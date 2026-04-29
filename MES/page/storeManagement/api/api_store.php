@@ -710,8 +710,12 @@ try {
             $page = max(1, (int)($_GET['page'] ?? 1));
             $limit = max(10, (int)($_GET['limit'] ?? 100));
             $offset = ($page - 1) * $limit;
-            
-            $conditions = ["t.status = 'PENDING'"];
+            $conditions = [
+                "t.status = 'PENDING'",
+                "t.transfer_uuid NOT LIKE '%-[0-9][0-9][0-9]'",
+                "t.transfer_uuid NOT LIKE '%-[0-9][0-9][0-9][0-9]'",
+                "t.transfer_uuid NOT LIKE '%-[0-9][0-9][0-9][0-9][0-9]'"
+            ];
             $params = [];
 
             if ($typeFilter === 'REPLACEMENT') {
@@ -734,6 +738,7 @@ try {
             $countStmt = $pdo->prepare($countSql);
             $countStmt->execute($params);
             $totalRecords = (int)$countStmt->fetchColumn();
+            
             $sql = "SELECT t.transfer_id, t.transfer_uuid, t.quantity, t.created_at, t.notes,
                            ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description,
                            loc_from.location_name AS from_loc, loc_to.location_name AS to_loc,
@@ -751,7 +756,7 @@ try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $totalBadgeCount = $pdo->query("SELECT COUNT(*) FROM dbo.STOCK_TRANSFER_ORDERS WITH (NOLOCK) WHERE status = 'PENDING'")->fetchColumn();
+            $totalBadgeCount = $pdo->query("SELECT COUNT(*) FROM dbo.STOCK_TRANSFER_ORDERS WITH (NOLOCK) WHERE status = 'PENDING' AND transfer_uuid NOT LIKE '%-[0-9][0-9][0-9]' AND transfer_uuid NOT LIKE '%-[0-9][0-9][0-9][0-9]' AND transfer_uuid NOT LIKE '%-[0-9][0-9][0-9][0-9][0-9]'")->fetchColumn();
 
             $response = [
                 'success' => true, 
@@ -883,8 +888,12 @@ try {
             $page = max(1, (int)($_GET['page'] ?? 1));
             $limit = max(10, (int)($_GET['limit'] ?? 100));
             $offset = ($page - 1) * $limit;
-
-            $conditions = ["1=1"];
+            $conditions = [
+                "1=1",
+                "t.transfer_uuid NOT LIKE '%-[0-9][0-9][0-9]'",
+                "t.transfer_uuid NOT LIKE '%-[0-9][0-9][0-9][0-9]'",
+                "t.transfer_uuid NOT LIKE '%-[0-9][0-9][0-9][0-9][0-9]'"
+            ];
             $params = [];
 
             if ($status !== 'ALL') { $conditions[] = "t.status = ?"; $params[] = $status; }

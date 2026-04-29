@@ -14,6 +14,9 @@
     $location_id = $_SESSION['location_id'] ?? 0;
     date_default_timezone_set('Asia/Bangkok');
     $current_hour = (int)date('H');
+
+    $active_type = $_GET['type'] ?? 'production';
+    $scanned_transfer_id = $_GET['transfer_id'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -106,7 +109,7 @@
         </button>
     </header>
 
-    <div id="section-in" class="app-section">
+    <div id="section-in" class="app-section <?php echo $active_type === 'receipt' ? 'active' : ''; ?>">
         
         <div class="app-card p-3 mb-3 text-center">
             <h6 class="fw-bold text-secondary mb-3"><i class="fas fa-qrcode me-1"></i> สแกน QR หรือระบุ Transfer ID</h6>
@@ -171,7 +174,7 @@
         </form>
     </div>
 
-    <div id="section-out" class="app-section active">
+    <div id="section-out" class="app-section <?php echo $active_type === 'production' ? 'active' : ''; ?>">
         <form id="mobileProductionForm" data-action="addPart" class="app-card">
             <div class="row g-2 mb-2">
                 <div class="col-6"><label class="form-label">วันที่</label><input type="date" id="out_log_date" name="log_date" class="form-control" required></div>
@@ -257,10 +260,10 @@
     </div>
 
     <nav class="bottom-nav">
-        <button class="nav-item-btn" data-target="section-in" data-title="รับของเข้า (IN)"> 
+        <button class="nav-item-btn <?php echo $active_type === 'receipt' ? 'active' : ''; ?>" data-target="section-in" data-title="รับของเข้า (IN)"> 
             <i class="fas fa-download"></i><span>RECEIPT</span>
         </button>
-        <button class="nav-item-btn active" data-target="section-out" data-title="บันทึกผลิต (OUT)"> 
+        <button class="nav-item-btn <?php echo $active_type === 'production' ? 'active' : ''; ?>" data-target="section-out" data-title="บันทึกผลิต (OUT)"> 
             <i class="fas fa-upload"></i><span>PRODUCTION</span>
         </button>
         <button class="nav-item-btn" data-target="section-review" data-title="ประวัติการบันทึก">
@@ -320,10 +323,10 @@
             if(typeof initReviewPage === 'function') initReviewPage();
         });
 
-        const g_EntryType = 'receipt';
+        const g_EntryType = <?php echo json_encode($active_type); ?>;
         const g_LocationId = <?php echo json_encode($location_id); ?>; 
         const g_AutoFillData_OLD = null; 
-        const g_TransferId_NEW = null;
+        const g_TransferId_NEW = <?php echo json_encode($scanned_transfer_id); ?>;
     </script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="script/mobile.js?v=<?php echo filemtime('script/mobile.js'); ?>"></script>

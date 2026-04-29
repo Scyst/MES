@@ -166,6 +166,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         $themeProd = 'text-primary bg-primary bg-opacity-10';
                         renderServiceLink('Production Entry', 'บันทึกผลผลิตประจำวัน', '<i class="fas fa-boxes"></i>', '../production/productionUI.php', 'view_production', $themeProd);
                         renderServiceLink('Mobile Entry', 'ลงยอดผ่านมือถือ', '<i class="fas fa-mobile-alt"></i>', '../production/mobile_entry.php', 'view_production', $themeProd);
+                        renderServiceLink('Tag Printer', 'พิมพ์แท็กส่งงาน (WIP/FG)', '<i class="fas fa-print"></i>', '../production/label_printer.php', 'print_label', $themeProd);
                         renderServiceLink('Stop Causes', 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../Stop_Cause/Stop_Cause.php', 'view_production', $themeProd);
                         ?>
                     </div>

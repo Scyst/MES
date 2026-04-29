@@ -79,9 +79,8 @@ function applyTimeMask(event) {
 }
 
 // =================================================================
-// SECTION: DATA ENTRY PAGE LOGIC (mobile_entry.php)
+// SECTION: DATA ENTRY PAGE LOGIC
 // =================================================================
-
 function initEntryPage() {
     populateInitialData(); 
     initializeDateTimeFields(); 
@@ -89,7 +88,6 @@ function initEntryPage() {
     const timeInputs = document.querySelectorAll('input[name="log_time"]');
     timeInputs.forEach(input => input.addEventListener('input', applyTimeMask));
 
-    // 🛡️ ป้องกัน ReferenceError จากตัวแปร Global ที่ไม่ได้ถูกส่งมาจาก PHP
     const entryType = typeof g_EntryType !== 'undefined' ? g_EntryType : 'receipt';
     const transferIdNew = typeof g_TransferId_NEW !== 'undefined' ? g_TransferId_NEW : null;
 
@@ -97,7 +95,6 @@ function initEntryPage() {
         setupAutocomplete('out_item_search', 'out_item_id');
         document.getElementById('mobileProductionForm')?.addEventListener('submit', handleFormSubmit);
     } else {
-        // --- ส่วนของ RECEIPT (IN) ---
         setupAutocomplete('entry_item_search', 'entry_item_id');
         document.getElementById('mobileReceiptForm')?.addEventListener('submit', handleFormSubmit);
         
@@ -132,13 +129,10 @@ async function populateInitialData() {
         allItems = result.items || [];
         allLocations = result.locations || [];
         
-        // 🛡️ ดึงค่า Global ตัวแปรอย่างปลอดภัย
         const entryType = typeof g_EntryType !== 'undefined' ? g_EntryType : 'receipt';
         const locId = typeof g_LocationId !== 'undefined' ? g_LocationId : 0;
         const transferIdNew = typeof g_TransferId_NEW !== 'undefined' ? g_TransferId_NEW : null;
         const autoFillDataOld = typeof g_AutoFillData_OLD !== 'undefined' ? g_AutoFillData_OLD : null;
-
-        // Setup Dropdown Locations
         const locationDisplay = document.getElementById('location_display');
         if (locationDisplay) {
             const optionsHtml = allLocations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
@@ -159,7 +153,6 @@ async function populateInitialData() {
             }
         }
 
-        // 🛡️ เช็ค Element ก่อน Assign ค่าป้องกัน TypeError
         if (entryType === 'production') {
             const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_OUT'));
             if (lastData && lastData.item_id) {
@@ -174,7 +167,7 @@ async function populateInitialData() {
                 }
                 selectedItem = allItems.find(i => i.item_id == lastData.item_id) || null;
             }
-        } else { // receipt
+        } else {
             const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_IN'));
             if (lastData && lastData.item_id) {
                 const searchEl = document.getElementById('entry_item_search');
@@ -381,28 +374,20 @@ async function autoFillForm_OLD(data) {
         if (scanIdFromUrl) {
             checkParams.scan_id = scanIdFromUrl;
         }
-        const result = await sendRequest(INVENTORY_API_URL, 'check_lot_status', 'GET', null, checkParams);
-        
+        const result = await sendRequest(INVENTORY_API_URL, 'check_lot_status', 'GET', null, checkParams);        
         if (!result.success) throw new Error(result.message || "Failed to check lot status.");
 
-        // 3. แยกการทำงานตามสถานะ
         if (result.status === 'received') {
-            // === กรณี ก.: รับไปแล้ว (แสดง Overlay) ===
             const details = result.details;
-            
-            // แปลงวันที่เป็นรูปแบบ DD/MM/YYYY (แบบสากล)
             const receivedDate = new Date(details.transaction_timestamp);
-            const dateStr = receivedDate.toLocaleDateString('en-GB'); // เช่น 07/11/2025
-            const timeStr = receivedDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); // เช่น 16:05
-
-            // แสดงข้อความ: ใครรับ, เมื่อไหร่
+            const dateStr = receivedDate.toLocaleDateString('en-GB');
+            const timeStr = receivedDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
             document.getElementById('status-details').innerHTML = 
                 `รับเข้าแล้วโดย: <strong class="text-warning">${details.username || 'Unknown User'}</strong><br>
                  เมื่อ: <strong>${dateStr} @ ${timeStr}</strong>`;
             document.getElementById('status-overlay').style.display = 'flex';
 
         } else {
-            // === กรณี ข.: ยังไม่เคยรับ (กรอกฟอร์ม) ===
             const item = allItems.find(i => i.sap_no.toLowerCase() === data.sap_no.toLowerCase().trim());
             
             if (item) {
@@ -465,11 +450,6 @@ async function autoFillFromTransferOrder(transferId) {
             document.getElementById('status-overlay').style.display = 'flex';
 
         } else if (order.status === 'PENDING') {
-            
-            if (g_LocationId > 0 && g_LocationId != order.to_location_id) {
-                 throw new Error(`QR Code นี้สำหรับคลังอื่น (Destination: ${order.to_location_name})`);
-            }
-
             selectedItem = {
                 item_id: order.item_id,
                 sap_no: order.sap_no,
@@ -487,11 +467,6 @@ async function autoFillFromTransferOrder(transferId) {
             lotNoEl.value = order.transfer_uuid;
             document.getElementById('entry_quantity_in').value = order.quantity;
             fromLocationEl.value = order.from_location_id;
-            
-            if (g_LocationId <= 0) {
-                 locationDisplayEl.value = order.to_location_id;
-            }
-            
             document.getElementById('entry_notes').value = order.notes || '';
 
             itemSearchEl.readOnly = true;
@@ -502,16 +477,15 @@ async function autoFillFromTransferOrder(transferId) {
 
             fromLocationEl.disabled = true;
             fromLocationEl.classList.add('form-control-readonly');
-            
-            if (!locationDisplayEl.disabled) {
-                locationDisplayEl.disabled = true;
-                locationDisplayEl.classList.add('form-control-readonly');
+            if (locationDisplayEl && locationDisplayEl.disabled) {
+                locationDisplayEl.disabled = false;
+                locationDisplayEl.classList.remove('form-control-readonly');
             }
 
             await updateAvailableStockDisplay(); 
 
             document.getElementById('mobileReceiptForm')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            showToast("ใบโอนพร้อมยืนยัน", 'var(--bs-success)');
+            showToast("สแกนสำเร็จ กรุณาเลือกคลังเก็บ", 'var(--bs-success)');
         }
 
     } catch (error) {
@@ -610,7 +584,6 @@ function setupAutocomplete(inputId, hiddenId) {
 // =================================================================
 // SECTION: REVIEW PAGE LOGIC (mobile_review.php)
 // =================================================================
-
 async function initReviewPage() {
     const container = document.getElementById('review-list-container');
     if (!container) return; 
@@ -670,8 +643,6 @@ async function populateReviewModals() {
 
 async function fetchReviewData(page = 1) {
     currentReviewPage = page;
-    
-    // 🛡️ เช็คก่อนแสดง Spinner เพื่อไม่ให้ Spinner ค้างถ้าหา Element ไม่เจอ
     const container = document.getElementById('review-list-container');
     if (!container) return;
 
@@ -681,7 +652,7 @@ async function fetchReviewData(page = 1) {
     const params = {
         page: page,
         limit: 25,
-        user_filter: currentUser.username // กรองเฉพาะ User ปัจจุบัน
+        user_filter: currentUser.username
     };
 
     const result = await sendRequest(INVENTORY_API_URL, action, 'GET', null, params);
@@ -696,9 +667,9 @@ async function fetchReviewData(page = 1) {
 
 function renderReviewCards(data, type) {
     const container = document.getElementById('review-list-container');
-    if (!container) return; // 🛡️ ป้องกัน Error
+    if (!container) return;
 
-    container.innerHTML = ''; // ล้างของเก่า
+    container.innerHTML = '';
     
     data.forEach(row => {
         const card = document.createElement('div');
@@ -706,7 +677,6 @@ function renderReviewCards(data, type) {
         card.dataset.transactionId = row.transaction_id;
         card.dataset.type = type;
 
-        // --- 1. เตรียมข้อมูลแสดงผล ---
         const dateObj = new Date(row.transaction_timestamp);
         const dateStr = dateObj.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' });
         const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
@@ -716,8 +686,7 @@ function renderReviewCards(data, type) {
         let locationName = '';
 
         if (type === 'production') {
-            // --- Logic สีของ Badge (OUT) ---
-            let badgeClass = 'bg-secondary'; // Default
+            let badgeClass = 'bg-secondary';
             switch (row.count_type.toUpperCase()) {
                 case 'FG': badgeClass = 'bg-primary'; break;
                 case 'HOLD': badgeClass = 'bg-warning text-dark'; break;
@@ -727,40 +696,31 @@ function renderReviewCards(data, type) {
             qtyDisplay = `<span class="fw-bold">${parseFloat(row.quantity).toLocaleString()} PCS</span>`;
             locationName = row.location_name || 'N/A';
             
-        } else { // 'receipt'
+        } else {
             badgeHtml = `<span class="badge bg-success">IN</span>`;
             qtyDisplay = `<span class="fw-bold text-success">+${parseFloat(row.quantity).toLocaleString()} PCS</span>`;
             locationName = row.destination_location || 'N/A';
         }
 
-        // --- 2. ประกอบร่าง HTML (ตาม Layout ใหม่) ---
-
-        // บรรทัดที่ 1 (Header): SAP No. (เด่น) และ Badge (สถานะ)
         const header = `
             <span class="fs-6 fw-bold">${row.sap_no}</span>
             ${badgeHtml}
         `;
 
-        // บรรทัดที่ 2: Part No. และ Description
         const line2 = `<div class="mb-1">
                          <span class="text-body fw-medium">${row.part_no}</span>
                          <small class="text-muted fst-italic">(${(row.part_description || 'No Desc.')})</small>
                        </div>`;
 
-        // บรรทัดที่ 3: Location และ Lot
         const line3 = `<small class="text-muted d-block">
                          Loc: ${locationName} | Lot: ${row.lot_no || '-'}
                        </small>`;
         
         const body = line2 + line3;
-
-        // Footer: วันที่/เวลา และ จำนวน
         const footer = `
             <span>${dateStr} ${timeStr}</span>
             ${qtyDisplay}
         `;
-
-        // --- 3. ยิง HTML เข้าการ์ด ---
         card.innerHTML = `
             <div class="card-header d-flex justify-content-between align-items-center">${header}</div>
             <div class="card-body py-2">${body}</div>
@@ -772,9 +732,6 @@ function renderReviewCards(data, type) {
     });
 }
 
-// =================================================================
-// SECTION: FORM SUBMISSION HANDLER
-// =================================================================
 // =================================================================
 // SECTION: FORM SUBMISSION HANDLER
 // =================================================================
@@ -795,7 +752,6 @@ async function handleFormSubmit(event) {
             const data = Object.fromEntries(formData.entries());
 
             if (action === 'addPart') {
-                // 🌟 โหมดผลิต (PRODUCTION)
                 if (!locationId) throw new Error("กรุณาเลือก Location");
                 data.location_id = locationId;
 
@@ -831,7 +787,7 @@ async function handleFormSubmit(event) {
                 }
                 
                 if (allSuccess) { 
-                    playBeep('success'); // 🔊 เสียงสแกนผ่าน!
+                    playBeep('success');
                     
                     Swal.fire({
                         title: 'บันทึกการผลิตสำเร็จ!',
@@ -857,7 +813,6 @@ async function handleFormSubmit(event) {
                 }
 
             } else {
-                // 🌟 โหมดรับเข้า (RECEIPT)
                 const transferUuid = data.transfer_uuid;
 
                 if (transferUuid) {
@@ -866,20 +821,16 @@ async function handleFormSubmit(event) {
                         toLocationId = document.getElementById('location_display').value;
                     }
                     if (!toLocationId) throw new Error("กรุณาเลือก Location ปลายทาง (To)");
-
-                    if (g_CurrentTransferOrder && g_CurrentTransferOrder.to_location_id != toLocationId) {
-                         throw new Error(`Location ไม่ตรงกับใบโอน (ใบโอนนี้สำหรับ ${g_CurrentTransferOrder.to_location_name})`);
-                    }
-
                     const body = {
                         transfer_uuid: transferUuid,
-                        confirmed_quantity: data.confirmed_quantity
+                        confirmed_quantity: data.confirmed_quantity,
+                        to_location_id: toLocationId 
                     };
                     
                     const res = await sendRequest(TRANSFER_API_URL, 'confirm_transfer', 'POST', body);
                     if (!res.success) throw new Error(res.message);
 
-                    playBeep('success'); // 🔊 เสียงสแกนผ่าน!
+                    playBeep('success');
                     showToast("ยืนยันการรับของสำเร็จ!", 'var(--bs-success)');
                     
                     form.reset();
@@ -898,7 +849,8 @@ async function handleFormSubmit(event) {
                     lotNoEl.classList.remove('form-control-readonly');
                     fromLocationEl.disabled = false;
                     fromLocationEl.classList.remove('form-control-readonly');
-                    if (g_LocationId <= 0) {
+                    
+                    if (g_LocationId <= 0 && locationDisplayEl) {
                         locationDisplayEl.disabled = false;
                         locationDisplayEl.classList.remove('form-control-readonly');
                     }
@@ -914,7 +866,7 @@ async function handleFormSubmit(event) {
                     const res = await sendRequest(INVENTORY_API_URL, 'execute_receipt', 'POST', data);
                     if (!res.success) throw new Error(res.message);
 
-                    playBeep('success'); // 🔊 เสียงสแกนผ่าน!
+                    playBeep('success');
                     showToast("บันทึกสำเร็จ", 'var(--bs-success)');
 
                     const searchInputValue = document.getElementById('entry_item_search').value;
@@ -941,7 +893,7 @@ async function handleFormSubmit(event) {
             const res = await sendRequest(INVENTORY_API_URL, 'update_transaction', 'POST', Object.fromEntries(formData));
             if (!res.success) throw new Error(res.message);
 
-            playBeep('success'); // 🔊 เสียงสแกนผ่าน!
+            playBeep('success');
             showToast("แก้ไขสำเร็จ", 'var(--bs-success)');
             bootstrap.Modal.getInstance(form.closest('.modal'))?.hide();
             fetchReviewData(currentReviewPage);
@@ -949,7 +901,7 @@ async function handleFormSubmit(event) {
         hideSpinner();
     } catch (error) {
         hideSpinner();
-        playBeep('error'); // 🔊 เสียง Error (ตื๊ดดด!)
+        playBeep('error');
         
         const errorMessage = error.message || 'An unexpected error occurred.';
         
@@ -966,8 +918,6 @@ async function handleFormSubmit(event) {
                 }
             }
         } else if (errorMessage.includes('วัตถุดิบในจุดจัดเก็บ')) {
-            
-            // 🚨 จัดรูปแบบป๊อปอัปแจ้งเตือน กรณี "วัตถุดิบไม่พอ"
             const errorHtml = errorMessage.replace(/\n/g, '<br>');
             Swal.fire({
                 title: '<i class="fas fa-exclamation-triangle text-warning"></i> วัตถุดิบไม่พอผลิต!',
@@ -984,13 +934,11 @@ async function handleFormSubmit(event) {
                 confirmButtonText: 'รับทราบ',
                 allowOutsideClick: false
             }).then(() => {
-                // Focus กลับไปที่ช่อง FG เผื่อพนักงานพิมพ์เลขผิด
                 const qtyInput = document.querySelector('input[name="quantity_fg"]');
                 if(qtyInput) qtyInput.select();
             });
 
         } else {
-            // 🚨 Error ทั่วไปอื่นๆ (เปลี่ยนจาก Toast เล็กๆ เป็น Popup ใหญ่ให้พนักงานสังเกตเห็น)
             Swal.fire({
                 title: 'ข้อผิดพลาด',
                 text: errorMessage,
@@ -1185,11 +1133,9 @@ async function deleteTransaction(transactionId, successCallback) {
 // SECTION: INITIALIZATION (SPA Update)
 // =================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // 🌟 โหลดทั้งสองฟังก์ชันพร้อมกัน เพราะตอนนี้อยู่หน้าเดียวกันหมดแล้ว
     initEntryPage();
     initReviewPage();
 
-    // ผูก Event ให้ Modal
     document.getElementById('editEntryForm')?.addEventListener('submit', handleFormSubmit);
     document.getElementById('editProductionForm')?.addEventListener('submit', handleFormSubmit);
     document.getElementById('deleteEntryFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('entry'));

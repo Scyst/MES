@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
 
-if (!hasPermission('add_production') && !hasPermission('manage_production')) {
+if (!hasPermission('add_production') && !hasPermission('manage_production') && !hasPermission('print_label')) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Permission Denied']);
     exit;
@@ -30,6 +30,178 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
+
+        // ==========================================================
+        // ACTION: 'search_items' (AJAX Autocomplete)
+        // ==========================================================
+        case 'search_items':
+            if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
+            
+            $q = $_GET['q'] ?? '';
+            if (strlen($q) < 2) {
+                echo json_encode(['success' => true, 'data' => []]);
+                break;
+            }
+
+            // 🌟 ปลดล็อกข้อจำกัดจาก TOP 20 เป็น TOP 150 เพื่อให้ค้นหาเจอรายการได้ครอบคลุมขึ้น
+            $sql = "SELECT TOP 150 item_id, sap_no, part_no, part_description 
+                    FROM $itemTable WITH (NOLOCK) 
+                    WHERE is_active = 1 
+                      AND (sap_no LIKE :q1 OR part_no LIKE :q2 OR part_description LIKE :q3)
+                    ORDER BY sap_no ASC";
+            
+            $stmt = $pdo->prepare($sql);
+            $searchTerm = "%{$q}%";
+            $stmt->execute(['q1' => $searchTerm, 'q2' => $searchTerm, 'q3' => $searchTerm]);
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $items]);
+            break;
+
+        // ==========================================================
+        // ACTION: 'get_label_history' (Fixed 500 Error PDO Offset Bug & Filtering)
+        // ==========================================================
+        case 'get_label_history':
+            if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
+            
+            $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+            $limit = isset($_GET['limit']) ? max(1, (int)$_GET['limit']) : 100;
+            $offset = ($page - 1) * $limit;
+            $search = $_GET['search'] ?? '';
+            $whereClause = "t.created_at >= DATEADD(DAY, -30, GETDATE()) 
+                            AND t.transfer_uuid NOT LIKE 'REQ-%' 
+                            AND t.transfer_uuid NOT LIKE 'TRF-%'";
+            $params = [];
+
+            if (!hasPermission('manage_production')) {
+                $whereClause .= " AND t.created_by_user_id = ?";
+                $params[] = $currentUser['id'];
+            }
+
+            if ($search !== '') {
+                $whereClause .= " AND (t.transfer_uuid LIKE ? OR i.sap_no LIKE ? OR i.part_no LIKE ?)";
+                $params[] = "%{$search}%";
+                $params[] = "%{$search}%";
+                $params[] = "%{$search}%";
+            }
+
+            // นับจำนวนรวม
+            $countSql = "SELECT COUNT(*) FROM $transferTable t WITH (NOLOCK) JOIN $itemTable i WITH (NOLOCK) ON t.item_id = i.item_id WHERE $whereClause";
+            $countStmt = $pdo->prepare($countSql);
+            $countStmt->execute($params);
+            $totalRecords = (int)$countStmt->fetchColumn();
+
+            // ดึงข้อมูล
+            $sql = "SELECT 
+                        t.transfer_uuid, t.quantity, t.status, t.created_at,
+                        i.sap_no, i.part_no, i.part_description 
+                    FROM $transferTable t WITH (NOLOCK)
+                    JOIN $itemTable i WITH (NOLOCK) ON t.item_id = i.item_id
+                    WHERE $whereClause
+                    ORDER BY t.created_at DESC 
+                    OFFSET $offset ROWS FETCH NEXT $limit ROWS ONLY";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true, 
+                'data' => $history, 
+                'total' => $totalRecords,
+                'page' => $page,
+                'total_pages' => ceil($totalRecords / $limit)
+            ]);
+            break;
+
+        // ==========================================================
+        // ACTION: 'cancel_batch_labels' (Fixed Permission Override)
+        // ==========================================================
+        case 'cancel_batch_labels':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+            
+            $lot_no = trim($input['lot_no'] ?? '');
+            $is_range = isset($input['is_range']) ? (bool)$input['is_range'] : false;
+            $start_no = (int)($input['start_no'] ?? 0);
+            $end_no = (int)($input['end_no'] ?? 0);
+
+            if (empty($lot_no)) throw new Exception("กรุณาระบุเลข Lot ที่ต้องการยกเลิก");
+            if ($is_range && ($start_no <= 0 || $end_no <= 0 || $start_no > $end_no)) {
+                throw new Exception("ระบุช่วงเลขรันให้ถูกต้อง (เริ่มต้นต้องน้อยกว่าหรือเท่ากับสิ้นสุด)");
+            }
+
+            $pdo->beginTransaction();
+            $note_update = "\nBulk Cancelled by " . $currentUser['username'] . " at " . date('Y-m-d H:i:s');
+            
+            // 🌟 Base SQL
+            $updSql = "UPDATE $transferTable 
+                       SET status = 'CANCELLED', 
+                           notes = ISNULL(notes, '') + ? 
+                       WHERE status = 'PENDING' 
+                         AND transfer_uuid LIKE ?";
+            
+            $params = [$note_update, $lot_no . '-%'];
+
+            // 🌟 ถ้าไม่ใช่ระดับ Admin/Manager จะลบได้เฉพาะที่ตัวเองปริ้นเท่านั้น
+            if (!hasPermission('manage_production')) {
+                $updSql .= " AND created_by_user_id = ?";
+                $params[] = $currentUser['id'];
+            }
+
+            // 🌟 ถ้ามีการระบุช่วง (Range)
+            if ($is_range) {
+                $updSql .= " AND TRY_CAST(RIGHT(transfer_uuid, CHARINDEX('-', REVERSE(transfer_uuid)) - 1) AS INT) BETWEEN ? AND ?";
+                $params[] = $start_no;
+                $params[] = $end_no;
+            }
+            
+            $stmt = $pdo->prepare($updSql);
+            $stmt->execute($params);
+            $affectedRows = $stmt->rowCount();
+
+            $pdo->commit();
+
+            if ($affectedRows > 0) {
+                echo json_encode(['success' => true, 'message' => "ยกเลิกสติ๊กเกอร์ Lot: {$lot_no} จำนวน {$affectedRows} รายการ สำเร็จ"]);
+            } else {
+                throw new Exception("ไม่พบสติ๊กเกอร์สถานะ PENDING ในช่วงที่คุณระบุ (อาจถูกลบ/รับเข้าหมดแล้ว หรือคุณไม่มีสิทธิ์ลบของผู้อื่น)");
+            }
+            break;
+
+        // ==========================================================
+        // ACTION: 'cancel_label' (ยกเลิก Ghost Label)
+        // ==========================================================
+        case 'cancel_label':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+            
+            $transfer_uuid = $input['transfer_uuid'] ?? '';
+            if (empty($transfer_uuid)) throw new Exception("Transfer UUID is required.");
+
+            $pdo->beginTransaction();
+            
+            $checkStmt = $pdo->prepare("SELECT status, created_by_user_id FROM $transferTable WITH (UPDLOCK) WHERE transfer_uuid = ?");
+            $checkStmt->execute([$transfer_uuid]);
+            $row = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$row) {
+                throw new Exception("ไม่พบรายการ Label นี้ในระบบ");
+            }
+            if ($row['status'] !== 'PENDING') {
+                throw new Exception("ไม่สามารถยกเลิกได้ เนื่องจากสถานะปัจจุบันคือ {$row['status']}");
+            }
+            
+            // ตรวจสอบสิทธิ์: ยกเลิกได้เฉพาะของตัวเอง หรือเป็น Manager
+            if ($row['created_by_user_id'] != $currentUser['id'] && !hasPermission('manage_production')) {
+                throw new Exception("คุณไม่มีสิทธิ์ยกเลิก Label ที่สร้างโดยผู้อื่น");
+            }
+
+            $updStmt = $pdo->prepare("UPDATE $transferTable SET status = 'CANCELLED', notes = ISNULL(notes, '') + ? WHERE transfer_uuid = ?");
+            $note_update = "\nCancelled (Ghost Label) by " . $currentUser['username'] . " at " . date('Y-m-d H:i:s');
+            $updStmt->execute([$note_update, $transfer_uuid]);
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => "ยกเลิกรายการ {$transfer_uuid} สำเร็จ"]);
+            break;
 
         // ==========================================================
         // ACTION: 'create_transfer_order'
@@ -102,13 +274,14 @@ try {
             break;
 
         // ==========================================================
-        // ACTION: 'confirm_transfer' (🌟 อัปเกรด Cost Snapshot)
+        // ACTION: 'confirm_transfer' 
         // ==========================================================
         case 'confirm_transfer':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
             
             $transfer_uuid = $input['transfer_uuid'] ?? '';
             $confirmed_quantity = $input['confirmed_quantity'] ?? 0; 
+            $actual_to_loc_id = $input['to_location_id'] ?? null;
             
             if (empty($transfer_uuid)) throw new Exception("Missing Transfer ID.");
 
@@ -134,10 +307,9 @@ try {
             
             $item_id = $transfer_order['item_id'];
             $from_loc_id = $transfer_order['from_location_id'];
-            $to_loc_id = $transfer_order['to_location_id'];
+            $to_loc_id = $actual_to_loc_id ? $actual_to_loc_id : $transfer_order['to_location_id'];
+            
             $transaction_timestamp = date('Y-m-d H:i:s'); 
-
-            // 🌟 ดึงข้อมูลต้นทุน ณ ปัจจุบัน (Cost Snapshot)
             $itemStmt = $pdo->prepare("SELECT * FROM $itemTable WITH (NOLOCK) WHERE item_id = ?");
             $itemStmt->execute([$item_id]);
             $item_info = $itemStmt->fetch(PDO::FETCH_ASSOC);
@@ -146,17 +318,15 @@ try {
                         (float)$item_info['Cost_OH_Staff'] + (float)$item_info['Cost_OH_Accessory'] + (float)$item_info['Cost_OH_Others'];
             $line_cost = (float)$item_info['Cost_Total'] * $confirmed_quantity;
 
-            // หักต้นทาง เพิ่มปลายทาง
             $spStock = $pdo->prepare("EXEC $spUpdateOnhand @item_id = ?, @location_id = ?, @quantity_to_change = ?");
             $spStock->execute([$item_id, $from_loc_id, -$confirmed_quantity]);
             $spStock->closeCursor();
 
             $spStock->execute([$item_id, $to_loc_id, $confirmed_quantity]);
             $spStock->closeCursor();
-
-            // อัปเดตใบโอน
             $sqlUpdate = "UPDATE $transferTable 
                           SET status = 'COMPLETED', 
+                              to_location_id = ?, 
                               confirmed_by_user_id = ?, 
                               confirmed_at = ?,
                               notes = ISNULL(notes, '') + ?
@@ -168,9 +338,7 @@ try {
             }
 
             $stmtUpdate = $pdo->prepare($sqlUpdate);
-            $stmtUpdate->execute([$currentUser['id'], $transaction_timestamp, $note_update, $transfer_order['transfer_id']]);
-
-            // 🌟 บันทึกประวัติพร้อม Cost Snapshot
+            $stmtUpdate->execute([$to_loc_id, $currentUser['id'], $transaction_timestamp, $note_update, $transfer_order['transfer_id']]);
             $transSql = "INSERT INTO $transTable 
                             (parameter_id, quantity, transaction_type, transaction_timestamp, 
                              from_location_id, to_location_id, reference_id, created_by_user_id,
@@ -192,7 +360,7 @@ try {
             break;
 
         // ==========================================================
-        // ACTION: 'reverse_transfer' (🌟 อัปเกรด Cost Snapshot)
+        // ACTION: 'reverse_transfer'
         // ==========================================================
         case 'reverse_transfer':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
@@ -247,7 +415,6 @@ try {
             $stmtUpdate = $pdo->prepare($sqlUpdate);
             $stmtUpdate->execute([$note_update, $transfer_order['transfer_id']]);
 
-            // 🌟 บันทึกประวัติการย้อนกลับ พร้อม Cost Snapshot ที่ติดลบ
             $transSql = "INSERT INTO $transTable 
                             (parameter_id, quantity, transaction_type, transaction_timestamp, 
                              from_location_id, to_location_id, reference_id, created_by_user_id,
@@ -355,7 +522,7 @@ try {
             break;
 
         // ==========================================================
-        // ACTION: 'cancel_pending_transfer'
+        // ACTION: 'cancel_pending_transfer' (เฉพาะผู้มีสิทธิ์ Manage)
         // ==========================================================
         case 'cancel_pending_transfer':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
@@ -407,15 +574,13 @@ try {
             $item_id = $input['item_id'] ?? 0;
             $quantity = $input['quantity'] ?? 0;
             $from_loc_id = $input['from_loc_id'] ?? 0;
-            $to_loc_id = $input['to_loc_id'] ?? 0;
+            $to_loc_id = $input['to_loc_id'] ?? 0; 
             $notes = $input['notes'] ?? null;
 
-            if (empty($parent_lot) || $print_count < 1 || empty($item_id) || empty($quantity) || empty($from_loc_id) || empty($to_loc_id)) {
+            if (empty($parent_lot) || $print_count < 1 || empty($item_id) || empty($quantity) || empty($from_loc_id)) {
                 throw new Exception("ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบฟอร์มอีกครั้ง");
             }
-            if ($from_loc_id == $to_loc_id) {
-                throw new Exception("คลังต้นทางและปลายทางต้องไม่ซ้ำกัน");
-            }
+
             if ($print_count > 500) {
                 throw new Exception("ป้องกัน Memory Limit - อนุญาตให้ปริ้นสูงสุด 500 ดวงต่อครั้ง");
             }
