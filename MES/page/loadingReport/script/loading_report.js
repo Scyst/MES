@@ -2,7 +2,7 @@
 
 const API_URL = 'api/manage_loading.php'; 
 let saveTimer;
-window.currentErrors = []; // 🟢 ตัวแปรเก็บรายการที่ยังกรอกไม่ครบ
+window.currentErrors = [];
 
 $(document).ready(function() {
     loadJobList();
@@ -46,21 +46,42 @@ function loadJobList() {
         if (res.data.length === 0) {
             html = `<div class="col-12 text-center text-muted py-5"><i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>No jobs found</div>`;
         } else {
+            let basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
             res.data.forEach(job => {
                 let statusClass = job.report_status === 'COMPLETED' ? 'job-card done' : 'job-card draft';
                 let badge = job.report_status === 'COMPLETED' ? '<span class="badge bg-success">Completed</span>' : '<span class="badge bg-warning text-dark">In Progress</span>';
-                let printBtn = job.report_status === 'COMPLETED' ? `<a href="print_report.php?report_id=${job.report_id}" target="_blank" class="btn btn-sm btn-light border ms-2 text-secondary" onclick="event.stopPropagation();"><i class="fas fa-print"></i></a>` : '';
                 
+                let printBtn = '';
+                if (job.report_status === 'COMPLETED') {
+                    let encodedRef = btoa('SNC-' + job.report_id);
+                    let shareUrl = window.location.origin + basePath + '/customerView.php?ref=' + encodedRef;
+
+                    printBtn = `
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-light border text-secondary" onclick="copyToClipboard('${shareUrl}', event)" title="Copy Link For Customer">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <a href="print_report.php?ref=${encodedRef}" target="_blank" class="btn btn-sm btn-light border text-secondary" onclick="event.stopPropagation();" title="Internal Print">
+                            <i class="fas fa-print"></i>
+                        </a>
+                    </div>`;
+                }
+
                 const isActive = ($('#current_so_id').val() == job.so_id) ? 'active' : '';
 
                 html += `
                 <div class="${statusClass} ${isActive} w-100 p-2 p-md-3" id="job-card-${job.so_id}" onclick="openReport(${job.so_id})">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h6 class="fw-bold text-primary mb-0">${job.po_number}</h6>
-                        <div>${badge}${printBtn}</div>
+                        <div>${badge}</div>
                     </div>
-                    <div class="small text-muted"><i class="fas fa-calendar-day me-2 text-secondary" style="width:16px;"></i>Load Date: <span class="text-dark">${job.loading_date || '-'}</span></div>
-                    <div class="small text-muted"><i class="fas fa-truck-loading me-2 text-secondary" style="width:16px;"></i>Cont: ${job.container_no || '-'}</div>
+                    <div class="d-flex justify-content-between align-items-end mt-1">
+                        <div>
+                            <div class="small text-muted"><i class="fas fa-calendar-day me-2 text-secondary" style="width:16px;"></i>Load Date: <span class="text-dark">${job.loading_date || '-'}</span></div>
+                            <div class="small text-muted"><i class="fas fa-truck-loading me-2 text-secondary" style="width:16px;"></i>Cont: ${job.container_no || '-'}</div>
+                        </div>
+                        ${printBtn}
+                    </div>
                 </div>`;
             });
         }
@@ -151,7 +172,6 @@ async function openReport(soId) {
             $('.camera-box').css('pointer-events', 'auto').css('opacity', '1');
             $('#btn_pass_all').prop('disabled', false);
             
-            // 🟢 Render ปุ่ม Finish เสมอ และไม่แสดงข้อความ Error (เดี๋ยวใช้ Popup แทน) 🟢
             $('#form-action-bar').removeClass('d-none').html(`
                 <div class="d-flex align-items-center justify-content-center w-100">
                     <button id="btn_finish" class="btn btn-success shadow-sm py-2 px-5 rounded-pill fw-bold w-100 w-md-auto" style="max-width:280px;" onclick="finishInspection()">
@@ -314,7 +334,6 @@ function validateCompletion() {
 
     if (checkedCount < totalItems || totalItems === 0) errors.push('Checklist');
 
-    // 🟢 เก็บใส่ตัวแปร Global รอแจ้งเตือนตอนกด Finish
     window.currentErrors = errors;
 }
 
@@ -361,11 +380,9 @@ function recalcTopicStatus(topicId) {
 function finishInspection() {
     clearTimeout(saveTimer);
     
-    // Save Header first to ensure latest input is checked
     saveHeader().then(() => {
         if (!$('#input_seal').val()) { Swal.fire('Missing Data', 'กรุณาระบุ Seal No.', 'warning'); return; }
         
-        // 🟢 แสดงแจ้งเตือน (Popup) ถ้าข้อมูลไม่ครบ 🟢
         if (window.currentErrors && window.currentErrors.length > 0) {
             let errorHtml = '<div class="text-start mt-3"><ul class="mb-0">';
             if (window.currentErrors.includes('Info')) errorHtml += '<li><b class="text-danger">Shipment Info:</b> กรอกข้อมูลสำคัญให้ครบถ้วน</li>';
@@ -383,7 +400,6 @@ function finishInspection() {
             return;
         }
 
-        // 🟢 ผ่านเงื่อนไขหมด -> ถาายืนยันจบงาน
         Swal.fire({
             title: 'Confirm Finish?', text: "ยืนยันการจบงาน (ระบบจะล็อคข้อมูลทันที)", icon: 'warning',
             showCancelButton: true, confirmButtonText: 'Yes, Finish!', confirmButtonColor: '#198754'
@@ -496,4 +512,25 @@ function resetInspectionForm() {
     $('#badge-photo').text('0/12').removeClass('bg-success text-white border-success').addClass('bg-light text-dark');
     $('#badge-check').text('0/0').removeClass('bg-success text-white border-success').addClass('bg-light text-dark');
     window.currentErrors = ['Info', 'Photos', 'Checklist'];
+}
+
+function copyToClipboard(text, e) {
+    e.stopPropagation();
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Copied link for customer!', showConfirmButton: false, timer: 1500 });
+        });
+    } else {
+        const tempInput = document.createElement("input");
+        tempInput.value = text;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        try {
+            document.execCommand("copy");
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Copied link for customer!', showConfirmButton: false, timer: 1500 });
+        } catch (err) {
+            Swal.fire('Error', 'Failed to copy link', 'error');
+        }
+        document.body.removeChild(tempInput);
+    }
 }

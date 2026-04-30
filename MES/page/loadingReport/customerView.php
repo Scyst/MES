@@ -1,17 +1,11 @@
 <?php
-// page/loadingReport copy/print_report.php
-define('SYSTEM_INJECTION_LOADED', true);
-
-require_once __DIR__ . '/../components/init.php';
+require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/loading_config.php';
 require_once __DIR__ . '/../db.php'; 
 
-if (!hasPermission('view_production')) {
-    die("Access Denied: You do not have permission to view or print this report.");
-}
-
 $hash = isset($_GET['ref']) ? $_GET['ref'] : '';
 if (empty($hash)) {
+    http_response_code(400);
     die("Error: Invalid Reference.");
 }
 
@@ -19,6 +13,7 @@ $decoded = base64_decode($hash);
 $report_id = str_replace('SNC-', '', $decoded);
 
 if (!is_numeric($report_id)) {
+    http_response_code(400);
     die("Error: Corrupted Reference.");
 }
 
@@ -27,12 +22,12 @@ $sql = "SELECT r.*, s.po_number, s.booking_no, s.quantity, s.sku, s.description,
                r.driver_name, r.inspector_name, r.supervisor_name, r.cable_seal
         FROM " . LOADING_REPORTS_TABLE . " r WITH (NOLOCK)
         LEFT JOIN " . SALES_ORDERS_TABLE . " s WITH (NOLOCK) ON r.sales_order_id = s.id
-        WHERE r.id = ?";
+        WHERE r.id = ? AND r.status = 'COMPLETED'";
 $stmt = $pdo->prepare($sql);
 $stmt->execute([$report_id]);
 $header = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$header) die("Error: Report not found");
+if (!$header) die("Error: Report not found or not completed.");
 
 $location_show = !empty($header['loading_location']) ? $header['loading_location'] : 'SNC Creativity Anthology Company (WH-B10)';
 $time_str = "";
@@ -49,7 +44,7 @@ if (!empty($header['loading_start_time']) && !empty($header['loading_end_time'])
 }
 
 $photos = [];
-$sqlPhoto = "SELECT photo_type, file_path FROM " . LOADING_PHOTOS_TABLE . " WHERE report_id = ?";
+$sqlPhoto = "SELECT photo_type, file_path FROM " . LOADING_PHOTOS_TABLE . " WITH (NOLOCK) WHERE report_id = ?";
 $stmtP = $pdo->prepare($sqlPhoto);
 $stmtP->execute([$report_id]);
 while ($row = $stmtP->fetch(PDO::FETCH_ASSOC)) {
@@ -57,7 +52,7 @@ while ($row = $stmtP->fetch(PDO::FETCH_ASSOC)) {
 }
 
 $checklist_results = [];
-$sqlCheck = "SELECT topic_id, item_index, result, remark FROM " . LOADING_RESULTS_TABLE . " WHERE report_id = ?";
+$sqlCheck = "SELECT topic_id, item_index, result, remark FROM " . LOADING_RESULTS_TABLE . " WITH (NOLOCK) WHERE report_id = ?";
 $stmtC = $pdo->prepare($sqlCheck);
 $stmtC->execute([$report_id]);
 while ($row = $stmtC->fetch(PDO::FETCH_ASSOC)) {
@@ -95,7 +90,6 @@ function renderContainerTypeCheck($currentValue, $targetLabel, $displayLabel = n
     <link rel="stylesheet" href="../../utils/libs/fontawesome/css/all.min.css">
     
     <style>
-        /* === A4 SETTINGS === */
         @page { size: A4; margin: 10mm; }
 
         body { 
@@ -122,10 +116,9 @@ function renderContainerTypeCheck($currentValue, $targetLabel, $displayLabel = n
         .no-print { position: fixed; top: 10px; right: 10px; z-index: 9999; }
         .page-number:after { content: "Page " counter(page); }
 
-        /* === PRINT MODE === */
         @media print {
             body { background: white; padding: 0; margin: 0; }
-            .no-print, #inactivityModal { display: none !important; }
+            .no-print { display: none !important; }
             
             .page { 
                 width: 100% !important; margin: 0 !important; padding: 0 !important;
@@ -135,13 +128,11 @@ function renderContainerTypeCheck($currentValue, $targetLabel, $displayLabel = n
             .page:last-child { page-break-after: auto; }
             #page-1 { page-break-after: always; }
 
-            /* Layout Fixes */
             thead { display: table-header-group; }
             tfoot { display: table-footer-group; }
             tr { page-break-inside: avoid; }
         }
 
-        /* --- STYLES --- */
         .header-simple { display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: #555; margin-bottom: 10px; }
         .page-1-header { text-align: center; margin-bottom: 5px; }
         .truck-icon { font-size: 24px; color: #2c5aa0; margin-bottom: 2px; }

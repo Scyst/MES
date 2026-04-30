@@ -1,5 +1,5 @@
 <?php
-// page/loading/api/manage_loading.php
+// page/loadingReport copy/api/manage_loading.php
 header('Content-Type: application/json');
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
@@ -84,8 +84,8 @@ try {
                         r.driver_name, r.inspector_name, r.supervisor_name, r.loading_location,
                         FORMAT(r.loading_start_time, 'yyyy-MM-dd HH:mm') as loading_start_time,
                         FORMAT(r.loading_end_time, 'yyyy-MM-dd HH:mm') as loading_end_time
-                        FROM " . SALES_ORDERS_TABLE . " s
-                        LEFT JOIN " . LOADING_REPORTS_TABLE . " r ON s.id = r.sales_order_id
+                        FROM " . SALES_ORDERS_TABLE . " s WITH (NOLOCK)
+                        LEFT JOIN " . LOADING_REPORTS_TABLE . " r WITH (NOLOCK) ON s.id = r.sales_order_id
                         WHERE s.id = ?";
             
             $stmt = $pdo->prepare($sqlHead);
@@ -94,7 +94,7 @@ try {
 
             $photos = [];
             if ($header && $header['report_id']) {
-                $sqlPhoto = "SELECT photo_type, file_path FROM " . LOADING_PHOTOS_TABLE . " WHERE report_id = ?";
+                $sqlPhoto = "SELECT photo_type, file_path FROM " . LOADING_PHOTOS_TABLE . " WITH (NOLOCK) WHERE report_id = ?";
                 $stmtP = $pdo->prepare($sqlPhoto);
                 $stmtP->execute([$header['report_id']]);
                 $rows = $stmtP->fetchAll(PDO::FETCH_ASSOC);
@@ -119,7 +119,7 @@ try {
             $start_time = !empty($_POST['loading_start_time']) ? str_replace('T', ' ', $_POST['loading_start_time']) : null;
             $end_time = !empty($_POST['loading_end_time']) ? str_replace('T', ' ', $_POST['loading_end_time']) : null;
             
-            $check = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WHERE sales_order_id = ?");
+            $check = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WITH (UPDLOCK) WHERE sales_order_id = ?");
             $check->execute([$so_id]);
             $existing = $check->fetch();
 
@@ -183,7 +183,7 @@ try {
 
         case 'get_checklist':
             $report_id = $_GET['report_id'];
-            $sql = "SELECT topic_id, item_index, result, remark FROM " . LOADING_RESULTS_TABLE . " WHERE report_id = ?";
+            $sql = "SELECT topic_id, item_index, result, remark FROM " . LOADING_RESULTS_TABLE . " WITH (NOLOCK) WHERE report_id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$report_id]);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -205,7 +205,7 @@ try {
             $result = $_POST['result'];
             $remark = $_POST['remark'] ?? '';
 
-            $chk = $pdo->prepare("SELECT id FROM " . LOADING_RESULTS_TABLE . " WHERE report_id = ? AND topic_id = ? AND item_index = ?");
+            $chk = $pdo->prepare("SELECT id FROM " . LOADING_RESULTS_TABLE . " WITH (UPDLOCK) WHERE report_id = ? AND topic_id = ? AND item_index = ?");
             $chk->execute([$report_id, $topic_id, $item_index]);
             $existing = $chk->fetch();
 
@@ -230,7 +230,7 @@ try {
                 foreach ($checklist as $topicId => $topic) {
                     $itemIndex = 1;
                     foreach ($topic['items'] as $itemName) {
-                        $chk = $pdo->prepare("SELECT id FROM " . LOADING_RESULTS_TABLE . " WHERE report_id = ? AND topic_id = ? AND item_index = ?");
+                        $chk = $pdo->prepare("SELECT id FROM " . LOADING_RESULTS_TABLE . " WITH (UPDLOCK) WHERE report_id = ? AND topic_id = ? AND item_index = ?");
                         $chk->execute([$report_id, $topicId, $itemIndex]);
                         $existing = $chk->fetch();
 
@@ -253,69 +253,85 @@ try {
         
         case 'finish_report':
             $report_id = $_POST['report_id'];
-            $check = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WHERE id = ?");
-            $check->execute([$report_id]);
-            if (!$check->fetch()) {
-                throw new Exception("Report not found.");
-            }
-
-            if (function_exists('writeLog')) {
-                writeLog($pdo, 'FINISH', 'LOADING', $report_id, ['status' => 'DRAFT'], ['status' => 'COMPLETED'], 'Inspection Completed');
-            }
-
-            $sql = "UPDATE " . LOADING_REPORTS_TABLE . " SET status = 'COMPLETED', updated_at = GETDATE() WHERE id = ?";
-            $pdo->prepare($sql)->execute([$report_id]);
-
-            $checkFleet = $pdo->prepare("SELECT log_id FROM dbo.LOGISTICS_FLEET_LOGS WHERE loading_report_id = ?");
-            $checkFleet->execute([$report_id]);
-            
-            if (!$checkFleet->fetch()) {
-                $stmtLoad = $pdo->prepare("SELECT r.*, s.po_number FROM " . LOADING_REPORTS_TABLE . " r LEFT JOIN " . SALES_ORDERS_TABLE . " s ON r.sales_order_id = s.id WHERE r.id = ?");
-                $stmtLoad->execute([$report_id]);
-                $rData = $stmtLoad->fetch(PDO::FETCH_ASSOC);
-
-                if ($rData) {
-                    $log_time = $rData['loading_end_time'] ?: date('Y-m-d H:i:s');
-                    $vehicle_type = $rData['container_type'] ?: 'UNKNOWN';
-                    $ref_doc = $rData['po_number'] ?: 'C-TPAT ID: ' . $report_id;
-                    $user_id = $_SESSION['user']['id'] ?? 0;
-
-                    $insFleet = "INSERT INTO dbo.LOGISTICS_FLEET_LOGS 
-                        (log_timestamp, trans_type, provider_type, vehicle_type, car_license, container_no, seal_no, ref_document, loading_report_id, created_by_user_id)
-                        VALUES (?, 'OUTBOUND', 'VENDOR', ?, ?, ?, ?, ?, ?, ?)";
-                    $pdo->prepare($insFleet)->execute([
-                        $log_time, $vehicle_type, $rData['car_license'], $rData['container_no'], $rData['seal_no'], $ref_doc, $report_id, $user_id
-                    ]);
+            $pdo->beginTransaction();
+            try {
+                $check = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WITH (UPDLOCK) WHERE id = ?");
+                $check->execute([$report_id]);
+                if (!$check->fetch()) {
+                    throw new Exception("Report not found.");
                 }
+
+                $sql = "UPDATE " . LOADING_REPORTS_TABLE . " SET status = 'COMPLETED', updated_at = GETDATE() WHERE id = ?";
+                $pdo->prepare($sql)->execute([$report_id]);
+
+                $checkFleet = $pdo->prepare("SELECT log_id FROM dbo.LOGISTICS_FLEET_LOGS WITH (UPDLOCK) WHERE loading_report_id = ?");
+                $checkFleet->execute([$report_id]);
+                
+                if (!$checkFleet->fetch()) {
+                    $stmtLoad = $pdo->prepare("SELECT r.*, s.po_number FROM " . LOADING_REPORTS_TABLE . " r WITH (NOLOCK) LEFT JOIN " . SALES_ORDERS_TABLE . " s WITH (NOLOCK) ON r.sales_order_id = s.id WHERE r.id = ?");
+                    $stmtLoad->execute([$report_id]);
+                    $rData = $stmtLoad->fetch(PDO::FETCH_ASSOC);
+
+                    if ($rData) {
+                        $log_time = $rData['loading_end_time'] ?: date('Y-m-d H:i:s');
+                        $vehicle_type = $rData['container_type'] ?: 'UNKNOWN';
+                        $ref_doc = $rData['po_number'] ?: 'C-TPAT ID: ' . $report_id;
+                        $user_id = $_SESSION['user']['id'] ?? 0;
+
+                        $insFleet = "INSERT INTO dbo.LOGISTICS_FLEET_LOGS 
+                            (log_timestamp, trans_type, provider_type, vehicle_type, car_license, container_no, seal_no, ref_document, loading_report_id, created_by_user_id)
+                            VALUES (?, 'OUTBOUND', 'VENDOR', ?, ?, ?, ?, ?, ?, ?)";
+                        $pdo->prepare($insFleet)->execute([
+                            $log_time, $vehicle_type, $rData['car_license'], $rData['container_no'], $rData['seal_no'], $ref_doc, $report_id, $user_id
+                        ]);
+                    }
+                }
+                $pdo->commit();
+                echo json_encode(['success' => true]);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
             }
-            echo json_encode(['success' => true]);
             break;
 
         case 'reopen_report':
             $report_id = $_POST['report_id'];
-            if (!hasPermission('manage_warehouse')) throw new Exception("Permission Denied");
-
-            $check = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WHERE id = ?");
-            $check->execute([$report_id]);
-            if (!$check->fetch()) throw new Exception("Report not found.");
-
-            if (function_exists('writeLog')) {
-                writeLog($pdo, 'UNLOCK', 'LOADING', $report_id, ['status' => 'COMPLETED'], ['status' => 'DRAFT'], 'Supervisor Re-opened Report');
+            if (!hasPermission('manage_warehouse')) {
+                throw new Exception("Permission Denied");
             }
 
-            $sql = "UPDATE " . LOADING_REPORTS_TABLE . " SET status = 'DRAFT', updated_at = GETDATE() WHERE id = ?";
-            $pdo->prepare($sql)->execute([$report_id]);
-            $pdo->prepare("DELETE FROM dbo.LOGISTICS_FLEET_LOGS WHERE loading_report_id = ?")->execute([$report_id]);
+            $pdo->beginTransaction();
+            try {
+                $check = $pdo->prepare("SELECT id FROM " . LOADING_REPORTS_TABLE . " WITH (UPDLOCK) WHERE id = ?");
+                $check->execute([$report_id]);
+                if (!$check->fetch()) {
+                    throw new Exception("Report not found.");
+                }
 
-            echo json_encode(['success' => true]);
+                if (function_exists('writeLog')) {
+                    writeLog($pdo, 'UNLOCK', 'LOADING', $report_id, ['status' => 'COMPLETED'], ['status' => 'DRAFT'], 'Supervisor Re-opened Report');
+                }
+
+                $sql = "UPDATE " . LOADING_REPORTS_TABLE . " SET status = 'DRAFT', updated_at = GETDATE() WHERE id = ?";
+                $pdo->prepare($sql)->execute([$report_id]);
+                
+                $pdo->prepare("DELETE FROM dbo.LOGISTICS_FLEET_LOGS WHERE loading_report_id = ?")->execute([$report_id]);
+
+                $pdo->commit();
+                echo json_encode(['success' => true]);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
             break;
 
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid Action']);
+            break;
     }
 
 } catch (\Throwable $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage() . " on line " . $e->getLine()]);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

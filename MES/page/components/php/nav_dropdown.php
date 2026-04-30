@@ -51,6 +51,7 @@
                     <li><a class="dropdown-item-icon py-1" href="../storeManagement/rmReceiving.php"><i class="fas fa-inbox fa-fw"></i><span>RM Receiving & Tag</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../storeManagement/storeRequest.php"><i class="fas fa-dolly-flatbed fa-fw"></i><span>Scrap & Replacement</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../loadingReport/loading_report.php"><i class="fas fa-truck-loading fa-fw"></i><span>Loading Toolbox</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../loadingReport/customerPortal.php" target="_blank"><i class="fas fa-search-location fa-fw"></i><span>Customer Tracking</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../fleetLog/fleetLog.php"><i class="fas fa-truck-moving fa-fw"></i><span>Transport & Logistics</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../areaAccess/areaAccess.php"><i class="fas fa-user-shield fa-fw"></i><span>Area Access Log</span></a></li>
                 </ul>
@@ -67,7 +68,7 @@
                 <ul class="list-unstyled ms-3 ps-2 border-start py-1">
                     <li><a class="dropdown-item-icon py-1" href="../QMS/qmsDashboard.php"><i class="fas fa-check-circle fa-fw"></i><span>iQMS (Quality)</span></a></li>
                     <?php if (in_array($userRole, ['admin', 'creator'])): ?>
-                    <li><a class="dropdown-item-icon py-1" href="../maintenanceStock/maintenanceStockUI.php"><i class="fas fa-tools fa-fw"></i><span>Maintenance Stock</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../maintenancePE/maintenanceStockUI.php"><i class="fas fa-tools fa-fw"></i><span>Maintenance Stock</span></a></li>
                     <?php endif; ?>
                 </ul>
             </div>
@@ -162,13 +163,14 @@
             <a class="list-group-item list-group-item-action text-dark" href="../storeManagement/rmReceiving.php"><i class="fas fa-inbox fa-fw me-3"></i> RM Receiving & Tag</a>
             <a class="list-group-item list-group-item-action text-dark" href="../storeManagement/storeRequest.php"><i class="fas fa-dolly-flatbed fa-fw me-3"></i> Scrap & Replacement</a>
             <a class="list-group-item list-group-item-action text-dark" href="../loadingReport/loading_report.php"><i class="fas fa-truck-loading fa-fw me-3"></i> Loading Toolbox</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../loadingReport/customerPortal.php" target="_blank"><i class="fas fa-search-location fa-fw me-3"></i> Customer Tracking</a>
             <a class="list-group-item list-group-item-action text-dark" href="../fleetLog/fleetLog.php"><i class="fas fa-truck-moving fa-fw me-3"></i> Transport & Logistics</a>
             <a class="list-group-item list-group-item-action text-dark" href="../areaAccess/areaAccess.php"><i class="fas fa-user-shield fa-fw me-3"></i> Area Access Log</a>
 
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">QUALITY & MAINTENANCE</div>
             <a class="list-group-item list-group-item-action text-dark" href="../QMS/qmsDashboard.php"><i class="fas fa-check-circle fa-fw me-3"></i> iQMS (Quality)</a>
             <?php if (in_array($userRole, ['admin', 'creator'])): ?>
-            <a class="list-group-item list-group-item-action text-dark" href="../maintenanceStock/maintenanceStockUI.php"><i class="fas fa-tools fa-fw me-3"></i> Maintenance Stock</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../maintenancePE/maintenanceStockUI.php"><i class="fas fa-tools fa-fw me-3"></i> Maintenance Stock</a>
             <?php endif; ?>
 
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">EXECUTIVE & MANAGEMENT</div>

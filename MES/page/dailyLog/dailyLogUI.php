@@ -181,6 +181,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('RM Receiving', 'รับวัตถุดิบเข้าคลัง', '<i class="fas fa-pallet"></i>', '../storeManagement/rmReceiving.php', 'view_warehouse', $themeWh);
                         renderServiceLink('Scrap & Replacement', 'เบิก/คืน วัตถุดิบ', '<i class="fas fa-dolly-flatbed"></i>', '../storeManagement/storeRequest.php', 'view_warehouse', $themeWh);
                         renderServiceLink('Loading Report', 'ตรวจสอบตู้สินค้า (C-TPAT)', '<i class="fas fa-truck-loading"></i>', '../loadingReport/loading_report.php', 'view_warehouse', $themeWh);
+                        renderServiceLink('Customer Tracking', 'ระบบค้นหาเอกสารสำหรับลูกค้า (Public)', '<i class="fas fa-search-location"></i>', '../loadingReport/customerPortal.php', '', $themeWh);
                         renderServiceLink('Transport & Logistics', 'บัญชีเที่ยวรถและค่าขนส่ง', '<i class="fas fa-truck-moving"></i>', '../fleetLog/fleetLog.php', 'view_sales', $themeWh);
                         renderServiceLink('Area Access', 'บันทึกเข้า-ออกพื้นที่หวงห้าม', '<i class="fas fa-user-shield"></i>', '../areaAccess/areaAccess.php', 'view_warehouse', $themeWh);
                         ?>
