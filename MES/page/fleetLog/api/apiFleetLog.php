@@ -1,5 +1,5 @@
 <?php
-// Path: MES/page/fleetLog/api/apiFleetLog.php
+// MES/page/fleetLog/api/apiFleetLog.php
 header('Content-Type: application/json');
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
@@ -8,7 +8,6 @@ require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../logger.php';
 
-// ตรวจสอบสิทธิ์การเข้าถึง
 if (!isset($_SESSION['user'])) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Access Denied']);
@@ -25,8 +24,6 @@ try {
     }
 
     switch ($action) {
-        
-        // 1. ดึงประวัติทั้งหมดมาโชว์ในตาราง
         case 'get_logs':
             $start_date = $_POST['start_date'] ?? date('Y-m-d');
             $end_date = $_POST['end_date'] ?? date('Y-m-d');
@@ -42,19 +39,24 @@ try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$start_date, $end_date_full]);
             $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // เพิ่ม total_cost ลงใน KPI array
             $kpi = [
                 'total' => count($logs), 'vendor' => 0, 'snc' => 0, 'total_cost' => 0,
-                'breakdown' => [ 'total' => [], 'vendor' => [], 'snc' => [] ]
+                'breakdown' => [ 'total' => [], 'vendor' => [], 'snc' => [] ],
+                'cost_breakdown' => [ 'INBOUND' => 0, 'OUTBOUND' => 0, 'OTHER' => 0 ]
             ];
             
             foreach ($logs as $log) {
                 $provider = $log['provider_type'];
                 $vType = $log['vehicle_type'] ?: 'UNKNOWN';
-                
-                // รวมยอดเงินค่าขนส่ง
-                $kpi['total_cost'] += (float)$log['transport_cost'];
+                $tType = $log['trans_type'];
+                $cost = (float)$log['transport_cost'];
+                $kpi['total_cost'] += $cost;
+
+                if (isset($kpi['cost_breakdown'][$tType])) {
+                    $kpi['cost_breakdown'][$tType] += $cost;
+                } else {
+                    $kpi['cost_breakdown']['OTHER'] += $cost;
+                }
 
                 if (!isset($kpi['breakdown']['total'][$vType])) $kpi['breakdown']['total'][$vType] = 0;
                 $kpi['breakdown']['total'][$vType]++;
@@ -77,7 +79,6 @@ try {
             echo json_encode(['success' => true, 'data' => $logs, 'kpi' => $kpi]);
             break;
 
-        // 2. บันทึกข้อมูลรถแบบ Manual
         case 'save_manual_log':
             $log_time = $_POST['log_timestamp'] ? str_replace('T', ' ', $_POST['log_timestamp']) : date('Y-m-d H:i:s');
             $trans_type = $_POST['trans_type'] ?? 'INBOUND';
@@ -85,7 +86,7 @@ try {
             $vehicle = $_POST['vehicle_type'] ?? 'OTHER';
             $car_license = trim($_POST['car_license'] ?? '');
             $remark = trim($_POST['remark'] ?? '');
-            $transportCost = floatval($_POST['transport_cost'] ?? 0); // รับค่า transport_cost
+            $transportCost = floatval($_POST['transport_cost'] ?? 0);
 
             $sql = "INSERT INTO dbo.LOGISTICS_FLEET_LOGS 
                     (log_timestamp, trans_type, provider_type, vehicle_type, car_license, remark, transport_cost, created_by_user_id)
@@ -96,7 +97,6 @@ try {
             echo json_encode(['success' => true, 'message' => 'บันทึกข้อมูลสำเร็จ']);
             break;
 
-        // 3. ดึงรายการใบโหลด C-TPAT
         case 'get_pending_loading':
             $sql = "SELECT l.id, s.po_number, l.car_license, l.container_no, l.container_type, 
                            l.seal_no, s.invoice_no, s.snc_ci_no
@@ -112,7 +112,6 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        // 4. บันทึกรถขาออก (Outbound)
         case 'sync_outbound':
             $loading_id = $_POST['loading_report_id'] ?? 0;
             $stmt = $pdo->prepare("SELECT r.*, s.po_number FROM dbo.LOADING_REPORTS r WITH (NOLOCK) LEFT JOIN dbo.SALES_ORDERS s WITH (NOLOCK) ON r.sales_order_id = s.id WHERE r.id = ?");
@@ -145,7 +144,6 @@ try {
             echo json_encode(['success' => true, 'message' => 'ซิงค์ข้อมูลรถออกสำเร็จ!']);
             break;
 
-        // 5. ดึงข้อมูล 1 รายการเพื่อไปแสดงในฟอร์มแก้ไข
         case 'get_log_detail':
             $log_id = $_POST['log_id'] ?? 0;
             $stmt = $pdo->prepare("SELECT * FROM dbo.LOGISTICS_FLEET_LOGS WITH (NOLOCK) WHERE log_id = ?");
@@ -156,7 +154,6 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
-        // 6. บันทึกการแก้ไข (อนุญาตให้แก้ได้ทุกอันที่ไม่ได้มาจาก C-TPAT)
         case 'update_manual_log':
             $log_id = $_POST['log_id'] ?? 0;
             $log_time = $_POST['log_timestamp'] ? str_replace('T', ' ', $_POST['log_timestamp']) : date('Y-m-d H:i:s');
@@ -165,7 +162,7 @@ try {
             $vehicle = $_POST['vehicle_type'] ?? 'OTHER';
             $car_license = trim($_POST['car_license'] ?? '');
             $remark = trim($_POST['remark'] ?? '');
-            $transportCost = floatval($_POST['transport_cost'] ?? 0); // รับค่า transport_cost
+            $transportCost = floatval($_POST['transport_cost'] ?? 0);
 
             $sql = "UPDATE dbo.LOGISTICS_FLEET_LOGS 
                     SET log_timestamp = ?, trans_type = ?, provider_type = ?, vehicle_type = ?, car_license = ?, remark = ?, transport_cost = ?, updated_at = GETDATE()
@@ -175,7 +172,6 @@ try {
             echo json_encode(['success' => true, 'message' => 'แก้ไขข้อมูลสำเร็จ']);
             break;
 
-        // 7. ลบข้อมูล (เฉพาะข้อมูลที่กรอกมือ)
         case 'delete_log':
             $log_id = $_POST['log_id'] ?? 0;
             $sql = "DELETE FROM dbo.LOGISTICS_FLEET_LOGS WHERE log_id = ? AND loading_report_id IS NULL";
@@ -189,13 +185,10 @@ try {
             }
             break;
 
-        // 8. อัปเดตเฉพาะค่าขนส่งและหมายเหตุ (Quick Update ใช้ได้ทั้ง Auto และ Manual)
         case 'update_quick_cost':
             $log_id = $_POST['log_id'] ?? 0;
             $transportCost = floatval($_POST['transport_cost'] ?? 0);
             $remark = trim($_POST['remark'] ?? '');
-
-            // ตัดเงื่อนไข loading_report_id IS NOT NULL ออก เพื่อให้ Reusable
             $sql = "UPDATE dbo.LOGISTICS_FLEET_LOGS 
                     SET transport_cost = ?, remark = ?, updated_at = GETDATE()
                     WHERE log_id = ?";

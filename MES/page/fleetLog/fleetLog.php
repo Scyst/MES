@@ -1,5 +1,5 @@
 <?php
-// Path: MES/page/fleetLog/fleetLog.php
+// MES/page/fleetLog/fleetLog.php
 require_once __DIR__ . '/../components/init.php';
 
 $pageTitle = "Transport & Logistics";
@@ -124,8 +124,8 @@ $defaultEnd = date('Y-m-t');
                                     </div>
                                     <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle"><i class="fas fa-money-bill-wave fa-lg"></i></div>
                                 </div>
-                                <div class="mt-auto pt-2 border-top border-danger-subtle text-muted small fw-bold">
-                                    *เฉพาะรายการที่ระบุค่าใช้จ่าย
+                                <div class="mt-auto pt-2 border-top border-danger-subtle">
+                                    <div id="breakdownCost" class="d-flex flex-wrap gap-1"></div>
                                 </div>
                             </div>
                         </div>
@@ -416,8 +416,6 @@ $defaultEnd = date('Y-m-t');
 
     <script>
         const API_URL = 'api/apiFleetLog.php';
-        
-        // ฟังก์ชันจัดฟอร์แมตตัวเลขสกุลเงิน
         const formatCurrency = (amount) => {
             return parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         };
@@ -456,6 +454,26 @@ $defaultEnd = date('Y-m-t');
             box.innerHTML = html;
         }
 
+        function renderCostBreakdownBadges(containerId, dataObj, colorClass) {
+            const box = document.getElementById(containerId);
+            if (!dataObj || (dataObj.INBOUND === 0 && dataObj.OUTBOUND === 0 && dataObj.OTHER === 0)) {
+                box.innerHTML = `<span class="text-muted small w-100 text-center py-1">*ยังไม่มีรายการค่าใช้จ่าย</span>`;
+                return;
+            }
+            
+            let html = '';
+            const labels = { 'INBOUND': 'IN', 'OUTBOUND': 'OUT', 'OTHER': 'OTHER' };
+            
+            for (const [tType, cost] of Object.entries(dataObj)) {
+                if (cost > 0) {
+                    html += `<span class="badge bg-${colorClass} bg-opacity-10 text-${colorClass}-emphasis border border-${colorClass}-subtle px-2 py-1" style="font-size: 0.75rem;">
+                                ${labels[tType]} <span class="badge bg-${colorClass} text-white ms-1" style="font-size: 0.75rem;">฿${formatCurrency(cost)}</span>
+                             </span>`;
+                }
+            }
+            box.innerHTML = html;
+        }
+
         async function loadLogs() {
             const tbody = document.getElementById('logTbody');
             const dStart = document.getElementById('filter_start').value;
@@ -477,13 +495,12 @@ $defaultEnd = date('Y-m-t');
                     document.getElementById('kpiTotal').innerText = json.kpi.total || 0;
                     document.getElementById('kpiVendor').innerText = json.kpi.vendor || 0;
                     document.getElementById('kpiSnc').innerText = json.kpi.snc || 0;
-                    
-                    // อัปเดต KPI ค่าใช้จ่าย
                     document.getElementById('kpiTotalCost').innerText = formatCurrency(json.kpi.total_cost);
 
                     renderBreakdownBadges('breakdownTotal', json.kpi.breakdown.total, 'primary');
                     renderBreakdownBadges('breakdownVendor', json.kpi.breakdown.vendor, 'warning');
                     renderBreakdownBadges('breakdownSnc', json.kpi.breakdown.snc, 'success');
+                    renderCostBreakdownBadges('breakdownCost', json.kpi.cost_breakdown, 'danger');
 
                     if (json.data.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5 text-muted"><i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>ไม่มีเที่ยวรถในช่วงวันที่เลือก</td></tr>';
@@ -749,7 +766,6 @@ $defaultEnd = date('Y-m-t');
             ];
 
             Array.from(tbody.rows).forEach(row => {
-                // อัปเดตเงื่อนไขให้ตรวจสอบที่ 10 คอลัมน์
                 if (row.cells.length < 10) return;
                 
                 const time = row.cells[0].innerText.trim();
@@ -768,8 +784,6 @@ $defaultEnd = date('Y-m-t');
                 const ctnData = row.cells[5].innerText.split('\n');
                 const ctnNo = ctnData[0] === '-' ? '' : ctnData[0].trim();
                 const sealNo = ctnData.length > 1 ? ctnData[1].trim() : '';
-
-                // ดึงค่าขนส่งและแปลงเป็นตัวเลขเพื่อ Export
                 const costStr = row.cells[6].innerText.trim();
                 const cost = costStr === '-' ? 0 : parseFloat(costStr.replace(/,/g, ''));
 
@@ -781,8 +795,6 @@ $defaultEnd = date('Y-m-t');
 
             try {
                 const ws = XLSX.utils.aoa_to_sheet(wsData);
-                
-                // ขยายจำนวนคอลัมน์และขนาดให้ครบ
                 ws['!cols'] = [
                     { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, 
                     { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 20 } 
@@ -839,7 +851,7 @@ $defaultEnd = date('Y-m-t');
             const remark = document.getElementById('quick_remark').value;
 
             const fd = new FormData();
-            fd.append('action', 'update_quick_cost'); // ตรงกับ API ที่แก้ใหม่
+            fd.append('action', 'update_quick_cost');
             fd.append('log_id', logId);
             fd.append('transport_cost', transportCost);
             fd.append('remark', remark);
