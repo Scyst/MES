@@ -30,10 +30,6 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
-
-        // ==========================================================
-        // ACTION: 'search_items' (AJAX Autocomplete)
-        // ==========================================================
         case 'search_items':
             if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
             
@@ -43,7 +39,6 @@ try {
                 break;
             }
 
-            // 🌟 ปลดล็อกข้อจำกัดจาก TOP 20 เป็น TOP 150 เพื่อให้ค้นหาเจอรายการได้ครอบคลุมขึ้น
             $sql = "SELECT TOP 150 item_id, sap_no, part_no, part_description 
                     FROM $itemTable WITH (NOLOCK) 
                     WHERE is_active = 1 
@@ -58,16 +53,14 @@ try {
             echo json_encode(['success' => true, 'data' => $items]);
             break;
 
-        // ==========================================================
-        // ACTION: 'get_label_history' (Fixed 500 Error PDO Offset Bug & Filtering)
-        // ==========================================================
         case 'get_label_history':
             if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
             
             $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
             $limit = isset($_GET['limit']) ? max(1, (int)$_GET['limit']) : 100;
             $offset = ($page - 1) * $limit;
-            $search = $_GET['search'] ?? '';
+            $search = trim($_GET['search'] ?? '');
+            $status_filter = $_GET['status'] ?? 'ACTIVE'; 
             $whereClause = "t.created_at >= DATEADD(DAY, -30, GETDATE()) 
                             AND t.transfer_uuid NOT LIKE 'REQ-%' 
                             AND t.transfer_uuid NOT LIKE 'TRF-%'";
@@ -78,6 +71,13 @@ try {
                 $params[] = $currentUser['id'];
             }
 
+            if ($status_filter === 'ACTIVE') {
+                $whereClause .= " AND t.status != 'CANCELLED'";
+            } elseif ($status_filter !== 'ALL') {
+                $whereClause .= " AND t.status = ?";
+                $params[] = $status_filter;
+            }
+
             if ($search !== '') {
                 $whereClause .= " AND (t.transfer_uuid LIKE ? OR i.sap_no LIKE ? OR i.part_no LIKE ?)";
                 $params[] = "%{$search}%";
@@ -85,18 +85,23 @@ try {
                 $params[] = "%{$search}%";
             }
 
-            // นับจำนวนรวม
-            $countSql = "SELECT COUNT(*) FROM $transferTable t WITH (NOLOCK) JOIN $itemTable i WITH (NOLOCK) ON t.item_id = i.item_id WHERE $whereClause";
+            $countSql = "SELECT COUNT(*) 
+                         FROM " . TRANSFER_ORDERS_TABLE . " t WITH (NOLOCK) 
+                         JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON t.item_id = i.item_id 
+                         WHERE $whereClause";
             $countStmt = $pdo->prepare($countSql);
             $countStmt->execute($params);
             $totalRecords = (int)$countStmt->fetchColumn();
-
-            // ดึงข้อมูล
             $sql = "SELECT 
-                        t.transfer_uuid, t.quantity, t.status, t.created_at,
-                        i.sap_no, i.part_no, i.part_description 
-                    FROM $transferTable t WITH (NOLOCK)
-                    JOIN $itemTable i WITH (NOLOCK) ON t.item_id = i.item_id
+                        t.transfer_uuid, 
+                        t.quantity, 
+                        t.status, 
+                        t.created_at,
+                        i.sap_no, 
+                        i.part_no, 
+                        i.part_description 
+                    FROM " . TRANSFER_ORDERS_TABLE . " t WITH (NOLOCK)
+                    JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON t.item_id = i.item_id
                     WHERE $whereClause
                     ORDER BY t.created_at DESC 
                     OFFSET $offset ROWS FETCH NEXT $limit ROWS ONLY";
@@ -110,13 +115,11 @@ try {
                 'data' => $history, 
                 'total' => $totalRecords,
                 'page' => $page,
-                'total_pages' => ceil($totalRecords / $limit)
+                'total_pages' => ceil($totalRecords / $limit),
+                'message' => 'Fetched history successfully'
             ]);
             break;
 
-        // ==========================================================
-        // ACTION: 'cancel_batch_labels' (Fixed Permission Override)
-        // ==========================================================
         case 'cancel_batch_labels':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
             
@@ -132,8 +135,6 @@ try {
 
             $pdo->beginTransaction();
             $note_update = "\nBulk Cancelled by " . $currentUser['username'] . " at " . date('Y-m-d H:i:s');
-            
-            // 🌟 Base SQL
             $updSql = "UPDATE $transferTable 
                        SET status = 'CANCELLED', 
                            notes = ISNULL(notes, '') + ? 
@@ -141,14 +142,11 @@ try {
                          AND transfer_uuid LIKE ?";
             
             $params = [$note_update, $lot_no . '-%'];
-
-            // 🌟 ถ้าไม่ใช่ระดับ Admin/Manager จะลบได้เฉพาะที่ตัวเองปริ้นเท่านั้น
             if (!hasPermission('manage_production')) {
                 $updSql .= " AND created_by_user_id = ?";
                 $params[] = $currentUser['id'];
             }
 
-            // 🌟 ถ้ามีการระบุช่วง (Range)
             if ($is_range) {
                 $updSql .= " AND TRY_CAST(RIGHT(transfer_uuid, CHARINDEX('-', REVERSE(transfer_uuid)) - 1) AS INT) BETWEEN ? AND ?";
                 $params[] = $start_no;
@@ -168,9 +166,6 @@ try {
             }
             break;
 
-        // ==========================================================
-        // ACTION: 'cancel_label' (ยกเลิก Ghost Label)
-        // ==========================================================
         case 'cancel_label':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
             
@@ -190,7 +185,6 @@ try {
                 throw new Exception("ไม่สามารถยกเลิกได้ เนื่องจากสถานะปัจจุบันคือ {$row['status']}");
             }
             
-            // ตรวจสอบสิทธิ์: ยกเลิกได้เฉพาะของตัวเอง หรือเป็น Manager
             if ($row['created_by_user_id'] != $currentUser['id'] && !hasPermission('manage_production')) {
                 throw new Exception("คุณไม่มีสิทธิ์ยกเลิก Label ที่สร้างโดยผู้อื่น");
             }
@@ -203,9 +197,6 @@ try {
             echo json_encode(['success' => true, 'message' => "ยกเลิกรายการ {$transfer_uuid} สำเร็จ"]);
             break;
 
-        // ==========================================================
-        // ACTION: 'create_transfer_order'
-        // ==========================================================
         case 'create_transfer_order':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
 
@@ -242,9 +233,6 @@ try {
             echo json_encode(['success' => true, 'message' => 'ใบโอนย้ายถูกสร้าง (Pending) สำเร็จ', 'transfer_uuid' => $transfer_uuid, 'transfer_id' => $new_transfer_id]);
             break;
 
-        // ==========================================================
-        // ACTION: 'get_transfer_details'
-        // ==========================================================
         case 'get_transfer_details':
             if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
             
@@ -273,9 +261,6 @@ try {
             echo json_encode(['success' => true, 'data' => $details]);
             break;
 
-        // ==========================================================
-        // ACTION: 'confirm_transfer' 
-        // ==========================================================
         case 'confirm_transfer':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
             
@@ -359,9 +344,6 @@ try {
             echo json_encode(['success' => true, 'message' => 'รับของเข้าสำเร็จ! สต็อกถูกอัปเดตแล้ว']);
             break;
 
-        // ==========================================================
-        // ACTION: 'reverse_transfer'
-        // ==========================================================
         case 'reverse_transfer':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
             
@@ -437,9 +419,6 @@ try {
             echo json_encode(['success' => true, 'message' => 'ยกเลิกรายการสำเร็จ! สต็อกถูกย้อนกลับแล้ว']);
             break;
 
-        // ==========================================================
-        // ACTION: 'get_transfer_history'
-        // ==========================================================
         case 'get_transfer_history':
             if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
 
@@ -521,9 +500,6 @@ try {
             echo json_encode(['success' => true, 'data' => $history, 'total' => $total, 'page' => $page]);
             break;
 
-        // ==========================================================
-        // ACTION: 'cancel_pending_transfer' (เฉพาะผู้มีสิทธิ์ Manage)
-        // ==========================================================
         case 'cancel_pending_transfer':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
             
@@ -563,9 +539,6 @@ try {
             echo json_encode(['success' => true, 'message' => 'ยกเลิกใบโอน (Pending) สำเร็จ']);
             break;
 
-        // ==========================================================
-        // ACTION: 'create_batch_transfer_orders'
-        // ==========================================================
         case 'create_batch_transfer_orders':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
 

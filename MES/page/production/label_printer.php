@@ -192,9 +192,15 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="input-group input-group-sm mb-1">
-                                <span class="input-group-text bg-light text-muted"><i class="fas fa-search"></i></span>
-                                <input type="text" id="historySearch" class="form-control" placeholder="ค้นหาจาก UUID, Lot, SAP, Part No..." autocomplete="off">
+                            <div class="input-group input-group-sm mb-1 shadow-sm">
+                                <select id="historyStatusFilter" class="form-select bg-light fw-bold text-secondary border-end-0" style="max-width: 140px;" onchange="loadLabelHistory(1)">
+                                    <option value="ACTIVE" selected>ซ่อนที่ยกเลิก</option>
+                                    <option value="ALL">แสดงทั้งหมด</option>
+                                    <option value="PENDING">PENDING</option>
+                                    <option value="COMPLETED">COMPLETED</option>
+                                </select>
+                                <span class="input-group-text bg-white text-muted border-start-0"><i class="fas fa-search"></i></span>
+                                <input type="text" id="historySearch" class="form-control border-start-0 ps-0" placeholder="ค้นหาจาก UUID, Lot, SAP, Part No..." autocomplete="off">
                             </div>
                         </div>
                         <div class="card-body p-0 flex-grow-1">

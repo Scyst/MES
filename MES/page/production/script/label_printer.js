@@ -143,6 +143,7 @@ async function loadLabelHistory(page = historyCurrentPage) {
     const tbody = document.getElementById('labelHistoryBody');
     const btnRefresh = document.getElementById('btnRefreshHistory');
     const searchVal = document.getElementById('historySearch')?.value.trim() || '';
+    const statusVal = document.getElementById('historyStatusFilter')?.value || 'ACTIVE'; 
     
     if (!tbody) return;
     if (btnRefresh) {
@@ -151,8 +152,9 @@ async function loadLabelHistory(page = historyCurrentPage) {
     }
 
     try {
-        const params = { page: page, limit: 100, search: searchVal };
+        const params = { page: page, limit: 100, search: searchVal, status: statusVal };
         const res = await sendRequest(TRANSFER_API_URL, 'get_label_history', 'GET', null, params);
+        
         tbody.innerHTML = '';
 
         if (res.success && res.data.length > 0) {
