@@ -1,7 +1,5 @@
 <?php
 // MES/page/autoInvoice/api/api_invoice.php
-
-// 1. Header & Error Handling
 header('Content-Type: application/json; charset=utf-8');
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
@@ -10,7 +8,6 @@ require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../../config/config.php';
 
-// 2. Auth Check (PBAC)
 if (!isset($_SESSION['user']) || !hasPermission('manage_invoice')) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Access Denied: You do not have permission to manage invoices.']);
@@ -20,12 +17,8 @@ if (!isset($_SESSION['user']) || !hasPermission('manage_invoice')) {
 $currentUser = $_SESSION['user'];
 $updatedBy = $currentUser['username'];
 $userId = $currentUser['id'] ?? 0;
-
-// 3. Input Handling
 $input = json_decode(file_get_contents('php://input'), true);
 $action = $_GET['action'] ?? ($input['action'] ?? '');
-
-// 4. Performance (Unlock Session)
 session_write_close();
 
 try {
@@ -34,7 +27,7 @@ try {
     switch ($action) {
 
         case 'get_history':
-            $dateType = $_GET['date_type'] ?? 'created_at'; // 📌 รับค่าโหมดวันที่
+            $dateType = $_GET['date_type'] ?? 'created_at'; 
             $startDate = $_GET['start'] ?? '';
             $endDate = $_GET['end'] ?? '';
 
@@ -43,12 +36,10 @@ try {
             $topLimit = "TOP 100";
 
             if ($startDate && $endDate) {
-                // 📌 แยกลอจิกการฟิลเตอร์ตามประเภทที่เลือก
                 if ($dateType === 'invoice_date') {
-                    // แปลง DD/MM/YYYY ใน JSON เป็น DATE แล้วเทียบ (รหัส 103 คือ format ของอังกฤษ/ไทย)
-                    $whereSql .= " AND TRY_CONVERT(DATE, JSON_VALUE(shipping_data_json, '$.invoice_date'), 103) BETWEEN ? AND ?";
+                    $whereSql .= " AND invoice_date_computed BETWEEN ? AND ?";
                 } elseif ($dateType === 'etd_date') {
-                    $whereSql .= " AND TRY_CONVERT(DATE, JSON_VALUE(shipping_data_json, '$.etd_date'), 103) BETWEEN ? AND ?";
+                    $whereSql .= " AND etd_date_computed BETWEEN ? AND ?";
                 } else {
                     $whereSql .= " AND CAST(created_at AS DATE) BETWEEN ? AND ?";
                 }
@@ -119,6 +110,7 @@ try {
 
         case 'import_invoice':
             $invoice_no = $input['invoice_no'] ?? 'AUTO';
+            $report_id = !empty($input['report_id']) ? (int)$input['report_id'] : null; 
             $remark = $input['remark'] ?? '';
             
             $customerJson = json_encode($input['customer'] ?? [], JSON_UNESCAPED_UNICODE);
@@ -129,7 +121,7 @@ try {
             $stmt = $pdo->prepare("
                 EXEC {$spName}
                     @invoice_no = ?, 
-                    @report_id = NULL,
+                    @report_id = ?, 
                     @customer_json = ?, 
                     @shipping_json = ?, 
                     @details_json = ?, 
@@ -139,6 +131,7 @@ try {
 
             $stmt->execute([
                 $invoice_no, 
+                $report_id,
                 $customerJson, 
                 $shippingJson, 
                 $detailsJson, 
@@ -147,9 +140,6 @@ try {
             ]);
 
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            // ไม่ต้องใช้ $pdo->commit();
-
             if ($result && $result['success'] == 1) {
                 echo json_encode([
                     'success' => true, 
@@ -216,16 +206,32 @@ try {
             ]);
             break;
 
+        case 'get_exchange_rate':
+            $sql = "SELECT TOP 1 exchange_rate 
+                    FROM dbo.MANPOWER_CALENDAR WITH (NOLOCK) 
+                    WHERE exchange_rate IS NOT NULL 
+                    ORDER BY calendar_date DESC";
+            $stmt = $pdo->query($sql);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $rate = $row ? (float)$row['exchange_rate'] : 35.00;
+
+            echo json_encode([
+                'success' => true, 
+                'data' => [
+                    'exchangeRate' => number_format($rate, 2, '.', '')
+                ]
+            ]);
+            break;
+
         case 'update_status':
             $invoice_no = $input['invoice_no'] ?? '';
             $status = $input['status'] ?? '';
-            $remark = trim($input['remark'] ?? ''); // สำหรับ void_reason
+            $remark = trim($input['remark'] ?? '');
             
             if (!$invoice_no || !$status) throw new Exception("ข้อมูลไม่ครบถ้วน");
 
             if ($status === 'Voided') {
                 if (!$remark) throw new Exception("ต้องระบุเหตุผลการยกเลิกบิล");
-                // อัปเดต Column void_reason ตรงๆ ตาม Structure ใหม่
                 $sql = "UPDATE dbo.FINANCE_INVOICES 
                         SET doc_status = ?, void_reason = ?
                         WHERE invoice_no = ? AND is_active = 1";

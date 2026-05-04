@@ -101,9 +101,6 @@
 
                                         <div class="col-12 mb-2"><label class="form-label small">Feeder Vessel</label><input type="text" id="editVessel" class="form-control form-control-sm"></div>
                                         <div class="col-12 mb-2"><label class="form-label small">Mother Vessel</label><input type="text" id="editMotherVessel" class="form-control form-control-sm"></div>
-
-                                        <div class="col-6 mb-2"><label class="form-label small">Container No.</label><input type="text" id="editContainer" class="form-control form-control-sm"></div>
-                                        <div class="col-6 mb-2"><label class="form-label small">Seal No.</label><input type="text" id="editSeal" class="form-control form-control-sm"></div>
                                     </div>
                                 </div>
                             </div>
@@ -117,13 +114,15 @@
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-bordered align-middle mb-0" id="editItemsTable" style="font-size: 0.85rem; min-width: 1400px;">
+                                <table class="table table-bordered align-middle mb-0" id="editItemsTable" style="font-size: 0.85rem; min-width: 1600px;">
                                     <thead class="table-light text-center">
                                         <tr>
                                             <th style="width: 150px;">Product Type <small class="text-danger d-block">(หมวดหมู่สินค้า)</small></th>
                                             <th style="width: 140px;">SKU <small class="d-block">(รหัสสินค้า)</small></th>
                                             <th style="min-width: 250px;">Description</th>
                                             <th style="width: 120px;">Carton No</th>
+                                            <th style="width: 130px;">Container No</th>
+                                            <th style="width: 130px;">Seal No</th>
                                             <th style="width: 90px;">Qty</th>
                                             <th style="width: 110px;">Price(USD)</th>
                                             <th style="width: 90px;">N.W (Ex)</th>
@@ -135,7 +134,8 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        </tbody>
+                                        <!-- แถวตัวอย่าง (จะถูกลบออกเมื่อเพิ่มแถวใหม่) -->
+                                    </tbody>
                                 </table>
                             </div>
                         </div>

@@ -2,11 +2,9 @@ window.formatUniversalDate = function(val) {
     if (!val) return '';
     let d;
     
-    // 1. กรณีเป็นตัวเลขจาก Excel (เช่น 46072)
     if (!isNaN(val) && Number(val) > 10000) {
         d = new Date(Math.round((Number(val) - 25569) * 86400 * 1000));
     } 
-    // 2. กรณีมี / (เช่น 20/02/2026) -> ต้องแปลงเป็น YYYY-MM-DD ให้ JS เข้าใจก่อน
     else if (typeof val === 'string' && val.includes('/')) {
         let parts = val.split('/');
         if (parts.length === 3) {
@@ -16,12 +14,10 @@ window.formatUniversalDate = function(val) {
             d = new Date(`${year}-${month}-${day}`);
         }
     } 
-    // 3. กรณีทั่วไป
     else {
         d = new Date(val);
     }
 
-    // จัด Format ส่งกลับเป็น DD/MM/YYYY คืนให้ Database
     if (!isNaN(d.getTime())) {
         const day = String(d.getDate()).padStart(2, '0');
         const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -55,7 +51,6 @@ window.formatDateForInput = function(val) {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
-    // --- 1. Drag & Drop Logic ---
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
@@ -86,7 +81,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- 🌟 เริ่มส่วน UI/UX ใหม่ (การตั้งค่าวันที่ & คำนวณยอด) 🌟 ---
     function setDefaultDates() {
         const d = new Date();
         const year = d.getFullYear();
@@ -99,10 +93,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (sd) sd.value = `${year}-${month}-01`;
         if (ed) ed.value = `${year}-${month}-${lastDay}`;
     }
-    // เรียกใช้ตอนโหลดหน้า เพื่อตั้งให้เป็นเดือนปัจจุบันเสมอ
     setDefaultDates();
 
-    // ดักจับการเปลี่ยนวันที่ ถ้าเปลี่ยนปุ๊บให้โหลดข้อมูลใหม่ทันที
     document.getElementById('filterStartDate')?.addEventListener('change', loadHistory);
     document.getElementById('filterEndDate')?.addEventListener('change', loadHistory);
     document.getElementById('filterDateType')?.addEventListener('change', loadHistory);
@@ -140,37 +132,27 @@ document.addEventListener('DOMContentLoaded', function() {
         if (elThb) elThb.innerText = '฿' + thbValue.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
-    // เมื่อแก้เรทเงิน ให้คำนวณ THB ใหม่ทันที
     document.getElementById('exchangeRate')?.addEventListener('input', () => calculateTHB());
-    // --- 🌍 ระบบดึงเรทเงินอัตโนมัติ (Live Exchange Rate) ---
     async function fetchExchangeRate() {
         const rateInput = document.getElementById('exchangeRate');
         try {
-            // โชว์สถานะกำลังโหลดชั่วคราว (ถ้าต้องการ)
-            // if (rateInput) rateInput.value = '...'; 
+            const res = await fetch('api/api_invoice.php?action=get_exchange_rate');
+            const resData = await res.json();
             
-            const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-            const data = await res.json();
-            
-            if (data && data.rates && data.rates.THB) {
-                const thbRate = data.rates.THB;
+            if (resData.success && resData.data.exchangeRate) {
                 if (rateInput) {
-                    rateInput.value = thbRate.toFixed(2);
+                    rateInput.value = resData.data.exchangeRate;
                 }
-                // ดึงค่าได้ปุ๊บ สั่งให้ระบบคำนวณเงินบาทบน Toolbar ใหม่ทันที
-                calculateTHB();
             }
-        } catch (err) { 
-            console.warn("Failed to fetch exchange rate, using default 35.00:", err); 
-            // ถ้า API ล่ม หรือไม่มีเน็ต ก็จะใช้ค่า 35.00 ที่อยู่ใน HTML ต่อไป
+            calculateTHB();
+        } catch (err) {
+            console.error("Local Exchange Rate fetch failed:", err); 
             calculateTHB();
         }
     }
     
-    // เรียกใช้งานดึงเรทเงินทันทีตอนโหลดหน้าเว็บ
     fetchExchangeRate();
 
-    // --- 2. Load History Logic ---
     function loadHistory() {
         const tbody = document.querySelector('#historyTable tbody');
         if (!tbody) return;
@@ -203,13 +185,10 @@ document.addEventListener('DOMContentLoaded', function() {
         tbody.innerHTML = '';
 
         let filteredData = allInvoiceData;
-
-        // ฟิลเตอร์จากปุ่มสถานะ
         if (currentStatusFilter !== 'ALL') {
             filteredData = filteredData.filter(inv => inv.doc_status === currentStatusFilter);
         }
 
-        // ฟิลเตอร์จากช่อง Live Search (ค้นหาพร้อมกันหลายคอลัมน์)
         const searchInput = document.getElementById('universalSearch');
         const searchText = (searchInput?.value || '').toLowerCase().trim();
         if (searchText) {
@@ -221,13 +200,11 @@ document.addEventListener('DOMContentLoaded', function() {
             );
         }
 
-        // ฟิลเตอร์ตามทีม
         const filterTeam = document.getElementById('filterTeam')?.value || 'ALL';
         if (filterTeam !== 'ALL') {
             filteredData = filteredData.filter(inv => inv.team_name === filterTeam);
         }
 
-        // อัปเดตยอดรวมใน Toolbar จากข้อมูลที่ผ่านการกรองแล้ว
         calculateToolbarSums(filteredData);
 
         if (filteredData.length === 0) {
@@ -315,36 +292,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateKPIs() {
-        // ฟังก์ชันช่วยรวมยอดเงิน
         const sumAmount = (arr) => arr.reduce((sum, inv) => sum + (parseFloat(String(inv.total_amount).replace(/,/g, '')) || 0), 0);
         const formatMoney = (val) => '$' + val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-        // 1. หมวด ALL
         document.getElementById('kpi-all').innerText = allInvoiceData.length;
         if(document.getElementById('kpi-all-val')) document.getElementById('kpi-all-val').innerText = formatMoney(sumAmount(allInvoiceData));
 
-        // 2. หมวด Pending
         const pendingArr = allInvoiceData.filter(d => d.doc_status === 'Pending');
         document.getElementById('kpi-pending').innerText = pendingArr.length;
         if(document.getElementById('kpi-pending-val')) document.getElementById('kpi-pending-val').innerText = formatMoney(sumAmount(pendingArr));
 
-        // 3. หมวด Exported
         const exportedArr = allInvoiceData.filter(d => d.doc_status === 'Exported');
         document.getElementById('kpi-exported').innerText = exportedArr.length;
         if(document.getElementById('kpi-exported-val')) document.getElementById('kpi-exported-val').innerText = formatMoney(sumAmount(exportedArr));
 
-        // 4. หมวด Invoiced (ใน JS ของคุณน่าจะตกการแสดงผลจำนวนของหมวดนี้ไป ผมเติมให้ครับ)
         const invoicedArr = allInvoiceData.filter(d => d.doc_status === 'Invoiced');
         const kpiInvoicedEl = document.getElementById('kpi-invoiced');
         if(kpiInvoicedEl) kpiInvoicedEl.innerText = invoicedArr.length;
         if(document.getElementById('kpi-invoiced-val')) document.getElementById('kpi-invoiced-val').innerText = formatMoney(sumAmount(invoicedArr));
 
-        // 5. หมวด Paid
         const paidArr = allInvoiceData.filter(d => d.doc_status === 'Paid');
         document.getElementById('kpi-paid').innerText = paidArr.length;
         if(document.getElementById('kpi-paid-val')) document.getElementById('kpi-paid-val').innerText = formatMoney(sumAmount(paidArr));
 
-        // 6. หมวด Voided
         const voidedArr = allInvoiceData.filter(d => d.doc_status === 'Voided');
         document.getElementById('kpi-voided').innerText = voidedArr.length;
         if(document.getElementById('kpi-voided-val')) document.getElementById('kpi-voided-val').innerText = formatMoney(sumAmount(voidedArr));
@@ -364,20 +334,17 @@ document.addEventListener('DOMContentLoaded', function() {
     window.loadHistory = loadHistory;
     loadHistory();
 
-    // --- 🌟 ระบบ Live Search (Debounce แบบไม่กระตุก) 🌟 ---
     const universalSearch = document.getElementById('universalSearch');
     if (universalSearch) {
         let debounceTimer;
         universalSearch.addEventListener('input', function() {
             clearTimeout(debounceTimer);
-            // รอ 0.4 วินาทีหลังหยุดพิมพ์ ถึงจะสั่งกรองข้อมูล
             debounceTimer = setTimeout(() => {
                 renderTable(); 
             }, 400); 
         });
     }
 
-    // --- 🌟 ปุ่ม Reset Filter รูปแบบใหม่ 🌟 ---
     window.clearFilter = function() {
         setDefaultDates(); 
         if (document.getElementById('universalSearch')) {
@@ -391,7 +358,6 @@ document.addEventListener('DOMContentLoaded', function() {
         loadHistory();
     };
 
-    // --- 5. View Versions Logic ---
     window.viewVersions = function(invoiceNo) {
         const modalEl = document.getElementById('versionModal');
         const modal = new bootstrap.Modal(modalEl);
@@ -442,7 +408,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     };
 
-    // --- 3. Process Excel & Submit Logic (Client-Side Parsing) ---
     const formImport = document.getElementById('formImport');
     if (formImport) {
         formImport.addEventListener('submit', function(e) {
@@ -460,7 +425,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    
                     const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
                     
                     let invoices = {};
@@ -476,15 +440,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             let rowUpper = row.map(c => String(c).toUpperCase().replace(/_/g, ' '));
                             if (rowUpper.some(c => c.includes('INVOICE NO')) && rowUpper.some(c => c.includes('CUSTOMER'))) {
                                 headerFound = true;
-                                // แก้ไขการค้นหาหัวคอลัมน์ให้ยืดหยุ่นขึ้น (ป้องกันปัญหามีการเคาะวรรคเกิน)
                                 const findIdx = (keyword) => rowUpper.findIndex(c => c === keyword || c.includes(keyword));
-                                
+
                                 idx.invoice_no = findIdx('INVOICE NO');
                                 idx.booking = findIdx('BOOKING NO') !== -1 ? findIdx('BOOKING NO') : findIdx('BOOKING');
-                                
-                                // 📌 1. เพิ่มการค้นหาคอลัมน์ TEAM
                                 idx.team = findIdx('TEAM'); 
-                                
                                 idx.customer = findIdx('CUSTOMER NAME') !== -1 ? findIdx('CUSTOMER NAME') : findIdx('CUSTOMER');
                                 idx.address = findIdx('CUSTOMER ADDRESS') !== -1 ? findIdx('CUSTOMER ADDRESS') : findIdx('ADDRESS');
                                 idx.incoterms = findIdx('INCOTERMS');
@@ -551,15 +511,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                         payment_terms: getVal(idx.payment, 'O/A 30 DAYS AFTER B/L DATE.')
                                     },
                                     shippingData: {
-                                        // 📌 2. ดึงค่า Team จากคอลัมน์ใน Excel ใส่เข้าไปใน Object Shipping
                                         team_name: getVal(idx.team), 
                                         booking_no: getVal(idx.booking),
                                         port_loading: getVal(idx.port_loading, 'LAEM CHABANG, THAILAND'),
                                         port_discharge: getVal(idx.port_discharge), 
                                         feeder_vessel: getVal(idx.vessel),
                                         mother_vessel: getVal(idx.mother),
-                                        container_no: getVal(idx.container), 
-                                        seal_no: getVal(idx.seal), 
+                                        container_no: "", 
+                                        seal_no: "", 
                                         invoice_date: window.formatUniversalDate(getVal(idx.invoice_date)), 
                                         etd_date: window.formatUniversalDate(getVal(idx.etd)), 
                                         eta_date: window.formatUniversalDate(getVal(idx.eta)),
@@ -584,7 +543,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                     gw: parseFloat(String(getVal(idx.gw)).replace(/,/g, '')) || 0, 
                                     cbm: parseFloat(String(getVal(idx.cbm)).replace(/,/g, '')) || 0, 
                                     po: getVal(idx.po), 
-                                    carton: getVal(idx.carton), 
+                                    carton: getVal(idx.carton),
+                                    container_no: getVal(idx.container),
+                                    seal_no: getVal(idx.seal),
                                     marks: getVal(idx.marks)
                                 });
                             }
@@ -603,7 +564,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         for (const key of invoiceKeys) {
                             const invData = invoices[key]; 
+                            const containerList = [];
+                            const sealList = [];
+                            invData.details.forEach(item => {
+                                containerList.push(item.container_no || "");
+                                sealList.push(item.seal_no || "");
+                            });
                             
+                            invData.shippingData.container_no = containerList.join(',');
+                            invData.shippingData.seal_no = sealList.join(',');
+
                             const payload = {
                                 action: 'import_invoice',
                                 invoice_no: key, 
@@ -667,7 +637,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- 4. ดาวน์โหลด Excel Template ---
     const btnDownloadTemplate = document.getElementById('btnDownloadTemplate');
     if (btnDownloadTemplate) {
         btnDownloadTemplate.addEventListener('click', function() {
@@ -675,7 +644,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- 5. แก้ไข/สร้าง Invoice บนเว็บ (Web Edit & Create) ---
     window.openWebEdit = function(id) {
         Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         fetch(`api/api_invoice.php?action=get_invoice_detail&id=${id}`)
@@ -763,6 +731,9 @@ document.addEventListener('DOMContentLoaded', function() {
             </td>
             <td><input type="text" class="form-control form-control-sm i-desc" value="${item.description || ''}"></td>
             <td><input type="text" class="form-control form-control-sm i-carton" value="${item.carton_no || ''}"></td>
+            <td><input type="text" class="form-control form-control-sm i-container" value="${item.container_no || ''}" placeholder="ตู้ No."></td>
+            <td><input type="text" class="form-control form-control-sm i-seal" value="${item.seal_no || ''}" placeholder="ซีล No."></td>
+
             <td><input type="number" step="0.01" class="form-control form-control-sm i-qty" value="${item.qty_carton || 1}" required></td>
             <td><input type="number" step="0.01" class="form-control form-control-sm i-price" value="${item.unit_price || 0}" required></td>
             <td><input type="number" step="0.01" class="form-control form-control-sm i-nw text-muted" value="${item.net_weight || 0}"></td>
@@ -847,6 +818,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (rows.length === 0) return Swal.fire('แจ้งเตือน', 'ต้องมีสินค้าอย่างน้อย 1 รายการ', 'warning');
         
         const details = [];
+        const containerList = [];
+        const sealList = [];
+
         rows.forEach(tr => {
             details.push({
                 product_type: tr.querySelector('.i-type').value,
@@ -861,6 +835,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 po: tr.querySelector('.i-po').value,
                 marks: tr.querySelector('.i-marks').value
             });
+            containerList.push(tr.querySelector('.i-container').value.trim());
+            sealList.push(tr.querySelector('.i-seal').value.trim());
         });
 
         const payload = {
@@ -887,8 +863,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 eta_date: window.formatUniversalDate(document.getElementById('editEta').value),
                 feeder_vessel: document.getElementById('editVessel').value,
                 mother_vessel: document.getElementById('editMotherVessel').value,
-                container_no: document.getElementById('editContainer').value,
-                seal_no: document.getElementById('editSeal').value
+                container_no: containerList.join(','),
+                seal_no: sealList.join(',')
             },
             details: details
         };
@@ -940,15 +916,20 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('editEta').value = window.formatDateForInput(inv.shipping.eta_date);
         document.getElementById('editVessel').value = inv.shipping.feeder_vessel || '';
         document.getElementById('editMotherVessel').value = inv.shipping.mother_vessel || '';
-        document.getElementById('editContainer').value = inv.shipping.container_no || '';
-        document.getElementById('editSeal').value = inv.shipping.seal_no || '';
+        
+        const containersArr = (inv.shipping.container_no || '').split(',').map(s => s.trim());
+        const sealsArr = (inv.shipping.seal_no || '').split(',').map(s => s.trim());
         
         document.getElementById('editRemark').value = ''; 
         
         const tbody = document.querySelector('#editItemsTable tbody');
         tbody.innerHTML = '';
         if (inv.details && inv.details.length > 0) {
-            inv.details.forEach(item => addEditItemRow(item));
+            inv.details.forEach((item, idx) => {
+                item.container_no = containersArr[idx] || '';
+                item.seal_no = sealsArr[idx] || '';
+                addEditItemRow(item);
+            });
         } else {
             addEditItemRow(); 
         }
@@ -1051,6 +1032,8 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmButtonText: '<i class="fas fa-undo me-1"></i> ใช่, กู้คืนเลย!'
         }).then((result) => {
             if (result.isConfirmed) {
+                Swal.fire({ title: 'Restoring...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
                 fetch('api/api_invoice.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1064,12 +1047,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         Swal.fire('Error', resData.message, 'error');
                     }
-                });
+                })
+                .catch(() => Swal.fire('Error', 'Connection failed', 'error'));
             }
         });
     };
 
     function updateInvoiceStatus(invoiceNo, status, remark) {
+        Swal.fire({ 
+            title: 'Processing...', 
+            allowOutsideClick: false, 
+            didOpen: () => Swal.showLoading() 
+        });
+
         fetch('api/api_invoice.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1083,6 +1073,10 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 Swal.fire('Error', resData.message, 'error');
             }
+        })
+        .catch(err => {
+            console.error(err);
+            Swal.fire('Error', 'Network or Server Error', 'error');
         });
     }
 
