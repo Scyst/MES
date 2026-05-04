@@ -62,7 +62,7 @@ function formatDocDate($dateStr) {
     if (empty($dateStr) || $dateStr === '-') return '-';
     $d = DateTime::createFromFormat('d/m/Y', $dateStr);
     if ($d) {
-        return strtoupper($d->format('F d, Y')); // F = Full month, d = Day, Y = Year
+        return strtoupper($d->format('F d, Y'));
     }
     $timestamp = strtotime($dateStr);
     if ($timestamp) {
@@ -78,7 +78,6 @@ function formatDocDate($dateStr) {
     <title>Commercial Invoice - <?= htmlspecialchars($header['invoice_no']) ?></title>
     <link rel="stylesheet" href="../../utils/libs/bootstrap.min.css">
     <style>
-        /* Reset & Base */
         body { 
             font-family: 'Arial', Helvetica, sans-serif; 
             font-size: 9px; 
@@ -91,7 +90,6 @@ function formatDocDate($dateStr) {
         }
         * { box-sizing: border-box; }
         
-        /* A4 Page Setup */
         .a4-page { 
             width: 210mm; 
             min-height: 297mm; 
@@ -103,7 +101,6 @@ function formatDocDate($dateStr) {
             line-height: 1.3; 
         }
         
-        /* Typography & Alignment */
         .text-center { text-align: center; }
         .text-right { text-align: right; }
         .text-left { text-align: left; }
@@ -117,21 +114,17 @@ function formatDocDate($dateStr) {
             line-height: 1.7;
         }
         
-        /* Header Section */
         .company-header { text-align: center; margin-bottom: 20px; line-height: 1.3; font-size: 9px; font-weight: bold; }
         .company-name { font-size: 20px; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
         .doc-title { font-size: 18px; font-weight: bold; text-align: center; text-decoration: underline; margin-bottom: 20px; letter-spacing: 1px; }
         
-        /* Top Box Table */
         table.border-box-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 9px; border: 1px solid #000; }
         table.border-box-table > tbody > tr > td { padding: 3px 8px; vertical-align: middle; border: 1px solid #000; }
         
-        /* Inner Table */
         table.inner-table { width: 100%; border-collapse: collapse; }
         table.inner-table td { padding: 2px 0; vertical-align: top; border: none !important; }
         .lbl-col { display: inline-block; font-weight: bold; }
         
-        /* Items Table */
         table.items-table { 
             width: 100%; 
             border-collapse: collapse;

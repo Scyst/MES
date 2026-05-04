@@ -19,12 +19,9 @@ $pageIcon = "fas fa-file-invoice-dollar";
     <link rel="stylesheet" href="../sales/css/salesDashboard.css"> 
     <link rel="stylesheet" href="css/finance_dashboard.css?v=<?php echo time(); ?>">
     <style>
-        /* สไตล์เสริมสำหรับ KPI Card ให้คลิกได้ */
         .kpi-card { cursor: pointer; transition: all 0.2s ease-in-out; }
         .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important; }
         .kpi-card.active { border: 2px solid #0d6efd !important; background-color: #f8f9fa; }
-        
-        /* ซ่อนลูกศรขึ้นลงในช่อง input number ของเรทเงิน */
         #exchangeRate::-webkit-inner-spin-button, 
         #exchangeRate::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         #exchangeRate { -moz-appearance: textfield; }
@@ -233,7 +230,6 @@ $pageIcon = "fas fa-file-invoice-dollar";
     <script src="script/finance_dashboard.js?v=<?php echo time(); ?>"></script>
     
     <script>
-        // Activate Bootstrap Tooltips
         document.addEventListener('DOMContentLoaded', function () {
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
