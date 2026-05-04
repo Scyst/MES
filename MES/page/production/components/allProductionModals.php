@@ -6,6 +6,7 @@
 
 <?php if ($canAdd): ?>
     
+    <!-- 1. Modal บันทึกของเข้า (IN) -->
     <div class="modal fade" id="addEntryModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow-lg border-0">
@@ -54,7 +55,7 @@
                                 </div>
                                 <div class="col-7 mt-2">
                                     <label class="form-label fw-bold small text-muted mb-1">จำนวน <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control form-control-sm fw-bold text-success border-success" id="entry_quantity_in" name="confirmed_quantity" min="1" step="any" required>
+                                    <input type="number" class="form-control form-control-sm fw-bold text-success border-success" id="entry_quantity_in" name="confirmed_quantity" min="1" step="1" required>
                                 </div>
                                 <div class="col-5 mt-2 d-flex flex-column justify-content-end pb-1 border-start px-3">
                                     <span class="form-label fw-bold small text-muted mb-0">สต็อกต้นทาง</span>
@@ -85,6 +86,7 @@
         </div>
     </div>
 
+    <!-- 2. Modal บันทึกผลิต (OUT) -->
     <?php
         date_default_timezone_set('Asia/Bangkok');
         $current_hour = (int)date('H');
@@ -135,15 +137,15 @@
                             <div class="row g-2">
                                 <div class="col-4 text-center">
                                     <label class="form-label fw-bold small text-success mb-1">FG (ดี)</label>
-                                    <input type="number" id="out_qty_fg" name="quantity_fg" class="form-control form-control-sm text-center fw-bold border-success text-success" min="0" step="any" placeholder="0">
+                                    <input type="number" id="out_qty_fg" name="quantity_fg" class="form-control form-control-sm text-center fw-bold border-success text-success" min="0" step="1" placeholder="0">
                                 </div>
                                 <div class="col-4 text-center">
                                     <label class="form-label fw-bold small text-warning mb-1">HOLD</label>
-                                    <input type="number" id="out_qty_hold" name="quantity_hold" class="form-control form-control-sm text-center fw-bold border-warning text-warning" min="0" step="any" placeholder="0">
+                                    <input type="number" id="out_qty_hold" name="quantity_hold" class="form-control form-control-sm text-center fw-bold border-warning text-warning" min="0" step="1" placeholder="0">
                                 </div>
                                 <div class="col-4 text-center">
                                     <label class="form-label fw-bold small text-danger mb-1">SCRAP</label>
-                                    <input type="number" id="out_qty_scrap" name="quantity_scrap" class="form-control form-control-sm text-center fw-bold border-danger text-danger" min="0" step="any" placeholder="0">
+                                    <input type="number" id="out_qty_scrap" name="quantity_scrap" class="form-control form-control-sm text-center fw-bold border-danger text-danger" min="0" step="1" placeholder="0">
                                 </div>
                             </div>
                         </div>
@@ -172,11 +174,8 @@
             </div>
         </div>
     </div>
-<?php endif; ?>
 
-
-<?php if ($canManage): ?>
-
+    <!-- 3. Modal แก้ไขประวัติ (IN) -->
     <div class="modal fade" id="editEntryModal" tabindex="-1" aria-labelledby="editEntryModalLabel" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow-lg border-0">
@@ -196,19 +195,19 @@
                             <div class="row g-2">
                                 <div class="col-6">
                                     <label class="form-label fw-bold small text-muted mb-1">วันที่</label>
-                                    <input type="date" class="form-control form-control-sm" id="edit_entry_log_date" name="log_date" required>
+                                    <input type="date" class="form-control form-control-sm text-dark" id="edit_entry_log_date" name="log_date" required>
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label fw-bold small text-muted mb-1">เวลา</label>
-                                    <input type="time" class="form-control form-control-sm" id="edit_entry_log_time" name="log_time" step="1" required>
+                                    <input type="time" class="form-control form-control-sm text-dark" id="edit_entry_log_time" name="log_time" step="1" required>
                                 </div>
                                 <div class="col-6 mt-2">
                                     <label class="form-label fw-bold small text-muted mb-1">จาก (From)</label>
-                                    <select class="form-select form-select-sm bg-light" id="edit_entry_from_location_id" name="from_location_id" disabled></select>
+                                    <select class="form-select form-select-sm bg-light text-dark" id="edit_entry_from_location_id" name="from_location_id" disabled></select>
                                 </div>
                                 <div class="col-6 mt-2">
                                     <label class="form-label fw-bold small text-muted mb-1">ไปยัง (To)</label>
-                                    <select class="form-select form-select-sm border-warning fw-bold text-warning" id="edit_entry_to_location_id" name="to_location_id"></select>
+                                    <select class="form-select form-select-sm border-warning fw-bold text-dark" id="edit_entry_to_location_id" name="to_location_id"></select>
                                 </div>
                             </div>
                         </div>
@@ -219,13 +218,13 @@
                                     <label class="form-label fw-bold small text-muted mb-1">จำนวน <span class="text-danger">*</span></label>
                                 </div>
                                 <div class="col-7">
-                                    <input type="number" class="form-control form-control-sm fw-bold border-warning text-end text-warning" id="edit_entry_quantity" name="quantity" min="0" step="any" required>
+                                    <input type="number" class="form-control form-control-sm fw-bold border-warning text-end text-dark" id="edit_entry_quantity" name="quantity" min="0" step="1" required>
                                 </div>
                                 <div class="col-12 mt-2">
-                                    <input type="text" class="form-control form-control-sm bg-light" id="edit_entry_lot_no" name="lot_no" placeholder="Lot / Ref No.">
+                                    <input type="text" class="form-control form-control-sm bg-light text-dark" id="edit_entry_lot_no" name="lot_no" placeholder="Lot / Ref No.">
                                 </div>
                                 <div class="col-12 mt-2">
-                                    <textarea class="form-control form-control-sm" id="edit_entry_notes" name="notes" rows="1" placeholder="หมายเหตุ..."></textarea>
+                                    <textarea class="form-control form-control-sm text-dark" id="edit_entry_notes" name="notes" rows="1" placeholder="หมายเหตุ..."></textarea>
                                 </div>
                             </div>
                         </div>
@@ -235,13 +234,14 @@
                     <div class="modal-footer bg-white border-top">
                         <button type="button" class="btn btn-sm btn-danger fw-bold shadow-sm me-auto px-3" id="deleteEntryFromModalBtn" data-action="delete"><i class="fas fa-trash-alt me-1"></i> ลบ</button>
                         <button type="button" class="btn btn-sm btn-secondary fw-bold px-3" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-sm btn-warning fw-bold px-4 shadow-sm" data-action="save"><i class="fas fa-save me-1"></i> บันทึกการแก้ไข</button>
+                        <button type="submit" class="btn btn-sm btn-warning fw-bold px-4 shadow-sm text-dark" data-action="save"><i class="fas fa-save me-1"></i> บันทึกการแก้ไข</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
+    <!-- 4. Modal แก้ไขประวัติ (OUT) -->
     <div class="modal fade" id="editProductionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow-lg border-0">
@@ -262,19 +262,19 @@
                             <div class="row g-2">
                                 <div class="col-12">
                                     <label class="form-label fw-bold small text-muted mb-1">จุดจัดเก็บ (Location)</label>
-                                    <select id="edit_production_location_id" name="location_id" class="form-select form-select-sm border-warning fw-bold text-warning" required></select>
+                                    <select id="edit_production_location_id" name="location_id" class="form-select form-select-sm border-warning fw-bold text-dark" required></select>
                                 </div>
                                 <div class="col-4 mt-2">
                                     <label class="form-label fw-bold small text-muted mb-1">วันที่</label>
-                                    <input type="date" class="form-control form-control-sm px-1" id="edit_production_log_date" name="log_date" required>
+                                    <input type="date" class="form-control form-control-sm px-1 text-dark" id="edit_production_log_date" name="log_date" required>
                                 </div>
                                 <div class="col-4 mt-2">
                                     <label class="form-label fw-bold small text-muted mb-1">เวลาเริ่ม</label>
-                                    <input type="time" class="form-control form-control-sm px-1" id="edit_production_start_time" name="start_time" required>
+                                    <input type="time" class="form-control form-control-sm px-1 text-dark" id="edit_production_start_time" name="start_time" required>
                                 </div>
                                 <div class="col-4 mt-2">
                                     <label class="form-label fw-bold small text-muted mb-1">เวลาจบ</label>
-                                    <input type="time" class="form-control form-control-sm px-1" id="edit_production_end_time" name="end_time" required>
+                                    <input type="time" class="form-control form-control-sm px-1 text-dark" id="edit_production_end_time" name="end_time" required>
                                 </div>
                             </div>
                         </div>
@@ -282,20 +282,20 @@
                         <div class="p-3 bg-white rounded shadow-sm border">
                             <div class="row g-2 align-items-center">
                                 <div class="col-5">
-                                    <select id="edit_production_count_type" name="count_type" class="form-select form-select-sm border-warning fw-bold text-warning" required>
+                                    <select id="edit_production_count_type" name="count_type" class="form-select form-select-sm border-warning fw-bold text-dark" required>
                                         <option value="FG">FG (ดี)</option>
                                         <option value="HOLD">HOLD (รอตรวจสอบ)</option>
                                         <option value="SCRAP">SCRAP (เสีย)</option>
                                     </select>
                                 </div>
                                 <div class="col-7">
-                                    <input type="number" class="form-control form-control-sm fw-bold border-warning text-end text-warning" id="edit_production_quantity" name="quantity" min="0" step="any" required>
+                                    <input type="number" class="form-control form-control-sm fw-bold border-warning text-end text-dark" id="edit_production_quantity" name="quantity" min="0" step="1" required>
                                 </div>
                                 <div class="col-12 mt-2">
-                                    <input type="text" class="form-control form-control-sm bg-light" id="edit_production_lot_no" name="lot_no" placeholder="Lot / Ref No.">
+                                    <input type="text" class="form-control form-control-sm bg-light text-dark" id="edit_production_lot_no" name="lot_no" placeholder="Lot / Ref No.">
                                 </div>
                                 <div class="col-12 mt-2">
-                                    <textarea class="form-control form-control-sm" id="edit_production_notes" name="notes" rows="1" placeholder="หมายเหตุ..."></textarea>
+                                    <textarea class="form-control form-control-sm text-dark" id="edit_production_notes" name="notes" rows="1" placeholder="หมายเหตุ..."></textarea>
                                 </div>
                             </div>
                         </div>
@@ -304,13 +304,18 @@
                     <div class="modal-footer bg-white border-top">
                         <button type="button" class="btn btn-sm btn-danger fw-bold shadow-sm me-auto px-3" id="deleteProductionFromModalBtn"><i class="fas fa-trash-alt me-1"></i> ลบ</button>
                         <button type="button" class="btn btn-sm btn-secondary fw-bold px-3" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-sm btn-warning fw-bold px-4 shadow-sm"><i class="fas fa-save me-1"></i> บันทึกการแก้ไข</button>
+                        <button type="submit" class="btn btn-sm btn-warning fw-bold px-4 shadow-sm text-dark"><i class="fas fa-save me-1"></i> บันทึกการแก้ไข</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
+<?php endif; ?>
+
+<?php if ($canManage): ?>
+
+    <!-- 5. Modal ปรับสต็อก (Adjustment) -->
     <div class="modal fade" id="adjustStockModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow-lg border-0">
@@ -338,7 +343,7 @@
                                 </div>
                                 <div class="col-6 text-center">
                                     <label for="adjust_physical_count" class="form-label fw-bold small text-danger mb-1">ยอดใหม่ที่นับได้ <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control text-center fw-bold border-danger text-danger fs-5 shadow-sm" id="adjust_physical_count" name="physical_count" required step="any">
+                                    <input type="number" class="form-control text-center fw-bold border-danger text-danger fs-5 shadow-sm" id="adjust_physical_count" name="physical_count" required step="1">
                                 </div>
                             </div>
                         </div>
@@ -359,7 +364,7 @@
 
 <?php endif; ?>
 
-
+<!-- 6. GLOBAL Modals (ทุกคนเข้าถึงได้) -->
 <div class="modal fade" id="stockDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content shadow-lg border-0">

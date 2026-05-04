@@ -344,7 +344,7 @@ async function reprintLabel(uuid) {
     const res = await sendRequest(TRANSFER_API_URL, 'get_transfer_details', 'GET', null, { transfer_id: uuid });
     if (res.success && res.data) {
         const data = res.data;
-        const baseUrl = window.location.href.replace('label_printer.php', 'mobile_entry.php');
+        const baseUrl = window.location.href.replace('label_printer.php', 'mobile_app');
         
         let parts = uuid.split('-');
         let serial = parts.pop();
@@ -506,7 +506,7 @@ async function processAndPrintUUIDs(uuids) {
 
     try {
         const labelsToPrint = [];
-        const baseUrl = window.location.href.replace('label_printer.php', 'mobile_entry.php');
+        const baseUrl = window.location.href.replace('label_printer.php', 'mobile_app');
         const fetchPromises = uuids.map(uuid => sendRequest(TRANSFER_API_URL, 'get_transfer_details', 'GET', null, { transfer_id: uuid }));
         const results = await Promise.allSettled(fetchPromises);
         let notFoundCount = 0;
@@ -599,7 +599,7 @@ async function handleGenerateLabel(event) {
         const res = await sendRequest(TRANSFER_API_URL, 'create_batch_transfer_orders', 'POST', payload);
         
         if (res.success) {
-            const baseUrl = window.location.href.replace('label_printer.php', 'mobile_entry.php');
+            const baseUrl = window.location.href.replace('label_printer.php', 'mobile_app');
             const locObj = allLocations.find(l => l.location_id == fromLocationId);
             const locName = locObj ? locObj.location_name : '';
 

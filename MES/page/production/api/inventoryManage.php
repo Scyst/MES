@@ -38,7 +38,7 @@ try {
         case 'get_initial_data':
             $locationsStmt = $pdo->query("SELECT location_id, location_name FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
             $locations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
-            $itemsStmt = $pdo->query("SELECT item_id, sap_no, part_no, part_description FROM " . ITEMS_TABLE . " ORDER BY sap_no");
+            $itemsStmt = $pdo->query("SELECT item_id, sap_no, part_no, part_description FROM " . ITEMS_TABLE . " WHERE is_active = 1 ORDER BY sap_no");
             $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'locations' => $locations, 'items' => $items]);
             break;
@@ -47,10 +47,11 @@ try {
             $item_id = $input['item_id'] ?? 0;
             $to_location_id = $input['to_location_id'] ?? 0;
             $from_location_id = $input['from_location_id'] ?? 0;
-            $quantity = $input['quantity'] ?? 0;
             
+            // Force Integer
+            $quantity = floor((float)($input['quantity'] ?? 0));
             if ($quantity <= 0 && isset($input['confirmed_quantity'])) {
-                $quantity = $input['confirmed_quantity'] ?? 0;
+                $quantity = floor((float)($input['confirmed_quantity'] ?? 0));
             }
 
             $lot_no = $input['lot_no'] ?? null;
@@ -107,44 +108,33 @@ try {
             $isExport = isset($_GET['limit']) && $_GET['limit'] == -1;
             
             $default_limit = ($action === 'get_all_transactions') ? 50 : 25;
-            $limit = $isExport ? 10000 : 50;
+            $limit = $isExport ? 10000 : $default_limit;
             $offset = ($page - 1) * $limit;
             
             $params = [];
             $conditions = [];
 
-            if ($action === 'get_receipt_history' || $action === 'get_production_history') {
-                $user_filter_username = $_GET['user_filter'] ?? null;
-                if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
-                } else if ($currentUser['role'] === 'supervisor') {
-                    $supervisorConditions = [];
-                    $supervisorConditions[] = "loc.production_line = ?";
-                    $params[] = $currentUser['line'];
-                    if (!empty($user_filter_username)) {
-                        $supervisorConditions[] = "u.username = ?";
-                        $params[] = $user_filter_username;
-                    }
-                    $conditions[] = "(" . implode(" OR ", $supervisorConditions) . ")";
-                } else {
-                    if (!empty($user_filter_username)) {
-                        $conditions[] = "u.username = ?";
-                        $params[] = $user_filter_username;
-                    }
-                }
-            } else {
-                if ($currentUser['role'] === 'supervisor') {
-                    $conditions[] = "loc.production_line = ?";
-                    $params[] = $currentUser['line'];
-                }
+            // Row-Level Security Authorization
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
                 if (!empty($_GET['user_filter'])) {
                     $conditions[] = "u.username = ?";
                     $params[] = $_GET['user_filter'];
                 }
+            } else if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "loc.production_line = ?";
+                $params[] = $currentUser['line'];
+                
+                if (!empty($_GET['user_filter'])) {
+                    $conditions[] = "u.username = ?";
+                    $params[] = $_GET['user_filter'];
+                }
+            } else {
+                $conditions[] = "t.created_by_user_id = ?";
+                $params[] = $currentUser['id'];
             }
-            
+
             if ($action === 'get_receipt_history') $conditions[] = "t.transaction_type IN ('RECEIPT', 'TRANSFER', 'TRANSFER_PENDING_SHIPMENT', 'SHIPPED', 'INTERNAL_TRANSFER', 'REVERSAL_TRANSFER')";
             if ($action === 'get_production_history') $conditions[] = "t.transaction_type LIKE 'PRODUCTION_%'";
-            
             if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
                 $search_terms = $_GET['search_terms'];
                 foreach ($search_terms as $term) {
@@ -164,7 +154,7 @@ try {
                     $conditions[] = "(" . implode(" OR ", $term_conditions) . ")";
                 }
             }
-
+            
             if (!empty($_GET['count_type']) && $action === 'get_production_history') {
                 $conditions[] = "t.transaction_type = ?";
                 $params[] = 'PRODUCTION_' . $_GET['count_type'];
@@ -186,11 +176,11 @@ try {
                 LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
                 {$whereClause}
             ";
+
             $totalSql = "SELECT COUNT(*) " . $baseSql;
             $totalStmt = $pdo->prepare($totalSql);
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetchColumn();
-
             $dataSql = "
                 SELECT
                     t.transaction_id, t.transaction_timestamp, t.transaction_type, i.sap_no, i.part_no, 
@@ -215,7 +205,9 @@ try {
 
             $dataStmt = $pdo->prepare($dataSql);
             $paramIndex = 1;
-            foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
+            foreach ($params as $param) { 
+                $dataStmt->bindValue($paramIndex++, $param); 
+            }
             $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
             $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
             $dataStmt->execute();
@@ -576,13 +568,13 @@ try {
             echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
             break;
 
-        // =========================================================================
-        // [2] 🌟 ระบบบันทึกยอดผลิต & ตัดสต็อกอัตโนมัติ (BACKFLUSHING) 🌟
-        // =========================================================================
         case 'execute_production':
             $fg_item_id = (int)($input['item_id'] ?? 0);
             $location_id = (int)($input['location_id'] ?? 0);
-            $quantity = (float)($input['quantity'] ?? 0);
+            
+            // Force Integer
+            $quantity = floor((float)($input['quantity'] ?? 0)); 
+            
             $count_type = strtoupper($input['count_type'] ?? 'FG');
             $lot_no = $input['lot_no'] ?? null;
             $notes = trim($input['notes'] ?? '');
@@ -590,143 +582,61 @@ try {
             $start_time = $input['start_time'] ?? date('H:i:s');
             $end_time = $input['end_time'] ?? date('H:i:s');
 
-            if (empty($log_date)) throw new Exception("Log Date is required.");
+            if (empty($log_date)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => "Log Date is required."]);
+                exit;
+            }
+
             $time_to_use = $end_time ?: date('H:i:s');
             $timestamp = $log_date . ' ' . $time_to_use;
 
             if ($fg_item_id <= 0 || $location_id <= 0 || $quantity <= 0) {
-                 throw new Exception("Invalid data provided for production logging.");
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => "Invalid data provided for production logging."]);
+                exit;
             }
 
-            $pdo->beginTransaction();
             try {
-                // 1. ดึงข้อมูล FG และต้นทุนมาตรฐาน
-                $fgStmt = $pdo->prepare("SELECT * FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE item_id = ? AND is_active = 1");
-                $fgStmt->execute([$fg_item_id]);
-                $fg = $fgStmt->fetch(PDO::FETCH_ASSOC);
-                
-                if (!$fg) throw new Exception("ไม่พบข้อมูลสินค้า FG หรือสินค้าถูกปิดการใช้งาน");
-
-                // 2. ดึงสูตรการผลิต (BOM) ที่กำลัง "ACTIVE" เท่านั้น
-                $bomStmt = $pdo->prepare("
-                    SELECT b.component_item_id, b.quantity_required, c.sap_no, c.part_description,
-                           c.Cost_Total, c.Cost_RM, c.Cost_DL, c.Cost_OH_Machine, c.Cost_OH_Utilities, 
-                           c.Cost_OH_Indirect, c.Cost_OH_Staff, c.Cost_OH_Accessory, c.Cost_OH_Others
-                    FROM " . BOM_TABLE . " b WITH (NOLOCK)
-                    JOIN " . ITEMS_TABLE . " c WITH (NOLOCK) ON b.component_item_id = c.item_id
-                    WHERE b.fg_item_id = ? AND b.bom_status = 'ACTIVE'
+                // Delegate entire execution logic to SQL Server Stored Procedure
+                $stmt = $pdo->prepare("
+                    EXEC dbo.sp_ExecuteProduction 
+                        @item_id = ?, 
+                        @location_id = ?, 
+                        @quantity = ?, 
+                        @count_type = ?, 
+                        @lot_no = ?, 
+                        @notes = ?, 
+                        @timestamp = ?, 
+                        @start_time = ?, 
+                        @end_time = ?, 
+                        @user_id = ?, 
+                        @username = ?
                 ");
-                $bomStmt->execute([$fg_item_id]);
-                $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
-
-                if (count($components) === 0 && in_array($count_type, ['FG', 'NG', 'SCRAP'])) {
-                    throw new Exception("ไม่สามารถผลิตได้! สินค้า [{$fg['sap_no']}] ไม่มีสูตรการผลิต (BOM) ที่อยู่ในสถานะ ACTIVE");
-                }
-
-                // 3. เตรียมรายการวัตถุดิบที่จะตัด
-                $rmToDeduct = [];
                 
-                if (in_array($count_type, ['FG', 'NG', 'SCRAP'])) {
-                    foreach ($components as $comp) {
-                        $req_qty = bcmul($comp['quantity_required'], $quantity, 6);
-                        
-                        $rmToDeduct[] = [
-                            'item' => $comp,
-                            'req_qty' => $req_qty
-                        ];
-                    }
-                }
-
-                // เตรียมข้อมูลการเพิ่ม FG
-                $trans_type = 'PRODUCTION_' . $count_type;
-                
-                // [🔥 แก้ไข] รวมค่า RM + PKG + SUB ให้ครบถ้วน
-                $fg_mat_total = (float)($fg['Cost_RM'] ?? 0) + (float)($fg['Cost_PKG'] ?? 0) + (float)($fg['Cost_SUB'] ?? 0);
-                
-                $fg_oh_total = (float)$fg['Cost_OH_Machine'] + (float)$fg['Cost_OH_Utilities'] + (float)$fg['Cost_OH_Indirect'] + 
-                               (float)$fg['Cost_OH_Staff'] + (float)$fg['Cost_OH_Accessory'] + (float)$fg['Cost_OH_Others'];
-
-                // 4. บันทึกประวัติการผลิต FG + Cost Snapshot
-                $insertFgLogStmt = $pdo->prepare("
-                    INSERT INTO " . TRANSACTIONS_TABLE . " (
-                        parameter_id, quantity, transaction_type, transaction_timestamp, 
-                        to_location_id, reference_id, created_by_user_id, notes, 
-                        start_time, end_time, 
-                        std_price_snapshot, std_cost_mat_snapshot, std_cost_dl_snapshot, 
-                        std_cost_oh_snapshot, 
-                        std_cost_oh_machine_snapshot, std_cost_oh_util_snapshot, std_cost_oh_indirect_snapshot, 
-                        std_cost_oh_staff_snapshot, std_cost_oh_acc_snapshot, std_cost_oh_other_snapshot,
-                        std_price_usd_snapshot
-                    ) VALUES (
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-                    )
-                ");
-
-                $insertFgLogStmt->execute([
-                    $fg_item_id, $quantity, $trans_type, $timestamp, $location_id, $lot_no, $currentUser['id'], $notes,
-                    $start_time, $end_time, 
-                    $fg['StandardPrice'], $fg_mat_total, /* เปลี่ยนเป็น $fg_mat_total */ $fg['Cost_DL'], 
-                    $fg_oh_total, 
-                    $fg['Cost_OH_Machine'], $fg['Cost_OH_Utilities'], $fg['Cost_OH_Indirect'],
-                    $fg['Cost_OH_Staff'], $fg['Cost_OH_Accessory'], $fg['Cost_OH_Others'],
-                    $fg['Price_USD']
+                $stmt->execute([
+                    $fg_item_id, 
+                    $location_id, 
+                    $quantity, 
+                    $count_type, 
+                    $lot_no, 
+                    $notes, 
+                    $timestamp, 
+                    $start_time, 
+                    $end_time, 
+                    $currentUser['id'], 
+                    $currentUser['username']
                 ]);
                 
-                $transaction_id = $pdo->lastInsertId();
-
-                // 5. เพิ่มสต็อก FG
-                $updateStockStmt = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
-                $updateStockStmt->execute([$fg_item_id, $location_id, $quantity]);
-
-                // 6. บันทึกตัดสต็อก RM (CONSUMPTION) อัตโนมัติ + Cost Snapshot
-                if (!empty($rmToDeduct)) {
-                    $insertLogStmt = $pdo->prepare("
-                        INSERT INTO " . TRANSACTIONS_TABLE . " (
-                            parameter_id, quantity, transaction_type, transaction_timestamp, 
-                            from_location_id, reference_id, created_by_user_id, notes, 
-                            start_time, end_time, 
-                            std_price_snapshot, std_cost_mat_snapshot, std_cost_dl_snapshot, 
-                            std_cost_oh_snapshot, 
-                            std_cost_oh_machine_snapshot, std_cost_oh_util_snapshot, std_cost_oh_indirect_snapshot, 
-                            std_cost_oh_staff_snapshot, std_cost_oh_acc_snapshot, std_cost_oh_other_snapshot
-                        ) VALUES (
-                            ?, ?, 'CONSUMPTION', ?, ?, ?, ?, ?, ?, ?,
-                            0, ?, ?, ?, ?, ?, ?, ?, ?, ?
-                        )
-                    ");
-                    
-                    $consume_note = "Auto-consumed for production ID: {$transaction_id}";
-
-                    foreach ($rmToDeduct as $rm) {
-                        // 6.1 อัปเดตสต็อก RM
-                        $updateStockStmt->execute([$rm['item']['component_item_id'], $location_id, -$rm['req_qty']]);
-                        
-                        $oh_total = (float)$rm['item']['Cost_OH_Machine'] + (float)$rm['item']['Cost_OH_Utilities'] + (float)$rm['item']['Cost_OH_Indirect'] + 
-                                    (float)$rm['item']['Cost_OH_Staff'] + (float)$rm['item']['Cost_OH_Accessory'] + (float)$rm['item']['Cost_OH_Others'];
-
-                        // 6.2 บันทึกประวัติ RM
-                        $insertLogStmt->execute([
-                            $rm['item']['component_item_id'], -abs($rm['req_qty']), $timestamp, $location_id, $lot_no, $currentUser['id'], $consume_note,
-                            $start_time, $end_time, 
-                            $rm['item']['Cost_RM'], $rm['item']['Cost_DL'], $oh_total, 
-                            $rm['item']['Cost_OH_Machine'], $rm['item']['Cost_OH_Utilities'], $rm['item']['Cost_OH_Indirect'],
-                            $rm['item']['Cost_OH_Staff'], $rm['item']['Cost_OH_Accessory'], $rm['item']['Cost_OH_Others']
-                        ]);
-                    }
-                }
-
-                logAction($pdo, $currentUser['username'], 'PRODUCTION BACKFLUSH', $fg_item_id, "Produced {$quantity} units. TxnID: {$transaction_id}");
-                $pdo->commit();
-
                 echo json_encode([
                     'success' => true, 
-                    'message' => "บันทึกการผลิตและตัดสต็อกวัตถุดิบสำเร็จ (Txn ID: {$transaction_id})"
+                    'message' => "บันทึกการผลิตและตัดสต็อกวัตถุดิบสำเร็จ"
                 ]);
 
             } catch (Exception $e) {
-                $pdo->rollBack();
-                throw $e;
+                // Return Business Logic Errors (e.g. "BOM not found") from SP back to the client
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
             }
             break;
 
@@ -797,7 +707,9 @@ try {
                     $deleteConsumeStmt = $pdo->prepare($deleteConsumeSql);
                     $deleteConsumeStmt->execute([$note_to_find]);
 
-                    $new_quantity = ($input['quantity'] ?? '0');
+                    // Force Integer
+                    $new_quantity = floor((float)($input['quantity'] ?? 0)); 
+                    
                     $new_location_id = (int)($input['location_id'] ?? 0);
                     $new_lot_no = $input['lot_no'] ?? null;
                     $new_notes = $input['notes'] ?? null;
@@ -815,7 +727,6 @@ try {
                     $new_count_type = strtoupper($input['count_type'] ?? '');
                     $new_transaction_type = 'PRODUCTION_' . $new_count_type;
 
-                    // [🔥 แก้ไข] ดึงข้อมูล FG มาอัปเดต Snapshot ให้ถูกต้อง
                     $fgStmt = $pdo->prepare("SELECT * FROM " . ITEMS_TABLE . " WHERE item_id = ?");
                     $fgStmt->execute([$old_transaction['parameter_id']]);
                     $fg = $fgStmt->fetch(PDO::FETCH_ASSOC);
@@ -840,7 +751,6 @@ try {
                     $spStock->execute([$old_transaction['parameter_id'], $new_location_id, $new_quantity]);
 
                     if (in_array($new_count_type, ['FG', 'NG', 'SCRAP'])) {
-                        // [🔥 แก้ไข] ดึงค่าต้นทุน Snapshot ของ Components มาด้วย
                         $bomSql = "SELECT b.component_item_id, b.quantity_required, c.Cost_RM, c.Cost_DL, c.Cost_OH_Machine, c.Cost_OH_Utilities, c.Cost_OH_Indirect, c.Cost_OH_Staff, c.Cost_OH_Accessory, c.Cost_OH_Others 
                                    FROM " . BOM_TABLE . " b JOIN " . ITEMS_TABLE . " c ON b.component_item_id = c.item_id 
                                    WHERE b.fg_item_id = ? AND b.bom_status = 'ACTIVE'";
@@ -849,7 +759,6 @@ try {
                         $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
 
                         if (!empty($components)) {
-                            // [🔥 แก้ไข] Insert Snapshot ของ RM เข้าไปด้วย
                             $consumeSql = "INSERT INTO " . TRANSACTIONS_TABLE . " (
                                             parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, notes, reference_id, transaction_timestamp, start_time, end_time,
                                             std_price_snapshot, std_cost_mat_snapshot, std_cost_dl_snapshot, std_cost_oh_snapshot,
@@ -885,7 +794,9 @@ try {
                         $spStock->execute([$old_item_id, $old_transaction['to_location_id'], -$old_quantity]);
                     }
 
-                    $new_quantity = ($input['quantity'] ?? '0');
+                    // Force Integer
+                    $new_quantity = floor((float)($input['quantity'] ?? 0));
+                    
                     $new_lot_no = $input['lot_no'] ?? null;
                     $new_notes = $input['notes'] ?? null;
                     $new_log_date = $input['log_date'] ?? null;
@@ -1091,7 +1002,10 @@ try {
             try {
                 $item_id = $input['item_id'] ?? 0;
                 $location_id = $input['location_id'] ?? 0;
-                $physical_count = $input['physical_count'] ?? null;
+                
+                // Force Integer
+                $physical_count = isset($input['physical_count']) ? floor((float)$input['physical_count']) : null;
+                
                 $notes = trim($input['notes'] ?? 'Quick Adjustment');
 
                 if (empty($item_id) || empty($location_id) || !is_numeric($physical_count)) {
@@ -1686,11 +1600,19 @@ try {
             echo json_encode(['success' => false, 'message' => "Action '{$action}' is not handled."]);
             break;
     }
-} catch (Exception $e) {
+} catch (PDOException $e) {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
     http_response_code(500);
+    echo json_encode(['success' => false, 'message' => "Database System Error. Please contact administrator."]);
+    error_log("Inventory API PDO Error: " . $e->getMessage());
+
+} catch (Exception $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

@@ -153,6 +153,12 @@ async function populateInitialData() {
             }
         }
 
+        const outLocationCustom = document.getElementById('out_location_id_custom');
+        if (outLocationCustom) {
+            const optionsHtml = allLocations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
+            outLocationCustom.innerHTML = '<option value="">-- เลือกสถานที่ --</option>' + optionsHtml;
+        }
+
         if (entryType === 'production') {
             const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_OUT'));
             if (lastData && lastData.item_id) {
@@ -161,9 +167,8 @@ async function populateInitialData() {
                 
                 if (searchEl) searchEl.value = lastData.item_display_text || '';
                 if (idEl) idEl.value = lastData.item_id;
-                
-                if (locId <= 0 && lastData.location_id && locationDisplay) {
-                    locationDisplay.value = lastData.location_id;
+                if (locId <= 0 && lastData.location_id && outLocationCustom) {
+                    outLocationCustom.value = lastData.location_id;
                 }
                 selectedItem = allItems.find(i => i.item_id == lastData.item_id) || null;
             }
@@ -399,7 +404,7 @@ async function autoFillForm_OLD(data) {
             }
 
             if (data.lot) document.getElementById('entry_lot_no').value = data.lot;
-            if (data.qty) document.getElementById('entry_quantity_in').value = data.qty;
+            if (data.qty) document.getElementById('entry_quantity_in').value = Math.floor(data.qty);
             if (data.from_loc_id) {
                 const fromSelect = document.getElementById('entry_from_location_id');
                 if (fromSelect) {
@@ -465,7 +470,7 @@ async function autoFillFromTransferOrder(transferId) {
             itemSearchEl.value = `${order.sap_no} | ${order.part_no}`;
             document.getElementById('entry_item_id').value = order.item_id;
             lotNoEl.value = order.transfer_uuid;
-            document.getElementById('entry_quantity_in').value = order.quantity;
+            document.getElementById('entry_quantity_in').value = Math.floor(order.quantity); // Force Int
             fromLocationEl.value = order.from_location_id;
             document.getElementById('entry_notes').value = order.notes || '';
 
@@ -514,7 +519,7 @@ async function updateAvailableStockDisplay() {
     });
 
     if (result.success) {
-        const qty = parseFloat(result.quantity);
+        const qty = Math.floor(result.quantity); // Force Int
         display.textContent = qty.toLocaleString();
         if (qty <= 0) {
             display.classList.add('text-danger');
@@ -693,12 +698,12 @@ function renderReviewCards(data, type) {
                 case 'SCRAP': badgeClass = 'bg-danger'; break;
             }
             badgeHtml = `<span class="badge ${badgeClass}">${row.count_type}</span>`;
-            qtyDisplay = `<span class="fw-bold">${parseFloat(row.quantity).toLocaleString()} PCS</span>`;
+            qtyDisplay = `<span class="fw-bold">${Math.floor(row.quantity).toLocaleString()} PCS</span>`;
             locationName = row.location_name || 'N/A';
             
         } else {
             badgeHtml = `<span class="badge bg-success">IN</span>`;
-            qtyDisplay = `<span class="fw-bold text-success">+${parseFloat(row.quantity).toLocaleString()} PCS</span>`;
+            qtyDisplay = `<span class="fw-bold text-success">+${Math.floor(row.quantity).toLocaleString()} PCS</span>`;
             locationName = row.destination_location || 'N/A';
         }
 
@@ -739,20 +744,24 @@ async function handleFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
     const action = form.dataset.action;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    submitBtn.disabled = true; 
     showSpinner();
 
     try {
         if (action === 'addPart' || action === 'addEntry') { 
-            let locationId = g_LocationId;
-            if (locationId <= 0) {
-                locationId = document.getElementById('location_display').value;
-            }
-
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
 
             if (action === 'addPart') {
-                if (!locationId) throw new Error("กรุณาเลือก Location");
+                let locationId = g_LocationId;
+                if (locationId <= 0) {
+                    const locCustom = document.getElementById('out_location_id_custom');
+                    if (locCustom) locationId = locCustom.value;
+                }
+                
+                if (!locationId) throw new Error("กรุณาเลือก Location ปลายทาง");
                 data.location_id = locationId;
 
                 const timeSlot = formData.get('time_slot');
@@ -770,9 +779,14 @@ async function handleFormSubmit(event) {
                 };
 
                 const transactions = [];
-                if (data.quantity_fg > 0) transactions.push({ ...baseData, quantity: data.quantity_fg, count_type: 'FG' });
-                if (data.quantity_hold > 0) transactions.push({ ...baseData, quantity: data.quantity_hold, count_type: 'HOLD' });
-                if (data.quantity_scrap > 0) transactions.push({ ...baseData, quantity: data.quantity_scrap, count_type: 'SCRAP' });
+                // Force Integer
+                const qtyFg = Math.floor(data.quantity_fg) || 0;
+                const qtyHold = Math.floor(data.quantity_hold) || 0;
+                const qtyScrap = Math.floor(data.quantity_scrap) || 0;
+
+                if (qtyFg > 0) transactions.push({ ...baseData, quantity: qtyFg, count_type: 'FG' });
+                if (qtyHold > 0) transactions.push({ ...baseData, quantity: qtyHold, count_type: 'HOLD' });
+                if (qtyScrap > 0) transactions.push({ ...baseData, quantity: qtyScrap, count_type: 'SCRAP' });
 
                 if (transactions.length === 0) throw new Error("กรุณากรอกจำนวนอย่างน้อย 1 ประเภท");
 
@@ -814,6 +828,12 @@ async function handleFormSubmit(event) {
 
             } else {
                 const transferUuid = data.transfer_uuid;
+                
+                let locationId = g_LocationId;
+                if (locationId <= 0) {
+                    const locDisplay = document.getElementById('location_display');
+                    if (locDisplay) locationId = locDisplay.value;
+                }
 
                 if (transferUuid) {
                     let toLocationId = g_LocationId;
@@ -823,7 +843,7 @@ async function handleFormSubmit(event) {
                     if (!toLocationId) throw new Error("กรุณาเลือก Location ปลายทาง (To)");
                     const body = {
                         transfer_uuid: transferUuid,
-                        confirmed_quantity: data.confirmed_quantity,
+                        confirmed_quantity: Math.floor(data.confirmed_quantity), // Force Integer
                         to_location_id: toLocationId 
                     };
                     
@@ -863,6 +883,8 @@ async function handleFormSubmit(event) {
                     if (!locationId) throw new Error("กรุณาเลือก Location ปลายทาง (To)");
                     
                     data.to_location_id = locationId;
+                    data.quantity = Math.floor(data.confirmed_quantity); // Force Integer
+                    
                     const res = await sendRequest(INVENTORY_API_URL, 'execute_receipt', 'POST', data);
                     if (!res.success) throw new Error(res.message);
 
@@ -890,7 +912,10 @@ async function handleFormSubmit(event) {
         }
         else if (action === 'editEntry' || action === 'editProduction') {
             const formData = new FormData(form);
-            const res = await sendRequest(INVENTORY_API_URL, 'update_transaction', 'POST', Object.fromEntries(formData));
+            const data = Object.fromEntries(formData.entries());
+            data.quantity = Math.floor(data.quantity); // Force Integer
+
+            const res = await sendRequest(INVENTORY_API_URL, 'update_transaction', 'POST', data);
             if (!res.success) throw new Error(res.message);
 
             playBeep('success');
@@ -898,11 +923,8 @@ async function handleFormSubmit(event) {
             bootstrap.Modal.getInstance(form.closest('.modal'))?.hide();
             fetchReviewData(currentReviewPage);
         }
-        hideSpinner();
     } catch (error) {
-        hideSpinner();
         playBeep('error');
-        
         const errorMessage = error.message || 'An unexpected error occurred.';
         
         if (errorMessage.includes("ใบโอนย้ายนี้ถูกประมวลผลไปแล้ว") || errorMessage === 'SCAN_ALREADY_USED') {
@@ -922,7 +944,7 @@ async function handleFormSubmit(event) {
             Swal.fire({
                 title: '<i class="fas fa-exclamation-triangle text-warning"></i> วัตถุดิบไม่พอผลิต!',
                 html: `
-                    <div class="text-start alert alert-warning border-warning mt-3" style="font-size: 0.9rem; max-height: 200px; overflow-y: auto;">
+                    <div class="text-start alert alert-warning border-warning mt-3" style="font-size: 0.95rem; max-height: 250px; overflow-y: auto;">
                         ${errorHtml}
                     </div>
                     <div class="small text-muted mt-2">
@@ -946,6 +968,9 @@ async function handleFormSubmit(event) {
                 confirmButtonColor: '#d33'
             });
         }
+    } finally {
+        hideSpinner();
+        submitBtn.disabled = false;
     }
 }
 
@@ -971,7 +996,7 @@ async function editTransaction(transactionId, type) {
             document.getElementById('edit_entry_from_location_id').value = data.from_location_id || "";
             document.getElementById('edit_entry_to_location_id').value = data.to_location_id;
             
-            document.getElementById('edit_entry_quantity').value = data.quantity;
+            document.getElementById('edit_entry_quantity').value = Math.floor(data.quantity);
             document.getElementById('edit_entry_lot_no').value = data.reference_id;
             document.getElementById('edit_entry_notes').value = data.notes;
             if (data.transaction_timestamp) {
@@ -989,7 +1014,7 @@ async function editTransaction(transactionId, type) {
             document.getElementById('edit_production_transaction_id').value = data.transaction_id;
             document.getElementById('edit_production_item_display').value = `${data.sap_no} | ${data.part_no}`;
             document.getElementById('edit_production_location_id').value = data.to_location_id; 
-            document.getElementById('edit_production_quantity').value = data.quantity;
+            document.getElementById('edit_production_quantity').value = Math.floor(data.quantity);
             document.getElementById('edit_production_lot_no').value = data.reference_id;
             document.getElementById('edit_production_count_type').value = data.transaction_type.replace('PRODUCTION_', '');
             document.getElementById('edit_production_notes').value = data.notes;

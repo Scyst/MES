@@ -104,10 +104,13 @@
     <?php include_once('../components/php/spinner.php'); ?>
 
     <header class="app-header">
-        <h1 class="app-title" id="appHeaderTitle">บันทึกผลิต (OUT)</h1> <button class="btn btn-light btn-sm rounded-circle shadow-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#globalMobileMenu">
+        <h1 class="app-title" id="appHeaderTitle">บันทึกผลิต (OUT)</h1> 
+        <button class="btn btn-light btn-sm rounded-circle shadow-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#globalMobileMenu">
             <i class="fas fa-bars"></i>
         </button>
     </header>
+
+    <?php include_once '../components/php/nav_dropdown.php'; ?>
 
     <div id="section-in" class="app-section <?php echo $active_type === 'receipt' ? 'active' : ''; ?>">
         
@@ -275,7 +278,7 @@
     </nav>
 
     <?php
-        if ($canManage) {
+        if ($canAdd) {
             include('components/allProductionModals.php');
         }
     ?>
@@ -318,9 +321,6 @@
                     }
                 });
             });
-
-            if(typeof initEntryPage === 'function') initEntryPage();
-            if(typeof initReviewPage === 'function') initReviewPage();
         });
 
         const g_EntryType = <?php echo json_encode($active_type); ?>;

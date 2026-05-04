@@ -48,7 +48,6 @@ function initializeFilters() {
             document.getElementById('filterStartDate').value = filters.startDate || dateStr;
             document.getElementById('filterEndDate').value = filters.endDate || dateStr;
         } catch(e) {
-            // ดัก Error กรณี Cache พัง
             document.getElementById("filterStartDate").value = dateStr;
             document.getElementById("filterEndDate").value = dateStr;
         }
@@ -89,8 +88,9 @@ async function sendRequest(endpoint, action, method, body = null, params = null)
             if (paramStrings.length > 0) url += `&${paramStrings.join('&')}`;
         }
 
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         const options = { method, headers: {} };
+        
         if (method.toUpperCase() !== 'GET' && csrfToken) {
             options.headers['X-CSRF-TOKEN'] = csrfToken;
         }
@@ -100,16 +100,32 @@ async function sendRequest(endpoint, action, method, body = null, params = null)
         }
         
         const response = await fetch(url, options);
+        
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            const textResponse = await response.text();
+            console.error("Non-JSON Response from Server:", textResponse);
+            throw new Error("ระบบเครือข่ายขัดข้อง หรือเซิร์ฟเวอร์ไม่ได้ตอบกลับเป็น JSON");
+        }
+
         const result = await response.json();
 
         if (!response.ok) {
-            throw new Error(result.message || `HTTP error! status: ${response.status}`);
+            throw new Error(result.message || `HTTP Error: ${response.status}`);
         }
+        
         return result;
+        
     } catch (error) {
         console.error(`Request for action '${action}' failed:`, error);
-        showToast(error.message || 'An unexpected error occurred.', 'var(--bs-danger)');
-        return { success: false, message: "Network or server error." };
+        
+        if (typeof showToast === 'function') {
+            showToast(error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'var(--bs-danger)');
+        } else if (typeof alert === 'function') {
+            alert(error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+        }
+        
+        return { success: false, message: error.message };
     }
 }
 
@@ -332,7 +348,7 @@ function renderProductionVarianceTable(data) {
             tr.addEventListener('click', () => openVarianceDetailModal(row.item_id, row.location_id, row.part_no));
         }
 
-        const variance = parseFloat(row.variance) || 0;
+        const variance = Math.floor(row.variance) || 0;
         let textColorClass = '';
 
         if (variance < 0) textColorClass = 'text-danger'; 
@@ -345,8 +361,8 @@ function renderProductionVarianceTable(data) {
             <td class="text-center" data-label="Part No.">${row.part_no}</td>
             <td class="text-center" data-label="Model">${row.model || ''}</td>
             <td class="text-start" style="padding-left: 1rem;" data-label="Part Description">${row.part_description || ''}</td>
-            <td class="text-end" data-label="Total IN">${parseFloat(row.total_in).toLocaleString()}</td>
-            <td class="text-end" data-label="Total OUT">${parseFloat(row.total_out).toLocaleString()}</td>
+            <td class="text-end" data-label="Total IN">${Math.floor(row.total_in).toLocaleString()}</td>
+            <td class="text-end" data-label="Total OUT">${Math.floor(row.total_out).toLocaleString()}</td>
             <td class="text-end fw-bold ${textColorClass}" data-label="Variance (OUT - IN)">${variance.toLocaleString()}</td>
         `;
         tbody.appendChild(tr);
@@ -386,7 +402,7 @@ function renderWipReportByLotTable(data) {
     }
     data.forEach(row => {
         const tr = document.createElement('tr');
-        const variance = parseFloat(row.variance) || 0;
+        const variance = Math.floor(row.on_hand_by_lot) || 0; // Using on_hand_by_lot from updated API
         let textColorClass = '';
 
         if (variance < 0) textColorClass = 'text-danger'; 
@@ -399,8 +415,8 @@ function renderWipReportByLotTable(data) {
             <td class="text-start" data-label="Model">${row.model || ''}</td>
             <td class="text-start" style="padding-left: 1rem;" data-label="Part Description">${row.part_description || ''}</td>
             <td class="text-center" data-label="Lot Number">${row.lot_no}</td>
-            <td class="text-end" data-label="Total IN">${parseFloat(row.total_in).toLocaleString()}</td>
-            <td class="text-end" data-label="Total OUT">${parseFloat(row.total_out).toLocaleString()}</td>
+            <td class="text-end" data-label="Total IN">${Math.floor(row.total_in).toLocaleString()}</td>
+            <td class="text-end" data-label="Total OUT">${Math.floor(row.total_out).toLocaleString()}</td>
             <td class="text-end fw-bold ${textColorClass}" data-label="Variance (OUT - IN)">${variance.toLocaleString()}</td>
         `;
         tbody.appendChild(tr);
@@ -454,7 +470,7 @@ function renderReceiptHistoryTable(data) {
             <td class="text-center" data-label="SAP No.">${row.sap_no}</td>
             <td class="text-center" data-label="Part No.">${row.part_no}</td>
             <td class="text-center" data-label="Lot. / Ref.">${row.lot_no || ''}</td>
-            <td class="text-center" data-label="Quantity">${parseFloat(row.quantity).toLocaleString()}</td>
+            <td class="text-center" data-label="Quantity">${Math.floor(row.quantity).toLocaleString()}</td>
             <td class="text-center" data-label="Notes">${row.notes || ''}</td>
         `;
         tbody.appendChild(tr);
@@ -516,7 +532,7 @@ function renderProductionHistoryTable(data) {
             <td class="text-center" data-label="Model">${row.model || ''}</td>
             <td class="text-center" data-label="Lot / Ref.">${row.lot_no || ''}</td>
             <td class="text-center" data-label="Location">${row.location_name || 'N/A'}</td>
-            <td class="text-center" data-label="Quantity">${parseFloat(row.quantity).toLocaleString()}</td>
+            <td class="text-center" data-label="Quantity">${Math.floor(row.quantity).toLocaleString()}</td>
             <td class="text-center" data-label="Type">${row.count_type}</td>
             <td class="text-center" data-label="Notes">${row.notes || ''}</td>
         `;
@@ -560,7 +576,7 @@ function renderWipOnHandTable(data) {
         tr.title = 'Click to adjust stock';
         tr.addEventListener('click', () => openAdjustStockModal(row));
 
-        const onHandQty = parseFloat(row.quantity) || 0;
+        const onHandQty = Math.floor(row.quantity) || 0;
         
         tr.innerHTML = `
             <td class="text-start" data-label="Location">${row.location_name}</td>
@@ -610,7 +626,7 @@ function renderStockInventoryTable(data) {
         tr.title = 'Click to see details by location';
         tr.addEventListener('click', () => openStockDetailModal(row.item_id, row.part_no));
 
-        const onHandQty = parseFloat(row.total_onhand) || 0;
+        const onHandQty = Math.floor(row.total_onhand) || 0;
 
         tr.innerHTML = `
             <td class="text-start" data-label="SAP No.">${row.sap_no}</td>
@@ -657,7 +673,7 @@ function renderAllTransactionsTable(data) {
     data.forEach(row => {
         const tr = document.createElement('tr');
         const transactionDate = new Date(row.transaction_timestamp);
-        const quantity = parseFloat(row.quantity);
+        const quantity = Math.floor(row.quantity);
 
         let quantityClass = '';
         let quantityPrefix = '';
@@ -847,7 +863,7 @@ async function autoFillFromTransferOrder_PC() {
         document.getElementById('entry_item_search').value = `${order.sap_no} | ${order.part_no}`;
         document.getElementById('entry_item_id').value = order.item_id;
         document.getElementById('entry_lot_no').value = order.transfer_uuid;
-        document.getElementById('entry_quantity_in').value = order.quantity;
+        document.getElementById('entry_quantity_in').value = Math.floor(order.quantity);
         document.getElementById('entry_from_location_id').value = order.from_location_id;
         document.getElementById('entry_to_location_id').value = order.to_location_id;
         document.getElementById('entry_notes').value = order.notes || '';
@@ -888,7 +904,7 @@ async function openStockDetailModal(itemId, partNo) {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${detail.location_name}</td>
-                <td class="text-end">${parseFloat(detail.quantity).toLocaleString()}</td>
+                <td class="text-end">${Math.floor(detail.quantity).toLocaleString()}</td>
             `;
             modalBody.appendChild(tr);
         });
@@ -986,12 +1002,11 @@ async function openVarianceDetailModal(itemId, locationId, partNo, lotNo = null)
 
     const result = await sendRequest(INVENTORY_API_URL, 'get_variance_details', 'GET', null, params);
 
-    // Render IN table
     inTableBody.innerHTML = '';
     let totalIn = 0;
     if (result.success && result.data.in_records.length > 0) {
         result.data.in_records.forEach(rec => {
-            const qty = parseFloat(rec.quantity);
+            const qty = Math.floor(rec.quantity);
             totalIn += qty;
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -1006,12 +1021,11 @@ async function openVarianceDetailModal(itemId, locationId, partNo, lotNo = null)
     }
     totalInSpan.textContent = totalIn.toLocaleString();
     
-    // Render OUT table
     outTableBody.innerHTML = '';
     let totalOut = 0;
     if (result.success && result.data.out_records.length > 0) {
         result.data.out_records.forEach(rec => {
-            const qty = Math.abs(parseFloat(rec.quantity));
+            const qty = Math.abs(Math.floor(rec.quantity));
             totalOut += qty;
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -1036,7 +1050,7 @@ function openAdjustStockModal(itemData) {
 
     modal.querySelector('#adjust_item_display').value = `${itemData.sap_no} | ${itemData.part_no}`;
     modal.querySelector('#adjust_location_display').value = itemData.location_name;
-    modal.querySelector('#adjust_current_onhand').value = parseFloat(itemData.quantity || itemData.total_onhand).toLocaleString();
+    modal.querySelector('#adjust_current_onhand').value = Math.floor(itemData.quantity || itemData.total_onhand).toLocaleString();
 
     modal.querySelector('#adjust_physical_count').value = '';
     modal.querySelector('#adjust_notes').value = '';
@@ -1073,7 +1087,7 @@ async function openSummaryModal() {
                 <td>${row.sap_no}</td>
                 <td>${row.part_no}</td>
                 <td>${row.count_type}</td>
-                <td class="text-end">${parseFloat(row.total_quantity).toLocaleString()}</td>
+                <td class="text-end">${Math.floor(row.total_quantity).toLocaleString()}</td>
             `;
             modalBody.appendChild(tr);
         });
@@ -1081,7 +1095,7 @@ async function openSummaryModal() {
         let overallGrandTotal = 0;
         
         result.grand_total.forEach(row => {
-            const quantity = parseFloat(row.total_quantity) || 0;
+            const quantity = Math.floor(row.total_quantity) || 0;
             overallGrandTotal += quantity;
             const tr = document.createElement('tr');
             tr.className = 'table-dark fw-bold';
@@ -1134,7 +1148,7 @@ async function openHistorySummaryModal() {
                 <td>${row.sap_no}</td>
                 <td>${row.part_no}</td>
                 <td><span class="badge bg-secondary">${row.transaction_type}</span></td>
-                <td class="text-end">${parseFloat(row.total_quantity).toLocaleString()}</td>
+                <td class="text-end">${Math.floor(row.total_quantity).toLocaleString()}</td>
             `;
             modalBody.appendChild(tr);
         });
@@ -1142,7 +1156,7 @@ async function openHistorySummaryModal() {
         const grandTotalRow = document.createElement('tr');
         grandTotalRow.className = 'table-group-divider fw-bold';
         let grandTotal = 0;
-        result.grand_total.forEach(row => grandTotal += parseFloat(row.total_quantity));
+        result.grand_total.forEach(row => grandTotal += Math.floor(row.total_quantity));
         grandTotalRow.innerHTML = `
             <td colspan="3" class="text-start">Grand Total</td>
             <td class="text-end">${grandTotal.toLocaleString()}</td>
@@ -1159,7 +1173,7 @@ async function handleAdjustStockSubmit(event) {
     const form = event.target;
     const submitBtn = form.querySelector('button[type="submit"]');
     
-    submitBtn.disabled = true; // 🛡️ Prevent Double Submit
+    submitBtn.disabled = true;
     showSpinner();
     
     try {
@@ -1173,7 +1187,7 @@ async function handleAdjustStockSubmit(event) {
         }
     } finally {
         hideSpinner();
-        submitBtn.disabled = false; // ปลดล็อกปุ่ม
+        submitBtn.disabled = false;
     }
 }
 
@@ -1192,7 +1206,7 @@ async function updateAvailableStockDisplay() {
     });
 
     if (result.success) {
-        const quantity = parseFloat(result.quantity);
+        const quantity = Math.floor(result.quantity);
         display.textContent = quantity.toLocaleString();
         if (quantity < 0) {
             display.classList.add('text-danger');
@@ -1209,7 +1223,7 @@ async function handleFormSubmit(event) {
     const action = form.dataset.action;
     const submitBtn = form.querySelector('button[type="submit"]');
     
-    submitBtn.disabled = true; // 🛡️ Prevent Double Submit
+    submitBtn.disabled = true; 
     showSpinner();
     
     try {
@@ -1235,9 +1249,9 @@ async function handleFormSubmit(event) {
             };
             
             const transactions = [];
-            const qtyFg = parseFloat(data.quantity_fg) || 0;
-            const qtyHold = parseFloat(data.quantity_hold) || 0;
-            const qtyScrap = parseFloat(data.quantity_scrap) || 0;
+            const qtyFg = Math.floor(data.quantity_fg) || 0;
+            const qtyHold = Math.floor(data.quantity_hold) || 0;
+            const qtyScrap = Math.floor(data.quantity_scrap) || 0;
 
             if (qtyFg > 0) transactions.push({ ...baseData, quantity: qtyFg, count_type: 'FG' });
             if (qtyHold > 0) transactions.push({ ...baseData, quantity: qtyHold, count_type: 'HOLD' });
@@ -1286,7 +1300,7 @@ async function handleFormSubmit(event) {
 
                 const body = {
                     transfer_uuid: transferUuid,
-                    confirmed_quantity: data.confirmed_quantity 
+                    confirmed_quantity: Math.floor(data.confirmed_quantity)
                 };
                 
                 const res = await sendRequest(TRANSFER_API_URL, 'confirm_transfer', 'POST', body);
@@ -1301,6 +1315,7 @@ async function handleFormSubmit(event) {
             } else {
                 if (!data.to_location_id) throw new Error("กรุณาเลือก Location ปลายทาง (To)");
                 
+                data.quantity = Math.floor(data.confirmed_quantity); // For receiving without transfer order
                 const res = await sendRequest(INVENTORY_API_URL, 'execute_receipt', 'POST', data);
                 if (!res.success) throw new Error(res.message);
 
@@ -1322,7 +1337,10 @@ async function handleFormSubmit(event) {
 
         } else if (action === 'editEntry' || action === 'editProduction') {
             const formData = new FormData(form);
-            const res = await sendRequest(INVENTORY_API_URL, 'update_transaction', 'POST', Object.fromEntries(formData));
+            const data = Object.fromEntries(formData.entries());
+            data.quantity = Math.floor(data.quantity); // Parse Int
+
+            const res = await sendRequest(INVENTORY_API_URL, 'update_transaction', 'POST', data);
             if (!res.success) throw new Error(res.message);
 
             showToast("แก้ไขสำเร็จ", 'var(--bs-success)');
@@ -1368,7 +1386,7 @@ async function handleFormSubmit(event) {
         }
     } finally {
         hideSpinner();
-        submitBtn.disabled = false; // ปลดล็อกปุ่มให้กดใหม่ได้เมื่อ Error หรือเสร็จสิ้น
+        submitBtn.disabled = false; 
     }
 }
 
@@ -1401,7 +1419,6 @@ function setEntryModalReadOnly(isReadOnly) {
     });
 }
 
-
 async function editTransaction(transactionId, type) {
     showSpinner();
     try {
@@ -1424,7 +1441,7 @@ async function editTransaction(transactionId, type) {
                 document.getElementById('edit_entry_from_location_id').value = data.from_location_id || "";
                 document.getElementById('edit_entry_to_location_id').value = data.to_location_id;
                 
-                document.getElementById('edit_entry_quantity').value = data.quantity;
+                document.getElementById('edit_entry_quantity').value = Math.floor(data.quantity);
                 document.getElementById('edit_entry_lot_no').value = data.reference_id;
                 document.getElementById('edit_entry_notes').value = data.notes;
                 
@@ -1449,7 +1466,7 @@ async function editTransaction(transactionId, type) {
                 document.getElementById('edit_production_transaction_id').value = data.transaction_id;
                 document.getElementById('edit_production_item_display').value = `${data.sap_no} | ${data.part_no}`;
                 document.getElementById('edit_production_location_id').value = data.to_location_id; 
-                document.getElementById('edit_production_quantity').value = data.quantity;
+                document.getElementById('edit_production_quantity').value = Math.floor(data.quantity);
                 document.getElementById('edit_production_lot_no').value = data.reference_id;
                 document.getElementById('edit_production_count_type').value = data.transaction_type.replace('PRODUCTION_', '');
                 document.getElementById('edit_production_notes').value = data.notes;
@@ -1531,9 +1548,9 @@ async function openHourlyProductionModal() {
         const pivotKey = `${row.part_no} (${row.sap_no})`; 
         
         const counts = {
-            fg: parseFloat(row.Qty_FG),
-            hold: parseFloat(row.Qty_HOLD),
-            scrap: parseFloat(row.Qty_SCRAP)
+            fg: Math.floor(row.Qty_FG),
+            hold: Math.floor(row.Qty_HOLD),
+            scrap: Math.floor(row.Qty_SCRAP)
         };
         
         if (!dataByDate[dateKey]) {
@@ -1671,9 +1688,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEntryAutocomplete();
     setupProductionAutocomplete();
 
+    // Attach listeners for action forms
     document.querySelectorAll('form[data-action]').forEach(form => {
         form.addEventListener('submit', handleFormSubmit);
     });
+    
     document.getElementById('adjustStockForm')?.addEventListener('submit', handleAdjustStockSubmit);
     document.getElementById('deleteEntryFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('entry'));
     document.getElementById('deleteProductionFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('production'));
