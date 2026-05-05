@@ -1,4 +1,5 @@
 <?php
+// MES/page/BOM/api/bomManage.php (หรือชื่อไฟล์ที่ตรงกับของคุณ)
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../components/init.php';
@@ -34,7 +35,7 @@ function checkCircularDependency($pdo, $fg_id, $comp_id) {
             SELECT b.component_item_id, c.depth + 1
             FROM " . BOM_TABLE . " b WITH (NOLOCK)
             INNER JOIN CTE c ON b.fg_item_id = c.component_item_id
-            WHERE c.depth < 50 -- 🔒 เบรกเกอร์: ถ้าลึกเกิน 50 ชั้นให้หยุดมุดทันที (ป้องกัน DB ค้าง)
+            WHERE c.depth < 50
         )
         SELECT TOP 1 1 FROM CTE WHERE component_item_id = ?
     ";
@@ -166,12 +167,12 @@ try {
 
             $sql = "
                 SELECT TOP 50 
-                    action_by AS username, 
-                    action_type AS action, 
-                    detail AS details, 
+                    username, 
+                    action, 
+                    remark AS details, 
                     FORMAT(created_at, 'yyyy-MM-dd HH:mm:ss') AS log_time
-                FROM " . USER_LOGS_TABLE . " WITH (NOLOCK) 
-                WHERE target_user = ? OR target_user = ?
+                FROM SYSTEM_LOGS WITH (NOLOCK) 
+                WHERE ref_id = ? OR ref_id = ?
                 ORDER BY created_at DESC
             ";
             
@@ -188,7 +189,7 @@ try {
             $fg_id = (int)($input['fg_item_id'] ?? 0);
             $comp_id = (int)($input['component_item_id'] ?? 0);
             $qty = (float)($input['quantity_required'] ?? 0);
-            $bom_version = (int)($input['bom_version'] ?? 1); // 🌟 รับเลขเวอร์ชันเป้าหมายมาด้วย
+            $bom_version = (int)($input['bom_version'] ?? 1); 
 
             if ($fg_id <= 0 || $comp_id <= 0 || $qty <= 0) throw new Exception("Invalid input data.");
             
@@ -198,7 +199,6 @@ try {
 
             $pdo->beginTransaction();
             try {
-                // 🔒 เช็คสถานะเวอร์ชันก่อน ว่าอนุญาตให้แก้หรือไม่
                 $statusStmt = $pdo->prepare("SELECT TOP 1 bom_status FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? AND bom_version = ?");
                 $statusStmt->execute([$fg_id, $bom_version]);
                 $currentStatus = $statusStmt->fetchColumn();
@@ -207,18 +207,16 @@ try {
                     throw new Exception("🔒 ไม่สามารถแก้ไขสูตรสถานะ [{$currentStatus}] ได้! กรุณาสร้าง Revision (ECN) ใหม่ก่อน");
                 }
 
-                // 🌟 แก้ไขตรงนี้: ให้เป็น DRAFT เสมอ เพื่อไม่ให้มันล็อกตัวเองตอนแอดชิ้นที่ 2
                 $bom_status = $currentStatus ? $currentStatus : 'DRAFT';
 
                 $checkStmt = $pdo->prepare("SELECT 1 FROM " . BOM_TABLE . " WITH (UPDLOCK) WHERE fg_item_id = ? AND component_item_id = ? AND bom_version = ?");
                 $checkStmt->execute([$fg_id, $comp_id, $bom_version]);
                 if ($checkStmt->fetchColumn()) throw new Exception("วัตถุดิบนี้ถูกเพิ่มไปแล้วในสูตรเวอร์ชัน {$bom_version}");
 
-                // 🌟 แทรกคอลัมน์ bom_version และ bom_status เข้าไป
                 $stmt = $pdo->prepare("INSERT INTO " . BOM_TABLE . " (fg_item_id, component_item_id, quantity_required, line, model, updated_by, updated_at, bom_version, bom_status) VALUES (?, ?, ?, 'DEFAULT', 'DEFAULT', ?, GETDATE(), ?, ?)");
                 $stmt->execute([$fg_id, $comp_id, $qty, $currentUser['username'], $bom_version, $bom_status]);
                 
-                logAction($pdo, $currentUser['username'], 'ADD BOM COMPONENT', $fg_id, "Comp ID: {$comp_id}, Qty: {$qty}, Ver: v{$bom_version}");
+                writeLog($pdo, 'ADD_BOM_COMPONENT', basename(__FILE__), $fg_id, null, null, "Comp ID: {$comp_id}, Qty: {$qty}, Ver: v{$bom_version}");
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'เพิ่มส่วนประกอบสำเร็จ']);
             } catch (Exception $e) {
@@ -278,7 +276,8 @@ try {
             $pdo->beginTransaction();
             $stmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE fg_item_id = ? AND bom_version = ?");
             $stmt->execute([$fg_id, $bom_version]);
-            logAction($pdo, $currentUser['username'], 'DELETE FULL BOM', $fg_id, "Deleted all components for Version: v{$bom_version}");
+            
+            writeLog($pdo, 'DELETE_FULL_BOM', basename(__FILE__), $fg_id, null, null, "Deleted all components for Version: v{$bom_version}");
             $pdo->commit();
             
             echo json_encode(['success' => true, 'message' => "ล้างข้อมูลสูตรร่างเวอร์ชัน v{$bom_version} เรียบร้อยแล้ว"]);
@@ -297,7 +296,7 @@ try {
                     $count++;
                 }
             }
-            logAction($pdo, $currentUser['username'], 'BULK DELETE BOM', 0, "Deleted {$count} BOMs");
+            writeLog($pdo, 'BULK_DELETE_BOM', basename(__FILE__), 0, null, null, "Deleted {$count} BOMs");
             $pdo->commit();
             
             echo json_encode(['success' => true, 'message' => "Successfully deleted {$count} BOM(s)."]);
@@ -310,7 +309,6 @@ try {
 
             $pdo->beginTransaction();
             try {
-                // 🌟 ดึงต้นทุนมารวมเฉพาะเวอร์ชันที่เลือกคำนวณเท่านั้น
                 $sql = "
                     SELECT 
                         ISNULL(SUM(c.Cost_RM * b.quantity_required), 0) AS sum_rm,
@@ -342,7 +340,7 @@ try {
                 ]);
 
                 $logMsg = "Updated Cost RM: " . number_format($costs['sum_rm'], 4) . " from Ver: v{$bom_version}";
-                logAction($pdo, $currentUser['username'], 'COST ROLL-UP', $fg_id, $logMsg);
+                writeLog($pdo, 'COST_ROLLUP', basename(__FILE__), $fg_id, null, null, $logMsg);
                 
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'อัปเดตต้นทุนมาตรฐานจากสูตรเวอร์ชัน v'.$bom_version.' สำเร็จแล้ว!']);
@@ -359,19 +357,16 @@ try {
 
             $pdo->beginTransaction();
             try {
-                // 1. เช็คว่ามี DRAFT ค้างอยู่ไหม
                 $checkDraft = $pdo->prepare("SELECT TOP 1 bom_version FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? AND bom_status = 'DRAFT'");
                 $checkDraft->execute([$fg_id]);
                 if ($checkDraft->fetchColumn()) {
                     throw new Exception("ไม่สามารถสร้างได้! มีสูตรเวอร์ชัน DRAFT ค้างรออนุมัติอยู่ กรุณาจัดการของเดิมให้เสร็จก่อน");
                 }
 
-                // 2. ดึงเวอร์ชันล่าสุดของ ACTIVE มา
                 $getActive = $pdo->prepare("SELECT TOP 1 bom_version FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? AND bom_status = 'ACTIVE' ORDER BY bom_version DESC");
                 $getActive->execute([$fg_id]);
                 $activeVer = (int)$getActive->fetchColumn();
                 
-                // ถ้ายกเลิกหมดแล้ว (OBSOLETE อย่างเดียว) ให้ดึงตัวล่าสุดมาแทน
                 if ($activeVer === 0) {
                      $getObs = $pdo->prepare("SELECT TOP 1 bom_version FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? ORDER BY bom_version DESC");
                      $getObs->execute([$fg_id]);
@@ -380,7 +375,6 @@ try {
 
                 $newVer = $activeVer > 0 ? $activeVer + 1 : 1;
 
-                // 3. ก๊อปปี้สูตรเดิมมาสร้างเป็นเวอร์ชันใหม่สถานะ DRAFT
                 if ($activeVer > 0) {
                     $sql = "INSERT INTO " . BOM_TABLE . " 
                             (fg_item_id, component_item_id, quantity_required, line, model, updated_by, updated_at, bom_version, bom_status, ecn_number)
@@ -389,12 +383,9 @@ try {
                             WHERE fg_item_id = ? AND bom_version = ?";
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([$currentUser['username'], $newVer, $ecn_no, $fg_id, $activeVer]);
-                } else {
-                    // กรณี FG นี้ยังไม่เคยมีสูตรเลย จะสร้างเปล่าๆ เพื่อให้ User ไปเพิ่ม Component เองในหน้า UI
-                    // แต่เราต้องจำ ecn_number และเวอร์ชันตั้งต้นไว้ด้วย
                 }
 
-                logAction($pdo, $currentUser['username'], 'CREATE BOM REVISION', $fg_id, "Created Version: v{$newVer}, ECN: {$ecn_no}");
+                writeLog($pdo, 'CREATE_BOM_REVISION', basename(__FILE__), $fg_id, null, null, "Created Version: v{$newVer}, ECN: {$ecn_no}");
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => "เปิดเอกสาร ECN และสร้างสูตรร่าง (Draft v{$newVer}) สำเร็จ!", 'new_version' => $newVer]);
             } catch (Exception $e) {
@@ -415,7 +406,7 @@ try {
                 $stmtAct = $pdo->prepare("UPDATE " . BOM_TABLE . " SET bom_status = 'ACTIVE', effective_date = GETDATE() WHERE fg_item_id = ? AND bom_version = ? AND bom_status = 'DRAFT'");
                 $stmtAct->execute([$fg_id, $version]);
 
-                logAction($pdo, $currentUser['username'], 'APPROVE BOM REVISION', $fg_id, "Approved Version: v{$version} to ACTIVE");
+                writeLog($pdo, 'APPROVE_BOM_REVISION', basename(__FILE__), $fg_id, null, null, "Approved Version: v{$version} to ACTIVE");
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => "อนุมัติสูตร v{$version} ขึ้นเป็น ACTIVE สำเร็จ! สูตรเดิมถูกปรับเป็น Obsolete แล้ว"]);
             } catch (Exception $e) {
@@ -484,7 +475,6 @@ try {
             $sheets = $input['sheets'] ?? [];
             if (empty($sheets)) throw new Exception("No data provided.");
 
-            // 1. ดึง ID ของ Items ทั้งหมดในรอบเดียว (Performance)
             $sapNos = [];
             foreach ($sheets as $sheetName => $data) {
                 $sapNos[] = $sheetName;
@@ -501,7 +491,6 @@ try {
                 while ($i = $stmt->fetch(PDO::FETCH_ASSOC)) $itemMap[$i['sap_no']] = $i['item_id'];
             }
 
-            // 2. เช็คว่ามี BOM อยู่แล้วหรือไม่
             $existingBomsStmt = $pdo->query("SELECT DISTINCT fg_item_id FROM " . BOM_TABLE . " WITH (NOLOCK)");
             $existingBoms = array_flip($existingBomsStmt->fetchAll(PDO::FETCH_COLUMN, 0));
 
@@ -546,7 +535,6 @@ try {
             $sheets = $input['sheets'] ?? [];
             if (empty($sheets)) throw new Exception("No validated data.");
 
-            // เตรียม Map Items
             $sapNos = [];
             foreach ($sheets as $s) {
                 $sapNos[] = $s['sheet_name'];
@@ -570,7 +558,7 @@ try {
                     $fgId = $itemMap[$sheet['sheet_name']] ?? null;
                     if (!$fgId) continue;
 
-                    $delStmt->execute([$fgId]); // ลบของเก่าออก (Overwrite)
+                    $delStmt->execute([$fgId]);
                     foreach ($sheet['rows'] as $row) {
                         $compId = $itemMap[$row['COMPONENT_SAP_NO']] ?? null;
                         if (!$compId) continue;
@@ -579,7 +567,7 @@ try {
                     $count++;
                 }
 
-                logAction($pdo, $currentUser['username'], 'BULK IMPORT BOM', 0, "Processed {$count} BOMs");
+                writeLog($pdo, 'BULK_IMPORT_BOM', basename(__FILE__), 0, null, null, "Processed {$count} BOMs");
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => "Successfully imported {$count} BOM(s)."]);
             } catch (Exception $e) {
@@ -610,7 +598,6 @@ try {
 
             foreach ($rows as $row) {
                 $fgId = $itemMap[$row['FG_SAP_NO']] ?? null;
-                // ข้ามถ้าไม่มี FG ในระบบ หรือ FG นี้มี BOM อยู่แล้ว (ป้องกันการทับ)
                 if (!$fgId || isset($existingFgIds[$fgId])) continue;
                 $bomGroups[$fgId][] = $row;
             }
@@ -632,7 +619,7 @@ try {
                     if (!empty($processed)) $created++;
                 }
 
-                logAction($pdo, $currentUser['username'], 'INITIAL BOM CREATE', 0, "Created {$created} BOMs");
+                writeLog($pdo, 'INITIAL_BOM_CREATE', basename(__FILE__), 0, null, null, "Created {$created} BOMs");
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => "Created {$created} new BOM(s). Existing ones skipped."]);
             } catch (Exception $e) {
@@ -650,7 +637,7 @@ try {
                     END AS has_bom
                 FROM " . ITEMS_TABLE . " i WITH (NOLOCK)
                 WHERE i.is_active = 1 
-                  AND i.material_type != 'RM' -- กรอง RM ทิ้งตั้งแต่ DB ลดโหลด Network
+                  AND i.material_type != 'RM'
             ";
             
             if ($currentUser['role'] === 'supervisor') {
@@ -714,7 +701,7 @@ try {
                     ]);
                 }
 
-                logAction($pdo, $currentUser['username'], 'COPY BOM', $source_sap, "Cloned BOM to Target SAP: {$target_sap}");
+                writeLog($pdo, 'COPY_BOM', basename(__FILE__), $source_sap, null, null, "Cloned BOM to Target SAP: {$target_sap}");
                 $pdo->commit();
                 
                 echo json_encode(['success' => true, 'message' => "คัดลอกสูตรไปยัง '{$target_sap}' สำเร็จแล้ว!"]);
@@ -725,13 +712,9 @@ try {
             break;
 
         default:
-            http_response_code(400);
             throw new Exception("Invalid Action.");
     }
-} catch (Exception $e) {
-    if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
-    ob_clean();
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+} catch (Throwable $e) {
+    handleApiError($e, $pdo ?? null, $input ?? $_REQUEST);
 }
 ?>

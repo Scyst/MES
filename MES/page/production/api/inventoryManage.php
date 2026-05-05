@@ -47,7 +47,6 @@ try {
             $to_location_id = $input['to_location_id'] ?? 0;
             $from_location_id = $input['from_location_id'] ?? 0;
             
-            // Force Integer
             $quantity = floor((float)($input['quantity'] ?? 0));
             if ($quantity <= 0 && isset($input['confirmed_quantity'])) {
                 $quantity = floor((float)($input['confirmed_quantity'] ?? 0));
@@ -91,7 +90,7 @@ try {
                 $logDetail = "Qty: {$quantity}, To: {$to_location_id}, Lot: {$lot_no}";
 
                 $pdo->commit();
-                logAction($pdo, $currentUser['username'], $logType, $item_id, $logDetail);
+                writeLog($pdo, $logType, 'INVENTORY_API', $item_id, null, null, $logDetail);
                 echo json_encode(['success' => true, 'message' => $message]);
 
             } catch (Exception $e) {
@@ -113,7 +112,6 @@ try {
             $params = [];
             $conditions = [];
 
-            // Row-Level Security Authorization
             if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
                 if (!empty($_GET['user_filter'])) {
                     $conditions[] = "u.username = ?";
@@ -571,7 +569,6 @@ try {
             $fg_item_id = (int)($input['item_id'] ?? 0);
             $location_id = (int)($input['location_id'] ?? 0);
             
-            // Force Integer
             $quantity = floor((float)($input['quantity'] ?? 0)); 
             
             $count_type = strtoupper($input['count_type'] ?? 'FG');
@@ -597,7 +594,6 @@ try {
             }
 
             try {
-                // Delegate entire execution logic to SQL Server Stored Procedure
                 $stmt = $pdo->prepare("
                     EXEC dbo.sp_ExecuteProduction 
                         @item_id = ?, 
@@ -633,9 +629,7 @@ try {
                 ]);
 
             } catch (Exception $e) {
-                // Return Business Logic Errors (e.g. "BOM not found") from SP back to the client
-                http_response_code(400);
-                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+                throw $e;
             }
             break;
 
@@ -706,7 +700,6 @@ try {
                     $deleteConsumeStmt = $pdo->prepare($deleteConsumeSql);
                     $deleteConsumeStmt->execute([$note_to_find]);
 
-                    // Force Integer
                     $new_quantity = floor((float)($input['quantity'] ?? 0)); 
                     
                     $new_location_id = (int)($input['location_id'] ?? 0);
@@ -793,7 +786,6 @@ try {
                         $spStock->execute([$old_item_id, $old_transaction['to_location_id'], -$old_quantity]);
                     }
 
-                    // Force Integer
                     $new_quantity = floor((float)($input['quantity'] ?? 0));
                     
                     $new_lot_no = $input['lot_no'] ?? null;
@@ -837,7 +829,7 @@ try {
                 }
 
                 $pdo->commit();
-                logAction($pdo, $currentUser['username'], 'UPDATE TRANSACTION', $transaction_id, "Updated transaction.");
+                writeLog($pdo, 'UPDATE', 'INVENTORY_API', $transaction_id, null, null, "Updated transaction.");
                 echo json_encode(['success' => true, 'message' => 'Transaction updated successfully.']);
                 
             } catch (Exception $e) {
@@ -908,7 +900,7 @@ try {
                 $deleteStmt->execute([$transaction_id]);
 
                 $pdo->commit();
-                logAction($pdo, $currentUser['username'], 'DELETE TRANSACTION', $transaction_id);
+                writeLog($pdo, 'DELETE', 'INVENTORY_API', $transaction_id);
                 echo json_encode(['success' => true, 'message' => 'Transaction deleted successfully.']);
 
             } catch (Exception $e) { 
@@ -1002,7 +994,6 @@ try {
                 $item_id = $input['item_id'] ?? 0;
                 $location_id = $input['location_id'] ?? 0;
                 
-                // Force Integer
                 $physical_count = isset($input['physical_count']) ? floor((float)$input['physical_count']) : null;
                 
                 $notes = trim($input['notes'] ?? 'Quick Adjustment');
@@ -1031,7 +1022,7 @@ try {
                 $transStmt->execute([$item_id, $variance, $location_id, $currentUser['id'], $notes]);
 
                 $pdo->commit();
-                logAction($pdo, $currentUser['username'], 'QUICK_ADJUST', $item_id, "Location: {$location_id}, New Qty: {$physical_count}, Variance: {$variance}");
+                writeLog($pdo, 'QUICK_ADJUST', 'INVENTORY_API', $item_id, null, null, "Location: {$location_id}, New Qty: {$physical_count}, Variance: {$variance}");
                 echo json_encode(['success' => true, 'message' => 'Stock adjusted successfully.']);
 
             } catch (Exception $e) {
@@ -1209,277 +1200,6 @@ try {
             echo json_encode(['success' => true, 'summary' => $summary, 'grand_total' => $grand_total]);
             break;
 
-        case 'get_pending_shipments':
-            if (!hasPermission('manage_shipment')) {
-                http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Unauthorized to view pending shipments.']);
-                exit;
-            }
-
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
-            $offset = ($page - 1) * $limit;
-            $params = [];
-            $conditions = ["t.transaction_type = 'TRANSFER_PENDING_SHIPMENT'"];
-
-            if (!empty($_GET['search_term'])) {
-                $search_term = '%' . $_GET['search_term'] . '%';
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR loc_from.location_name LIKE ? OR loc_to.location_name LIKE ? OR u.username LIKE ?)";
-                array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
-            }
-            if (!empty($_GET['startDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) >= ?"; $params[] = $_GET['startDate']; }
-            if (!empty($_GET['endDate'])) { $conditions[] = "CAST(t.transaction_timestamp AS DATE) <= ?"; $params[] = $_GET['endDate']; }
-
-            $whereClause = "WHERE " . implode(" AND ", $conditions);
-
-            $totalSql = "SELECT COUNT(*) FROM " . TRANSACTIONS_TABLE . " t
-                        JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                        LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
-                        LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
-                        LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
-                        {$whereClause}";
-            $totalStmt = $pdo->prepare($totalSql);
-            $totalStmt->execute($params);
-            $total = (int)$totalStmt->fetchColumn();
-
-            $dataSql = "
-                SELECT
-                    t.transaction_id, t.transaction_timestamp, i.sap_no, i.part_no, i.part_description, t.quantity,
-                    loc_from.location_name AS from_location,
-                    loc_to.location_name AS to_location,
-                    u.username AS requested_by, t.notes
-                FROM " . TRANSACTIONS_TABLE . " t
-                JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                LEFT JOIN " . LOCATIONS_TABLE . " loc_from ON t.from_location_id = loc_from.location_id
-                LEFT JOIN " . LOCATIONS_TABLE . " loc_to ON t.to_location_id = loc_to.location_id
-                LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
-                {$whereClause}
-                ORDER BY t.transaction_timestamp ASC
-                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
-            ";
-            $dataStmt = $pdo->prepare($dataSql);
-            $paramIndex = 1;
-            foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
-            $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
-            $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
-            $dataStmt->execute();
-            $pending_shipments = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            echo json_encode(['success' => true, 'data' => $pending_shipments, 'total' => $total, 'page' => $page]);
-            break;
-
-        case 'confirm_shipment':
-            if (!hasPermission('manage_shipment')) {
-                http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Unauthorized to confirm shipments.']);
-                exit;
-            }
-
-            $transaction_ids = $input['transaction_ids'] ?? []; 
-            if (empty($transaction_ids) || !is_array($transaction_ids)) {
-                throw new Exception("No valid Transaction IDs provided for confirmation.");
-            }
-
-            $pdo->beginTransaction();
-            try {
-                $confirmed_count = 0;
-                $updateSql = "UPDATE " . TRANSACTIONS_TABLE . "
-                            SET transaction_type = 'SHIPPED'
-                            WHERE transaction_id = ? AND transaction_type = 'TRANSFER_PENDING_SHIPMENT'";
-                $updateStmt = $pdo->prepare($updateSql);
-
-                foreach ($transaction_ids as $tid) {
-                    $updateParams = [ $tid ];
-                    $updateStmt->execute($updateParams);
-
-                    if ($updateStmt->rowCount() > 0) {
-                        $confirmed_count++;
-                        logAction($pdo, $currentUser['username'], 'CONFIRM SHIPMENT', $tid);
-                    } else {
-                        error_log("Failed to confirm shipment for transaction ID: " . $tid . " - Status might not be PENDING or ID invalid.");
-                    }
-                }
-
-                $pdo->commit();
-
-                if ($confirmed_count > 0) {
-                    echo json_encode(['success' => true, 'message' => "Successfully confirmed {$confirmed_count} shipment(s)."]);
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'No shipments were confirmed. They might have been confirmed already or the IDs were invalid.']);
-                }
-
-            } catch (Exception $e) {
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
-                }
-                throw $e;
-            }
-            break;
-
-            case 'check_lot_status':
-            $lot_no = $_GET['lot_no'] ?? '';
-            $sap_no = $_GET['sap_no'] ?? ''; 
-            $scan_id = $_GET['scan_id'] ?? null; 
-
-            if (!empty($scan_id)) {
-                $sql = "SELECT is_used, job_data FROM " . SCAN_JOBS_TABLE . " WHERE scan_id = ?";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$scan_id]);
-                $job = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if ($job && $job['is_used'] == 1) {
-                    $job_data = json_decode($job['job_data'], true);
-                    $lot_to_find = $job_data['lot'] ?? $lot_no; 
-
-                    $transSql = "SELECT TOP 1 t.transaction_timestamp, u.username 
-                                 FROM " . TRANSACTIONS_TABLE . " t
-                                 LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
-                                 JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
-                                 WHERE t.reference_id = ? AND i.sap_no = ?
-                                 ORDER BY t.transaction_timestamp DESC";
-                    $transStmt = $pdo->prepare($transSql);
-                    $transStmt->execute([$lot_to_find, $job_data['sap_no'] ?? $sap_no]);
-                    $transaction = $transStmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    echo json_encode([
-                        'success' => true, 
-                        'status' => 'received', 
-                        'details' => $transaction 
-                    ]);
-                    exit;
-                } else if ($job && $job['is_used'] == 0) {
-                    echo json_encode(['success' => true, 'status' => 'new']); 
-                    exit;
-                }
-            }
-
-            if (empty($lot_no) || empty($sap_no)) {
-                throw new Exception("Lot No and SAP No are required for status check.");
-            }
-            $itemStmt = $pdo->prepare("SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ?");
-            $itemStmt->execute([$sap_no]);
-            $item_id = $itemStmt->fetchColumn();
-
-            if (!$item_id) {
-                echo json_encode(['success' => true, 'status' => 'new']);
-                exit;
-            }
-
-            $sql = "SELECT TOP 1 t.transaction_timestamp, u.username 
-                    FROM " . TRANSACTIONS_TABLE . " t
-                    LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
-                    WHERE t.parameter_id = ? AND t.reference_id = ?
-                    AND t.transaction_type IN ('RECEIPT', 'TRANSFER')
-                    ORDER BY t.transaction_timestamp DESC";
-            
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$item_id, $lot_no]);
-            $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($transaction) {
-                echo json_encode(['success' => true, 'status' => 'received', 'details' => $transaction]);
-            } else {
-                echo json_encode(['success' => true, 'status' => 'new']);
-            }
-            break;
-
-        case 'get_locations_for_qr':
-            if (!hasPermission('print_qr')) {
-                 http_response_code(403);
-                 echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
-                 exit;
-            }
-            
-            $stmt = $pdo->query("SELECT location_id, location_name FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
-            $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            echo json_encode(['success' => true, 'locations' => $locations]);
-            break;
-
-        case 'get_next_serial':
-            $parent_lot = $input['parent_lot'] ?? '';
-            if (empty($parent_lot)) {
-                throw new Exception("Parent Lot (Lot No.) is required.");
-            }
-
-            $sql = "
-                MERGE INTO " . LOT_SERIALS_TABLE . " AS T
-                USING (SELECT ? AS parent_lot) AS S
-                ON (T.parent_lot = S.parent_lot)
-                WHEN MATCHED THEN
-                    UPDATE SET 
-                        T.last_serial = T.last_serial + 1, 
-                        T.updated_at = GETDATE()
-                WHEN NOT MATCHED THEN
-                    INSERT (parent_lot, last_serial, updated_at) 
-                    VALUES (S.parent_lot, 1, GETDATE())
-                OUTPUT inserted.last_serial;
-            ";
-
-            $pdo->beginTransaction();
-            try {
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$parent_lot]);
-                $new_serial = $stmt->fetchColumn();
-                $pdo->commit();
-                echo json_encode(['success' => true, 'new_serial_number' => $new_serial]);
-            } catch (Exception $e) {
-                if ($pdo->inTransaction()) $pdo->rollBack();
-                throw $e;
-            }
-            break;
-
-        case 'create_scan_job':
-            $jobData = [
-                'sap_no' => $input['sap_no'] ?? null,
-                'lot' => $input['lot'] ?? null,
-                'qty' => $input['qty'] ?? null,
-                'from_loc_id' => $input['from_loc_id'] ?? null
-            ];
-
-            if (empty($jobData['sap_no']) || empty($jobData['lot']) || empty($jobData['qty'])) {
-                throw new Exception("Incomplete job data provided (SAP, Lot, Qty required).");
-            }
-
-            $scan_id = '';
-            $max_tries = 5;
-            for ($i = 0; $i < $max_tries; $i++) {
-                $scan_id = generateShortUUID(8); 
-                $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM " . SCAN_JOBS_TABLE . " WHERE scan_id = ?");
-                $checkStmt->execute([$scan_id]);
-                if ($checkStmt->fetchColumn() == 0) {
-                    break; 
-                }
-                if ($i === $max_tries - 1) {
-                    throw new Exception("Failed to generate a unique Scan ID.");
-                }
-            }
-
-            $sql = "INSERT INTO " . SCAN_JOBS_TABLE . " (scan_id, job_data, created_at, is_used) VALUES (?, ?, GETDATE(), 0)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$scan_id, json_encode($jobData)]);
-
-            echo json_encode(['success' => true, 'scan_id' => $scan_id]);
-            break;
-
-        case 'get_scan_job_data':
-            $scan_id = $_GET['scan_id'] ?? '';
-            if (empty($scan_id)) {
-                throw new Exception("Scan ID is required.");
-            }
-
-            $sql = "SELECT job_data FROM " . SCAN_JOBS_TABLE . " WHERE scan_id = ?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$scan_id]);
-            $job_data_json = $stmt->fetchColumn();
-
-            if ($job_data_json) {
-                echo json_encode(['success' => true, 'data' => json_decode($job_data_json)]);
-            } else {
-                throw new Exception("Scan ID not found or already used.");
-            }
-            break;
-
         case 'get_production_hourly_summary':
             try {
                 $sp_name = SP_CALC_OEE_HOURLY; 
@@ -1498,8 +1218,7 @@ try {
                 echo json_encode(['success' => true, 'data' => $data]);
 
             } catch (Exception $e) {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+                throw $e;
             }
             break;
 
@@ -1589,8 +1308,7 @@ try {
                 echo json_encode(['success' => true, 'data' => $data]);
 
             } catch (Exception $e) {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+                throw $e;
             }
             break;
 

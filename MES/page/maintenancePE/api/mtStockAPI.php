@@ -2,7 +2,7 @@
 // MES/page/maintenancePE/api/mtStockAPI.php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../db.php';
-require_once __DIR__ . '/../../../auth/check_auth.php';
+require_once __DIR__ . '/../../components/init.php';
 
 requirePermission(['view_maintenance', 'manage_maintenance']);
 
@@ -237,7 +237,7 @@ try {
             }
 
             $pdo->commit();
-            logAction($pdo, $currentUser['username'], 'IMPORT ITEMS', 0, "Imported $insertedCount new items, Updated $updatedCount items.");
+            writeLog($pdo, 'IMPORT_ITEMS', 'MT_STOCK_API', 0, null, null, "Imported $insertedCount new items, Updated $updatedCount items.");
 
             echo json_encode([
                 'success' => true, 
@@ -245,9 +245,6 @@ try {
             ]);
             break;
 
-        // =========================================================================
-        // 📦 [ADJUST] BULK STOCK TAKE (นำเข้ายอดนับสต๊อกผ่าน Excel)
-        // =========================================================================
         case 'bulk_stock_take':
             $adjustments = $input['adjustments'] ?? [];
             if (empty($adjustments)) throw new Exception("ไม่พบรายการที่ต้องปรับยอด");
@@ -255,11 +252,9 @@ try {
             $pdo->beginTransaction();
             $processedCount = 0;
 
-            // 1. เตรียม SQL หา Item ID จาก Item Code
             $itemSql = "SELECT item_id FROM MT_ITEMS WITH (NOLOCK) WHERE item_code = ?";
             $itemStmt = $pdo->prepare($itemSql);
 
-            // 2. เตรียม SQL อัปเดตยอดคงเหลือ (เปลี่ยนเป็น quantity)
             $updateSql = "
                 UPDATE MT_INVENTORY_ONHAND 
                 SET quantity = quantity + ?, last_updated = GETDATE()
@@ -267,14 +262,12 @@ try {
             ";
             $updateStmt = $pdo->prepare($updateSql);
 
-            // 3. เตรียม SQL ถ้าของไม่เคยมีในคลังเลย ให้ Insert ใหม่ (เปลี่ยนเป็น quantity)
             $insertOnhandSql = "
                 INSERT INTO MT_INVENTORY_ONHAND (item_id, location_id, quantity, last_updated)
                 VALUES (?, ?, ?, GETDATE())
             ";
             $insertOnhandStmt = $pdo->prepare($insertOnhandSql);
 
-            // 4. เตรียม SQL ลงประวัติ Transactions (เหมือนเดิม)
             $transSql = "
                 INSERT INTO MT_TRANSACTIONS 
                 (transaction_type, item_id, location_id, quantity, notes, created_by_user_id, created_at)
@@ -295,16 +288,13 @@ try {
 
                 if (!$itemId) continue; 
 
-                // อัปเดตสต๊อกคงเหลือ
                 $updateStmt->execute([$diff, $itemId, $locId]);
                 
-                // ถ้าอัปเดตไม่ได้ผล ให้ Insert ใหม่
                 if ($updateStmt->rowCount() === 0) {
                     $insertOnhandStmt->execute([$itemId, $locId, $adj['actual_qty']]);
                 }
 
-                // บันทึก Log Transaction
-                $transStmt->execute([$itemId, $locId, $diff, $notes, $userId]); // ใช้ $userId ตามที่คุณประกาศไว้ด้านบน
+                $transStmt->execute([$itemId, $locId, $diff, $notes, $userId]);
                 $processedCount++;
             }
 
@@ -315,11 +305,7 @@ try {
         default:
             throw new Exception("Invalid Action");
     }
-} catch (Exception $e) {
-    if ($pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+} catch (Throwable $e) {
+    handleApiError($e, $pdo ?? null, $input ?? $_REQUEST);
 }
 ?>

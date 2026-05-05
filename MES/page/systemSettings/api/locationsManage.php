@@ -64,7 +64,7 @@ try {
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$name, $desc, $line, $type, $is_active, $id]);
                 
-                logAction($pdo, $currentUser['username'], 'UPDATE LOCATION', $id, "Updated Location: $name");
+                writeLog($pdo, 'UPDATE_LOCATION', basename(__FILE__), $id, null, null, "Updated Location: $name");
                 $msg = 'Location updated successfully.';
             } else {
                 $sql = "INSERT INTO " . LOCATIONS_TABLE . " 
@@ -74,7 +74,7 @@ try {
                 $stmt->execute([$name, $desc, $line, $type, $is_active]);
                 $newId = $pdo->lastInsertId();
                 
-                logAction($pdo, $currentUser['username'], 'ADD LOCATION', $newId, "Created Location: $name");
+                writeLog($pdo, 'ADD_LOCATION', basename(__FILE__), $newId, null, null, "Created Location: $name");
                 $msg = 'Location created successfully.';
             }
 
@@ -83,15 +83,9 @@ try {
             break;
 
         default:
-            http_response_code(400);
             throw new Exception("Invalid Action requested.");
     }
-} catch (Exception $e) {
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    ob_clean();
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+} catch (Throwable $e) {
+    handleApiError($e, $pdo ?? null, $input ?? $_REQUEST);
 }
 ?>

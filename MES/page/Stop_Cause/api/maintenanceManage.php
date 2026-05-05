@@ -187,12 +187,11 @@ try {
                 
                 $stmt->execute([$requestDate, $currentUser['username'], $line, $input['machine'], $input['issue_description'], $priority, $photoPath, $jobType]);
                 
-                logAction($pdo, $currentUser['username'], 'ADD_MT_REQ', $line, "Type: {$jobType}, Machine: {$input['machine']}");
+                writeLog($pdo, 'ADD_REQUEST', 'MAINTENANCE_API', $pdo->lastInsertId(), null, null, "Line: {$line}, Machine: {$input['machine']}, Type: {$jobType}");
                 
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'Maintenance request submitted.']);
             } catch (Exception $e) {
-                $pdo->rollBack();
                 throw $e;
             }
             break;
@@ -244,7 +243,6 @@ try {
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'Status updated successfully.']);
             } catch (Exception $e) {
-                $pdo->rollBack();
                 throw $e;
             }
             break;
@@ -341,12 +339,11 @@ try {
                     $id
                 ]);
 
-                logAction($pdo, $currentUser['username'], 'EDIT_MT_REQ', $line, "Updated ID: {$id}");
+                writeLog($pdo, 'EDIT_REQUEST', 'MAINTENANCE_API', $id, null, null, "Line: {$line}");
                 
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'อัปเดตข้อมูลสำเร็จ']);
             } catch (Exception $e) {
-                $pdo->rollBack();
                 throw $e;
             }
             break;
@@ -399,8 +396,7 @@ try {
             $spare = $input['spare_parts_list'] ?? '';
 
             if (empty($id) || empty($note)) {
-                echo json_encode(['success' => false, 'message' => 'Missing Job ID or Technician Note.']);
-                exit;
+                throw new Exception('Missing Job ID or Technician Note.');
             }
 
             try {
@@ -417,22 +413,17 @@ try {
                     echo json_encode(['success' => true]);
                 } else {
                     $pdo->rollBack();
-                    echo json_encode(['success' => false, 'message' => 'ไม่สามารถบันทึกได้ (งานอาจถูกปิดไปแล้ว หรือไม่มีการเปลี่ยนแปลงเนื้อหา)']);
+                    throw new Exception('ไม่สามารถบันทึกได้ (งานอาจถูกปิดไปแล้ว หรือไม่มีการเปลี่ยนแปลงเนื้อหา)');
                 }
             } catch (Exception $ex) {
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
-                }
-                echo json_encode(['success' => false, 'message' => 'Database error: ' . $ex->getMessage()]);
+                throw $ex;
             }
             break;
 
         default:
             throw new Exception("Invalid Action");
     }
-} catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+} catch (Throwable $e) {
+    handleApiError($e, $pdo ?? null, $input ?? $_REQUEST);
 }
 ?>

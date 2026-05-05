@@ -66,7 +66,6 @@ try {
 
         case 'get_stop_by_id':
             if (!isset($_GET['id']) || !filter_var($_GET['id'], FILTER_VALIDATE_INT)) {
-                http_response_code(400);
                 throw new Exception('Invalid or missing ID for editing.');
             }
             $id = $_GET['id'];
@@ -79,8 +78,7 @@ try {
                 $stop['stop_end'] = (new DateTime($stop['stop_end']))->format('H:i:s');
                 echo json_encode(['success' => true, 'data' => $stop]);
             } else {
-                http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Record not found.']);
+                throw new Exception('Record not found.');
             }
             break;
 
@@ -104,9 +102,10 @@ try {
             $stmt = $pdo->prepare($sql);
 
             if ($stmt->execute($params)) {
+                $newId = $pdo->lastInsertId();
                 $duration = ($stop_end_dt->getTimestamp() - $stop_begin_dt->getTimestamp()) / 60;
-                $detail = "Machine: {$input['machine']}, Cause: {$input['cause']}, Duration: " . round($duration, 2) . " mins";
-                logAction($pdo, $currentUser['username'], 'ADD_STOP', $line, $detail);
+                $detail = "Line: {$line}, Machine: {$input['machine']}, Cause: {$input['cause']}, Duration: " . round($duration, 2) . " mins";
+                writeLog($pdo, 'ADD_STOP', basename(__FILE__), $newId, null, null, $detail);
                 echo json_encode(['success' => true, 'message' => 'Stop cause added successfully.']);
             } else {
                 throw new Exception("Failed to add stop cause.");
@@ -151,8 +150,8 @@ try {
     
             if ($stmt->rowCount() > 0) {
                 $duration = ($stop_end_dt->getTimestamp() - $stop_begin_dt->getTimestamp()) / 60;
-                $detail = "ID: {$id}, Machine: {$input['machine']}, Cause: {$input['cause']}, Duration: " . round($duration, 2) . " mins";
-                logAction($pdo, $currentUser['username'], 'UPDATE_STOP', $line, $detail);
+                $detail = "Machine: {$input['machine']}, Cause: {$input['cause']}, Duration: " . round($duration, 2) . " mins";
+                writeLog($pdo, 'UPDATE_STOP', basename(__FILE__), $id, null, null, $detail);
                 echo json_encode(['success' => true, 'message' => 'Stop Cause updated successfully.']);
             } else {
                 echo json_encode(['success' => true, 'message' => 'No changes made or data not found.']);
@@ -162,7 +161,6 @@ try {
         case 'delete_stop':
             $id = $input['id'] ?? $_REQUEST['id'] ?? null;
             if (!$id || !filter_var($id, FILTER_VALIDATE_INT)) {
-                http_response_code(400);
                 throw new Exception('Invalid or missing Stop Cause ID.');
             }
             $stmt = $pdo->prepare("SELECT * FROM " . STOP_CAUSES_TABLE . " WHERE id = ?");
@@ -176,8 +174,8 @@ try {
             $deleteStmt = $pdo->prepare("DELETE FROM " . STOP_CAUSES_TABLE . " WHERE id = ?");
             $deleteStmt->execute([$id]);
             if ($deleteStmt->rowCount() > 0) {
-                $detail = "Deleted ID: {$id} | Machine: {$stopToDelete['machine']}, Cause: {$stopToDelete['cause']}, Duration: " . round($stopToDelete['duration'], 2) . " mins";
-                logAction($pdo, $currentUser['username'], 'DELETE_STOP', $stopToDelete['line'], $detail);
+                $detail = "Line: {$stopToDelete['line']}, Machine: {$stopToDelete['machine']}, Cause: {$stopToDelete['cause']}, Duration: " . round($stopToDelete['duration'], 2) . " mins";
+                writeLog($pdo, 'DELETE_STOP', basename(__FILE__), $id, null, null, $detail);
                 echo json_encode(['success' => true, 'message' => 'Stop Cause data deleted successfully.']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Record not found or already deleted.']);
@@ -202,12 +200,9 @@ try {
             break;
 
         default:
-            http_response_code(400);
             throw new Exception('Invalid action specified for Stop Cause.');
     }
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    error_log("Error in stopCauseManage.php: " . $e->getMessage());
+} catch (Throwable $e) {
+    handleApiError($e, $pdo ?? null, $input ?? $_REQUEST);
 }
 ?>

@@ -153,7 +153,7 @@ try {
             $stmt->execute([$id]);
 
             if ($stmt->rowCount() > 0) {
-                logAction($pdo, $currentUser['username'], 'DEACTIVATE ITEM', $id);
+                writeLog($pdo, 'DEACTIVATE_ITEM', basename(__FILE__), $id);
                 echo json_encode(['success' => true, 'message' => 'Item deactivated successfully.']);
             } else {
                 throw new Exception("Item not found or could not be deactivated.");
@@ -169,7 +169,7 @@ try {
             $stmt->execute([$id]);
 
             if ($stmt->rowCount() > 0) {
-                logAction($pdo, $currentUser['username'], 'RESTORE ITEM', $id);
+                writeLog($pdo, 'RESTORE_ITEM', basename(__FILE__), $id);
                 echo json_encode(['success' => true, 'message' => 'Item restored successfully.']);
             } else {
                 throw new Exception("Item not found or could not be restored.");
@@ -245,7 +245,7 @@ try {
                         $p_std, $p_usd,
                         $item_id
                     ]);
-                    logAction($pdo, $currentUser['username'], 'UPDATE ITEM', $item_id, "SAP: {$sap_no}");
+                    writeLog($pdo, 'UPDATE_ITEM', basename(__FILE__), $item_id, null, null, "SAP: {$sap_no}");
                 } else {
                     $sql = "INSERT INTO " . ITEMS_TABLE . " (
                                 sap_no, part_no, sku, part_description, material_type, material_sub_type, created_at, 
@@ -272,7 +272,7 @@ try {
                         $p_std, $p_usd
                     ]);
                     $item_id = $pdo->lastInsertId();
-                    logAction($pdo, $currentUser['username'], 'CREATE ITEM', $item_id, "SAP: {$sap_no}");
+                    writeLog($pdo, 'CREATE_ITEM', basename(__FILE__), $item_id, null, null, "SAP: {$sap_no}");
                 }
 
                 foreach ($routes_data as $route) {
@@ -614,16 +614,10 @@ try {
             break;
 
         default:
-            http_response_code(400);
             throw new Exception("Invalid action specified for Item Master.");
     }
 
-} catch (Exception $e) {
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    ob_clean();
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+} catch (Throwable $e) {
+    handleApiError($e, $pdo ?? null, $input ?? $_REQUEST);
 }
 ?>
