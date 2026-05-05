@@ -5,8 +5,7 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../../db.php';
-require_once __DIR__ . '/../../../auth/check_auth.php';
-require_once __DIR__ . '/../../logger.php';
+require_once __DIR__ . '/../../components/init.php';
 
 if (!isset($_SESSION['user'])) {
     http_response_code(403);

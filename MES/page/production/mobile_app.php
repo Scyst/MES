@@ -186,10 +186,11 @@
                     <select id="out_time_slot" name="time_slot" class="form-select text-primary fw-bold bg-light">
                         <?php
                             for ($h = 0; $h < 24; $h++) {
-                                $start = str_pad($h, 2, '0', STR_PAD_LEFT);
-                                $end = str_pad(($h + 1) % 24, 2, '0', STR_PAD_LEFT);
+                                $start_h = str_pad($h, 2, '0', STR_PAD_LEFT);
+                                $end_h = str_pad(($h + 1) % 24, 2, '0', STR_PAD_LEFT);
+                                $slot_value = "{$start_h}:00:00|{$start_h}:59:59"; 
                                 $selected = ($h == $current_hour) ? 'selected' : '';
-                                echo "<option value=\"{$start}:00:00|{$end}:00:00\" $selected>{$start}:00 - {$end}:00</option>";
+                                echo "<option value=\"{$slot_value}\" {$selected}>{$start_h}:00 - {$end_h}:00</option>";
                             }
                         ?>
                     </select>

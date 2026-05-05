@@ -1,8 +1,7 @@
 <?php
 // MES/page/storeManagement/api/api_store.php
 require_once __DIR__ . '/../../db.php';
-require_once __DIR__ . '/../../../auth/check_auth.php';
-require_once __DIR__ . '/../../logger.php';
+require_once __DIR__ . '/../../components/init.php';
 
 header('Content-Type: application/json; charset=utf-8');
 ini_set('display_errors', 0);

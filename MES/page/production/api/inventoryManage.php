@@ -1,8 +1,7 @@
 <?php
 // MES/page/production/api/inventoryManage.php
 require_once __DIR__ . '/../../db.php';
-require_once __DIR__ . '/../../../auth/check_auth.php';
-require_once __DIR__ . '/../../logger.php';
+require_once __DIR__ . '/../../components/init.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -1600,19 +1599,7 @@ try {
             echo json_encode(['success' => false, 'message' => "Action '{$action}' is not handled."]);
             break;
     }
-} catch (PDOException $e) {
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => "Database System Error. Please contact administrator."]);
-    error_log("Inventory API PDO Error: " . $e->getMessage());
-
-} catch (Exception $e) {
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+} catch (Throwable $e) {
+    handleApiError($e, $pdo ?? null, $input ?? $_REQUEST);
 }
 ?>

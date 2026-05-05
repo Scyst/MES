@@ -2,7 +2,7 @@
 // api/forkliftManage.php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../db.php'; 
-require_once __DIR__ . '/../../components/php/logger.php';
+require_once __DIR__ . '/../../components/init.php';
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 

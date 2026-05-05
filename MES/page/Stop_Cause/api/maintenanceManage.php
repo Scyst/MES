@@ -2,8 +2,7 @@
 // MES/page/Stop_Cause/api/maintenanceManage.php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../db.php'; 
-require_once __DIR__ . '/../../../auth/check_auth.php';
-require_once __DIR__ . '/../../logger.php';
+require_once __DIR__ . '/../../components/init.php';
 
 requirePermission(['view_maintenance', 'view_production', 'view_dashboard']);
 

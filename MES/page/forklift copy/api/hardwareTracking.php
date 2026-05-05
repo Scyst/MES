@@ -2,9 +2,8 @@
 // api/api_hardware.php (สำหรับ ESP32)
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../db.php'; 
-// ถ้ามี logger.php ให้ require เข้ามาด้วยเพื่อเก็บ Log ว่าบอร์ดไหนดับ
+require_once __DIR__ . '/../../components/init.php';
 
-// ป้องกัน GET Method จากอุปกรณ์หรือสแกนเนอร์ภายนอก
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'POST Method Required']);

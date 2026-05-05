@@ -1,8 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../db.php';
-require_once __DIR__ . '/../../../auth/check_auth.php';
-require_once __DIR__ . '/../../logger.php';
+require_once __DIR__ . '/../../components/init.php';
 
 if (!hasPermission('add_production') && !hasPermission('manage_production') && !hasPermission('print_label')) {
     http_response_code(403);
@@ -499,22 +498,7 @@ try {
             echo json_encode(['success' => false, 'message' => "Invalid action: $action"]);
             break;
     }
-
-} catch (PDOException $e) {
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    // ปิดช่องโหว่ Data Leakage กรณี SQL Syntax ผิด หรือ Database ร่ม
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => "Database System Error. Please contact administrator."]);
-    error_log("Transfer API PDO Error: " . $e->getMessage());
-
-} catch (Exception $e) {
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    // ไม่จำเป็นต้อง error_log ทุกๆ Exception เพราะบางอย่างคือ Business Error (เช่น User กรอกข้อมูลไม่ครบ)
+} catch (Throwable $e) {
+    handleApiError($e, $pdo ?? null, $input ?? $_REQUEST);
 }
 ?>

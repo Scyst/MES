@@ -14,20 +14,14 @@
  */
 function writeLog($pdo, $action, $module, $refId, $oldData = null, $newData = null, $remark = '') {
     try {
-        // 1. เตรียมข้อมูล Context อัตโนมัติ (ไม่ต้องส่งมาให้เสียเวลา)
-        $userId = $_SESSION['user']['id'] ?? 'SYSTEM'; // หรือ username แล้วแต่ระบบคุณ
+        $userId = $_SESSION['user']['id'] ?? 'SYSTEM';
         $username = $_SESSION['user']['username'] ?? 'SYSTEM';
         $role = $_SESSION['user']['role'] ?? 'system';
         
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'UNKNOWN';
-
-        // 2. แปลง Array ข้อมูลให้เป็น JSON String (นี่คือจุดที่ทำให้รองรับทุกโครงสร้าง!)
-        // JSON_UNESCAPED_UNICODE เพื่อให้อ่านภาษาไทยรู้เรื่องใน Database
         $oldJson = $oldData ? json_encode($oldData, JSON_UNESCAPED_UNICODE) : null;
         $newJson = $newData ? json_encode($newData, JSON_UNESCAPED_UNICODE) : null;
-
-        // 3. ยิง SQL ลงตาราง SYSTEM_LOGS
         $sql = "INSERT INTO SYSTEM_LOGS 
                 (user_id, username, role, action, module, ref_id, old_value, new_value, remark, ip_address, user_agent) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -41,8 +35,6 @@ function writeLog($pdo, $action, $module, $refId, $oldData = null, $newData = nu
         ]);
 
     } catch (Exception $e) {
-        // Silent Fail: ถ้า Log พัง อย่าให้ระบบหลักพังตาม
-        // อาจจะเขียนลง Text File สำรองไว้ถ้าระบบซีเรียสมาก
         error_log("Audit Log Error: " . $e->getMessage());
     }
 }
@@ -70,11 +62,56 @@ function writeErrorLog($pdo, $module, $errorMessage, $payloadData = null) {
             $ip, $userAgent
         ]);
         
-        // เขียนลง PHP Error Log ด้วยเผื่อกรณี Database ล่ม (Hard Crash)
         error_log("[$module] SYSTEM_ERROR: " . $errorMessage);
 
     } catch (Exception $e) {
         error_log("Failed to write Error Log: " . $e->getMessage());
     }
+}
+
+/**
+ * Global API Error Handler
+ * ใช้สำหรับดักจับ Error ทั้งระบบ (รวมถึงตัดข้อความ [SQL Server] อัตโนมัติ)
+ */
+function handleApiError(Throwable $e, $pdo = null, $payload = null) {
+    if ($pdo !== null && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
+    $fullErrorMessage = $e->getMessage();
+    $displayMessage = $fullErrorMessage;
+    $httpCode = 400;
+    if (strpos($fullErrorMessage, '[SQL Server]') !== false) {
+        $parts = explode('[SQL Server]', $fullErrorMessage);
+        $displayMessage = trim(end($parts));
+    }
+
+    if ($pdo !== null) {
+        try {
+            $userId = $_SESSION['user']['id'] ?? 'SYSTEM';
+            $username = $_SESSION['user']['username'] ?? 'SYSTEM';
+            $role = $_SESSION['user']['role'] ?? 'SYSTEM';
+            $uri = $_SERVER['REQUEST_URI'] ?? 'Unknown URI';
+            $payloadData = $payload ? json_encode($payload, JSON_UNESCAPED_UNICODE) : null;
+            $moduleName = basename($_SERVER['PHP_SELF']);
+
+            $logStmt = $pdo->prepare("
+                INSERT INTO dbo.SYSTEM_LOGS 
+                (user_id, username, role, action, module, ref_id, old_value, new_value, remark) 
+                VALUES (?, ?, ?, 'API_ERROR', ?, '500', ?, ?, ?)
+            ");
+            $logStmt->execute([$userId, $username, $role, $moduleName, $payloadData, $fullErrorMessage, $uri]);
+        } catch (Throwable $logEx) {
+            error_log("Failed to write to SYSTEM_LOGS: " . $logEx->getMessage() . " | Original Error: " . $fullErrorMessage);
+        }
+    }
+
+    header('Content-Type: application/json; charset=utf-8');
+    http_response_code($httpCode);
+    echo json_encode([
+        'success' => false, 
+        'message' => $displayMessage
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 ?>

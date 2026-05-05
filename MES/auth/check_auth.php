@@ -1,28 +1,32 @@
 <?php
 // MES/auth/check_auth.php
-
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+function isApiRequest() {
+    return (stripos($_SERVER['REQUEST_URI'], '/api/') !== false) || 
+           (isset($_SERVER['HTTP_ACCEPT']) && stripos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+}
+
 if (!defined('ALLOW_GUEST_ACCESS') && !isset($_SESSION['user'])) {
-    $current_url = $_SERVER['REQUEST_URI'];
-    if (defined('BASE_URL')) {
-        $loginUrl = BASE_URL . '/auth/login_form.php';
+    if (isApiRequest()) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Session expired. Please log in again.', 'is_expired' => true]);
+        exit;
     } else {
-        $loginUrl = '../../auth/login_form.php'; 
+        $current_url = $_SERVER['REQUEST_URI'];
+        $loginUrl = defined('BASE_URL') ? BASE_URL . '/auth/login_form.php' : '../../auth/login_form.php'; 
+        header("Location: " . $loginUrl . "?redirect=" . urlencode($current_url));
+        exit;
     }
-    header("Location: " . $loginUrl . "?redirect=" . urlencode($current_url));
-    exit;
 }
 
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); 
 }
 
-// ======================================================================
-// 🛡️ 1. ROLE-BASED ACCESS CONTROL (LEGACY SUPPORT)
-// ======================================================================
 function hasRole($roles): bool {
     if (empty($_SESSION['user']['role'])) return false;
     $userRole = $_SESSION['user']['role'];
@@ -32,11 +36,8 @@ function hasRole($roles): bool {
     return $userRole === $roles;
 }
 
-// ======================================================================
-// 🛡️ 2. PERMISSION-BASED ACCESS CONTROL (NEW STANDARD)
-// ======================================================================
 function hasPermission($permissionCode): bool {
-    if (hasRole('creator')) return true; // System Owner bypass
+    if (hasRole('creator')) return true;
     if (empty($_SESSION['user']['permissions']) || !is_array($_SESSION['user']['permissions'])) {
         return false;
     }
@@ -44,15 +45,20 @@ function hasPermission($permissionCode): bool {
 }
 
 function requirePermission($permissions) {
-    // 1. ถ้ายังไม่ล็อกอิน ให้เด้งไปหน้า Login อัตโนมัติ
     if (!isset($_SESSION['user'])) {
-        $current_url = $_SERVER['REQUEST_URI'];
-        $loginUrl = defined('BASE_URL') ? BASE_URL . '/auth/login_form.php' : '/MES/auth/login_form.php'; 
-        header("Location: " . $loginUrl . "?redirect=" . urlencode($current_url));
-        exit;
+        if (isApiRequest()) {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Session expired. Please log in again.', 'is_expired' => true]);
+            exit;
+        } else {
+            $current_url = $_SERVER['REQUEST_URI'];
+            $loginUrl = defined('BASE_URL') ? BASE_URL . '/auth/login_form.php' : '/MES/auth/login_form.php'; 
+            header("Location: " . $loginUrl . "?redirect=" . urlencode($current_url));
+            exit;
+        }
     }
 
-    // 2. เช็คว่ามีสิทธิ์ตามที่ขอหรือไม่ (รองรับทั้งแบบ String และ Array)
     $hasAccess = false;
     if (is_array($permissions)) {
         foreach ($permissions as $perm) {
@@ -65,20 +71,13 @@ function requirePermission($permissions) {
         $hasAccess = hasPermission($permissions);
     }
 
-    // 3. ถ้าไม่มีสิทธิ์ ให้ดีดออก!
     if (!$hasAccess) {
-        // เช็คก่อนว่าเป็นการเรียกผ่าน API (JSON) หรือเปิดหน้าเว็บปกติ
-        $isApiReq = (stripos($_SERVER['REQUEST_URI'], '/api/') !== false) || 
-                    (isset($_SERVER['HTTP_ACCEPT']) && stripos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
-
-        if ($isApiReq) {
-            // ถ้าเป็น API ให้ตอบกลับเป็น JSON Error
+        if (isApiRequest()) {
             header('Content-Type: application/json; charset=utf-8');
             http_response_code(403);
             echo json_encode(['success' => false, 'message' => 'Access Denied: You lack the required permissions.']);
             exit;
         } else {
-            // ถ้าเป็นหน้าเว็บ ให้โชว์หน้า Access Denied สวยๆ พร้อมปุ่มกลับไปหน้าหลัก
             $homeUrl = defined('BASE_URL') ? BASE_URL . '/page/dailyLog/dailyLogUI.php' : '/MES/page/dailyLog/dailyLogUI.php';
             die('
                 <!DOCTYPE html>
@@ -109,9 +108,6 @@ function requirePermission($permissions) {
     }
 }
 
-// ======================================================================
-// 🛡️ 3. LINE & RECORD LEVEL SECURITY
-// ======================================================================
 function checkLinePermission($requiredLine): bool {
     if (hasRole(['admin', 'creator'])) return true;
     if (hasRole('supervisor')) return isset($_SESSION['user']['line']) && ($_SESSION['user']['line'] === $requiredLine);
@@ -151,14 +147,10 @@ function enforceRecordPermission($pdo, $tableName, $recordId, $idColumn, $ownerC
     throw new Exception("Permission Denied: Record access restricted.");
 }
 
-// ======================================================================
-// 🛡️ 4. ENVIRONMENT & DEV MODE CONTROL (IMMEDIATE CHECK)
-// ======================================================================
 if (isset($_SESSION['user']) && defined('IS_DEVELOPMENT') && IS_DEVELOPMENT === true) {
     $currentUri = $_SERVER['REQUEST_URI'];
-    $isApiReq = (stripos($currentUri, '/api/') !== false) || (isset($_SERVER['HTTP_ACCEPT']) && stripos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
-
-    if (!$isApiReq) {
+    
+    if (!isApiRequest()) {
         $productionPath = str_replace('/Clone/MES/', '/MES/MES/', $currentUri);
         $productionUrl = ($productionPath === $currentUri && strpos($currentUri, '/Clone/') === false)
             ? "https://oem.sncformer.com" . $currentUri 
@@ -202,27 +194,15 @@ if (isset($_SESSION['user']) && defined('IS_DEVELOPMENT') && IS_DEVELOPMENT === 
     }
 }
 
-// ======================================================================
-// 🛡️ 5. SYSTEM INJECTION (AUTO LOGOUT & DEV BANNER)
-// ======================================================================
 if (isset($_SESSION['user'])) {
     if (!defined('SYSTEM_INJECTION_LOADED')) {
         define('SYSTEM_INJECTION_LOADED', true);
         
         register_shutdown_function(function() {
-            $isApiRequest = false;
-            foreach (headers_list() as $header) {
-                if (stripos($header, 'application/json') !== false) {
-                    $isApiRequest = true; break;
-                }
-            }
-            
-            if (!$isApiRequest) {
-                // 1. Inject Auto Logout Modal & JS
+            if (!isApiRequest()) {
                 $autoLogoutPath = __DIR__ . '/auto_logout.php';
                 if (file_exists($autoLogoutPath)) include_once $autoLogoutPath;
 
-                // 2. Inject Dev Mode Banner (Only if defined in Step 4)
                 if (defined('DEV_PRODUCTION_URL')) {
                     $prodUrl = DEV_PRODUCTION_URL;
                     echo <<<EOT

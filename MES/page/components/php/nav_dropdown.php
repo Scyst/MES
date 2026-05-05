@@ -30,7 +30,7 @@
             <div class="collapse" id="collapseProd" data-bs-parent="#desktopAccordionMenu">
                 <ul class="list-unstyled ms-3 ps-2 border-start py-1">
                     <li><a class="dropdown-item-icon py-1" href="../production/productionUI.php"><i class="fas fa-boxes fa-fw"></i><span>Production & Inventory</span></a></li>
-                    <li><a class="dropdown-item-icon py-1" href="../production/mobile_app"><i class="fas fa-mobile-alt fa-fw"></i><span>ลงยอดผลิต (Mobile)</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../production/mobile_app.php"><i class="fas fa-mobile-alt fa-fw"></i><span>ลงยอดผลิต (Mobile)</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../production/label_printer.php"><i class="fas fa-print fa-fw"></i><span>Tag Printer (WIP/FG)</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../Stop_Cause/Stop_Cause.php"><i class="fas fa-ban fa-fw"></i><span>Stop & Causes</span></a></li>
                 </ul>
@@ -152,7 +152,7 @@
             <?php if ($userRole && in_array($userRole, ['operator', 'supervisor', 'admin', 'creator'])): ?>
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">PRODUCTION</div>
             <a class="list-group-item list-group-item-action text-dark" href="../production/productionUI.php"><i class="fas fa-boxes fa-fw me-3"></i> Production & Inventory</a>
-            <a class="list-group-item list-group-item-action text-dark" href="../production/mobile_app"><i class="fas fa-mobile-alt fa-fw me-3"></i> ลงยอดผลิต (Mobile)</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../production/mobile_app.php"><i class="fas fa-mobile-alt fa-fw me-3"></i> ลงยอดผลิต (Mobile)</a>
             <!--a class="list-group-item list-group-item-action text-dark" href="../production/label_printer.php"><i class="fas fa-print fa-fw me-3"></i> Tag Printer (WIP/FG)</a-->
             <a class="list-group-item list-group-item-action text-dark" href="../Stop_Cause/Stop_Cause.php"><i class="fas fa-ban fa-fw me-3"></i> Stop & Causes</a>
 
