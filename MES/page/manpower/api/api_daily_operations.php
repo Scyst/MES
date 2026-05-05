@@ -459,23 +459,26 @@ try {
                 $sql = "EXEC sp_GetIntegratedManpowerAnalysis @StartDate = ?, @EndDate = ?, @Line = ?";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$startDate, $endDate, $line]);
+                
+                // 1. Fetch Summary (Layer 1)
                 $summary = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$summary) {
                     $summary = [
-                        'Total_Unique_HC' => 0,
-                        'Total_Present_ManDays' => 0,
-                        'Total_Absent_ManDays' => 0,
-                        'Total_Leave_ManDays' => 0,
-                        'New_Joiners' => 0,
-                        'Resigned' => 0
+                        'Total_Unique_HC' => 0, 'Total_Present_ManDays' => 0,
+                        'Total_Absent_ManDays' => 0, 'Total_Leave_ManDays' => 0,
+                        'New_Joiners' => 0, 'Resigned' => 0
                     ];
                 }
-                $stmt->nextRowset();
-                $trend = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                $stmt->nextRowset();
-                $financials = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                $stmt->nextRowset();
-                $distribution = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                
+                // 2. Defensive Fetching for multiple rowsets
+                $trend = [];
+                try { if ($stmt->nextRowset()) { $trend = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []; } } catch (Exception $e) {}
+                
+                $financials = [];
+                try { if ($stmt->nextRowset()) { $financials = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []; } } catch (Exception $e) {}
+                
+                $distribution = [];
+                try { if ($stmt->nextRowset()) { $distribution = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []; } } catch (Exception $e) {}
 
                 echo json_encode([
                     'success' => true,
@@ -489,7 +492,6 @@ try {
 
             } catch (Exception $e) {
                 error_log("Integrated Analysis Error: " . $e->getMessage());
-                
                 echo json_encode([
                     'success' => false, 
                     'message' => 'Database Error: ' . $e->getMessage()
