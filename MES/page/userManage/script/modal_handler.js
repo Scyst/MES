@@ -1,7 +1,3 @@
-/**
- * ฟังก์ชันสำหรับเปิด Bootstrap Modal (ตรวจสอบ Instance ก่อนสร้างใหม่)
- * @param {string} modalId - ID ของ Modal ที่จะเปิด
- */
 function openModal(modalId) {
     const modalElement = document.getElementById(modalId);
     if (modalElement) {
@@ -13,10 +9,6 @@ function openModal(modalId) {
     }
 }
 
-/**
- * ฟังก์ชันสำหรับปิด Bootstrap Modal
- * @param {string} modalId - ID ของ Modal ที่จะปิด
- */
 function closeModal(modalId) {
     const modalElement = document.getElementById(modalId);
     if (modalElement) {
@@ -27,18 +19,11 @@ function closeModal(modalId) {
     }
 }
 
-/**
- * ฟังก์ชันสำหรับเปิด Modal แสดง Logs และเรียกโหลดข้อมูล
- */
 async function openLogsModal() {
     openModal('logsModal');
     loadLogs();
 }
 
-/**
- * ฟังก์ชันสำหรับเปิด Modal "Edit User" และเติมข้อมูลพร้อมตั้งค่าสิทธิ์การแก้ไข
- * @param {object} user - Object ข้อมูลของผู้ใช้ที่ต้องการแก้ไข
- */
 function openEditUserModal(user) {
     const modal = document.getElementById('editUserModal');
     if (!modal) return;
@@ -47,7 +32,7 @@ function openEditUserModal(user) {
     document.getElementById('edit_username').value = user.username;
     document.getElementById('edit_role').value = user.role;
     document.getElementById('editLine').value = user.line || '';
-    document.getElementById('editEmpId').value = user.emp_id || ''; // <-- เพิ่มบรรทัดนี้
+    document.getElementById('editEmpId').value = user.emp_id || '';
 
     const isSelf = (user.id === currentUserId);
     document.getElementById('edit_username').disabled = (currentUserRole === 'admin' && isSelf);
@@ -60,8 +45,6 @@ function openEditUserModal(user) {
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!canManage) return;
-
-    // --- เพิ่ม Logic จัดการการแสดงผลช่อง Line ---
     function handleRoleChange(roleSelectId, lineWrapperId) {
         const roleSelect = document.getElementById(roleSelectId);
         const lineWrapper = document.getElementById(lineWrapperId);
@@ -74,7 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
     handleRoleChange('addRole', 'addUserLineWrapper');
     handleRoleChange('edit_role', 'editUserLineWrapper');
 
-    //-- จัดการการ Submit ฟอร์ม "Add User" --
     const addUserForm = document.getElementById('addUserForm');
     if (addUserForm) {
         addUserForm.addEventListener('submit', async (e) => {
@@ -86,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            showSpinner(); // <-- เพิ่ม: แสดง Spinner
+            showSpinner();
             try {
                 const result = await sendRequest('create', 'POST', payload);
                 showToast(result.message, result.success ? '#28a745' : '#dc3545');
@@ -101,19 +83,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     modal.hide();
                 }
             } finally {
-                hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
+                hideSpinner();
             }
         });
     }
 
-    //-- จัดการการ Submit ฟอร์ม "Edit User" --
     const editUserForm = document.getElementById('editUserForm');
     if (editUserForm) {
         editUserForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const payload = Object.fromEntries(new FormData(e.target).entries());
 
-            showSpinner(); // <-- เพิ่ม: แสดง Spinner
+            showSpinner();
             try {
                 const result = await sendRequest('update', 'POST', payload);
                 showToast(result.message, result.success ? '#28a745' : '#dc3545');
@@ -127,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     modal.hide();
                 }
             } finally {
-                hideSpinner(); // <-- เพิ่ม: ซ่อน Spinner เสมอ
+                hideSpinner();
             }
         });
     }

@@ -107,14 +107,84 @@ $pageIcon = "fas fa-users-cog";
                 </div>
 
                 <div class="tab-pane fade" id="tab-logs" role="tabpanel">
+                    <div class="card user-card border-0 mb-3 shadow-sm">
+                        <div class="card-body bg-light rounded">
+                            <form id="filterLogsForm" class="row g-2 align-items-end">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold mb-1">Date Range</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="date" class="form-control" id="logStartDate" name="startDate">
+                                        <span class="input-group-text px-2">-</span>
+                                        <input type="date" class="form-control" id="logEndDate" name="endDate">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold mb-1">Action Type</label>
+                                    <input type="text" class="form-control form-control-sm" id="logActionType" name="action_type" placeholder="e.g. UPDATE, LOGIN, API_ERROR">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold mb-1">Module</label>
+                                    <input type="text" class="form-control form-control-sm" id="logModule" name="module" placeholder="e.g. INVENTORY_API">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold mb-1">Keyword Search</label>
+                                    <input type="text" class="form-control form-control-sm" id="logSearch" name="search" placeholder="Search in remark, values, ref_id...">
+                                </div>
+                                <div class="col-md-2 d-grid">
+                                    <button type="submit" class="btn btn-primary btn-sm fw-bold"><i class="fas fa-search me-1"></i> Search Logs</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
                     <div class="card user-card">
-                        <div class="card-body">
-                            <div class="text-center text-muted py-5"><i class="fas fa-tools fa-2x mb-3"></i><br>Log Viewer Interface Goes Here</div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 600px;">
+                                <table class="table table-hover table-custom align-middle mb-0" style="font-size: 0.85rem; table-layout: fixed;">
+                                    <thead class="position-sticky top-0" style="z-index: 1; background-color: var(--bs-tertiary-bg);">
+                                        <tr>
+                                            <th style="width: 15%;">Timestamp</th>
+                                            <th style="width: 18%;">User & IP</th>
+                                            <th style="width: 20%;">Action & Module</th>
+                                            <th style="width: 6%;">Ref ID</th>
+                                            <th style="width: 33%;">Details / Remark</th>
+                                            <th style="width: 8%;" class="text-center">Raw Data</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="logsTbody">
+                                        <tr><td colspan="6" class="text-center py-4 text-muted">Click Search to load logs.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <small class="text-muted" id="logRecordInfo">Showing 0 records</small>
+                        <div class="d-flex gap-2 align-items-center">
+                            <button class="btn btn-sm btn-outline-secondary" id="btnPrevLog" disabled><i class="fas fa-chevron-left"></i></button>
+                            <span class="fw-bold" id="logCurrentPage">1</span>
+                            <button class="btn btn-sm btn-outline-secondary" id="btnNextLog" disabled><i class="fas fa-chevron-right"></i></button>
                         </div>
                     </div>
                 </div>
 
-            </div> </div>
+                <div class="modal fade" id="rawLogModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-dark text-white py-2">
+                                <h5 class="modal-title fs-6"><i class="fas fa-code me-2"></i>Raw Log Data</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body p-0 bg-dark">
+                                <pre><code id="rawLogContent" class="text-success p-3 d-block" style="max-height: 400px; overflow-y: auto; font-size: 0.8rem;"></code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
 
         <?php 
             include_once('components/addUserModal.php'); 

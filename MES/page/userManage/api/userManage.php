@@ -1,8 +1,6 @@
 <?php
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
-
-// เรียกใช้ db.php ซึ่งได้โหลด config.php ไว้แล้ว
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 
@@ -40,13 +38,10 @@ try {
             break;
 
         case 'sync_manpower':
-            // 1. อัปเดตข้อมูลพนักงานที่มี User อยู่แล้ว
             $stmtSync = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_SyncExistingUsersFromManpower @ActionBy=?");
             $stmtSync->execute([$actionBy]);
             $syncResult = $stmtSync->fetch(PDO::FETCH_ASSOC);
             $updatedCount = $syncResult['updated_count'] ?? 0;
-
-            // 2. กวาดพนักงานที่ยังไม่มี User มาสร้างใหม่ (ดึง department_api มาด้วย)
             $stmtNew = $pdo->query("
                 SELECT emp_id, name_th, line, department_api 
                 FROM " . MANPOWER_EMPLOYEES_TABLE . " 
@@ -66,8 +61,6 @@ try {
                 $username = $empId;
                 $password = substr($empId, -4); 
                 $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                
-                // Dynamic Extraction สำหรับสร้างคนใหม่ (PHP)
                 $teamGroup = null;
                 $dept = $emp['department_api'] ?? '';
                 if (strpos($dept, '-') !== false) {
@@ -104,15 +97,14 @@ try {
             $emp = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($emp) {
-                // Dynamic Extraction (PHP)
                 $teamGroup = '';
                 $dept = $emp['department_api'] ?? '';
                 if (strpos($dept, '-') !== false) {
                     $parts = explode('-', $dept);
-                    $afterDash = trim($parts[1] ?? ''); // เช่น "Team1 D-DL" หรือ "B9 D-DL"
+                    $afterDash = trim($parts[1] ?? '');
                     $subParts = explode(' ', $afterDash);
                     if (!empty($subParts[0]) && strtoupper($subParts[0]) !== 'UNASSIGNED') {
-                        $teamGroup = strtoupper($subParts[0]); // ได้ "TEAM1" หรือ "B9"
+                        $teamGroup = strtoupper($subParts[0]);
                     }
                 }
 
@@ -180,17 +172,32 @@ try {
             $conditions = []; $params = [];
             if (!empty($_GET['startDate'])) { $conditions[] = "CAST(created_at AS DATE) >= ?"; $params[] = $_GET['startDate']; }
             if (!empty($_GET['endDate'])) { $conditions[] = "CAST(created_at AS DATE) <= ?"; $params[] = $_GET['endDate']; }
-            if (!empty($_GET['user'])) { $conditions[] = "action_by LIKE ?"; $params[] = '%' . $_GET['user'] . '%'; }
-            if (!empty($_GET['action_type'])) { $conditions[] = "action_type LIKE ?"; $params[] = '%' . $_GET['action_type'] . '%'; }
-            if (!empty($_GET['target'])) { $conditions[] = "target_user LIKE ?"; $params[] = '%' . $_GET['target'] . '%'; }
+            if (!empty($_GET['user'])) { $conditions[] = "username LIKE ?"; $params[] = '%' . $_GET['user'] . '%'; }
+            if (!empty($_GET['action_type'])) { $conditions[] = "action LIKE ?"; $params[] = '%' . $_GET['action_type'] . '%'; }
+            if (!empty($_GET['module'])) { $conditions[] = "module LIKE ?"; $params[] = '%' . $_GET['module'] . '%'; }
+            if (!empty($_GET['search'])) { 
+                $conditions[] = "(remark LIKE ? OR old_value LIKE ? OR new_value LIKE ? OR ref_id LIKE ?)"; 
+                $searchKw = '%' . $_GET['search'] . '%';
+                array_push($params, $searchKw, $searchKw, $searchKw, $searchKw); 
+            }
             
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
 
-            $totalStmt = $pdo->prepare("SELECT COUNT(*) AS total FROM " . USER_LOGS_TABLE . " $whereClause");
+            $totalStmt = $pdo->prepare("SELECT COUNT(*) AS total FROM dbo.SYSTEM_LOGS $whereClause");
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetch()['total'];
             
-            $dataSql = "SELECT * FROM ( SELECT id, action_by, action_type, target_user, detail, created_at, ROW_NUMBER() OVER (ORDER BY created_at DESC, id DESC) AS RowNum FROM " . USER_LOGS_TABLE . " $whereClause ) AS NumberedRows WHERE RowNum > ? AND RowNum <= ?";
+            $dataSql = "
+                SELECT * FROM ( 
+                    SELECT 
+                        id, username, role, action, module, ref_id, 
+                        old_value, new_value, remark, ip_address, 
+                        created_at, 
+                        ROW_NUMBER() OVER (ORDER BY created_at DESC, id DESC) AS RowNum 
+                    FROM dbo.SYSTEM_LOGS 
+                    $whereClause 
+                ) AS NumberedRows 
+                WHERE RowNum > ? AND RowNum <= ?";
             
             $paginationParams = array_merge($params, [$startRow, $startRow + $limit]);
             $dataStmt = $pdo->prepare($dataSql);
@@ -206,20 +213,10 @@ try {
             echo json_encode(['success' => true, 'data' => $logs, 'total' => $total, 'page' => $page, 'limit' => $limit]);
             break;
 
-        // ------------------------------------------------------------------
-        // PBAC: Role Matrix Management
-        // ------------------------------------------------------------------
         case 'get_permission_matrix':
-            // ดึง Role ทั้งหมด (เรียงตามลำดับความสำคัญ)
             $roles = $pdo->query("SELECT role_code, role_name, role_level FROM dbo.SYS_ROLES ORDER BY role_level ASC")->fetchAll(PDO::FETCH_ASSOC);
-            
-            // ดึง Permission ทั้งหมด (จัดกลุ่มตาม Module)
             $perms = $pdo->query("SELECT perm_code, module_name, description FROM dbo.SYS_PERMISSIONS ORDER BY module_name ASC, perm_code ASC")->fetchAll(PDO::FETCH_ASSOC);
-            
-            // ดึง Mapping ปัจจุบัน
             $mappings = $pdo->query("SELECT role_code, perm_code FROM dbo.SYS_ROLE_PERMISSIONS")->fetchAll(PDO::FETCH_ASSOC);
-            
-            // จัดรูป Mapping ให้ JS อ่านง่าย
             $mapDict = [];
             foreach ($mappings as $m) {
                 $mapDict[$m['role_code']][] = $m['perm_code'];
@@ -229,7 +226,6 @@ try {
             break;
 
         case 'toggle_permission':
-            // เช็คว่าคนกดมีสิทธิ์ manage_roles หรือไม่ (ยกเว้น creator ทะลุได้อยู่แล้วผ่านเช็คในฟังก์ชัน)
             if (!hasPermission('manage_roles')) throw new Exception("Permission denied. You cannot modify roles.");
             
             $roleCode = $input['role_code'] ?? '';
@@ -237,24 +233,18 @@ try {
             $isGranted = filter_var($input['is_granted'] ?? false, FILTER_VALIDATE_BOOLEAN);
             
             if (!$roleCode || !$permCode) throw new Exception("Invalid parameters.");
-            
-            // ป้องกันการไปยุ่งกับสิทธิ์ของ System Owner (creator)
             if ($roleCode === 'creator') throw new Exception("System Owner permissions cannot be modified.");
-
             if ($isGranted) {
-                // Insert ถ้ายังไม่มี
                 $stmt = $pdo->prepare("
                     IF NOT EXISTS (SELECT 1 FROM dbo.SYS_ROLE_PERMISSIONS WHERE role_code=? AND perm_code=?) 
                     INSERT INTO dbo.SYS_ROLE_PERMISSIONS (role_code, perm_code) VALUES (?, ?)
                 ");
                 $stmt->execute([$roleCode, $permCode, $roleCode, $permCode]);
             } else {
-                // Delete เพื่อถอดสิทธิ์
                 $stmt = $pdo->prepare("DELETE FROM dbo.SYS_ROLE_PERMISSIONS WHERE role_code=? AND perm_code=?");
                 $stmt->execute([$roleCode, $permCode]);
             }
             
-            // บันทึก Log
             $actionWord = $isGranted ? 'GRANTED' : 'REVOKED';
             $pdo->prepare("INSERT INTO dbo.USER_LOGS (action_by, action_type, target_user, detail, created_at) VALUES (?, 'UPDATE_ROLE', ?, ?, GETDATE())")
                 ->execute([$actionBy, $roleCode, "$actionWord permission '$permCode'"]);

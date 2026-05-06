@@ -3,7 +3,6 @@
 const API_URL = 'api/userManage.php';
 let allUsers = [];
 
-// --- API Helper ---
 async function sendRequest(action, method, body = null) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const options = { method, headers: {} };
@@ -19,7 +18,6 @@ async function sendRequest(action, method, body = null) {
     return await res.json();
 }
 
-// --- Toast & Loader ---
 function showToast(message, color = '#333') {
     Swal.fire({
         text: message,
@@ -43,7 +41,6 @@ function setBtnLoading(btn, isLoading) {
     }
 }
 
-// --- Logic Functions ---
 async function loadUsers() {
     try {
         const result = await sendRequest('read', 'GET');
@@ -143,7 +140,7 @@ function openEdit(user) {
     document.getElementById('edit_role').value = user.role;
     document.getElementById('edit_team').value = user.team_group || '';
     document.getElementById('edit_line').value = user.line || '';
-    document.getElementById('edit_password').value = ''; // clear input
+    document.getElementById('edit_password').value = '';
     openModal('editUserModal');
 }
 
@@ -159,11 +156,8 @@ async function toggleStatus(id, isActive) {
     }
 }
 
-// --- DOM Ready Events ---
 document.addEventListener('DOMContentLoaded', () => {
     loadUsers();
-
-    // Client-side search
     document.getElementById('searchUserInput').addEventListener('input', (e) => {
         const kw = e.target.value.toLowerCase();
         const filtered = allUsers.filter(u => 
@@ -174,7 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTable(filtered);
     });
 
-    // Forms Submission
     document.getElementById('addUserForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = e.target.querySelector('button[type="submit"]');
@@ -206,7 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally { setBtnLoading(btn, false); }
     });
 
-    // Sync Button
     document.getElementById('btnSyncManpower').addEventListener('click', async (e) => {
         if(!confirm("This will pull new users and update existing profiles from Manpower Data. Proceed?")) return;
         const btn = e.currentTarget;
@@ -222,20 +214,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 🔥 ระบบ Auto-fill ข้อมูลจากตาราง Manpower เมื่อพิมพ์รหัสพนักงาน
     async function fetchEmpInfoAndFill(empId, prefix) {
         const cleanId = empId.trim();
-        if (cleanId.length < 4) return; // ไม่ค้นหาถ้ารหัสสั้นเกินไป
+        if (cleanId.length < 4) return;
 
         try {
             const res = await sendRequest('get_emp_info', 'GET', null, { emp_id: cleanId });
             if (res.success && res.data) {
-                // เติมข้อมูลลงช่องต่างๆ
                 document.getElementById(prefix + 'fullname').value = res.data.name_th || '';
                 document.getElementById(prefix + 'line').value = res.data.line || '';
                 document.getElementById(prefix + 'team').value = res.data.team_group || '';
                 
-                // ถ้านี่คือฟอร์ม Add ให้เอา emp_id ไปใส่ในช่อง Username ให้ด้วยเลยเพื่อความไว
                 if (prefix === 'add_') {
                     const unInput = document.getElementById('add_username');
                     if (!unInput.value) unInput.value = cleanId;
@@ -248,7 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // จับ Event เมื่อพิมพ์รหัสพนักงานเสร็จแล้วคลิกออก (change) 
     const addEmpInput = document.getElementById('add_emp_id');
     if(addEmpInput) {
         addEmpInput.addEventListener('change', (e) => fetchEmpInfoAndFill(e.target.value, 'add_'));
@@ -258,14 +246,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if(editEmpInput) {
         editEmpInput.addEventListener('change', (e) => fetchEmpInfoAndFill(e.target.value, 'edit_'));
     }
-
-    // =================================================================
-    // PBAC: Role Matrix Logic
-    // =================================================================
     
     let isMatrixLoaded = false;
-
-    // ผูก Event ตอนเปลี่ยน Tab
     const rolesTabBtn = document.getElementById('roles-tab');
     if (rolesTabBtn) {
         rolesTabBtn.addEventListener('shown.bs.tab', () => {
@@ -294,7 +276,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const thead = document.getElementById('matrixThead');
         const tbody = document.getElementById('matrixTbody');
 
-        // 1. สร้าง Header (เรียง Role ตามแนวนอน)
         let thHtml = `<tr><th class="text-start ps-3" style="width: 250px;">Module / Permission</th>`;
         roles.forEach(r => {
             thHtml += `<th style="min-width: 120px;">
@@ -305,12 +286,10 @@ document.addEventListener('DOMContentLoaded', () => {
         thHtml += `</tr>`;
         thead.innerHTML = thHtml;
 
-        // 2. สร้าง Body (จัดกลุ่มตาม Module)
         tbody.innerHTML = '';
         let currentModule = '';
 
         permissions.forEach(p => {
-            // สร้าง Header คั่นแต่ละ Module
             if (p.module_name !== currentModule) {
                 currentModule = p.module_name;
                 tbody.innerHTML += `
@@ -330,14 +309,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 </td>
             `;
 
-            // วนลูป Role เพื่อสร้าง Checkbox Switch
             roles.forEach(r => {
                 const isCreator = (r.role_code === 'creator');
-                // เช็คว่า Role นี้มี Permission นี้หรือไม่
                 const hasPerm = isCreator || (mappings[r.role_code] && mappings[r.role_code].includes(p.perm_code));
                 
                 const checkedStr = hasPerm ? 'checked' : '';
-                const disabledStr = isCreator ? 'disabled' : ''; // ห้ามแก้ creator
+                const disabledStr = isCreator ? 'disabled' : '';
                 
                 tdHtml += `
                     <td class="text-center align-middle">
@@ -354,14 +331,13 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.appendChild(tr);
         });
 
-        // 3. ผูก Event Listener ตอนกด Switch
         document.querySelectorAll('.perm-switch').forEach(sw => {
             sw.addEventListener('change', async function(e) {
                 const roleCode = this.dataset.role;
                 const permCode = this.dataset.perm;
                 const isGranted = this.checked;
                 
-                this.disabled = true; // ล็อคปุ่มชั่วคราว
+                this.disabled = true;
                 try {
                     const res = await sendRequest('toggle_permission', 'POST', {
                         role_code: roleCode,
@@ -369,13 +345,134 @@ document.addEventListener('DOMContentLoaded', () => {
                         is_granted: isGranted
                     });
                     showToast(res.message, res.success ? '#198754' : '#dc3545');
-                    if(!res.success) this.checked = !isGranted; // rollback UI
+                    if(!res.success) this.checked = !isGranted;
                 } catch(err) {
-                    this.checked = !isGranted; // rollback UI
+                    this.checked = !isGranted;
                 } finally {
-                    this.disabled = false; // ปลดล็อคปุ่ม
+                    this.disabled = false;
                 }
             });
         });
     }
+
+    let currentLogPage = 1;
+    let isLogLoaded = false;
+
+    const logsTabBtn = document.getElementById('logs-tab');
+    if (logsTabBtn) {
+        logsTabBtn.addEventListener('shown.bs.tab', () => {
+            if (!isLogLoaded) {
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('logStartDate').value = today;
+                document.getElementById('logEndDate').value = today;
+                fetchSystemLogs();
+                isLogLoaded = true;
+            }
+        });
+    }
+
+    document.getElementById('filterLogsForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        currentLogPage = 1;
+        fetchSystemLogs();
+    });
+
+    document.getElementById('btnPrevLog')?.addEventListener('click', () => {
+        if (currentLogPage > 1) { currentLogPage--; fetchSystemLogs(); }
+    });
+    document.getElementById('btnNextLog')?.addEventListener('click', () => {
+        currentLogPage++; fetchSystemLogs();
+    });
+
+    async function fetchSystemLogs() {
+        const tbody = document.getElementById('logsTbody');
+        if(!tbody) return;
+        
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i>Loading logs...</td></tr>`;
+        
+        const form = document.getElementById('filterLogsForm');
+        const fd = new FormData(form);
+        const params = new URLSearchParams(fd);
+        
+        params.append('action', 'logs');
+        params.append('page', currentLogPage);
+        params.append('limit', 50);
+
+        try {
+            const response = await fetch(`${API_URL}?${params.toString()}`);
+            if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+            
+            const res = await response.json();
+            
+            if (res.success) {
+                renderLogsTable(res.data);
+                
+                const totalPages = Math.ceil(res.total / 50) || 1;
+                document.getElementById('logCurrentPage').textContent = currentLogPage;
+                document.getElementById('btnPrevLog').disabled = currentLogPage <= 1;
+                document.getElementById('btnNextLog').disabled = currentLogPage >= totalPages;
+                document.getElementById('logRecordInfo').textContent = `Total: ${res.total.toLocaleString()} records`;
+            } else {
+                throw new Error(res.message);
+            }
+        } catch (e) {
+            console.error("Fetch Logs Error:", e);
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load logs.</td></tr>`;
+        }
+    }
+
+    function renderLogsTable(data) {
+        const tbody = document.getElementById('logsTbody');
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No logs found matching your criteria.</td></tr>`;
+            return;
+        }
+
+        data.forEach(log => {
+            const tr = document.createElement('tr');
+            
+            let actionColor = 'bg-secondary';
+            if (log.action.includes('ERROR')) actionColor = 'bg-danger';
+            else if (log.action.includes('UPDATE') || log.action.includes('EDIT')) actionColor = 'bg-warning text-dark';
+            else if (log.action.includes('DELETE')) actionColor = 'bg-dark';
+            else if (log.action.includes('ADD') || log.action.includes('CREATE')) actionColor = 'bg-success';
+            
+            const rawData = JSON.stringify({
+                old_value: log.old_value ? JSON.parse(log.old_value) : null,
+                new_value: log.new_value ? (log.new_value.startsWith('{') ? JSON.parse(log.new_value) : log.new_value) : null
+            }, null, 2);
+
+            const hasRawData = (log.old_value || log.new_value);
+
+            tr.innerHTML = `
+                <td class="text-nowrap"><i class="far fa-clock text-muted me-1"></i> ${log.created_at}</td>
+                <td class="text-truncate">
+                    <div class="fw-bold text-truncate">${log.username} <span class="badge bg-light text-dark border ms-1">${log.role}</span></div>
+                    <small class="text-muted"><i class="fas fa-network-wired me-1"></i> ${log.ip_address || 'N/A'}</small>
+                </td>
+                <td class="text-truncate">
+                    <span class="badge ${actionColor} mb-1">${log.action}</span><br>
+                    <small class="text-primary fw-semibold">${log.module}</small>
+                </td>
+                <td class="font-monospace text-muted text-truncate">${log.ref_id || '-'}</td>
+                <!-- ปรับช่อง Remark ให้ตัดคำอัตโนมัติ (Ellipsis) ถ้าเกินความกว้าง และเอา Tooltip ใส่ไว้เผื่อดูแบบเร็วๆ -->
+                <td class="text-truncate" title="${log.remark || '-'}">
+                    <span class="text-muted">${log.remark || '-'}</span>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-dark" onclick='showRawLog(${JSON.stringify(rawData)})' ${hasRawData ? '' : 'disabled'}>
+                        <i class="fas fa-code"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.showRawLog = function(rawJsonStr) {
+        document.getElementById('rawLogContent').textContent = rawJsonStr;
+        new bootstrap.Modal(document.getElementById('rawLogModal')).show();
+    };
 });
