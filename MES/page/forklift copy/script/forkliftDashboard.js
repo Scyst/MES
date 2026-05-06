@@ -1,7 +1,7 @@
 let map;
 let gridLayerGroup;
-let mapInterval;
 let timelineInterval;
+let wsForklift = null;
 let heatmapLayer = null;
 let forkliftMarkers = {};
 let mappedZones = [];
@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchMappedZones();
     loadAllData();
     startPolling();
+    initWebSocket();
 
     document.addEventListener("visibilitychange", () => {
         if (document.hidden) stopPolling();
@@ -55,14 +56,52 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+function initWebSocket() {
+    const wsUrl = `ws://${window.location.hostname}:1880/ws/forklift`;
+    wsForklift = new WebSocket(wsUrl);
+    
+    wsForklift.onmessage = function(event) {
+        try {
+            const payload = JSON.parse(event.data);
+            if (payload.action === 'location_update' && payload.data) {
+                const index = globalForkliftData.findIndex(f => f.code === payload.data.code);
+                
+                if (index !== -1) {
+                    globalForkliftData[index].lat = payload.data.lat;
+                    globalForkliftData[index].lng = payload.data.lng;
+                    globalForkliftData[index].indoor_x = payload.data.indoor_x;
+                    globalForkliftData[index].indoor_y = payload.data.indoor_y;
+                    globalForkliftData[index].location_type = payload.data.location_type;
+                    globalForkliftData[index].last_location = payload.data.last_location;
+                    globalForkliftData[index].current_battery = payload.data.current_battery;
+                    globalForkliftData[index].last_updated = payload.data.last_updated;
+                    renderMapMarkers(globalForkliftData);
+                    renderList(globalForkliftData);
+                } else {
+                    loadMapDataOnly();
+                }
+            }
+        } catch (e) {
+            console.error("WebSocket Data Error:", e);
+        }
+    };
+    
+    wsForklift.onclose = function() {
+        setTimeout(initWebSocket, 5000); 
+    };
+
+    wsForklift.onerror = function(err) {
+        console.error("WebSocket Error:", err);
+        wsForklift.close();
+    };
+}
+
 function startPolling() {
     stopPolling();
-    mapInterval = setInterval(loadMapDataOnly, 5000); 
     timelineInterval = setInterval(loadTimelineDataOnly, 30000); 
 }
 
 function stopPolling() {
-    if (mapInterval) clearInterval(mapInterval);
     if (timelineInterval) clearInterval(timelineInterval);
 }
 
@@ -626,7 +665,6 @@ async function openHistoryModal() {
     } catch (e) { console.error(e); }
 }
 
-// 🟢 อัปเกรดตาราง จัดการข้อมูลรถ ให้มีปุ่มสร้าง QR Code
 function openManageModal() {
     let tbody = '';
     globalForkliftData.forEach(fl => {
@@ -652,24 +690,15 @@ function openManageModal() {
     bootstrap.Modal.getOrCreateInstance(document.getElementById('manageModal')).show();
 }
 
-// 🟢 ฟังก์ชันใหม่: จำลองสร้าง QR Code สำหรับเอาไปแปะรถ
 function generateQRCode(code) {
-    // ดึงโดเมนหลักของระบบคุณ (เช่น http://192.168.1.100)
     const host = window.location.origin;
-    
-    // ⭐️ นำมารวมกับ Path ที่คุณแจ้งว่าเก็บไฟล์ scan ไว้
-    const mobileUrl = `${host}/MES/page/forklift copy/scan.php?code=${encodeURIComponent(code)}`;
-    
-    // ใช้ API สร้างรูป QR Code ฟรี (ใช้ในการทำงานแบบมีอินเทอร์เน็ต)
-    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(mobileUrl)}`;
+    const mobileUrl = `${host}/MES/page/forklift/scan.php?code=${encodeURIComponent(code)}`;
 
     Swal.fire({
         title: `<h5 class="fw-bold mb-0">QR Code ประจำรถ: <span class="text-primary">${code}</span></h5>`,
         html: `
             <div class="text-center mt-3">
-                <div class="d-inline-block p-2 bg-white border rounded-3 shadow-sm mb-3">
-                    <img src="${qrApiUrl}" alt="QR Code ${code}" style="width: 250px; height: 250px; object-fit: contain;">
-                </div>
+                <div id="qrcode-container" class="d-inline-block p-2 bg-white border rounded-3 shadow-sm mb-3"></div>
                 <div class="bg-light p-2 rounded border small text-break user-select-all" style="font-family: monospace;">
                     ${mobileUrl}
                 </div>
@@ -678,13 +707,26 @@ function generateQRCode(code) {
                 </button>
             </div>
         `,
+        didOpen: () => {
+            const qrContainer = document.getElementById("qrcode-container");
+            if (qrContainer) {
+                qrContainer.innerHTML = "";
+                new QRCode(qrContainer, {
+                    text: mobileUrl,
+                    width: 250,
+                    height: 250,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            }
+        },
         showConfirmButton: true,
         confirmButtonText: 'ปิด (Close)',
         confirmButtonColor: '#6c757d'
     });
 }
 
-// Helper: คัดลอกลิงก์ลง Clipboard
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
         Swal.fire({
@@ -880,20 +922,14 @@ function renderTimelineChart(forklifts, bookings) {
     if(!container) return;
     
     const now = new Date();
-    
-    // 1. ปรับเวลาตั้งต้นให้เป็น "ต้นชั่วโมง" เสมอ 
     const currentHourStart = new Date(now);
     currentHourStart.setMinutes(0, 0, 0);
 
-    // 2. แกนเวลา: อดีต 21 ชั่วโมง -> อนาคต 3 ชั่วโมง
     const startOfTimeline = new Date(currentHourStart.getTime() - (21 * 60 * 60 * 1000)); 
     const endOfTimeline = new Date(currentHourStart.getTime() + (3 * 60 * 60 * 1000));   
     const totalMs = endOfTimeline.getTime() - startOfTimeline.getTime(); 
-    
-    // 3. โครงสร้างหลัก บังคับ min-width เพื่อไม่ให้สเกลเพี้ยนเวลาจอเล็ก
     let html = '<div style="min-width: 1000px; position: relative;">';
     
-    // --- HEADER (ตัวเลขเวลา) ---
     html += '<div class="d-flex" style="position: sticky; top: 0; background: #f8f9fa; border-bottom: 1px solid #ccc; z-index: 15;">';
     html += '<div style="width: 120px; min-width: 120px; padding: 8px; font-weight: bold; border-right: 1px solid #ccc; position: sticky; left: 0; background: #f8f9fa; z-index: 16;">Forklift</div>';
     
@@ -912,11 +948,8 @@ function renderTimelineChart(forklifts, bookings) {
         html += `<div style="position: absolute; left: ${pct}%; bottom: 0; height: 5px; width: 1px; background-color: #ccc;"></div>`;
     }
     html += '</div></div>';
-
-    // --- BODY (ส่วนเนื้อหาตาราง) ---
     html += '<div style="position: relative;">';
     
-    // วาดเส้น Grid แนวตั้ง (ชั่วโมง)
     html += '<div style="position: absolute; top: 0; bottom: 0; left: 120px; right: 0; pointer-events: none; z-index: 1;">';
     for (let i = 1; i < 24; i++) {
         let pct = (i / 24) * 100;
@@ -924,7 +957,6 @@ function renderTimelineChart(forklifts, bookings) {
     }
     html += '</div>';
     
-    // เส้นเวลาปัจจุบัน (Red Line)
     let nowPct = ((now.getTime() - startOfTimeline.getTime()) / totalMs) * 100;
     if (nowPct < 0) nowPct = 0; if (nowPct > 100) nowPct = 100; 
 
@@ -933,7 +965,6 @@ function renderTimelineChart(forklifts, bookings) {
         <div style="position: absolute; top: 0; left: -4px; width: 10px; height: 10px; background-color: #dc3545; border-radius: 50%; border: 2px solid #fff;"></div>
     </div>`;
 
-    // วาดแถวของรถแต่ละคัน
     forklifts.forEach(fl => {
         html += `
         <div class="d-flex" style="border-bottom: 1px solid #eee; min-height: 45px; position: relative;">
@@ -945,7 +976,6 @@ function renderTimelineChart(forklifts, bookings) {
     
     container.innerHTML = html;
 
-    // Helper แปลง Date ให้ปลอดภัย
     const parseDateSafe = (dateStr) => {
         if (!dateStr) return new Date();
         if (dateStr.includes('T')) return new Date(dateStr);
@@ -954,7 +984,6 @@ function renderTimelineChart(forklifts, bookings) {
         return new Date(dateStr);
     };
 
-    // วาดแถบงาน
     bookings.forEach(bk => {
         const track = document.getElementById(`track-${bk.forklift_id}`);
         if (!track) return;
@@ -964,7 +993,7 @@ function renderTimelineChart(forklifts, bookings) {
         let eDateStr = (bk.status === 'COMPLETED' && bk.end_time_actual) ? bk.end_time_actual : bk.end_time_est;
         
         if (bk.status === 'ACTIVE') {
-            e = now.getTime(); // ⭐️ รถที่ใช้ปัจจุบันให้หยุดที่เส้นแดง
+            e = now.getTime();
         } else {
             e = parseDateSafe(eDateStr).getTime();
         }

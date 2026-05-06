@@ -1,12 +1,9 @@
 <?php
-// api/api_hardware.php (สำหรับ ESP32 ยิงเข้ามาเท่านั้น)
+// api/hardwareTracking.php (สำหรับ ESP32 ยิงเข้ามาเท่านั้น)
 header('Content-Type: application/json; charset=utf-8');
-
-// เรียกใช้แค่ Database Connection
 require_once __DIR__ . '/../../db.php'; 
 
 try {
-    // รับค่า JSON จาก ESP32
     $jsonInput = file_get_contents('php://input');
     $data = json_decode($jsonInput, true);
 

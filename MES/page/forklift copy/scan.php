@@ -76,14 +76,15 @@ $targetCode = $_GET['code'] ?? '';
         async function refreshMobileStatus() {
             try {
                 const fd = new FormData();
-                fd.append('action', 'get_dashboard');
+                fd.append('action', 'get_single_forklift');
+                fd.append('code', targetCode);
+                
                 const res = await fetch('../api/forkliftManage.php', { method: 'POST', body: fd });
                 const json = await res.json();
                 
-                const fl = json.data.find(f => f.code === targetCode);
-                if(!fl) throw new Error("ไม่พบรถรหัสนี้ในระบบ");
+                if(!json.success) throw new Error(json.message);
 
-                renderMobileUI(fl);
+                renderMobileUI(json.data);
             } catch(e) {
                 Swal.fire('Error', e.message, 'error');
             }
@@ -107,7 +108,6 @@ $targetCode = $_GET['code'] ?? '';
             const actions = document.getElementById('m-actions');
             let btnHtml = '';
 
-            // 🛡️ ปรับให้ปุ่มส่ง this (ตัวมันเอง) เข้าไปในฟังก์ชันป้องกันการกดย้ำ
             if(fl.status === 'MAINTENANCE') {
                 badge.className = 'badge p-2 px-3 rounded-pill bg-secondary';
                 badge.innerText = 'ปิดปรับปรุง (Maintenance)';
@@ -131,7 +131,6 @@ $targetCode = $_GET['code'] ?? '';
             actions.innerHTML = btnHtml;
         }
 
-        // 🛡️ ฟังก์ชันป้องกันกดย้ำ (Operator Proofing)
         function handleMobileClick(btn, id, isBooking = false, code = '', name = '') {
             const originalHtml = btn.innerHTML;
             btn.disabled = true;
@@ -141,7 +140,6 @@ $targetCode = $_GET['code'] ?? '';
                 if(isBooking) openBookingModal(id, code, name);
                 else checkAction(id);
                 
-                // คืนค่าปุ่มกลับเผื่อ User ปิด Modal ทิ้งโดยไม่ทำรายการ
                 setTimeout(() => {
                     btn.disabled = false;
                     btn.innerHTML = originalHtml;

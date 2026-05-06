@@ -1,6 +1,4 @@
 /* MES/page/forklift/css/forklift.css */
-
-/* --- Forklift Card --- */
 .forklift-card {
     transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
     cursor: pointer;
@@ -25,7 +23,6 @@
 .status-charging .status-strip { background-color: #ffc107; }
 .status-maintenance .status-strip { background-color: #6c757d; }
 
-/* Info Rows in Card */
 .card-info-row {
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 0.5rem; font-size: 0.9rem;
@@ -33,16 +30,14 @@
 .card-info-label { color: var(--bs-gray-600); font-size: 0.8rem; }
 .card-info-value { font-weight: 600; color: var(--bs-body-color); }
 
-/* Battery Bar */
 .battery-wrapper { 
     width: 100%; background: #e9ecef; height: 6px; 
     border-radius: 3px; overflow: hidden; margin-top: 8px;
 }
 .battery-fill { height: 100%; transition: width 0.3s; }
 
-/* --- Slider & Inputs (GLOBAL STYLES) --- */
 .custom-range-track::-webkit-slider-runnable-track {
-    background: #ced4da; /* สีเทาเข้มขึ้น */
+    background: #ced4da;
     height: 0.5rem;
     border-radius: 1rem;
 }
@@ -51,13 +46,11 @@
     height: 0.5rem;
     border-radius: 1rem;
 }
-/* Show Spinner in Number Input */
 input[type=number]::-webkit-inner-spin-button, 
 input[type=number]::-webkit-outer-spin-button { 
     opacity: 1;
 }
 
-/* --- Timeline Chart --- */
 .timeline-container {
     overflow-x: auto;
     position: relative;
@@ -121,9 +114,6 @@ input[type=number]::-webkit-outer-spin-button {
 .booking-bar.completed { background-color: #6c757d; opacity: 0.6; }
 .booking-bar:hover { z-index: 20; transform: scaleY(1.2); opacity: 1; }
 
-/* =========================================
-   GLOBAL MODAL TWEAKS
-   ========================================= */
 .modal-dialog-centered {
     display: flex;
     align-items: flex-start !important;
@@ -149,46 +139,36 @@ input[type=number]::-webkit-outer-spin-button {
 }
 .modal.show .modal-dialog { transform: none; }
 
-/* =========================================
-   MOBILE RESPONSIVE FIXES
-   ========================================= */
 @media (min-width: 992px) { 
-    
-    /* 1. ปลดล็อก Main Content ให้ยาวลงมาตามเนื้อหา (ไม่ Fix 100vh) */
     body.layout-top-header #main-content {
         height: auto !important;
         min-height: calc(100vh - 70px);
-        overflow: visible !important; /* ให้ใช้ Scrollbar ของ Browser แทน */
+        overflow: visible !important;
         display: block !important;
     }
 
-    /* 2. ปลดล็อก Timeline ให้ยืดเต็มที่เท่าจำนวนรถ */
     .timeline-container {
-        max-height: none !important; /* ยกเลิกการจำกัดความสูง */
+        max-height: none !important;
         overflow: visible !important;
         border: 1px solid var(--bs-border-color);
     }
 
-    /* 3. ทำให้หัวตารางกราฟ (00:00 - 23:00) ลอยค้าง (Sticky) */
-    /* สำคัญ: ต้องกำหนด Top = 70px เพื่อให้ลอยต่อจาก Navbar หลักพอดี */
     .timeline-header {
         position: sticky;
-        top: 70px; /* ความสูงของ Portal Header */
+        top: 70px;
         z-index: 20; 
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05); /* เพิ่มเงาให้ดูจมลงไป */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         border-top: 1px solid var(--bs-border-color);
     }
 
-    /* 4. ปลดล็อกพื้นที่ Card Grid ด้านล่าง */
     .flex-grow-1.overflow-auto {
         overflow: visible !important;
         height: auto !important;
-        padding-bottom: 50px; /* เผื่อที่ด้านล่างหน่อย */
+        padding-bottom: 50px;
     }
 }
 
 @media (max-width: 991.98px) {
-    /* 1. Unlock Layout for Scrolling */
     body.layout-top-header #main-content {
         height: auto !important;
         min-height: calc(100vh - 60px);
@@ -201,7 +181,6 @@ input[type=number]::-webkit-outer-spin-button {
         padding-bottom: 80px !important;
     }
 
-    /* 2. Timeline Adjustments */
     .card .card-header {
         padding-top: 0.75rem !important;
         padding-bottom: 0.5rem !important;
@@ -211,7 +190,6 @@ input[type=number]::-webkit-outer-spin-button {
         height: auto !important;
     }
 
-    /* 3. Card & Text Size */
     .forklift-card {
         margin-bottom: 0.5rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
@@ -219,16 +197,12 @@ input[type=number]::-webkit-outer-spin-button {
     h5.fw-bold { font-size: 1.1rem !important; }
     .card-info-row { font-size: 0.85rem !important; }
     
-    /* 4. Timeline Height */
     .timeline-row { height: 40px !important; }
     .timeline-header .time-slot { font-size: 0.6rem; }
     .booking-bar { font-size: 0.6rem; padding: 0 4px; }
     .offcanvas-body {margin-top: 10px;}
 }
 
-/* =========================================
-   SUB-HEADER RESPONSIVE (Small Mobile)
-   ========================================= */
 @media (max-width: 575.98px) {
     .fleet-toolbar {
         flex-direction: column !important;
@@ -242,8 +216,6 @@ input[type=number]::-webkit-outer-spin-button {
         flex: 1; display: flex; justify-content: center; align-items: center; padding: 0.5rem;
     }
     .fleet-toolbar h6 { font-size: 1.1rem !important; }
-
-    /* Timeline Toolbar */
     .timeline-toolbar {
         flex-direction: column !important;
         align-items: flex-start !important;
@@ -258,7 +230,6 @@ input[type=number]::-webkit-outer-spin-button {
     }
 }
 
-/* Landscape Mode Fix */
 @media (max-height: 500px) and (orientation: landscape) {
     .portal-top-header { height: 50px !important; padding: 0 1rem; }
     .header-logo-box { width: 35px; height: 35px; }

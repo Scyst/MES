@@ -12,7 +12,6 @@ if (!isset($_SESSION['user'])) {
     exit; 
 }
 
-// ตรวจสอบ HTTP Method ป้องกันการยิง GET เข้ามารัน Action
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method Not Allowed']);
@@ -25,7 +24,6 @@ $response = ['success' => false, 'message' => 'Invalid action requested.'];
 try {
     switch ($action) {
         case 'get_dashboard':
-            // ดึงข้อมูลหลัก (NOLOCK ถูกใช้ใน SP หรือ View อยู่แล้ว แต่ถ้า Query สดต้องใส่เสมอ)
             $stmt = $pdo->query("SELECT *, CASE WHEN DATEDIFF(MINUTE, last_updated, GETDATE()) > 3 THEN 1 ELSE 0 END as is_offline 
                                  FROM " . FORKLIFTS_TABLE . " WITH (NOLOCK) ORDER BY code ASC");
             $forklifts = $stmt->fetchAll();
@@ -114,7 +112,6 @@ try {
 
         case 'get_utilization':
             $days = isset($_POST['days']) ? (int)$_POST['days'] : 1;
-            // Parameterized Query สำหรับ Dynamic Days
             $sql = "DECLARE @Days INT = ?;
                     DECLARE @TotalMinutes FLOAT = @Days * 1440.0;
                     SELECT f.id as forklift_id, f.code, f.name, f.status as current_status,
@@ -139,6 +136,36 @@ try {
                 $r['machine_state'] = ($r['current_status'] === 'MAINTENANCE') ? 'DOWN' : 'READY';
             }
             $response = ['success' => true, 'data' => $rows, 'message' => 'Success'];
+            break;
+
+        case 'get_single_forklift':
+            $code = trim($_POST['code'] ?? '');
+            if(empty($code)) throw new Exception('Missing forklift code');
+
+            $stmt = $pdo->prepare("SELECT *, CASE WHEN DATEDIFF(MINUTE, last_updated, GETDATE()) > 3 THEN 1 ELSE 0 END as is_offline 
+                                   FROM " . FORKLIFTS_TABLE . " WITH (NOLOCK) 
+                                   WHERE code = ? AND is_active = 1");
+            $stmt->execute([$code]);
+            $fl = $stmt->fetch();
+            
+            if(!$fl) throw new Exception("ไม่พบข้อมูลรถรหัสนี้ในระบบ");
+
+            $stmt2 = $pdo->prepare("SELECT booking_id, user_name, usage_details 
+                                    FROM " . FORKLIFT_BOOKINGS_TABLE . " WITH (NOLOCK) 
+                                    WHERE forklift_id = ? AND status = 'ACTIVE'");
+            $stmt2->execute([$fl['id']]);
+            $active = $stmt2->fetch();
+
+            $fl['current_driver'] = '-';
+            if ($active) {
+                $fl['status'] = 'IN_USE'; 
+                $fl['current_driver'] = $active['user_name'];
+                $fl['active_booking_id'] = $active['booking_id'];
+                $fl['usage_details'] = $active['usage_details'];
+            }
+            if(empty($fl['status'])) $fl['status'] = 'AVAILABLE';
+
+            $response = ['success' => true, 'data' => $fl, 'message' => 'Success'];
             break;
             
         default:

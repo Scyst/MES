@@ -27,11 +27,9 @@ $pageHeaderSubtitle = "ระบบติดตามและจัดการ
         const IS_ADMIN = <?php echo in_array($_SESSION['user']['role'], ['admin', 'supervisor', 'creator']) ? 'true' : 'false'; ?>;
     </script>
     <style>
-        /* ⭐️ ล็อกความสูงหน้าจอ 100% (หักลบ Header ออก) */
         body { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
         #main-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-        
-        /* Map Styles - Absolute Fill แก้ปัญหาแผนที่ดันจอล้น */
+
         .map-wrapper { 
             position: absolute; 
             top: 0; left: 0; right: 0; bottom: 0; 
@@ -151,6 +149,7 @@ $pageHeaderSubtitle = "ระบบติดตามและจัดการ
     
     <script src="../../utils/libs/leaflet.js"></script>
     <script src="../../utils/libs/leaflet-heat.js"></script>
+    <script src="../../utils/libs/qrcode.min.js"></script>
     <script src="script/forkliftDashboard.js?v=<?php echo filemtime(__DIR__ . '/script/forkliftDashboard.js'); ?>" defer></script>
 </body>
 </html>
