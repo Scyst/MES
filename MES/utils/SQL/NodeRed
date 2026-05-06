@@ -135,6 +135,54 @@
         "h": 82
     },
     {
+        "id": "e1db5898a992d342",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "🚀 REAL-TIME FORKLIFT TRACKING (MQTT -> DB -> WebSocket)",
+        "style": {
+            "stroke": "#e65100",
+            "fill": "#fff3e0",
+            "label": true
+        },
+        "nodes": [
+            "2e469f8318ec5999",
+            "d2be5ca90d33bd69",
+            "0b5aaa3eb1a3058f",
+            "4e1e55ac7b0fb4a1",
+            "aed9057beb046aaa",
+            "6ff816ee41c72df6",
+            "edcc4aa342560bfa"
+        ],
+        "x": 114,
+        "y": 779,
+        "w": 1152,
+        "h": 122
+    },
+    {
+        "id": "1b4f6334d888a3a1",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "REAL-TIME FORKLIFT TRACKING (Cloud MQTT -> DB -> WebSocket)",
+        "style": {
+            "stroke": "#e65100",
+            "fill": "#fff3e0",
+            "label": true
+        },
+        "nodes": [
+            "422b794747d6a036",
+            "c71a245ae52c4eba",
+            "30d1a3d1cb77397f",
+            "648870c69f66f135",
+            "cfc8e88ebf96f69c",
+            "22e5687cb7342683",
+            "35e73a25a35940bc"
+        ],
+        "x": 114,
+        "y": 919,
+        "w": 1152,
+        "h": 122
+    },
+    {
         "id": "6623dac7d8cea519",
         "type": "inject",
         "z": "cc3ed6cb9d327d93",
@@ -670,6 +718,10 @@
         "authType": "",
         "senderr": false,
         "headers": [],
+        "credentials": {
+            "user": "",
+            "password": ""
+        },
         "x": 770,
         "y": 720,
         "wires": [
@@ -697,11 +749,319 @@
         "wires": []
     },
     {
+        "id": "2e469f8318ec5999",
+        "type": "mqtt in",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "MQTT: Forklift Location",
+        "topic": "/B9/Forklift/+/Location",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "mqtt_broker_snc",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 240,
+        "y": 820,
+        "wires": [
+            [
+                "d2be5ca90d33bd69"
+            ]
+        ]
+    },
+    {
+        "id": "d2be5ca90d33bd69",
+        "type": "json",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 410,
+        "y": 820,
+        "wires": [
+            [
+                "0b5aaa3eb1a3058f"
+            ]
+        ]
+    },
+    {
+        "id": "0b5aaa3eb1a3058f",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "Prep Hardware API",
+        "func": "var baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/forklift/api/hardwareTracking.php\";\n\nmsg.url = baseUrl;\nmsg.headers = {\n    \"Content-Type\": \"application/json\",\n    \"User-Agent\": \"Node-RED-Forklift\"\n};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 820,
+        "wires": [
+            [
+                "4e1e55ac7b0fb4a1"
+            ]
+        ]
+    },
+    {
+        "id": "4e1e55ac7b0fb4a1",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "POST to DB",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 750,
+        "y": 820,
+        "wires": [
+            [
+                "aed9057beb046aaa"
+            ]
+        ]
+    },
+    {
+        "id": "aed9057beb046aaa",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "Format WS Payload",
+        "func": "if (msg.payload && msg.payload.success && msg.payload.data) {\n    msg.payload = {\n        action: \"location_update\",\n        data: msg.payload.data\n    };\n    return msg;\n}\nreturn null;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 940,
+        "y": 820,
+        "wires": [
+            [
+                "6ff816ee41c72df6",
+                "edcc4aa342560bfa"
+            ]
+        ]
+    },
+    {
+        "id": "6ff816ee41c72df6",
+        "type": "websocket out",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "Broadcast to Web",
+        "server": "f293631bae2ef4f2",
+        "client": "",
+        "x": 1150,
+        "y": 820,
+        "wires": []
+    },
+    {
+        "id": "edcc4aa342560bfa",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "WS Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1130,
+        "y": 860,
+        "wires": []
+    },
+    {
+        "id": "422b794747d6a036",
+        "type": "mqtt in",
+        "z": "cc3ed6cb9d327d93",
+        "g": "1b4f6334d888a3a1",
+        "name": "MQTT: HiveMQ Forklift",
+        "topic": "/SNC_TEST/B9/Forklift/+/Location",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "a54164c2611a5a25",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 240,
+        "y": 960,
+        "wires": [
+            [
+                "c71a245ae52c4eba"
+            ]
+        ]
+    },
+    {
+        "id": "c71a245ae52c4eba",
+        "type": "json",
+        "z": "cc3ed6cb9d327d93",
+        "g": "1b4f6334d888a3a1",
+        "name": "",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 410,
+        "y": 960,
+        "wires": [
+            [
+                "30d1a3d1cb77397f"
+            ]
+        ]
+    },
+    {
+        "id": "30d1a3d1cb77397f",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "1b4f6334d888a3a1",
+        "name": "Prep Hardware API",
+        "func": "var baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/forklift/api/hardwareTracking.php\";\n\nmsg.url = baseUrl;\nmsg.headers = {\n    \"Content-Type\": \"application/json\",\n    \"User-Agent\": \"Node-RED-Forklift\"\n};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 960,
+        "wires": [
+            [
+                "648870c69f66f135",
+                "35e73a25a35940bc"
+            ]
+        ]
+    },
+    {
+        "id": "648870c69f66f135",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "1b4f6334d888a3a1",
+        "name": "POST to DB",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 750,
+        "y": 960,
+        "wires": [
+            [
+                "cfc8e88ebf96f69c",
+                "35e73a25a35940bc"
+            ]
+        ]
+    },
+    {
+        "id": "cfc8e88ebf96f69c",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "1b4f6334d888a3a1",
+        "name": "Format WS Payload",
+        "func": "if (msg.payload && msg.payload.success && msg.payload.data) {\n    msg.payload = {\n        action: \"location_update\",\n        data: msg.payload.data\n    };\n    return msg;\n}\nreturn null;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 940,
+        "y": 960,
+        "wires": [
+            [
+                "22e5687cb7342683",
+                "35e73a25a35940bc"
+            ]
+        ]
+    },
+    {
+        "id": "22e5687cb7342683",
+        "type": "websocket out",
+        "z": "cc3ed6cb9d327d93",
+        "g": "1b4f6334d888a3a1",
+        "name": "Broadcast to Web",
+        "server": "f293631bae2ef4f2",
+        "client": "",
+        "x": 1150,
+        "y": 960,
+        "wires": []
+    },
+    {
+        "id": "35e73a25a35940bc",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "1b4f6334d888a3a1",
+        "name": "WS Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1130,
+        "y": 1000,
+        "wires": []
+    },
+    {
         "id": "mqtt_broker_snc",
         "type": "mqtt-broker",
         "name": "SNC Utility Broker",
         "broker": "10.1.68.100",
         "port": "1884",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "f293631bae2ef4f2",
+        "type": "websocket-listener",
+        "path": "/ws/forklift",
+        "wholemsg": "false"
+    },
+    {
+        "id": "a54164c2611a5a25",
+        "type": "mqtt-broker",
+        "name": "HiveMQ Public (Test)",
+        "broker": "broker.hivemq.com",
+        "port": "1883",
         "clientid": "",
         "autoConnect": true,
         "usetls": false,
