@@ -247,7 +247,7 @@ async function fetchItems(page = 1) {
             renderItemsTable(result.data, result.total, page);
         } else {
             const tbody = document.getElementById('itemsTableBody');
-            if (tbody) tbody.innerHTML = `<tr><td colspan="22" class="text-center text-danger">${escapeHtml(result.message)}</td></tr>`;
+            if (tbody) tbody.innerHTML = `<tr><td colspan="23" class="text-center text-danger">${escapeHtml(result.message)}</td></tr>`;
         }
     } catch (e) {
         console.error("Error fetching items:", e);
@@ -280,7 +280,7 @@ function renderItemsTable(items, totalItems, page) {
     tbody.innerHTML = '';
     
     if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="22" class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block"></i> ไม่พบข้อมูล Master Data</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="23" class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block"></i> ไม่พบข้อมูล Master Data</td></tr>`; 
         if (typeof renderPagination === 'function') renderPagination('itemMasterPagination', totalItems, page, ROWS_PER_PAGE, fetchItems);
         return;
     }
@@ -317,6 +317,11 @@ function renderItemsTable(items, totalItems, page) {
                     <span class="badge ${typeBadgeClass}" style="font-size: 0.6rem;">${escapeHtml(item.material_type || 'FG')}</span>
                     ${subTypeBadge} </div>
                 <div class="text-muted text-truncate" style="font-size: 0.7rem; max-width: 150px;">${escapeHtml(item.part_no || '-')}</div>
+            </td>
+
+            <td>
+                <div class="fw-bold text-dark"><i class="fas fa-barcode text-secondary me-1"></i> ${escapeHtml(item.barcode || '-')}</div>
+                <div class="text-muted small">SKU: ${escapeHtml(item.sku || '-')}</div>
             </td>
             <td>
                 <div class="text-truncate text-dark" style="max-width: 200px;" title="${escapeHtml(item.part_description)}">
@@ -400,6 +405,7 @@ async function openItemModal(item = null) {
         document.getElementById('sap_no').value = item.sap_no || '';
         document.getElementById('part_no').value = item.part_no || '';
         document.getElementById('sku').value = item.sku || '';
+        document.getElementById('barcode').value = item.barcode || '';
         document.getElementById('material_type').value = item.material_type || 'FG';
         updateSubTypeOptions(item.material_type || 'FG', item.material_sub_type || '');
         document.getElementById('part_description').value = item.part_description || '';
@@ -451,6 +457,7 @@ async function openItemModal(item = null) {
         document.getElementById('item_id').value = '0';
         document.getElementById('is_active').checked = true;
         document.getElementById('sku').value = '';
+        document.getElementById('barcode').value = '';
         
         setInputValue('planned_output', 0); setInputValue('min_stock', 0); setInputValue('max_stock', 0);
         setInputValue('CTN', 0); setInputValue('net_weight', 0); setInputValue('gross_weight', 0); setInputValue('cbm', 0);
@@ -552,6 +559,7 @@ async function handleItemFormSubmit(event) {
             sap_no: sapNo,
             part_no: form.querySelector('#part_no').value,
             sku: form.querySelector('#sku').value,
+            barcode: form.querySelector('#barcode').value,
             material_type: form.querySelector('#material_type').value,
             material_sub_type: form.querySelector('#material_sub_type').value,
             part_description: form.querySelector('#part_description').value,
@@ -641,7 +649,7 @@ async function exportItemsMaster() {
         const result = await fetchAPI(ITEM_MASTER_API, 'get_items', 'GET', null, { page: 1, limit: -1 });
         if (result.success) {
             const wsData = [[
-                "SAP No", "Part No", "Customer SKU", "Material Type", 
+                "SAP No", "Part No", "Customer SKU", "Barcode", "Material Type",
                 "Sub Type",
                 "Description", "Planned Output", "Min Stock", "Max Stock", "Is Active",
                 "CTN", "Net Weight", "Gross Weight", "CBM", "Invoice Product Type", "Invoice Description",
@@ -651,7 +659,7 @@ async function exportItemsMaster() {
 
             result.data.forEach(item => {
                 wsData.push([
-                    item.sap_no || '', item.part_no || '', item.sku || '', item.material_type || 'FG', 
+                    item.sap_no || '', item.part_no || '', item.sku || '', item.barcode || '', item.material_type || 'FG',
                     item.material_sub_type || '',
                     item.part_description || '', item.planned_output || 0, item.min_stock || 0, item.max_stock || 0, item.is_active == 1 ? 'Yes' : 'No',
                     item.CTN || 0, item.net_weight || 0, item.gross_weight || 0, item.cbm || 0, item.invoice_product_type || '', item.invoice_description || '',
@@ -753,6 +761,7 @@ async function handleItemMasterImport(e) {
             sap_no: row["SAP No"] || '',
             part_no: row["Part No"] || '',
             sku: row["Customer SKU"] || '',
+            barcode: row["Barcode"] || '',
             material_type: row["Material Type"] || 'FG',
             material_sub_type: row["Sub Type"] || row["Group"] || '',
             part_description: row["Description"] || '',

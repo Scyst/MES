@@ -69,7 +69,14 @@
                                     <label class="form-label fw-bold small text-muted mb-1">Customer SKU</label>
                                     <input type="text" class="form-control form-control-sm" id="sku">
                                 </div>
-                                <div class="col-md-9">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-muted mb-1">Barcode <span class="fw-normal">(Optional)</span></label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light border-end-0"><i class="fas fa-barcode text-secondary"></i></span>
+                                        <input type="text" class="form-control border-start-0" id="barcode" placeholder="Scan here...">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
                                     <label class="form-label fw-bold small text-muted mb-1">Description</label>
                                     <input type="text" class="form-control form-control-sm" id="part_description">
                                 </div>

@@ -106,7 +106,7 @@ try {
             $dataSql = "
                 WITH NumberedRows AS (
                     SELECT 
-                        DISTINCT i.item_id, i.sap_no, i.part_no, i.sku, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, 
+                        DISTINCT i.item_id, i.sap_no, i.part_no, i.sku, i.barcode, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, 
                         i.is_active, i.min_stock, i.max_stock, i.is_tracking
                         {$costingCols_CTE} 
                         ,
@@ -129,7 +129,7 @@ try {
                     {$whereClause}
                 )
                 SELECT 
-                    item_id, sap_no, part_no, sku, part_description, created_at, is_active, used_in_models,
+                    item_id, sap_no, part_no, sku, barcode, part_description, created_at, is_active, used_in_models,
                     route_speed_range, min_stock, max_stock, is_tracking
                 {$costingCols_Final} 
                 FROM NumberedRows
@@ -196,6 +196,7 @@ try {
                 $sap_no = trim($item_details['sap_no']);
                 $part_no = trim($item_details['part_no']);
                 $sku = trim($item_details['sku'] ?? '');
+                $barcode = trim($item_details['barcode'] ?? '');
                 $desc = trim($item_details['part_description'] ?? '');
                 $mat_type = trim($item_details['material_type'] ?? 'FG');
                 $mat_sub_type = trim($item_details['material_sub_type'] ?? '');
@@ -228,7 +229,7 @@ try {
 
                 if ($item_id > 0) {
                     $sql = "UPDATE " . ITEMS_TABLE . " SET 
-                                sap_no = ?, part_no = ?, sku = ?, part_description = ?, material_type = ?, material_sub_type = ?,
+                                sap_no = ?, part_no = ?, sku = ?, barcode = ?, part_description = ?, material_type = ?, material_sub_type = ?,
                                 min_stock = ?, max_stock = ?, is_tracking = ?, planned_output = ?, is_active = ?,
                                 CTN = ?, net_weight = ?, gross_weight = ?, cbm = ?, invoice_product_type = ?, invoice_description = ?,
                                 Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, Cost_DL = ?,
@@ -237,7 +238,7 @@ try {
                             WHERE item_id = ?";
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([
-                        $sap_no, $part_no, $sku, $desc, $mat_type, $mat_sub_type,
+                        $sap_no, $part_no, $sku, $barcode, $desc, $mat_type, $mat_sub_type,
                         $min_stock, $max_stock, $is_tracking, $planned_output, $is_active,
                         $ctn, $nw, $gw, $cbm, $inv_type, $inv_desc,
                         $c_rm, $c_pkg, $c_sub, $c_dl,
@@ -248,14 +249,14 @@ try {
                     writeLog($pdo, 'UPDATE_ITEM', basename(__FILE__), $item_id, null, null, "SAP: {$sap_no}");
                 } else {
                     $sql = "INSERT INTO " . ITEMS_TABLE . " (
-                                sap_no, part_no, sku, part_description, material_type, material_sub_type, created_at, 
+                                sap_no, part_no, sku, barcode, part_description, material_type, material_sub_type, created_at, 
                                 min_stock, max_stock, is_tracking, planned_output, is_active,
                                 CTN, net_weight, gross_weight, cbm, invoice_product_type, invoice_description,
                                 Cost_RM, Cost_PKG, Cost_SUB, Cost_DL,
                                 Cost_OH_Machine, Cost_OH_Utilities, Cost_OH_Indirect, Cost_OH_Staff, Cost_OH_Accessory, Cost_OH_Others,
                                 StandardPrice, Price_USD
                             ) VALUES (
-                                ?, ?, ?, ?, ?, ?, GETDATE(), 
+                                ?, ?, ?, ?, ?, ?, ?, GETDATE(), 
                                 ?, ?, ?, ?, ?,
                                 ?, ?, ?, ?, ?, ?,
                                 ?, ?, ?, ?, 
@@ -264,7 +265,7 @@ try {
                             )";
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([
-                        $sap_no, $part_no, $sku, $desc, $mat_type, $mat_sub_type,
+                        $sap_no, $part_no, $sku, $barcode, $desc, $mat_type, $mat_sub_type,
                         $min_stock, $max_stock, $is_tracking, $planned_output, $is_active,
                         $ctn, $nw, $gw, $cbm, $inv_type, $inv_desc,
                         $c_rm, $c_pkg, $c_sub, $c_dl,
@@ -465,6 +466,7 @@ try {
                     'sap_no' => $sap,
                     'part_no' => $getValue(['part_no', 'Part No'], 'part_no', ''),
                     'sku' => $getValue(['sku', 'Customer SKU'], 'sku', ''),
+                    'barcode' => $getValue(['barcode', 'Barcode'], 'barcode', ''),
                     'part_description' => $getValue(['part_description', 'Description'], 'part_description', ''),
                     
                     'material_type' => $mat_type,

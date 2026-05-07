@@ -151,15 +151,16 @@
             "4e1e55ac7b0fb4a1",
             "aed9057beb046aaa",
             "6ff816ee41c72df6",
-            "edcc4aa342560bfa"
+            "edcc4aa342560bfa",
+            "custom_rate_limiter"
         ],
         "x": 114,
         "y": 779,
-        "w": 1152,
+        "w": 1392,
         "h": 122
     },
     {
-        "id": "1b4f6334d888a3a1",
+        "id": "81be1df32446e5ce",
         "type": "group",
         "z": "cc3ed6cb9d327d93",
         "name": "REAL-TIME FORKLIFT TRACKING (Cloud MQTT -> DB -> WebSocket)",
@@ -169,17 +170,18 @@
             "label": true
         },
         "nodes": [
-            "422b794747d6a036",
-            "c71a245ae52c4eba",
-            "30d1a3d1cb77397f",
-            "648870c69f66f135",
-            "cfc8e88ebf96f69c",
-            "22e5687cb7342683",
-            "35e73a25a35940bc"
+            "e54acfbe2389a4a6",
+            "42aa5f8026b2942f",
+            "6135a1f0d0dd2b12",
+            "70645477faf1f6bf",
+            "5482454517eabdeb",
+            "03af72b227e71732",
+            "2863191bce540f95",
+            "a38a688412878f4f"
         ],
         "x": 114,
         "y": 919,
-        "w": 1152,
+        "w": 1392,
         "h": 122
     },
     {
@@ -718,10 +720,6 @@
         "authType": "",
         "senderr": false,
         "headers": [],
-        "credentials": {
-            "user": "",
-            "password": ""
-        },
         "x": 770,
         "y": 720,
         "wires": [
@@ -783,7 +781,7 @@
         "y": 820,
         "wires": [
             [
-                "0b5aaa3eb1a3058f"
+                "custom_rate_limiter"
             ]
         ]
     },
@@ -793,17 +791,18 @@
         "z": "cc3ed6cb9d327d93",
         "g": "e1db5898a992d342",
         "name": "Prep Hardware API",
-        "func": "var baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/forklift/api/hardwareTracking.php\";\n\nmsg.url = baseUrl;\nmsg.headers = {\n    \"Content-Type\": \"application/json\",\n    \"User-Agent\": \"Node-RED-Forklift\"\n};\nreturn msg;",
+        "func": "var baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/forkliftCopy/api/hardwareTracking.php\";\n\nmsg.url = baseUrl;\nmsg.headers = {\n    \"Content-Type\": \"application/json\",\n    \"User-Agent\": \"Node-RED-Forklift\",\n    \"X-API-KEY\": \"MESKey2026\"\n};\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 570,
+        "x": 790,
         "y": 820,
         "wires": [
             [
-                "4e1e55ac7b0fb4a1"
+                "4e1e55ac7b0fb4a1",
+                "edcc4aa342560bfa"
             ]
         ]
     },
@@ -824,11 +823,12 @@
         "authType": "",
         "senderr": false,
         "headers": [],
-        "x": 750,
+        "x": 970,
         "y": 820,
         "wires": [
             [
-                "aed9057beb046aaa"
+                "aed9057beb046aaa",
+                "edcc4aa342560bfa"
             ]
         ]
     },
@@ -838,13 +838,13 @@
         "z": "cc3ed6cb9d327d93",
         "g": "e1db5898a992d342",
         "name": "Format WS Payload",
-        "func": "if (msg.payload && msg.payload.success && msg.payload.data) {\n    msg.payload = {\n        action: \"location_update\",\n        data: msg.payload.data\n    };\n    return msg;\n}\nreturn null;",
+        "func": "if (msg.statusCode != 200) {\n    node.error(\"API Request Failed: HTTP \" + msg.statusCode, msg.payload);\n    return null;\n}\n\nif (!msg.payload) {\n    node.error(\"API returned empty payload\", msg);\n    return null;\n}\n\ntry {\n    var response = typeof msg.payload === \"string\" ? JSON.parse(msg.payload) : msg.payload;\n\n    if (response.success == true) {\n        var forkliftData = response.data || { code: \"Unknown\", status: \"Updated\" };\n\n        msg.payload = {\n            action: \"location_update\",\n            data: forkliftData\n        };\n        return msg;\n    } else {\n        var errMsg = response.message ? response.message : \"Unknown API Logic Error\";\n        node.error(\"API Logic Failed: \" + errMsg, response);\n        return null;\n    }\n} catch (e) {\n    node.error(\"API returned invalid JSON: \" + e.message, msg.payload);\n    return null;\n}",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 940,
+        "x": 1160,
         "y": 820,
         "wires": [
             [
@@ -861,7 +861,7 @@
         "name": "Broadcast to Web",
         "server": "f293631bae2ef4f2",
         "client": "",
-        "x": 1150,
+        "x": 1390,
         "y": 820,
         "wires": []
     },
@@ -879,15 +879,35 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 1130,
+        "x": 1370,
         "y": 860,
         "wires": []
     },
     {
-        "id": "422b794747d6a036",
+        "id": "custom_rate_limiter",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "Topic Rate Limiter (5s)",
+        "func": "var lastSeen = context.get('lastSeen') || {};\nvar topic = msg.topic;\nvar now = Date.now();\nvar cooldown = 5000;\n\nif (!topic) return null;\n\nif (!lastSeen[topic] || (now - lastSeen[topic]) >= cooldown) {\n    lastSeen[topic] = now;\n    context.set('lastSeen', lastSeen);\n    return msg;\n} else {\n    return null;\n}",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 820,
+        "wires": [
+            [
+                "0b5aaa3eb1a3058f"
+            ]
+        ]
+    },
+    {
+        "id": "e54acfbe2389a4a6",
         "type": "mqtt in",
         "z": "cc3ed6cb9d327d93",
-        "g": "1b4f6334d888a3a1",
+        "g": "81be1df32446e5ce",
         "name": "MQTT: HiveMQ Forklift",
         "topic": "/SNC_TEST/B9/Forklift/+/Location",
         "qos": "0",
@@ -901,15 +921,15 @@
         "y": 960,
         "wires": [
             [
-                "c71a245ae52c4eba"
+                "42aa5f8026b2942f"
             ]
         ]
     },
     {
-        "id": "c71a245ae52c4eba",
+        "id": "42aa5f8026b2942f",
         "type": "json",
         "z": "cc3ed6cb9d327d93",
-        "g": "1b4f6334d888a3a1",
+        "g": "81be1df32446e5ce",
         "name": "",
         "property": "payload",
         "action": "obj",
@@ -918,39 +938,58 @@
         "y": 960,
         "wires": [
             [
-                "30d1a3d1cb77397f"
+                "6135a1f0d0dd2b12"
             ]
         ]
     },
     {
-        "id": "30d1a3d1cb77397f",
+        "id": "6135a1f0d0dd2b12",
         "type": "function",
         "z": "cc3ed6cb9d327d93",
-        "g": "1b4f6334d888a3a1",
-        "name": "Prep Hardware API",
-        "func": "var baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/forklift/api/hardwareTracking.php\";\n\nmsg.url = baseUrl;\nmsg.headers = {\n    \"Content-Type\": \"application/json\",\n    \"User-Agent\": \"Node-RED-Forklift\"\n};\nreturn msg;",
+        "g": "81be1df32446e5ce",
+        "name": "Topic Rate Limiter (5s)",
+        "func": "var lastSeen = context.get('lastSeen') || {};\nvar topic = msg.topic;\nvar now = Date.now();\nvar cooldown = 5000;\n\nif (!topic) return null;\n\nif (!lastSeen[topic] || (now - lastSeen[topic]) >= cooldown) {\n    lastSeen[topic] = now;\n    context.set('lastSeen', lastSeen);\n    return msg;\n} else {\n    return null;\n}",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 570,
+        "x": 580,
         "y": 960,
         "wires": [
             [
-                "648870c69f66f135",
-                "35e73a25a35940bc"
+                "70645477faf1f6bf"
             ]
         ]
     },
     {
-        "id": "648870c69f66f135",
+        "id": "70645477faf1f6bf",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "81be1df32446e5ce",
+        "name": "Prep Hardware API",
+        "func": "var baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/forkliftCopy/api/hardwareTracking.php\";\n\nmsg.url = baseUrl;\nmsg.headers = {\n    \"Content-Type\": \"application/json\",\n    \"User-Agent\": \"Node-RED-Forklift\",\n    \"X-API-KEY\": \"MESKey2026\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 790,
+        "y": 960,
+        "wires": [
+            [
+                "5482454517eabdeb"
+            ]
+        ]
+    },
+    {
+        "id": "5482454517eabdeb",
         "type": "http request",
         "z": "cc3ed6cb9d327d93",
-        "g": "1b4f6334d888a3a1",
+        "g": "81be1df32446e5ce",
         "name": "POST to DB",
         "method": "POST",
-        "ret": "obj",
+        "ret": "txt",
         "paytoqs": "ignore",
         "url": "",
         "tls": "",
@@ -960,55 +999,55 @@
         "authType": "",
         "senderr": false,
         "headers": [],
-        "x": 750,
+        "x": 970,
         "y": 960,
         "wires": [
             [
-                "cfc8e88ebf96f69c",
-                "35e73a25a35940bc"
+                "03af72b227e71732",
+                "a38a688412878f4f"
             ]
         ]
     },
     {
-        "id": "cfc8e88ebf96f69c",
+        "id": "03af72b227e71732",
         "type": "function",
         "z": "cc3ed6cb9d327d93",
-        "g": "1b4f6334d888a3a1",
+        "g": "81be1df32446e5ce",
         "name": "Format WS Payload",
-        "func": "if (msg.payload && msg.payload.success && msg.payload.data) {\n    msg.payload = {\n        action: \"location_update\",\n        data: msg.payload.data\n    };\n    return msg;\n}\nreturn null;",
+        "func": "if (msg.statusCode != 200) {\n    node.error(\"API Request Failed: HTTP \" + msg.statusCode, msg.payload);\n    return null;\n}\n\nif (!msg.payload) {\n    node.error(\"API returned empty payload\", msg);\n    return null;\n}\n\ntry {\n    var response = typeof msg.payload === \"string\" ? JSON.parse(msg.payload) : msg.payload;\n\n    if (response.success == true) {\n        var forkliftData = response.data || { code: \"Unknown\", status: \"Updated\" };\n\n        msg.payload = {\n            action: \"location_update\",\n            data: forkliftData\n        };\n        return msg;\n    } else {\n        var errMsg = response.message ? response.message : \"Unknown API Logic Error\";\n        node.error(\"API Logic Failed: \" + errMsg, response);\n        return null;\n    }\n} catch (e) {\n    node.error(\"API returned invalid JSON: \" + e.message, msg.payload);\n    return null;\n}",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 940,
+        "x": 1160,
         "y": 960,
         "wires": [
             [
-                "22e5687cb7342683",
-                "35e73a25a35940bc"
+                "2863191bce540f95",
+                "a38a688412878f4f"
             ]
         ]
     },
     {
-        "id": "22e5687cb7342683",
+        "id": "2863191bce540f95",
         "type": "websocket out",
         "z": "cc3ed6cb9d327d93",
-        "g": "1b4f6334d888a3a1",
+        "g": "81be1df32446e5ce",
         "name": "Broadcast to Web",
         "server": "f293631bae2ef4f2",
         "client": "",
-        "x": 1150,
+        "x": 1390,
         "y": 960,
         "wires": []
     },
     {
-        "id": "35e73a25a35940bc",
+        "id": "a38a688412878f4f",
         "type": "debug",
         "z": "cc3ed6cb9d327d93",
-        "g": "1b4f6334d888a3a1",
+        "g": "81be1df32446e5ce",
         "name": "WS Output",
-        "active": false,
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -1016,7 +1055,7 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 1130,
+        "x": 1370,
         "y": 1000,
         "wires": []
     },

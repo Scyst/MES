@@ -172,6 +172,7 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                             <thead class="table-light text-center" style="position: sticky; top: 0; z-index: 2;">
                                 <tr class="text-secondary bg-light">
                                     <th rowspan="2" class="sticky-col-left px-3 py-2">Item Identity</th>
+                                    <th rowspan="2" class="py-2">Barcode / SKU</th>
                                     <th rowspan="2" class="py-2">Description</th>
                                     <th rowspan="2" class="py-2 text-center bg-secondary bg-opacity-10" style="min-width: 80px;">Plan<br><small>(UPH)</small></th>
                                     <th colspan="2" class="py-1 bg-warning bg-opacity-10">Stock Policy</th>
