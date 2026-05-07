@@ -64,7 +64,7 @@ async function fetchAndRenderBarAndTable() {
         const tbody = document.getElementById('productionTableBody');
         if (tbody) {
             if (!partResults || partResults.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No production data</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No production data</td></tr>';
             } else {
                 tbody.innerHTML = '';
                 const globalMax = Math.max(

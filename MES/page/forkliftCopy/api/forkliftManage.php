@@ -167,6 +167,22 @@ try {
 
             $response = ['success' => true, 'data' => $fl, 'message' => 'Success'];
             break;
+
+        case 'trigger_auto_alerts':
+            $headers = getallheaders();
+            $headers = array_change_key_case($headers, CASE_UPPER);
+            $apiKey = $headers['X-API-KEY'] ?? '';
+
+            if ($apiKey !== (defined('SYSTEM_API_KEY') ? SYSTEM_API_KEY : 'MESKey2026')) {
+                http_response_code(401);
+                throw new Exception('Unauthorized API Key for Alert Engine');
+            }
+
+            $stmt = $pdo->prepare("EXEC dbo.sp_Forklift_AutoDetectAlerts");
+            $stmt->execute();
+            
+            $response = ['success' => true, 'data' => null, 'message' => 'Alert engine executed.'];
+            break;
             
         default:
             $response = ['success' => false, 'message' => 'Invalid action requested.'];
