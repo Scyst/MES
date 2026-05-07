@@ -1,4 +1,3 @@
-
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../db.php';
@@ -98,6 +97,7 @@ try {
                         t.quantity, 
                         t.status, 
                         t.created_at,
+                        t.prod_date,
                         i.sap_no, 
                         i.part_no, 
                         i.part_description 
@@ -172,30 +172,30 @@ try {
             
             $transfer_uuid = $input['transfer_uuid'] ?? '';
             if (empty($transfer_uuid)) throw new Exception("Transfer UUID is required.");
-
-            $pdo->beginTransaction();
             
-            $checkStmt = $pdo->prepare("SELECT status, created_by_user_id FROM $transferTable WITH (UPDLOCK) WHERE transfer_uuid = ?");
+            $checkStmt = $pdo->prepare("SELECT status, created_by_user_id FROM $transferTable WITH (NOLOCK) WHERE transfer_uuid = ?");
             $checkStmt->execute([$transfer_uuid]);
             $row = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$row) {
-                throw new Exception("ไม่พบรายการ Label นี้ในระบบ");
+                throw new Exception("ไม่พบรายการ Label นี้ในระบบ (อาจถูกลบไปแล้ว)");
             }
             if ($row['status'] !== 'PENDING') {
-                throw new Exception("ไม่สามารถยกเลิกได้ เนื่องจากสถานะปัจจุบันคือ {$row['status']}");
+                throw new Exception("ไม่สามารถยกเลิกได้ เนื่องจากแท็กนี้ถูกใช้งานไปแล้ว (สถานะ: {$row['status']})");
             }
-            
             if ($row['created_by_user_id'] != $currentUser['id'] && !hasPermission('manage_production')) {
                 throw new Exception("คุณไม่มีสิทธิ์ยกเลิก Label ที่สร้างโดยผู้อื่น");
             }
 
-            $updStmt = $pdo->prepare("UPDATE $transferTable SET status = 'CANCELLED', notes = ISNULL(notes, '') + ? WHERE transfer_uuid = ?");
-            $note_update = "\nCancelled (Ghost Label) by " . $currentUser['username'] . " at " . date('Y-m-d H:i:s');
-            $updStmt->execute([$note_update, $transfer_uuid]);
+            $stmt = $pdo->prepare("EXEC dbo.sp_CancelAndRollbackTag @transfer_uuid = ?, @user_id = ?");
+            $stmt->execute([$transfer_uuid, $currentUser['id']]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            $pdo->commit();
-            echo json_encode(['success' => true, 'message' => "ยกเลิกรายการ {$transfer_uuid} สำเร็จ"]);
+            if ($result && isset($result['success']) && $result['success'] == 1) {
+                echo json_encode(['success' => true, 'message' => $result['message']]);
+            } else {
+                throw new Exception("ระบบไม่สามารถทำรายการยกเลิกและคืนเลขได้ กรุณาลองใหม่อีกครั้ง");
+            }
             break;
 
         case 'create_transfer_order':
@@ -206,7 +206,10 @@ try {
             $quantity = floor((float)($input['quantity'] ?? 0)); 
             $from_loc_id = $input['from_loc_id'] ?? 0;
             $to_loc_id = $input['to_loc_id'] ?? 0;
+            
             $notes = $input['notes'] ?? null;
+            $prod_date = $input['prod_date'] ?? null;
+            if ($prod_date === '') $prod_date = null;
 
             if (empty($transfer_uuid) || empty($item_id) || empty($quantity) || $quantity <= 0 || empty($from_loc_id) || empty($to_loc_id)) {
                 throw new Exception("ข้อมูลไม่ครบถ้วน (UUID, Item, Qty, From, To).");
@@ -217,15 +220,14 @@ try {
             }
 
             $pdo->beginTransaction();
-            
             $sql = "INSERT INTO $transferTable 
-                        (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes)
+                        (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, prod_date, notes)
                     VALUES 
-                        (?, ?, ?, ?, ?, 'PENDING', ?, ?)";
+                        (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?)";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                $transfer_uuid, $item_id, $quantity, $from_loc_id, $to_loc_id, $currentUser['id'], $notes
+                $transfer_uuid, $item_id, $quantity, $from_loc_id, $to_loc_id, $currentUser['id'], $prod_date, $notes
             ]);
             
             $new_transfer_id = $pdo->lastInsertId();
@@ -429,7 +431,10 @@ try {
             $quantity = floor((float)($input['quantity'] ?? 0));
             $from_loc_id = $input['from_loc_id'] ?? 0;
             $to_loc_id = $input['to_loc_id'] ?? 0; 
+            
             $notes = $input['notes'] ?? null;
+            $prod_date = $input['prod_date'] ?? null;
+            if ($prod_date === '') $prod_date = null;
 
             if (empty($parent_lot) || $print_count < 1 || empty($item_id) || empty($quantity) || empty($from_loc_id)) {
                 throw new Exception("ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบฟอร์มอีกครั้ง");
@@ -442,7 +447,7 @@ try {
             $pdo->beginTransaction();
 
             $sqlReserve = "
-                MERGE INTO dbo.LOT_SERIALS WITH (HOLDLOCK) AS T
+                MERGE INTO " . LOT_SERIALS_TABLE . " WITH (HOLDLOCK) AS T
                 USING (SELECT ? AS parent_lot) AS S
                 ON (T.parent_lot = S.parent_lot)
                 WHEN MATCHED THEN
@@ -463,10 +468,9 @@ try {
 
             $end_serial = (int)$reserveResult['last_serial'];
             $start_serial = (int)($reserveResult['old_serial'] ?? 0) + 1;
-
             $insertSql = "INSERT INTO $transferTable 
-                          (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes)
-                          VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?)";
+                          (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, prod_date, notes)
+                          VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?)";
             $insertStmt = $pdo->prepare($insertSql);
 
             $generated_labels = [];
@@ -476,7 +480,7 @@ try {
                 $transfer_uuid = $parent_lot . $serialSuffix;
 
                 $insertStmt->execute([
-                    $transfer_uuid, $item_id, $quantity, $from_loc_id, $to_loc_id, $currentUser['id'], $notes
+                    $transfer_uuid, $item_id, $quantity, $from_loc_id, $to_loc_id, $currentUser['id'], $prod_date, $notes
                 ]);
 
                 $generated_labels[] = [
@@ -760,6 +764,100 @@ try {
                 echo json_encode(['success' => true, 'data' => json_decode($job_data_json)]);
             } else {
                 throw new Exception("Scan ID not found or already used.");
+            }
+            break;
+
+        case 'update_label':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+            
+            $transfer_uuid = $input['transfer_uuid'] ?? '';
+            $item_id = $input['item_id'] ?? 0;
+            $quantity = floor((float)($input['quantity'] ?? 0));
+            $from_loc_id = $input['from_loc_id'] ?? 0;
+            
+            $notes = $input['notes'] ?? null;
+            $prod_date = $input['prod_date'] ?? null;
+            if ($prod_date === '') $prod_date = null;
+
+            if (empty($transfer_uuid) || empty($item_id) || $quantity <= 0) {
+                throw new Exception("ข้อมูลไม่ครบถ้วนหรือไม่ถูกต้อง");
+            }
+
+            $checkStmt = $pdo->prepare("SELECT status, created_by_user_id FROM $transferTable WITH (UPDLOCK) WHERE transfer_uuid = ?");
+            $checkStmt->execute([$transfer_uuid]);
+            $row = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$row) throw new Exception("ไม่พบรายการนี้ในระบบ");
+            if ($row['status'] !== 'PENDING') throw new Exception("ไม่สามารถแก้ไขได้ สถานะปัจจุบันคือ: {$row['status']}");
+            if ($row['created_by_user_id'] != $currentUser['id'] && !hasPermission('manage_production')) {
+                throw new Exception("คุณไม่มีสิทธิ์แก้ไขข้อมูลที่สร้างโดยผู้อื่น");
+            }
+
+            $note_update = "\nEdited by " . $currentUser['username'] . " at " . date('Y-m-d H:i:s');
+            $updStmt = $pdo->prepare("UPDATE $transferTable 
+                                      SET item_id = ?, quantity = ?, from_location_id = ?, 
+                                          prod_date = ?, notes = ISNULL(notes, '') + ? 
+                                      WHERE transfer_uuid = ?");
+            $updStmt->execute([$item_id, $quantity, $from_loc_id, $prod_date, $notes . $note_update, $transfer_uuid]);
+
+            echo json_encode(['success' => true, 'message' => "อัปเดตข้อมูล {$transfer_uuid} สำเร็จ"]);
+            break;
+
+        case 'update_batch_labels':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+            
+            $lot_no = trim($input['lot_no'] ?? '');
+            $is_range = isset($input['is_range']) ? (bool)$input['is_range'] : false;
+            $start_no = (int)($input['start_no'] ?? 0);
+            $end_no = (int)($input['end_no'] ?? 0);
+
+            $item_id = $input['item_id'] ?? 0;
+            $quantity = floor((float)($input['quantity'] ?? 0));
+            $from_loc_id = $input['from_loc_id'] ?? 0;
+            $notes = $input['notes'] ?? null;
+            $prod_date = $input['prod_date'] ?? null;
+            if ($prod_date === '') $prod_date = null;
+
+            if (empty($lot_no)) throw new Exception("กรุณาระบุเลข Lot ที่ต้องการแก้ไข");
+            if (empty($item_id) || $quantity <= 0 || empty($from_loc_id)) {
+                throw new Exception("ข้อมูลที่จะอัปเดตไม่ครบถ้วน (Item, Qty, Location)");
+            }
+            if ($is_range && ($start_no <= 0 || $end_no <= 0 || $start_no > $end_no)) {
+                throw new Exception("ระบุช่วงเลขรันให้ถูกต้อง");
+            }
+
+            $pdo->beginTransaction();
+            $note_update = "\nBulk Edited by " . $currentUser['username'] . " at " . date('Y-m-d H:i:s');
+            
+            $updSql = "UPDATE $transferTable 
+                       SET item_id = ?, quantity = ?, from_location_id = ?, 
+                           prod_date = ?, notes = ISNULL(notes, '') + ? 
+                       WHERE status = 'PENDING' 
+                         AND transfer_uuid LIKE ?";
+            
+            $params = [$item_id, $quantity, $from_loc_id, $prod_date, $notes . $note_update, $lot_no . '-%'];
+
+            if (!hasPermission('manage_production')) {
+                $updSql .= " AND created_by_user_id = ?";
+                $params[] = $currentUser['id'];
+            }
+
+            if ($is_range) {
+                $updSql .= " AND TRY_CAST(RIGHT(transfer_uuid, CHARINDEX('-', REVERSE(transfer_uuid)) - 1) AS INT) BETWEEN ? AND ?";
+                $params[] = $start_no;
+                $params[] = $end_no;
+            }
+            
+            $stmt = $pdo->prepare($updSql);
+            $stmt->execute($params);
+            $affectedRows = $stmt->rowCount();
+
+            $pdo->commit();
+
+            if ($affectedRows > 0) {
+                echo json_encode(['success' => true, 'message' => "แก้ไขข้อมูล Lot: {$lot_no} จำนวน {$affectedRows} รายการ สำเร็จ"]);
+            } else {
+                throw new Exception("ไม่พบสติ๊กเกอร์สถานะ PENDING หรือคุณไม่มีสิทธิ์แก้ไข");
             }
             break;
 

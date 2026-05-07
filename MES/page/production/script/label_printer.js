@@ -1,8 +1,4 @@
 "use strict";
-
-// =================================================================
-// SECTION: GLOBAL STATE
-// =================================================================
 let allLocations = [];
 let selectedItem = null; 
 let searchTimeout = null;
@@ -18,9 +14,6 @@ function escapeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
-// =================================================================
-// SECTION: CORE & AJAX SEARCH
-// =================================================================
 async function sendRequest(endpoint, action, method, body = null, params = null) {
     try {
         let url = `${endpoint}?action=${action}`;
@@ -125,9 +118,6 @@ async function populateInitialData() {
     }
 }
 
-// =================================================================
-// SECTION: HISTORY MANAGEMENT
-// =================================================================
 let historyCurrentPage = 1;
 let historyTotalPages = 1;
 let historySearchTimer = null;
@@ -181,19 +171,28 @@ async function loadLabelHistory(page = historyCurrentPage) {
             updateBatchPrintBtn();
 
             res.data.forEach(row => {
+                const safeUuid = escapeHTML(row.transfer_uuid);
+                const mfgDate = row.prod_date ? escapeHTML(row.prod_date) : '-';
+                const printTime = row.created_at ? escapeHTML(row.created_at.substring(0, 16)) : '-';
+                const displayTimeHTML = `
+                    <div class="text-nowrap">
+                        <strong class="text-dark"><i class="far fa-calendar-alt text-secondary me-1"></i>${mfgDate}</strong><br>
+                        <small class="text-muted" style="font-size: 0.7rem;" title="เวลาที่พิมพ์ Tag">พิมพ์: ${printTime}</small>
+                    </div>
+                `;
+
                 let badgeClass = row.status === 'PENDING' ? 'bg-warning text-dark' : (row.status === 'COMPLETED' ? 'bg-success' : 'bg-danger');
                 const statusBadge = `<span class="badge ${badgeClass}">${row.status}</span>`;
                 
                 let actionBtns = '';
                 if (row.status === 'PENDING') {
                     actionBtns = `
-                        <button type="button" class="btn btn-sm btn-primary py-0 px-2" onclick="reprintLabel('${row.transfer_uuid}')" title="Reprint"><i class="fas fa-print"></i></button>
+                        <button type="button" class="btn btn-sm btn-warning py-0 px-2 text-dark" onclick="editLabel('${safeUuid}')" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button type="button" class="btn btn-sm btn-primary py-0 px-2 ms-1" onclick="reprintLabel('${row.transfer_uuid}')" title="Reprint"><i class="fas fa-print"></i></button>
                         <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 ms-1" onclick="cancelLabel('${row.transfer_uuid}')" title="Cancel"><i class="fas fa-times"></i></button>
                     `;
                 }
 
-                const safeUuid = escapeHTML(row.transfer_uuid);
-                const displayTime = row.created_at ? escapeHTML(row.created_at.substring(0, 16)) : '-';
                 const checkboxHtml = `<input class="form-check-input row-checkbox" type="checkbox" value="${safeUuid}" onchange="updateBatchPrintBtn()" style="cursor:pointer; transform:scale(1.2);">`;
                 const itemDisplay = `
                     <div class="text-truncate" style="max-width: 250px;" title="${escapeHTML(row.part_description || '')}">
@@ -207,7 +206,7 @@ async function loadLabelHistory(page = historyCurrentPage) {
                 tbody.innerHTML += `
                     <tr class="align-middle">
                         <td class="text-center px-2">${checkboxHtml}</td>
-                        <td class="px-2 text-muted"><small>${displayTime}</small></td>
+                        <td class="px-2">${displayTimeHTML}</td>
                         <td class="fw-bold text-primary">${safeUuid}</td>
                         <td>${itemDisplay}</td>
                         <td class="text-end fw-bold fs-6">${Math.floor(row.quantity)}</td>
@@ -240,18 +239,26 @@ function changeHistoryPage(step) {
 }
 
 async function cancelLabel(uuid) {
-    if (!confirm(`ยืนยันการยกเลิก Label: ${uuid} ใช่หรือไม่?\n(เมื่อยกเลิกแล้ว จะไม่สามารถสแกนรับเข้าสต็อกได้อีก)`)) return;
-    
-    const res = await sendRequest(TRANSFER_API_URL, 'cancel_label', 'POST', { transfer_uuid: uuid });
-    if (res.success) {
-        if (typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
-        loadLabelHistory();
+    const confirmDelete = await Swal.fire({
+        title: 'ยืนยันการยกเลิก?',
+        html: `คุณต้องการยกเลิก Label: <b class="text-danger">${uuid}</b> ใช่หรือไม่?<br><br><small class="text-muted">หากนี่คือเลขล่าสุด ระบบจะนำเลขนี้กลับมารันใหม่ให้อัตโนมัติ</small>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'ใช่, ยกเลิกเลย',
+        cancelButtonText: 'ปิด'
+    });
+
+    if (confirmDelete.isConfirmed) {
+        const res = await sendRequest(TRANSFER_API_URL, 'cancel_label', 'POST', { transfer_uuid: uuid });
+        if (res.success) {
+            if (typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
+            loadLabelHistory();
+        }
     }
 }
 
-// =================================================================
-// SECTION: ADVANCED BULK CANCEL (ป้องกันการลบข้อมูลดีทิ้ง)
-// =================================================================
 function toggleBcRange() {
     const isChecked = document.getElementById('bc_is_range').checked;
     const rangeDiv = document.getElementById('bc_range_div');
@@ -328,15 +335,89 @@ async function executeAdvancedBulkCancel() {
     }
 }
 
-async function cancelLabel(uuid) {
-    if (!confirm(`ยืนยันการยกเลิก Label: ${uuid} ใช่หรือไม่?\n(เมื่อยกเลิกแล้ว จะไม่สามารถสแกนรับเข้าสต็อกได้อีก)`)) {
-        return;
-    }
-    
-    const res = await sendRequest(TRANSFER_API_URL, 'cancel_label', 'POST', { transfer_uuid: uuid });
-    if (res.success) {
-        if (typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
-        loadLabelHistory();
+async function openBulkEditMode() {
+    const { value: formValues } = await Swal.fire({
+        title: 'แก้ไขแบบกลุ่ม (Bulk Edit)',
+        html: `
+            <div class="mb-3 text-start">
+                <label class="form-label fw-bold">เลข Lot / Master Pallet <span class="text-danger">*</span></label>
+                <input id="swal-lot" class="form-control text-uppercase fw-bold" placeholder="เช่น L-202604">
+            </div>
+            <div class="form-check form-switch text-start mb-2">
+                <input class="form-check-input" type="checkbox" id="swal-is-range" onchange="document.getElementById('swal-range-div').classList.toggle('d-none')">
+                <label class="form-check-label fw-bold text-dark">ระบุช่วงเลขรัน (แก้เฉพาะบางดวง)</label>
+            </div>
+            <div id="swal-range-div" class="row g-2 d-none text-start bg-light p-2 rounded border">
+                <div class="col-6">
+                    <label class="form-label small fw-bold">ตั้งแต่ดวงที่</label>
+                    <input type="number" id="swal-start" class="form-control text-center text-primary fw-bold" min="1" placeholder="เช่น 1">
+                </div>
+                <div class="col-6">
+                    <label class="form-label small fw-bold">ถึงดวงที่</label>
+                    <input type="number" id="swal-end" class="form-control text-center text-primary fw-bold" min="1" placeholder="เช่น 50">
+                </div>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'ดึงข้อมูลมาแก้ไข',
+        cancelButtonText: 'ยกเลิก',
+        preConfirm: () => {
+            const lot = document.getElementById('swal-lot').value.trim().toUpperCase();
+            const isRange = document.getElementById('swal-is-range').checked;
+            const start = document.getElementById('swal-start').value;
+            const end = document.getElementById('swal-end').value;
+            
+            if (!lot) {
+                Swal.showValidationMessage('กรุณาระบุเลข Lot!');
+                return false;
+            }
+            if (isRange && (!start || !end || parseInt(start) > parseInt(end))) {
+                Swal.showValidationMessage('กรุณาระบุช่วงตัวเลขให้ถูกต้อง!');
+                return false;
+            }
+            return { lot, isRange, start, end };
+        }
+    });
+
+    if (formValues) {
+        const previewSerial = formValues.isRange ? `${formValues.lot}-${formValues.start}` : `${formValues.lot}-1`;
+        
+        const res = await sendRequest(TRANSFER_API_URL, 'get_transfer_details', 'GET', null, { transfer_id: previewSerial });
+        
+        if (res.success && res.data) {
+            const data = res.data;
+            document.getElementById('from_location_id').value = data.from_location_id;
+            
+            selectedItem = { item_id: data.item_id, sap_no: data.sap_no, part_no: data.part_no, part_description: data.part_description };
+            document.getElementById('item_id').value = data.item_id;
+            document.getElementById('item_search').value = `${data.sap_no} | ${data.part_no}`;
+            
+            document.getElementById('lot_no').value = formValues.lot;
+            document.getElementById('lot_no').disabled = true; 
+            document.getElementById('notes').value = data.notes || '';
+            document.getElementById('quantity').value = Math.floor(data.quantity);
+            if (data.prod_date) document.getElementById('prod_date').value = data.prod_date;
+
+            const pc = document.getElementById('print_count');
+            pc.value = 1;
+            pc.disabled = true;
+
+            document.getElementById('edit_transfer_uuid').value = 'BULK-' + JSON.stringify(formValues);
+            
+            document.getElementById('cancel-edit-btn').classList.remove('d-none');
+            const btn = document.getElementById('generate-label-btn');
+            btn.classList.replace('btn-primary', 'btn-warning');
+            btn.classList.replace('text-white', 'text-dark');
+            
+            let btnText = formValues.isRange ? `บันทึกการแก้ไข (ดวงที่ ${formValues.start} ถึง ${formValues.end})` : `บันทึกการแก้ไข (ทั้ง Lot)`;
+            btn.innerHTML = `<i class="fas fa-save me-2"></i> ${btnText}`;
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (typeof showToast === 'function') showToast('ดึงข้อมูลสำเร็จ กรุณาแก้ไขและกดบันทึก', 'var(--bs-info)');
+        } else {
+            Swal.fire('ไม่พบข้อมูล', `ไม่สามารถดึงข้อมูล ${previewSerial} ได้ อาจจะถูกลบหรือรับเข้าคลังไปแล้ว`, 'error');
+        }
     }
 }
 
@@ -358,7 +439,7 @@ async function reprintLabel(uuid) {
             manual_lot: manualLot, 
             serial_no: serial,
             location_name: data.from_location_name || '', 
-            prod_date: "-", 
+            prod_date: data.prod_date || "-",
             remark: data.notes || '',
             scan_id_display: data.transfer_uuid, 
             qr_url: `${baseUrl}?type=receipt&transfer_id=${data.transfer_uuid}`
@@ -368,9 +449,6 @@ async function reprintLabel(uuid) {
     }
 }
 
-// =================================================================
-// SECTION: BATCH REPRINT (พิมพ์ซ้ำหลายใบ)
-// =================================================================
 function toggleAllCheckboxes() {
     const selectAll = document.getElementById('selectAllCheckbox');
     const checkboxes = document.querySelectorAll('.row-checkbox');
@@ -526,7 +604,7 @@ async function processAndPrintUUIDs(uuids) {
                     manual_lot: manualLot, 
                     serial_no: serial,
                     location_name: data.from_location_name || '', 
-                    prod_date: "-", 
+                    prod_date: data.prod_date || "-",
                     remark: data.notes || '',
                     scan_id_display: data.transfer_uuid, 
                     qr_url: `${baseUrl}?type=receipt&transfer_id=${data.transfer_uuid}`
@@ -549,9 +627,6 @@ async function processAndPrintUUIDs(uuids) {
     }
 }
 
-// =================================================================
-// SECTION: GENERATE & PRINT
-// =================================================================
 async function handleGenerateLabel(event) {
     event.preventDefault();
     
@@ -561,6 +636,8 @@ async function handleGenerateLabel(event) {
     const manualLot = document.getElementById('lot_no').value.trim().toUpperCase();
     const prodDate = document.getElementById('prod_date').value;
     const remark = document.getElementById('notes').value.trim();
+    const editInput = document.getElementById('edit_transfer_uuid');
+    const editUuid = editInput ? editInput.value : '';
 
     if (!selectedItem || !fromLocationId) { 
         if (typeof showToast === 'function') showToast("กรุณาเลือก Item และคลังต้นทางให้ครบถ้วน", 'var(--bs-danger)');
@@ -575,61 +652,144 @@ async function handleGenerateLabel(event) {
     const btn = document.getElementById('generate-label-btn');
     const originalText = btn.innerHTML;
     btn.disabled = true; 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> กำลังสร้างแท็ก...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> กำลังประมวลผล...';
     
     if (typeof showSpinner === 'function') showSpinner();
 
     try {
-        let dummyToLocId = 1;
-        if (allLocations && allLocations.length > 0) {
-            const fallbackLoc = allLocations.find(loc => loc.location_id != fromLocationId);
-            dummyToLocId = fallbackLoc ? fallbackLoc.location_id : allLocations[0].location_id;
-        }
+        if (editUuid) {
+            if (editUuid.startsWith('BULK-')) {
+                const settingsStr = editUuid.replace('BULK-', '');
+                const settings = JSON.parse(settingsStr);
+                
+                const payload = {
+                    lot_no: settings.lot,
+                    is_range: settings.isRange,
+                    start_no: settings.start,
+                    end_no: settings.end,
+                    item_id: selectedItem.item_id,
+                    quantity: qty,
+                    from_loc_id: fromLocationId,
+                    prod_date: prodDate,
+                    notes: remark
+                };
+                
+                const res = await sendRequest(TRANSFER_API_URL, 'update_batch_labels', 'POST', payload);
+                if (res.success) {
+                    Swal.fire('สำเร็จ', res.message, 'success');
+                    clearPrinterForm();
+                    loadLabelHistory(1);
+                } else {
+                    if (typeof showToast === 'function') showToast(res.message, 'var(--bs-danger)');
+                }
+            } else {
+                const payload = {
+                    transfer_uuid: editUuid,
+                    item_id: selectedItem.item_id,
+                    quantity: qty,
+                    from_loc_id: fromLocationId,
+                    prod_date: prodDate,
+                    notes: remark
+                };
+                const res = await sendRequest(TRANSFER_API_URL, 'update_label', 'POST', payload);
+                if (res.success) {
+                    if (typeof showToast === 'function') showToast('อัปเดตข้อมูลสำเร็จ', 'var(--bs-success)');
+                    reprintLabel(editUuid); 
+                    clearPrinterForm();
+                    loadLabelHistory(1);
+                } else {
+                    if (typeof showToast === 'function') showToast(res.message, 'var(--bs-danger)');
+                }
+            }
+        } else {
+            let dummyToLocId = 1;
+            if (allLocations && allLocations.length > 0) {
+                const fallbackLoc = allLocations.find(loc => loc.location_id != fromLocationId);
+                dummyToLocId = fallbackLoc ? fallbackLoc.location_id : allLocations[0].location_id;
+            }
 
-        const payload = {
-            parent_lot: manualLot, 
-            print_count: printCount, 
-            item_id: selectedItem.item_id,
-            quantity: qty, 
-            from_loc_id: fromLocationId, 
-            to_loc_id: dummyToLocId,
-            notes: remark
-        };
-        
-        const res = await sendRequest(TRANSFER_API_URL, 'create_batch_transfer_orders', 'POST', payload);
-        
-        if (res.success) {
-            const baseUrl = window.location.href.replace('label_printer.php', 'mobile_app.php');
-            const locObj = allLocations.find(l => l.location_id == fromLocationId);
-            const locName = locObj ? locObj.location_name : '';
-
-            const labelsToPrint = res.labels.map(l => ({
-                sap_no: selectedItem.sap_no, 
-                part_no: selectedItem.part_no, 
-                description: selectedItem.part_description || '',
+            const payload = {
+                parent_lot: manualLot, 
+                print_count: printCount, 
+                item_id: selectedItem.item_id,
                 quantity: qty, 
-                manual_lot: manualLot, 
-                serial_no: l.serial_no, 
-                location_name: locName,
-                prod_date: prodDate, 
-                remark: remark,
-                scan_id_display: l.transfer_uuid, 
-                qr_url: `${baseUrl}?type=receipt&transfer_id=${l.transfer_uuid}`
-            }));
+                from_loc_id: fromLocationId, 
+                to_loc_id: dummyToLocId,
+                prod_date: prodDate,
+                notes: remark
+            };
+            
+            const res = await sendRequest(TRANSFER_API_URL, 'create_batch_transfer_orders', 'POST', payload);
+            
+            if (res.success) {
+                const baseUrl = window.location.href.replace('label_printer.php', 'mobile_app.php');
+                const locObj = allLocations.find(l => l.location_id == fromLocationId);
+                const locName = locObj ? locObj.location_name : '';
 
-            executeHiddenPrint(labelsToPrint);
-            selectedItem = null; 
-            document.getElementById('item_id').value = '';
-            document.getElementById('item_search').value = '';
-            document.getElementById('lot_no').value = '';
-            document.getElementById('notes').value = '';
-            document.getElementById('item_search').focus();
-            loadLabelHistory(1);
+                const labelsToPrint = res.labels.map(l => ({
+                    sap_no: selectedItem.sap_no, 
+                    part_no: selectedItem.part_no, 
+                    description: selectedItem.part_description || '',
+                    quantity: qty, 
+                    manual_lot: manualLot, 
+                    serial_no: l.serial_no, 
+                    location_name: locName,
+                    prod_date: prodDate, 
+                    remark: remark,
+                    scan_id_display: l.transfer_uuid, 
+                    qr_url: `${baseUrl}?type=receipt&transfer_id=${l.transfer_uuid}`
+                }));
+
+                executeHiddenPrint(labelsToPrint);
+                clearPrinterForm();
+                loadLabelHistory(1);
+            } else {
+                if (typeof showToast === 'function') showToast(res.message, 'var(--bs-danger)');
+            }
         }
+    } catch (error) {
+        console.error(error);
+        if (typeof showToast === 'function') showToast('เกิดข้อผิดพลาดในการประมวลผล', 'var(--bs-danger)');
     } finally {
         if (typeof hideSpinner === 'function') hideSpinner();
         btn.disabled = false; 
         btn.innerHTML = originalText;
+    }
+}
+
+async function editLabel(uuid) {
+    const res = await sendRequest(TRANSFER_API_URL, 'get_transfer_details', 'GET', null, { transfer_id: uuid });
+    if (res.success && res.data) {
+        const data = res.data;  
+        let parts = uuid.split('-');
+        parts.pop();
+        let manualLot = parts.join('-');
+
+        document.getElementById('edit_transfer_uuid').value = uuid;
+        document.getElementById('from_location_id').value = data.from_location_id;
+        
+        selectedItem = { item_id: data.item_id, sap_no: data.sap_no, part_no: data.part_no, part_description: data.part_description };
+        document.getElementById('item_id').value = data.item_id;
+        document.getElementById('item_search').value = `${data.sap_no} | ${data.part_no}`;
+        
+        document.getElementById('lot_no').value = manualLot;
+        document.getElementById('lot_no').disabled = true;
+        
+        document.getElementById('notes').value = data.notes || '';
+        document.getElementById('quantity').value = Math.floor(data.quantity);
+
+        if (data.prod_date) document.getElementById('prod_date').value = data.prod_date;
+        
+        const pc = document.getElementById('print_count');
+        pc.value = 1;
+        pc.disabled = true;
+
+        document.getElementById('cancel-edit-btn').classList.remove('d-none');
+        const btn = document.getElementById('generate-label-btn');
+        btn.classList.replace('btn-primary', 'btn-warning');
+        btn.classList.replace('text-white', 'text-dark');
+        btn.innerHTML = '<i class="fas fa-save me-2"></i> บันทึกการแก้ไข';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
@@ -638,12 +798,19 @@ function clearPrinterForm() {
     selectedItem = null;
     document.getElementById('item_id').value = '';
     document.getElementById('prod_date').valueAsDate = new Date();
+    document.getElementById('edit_transfer_uuid').value = '';
+    document.getElementById('lot_no').disabled = false;
+    document.getElementById('print_count').disabled = false;
+    document.getElementById('cancel-edit-btn').classList.add('d-none');
+    
+    const btn = document.getElementById('generate-label-btn');
+    btn.classList.replace('btn-warning', 'btn-primary');
+    btn.classList.remove('text-dark');
+    btn.innerHTML = '<i class="fas fa-print me-2"></i> สร้างและพิมพ์แท็ก';
+    
     document.getElementById('item_search').focus();
 }
 
-// =================================================================
-// SECTION: PRINT RENDERING (ตรงตาม storeScanner.js)
-// =================================================================
 function executeHiddenPrint(labelsArray) {
     const printArea = document.getElementById('printArea');
     if (!printArea) return;
@@ -734,9 +901,6 @@ function executeHiddenPrint(labelsArray) {
     }, 500);
 }
 
-// =================================================================
-// SECTION: INITIALIZATION
-// =================================================================
 document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('printer-container') || document.getElementById('label-generator-form')) {
         populateInitialData();

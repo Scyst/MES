@@ -167,12 +167,12 @@ $defaultEnd = date('Y-m-d');
                                                 <div class="photo-filmstrip">
                                                     <?php 
                                                     $photoPoints = [
-                                                        'undercarriage' => '1. Gate Pass', 'outside_door' => '2. Seal Condition',
-                                                        'right_side' => '3. Container No.', 'left_side' => '4. Empty Cont.',
-                                                        'floor_moisture' => '5. Floor Moisture', 'front_wall' => '6. Half Loaded',
-                                                        'cargo_moisture' => '7. Cargo Moisture', 'ceiling_roof' => '8. Full Loaded',
-                                                        'floor' => '9. Right Door', 'inside_empty' => '10. All Doors',
-                                                        'inside_loaded' => '11. Seal Lock', 'seal_lock' => '12. Shipping Doc'
+                                                        'undercarriage' => '1. Gate Pass (ใบผ่าน รปภ.)', 'outside_door' => '2. Seal Condition (สภาพซีล)',
+                                                        'right_side' => '3. Container No. (เบอร์ตู้)', 'left_side' => '4. Empty Cont. (ตู้เปล่า)',
+                                                        'floor_moisture' => '5. Floor Moisture (ความชื้นพื้นตู้)', 'front_wall' => '6. Half Loaded (ครึ่งตู้)',
+                                                        'cargo_moisture' => '7. Cargo Moisture (ความชื้นสินค้า)', 'ceiling_roof' => '8. Full Loaded (เต็มตู้)',
+                                                        'floor' => '9. Right Door (ปิดขวา)', 'inside_empty' => '10. All Doors (ปิด 2 ฝั่ง)',
+                                                        'inside_loaded' => '11. Seal Lock (ล็อคซีล)', 'seal_lock' => '12. Shipping Doc (ใบของออก)'
                                                     ];
                                                     foreach ($photoPoints as $key => $label): 
                                                     ?>

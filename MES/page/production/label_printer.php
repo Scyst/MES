@@ -132,9 +132,17 @@
                                     </div>
                                 </div>
 
-                                <button type="submit" id="generate-label-btn" class="btn btn-primary w-100 fw-bold py-2 shadow-sm fs-6">
-                                    <i class="fas fa-print me-2"></i> สร้างและพิมพ์แท็ก
-                                </button>
+                                <input type="hidden" id="edit_transfer_uuid" value="">
+
+                                <div class="d-flex gap-2">
+                                    <button type="button" id="cancel-edit-btn" class="btn btn-secondary fw-bold py-2 shadow-sm fs-6 d-none" onclick="clearPrinterForm()">
+                                        <i class="fas fa-times me-1"></i> ยกเลิก
+                                    </button>
+                                    
+                                    <button type="submit" id="generate-label-btn" class="btn btn-primary flex-grow-1 fw-bold py-2 shadow-sm fs-6">
+                                        <i class="fas fa-print me-2"></i> สร้างและพิมพ์แท็ก
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -187,6 +195,9 @@
                                     <button class="btn btn-sm btn-outline-danger me-1 fw-bold" data-bs-toggle="modal" data-bs-target="#bulkCancelModal">
                                         <i class="fas fa-eraser me-1"></i>ลบกลุ่ม
                                     </button>
+                                    <button class="btn btn-sm btn-outline-warning me-1 fw-bold text-dark" onclick="openBulkEditMode()">
+                                        <i class="fas fa-edit me-1"></i>แก้ไขกลุ่ม
+                                    </button>
                                     <button class="btn btn-sm btn-outline-secondary" id="btnRefreshHistory" onclick="loadLabelHistory(1)">
                                         <i class="fas fa-sync-alt"></i>
                                     </button>
@@ -211,7 +222,7 @@
                                             <th class="text-center px-2" style="width: 40px;">
                                                 <input class="form-check-input" type="checkbox" id="selectAllCheckbox" onchange="toggleAllCheckboxes()" style="transform: scale(1.2); cursor: pointer;">
                                             </th>
-                                            <th class="px-2">วันเวลา (Date/Time)</th>
+                                            <th class="px-2">วันที่ผลิต (MFG Date)</th>
                                             <th>UUID</th>
                                             <th>Item / Part</th>
                                             <th class="text-end">Qty</th>
