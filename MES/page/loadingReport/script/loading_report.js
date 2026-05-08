@@ -36,6 +36,44 @@ $(document).ready(function() {
             setTimeout(() => { openCameraOptions(currentPreviewType); }, 300);
         }
     });
+
+    $('#btnDeletePhoto').on('click', function() {
+        if (!currentPreviewType) return;
+        const reportId = $('#current_report_id').val();
+
+        Swal.fire({
+            title: 'ลบรูปภาพ?',
+            text: "คุณต้องการลบรูปภาพนี้ออกจากระบบใช่หรือไม่?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-trash-alt me-2"></i>ลบรูปภาพ'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const $btn = $('#btnDeletePhoto');
+                const originalHtml = $btn.html();
+                $btn.html('<i class="fas fa-spinner fa-spin"></i> Deleting...').prop('disabled', true);
+
+                $.post(API_URL, {
+                    action: 'delete_photo',
+                    report_id: reportId,
+                    photo_type: currentPreviewType
+                }, function(res) {
+                    $btn.html(originalHtml).prop('disabled', false);
+                    if (res.success) {
+                        $('#photoPreviewModal').modal('hide');
+                        const $box = $(`#box_${currentPreviewType}`);
+                        $box.removeClass('has-image').empty();
+                        $box.append('<i class="fas fa-camera fa-2x text-secondary opacity-50"></i>');
+                        setTimeout(validateCompletion, 200);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                }, 'json');
+            }
+        });
+    });
 });
 
 function loadJobList() {
@@ -471,9 +509,9 @@ function triggerCamera(type, element) {
 
         const isCompleted = $('#form-content input').prop('disabled');
         if (isCompleted) {
-            $('#btnRetakePhoto').hide();
+            $('#btnRetakePhoto, #btnDeletePhoto').hide();
         } else {
-            $('#btnRetakePhoto').show();
+            $('#btnRetakePhoto, #btnDeletePhoto').show();
         }
 
         const modal = new bootstrap.Modal(document.getElementById('photoPreviewModal'));

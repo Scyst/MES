@@ -1,5 +1,5 @@
 <?php
-// page/loadingReport copy/api/manage_loading.php
+// page/loadingReport/api/manage_loading.php
 header('Content-Type: application/json');
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
@@ -151,15 +151,29 @@ try {
             break;
 
         case 'upload_photo':
-            if (!isset($_FILES['file']) || !isset($_POST['report_id'])) throw new Exception("Invalid Data");
+            if (!isset($_FILES['file']) || !isset($_POST['report_id']) || !isset($_POST['photo_type'])) {
+                throw new Exception("Invalid Payload.");
+            }
 
-            $report_id = $_POST['report_id'];
-            $type = $_POST['photo_type'];
+            if ($_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+                throw new Exception("File upload failed. Error code: " . $_FILES['file']['error']);
+            }
+
+            $report_id = intval($_POST['report_id']);
+            $type = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['photo_type']);
+
+            if ($report_id <= 0 || empty($type)) {
+                throw new Exception("Invalid parameters detected.");
+            }
+
             $file = $_FILES['file'];
+            if ($file['size'] > 5 * 1024 * 1024) {
+                throw new Exception("File size exceeds the 5MB limit.");
+            }
             
             $finfo = new finfo(FILEINFO_MIME_TYPE);
             $realMimeType = $finfo->file($file['tmp_name']);
-            $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            $allowedMimeTypes = ['image/jpeg', 'image/png']; 
             
             if (!in_array($realMimeType, $allowedMimeTypes)) {
                 throw new Exception("Security Warning: Invalid file format detected.");
@@ -170,7 +184,7 @@ try {
             $webPath = "../../uploads/loading_reports/" . $newFilename; 
             
             if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-                throw new Exception("Failed to save uploaded file.");
+                throw new Exception("Failed to save uploaded file on server.");
             }
 
             $pdo->prepare("DELETE FROM " . LOADING_PHOTOS_TABLE . " WHERE report_id = ? AND photo_type = ?")->execute([$report_id, $type]);
@@ -324,13 +338,41 @@ try {
             }
             break;
 
+        case 'delete_photo':
+            if (!isset($_POST['report_id']) || !isset($_POST['photo_type'])) {
+                throw new Exception("Invalid Payload.");
+            }
+            
+            $report_id = intval($_POST['report_id']);
+            $type = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['photo_type']);
+
+            if ($report_id <= 0 || empty($type)) {
+                throw new Exception("Invalid parameters detected.");
+            }
+
+            $stmt = $pdo->prepare("SELECT file_path FROM " . LOADING_PHOTOS_TABLE . " WITH (NOLOCK) WHERE report_id = ? AND photo_type = ?");
+            $stmt->execute([$report_id, $type]);
+            $row = $stmt->fetch();
+
+            if ($row && !empty($row['file_path'])) {
+                $physicalPath = realpath($baseUploadDir) . DIRECTORY_SEPARATOR . basename($row['file_path']);
+                if (file_exists($physicalPath)) {
+                    unlink($physicalPath);
+                }
+            }
+
+            $pdo->prepare("DELETE FROM " . LOADING_PHOTOS_TABLE . " WHERE report_id = ? AND photo_type = ?")
+                ->execute([$report_id, $type]);
+
+            echo json_encode(['success' => true]);
+            break;
+
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid Action']);
             break;
     }
 
 } catch (\Throwable $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    handleApiError($e, $pdo ?? null, $_REQUEST);
 }
 ?>

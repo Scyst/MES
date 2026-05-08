@@ -261,7 +261,10 @@ $defaultEnd = date('Y-m-d');
                 </div>
                 <div class="modal-footer bg-light border-0 justify-content-between">
                     <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i> Close</button>
-                    <button type="button" class="btn btn-warning fw-bold" id="btnRetakePhoto"><i class="fas fa-camera me-2"></i> Retake Photo</button>
+                    <div>
+                        <button type="button" class="btn btn-danger fw-bold me-2" id="btnDeletePhoto"><i class="fas fa-trash-alt me-1"></i> Delete</button>
+                        <button type="button" class="btn btn-warning fw-bold" id="btnRetakePhoto"><i class="fas fa-camera me-1"></i> Retake</button>
+                    </div>
                 </div>
             </div>
         </div>
