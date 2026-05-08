@@ -3,10 +3,6 @@
 
 const UI = {
     charts: {},
-
-    // =========================================================================
-    // 1. KPI CARDS
-    // =========================================================================
     renderKPI(data) {
         let totalPlan = 0, totalActual = 0, totalLate = 0, totalAbsent = 0, totalLeave = 0;
         let totalCost = 0;
@@ -42,19 +38,15 @@ const UI = {
         const elRate = document.getElementById('kpi-rate');
         if(elRate) elRate.innerText = `${rate}% Rate`;
         
-        // 1. Plan Card
         const cardPlan = document.getElementById('card-plan');
         if(cardPlan) cardPlan.onclick = () => Actions.openDetailModal('', '', 'ALL', 'ALL');
 
-        // 2. Actual Card
         const cardActual = document.getElementById('card-actual'); 
         if(cardActual) cardActual.onclick = () => Actions.openDetailModal('', '', 'ALL', 'PRESENT_AND_LATE');
 
-        // 3. Absent Card (Parent)
         const cardAbsent = document.getElementById('card-absent');
         if(cardAbsent) cardAbsent.onclick = () => Actions.openDetailModal('', '', 'ALL', 'ABSENT');
 
-        // 4. Late Button (Child) - Stop Propagation
         const cardLate = document.getElementById('card-late');
         if(cardLate) {
             cardLate.onclick = (e) => {
@@ -63,7 +55,6 @@ const UI = {
             };
         }
 
-        // 5. Leave Button (Child) - Stop Propagation
         const cardLeave = document.getElementById('card-leave');
         if(cardLeave) {
             cardLeave.onclick = (e) => {
@@ -76,18 +67,14 @@ const UI = {
     animateNumber(elementId, endValue) {
         const obj = document.getElementById(elementId);
         if (!obj) return;
-        // ใช้ toLocaleString ให้มีลูกน้ำคั่นหลักพัน
         obj.innerText = endValue.toLocaleString();
     },
 
-    // =========================================================================
-    // 2. CHARTS
-    // =========================================================================
     renderCharts(data) {
         const labels = [];
         const dataPlan = [];
         const dataActual = [];
-        const actualColors = []; // 🔥 เพิ่ม Array สำหรับเก็บสีของแท่ง Actual แต่ละแท่ง
+        const actualColors = [];
         const grouped = {};
         let sumPresent = 0, sumLate = 0, sumAbsent = 0, sumLeave = 0;
 
@@ -108,22 +95,18 @@ const UI = {
             sumLeave += parseInt(row.leave || 0);
         });
 
-        // 🔥 วนลูปเพื่อนำข้อมูลเข้า Array และคำนวณสี
         for (const [line, val] of Object.entries(grouped)) {
             labels.push(line);
             dataPlan.push(val.plan);
             dataActual.push(val.actual);
-
-            // คำนวณ % Working Rate ของไลน์นั้นๆ
             const rate = val.plan > 0 ? (val.actual / val.plan) * 100 : 0;
 
-            // กำหนดสีตามเงื่อนไขเดียวกับ Donut Chart
             if (rate >= 95) {
-                actualColors.push('#1cc88a'); // เขียว (>= 95%)
+                actualColors.push('#1cc88a');
             } else if (rate < 90) {
-                actualColors.push('#e74a3b'); // แดง (< 90%)
+                actualColors.push('#e74a3b');
             } else {
-                actualColors.push('#f6c23e'); // เหลือง (90% - 94.99%)
+                actualColors.push('#f6c23e');
             }
         }
 
@@ -154,7 +137,7 @@ const UI = {
                     { 
                         label: 'Actual', 
                         data: dataActual, 
-                        backgroundColor: actualColors, // 🔥 ใช้ Array สีที่คำนวณไว้
+                        backgroundColor: actualColors,
                         borderRadius: 4, 
                         barPercentage: 0.6, 
                         categoryPercentage: 0.8 
@@ -223,20 +206,18 @@ const UI = {
         const ctx = document.getElementById('trendChart');
         if (!ctx) return;
 
-        // 1. เตรียมข้อมูล
         const labels = data.map(r => r.display_date);
         const planData = data.map(r => parseInt(r.total_plan));
         const actualData = data.map(r => parseInt(r.total_actual));
         const absentData = data.map(r => parseInt(r.total_absent) + parseInt(r.total_leave));
 
-        // 2. เช็คว่ามีกราฟเดิมอยู่ไหม?
         if (this.charts.trend) {
             const chart = this.charts.trend;
             
             chart.data.labels = labels;
-            chart.data.datasets[0].data = planData;   // Plan
-            chart.data.datasets[1].data = actualData; // Actual
-            chart.data.datasets[2].data = absentData; // Absent & Leave
+            chart.data.datasets[0].data = planData;
+            chart.data.datasets[1].data = actualData;
+            chart.data.datasets[2].data = absentData;
             
             chart.update();
         } else {
@@ -248,7 +229,7 @@ const UI = {
                         {
                             label: 'Plan',
                             data: planData,
-                            borderColor: '#4e73df', // Blue
+                            borderColor: '#4e73df',
                             backgroundColor: 'rgba(78, 115, 223, 0.05)',
                             borderWidth: 2,
                             tension: 0.3,
@@ -257,7 +238,7 @@ const UI = {
                         {
                             label: 'Actual',
                             data: actualData,
-                            borderColor: '#1cc88a', // Green
+                            borderColor: '#1cc88a',
                             backgroundColor: 'rgba(28, 200, 138, 0.05)',
                             borderWidth: 2,
                             tension: 0.3,
@@ -266,10 +247,10 @@ const UI = {
                         {
                             label: 'Absent & Leave',
                             data: absentData,
-                            borderColor: '#e74a3b', // Red
+                            borderColor: '#e74a3b',
                             backgroundColor: 'transparent',
                             borderWidth: 2,
-                            borderDash: [5, 5], // เส้นประ
+                            borderDash: [5, 5],
                             tension: 0.3,
                             fill: false
                         }
@@ -294,9 +275,6 @@ const UI = {
         }
     },
 
-    // =========================================================================
-    // 3. MAIN TABLE LOGIC (FIXED INTEGRITY & PAYMENT UI)
-    // =========================================================================
     processGroupedData(rawData = [], viewMode) {
         const groups = {};
         const grandTotal = this._initStats(); 
@@ -341,7 +319,6 @@ const UI = {
             stats.actual = stats.present + stats.late;
             stats.dlot = stats.dl + stats.ot;
 
-            // 💡 [Smart Fallback] ถ้าหลังบ้านยังไม่ส่ง dl_count มา ให้เดาจากคนที่มาและลา (เพราะคนที่ลาบางประเภทก็ได้ค่าแรง)
             if (!row.dl_count && stats.dl > 0) {
                 stats.dl_count = stats.present + stats.late + stats.leave;
             }
@@ -378,8 +355,7 @@ const UI = {
         return { groups, grandTotal };
     },
 
-    _initStats() { 
-        // 🔥 [NEW] เพิ่ม dl_count, ot_count, ot_hours เข้าไปในโครงสร้างเริ่มต้น
+    _initStats() {
         return { hc: 0, plan: 0, present: 0, late: 0, absent: 0, leave: 0, actual: 0, diff: 0, dl: 0, ot: 0, dlot: 0, cost: 0, dl_count: 0, ot_count: 0, ot_hours: 0 }; 
     },
 
@@ -396,7 +372,6 @@ const UI = {
         target.ot += (Number(source.ot) || 0);
         target.dlot += (Number(source.dlot) || 0);
         target.cost += (Number(source.cost) || 0);
-        // 🔥 [NEW] บวกทบยอด Detail
         target.dl_count += (Number(source.dl_count) || 0);
         target.ot_count += (Number(source.ot_count) || 0);
         target.ot_hours += (Number(source.ot_hours) || 0);
@@ -405,7 +380,6 @@ const UI = {
     _createRowHtml(label, stats, options = {}) {
         const { isGrand, isParent, isChild, isGrandChild, viewMode, rawName, meta, toggleTarget, rowClass, isHidden } = options;
         const fmt = (n) => new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(Number(n) || 0);
-        // Helper สำหรับโชว์จำนวนคน/ชั่วโมง
         const fmtNum = (n) => Number(n) > 0 ? Number(n).toLocaleString() : '-';
         
         let rowStyle = isHidden ? 'display: none;' : ''; 
@@ -440,7 +414,6 @@ const UI = {
             const cellClass = "text-end align-middle font-monospace";
             const payableCount = (stats.present || 0) + (stats.late || 0) + (stats.leave || 0);
 
-            // 🔥 [NEW UI] แบ่ง 2 บรรทัด บนคือตัวเงิน(ตัวหนา) ล่างคือจำนวนคน/ชั่วโมง(ตัวเล็ก)
             columnsHtml = `
                 <td class="text-center text-primary border-end border-light opacity-75 small align-middle">${stats.hc || '-'}</td>
                 <td class="text-center text-success ${hoverClass} align-middle" ${clickAttr('PRESENT')}>${stats.present || '-'}</td>
@@ -526,13 +499,10 @@ const UI = {
                     </td>
                 </tr>
             `;
-            return; // จบการทำงานทันที ไม่ให้ไปต่อ
+            return;
         }
-        // ----------------------------------------
 
         const thead = document.querySelector('#manpowerTable thead tr');
-        
-        // 1. ปรับ Header ตาม View Mode
         if (viewMode === 'PAYMENT') {
             thead.innerHTML = `
                 <th class="ps-3">Payment / Line</th>
@@ -549,7 +519,6 @@ const UI = {
                 <th class="text-end fw-bold border-end pe-3">Total (รวม)</th>
             `;
         } else {
-            // Header เดิม
             thead.innerHTML = `
                 <th class="ps-3">Group / Line</th>
                 <th class="text-center">HC</th>
@@ -564,12 +533,10 @@ const UI = {
             `;
         }
         
-        // เรียก Process Data (ตอนนี้ data จะไม่เป็น undefined แล้ว)
         const { groups, grandTotal } = this.processGroupedData(data, viewMode);
         
-        tbody.innerHTML = ''; // เคลียร์ของเก่า
-        tbody.innerHTML += this._createRowHtml('GRAND TOTAL', grandTotal, { isGrand: true, viewMode }); // ส่ง viewMode ไปด้วย
-        
+        tbody.innerHTML = '';
+        tbody.innerHTML += this._createRowHtml('GRAND TOTAL', grandTotal, { isGrand: true, viewMode });
         const sortedKeys = Object.keys(groups).sort();
         
         sortedKeys.forEach((key, gIndex) => {
@@ -590,7 +557,7 @@ const UI = {
                 const subTarget = `target-${subId}`;
                 tbody.innerHTML += this._createRowHtml(sub.name, sub.total, { 
                     isChild: true, 
-                    viewMode, // ส่ง viewMode
+                    viewMode,
                     meta: sub.meta,
                     rowClass: groupTarget,
                     isHidden: true,
@@ -601,7 +568,7 @@ const UI = {
                 sortedItems.forEach(item => {
                     tbody.innerHTML += this._createRowHtml(item.name, item, { 
                         isGrandChild: true, 
-                        viewMode, // ส่ง viewMode
+                        viewMode,
                         meta: item.meta,
                         rowClass: subTarget,
                         isHidden: true 
@@ -684,7 +651,6 @@ const UI = {
         }
     },
 
-    // ✅ [MOVED] ย้ายมาไว้ตรงนี้ (ใน UI Object)
     renderReportChart(data) {
         const canvas = document.getElementById('reportChart');
         if (!canvas) return;
@@ -796,8 +762,6 @@ const UI = {
     renderIntegratedTrendChart(trendData) {
         const ctx = document.getElementById('ia_trendChart')?.getContext('2d');
         if (!ctx) return;
-
-        // เปลี่ยนจาก this.charts เป็น UI.charts
         if (UI.charts.iaTrend) UI.charts.iaTrend.destroy();
 
         UI.charts.iaTrend = new Chart(ctx, {
@@ -846,7 +810,7 @@ const UI = {
         if (UI.charts.iaTrend) UI.charts.iaTrend.destroy();
 
         UI.charts.iaTrend = new Chart(ctx, {
-            type: 'bar', // เปลี่ยนเป็น Bar
+            type: 'bar',
             data: {
                 labels: data.map(d => {
                     const date = new Date(d.log_date);
@@ -856,19 +820,19 @@ const UI = {
                     {
                         label: 'Present (มา)',
                         data: data.map(d => d.Act_Present),
-                        backgroundColor: '#1cc88a', // เขียว
+                        backgroundColor: '#1cc88a',
                         stack: 'Stack 0'
                     },
                     {
                         label: 'Leave (ลา)',
                         data: data.map(d => d.Act_Leave),
-                        backgroundColor: '#36b9cc', // ฟ้า
+                        backgroundColor: '#36b9cc',
                         stack: 'Stack 0'
                     },
                     {
                         label: 'Absent (ขาด)',
                         data: data.map(d => d.Act_Absent),
-                        backgroundColor: '#e74a3b', // แดง
+                        backgroundColor: '#e74a3b',
                         stack: 'Stack 0'
                     }
                 ]
@@ -885,7 +849,6 @@ const UI = {
                     tooltip: {
                         callbacks: {
                             footer: function(tooltipItems) {
-                                // Logic: ดึงข้อมูล New Joiner / Resigned ของวันนั้นมาโชว์
                                 const index = tooltipItems[0].dataIndex;
                                 const dayData = data[index];
                                 let total = 0;
@@ -911,7 +874,6 @@ const UI = {
         const ctx = document.getElementById('ia_distributionChart')?.getContext('2d');
         if (!ctx) return;
 
-        // เปลี่ยนจาก this.charts เป็น UI.charts
         if (UI.charts.iaDist) UI.charts.iaDist.destroy();
 
         UI.charts.iaDist = new Chart(ctx, {
@@ -1014,7 +976,6 @@ const UI = {
         if (!ctx) return;
         if (this.charts.iaCombo) this.charts.iaCombo.destroy();
 
-        // 🔥 1. เตรียม Array สำหรับเก็บสีและความหนาของตัวหนังสือแกน X
         const tickColors = [];
         const tickWeights = [];
 
@@ -1024,24 +985,18 @@ const UI = {
             const late = parseInt(d.Act_Late || 0);
             
             const totalActual = present + late; 
-            // คำนวณ % การมาทำงานเทียบกับแผน
             const rate = planHc > 0 ? (totalActual / planHc) * 100 : 100;
 
-            // ตรวจสอบเงื่อนไขการทำสีวันที่ (X-Axis Label)
             if (planHc === 0) {
-                // วันที่ไม่มีแผน (เช่น วันอาทิตย์)
                 tickColors.push('#858796'); 
                 tickWeights.push('normal');
             } else if (rate < 90) {
-                // ตกเกณฑ์หนัก (< 90%) -> แดง ตัวหนา
                 tickColors.push('#e74a3b');  
                 tickWeights.push('bold');
             } else if (rate < 95) {
-                // ต่ำกว่าเป้าหมาย (90% - 94.99%) -> เหลืองอมส้ม ตัวหนา (ใช้อ่านง่ายกว่าเหลืองสด)
                 tickColors.push('#f39c12');  
                 tickWeights.push('bold');
             } else {
-                // ผ่านเกณฑ์ (>= 95%) -> สีเทาปกติ
                 tickColors.push('#858796');  
                 tickWeights.push('normal');
             }
@@ -1059,11 +1014,10 @@ const UI = {
                         borderColor: '#858796',
                         borderWidth: 2,
                         borderDash: [5, 5],
-                        pointRadius: 0, // ซ่อนจุดบนเส้น
+                        pointRadius: 0,
                         pointHoverRadius: 0, 
                         order: 0
                     },
-                    // 🌈 2. สีแท่งกราฟกลับมาใช้สีมาตรฐานให้ตรงกับ Donut Chart
                     { label: 'Present', data: data.map(d => d.Act_Present), backgroundColor: '#1cc88a', stack: 'combined', order: 1 },
                     { label: 'Late', data: data.map(d => d.Act_Late), backgroundColor: '#f6c23e', stack: 'combined', order: 1 },
                     { label: 'Leave', data: data.map(d => d.Act_Leave), backgroundColor: '#36b9cc', stack: 'combined', order: 1 },
@@ -1093,7 +1047,6 @@ const UI = {
                         stacked: true, 
                         grid: { display: false },
                         ticks: {
-                            // 🔥 3. ดึงค่าสีจากเงื่อนไขที่เราคำนวณไว้มาใส่ให้แกน X
                             color: tickColors,
                             font: function(context) {
                                 return {
@@ -1109,7 +1062,6 @@ const UI = {
         });
     },
 
-    // --- 3.2 Donut 1: Workforce Structure (โครงสร้างพนักงาน) ---
     renderIntegratedStructureDonut(data) {
         const ctx = document.getElementById('ia_structureDonut')?.getContext('2d');
         if (!ctx) return;
@@ -1117,7 +1069,6 @@ const UI = {
 
         if (!data || data.length === 0) return;
 
-        // คำนวณยอดรวม
         const totalHeadCount = data.reduce((acc, cur) => acc + parseInt(cur.head_count || 0), 0);
 
         this.charts.iaStructDonut = new Chart(ctx, {
@@ -1142,7 +1093,6 @@ const UI = {
                         position: 'right', 
                         labels: { boxWidth: 10, usePointStyle: true, font: { size: 11, family: 'Prompt' }, padding: 15 } 
                     },
-                    // แสดงตัวเลขจำนวนคนบนกราฟ
                     datalabels: {
                         color: '#fff',
                         font: { weight: 'bold', size: 11, family: 'Prompt' },
@@ -1151,7 +1101,6 @@ const UI = {
                             let dataArr = ctx.chart.data.datasets[0].data;
                             dataArr.map(data => { sum += data; });
                             let percentage = (value * 100 / sum).toFixed(1);
-                            // แสดงเฉพาะถ้าพื้นที่พอ (> 5%)
                             return (percentage > 5) ? value : null;
                         }
                     }
@@ -1163,10 +1112,9 @@ const UI = {
                     var width = chart.width, height = chart.height, ctx = chart.ctx;
                     ctx.restore();
                     
-                    var shiftX = -65; // ขยับซ้ายนิดนึง
-                    var shiftY = 0; // ขยับลงล่างนิดนึง
+                    var shiftX = -65;
+                    var shiftY = 0;
 
-                    // 1. ยอดรวม (ตัวใหญ่)
                     ctx.font = "bold 26px 'Prompt', sans-serif";
                     ctx.textBaseline = "middle";
                     ctx.fillStyle = "#4e73df"; 
@@ -1175,7 +1123,6 @@ const UI = {
                     var textY = (height / 2) + 10 + shiftY;
                     ctx.fillText(text, textX, textY);
 
-                    // 2. ป้าย Total
                     ctx.font = "normal 12px 'Prompt', sans-serif";
                     ctx.fillStyle = "#858796";
                     var label = "Total HC";
@@ -1189,15 +1136,13 @@ const UI = {
         });
     },
 
-    // --- 3.4 Donut 2: Attendance Ratio (สัดส่วนการมาทำงาน) ---
     renderIntegratedAttendanceDonut(values) {
         const ctx = document.getElementById('ia_attendanceDonut')?.getContext('2d');
         if (!ctx) return;
         if (this.charts.iaAttDonut) this.charts.iaAttDonut.destroy();
 
-        // ตรวจสอบข้อมูลก่อนวาด
         const totalVal = values.reduce((a, b) => a + (parseInt(b)||0), 0);
-        if (totalVal === 0) return; // ถ้าไม่มีข้อมูลเลย ไม่ต้องวาด (กัน Error หาร 0)
+        if (totalVal === 0) return;
 
         this.charts.iaAttDonut = new Chart(ctx, {
             type: 'doughnut',
@@ -1221,7 +1166,6 @@ const UI = {
                         position: 'right', 
                         labels: { boxWidth: 10, usePointStyle: true, font: { size: 11, family: 'Prompt' }, padding: 15 } 
                     },
-                    // แสดง % บนกราฟ
                     datalabels: {
                         color: '#fff',
                         font: { weight: 'bold', size: 11, family: 'Prompt' },
@@ -1240,8 +1184,6 @@ const UI = {
                 beforeDraw: function(chart) {
                     var width = chart.width, height = chart.height, ctx = chart.ctx;
                     ctx.restore();
-
-                    // คำนวณ % Working Rate สดๆ จากกราฟ
                     var d = chart.config.data.datasets[0].data;
                     var present = d[0] || 0;
                     var late    = d[1] || 0;
@@ -1251,18 +1193,14 @@ const UI = {
                     var shiftX = -40;
                     var shiftY = 0;
 
-                    // 1. ตัวเลข %
                     ctx.font = "bold 26px 'Prompt', sans-serif";
                     ctx.textBaseline = "middle";
-                    // เปลี่ยนสีตามเกณฑ์
                     ctx.fillStyle = rate >= 95 ? "#1cc88a" : (rate >= 90 ? "#f6c23e" : "#e74a3b");
                     
                     var text = rate + "%";
                     var textX = Math.round((width - ctx.measureText(text).width) / 2) + shiftX;
                     var textY = (height / 2) + 10 + shiftY;
                     ctx.fillText(text, textX, textY);
-
-                    // 2. ป้าย Working Rate
                     ctx.font = "normal 12px 'Prompt', sans-serif";
                     ctx.fillStyle = "#858796";
                     var label = "Working Rate";
@@ -1297,14 +1235,10 @@ const UI = {
         try {
             const response = await fetch('api/api_master_data.php?action=read_structure');
             const json = await response.json();
-
-            // ✅ FIX 1: แก้จาก json.data.lines เป็น json.lines ตาม API
             if (json.success && json.lines) { 
                 const currentValue = selectEl.value;
 
                 selectEl.innerHTML = '<option value="ALL">All Lines (Overview)</option>';
-
-                // ✅ FIX 1: แก้ Loop ให้ใช้ json.lines
                 json.lines.forEach(line => {
                     const option = document.createElement('option');
                     option.value = line;
@@ -1316,7 +1250,6 @@ const UI = {
                     selectEl.value = currentValue;
                 }
                 
-                // ✅ เพิ่ม Event Listener ให้เปลี่ยนแล้วโหลดข้อมูลทันที (เผื่อไว้)
                 selectEl.onchange = () => Actions.runSuperAnalysis();
             }
         } catch (error) {
@@ -1336,7 +1269,6 @@ const UI = {
             sumNew += parseFloat(f.cost_actual || 0);
         });
 
-        // 🔥 FIX: ปัดเศษให้เป็นจำนวนเต็มก่อนเทียบ เพื่อแก้ปัญหาทศนิยมเพี้ยน
         const sumDiff = sumNew - sumOld;
         const sumDiffRounded = Math.round(sumDiff); 
         
@@ -1349,32 +1281,29 @@ const UI = {
         const diffTxt = document.getElementById('fin_impact_text');
         const percentEl = document.getElementById('fin_diff_percent');
         
-        // 1. จัดการตัวเลขและสี (Header)
         if (diffEl) {
             if (sumDiffRounded > 0) {
                 diffEl.innerText = '+' + sumDiffRounded.toLocaleString();
-                diffEl.className = 'h5 mb-0 font-weight-bold text-danger'; // แดง
+                diffEl.className = 'h5 mb-0 font-weight-bold text-danger';
             } else if (sumDiffRounded < 0) {
                 diffEl.innerText = sumDiffRounded.toLocaleString(); 
-                diffEl.className = 'h5 mb-0 font-weight-bold text-success'; // เขียว
+                diffEl.className = 'h5 mb-0 font-weight-bold text-success';
             } else {
                 diffEl.innerText = '0';
-                diffEl.className = 'h5 mb-0 font-weight-bold text-secondary'; // ✅ เทา (เมื่อเท่ากัน)
+                diffEl.className = 'h5 mb-0 font-weight-bold text-secondary';
             }
         }
         
-        // 2. จัดการ % Badge
         if (percentEl) {
             if (sumDiffRounded === 0) {
                 percentEl.innerText = '0%';
-                percentEl.className = 'badge bg-light text-muted border'; // สีจางๆ
+                percentEl.className = 'badge bg-light text-muted border';
             } else {
                 percentEl.innerText = (sumDiffRounded > 0 ? '+' : '') + sumPct.toFixed(2) + '%';
                 percentEl.className = `badge ${sumDiffRounded > 0 ? 'bg-danger' : 'bg-success'} text-white`;
             }
         }
 
-        // 3. จัดการข้อความ (Context Text)
         if (diffTxt) {
             if (sumDiffRounded > 0) {
                 diffTxt.innerHTML = `<i class="fas fa-arrow-up"></i> Cost เพิ่มขึ้น (Overrun)`;
@@ -1383,7 +1312,6 @@ const UI = {
                 diffTxt.innerHTML = `<i class="fas fa-arrow-down"></i> Cost ลดลง (Saving)`;
                 diffTxt.className = "small text-success mt-1 fw-bold";
             } else {
-                // ✅ เพิ่มเคสเท่ากัน
                 diffTxt.innerHTML = `<i class="fas fa-check-circle"></i> No Variance (เท่าเดิม)`;
                 diffTxt.className = "small text-muted mt-1";
             }
@@ -1399,7 +1327,6 @@ const UI = {
 
         if (UI.charts.finImpact) UI.charts.finImpact.destroy();
 
-        // Prepare Data
         const labels = data.map(d => d.section_name);
         const dataOld = data.map(d => d.cost_standard);
         const dataNew = data.map(d => d.cost_actual);
@@ -1412,7 +1339,7 @@ const UI = {
                     {
                         label: 'Old Formula',
                         data: dataOld,
-                        backgroundColor: '#858796', // สีเทา (เดิม)
+                        backgroundColor: '#858796',
                         borderRadius: 4,
                         barPercentage: 0.6,
                         categoryPercentage: 0.8
@@ -1420,7 +1347,7 @@ const UI = {
                     {
                         label: 'New Formula',
                         data: dataNew,
-                        backgroundColor: '#4e73df', // สีน้ำเงิน (ใหม่)
+                        backgroundColor: '#4e73df',
                         borderRadius: 4,
                         barPercentage: 0.6,
                         categoryPercentage: 0.8
@@ -1464,14 +1391,11 @@ const UI = {
             const oldCost = parseFloat(row.cost_standard || 0);
             const newCost = parseFloat(row.cost_actual || 0);
             const diff = newCost - oldCost;
-            
-            // 🔥 FIX: ปัดเศษก่อนเทียบ
             const diffRounded = Math.round(diff);
             const pct = oldCost > 0 ? ((diff / oldCost) * 100).toFixed(1) : '0.0';
             
-            // Logic สี และ Badge
-            let diffClass = 'text-muted font-weight-normal'; // Default (0)
-            let badgeHtml = `<span class="badge bg-light text-muted border" style="min-width:50px;">0%</span>`; // Default (0)
+            let diffClass = 'text-muted font-weight-normal';
+            let badgeHtml = `<span class="badge bg-light text-muted border" style="min-width:50px;">0%</span>`;
             let sign = '';
 
             if (diffRounded > 0) {
@@ -1481,10 +1405,8 @@ const UI = {
             } else if (diffRounded < 0) {
                 diffClass = 'text-success fw-bold';
                 badgeHtml = `<span class="badge-var good">${pct}%</span>`;
-                // เครื่องหมายลบ (-) มากับตัวเลขอยู่แล้ว
             }
 
-            // Highlight แถวเฉพาะที่มีผลต่างเยอะๆ (> 1000)
             const rowClass = Math.abs(diffRounded) > 1000 ? 'bg-warning bg-opacity-10' : '';
 
             html += `
@@ -1518,10 +1440,6 @@ const UI = {
     }
 };
 
-// =============================================================================
-// 4. ACTIONS
-// =============================================================================
-
 const Actions = {
     _structureCache: { lines: [], teams: [] },
     _lastDetailParams: { line: '', shiftId: '', empType: '', filterStatus: 'ALL' },
@@ -1535,15 +1453,12 @@ const Actions = {
         
         const modalEl = document.getElementById('detailModal');
         
-        // Setup Title
         let title = line ? `${line}` : 'รายละเอียดทั้งหมด';
         if (shiftId) title += ` (${shiftId == 1 ? 'กะเช้า ☀️' : 'กะดึก 🌙'})`;
         if (empType !== 'ALL') title += ` [${empType}]`;
         if (filterStatus !== 'ALL') title += ` - ${filterStatus}`;
         
         document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-users me-2"></i> ${title}`;
-
-        // Set Skeleton
         document.getElementById('detailModalTable').innerHTML = `
             <thead>
                 <tr class="table-light text-secondary small text-center">
@@ -1556,7 +1471,6 @@ const Actions = {
                 ${UI.getSkeletonRow(10)}
             </tbody>`;
         
-        // Reset Search Input
         const searchInput = document.getElementById('searchDetail');
         if(searchInput) {
             searchInput.value = '';
@@ -1568,7 +1482,6 @@ const Actions = {
             modal.show();
         } 
 
-        // โหลดข้อมูล
         setTimeout(() => {
             this.fetchDetailData();
         }, 300);
@@ -1638,10 +1551,8 @@ const Actions = {
             const json = await res.json();
             
             if (json.success) {
-                // รีโหลดตารางใน Modal และ Dashboard
                 await Actions.fetchDetailData(); 
                 App.loadData();
-                // UI.showToast("ลบรายการเรียบร้อย", "success"); // ถ้ามี function showToast
             } else {
                 alert('Error: ' + json.message);
             }
@@ -1668,7 +1579,7 @@ const Actions = {
                 line: document.getElementById('empEditLine').value,
                 shift_id: document.getElementById('empEditShift').value,
                 team_group: document.getElementById('empEditTeam').value,
-                is_active: 0 // ❌ Force Inactive
+                is_active: 0
             };
 
             const res = await fetch('api/api_master_data.php', { 
@@ -1712,13 +1623,11 @@ const Actions = {
                     })
                 });
                 const json = await res.json();
-                if(json.success) { 
-                    // 1. ปิด Modal แก้ไขพนักงาน (ถ้าเปิดค้างอยู่)
+                if(json.success) {
                     const editModalEl = document.getElementById('empEditModal');
                     const editModal = bootstrap.Modal.getInstance(editModalEl);
                     if (editModal) editModal.hide();
 
-                    // 2. อัปเดตข้อมูลหน้าจอ
                     await App.loadData(); 
                     await Actions.fetchDetailData(); 
                     if(document.getElementById('empListModal').classList.contains('show')) {
@@ -1784,7 +1693,6 @@ const Actions = {
             modal.show();
         }
 
-        // แสดง Loading Skeleton
         document.getElementById('detailModalBody').innerHTML = UI.getSkeletonRow(10);
 
         try {
@@ -1794,7 +1702,6 @@ const Actions = {
             
             if (json.success) {
                 const history = json.data.filter(r => r.emp_id === empId);
-                // เรียงวันที่ล่าสุดขึ้นก่อน
                 history.sort((a, b) => new Date(b.log_date) - new Date(a.log_date));
                 
                 this.renderDetailTable(history); 
@@ -1806,10 +1713,7 @@ const Actions = {
     },
 
     backToDailyList() {
-        // คืนค่า Title เดิม (ถ้ามี) หรือ Default
         const titleEl = document.getElementById('detailModalTitle');
-        // รีเซ็ต Title กลับเป็นแบบ Daily List (ดึงจาก function openDetailModal เดิมแบบ manual)
-        // หรือเรียก openDetailModal ซ้ำด้วย Params ล่าสุดที่ cached ไว้
         this.openDetailModal(
             this._lastDetailParams.line, 
             this._lastDetailParams.shiftId, 
@@ -1826,31 +1730,20 @@ const Actions = {
             return; 
         }
 
-        // Helper สร้าง Option (อยู่นอก Loop เพื่อความเร็ว)
         const createOptions = (items, selectedVal) => items.map(val => `<option value="${val}" ${val == selectedVal ? 'selected' : ''}>${val}</option>`).join('');
-        
-        // Status Options Map (สร้างครั้งเดียวพอ)
         const statusMap = {
             'WAITING': '⏳ รอเข้างาน', 'PRESENT': '✅ มา (Present)', 'LATE': '⏰ สาย (Late)',
             'ABSENT': '❌ ขาด (Absent)', 'SICK': '🤢 ลาป่วย (Sick)', 'BUSINESS': '👜 ลากิจ (Business)',
             'VACATION': '🏖️ พักร้อน (Vacation)', 'OTHER': '⚪ อื่นๆ (Other)'
         };
         const statusOptionsArr = Object.entries(statusMap).map(([val, label]) => ({val, label}));
-
-        // 🔥 [PERFORMANCE] ใช้ Array.map สร้าง String ก้อนใหญ่แทนการ Loop แปะ DOM
         const rowsHTML = list.map(row => {
             const uid = row.emp_id;
-            
-            // Dropdowns (string operation is fast)
             const lineOpts = createOptions(this._structureCache.lines, row.actual_line || row.line);
             const teamOpts = createOptions(this._structureCache.teams, row.actual_team || row.team_group);
             const shift1Sel = (row.shift_id == 1 || (!row.shift_id && row.default_shift_id == 1)) ? 'selected' : '';
             const shift2Sel = (row.shift_id == 2 || (!row.shift_id && row.default_shift_id == 2)) ? 'selected' : '';
-
-            // Status Select
             const statusOptsHtml = statusOptionsArr.map(opt => `<option value="${opt.val}" ${row.status === opt.val ? 'selected' : ''}>${opt.label}</option>`).join('');
-
-            // Logic เดิม
             const costVal = parseFloat(row.est_cost || 0);
             const costHtml = costVal > 0 ? `<span class="fw-bold ${costVal > 1000 ? 'text-primary' : 'text-dark'}">${costVal.toLocaleString()}</span>` : '<span class="text-muted">-</span>';
             
@@ -1873,7 +1766,6 @@ const Actions = {
                 default_shift_id: row.default_shift_id, 
                 is_active: row.is_active
             }));
-            // Return HTML String of ONE row
             return `
                 <tr class="${trClass}">
                     <td class="ps-4">
@@ -1997,13 +1889,8 @@ const Actions = {
                     btn.innerHTML = originalIcon; 
                     btn.disabled = false;
 
-                    // 1. อัปเดตตัวเลขหน้า Dashboard หลัง
                     if(typeof App !== 'undefined') App.loadData(true);
-
-                    // 2. 🔥 เพิ่มบรรทัดนี้: สั่งให้ Modal ดึงข้อมูลใหม่และวาดตารางใหม่
-                    // หากพนักงานถูกย้ายไลน์ไปแล้ว เขาจะหายไปจากตารางใน Modal นี้ทันที
                     await Actions.fetchDetailData(); 
-
                 }, 1000);
             } else { 
                 alert('Error: ' + json.message); 
@@ -2040,8 +1927,6 @@ const Actions = {
         if (!input) return;
 
         let debounceTimer;
-
-        // ล้าง Event เก่า (ถ้ามี)
         input.onkeyup = null;
 
         input.onkeyup = function() {
@@ -2049,38 +1934,31 @@ const Actions = {
             
             const searchTerm = this.value.toLowerCase().trim();
             const tbody = document.getElementById('detailModalBody');
-            
-            // 1. ถ้าลบจนว่าง ให้โชว์หมดแบบปกติ (ไม่ต้อง Anime เยอะเดี๋ยวตาลาย)
             if (searchTerm === '') {
                 const rows = tbody.querySelectorAll('tr');
                 requestAnimationFrame(() => {
                     rows.forEach(r => {
                         r.style.display = '';
-                        r.classList.remove('search-reveal'); // เอา Animation ออก
+                        r.classList.remove('search-reveal');
                     });
                 });
                 return;
             }
 
-            // 2. ถ้ามีคำค้นหา -> รอ User หยุดพิมพ์ 0.3 วิ
             debounceTimer = setTimeout(() => {
                 const rows = tbody.querySelectorAll('tr');
                 
                 requestAnimationFrame(() => {
                     rows.forEach(row => {
                         const text = row.innerText.toLowerCase();
-                        // เก็บ status เดิมไว้เปรียบเทียบ
                         const isCurrentlyVisible = row.style.display !== 'none';
-                        
-                        // Logic การค้นหา
                         const isMatch = text.includes(searchTerm) || text.includes('loading');
 
                         if (isMatch) {
                             if (!isCurrentlyVisible) {
-                                // ถ้าของเดิมซ่อนอยู่ แล้วกำลังจะโชว์ -> ใส่ Animation
                                 row.style.display = '';
-                                row.classList.remove('search-reveal'); // Reset Class
-                                void row.offsetWidth; // 🔥 เทคนิค Trigger Reflow เพื่อให้เล่น Animation ใหม่
+                                row.classList.remove('search-reveal');
+                                void row.offsetWidth;
                                 row.classList.add('search-reveal');
                             }
                         } else {
@@ -2090,7 +1968,7 @@ const Actions = {
                     });
                 });
                 
-            }, 300); // Delay 300ms
+            }, 300);
         };
     },
 
@@ -2114,13 +1992,11 @@ const Actions = {
                     
                     const objectMaxLength = []; 
                     const keys = Object.keys(jsonArray[0]);
-                    
-                    // 1. วนลูปหาความกว้างของ Header
+
                     keys.forEach(col => {
                         objectMaxLength.push({ wch: col.length + 5 });
                     });
 
-                    // 2. วนลูปข้อมูลทุกแถว เพื่อหาคำที่ยาวที่สุดในคอลัมน์นั้น
                     jsonArray.forEach(row => {
                         keys.forEach((key, i) => {
                             const value = (row[key] || '').toString();
@@ -2130,13 +2006,9 @@ const Actions = {
                         });
                     });
 
-                    // 3. กำหนดค่าความกว้างให้ Worksheet
                     worksheet['!cols'] = objectMaxLength;
                 };
 
-                // =========================================================
-                // 1. FACTORY SUMMARY
-                // =========================================================
                 const summaryMap = {};
                 rawData.forEach(row => {
                     const date = row['Date'];
@@ -2158,10 +2030,6 @@ const Actions = {
                 const wsSummary = XLSX.utils.json_to_sheet(summaryData);
                 autoFitColumns(summaryData, wsSummary);
                 XLSX.utils.book_append_sheet(wb, wsSummary, "Factory_Summary");
-
-                // =========================================================
-                // 2. SHIFT TABS
-                // =========================================================
                 const dayData = rawData.filter(r => r['Shift'] && r['Shift'].toUpperCase().includes('DAY'));
                 if (dayData.length > 0) {
                     const wsDay = XLSX.utils.json_to_sheet(dayData);
@@ -2176,9 +2044,6 @@ const Actions = {
                     XLSX.utils.book_append_sheet(wb, wsNight, "Only_Night");
                 }
 
-                // =========================================================
-                // 3. LINE TABS
-                // =========================================================
                 const uniqueLines = [...new Set(rawData.map(item => item['Line']))].sort();
                 uniqueLines.forEach(lineName => {
                     if (lineName) {
@@ -2191,14 +2056,9 @@ const Actions = {
                     }
                 });
 
-                // =========================================================
-                // 4. RAW DATA ALL
-                // =========================================================
                 const wsAll = XLSX.utils.json_to_sheet(rawData);
                 autoFitColumns(rawData, wsAll);
                 XLSX.utils.book_append_sheet(wb, wsAll, "Raw_Data_All");
-
-                // SAVE FILE
                 const fileName = `Manpower_Report_${days}Days_${eStr}.xlsx`;
                 XLSX.writeFile(wb, fileName);
 
@@ -2236,8 +2096,6 @@ const Actions = {
                     'Remark': row.remark,
                     'Cost (Est)': parseFloat(row.est_cost || 0)
                 }));
-
-                // สร้าง Excel
                 const ws = XLSX.utils.json_to_sheet(exportData);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "Daily_Raw_Data");
@@ -2254,23 +2112,15 @@ const Actions = {
         }
     },
     
-    // -------------------------------------------------------------------------
-    // 6. EMPLOYEE MANAGER V2 (IMPROVED)
-    // -------------------------------------------------------------------------
     _employeeCache: [],
-    
-    // เพิ่ม parameter keepFilters = false (ค่าเริ่มต้นคือไม่จำ)
     async openEmployeeManager(keepFilters = false) {
-        
-        // 1. 💾 SAVE STATE: ถ้าสั่งให้จำค่า ให้เก็บค่าปัจจุบันใส่ตัวแปรไว้ก่อน
         let savedState = null;
         if (keepFilters) {
-            // เช็คว่า Element มีอยู่จริงไหมก่อนดึงค่า
             const statusEl = document.querySelector('input[name="empStatusFilter"]:checked');
             savedState = {
                 term: document.getElementById('empSearchBox')?.value || '',
                 line: document.getElementById('empFilterLine')?.value || '',
-                status: statusEl ? statusEl.value : '1', // Default Active if not found
+                status: statusEl ? statusEl.value : '1',
                 dateType: document.getElementById('empDateType')?.value || '',
                 dFrom: document.getElementById('empDateFrom')?.value || '',
                 dTo: document.getElementById('empDateTo')?.value || ''
@@ -2278,13 +2128,9 @@ const Actions = {
         }
 
         const modal = new bootstrap.Modal(document.getElementById('empListModal'));
-        
-        // แสดง Skeleton Loading เฉพาะตอนเปิดใหม่ (ถ้า keepFilters ไม่ต้องโชว์โหลดให้วูบวาบ)
         if (!keepFilters) {
             document.getElementById('empListBody').innerHTML = UI.getSkeletonRow(7);
         }
-        
-        // Populate Line Filter (ถ้ายังไม่มี option)
         const filterSelect = document.getElementById('empFilterLine');
         if (filterSelect && filterSelect.options.length <= 1 && this._structureCache.lines.length > 0) {
             filterSelect.innerHTML = '<option value="">All Lines</option>' + 
@@ -2294,33 +2140,24 @@ const Actions = {
         if(!document.getElementById('empListModal').classList.contains('show')) modal.show();
         
         try {
-            // Fetch ข้อมูลใหม่
             const res = await fetch(`api/api_master_data.php?action=read_employees&show_all=true`);
             const json = await res.json();
             
             if (json.success) { 
                 this._employeeCache = json.data;
-                
-                // 2. 🔄 RESTORE STATE: คืนค่าเดิมกลับไป
                 if (keepFilters && savedState) {
-                    // คืนค่า Search & Line
                     document.getElementById('empSearchBox').value = savedState.term;
                     document.getElementById('empFilterLine').value = savedState.line;
                     
-                    // คืนค่า Status Radio
                     const rad = document.querySelector(`input[name="empStatusFilter"][value="${savedState.status}"]`);
                     if(rad) rad.checked = true;
 
-                    // คืนค่า Date
                     document.getElementById('empDateType').value = savedState.dateType;
                     document.getElementById('empDateFrom').value = savedState.dFrom;
                     document.getElementById('empDateTo').value = savedState.dTo;
-                    
-                    // สั่งเปิดกล่องวันที่ ถ้าเดิมมันเปิดอยู่
                     this.toggleDateInputs(); 
 
                 } else {
-                    // 🧹 RESET DEFAULT: กรณีเปิดใหม่ปกติ
                     if(document.getElementById('filterStatusActive')) {
                         document.getElementById('filterStatusActive').checked = true;
                     }
@@ -2331,8 +2168,6 @@ const Actions = {
                     if (document.getElementById('empSearchBox')) document.getElementById('empSearchBox').value = '';
                     if (document.getElementById('empFilterLine')) document.getElementById('empFilterLine').value = '';
                 }
-
-                // สั่งกรองข้อมูลทันที
                 this.filterEmployeeList();
             }
         } catch (e) { 
@@ -2346,61 +2181,43 @@ const Actions = {
             console.log("🔥 CHECK DATA STRUCTURE:", this._employeeCache[0]);
         }
 
-        // 1. ดึงค่าจาก Input
         const term = document.getElementById('empSearchBox').value.toLowerCase().trim();
         const lineFilter = document.getElementById('empFilterLine').value;
         
-        // อ่านค่า Status (รองรับทั้ง Radio และ Select เผื่อคุณเปลี่ยนไปมา)
         let statusVal = 'ALL';
         const radioActive = document.querySelector('input[name="empStatusFilter"]:checked');
         const selectActive = document.getElementById('empFilterStatus');
         if (radioActive) statusVal = radioActive.value;
         else if (selectActive) statusVal = selectActive.value;
 
-        // อ่านค่าวันที่
-        const dateType = document.getElementById('empDateType').value; // 'JOIN', 'RESIGN', ''
+        const dateType = document.getElementById('empDateType').value;
         const dateFrom = document.getElementById('empDateFrom').value;
         const dateTo = document.getElementById('empDateTo').value;
 
-        // 2. กรองข้อมูล
         const filtered = this._employeeCache.filter(emp => {
-            // [A] Status Filter
             const isActive = parseInt(emp.is_active);
             if (statusVal !== 'ALL') {
                 if (isActive != parseInt(statusVal)) return false;
             }
 
-            // [B] Line Filter
             if (lineFilter && emp.line !== lineFilter) return false;
 
-            // [C] Search Term
             if (term) {
                 const searchStr = `${emp.emp_id} ${emp.name_th} ${emp.position} ${emp.line}`.toLowerCase();
                 if (!searchStr.includes(term)) return false;
             }
 
-            // [D] Date Filter (Logic ใหม่: ยืดหยุ่นกว่าเดิม)
             if (dateType && dateType !== '') {
-                // เลือกฟิลด์ที่จะเช็ค
                 const rawDate = (dateType === 'JOIN') ? emp.start_date : emp.resign_date;
-
-                // ถ้าคนนี้ไม่มีวันที่บันทึกไว้ -> ตกไปเลย
                 if (!rawDate) return false;
-
-                // ตัดเวลาทิ้งเอาแค่ YYYY-MM-DD
                 const targetDate = rawDate.split(' ')[0];
-
-                // ถ้ามี 'จากวันที่' -> วันที่เป้าหมายต้อง มากกว่าหรือเท่ากับ
                 if (dateFrom && targetDate < dateFrom) return false;
-
-                // ถ้ามี 'ถึงวันที่' -> วันที่เป้าหมายต้อง น้อยกว่าหรือเท่ากับ
                 if (dateTo && targetDate > dateTo) return false;
             }
 
             return true;
         });
 
-        // 3. แสดงผล
         console.log(`🔍 Found: ${filtered.length} items`);
         this.renderEmployeeTable(filtered);
     },
@@ -2413,7 +2230,7 @@ const Actions = {
         }
         
         document.getElementById('empDateType').value = '';
-        this.toggleDateInputs(); // ซ่อนวัน
+        this.toggleDateInputs();
         
         this.filterEmployeeList();
     },
@@ -2427,24 +2244,17 @@ const Actions = {
             wrapper.classList.remove('d-flex');
             wrapper.classList.add('d-none');
             
-            // Clear Dates
             document.getElementById('empDateFrom').value = '';
             document.getElementById('empDateTo').value = '';
         } else {
             wrapper.classList.remove('d-none');
             wrapper.classList.add('d-flex');
             
-            // 🔥 AUTO-SWITCH LOGIC:
             if (type === 'RESIGN') {
-                // ถ้าหาคนลาออก -> ปรับ Status เป็น Inactive หรือ All
-                // แนะนำ 'ALL' เผื่อบางคนลาออกล่วงหน้า (แต่ยัง Active อยู่)
                 document.getElementById('filterStatusAll').checked = true;
             } else if (type === 'JOIN') {
-                // ถ้าหาคนเข้าใหม่ -> ปรับเป็น All (เผื่อเข้าใหม่แล้วออกไปแล้ว)
                 document.getElementById('filterStatusAll').checked = true;
             }
-            
-            // สั่งกรองใหม่ทันที
             this.filterEmployeeList();
         }
     },
@@ -2461,8 +2271,6 @@ const Actions = {
          }
          
          const displayList = list.slice(0, 100); 
-
-         // Helper Date Format (DD/MM/YY)
          const dFmt = (dStr) => {
              if (!dStr) return '<span class="text-muted opacity-50">-</span>';
              const d = new Date(dStr);
@@ -2471,8 +2279,6 @@ const Actions = {
 
          displayList.forEach(emp => {
              const isActive = parseInt(emp.is_active) === 1;
-             
-             // 1. Profile Section
              const profileHtml = `
                 <div class="d-flex align-items-center">
                     <div class="avatar-initial rounded bg-light text-primary fw-bold me-3 d-flex align-items-center justify-content-center" style="width:40px; height:40px; font-size:1.2rem;">
@@ -2485,14 +2291,12 @@ const Actions = {
                 </div>
              `;
 
-             // 2. Type Badge
              let typeBadge = '';
              if (emp.emp_type === 'Monthly') typeBadge = '<span class="badge badge-soft-primary">Monthly</span>';
              else if (emp.emp_type === 'Daily') typeBadge = '<span class="badge badge-soft-success">Daily</span>';
              else if (emp.emp_type === 'Subcontract') typeBadge = '<span class="badge badge-soft-warning text-dark">Sub</span>';
              else typeBadge = `<span class="badge bg-secondary">${emp.emp_type || '?'}</span>`;
 
-             // 3. Status Badge & Timeline (ปรับใหม่)
              let statusHtml = '';
              if (isActive) {
                  statusHtml = `
@@ -2514,17 +2318,13 @@ const Actions = {
                     </div>`;
              }
 
-             // 4. Data Quality Check
              let tagsHtml = '';
              if (!emp.line) tagsHtml += `<span class="badge bg-danger mb-1 me-1">No Line</span>`;
              if (!emp.default_shift_id) tagsHtml += `<span class="badge bg-warning text-dark mb-1 me-1">No Shift</span>`;
              if (!emp.team_group) tagsHtml += `<span class="badge bg-info text-dark mb-1 me-1">No Team</span>`;
              if (tagsHtml === '') tagsHtml = `<span class="text-muted small"><i class="fas fa-check-circle text-success me-1"></i>Data OK</span>`;
 
-             // 5. Shift Info
              const shiftText = emp.shift_name ? (emp.shift_name.includes('Day') ? '<i class="fas fa-sun text-warning me-1"></i>Day' : '<i class="fas fa-moon text-indigo me-1"></i>Night') : '-';
-
-             // Row HTML
              tbody.innerHTML += `
                 <tr class="${!isActive ? 'bg-light text-muted' : ''}"> <td class="ps-4">${profileHtml}</td>
                     <td>
@@ -2577,12 +2377,10 @@ const Actions = {
             else { try { const t = JSON.parse(decodeURIComponent(dataOrEmpId)); empId = t.emp_id; } catch(e) { return; } }
         }
 
-        // Setup Header
         document.getElementById('isEditMode').value = isEdit ? '1' : '0';
         document.getElementById('empEditTitle').innerText = isEdit ? 'Edit Employee' : 'New Employee';
         document.getElementById('empEditId').readOnly = isEdit;
 
-        // Load Dropdowns
         if(this._structureCache.lines.length === 0) await this.initDropdowns();
 
         if (isEdit) {
@@ -2592,28 +2390,21 @@ const Actions = {
                 const json = await res.json();
                 if (!json.success) throw new Error(json.message);
                 const emp = json.data;
-
-                // Populate Data
                 document.getElementById('empEditId').value = emp.emp_id;
                 document.getElementById('empEditName').value = emp.name_th || '';
                 document.getElementById('empEditPos').value = emp.position || '';
                 document.getElementById('empEditStartDate').value = emp.start_date || '';
                 
-                // Work Info
                 setTimeout(() => {
                     document.getElementById('empEditLine').value = emp.line || '';
                     document.getElementById('empEditShift').value = emp.default_shift_id || emp.shift_id || '';
                     document.getElementById('empEditTeam').value = emp.team_group || '';
-                    
-                    // Cache ค่าเดิมไว้เทียบ
                     this._originalWorkData = { 
                         line: emp.line, 
                         shift: (emp.default_shift_id || emp.shift_id), 
                         team: emp.team_group 
                     };
                 }, 50);
-
-                // --- 🔥 SMART STATUS LOGIC ---
                 const isActive = parseInt(emp.is_active) === 1;
                 document.getElementById('currentActiveStatus').value = isActive ? '1' : '0';
                 
@@ -2645,7 +2436,6 @@ const Actions = {
                 UI.hideLoader();
             }
         } else {
-            // New Mode
             document.getElementById('currentActiveStatus').value = '1';
             document.getElementById('empStatusBadge').innerText = 'NEW';
             document.getElementById('empStatusBadge').className = 'badge bg-primary ms-3';
@@ -2661,8 +2451,6 @@ const Actions = {
         const newLine = document.getElementById('empEditLine').value;
         const newTeam = document.getElementById('empEditTeam').value;
         const newShift = document.getElementById('empEditShift').value;
-
-        // ถ้าค่าใหม่ ไม่ตรงกับค่าเดิม -> โชว์ Retroactive Box
         const isChanged = (newLine != this._originalWorkData.line) || 
                           (newTeam != this._originalWorkData.team) || 
                           (newShift != this._originalWorkData.shift);
@@ -2671,9 +2459,8 @@ const Actions = {
         
         if (isChanged && document.getElementById('isEditMode').value === '1') {
             if (retroDiv.style.display === 'none') {
-                retroDiv.style.display = 'block'; // Slide Down
-                retroDiv.classList.add('animate__animated', 'animate__fadeIn'); // ถ้ามี Animate.css
-                // Auto-set effective date to Today
+                retroDiv.style.display = 'block';
+                retroDiv.classList.add('animate__animated', 'animate__fadeIn');
                 document.getElementById('editMaster_EffectiveDate').value = new Date().toISOString().split('T')[0];
             }
         } else {
@@ -2691,31 +2478,23 @@ const Actions = {
 
     async handleReactivateClick() {
         if(!confirm('ต้องการปรับสถานะพนักงานนี้กลับเป็น Active ใช่หรือไม่?')) return;
-        
-        // แค่เซ็ตสถานะใน UI เป็น 1 แล้วกด Save เอง หรือจะยิง API เลยก็ได้
-        // วิธีง่ายสุด: เปลี่ยนค่าใน Hidden แล้วสั่ง Save
         document.getElementById('currentActiveStatus').value = '1';
-        document.getElementById('empEditResignDate').value = ''; // เคลียร์วันลาออก
-        await this.saveEmployee(); // Reuse Save Logic
+        document.getElementById('empEditResignDate').value = '';
+        await this.saveEmployee();
     },
 
-    // 5. Save Function (Updated to use hidden status)
     async saveEmployee() {
         const btn = event.currentTarget;
         const originalHtml = btn.innerHTML;
         
-        // 1. ป้องกัน Double Submit
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
 
         try {
-            // 2. ดึง Element แบบปลอดภัย (Defensive Check)
             const elRetroCheck = document.getElementById('editMaster_UpdateLogs');
             const elRetroDate = document.getElementById('editMaster_EffectiveDate');
             const elActiveStatus = document.getElementById('currentActiveStatus');
             const elIsEdit = document.getElementById('isEditMode');
-
-            // 3. ตรวจสอบเงื่อนไขการอัปเดตย้อนหลัง
             const needRetroUpdate = elRetroCheck ? elRetroCheck.checked : false;
             const retroDate = elRetroDate ? elRetroDate.value : null;
 
@@ -2723,7 +2502,6 @@ const Actions = {
                 throw new Error('กรุณาระบุ "มีผลตั้งแต่วันที่" หากต้องการอัปเดตย้อนหลัง');
             }
 
-            // 4. เตรียม Payload
             const payload = {
                 action: (elIsEdit && elIsEdit.value === '1') ? 'update_employee' : 'create_employee',
                 emp_id: document.getElementById('empEditId').value.trim(),
@@ -2739,12 +2517,10 @@ const Actions = {
                 effective_date: needRetroUpdate ? retroDate : null, 
             };
 
-            // 5. Validation เบื้องต้น
             if(!payload.emp_id || !payload.name_th) {
                 throw new Error('กรุณากรอกรหัสพนักงานและชื่อให้ครบถ้วน');
             }
 
-            // 6. ยิง API ไปที่ api_master_data.php
             const res = await fetch('api/api_master_data.php', { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'}, 
@@ -2754,22 +2530,16 @@ const Actions = {
             const json = await res.json();
             
             if(json.success) { 
-                // 7. ปิด Modal และรีโหลดข้อมูล
                 const editModalEl = document.getElementById('empEditModal');
                 const editModal = bootstrap.Modal.getInstance(editModalEl);
-                if (editModal) editModal.show(); // บางครั้งเรียก hide ไม่ไป ให้ลองเช็ค instance
+                if (editModal) editModal.show();
                 editModal.hide();
-
-                // รีเฟรชตารางเบื้องหลัง
                 if (typeof App !== 'undefined') await App.loadData(true); 
-                
-                // ถ้าเปิดหน้า Employee Manager ค้างไว้ให้รีโหลดด้วย
                 const empListModal = document.getElementById('empListModal');
                 if(empListModal && empListModal.classList.contains('show')) {
                     this.openEmployeeManager(true); 
                 }
                 
-                // ถ้ามาจากหน้า Detail Modal ให้รีโหลดข้อมูลคนในไลน์นั้น
                 if (typeof this.fetchDetailData === 'function' && document.getElementById('detailModal').classList.contains('show')) {
                     await this.fetchDetailData(); 
                 }
@@ -2783,20 +2553,14 @@ const Actions = {
             console.error("Save Error:", e);
             alert('❌ Failed: ' + e.message);
         } finally {
-            // 8. คืนค่าสถานะปุ่ม
             btn.disabled = false; 
             btn.innerHTML = originalHtml;
         }
     },
 
-    // =========================================================================
-    // OPEN REPORT MODAL (FIXED)
-    // =========================================================================
     openReportModal() {
         const modalEl = document.getElementById('reportRangeModal');
         const modal = new bootstrap.Modal(modalEl);
-        
-        // 1. Set Default Dates (Current Week)
         const curr = new Date();
         const first = curr.getDate() - curr.getDay() + 1; 
         const firstDay = new Date(curr.setDate(first)).toISOString().split('T')[0];
@@ -2805,13 +2569,11 @@ const Actions = {
         document.getElementById('reportStartDate').value = firstDay;
         document.getElementById('reportEndDate').value = today;
 
-        // 2. Populate Line Dropdown (FIXED UNDEFINED ISSUE)
         const lineSelect = document.getElementById('rpt_line');
         if (this._structureCache && this._structureCache.lines) {
             lineSelect.innerHTML = '<option value="ALL">All Lines</option>';
             
             this._structureCache.lines.forEach(item => {
-                // แก้บั๊ก: ตรวจสอบว่า item เป็น object ({line: 'A'}) หรือ string ('A')
                 const lineName = (typeof item === 'object' && item.line) ? item.line : item;
                 
                 if (lineName) {
@@ -2820,12 +2582,10 @@ const Actions = {
             });
         }
 
-        // 3. Attach Auto-Load Events
         const filters = ['rpt_line', 'rpt_shift', 'rpt_type', 'reportStartDate', 'reportEndDate'];
         filters.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                // ลบ Event เก่า (ถ้ามี) แล้วใส่ใหม่
                 el.onchange = null; 
                 el.onchange = () => this.loadExecutiveReport();
             }
@@ -2835,21 +2595,15 @@ const Actions = {
         this.loadExecutiveReport(); 
     },
 
-    // =========================================================================
-    // LOAD DATA & CALCULATE STATS
-    // =========================================================================
     async loadExecutiveReport() {
-        // 1. ดึงค่าจาก Input
         const sDate = document.getElementById('reportStartDate').value;
         const eDate = document.getElementById('reportEndDate').value;
         const line  = document.getElementById('rpt_line').value;
         const shift = document.getElementById('rpt_shift').value;
         const type  = document.getElementById('rpt_type').value;
 
-        // Validation
         if(!sDate || !eDate) return alert("Please select dates");
 
-        // 2. แสดงสถานะ Loading UI (...)
         const loadingIds = ['rpt_hc', 'rpt_actual', 'rpt_absent', 'rpt_leave', 
                             'hc_max', 'hc_min', 'hc_avg', 
                             'act_max', 'act_min', 'act_avg',
@@ -2862,8 +2616,6 @@ const Actions = {
         });
 
         try {
-            // 3. ยิง API พร้อม Parameter ครบชุด
-            // ใช้ encodeURIComponent เพื่อป้องกันปัญหากรณีชื่อไลน์มีช่องว่างหรืออักขระพิเศษ
             const url = `api/api_daily_operations.php?action=read_range_report` +
                         `&startDate=${sDate}` +
                         `&endDate=${eDate}` +
@@ -2875,20 +2627,13 @@ const Actions = {
             const json = await res.json();
 
             if (json.success) {
-                const h = json.header; // ข้อมูล Header (ยอดรวม)
-                const t = json.trend;  // ข้อมูล Trend (รายวัน)
-
-                // ---------------------------------------------------------
-                // ส่วนที่ 1: อัปเดตตัวเลขการ์ดใหญ่ (Big Numbers)
-                // ---------------------------------------------------------
-                // ใช้ Total_Headcount ตามที่ SQL ส่งมา (ไม่ต้องแปลงชื่อ)
+                const h = json.header;
+                const t = json.trend;
                 UI.animateNumber('rpt_hc', h.Total_Headcount || 0);
                 
-                // แสดงยอด เข้าใหม่ / ลาออก
                 document.getElementById('rpt_new').innerText = `+${h.New_Joiners || 0} / -${h.Total_Resigned || 0}`; 
                 const elNew = document.getElementById('rpt_new');
                 if (elNew) {
-                    // แต่งสีหน่อย: เข้าเขียว / ออกแดง
                     elNew.innerHTML = `<span class="text-success">+${h.New_Joiners || 0}</span> / <span class="text-danger">-${h.Total_Resigned || 0}</span>`;
                 }
                 
@@ -2896,28 +2641,24 @@ const Actions = {
                 UI.animateNumber('rpt_absent', h.Total_Absent || 0);
                 UI.animateNumber('rpt_leave', h.Total_Leave || 0);
 
-                // ---------------------------------------------------------
-                // ส่วนที่ 2: คำนวณค่าสถิติ (Max/Min/Avg) สำหรับตารางเล็ก
-                // ---------------------------------------------------------
                 const calcStats = (data, key) => {
-                    // Default Structure
                     const res = { max: 0, min: 0, avg: 0, last: 0 };
-                    
                     if (!data || data.length === 0) return res;
                     
                     let max = -Infinity, min = Infinity, sum = 0, count = 0;
 
                     data.forEach(d => {
+                        if (d.Is_Work_Day !== undefined && parseInt(d.Is_Work_Day) === 0) return;
+
                         const val = parseInt(d[key] || 0);
-                        if (val >= 0) { // นับเฉพาะค่าที่เป็นบวก
+                        if (val >= 0) {
                             if (val > max) max = val;
-                            if (val < min && val > 0) min = val; // Min ไม่นับ 0 (ถ้าต้องการนับให้ลบ && val > 0)
+                            if (val < min && val > 0) min = val;
                             sum += val;
                             count++;
                         }
                     });
 
-                    // Handle Infinity
                     if (min === Infinity) min = 0;
                     if (max === -Infinity) max = 0;
 
@@ -2925,14 +2666,12 @@ const Actions = {
                     res.min = min;
                     res.avg = count > 0 ? (sum / count).toFixed(1) : 0;
                     
-                    // 🔥 [NEW] ค่าล่าสุด (ตัวสุดท้ายของ Array)
                     const lastItem = data[data.length - 1];
                     res.last = lastItem ? parseInt(lastItem[key] || 0) : 0;
 
                     return res;
                 };
 
-                // Helper: Render ลง HTML
                 const renderStats = (prefix, stats) => {
                     const setVal = (suffix, val) => {
                         const el = document.getElementById(`${prefix}_${suffix}`);
@@ -2943,30 +2682,19 @@ const Actions = {
                     setVal('avg', stats.avg);
                     setVal('last', stats.last);
                 };
-
-                // เรียกใช้งาน
                 renderStats('hc',  calcStats(t, 'Daily_HC'));
                 renderStats('act', calcStats(t, 'Daily_Actual'));
                 renderStats('abs', calcStats(t, 'Daily_Absent'));
                 renderStats('lev', calcStats(t, 'Daily_Leave'));
-                // ---------------------------------------------------------
-                // ส่วนที่ 3: วาดกราฟ (Chart)
-                // ---------------------------------------------------------
                 this.renderReportChart(t);
             }
         } catch (err) {
             console.error("Error loading report:", err);
-            // alert("Failed to load report data"); // ปิดไว้ก็ได้ถ้าไม่อยากให้เด้งรบกวน
         }
     },
 
-    // =========================================================================
-    // RENDER CHART (Stacked Bar with Advanced Tooltip)
-    // =========================================================================
     renderReportChart(data) {
         const ctx = document.getElementById('reportChart').getContext('2d');
-        
-        // ทำลายกราฟเก่าทิ้งก่อนวาดใหม่ (ป้องกันกราฟซ้อนกัน)
         if (window.reportChartObj) {
             window.reportChartObj.destroy();
         }
@@ -2974,7 +2702,6 @@ const Actions = {
         window.reportChartObj = new Chart(ctx, {
             type: 'bar',
             data: {
-                // แกน X: วันที่ (แปลงเป็น วว/ดด)
                 labels: data.map(d => {
                     const date = new Date(d.log_date);
                     return `${date.getDate()}/${date.getMonth()+1}`;
@@ -2983,21 +2710,21 @@ const Actions = {
                     {
                         label: 'Actual (มา)',
                         data: data.map(d => d.Daily_Actual),
-                        backgroundColor: '#1cc88a', // สีเขียว
+                        backgroundColor: '#1cc88a',
                         borderRadius: 4,
                         stack: 'Stack 0'
                     },
                     {
                         label: 'Leave (ลา)',
                         data: data.map(d => d.Daily_Leave),
-                        backgroundColor: '#36b9cc', // สีฟ้า
+                        backgroundColor: '#36b9cc',
                         borderRadius: 4,
                         stack: 'Stack 0'
                     },
                     {
                         label: 'Absent (ขาด)',
                         data: data.map(d => d.Daily_Absent),
-                        backgroundColor: '#e74a3b', // สีแดง
+                        backgroundColor: '#e74a3b',
                         borderRadius: 4,
                         stack: 'Stack 0'
                     }
@@ -3007,28 +2734,20 @@ const Actions = {
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: {
-                    mode: 'index', // Hover จุดเดียว แสดงข้อมูลทุกแท่งในวันนั้น
+                    mode: 'index',
                     intersect: false,
                 },
                 plugins: {
                     legend: { position: 'bottom' },
                     tooltip: {
                         callbacks: {
-                            // 🔥 เพิ่ม Footer แสดงยอดรวม และยอด Movement (เข้า/ออก)
                             footer: function(tooltipItems) {
-                                // 1. หา index ของข้อมูลที่ Hover อยู่
                                 const dataIndex = tooltipItems[0].dataIndex;
-                                
-                                // 2. ดึงข้อมูลดิบของวันนั้นจาก Array 'data'
                                 const dayData = data[dataIndex];
-
-                                // 3. คำนวณยอดรวม Stack (มา+ลา+ขาด)
                                 let totalStack = 0;
                                 tooltipItems.forEach(function(tooltipItem) {
                                     totalStack += tooltipItem.parsed.y;
                                 });
-
-                                // 4. สร้างข้อความที่จะแสดง
                                 return `----------------\n` +
                                        `Total Accounted: ${totalStack} คน\n` +
                                        `New Joiners: +${dayData.Daily_New || 0}\n` +
@@ -3039,7 +2758,7 @@ const Actions = {
                 },
                 scales: {
                     x: { 
-                        stacked: true, // กราฟแท่งแบบซ้อน
+                        stacked: true,
                         grid: { display: false } 
                     },
                     y: { 
@@ -3084,7 +2803,6 @@ const Actions = {
         const btn = event.currentTarget;
         const originalHtml = btn.innerHTML;
 
-        // 1. UI State: Loading
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
         tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5"><div class="spinner-border text-primary"></div><br>Calculating...</td></tr>`;
@@ -3094,7 +2812,6 @@ const Actions = {
             const json = await res.json();
 
             if(json.success) {
-                // 2. Render Summary Cards (3 กล่องบน)
                 const sum = json.summary;
                 document.getElementById('simSummarySection').style.display = 'flex';
                 
@@ -3115,7 +2832,6 @@ const Actions = {
                     else diffCard.classList.add('bg-secondary');
                 }
 
-                // 3. Render Table Body (วาดตารางใหม่ทั้งหมด)
                 let html = '';
                 const fmt = (n) => Math.round(parseFloat(n || 0)).toLocaleString();
 
@@ -3156,9 +2872,6 @@ const Actions = {
         }
     },
 
-    // -------------------------------------------------------------------------
-    // 7. MAPPING & SHIFT PLANNER
-    // -------------------------------------------------------------------------
     async openShiftPlanner() {
         const modal = new bootstrap.Modal(document.getElementById('shiftPlannerModal'));
         document.getElementById('shiftPlannerBody').innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-warning"></div></td></tr>`;
@@ -3224,13 +2937,11 @@ const Actions = {
         await fetch('api/api_master_data.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save_mappings', categories: this._mappingCache }) });
     },
 
-    // Internal Logic for Tab 1: Operation
     async runExecutiveReportInternal(sDate, eDate, line) {
         try {
             const url = `api/api_daily_operations.php?action=read_range_report` +
                         `&startDate=${sDate}&endDate=${eDate}` +
-                        `&line=${encodeURIComponent(line)}&shift=ALL&type=ALL`; // Default shift/type to ALL
-            
+                        `&line=${encodeURIComponent(line)}&shift=ALL&type=ALL`;            
             const res = await fetch(url);
             const json = await res.json();
 
@@ -3238,17 +2949,14 @@ const Actions = {
                 const h = json.header;
                 const t = json.trend;
 
-                // 1. Big Cards
                 UI.animateNumber('rpt_hc', h.Total_Headcount || 0);
                 UI.animateNumber('rpt_actual', h.Total_Present_ManDays || 0);
                 UI.animateNumber('rpt_absent', h.Total_Absent || 0);
                 UI.animateNumber('rpt_leave', h.Total_Leave || 0);
 
-                // 2. New/Resigned Label
                 const elNew = document.getElementById('rpt_new');
                 if (elNew) elNew.innerHTML = `Move: <span class="text-success">+${h.New_Joiners || 0}</span> / <span class="text-danger">-${h.Total_Resigned || 0}</span>`;
 
-                // 3. Stats (Min/Max/Avg) Helper
                 const calcStats = (data, key) => {
                     if (!data || data.length === 0) return { max: 0, min: 0, avg: 0 };
                     let max = -Infinity, min = Infinity, sum = 0, count = 0;
@@ -3278,7 +2986,6 @@ const Actions = {
                 setStats('abs', calcStats(t, 'Daily_Absent'));
                 setStats('lev', calcStats(t, 'Daily_Leave'));
 
-                // 4. Render Chart
                 UI.renderReportChart(t);
             }
         } catch(err) {
@@ -3362,7 +3069,6 @@ const Actions = {
     },
 
     exportSimTable() {
-        // 1. เช็คว่ามีข้อมูลให้ Export ไหม
         if (!this._cachedAnalysisData) {
             alert("กรุณากด Run Analysis เพื่อโหลดข้อมูลก่อน Export");
             return;
@@ -3370,12 +3076,7 @@ const Actions = {
 
         const { summary, financials, trend } = this._cachedAnalysisData;
         const wb = XLSX.utils.book_new();
-
-        // =========================================================
-        // SHEET 1: Financial Impact (หน้าสรุปต้นทุน)
-        // =========================================================
         if (financials && financials.length > 0) {
-            // จัด Format ข้อมูลให้สวยงามสำหรับ Excel
             const finData = financials.map(row => {
                 const diff = row.cost_actual - row.cost_standard;
                 const pct = row.cost_standard > 0 ? ((diff / row.cost_standard) * 100).toFixed(2) + '%' : '0%';
@@ -3391,10 +3092,7 @@ const Actions = {
                 };
             });
 
-            // สร้าง Sheet
             const wsFin = XLSX.utils.json_to_sheet(finData);
-
-            // ปรับความกว้างคอลัมน์ (Auto Width แบบบ้านๆ)
             const wscols = [
                 {wch: 25}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 12}, {wch: 15}, {wch: 15}
             ];
@@ -3403,9 +3101,6 @@ const Actions = {
             XLSX.utils.book_append_sheet(wb, wsFin, "Financial Impact");
         }
 
-        // =========================================================
-        // SHEET 2: Daily Trend (ข้อมูลรายวัน) - แถมให้!
-        // =========================================================
         if (trend && trend.length > 0) {
             const trendData = trend.map(t => ({
                 "Date": t.log_date,
@@ -3420,15 +3115,12 @@ const Actions = {
             XLSX.utils.book_append_sheet(wb, wsTrend, "Daily Trend");
         }
 
-        // =========================================================
-        // 3. SAVE FILE
-        // =========================================================
         const dateStr = new Date().toISOString().split('T')[0];
         XLSX.writeFile(wb, `Manpower_Analysis_Report_${dateStr}.xlsx`);
     },
 
     renderSimulationTable(data, apiSummary, isAllLines, targetTbodyId = 'simTableBody') {
-        const tbody = document.getElementById(targetTbodyId); // ใช้ ID ที่ส่งมา
+        const tbody = document.getElementById(targetTbodyId);
         if(!tbody) return;
 
         let html = '';
@@ -3465,7 +3157,6 @@ const Actions = {
         const modalEl = document.getElementById('integratedAnalysisModal');
         if (!modalEl) return;
         
-        // 1. ตั้งค่า Default Date (ต้นเดือน - ปัจจุบัน)
         const today = new Date();
         const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
         const toLocalISO = (d) => new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
@@ -3474,18 +3165,14 @@ const Actions = {
         const endInput = document.getElementById('ia_endDate');
         const lineSelect = document.getElementById('superLineSelect');
         
-        // Set Date Values
         if(startInput) startInput.value = toLocalISO(firstDay);
         if(endInput) endInput.value = document.getElementById('filterDate').value || toLocalISO(today);
 
-        // 2. ✅ Auto-Refresh Setup: ผูก Event Listener ให้ทำงานทันทีเมื่อค่าเปลี่ยน
         const inputs = [startInput, endInput, lineSelect];
         inputs.forEach(el => {
             if (el) {
-                // ล้าง Event เก่า (ถ้ามี) แล้วใส่ใหม่
                 el.onchange = null;
                 el.onchange = () => {
-                    // ตรวจสอบว่าวันที่ครบไหมก่อนรัน (กัน Error)
                     if (startInput.value && endInput.value) {
                         this.runSuperAnalysis();
                     }
@@ -3493,14 +3180,9 @@ const Actions = {
             }
         });
 
-        // 3. โหลด Dropdown Line (ถ้ายังไม่เคยโหลด)
         UI.populateAnalysisDropdown(); 
-
-        // 4. เปิด Modal
         const modal = new bootstrap.Modal(modalEl);
         modal.show();
-
-        // 5. รันครั้งแรกทันที (Initial Run)
         setTimeout(() => this.runSuperAnalysis(), 300);
     },
 
@@ -3518,18 +3200,25 @@ const Actions = {
             if (result.success) {
                 this._cachedAnalysisData = result.data;
                 const { summary, trend, financials, distribution } = result.data;
-
-                // --- 1. KPI & Stats Calculation Helper ---
                 const calcStats = (dataArray, key) => {
                     if (!dataArray || dataArray.length === 0) return { max: 0, min: 0, avg: 0 };
                     let max = -Infinity, min = Infinity, sum = 0, count = 0;
+                    
                     dataArray.forEach(d => {
+                        if (d.Is_Work_Day !== undefined && parseInt(d.Is_Work_Day) === 0) return;
+
                         const val = parseInt(d[key] || 0);
                         if (val > max) max = val;
                         if (val < min) min = val;
-                        sum += val; count++;
+                        sum += val; 
+                        count++;
                     });
-                    return { max: max === -Infinity ? 0 : max, min: min === Infinity ? 0 : min, avg: count > 0 ? (sum / count).toFixed(1) : 0 };
+                    
+                    return { 
+                        max: max === -Infinity ? 0 : max, 
+                        min: min === Infinity ? 0 : min, 
+                        avg: count > 0 ? (sum / count).toFixed(1) : 0 
+                    };
                 };
 
                 const setCardStats = (prefix, totalVal, statsObj) => {
@@ -3539,13 +3228,10 @@ const Actions = {
                     if(document.getElementById(`ia_rpt_${prefix}_avg`)) document.getElementById(`ia_rpt_${prefix}_avg`).innerText = statsObj.avg;
                 };
 
-                // Apply Data to Cards
                 setCardStats('hc', summary.Total_Unique_HC, calcStats(trend, 'Daily_HC'));
                 setCardStats('actual', summary.Total_Present_ManDays, calcStats(trend, 'Act_Present'));
                 setCardStats('absent', summary.Total_Absent_ManDays, calcStats(trend, 'Act_Absent'));
                 setCardStats('leave', summary.Total_Leave_ManDays, calcStats(trend, 'Act_Leave'));
-
-                // 🔥 [ADDED] Logic สำหรับ Movement Badge (เข้า/ออก) บนการ์ด HC
                 const elAttr = document.getElementById('ia_rpt_attrition');
                 if (elAttr) {
                     const newJoin = parseInt(summary.New_Joiners || 0);
@@ -3564,10 +3250,7 @@ const Actions = {
                     }
                 }
 
-                // --- 2. Financials ---
                 UI.renderIntegratedFinancialTable(financials, 'ia_simTableBody');
-                
-                // Calculate Variance
                 const totalStd = financials.reduce((sum, row) => sum + row.cost_standard, 0);
                 const totalAct = financials.reduce((sum, row) => sum + row.cost_actual, 0);
                 const diffVal = totalAct - totalStd;
@@ -3582,29 +3265,19 @@ const Actions = {
                 const pctEl = document.getElementById('sim_diff_percent');
                 if(pctEl) {
                     pctEl.innerText = (diffPct > 0 ? '+' : '') + diffPct.toFixed(2) + '%';
-                    // Dynamic Color
                     pctEl.parentElement.className = `badge ${diffPct > 5 ? 'bg-danger' : (diffPct < -5 ? 'bg-success' : 'bg-secondary')} p-2`;
                 }
 
-                // --- 3. CHARTS RENDERING (4 Charts Layout) ---
-                
-                // A. Trend Line
                 UI.renderIntegratedLineChart(trend);
-
-                // B. Donut 1: Workforce Structure
                 UI.renderIntegratedStructureDonut(distribution); 
-
-                // C. Combo Chart
                 UI.renderIntegratedComboChart(trend);
 
-                // D. Donut 2: Attendance Ratio 
                 const sumPresent = trend.reduce((s, d) => s + parseInt(d.Act_Present || 0), 0);
                 const sumLate    = trend.reduce((s, d) => s + parseInt(d.Act_Late || 0), 0);
                 const sumAbsent  = trend.reduce((s, d) => s + parseInt(d.Act_Absent || 0), 0);
                 const sumLeave   = trend.reduce((s, d) => s + parseInt(d.Act_Leave || 0), 0);
                 
                 UI.renderIntegratedAttendanceDonut([sumPresent, sumLate, sumAbsent, sumLeave]);
-
                 UI.renderFinancialAnalysis(financials);
 
             } else {
