@@ -1,5 +1,4 @@
 /* loading_report.css - Full-Width Split-Pane Layout */
-
 :root {
     --card-radius: 12px;
     --box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
@@ -10,11 +9,8 @@ body { background-color: var(--bg-light-gray); overflow: hidden; }
 
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* 🟢 Layout ซ้าย-ขวา 🟢 */
 .split-layout-height { height: calc(100vh - 95px); }
 
-/* Job Cards (Left Pane) */
 .job-card {
     border: 1px solid #eef2f6; border-radius: 8px; background: #fff;
     transition: all 0.2s; border-left: 4px solid transparent; cursor: pointer;
@@ -24,35 +20,75 @@ body { background-color: var(--bg-light-gray); overflow: hidden; }
 .job-card.draft { border-left-color: #ffc107; }
 .job-card.done { border-left-color: #198754; }
 
-/* Custom Nav Tabs */
 .custom-pills { 
     background: #fff; border-radius: 10px; padding: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); border: 1px solid #eef2f6; 
     display: flex; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; 
 }
 .custom-pills .nav-link { border-radius: 8px; color: #6c757d; font-weight: 600; padding: 8px 15px; transition: all 0.3s; font-size: 0.9rem; }
 .custom-pills .nav-link.active { background-color: #0d6efd; color: #fff; box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3); }
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 0.5rem 0 1rem 0;
+}
 
-/* Camera Grid */
-.photo-filmstrip { display: flex; overflow-x: auto; gap: 0.75rem; padding: 0.5rem 0 1rem 0; scroll-snap-type: x mandatory; }
-.photo-filmstrip::-webkit-scrollbar { height: 6px; }
-.photo-filmstrip::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 10px; }
-.camera-wrapper { min-width: 140px; flex-shrink: 0; scroll-snap-align: start; }
+@media (min-width: 768px) {
+    .photo-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 1200px) {
+    .photo-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.camera-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
 .camera-box {
-    border: 2px dashed #cbd5e0; border-radius: 12px; background-color: #fff; height: 140px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    cursor: pointer; overflow: hidden; position: relative; transition: all 0.2s;
+    border: 2px dashed #cbd5e0; 
+    border-radius: 12px; 
+    background-color: #fff; 
+    height: 150px;
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    cursor: pointer; 
+    overflow: hidden; 
+    position: relative; 
+    transition: all 0.2s ease-in-out;
 }
 .camera-box:hover { border-color: #0d6efd; background-color: #f8fbff; }
 .camera-box.has-image { border: 2px solid #198754; padding: 0; }
-.camera-label { font-size: 0.75rem; color: #495057; font-weight: bold; text-align: center; margin-top: 8px; line-height: 1.2; }
+.camera-label { font-size: 0.8rem; color: #495057; font-weight: 600; text-align: center; margin-top: 8px; line-height: 1.2; }
 .preview-img { width: 100%; height: 100%; object-fit: cover; }
+.save-status-indicator {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    opacity: 0;
+}
+.save-status-indicator.saving {
+    background-color: #fff3cd; color: #856404; opacity: 1;
+}
+.save-status-indicator.saved {
+    background-color: #d1e7dd; color: #0f5132; opacity: 1;
+}
 
-/* Checklist */
 .checklist-card { border-radius: 8px; border: 1px solid #eef2f6; background: #fff; margin-bottom: 1rem; overflow: hidden; }
 .checklist-header { background: #f8fbff; padding: 0.5rem 1rem; border-bottom: 1px solid #eef2f6; font-weight: bold; color: #0d6efd; display: flex; align-items: center; font-size: 0.9rem; }
 .sub-item-row { padding: 0.75rem 1rem; border-bottom: 1px solid #f1f1f1; display: flex; flex-direction: column; gap: 0.5rem; }
 .sub-item-row:last-child { border-bottom: none; }
 .sub-item-text { font-size: 0.85rem; color: #2c3e50; font-weight: 500; }
+.sub-item-controls .btn-group label.btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
 
 @media (min-width: 768px) {
     .sub-item-row { flex-direction: row; justify-content: space-between; align-items: center; } 
@@ -62,28 +98,25 @@ body { background-color: var(--bg-light-gray); overflow: hidden; }
     .sub-item-controls .form-control { flex-grow: 1; } 
 }
 
-/* Mobile Control */
 @media (max-width: 991.98px) {
     body { overflow: auto; } 
     .split-layout-height { height: auto; }
     #left-pane { min-height: calc(100vh - 80px); }
     #right-pane { min-height: calc(100vh - 80px); }
-    
-    /* 🟢 บังคับ Action Bar ให้ Fixed ติดขอบล่างในมือถือ 🟢 */
     #form-action-bar {
         position: fixed !important;
         bottom: 0;
         left: 0;
         width: 100%;
-        z-index: 1050 !important; /* ให้อยู่บนสุด */
+        z-index: 1050 !important;
         box-shadow: 0 -4px 20px rgba(0,0,0,0.1) !important;
-        padding-bottom: calc(15px + env(safe-area-inset-bottom)) !important; /* รองรับจอรอยบาก iPhone */
+        padding-bottom: calc(15px + env(safe-area-inset-bottom)) !important;
     }
     
-    /* 🟢 ดันเนื้อหาฟอร์มไม่ให้โดนปุ่ม Finish บังตอนเลื่อนลงสุด 🟢 */
     #form-content {
         padding-bottom: 90px !important;
     }
 }
+
 .hover-scale { transition: transform 0.2s; }
 .hover-scale:hover { transform: translateX(-3px); }

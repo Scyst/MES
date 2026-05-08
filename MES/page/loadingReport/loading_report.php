@@ -85,6 +85,7 @@ $defaultEnd = date('Y-m-d');
                                                 <i class="fas fa-arrow-left"></i>
                                             </button>
                                             <h5 class="mb-0 fw-bold" id="disp_po_head">LOADING...</h5>
+                                            <span id="save_indicator" class="save-status-indicator ms-2"></span>
                                         </div>
                                         <span class="badge bg-white text-primary fw-bold px-2 py-1 fs-6 shadow-sm d-none" id="disp_invoice_badge">INV: <span id="disp_invoice">-</span></span>
                                     </div>
@@ -164,7 +165,7 @@ $defaultEnd = date('Y-m-d');
                                         <div class="card shadow-sm mt-3 border-0 border-top border-warning border-3">
                                             <div class="card-header bg-white border-bottom fw-bold text-dark py-2"><i class="fas fa-camera text-warning me-2"></i>Photo Evidence (12 Points)</div>
                                             <div class="card-body p-3 pt-0">
-                                                <div class="photo-filmstrip">
+                                                <div class="photo-grid">
                                                     <?php 
                                                     $photoPoints = [
                                                         'undercarriage' => '1. Gate Pass (ใบผ่าน รปภ.)', 'outside_door' => '2. Seal Condition (สภาพซีล)',
@@ -177,11 +178,11 @@ $defaultEnd = date('Y-m-d');
                                                     foreach ($photoPoints as $key => $label): 
                                                     ?>
                                                     <div class="camera-wrapper">
-                                                        <div class="camera-box shadow-sm" id="box_<?php echo $key; ?>" onclick="triggerCamera('<?php echo $key; ?>')">
+                                                        <div class="camera-box shadow-sm" id="box_<?php echo $key; ?>" onclick="triggerCamera('<?php echo $key; ?>', this)">
                                                             <i class="fas fa-camera fa-2x text-secondary opacity-50"></i>
                                                         </div>
                                                         <div class="camera-label"><?php echo $label; ?></div>
-                                                        <input type="file" id="file_<?php echo $key; ?>" accept="image/*" capture="environment" hidden onchange="handleFileSelect(this, '<?php echo $key; ?>')">
+                                                        <input type="file" id="file_<?php echo $key; ?>" accept="image/*" hidden onchange="handleFileSelect(this, '<?php echo $key; ?>')">
                                                     </div>
                                                     <?php endforeach; ?>
                                                 </div>
@@ -246,6 +247,24 @@ $defaultEnd = date('Y-m-d');
 
             </div>
         </main>
+    </div>
+
+    <div class="modal fade" id="photoPreviewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white border-0">
+                    <h5 class="modal-title fw-bold" id="previewModalLabel">Photo Preview</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0 text-center bg-dark">
+                    <img id="previewModalImage" src="" class="img-fluid" style="max-height: 70vh; object-fit: contain;">
+                </div>
+                <div class="modal-footer bg-light border-0 justify-content-between">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i> Close</button>
+                    <button type="button" class="btn btn-warning fw-bold" id="btnRetakePhoto"><i class="fas fa-camera me-2"></i> Retake Photo</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <input type="hidden" id="current_so_id">

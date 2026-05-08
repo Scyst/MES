@@ -1,7 +1,9 @@
 "use strict";
 
-const API_URL = 'api/manage_loading.php'; 
+const API_URL = 'api/manage_loading.php';
 let saveTimer;
+let saveIndicatorTimer;
+let currentPreviewType = '';
 window.currentErrors = [];
 
 $(document).ready(function() {
@@ -12,8 +14,8 @@ $(document).ready(function() {
     const inputSelectors = '#input_location, #input_start_time, #input_end_time, #input_seal, #input_cable_seal, #input_container, #input_car_license, #input_container_type, #input_container_type_other, #input_driver, #input_inspector, #input_supervisor';
     $(inputSelectors).on('change keyup', function() {
         clearTimeout(saveTimer);
-        saveTimer = setTimeout(saveHeader, 1000); 
-        validateCompletion(); 
+        saveTimer = setTimeout(saveHeader, 1000);
+        validateCompletion();
     });
 
     $('#filter_search').on('keypress', function(e) {
@@ -27,11 +29,18 @@ $(document).ready(function() {
             }
         }
     };
+
+    $('#btnRetakePhoto').on('click', function() {
+        if (currentPreviewType) {
+            $('#photoPreviewModal').modal('hide');
+            setTimeout(() => { openCameraOptions(currentPreviewType); }, 300);
+        }
+    });
 });
 
 function loadJobList() {
     $('#jobListContainer').html('<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div></div>');
-    
+
     const payload = {
         action: 'get_jobs',
         start_date: $('#filter_start').val(),
@@ -50,7 +59,7 @@ function loadJobList() {
             res.data.forEach(job => {
                 let statusClass = job.report_status === 'COMPLETED' ? 'job-card done' : 'job-card draft';
                 let badge = job.report_status === 'COMPLETED' ? '<span class="badge bg-success">Completed</span>' : '<span class="badge bg-warning text-dark">In Progress</span>';
-                
+
                 let printBtn = '';
                 if (job.report_status === 'COMPLETED') {
                     let encodedRef = btoa('SNC-' + job.report_id);
@@ -98,7 +107,7 @@ function resetSearch() {
 async function openReport(soId) {
     resetInspectionForm();
     $('#loadingOverlay').css('display', 'flex');
-    
+
     $('.job-card').removeClass('active');
     $(`#job-card-${soId}`).addClass('active');
 
@@ -110,7 +119,7 @@ async function openReport(soId) {
         $('#current_so_id').val(h.so_id);
 
         $('#disp_po_head').text(h.po_number || '-');
-        $('#disp_invoice').text(h.snc_ci_no || '-'); 
+        $('#disp_invoice').text(h.snc_ci_no || '-');
         $('#disp_invoice_badge').removeClass('d-none');
         $('#disp_po_nav').text('PO: ' + (h.po_number || '-'));
         $('#disp_qty').text(Number(h.quantity).toLocaleString());
@@ -125,10 +134,10 @@ async function openReport(soId) {
         $('#input_driver').val(h.driver_name || '');
         $('#input_inspector').val(h.inspector_name || '');
 
-        const DEFAULT_SUPERVISOR = 'ลลิต์ภัทร สุทธิธรรมสกุล'; 
+        const DEFAULT_SUPERVISOR = 'ลลิต์ภัทร สุทธิธรรมสกุล';
         $('#input_supervisor').val(h.supervisor_name || DEFAULT_SUPERVISOR);
         $('#input_location').val(h.loading_location || 'SNC Creativity Anthology Company (WH-B10)');
-        
+
         if (h.loading_start_time) $('#input_start_time').val(h.loading_start_time.replace(' ', 'T').substring(0, 16));
         if (h.loading_end_time) $('#input_end_time').val(h.loading_end_time.replace(' ', 'T').substring(0, 16));
 
@@ -148,11 +157,11 @@ async function openReport(soId) {
             if (res.photos) {
                 for (const [type, path] of Object.entries(res.photos)) showPreview(type, path);
             }
-            loadChecklistData(); 
+            loadChecklistData();
         } else {
-            const saveRes = await saveHeaderPromise(); 
+            const saveRes = await saveHeaderPromise();
             if(saveRes.success && saveRes.report_id) $('#current_report_id').val(saveRes.report_id);
-            validateCompletion(); 
+            validateCompletion();
         }
 
         const currentStatus = (h.status || h.report_status || '').toString().toUpperCase().trim();
@@ -160,7 +169,7 @@ async function openReport(soId) {
             $('#form-content input, #form-content select, #form-content textarea').prop('disabled', true);
             $('.camera-box').css('pointer-events', 'none').css('opacity', '0.7');
             $('#btn_pass_all').prop('disabled', true);
-            
+
             $('#form-action-bar').removeClass('d-none').html(`
                 <div class="d-flex align-items-center justify-content-center gap-3 w-100">
                     <div class="text-danger fw-bold fs-5"><i class="fas fa-lock me-2"></i> COMPLETED</div>
@@ -171,7 +180,7 @@ async function openReport(soId) {
             $('#form-content input, #form-content select, #form-content textarea').prop('disabled', false);
             $('.camera-box').css('pointer-events', 'auto').css('opacity', '1');
             $('#btn_pass_all').prop('disabled', false);
-            
+
             $('#form-action-bar').removeClass('d-none').html(`
                 <div class="d-flex align-items-center justify-content-center w-100">
                     <button id="btn_finish" class="btn btn-success shadow-sm py-2 px-5 rounded-pill fw-bold w-100 w-md-auto" style="max-width:280px;" onclick="finishInspection()">
@@ -180,9 +189,9 @@ async function openReport(soId) {
                 </div>
             `);
         }
-        
+
         history.pushState({page: 'report'}, 'Report View', '#report');
-        switchView('form'); 
+        switchView('form');
     } catch (err) {
         Swal.fire('Error', 'Failed to load report', 'error');
     } finally {
@@ -191,18 +200,18 @@ async function openReport(soId) {
 }
 
 function switchView(view) {
-    if (window.innerWidth < 992) { 
+    if (window.innerWidth < 992) {
         if (view === 'list') {
             $('#left-pane').removeClass('d-none').addClass('d-flex');
             $('#right-pane').removeClass('d-flex').addClass('d-none');
-            $('.job-card').removeClass('active'); 
+            $('.job-card').removeClass('active');
             $('#current_so_id').val('');
         } else {
             $('#left-pane').removeClass('d-flex').addClass('d-none');
             $('#right-pane').removeClass('d-none').addClass('d-flex');
             window.scrollTo(0,0);
         }
-    } else { 
+    } else {
         $('#left-pane').removeClass('d-none').addClass('d-flex');
         $('#right-pane').removeClass('d-none').addClass('d-flex');
     }
@@ -255,6 +264,18 @@ function saveHeaderPromise() {
     });
 }
 
+function showSaveStatus(status) {
+    const $ind = $('#save_indicator');
+    clearTimeout(saveIndicatorTimer);
+
+    if (status === 'saving') {
+        $ind.removeClass('saved').addClass('saving').html('<i class="fas fa-sync-alt fa-spin me-1"></i>Saving...');
+    } else if (status === 'saved') {
+        $ind.removeClass('saving').addClass('saved').html('<i class="fas fa-check me-1"></i>Saved');
+        saveIndicatorTimer = setTimeout(() => { $ind.removeClass('saved'); }, 3000);
+    }
+}
+
 function saveHeader() {
     let finalCtnType = $('#input_container_type').val();
     if (finalCtnType === 'OTHER') finalCtnType = $('#input_container_type_other').val();
@@ -268,14 +289,20 @@ function saveHeader() {
         seal_no: $('#input_seal').val(),
         cable_seal: $('#input_cable_seal').val(),
         container_no: $('#input_container').val(),
-        container_type: finalCtnType, 
+        container_type: finalCtnType,
         car_license: $('#input_car_license').val(),
         driver_name: $('#input_driver').val(),
         inspector_name: $('#input_inspector').val(),
         supervisor_name: $('#input_supervisor').val()
     };
+
+    showSaveStatus('saving');
+
     return $.post(API_URL, data, function(res) {
-        if (res.success && res.report_id) { $('#current_report_id').val(res.report_id); }
+        if (res.success && res.report_id) {
+            $('#current_report_id').val(res.report_id);
+            showSaveStatus('saved');
+        }
     }, 'json');
 }
 
@@ -287,15 +314,20 @@ function saveSubItem(topicId, topicName, itemIndex, itemName) {
 
     if (!reportId || !result) return;
 
+    showSaveStatus('saving');
+
     $.post(API_URL, {
         action: 'save_checklist_item', report_id: reportId, topic_id: topicId,
         topic_name: topicName, item_index: itemIndex, item_name: itemName,
         result: result, remark: remark
     }, function(res) {
-        if(res.success) recalcTopicStatus(topicId);
+        if(res.success) {
+            recalcTopicStatus(topicId);
+            showSaveStatus('saved');
+        }
     }, 'json');
-    
-    setTimeout(validateCompletion, 100); 
+
+    setTimeout(validateCompletion, 100);
 }
 
 function validateCompletion() {
@@ -314,7 +346,7 @@ function validateCompletion() {
     if (!ctnType || (ctnType === 'OTHER' && !$('#input_container_type_other').val())) infoComplete = false;
     if (!infoComplete) errors.push('Info');
 
-    const totalPhotos = 12; 
+    const totalPhotos = 12;
     const currentPhotos = $('.camera-box.has-image').length;
     $('#badge-photo').text(`${currentPhotos}/${totalPhotos}`);
     if (currentPhotos === totalPhotos) $('#badge-photo').removeClass('bg-light text-dark').addClass('bg-success text-white border-success');
@@ -327,7 +359,7 @@ function validateCompletion() {
     $('input[type=radio]:checked').each(function() {
         checkedCount++;
     });
-    
+
     $('#badge-check').text(`${checkedCount}/${totalItems}`);
     if (checkedCount === totalItems && totalItems > 0) $('#badge-check').removeClass('bg-light text-dark').addClass('bg-success text-white border-success');
     else $('#badge-check').removeClass('bg-success text-white border-success').addClass('bg-light text-dark');
@@ -349,10 +381,10 @@ function triggerPassAll() {
         if (result.isConfirmed) {
             $('#loadingOverlay').css('display', 'flex');
             const reportId = $('#current_report_id').val();
-            
+
             $('input[value="PASS"]').prop('checked', true);
             $('[id^="topic_icon_"]').removeClass('text-white-50 text-warning text-white').addClass('text-success');
-            
+
             $.post(API_URL, { action: 'save_all_pass', report_id: reportId }, function(res) {
                 $('#loadingOverlay').hide();
                 if (res.success) validateCompletion();
@@ -379,10 +411,10 @@ function recalcTopicStatus(topicId) {
 
 function finishInspection() {
     clearTimeout(saveTimer);
-    
+
     saveHeader().then(() => {
         if (!$('#input_seal').val()) { Swal.fire('Missing Data', 'กรุณาระบุ Seal No.', 'warning'); return; }
-        
+
         if (window.currentErrors && window.currentErrors.length > 0) {
             let errorHtml = '<div class="text-start mt-3"><ul class="mb-0">';
             if (window.currentErrors.includes('Info')) errorHtml += '<li><b class="text-danger">Shipment Info:</b> กรอกข้อมูลสำคัญให้ครบถ้วน</li>';
@@ -405,7 +437,7 @@ function finishInspection() {
             showCancelButton: true, confirmButtonText: 'Yes, Finish!', confirmButtonColor: '#198754'
         }).then((result) => {
             if (result.isConfirmed) {
-                $('#loadingOverlay').css('display', 'flex'); 
+                $('#loadingOverlay').css('display', 'flex');
                 $.post(API_URL, { action: 'finish_report', report_id: $('#current_report_id').val() }, function(res) {
                     $('#loadingOverlay').hide();
                     if (res.success) Swal.fire('Success', 'Completed!', 'success').then(() => { loadJobList(); switchView('list'); });
@@ -429,9 +461,54 @@ function reopenReport() {
     });
 }
 
-function triggerCamera(type) {
-    if ($(`#box_${type}`).hasClass('has-image')) { if (!confirm('Replace photo?')) return; }
-    $(`#file_${type}`).click();
+function triggerCamera(type, element) {
+    if ($(element).hasClass('has-image')) {
+        const imgSrc = $(element).find('img').attr('src');
+        currentPreviewType = type;
+
+        $('#previewModalImage').attr('src', imgSrc);
+        $('#previewModalLabel').text($(`#box_${type}`).siblings('.camera-label').text());
+
+        const isCompleted = $('#form-content input').prop('disabled');
+        if (isCompleted) {
+            $('#btnRetakePhoto').hide();
+        } else {
+            $('#btnRetakePhoto').show();
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('photoPreviewModal'));
+        modal.show();
+    } else {
+        openCameraOptions(type);
+    }
+}
+
+function openCameraOptions(type) {
+    Swal.fire({
+        title: 'เลือกวิธีอัปโหลดภาพ',
+        icon: 'info',
+        showDenyButton: true,
+        showCancelButton: false,
+        confirmButtonText: '<i class="fas fa-camera me-2"></i> ถ่ายรูปสด',
+        confirmButtonColor: '#0d6efd',
+        denyButtonText: '<i class="fas fa-images me-2"></i> เลือกจากคลัง',
+        denyButtonColor: '#6c757d',
+        customClass: {
+            confirmButton: 'order-1',
+            denyButton: 'order-2'
+        }
+        
+    }).then((result) => {
+        const $fileInput = $(`#file_${type}`);
+        
+        if (result.isConfirmed) {
+            $fileInput.attr('capture', 'environment');
+            setTimeout(() => { $fileInput.click(); }, 300);
+        } else if (result.isDenied) {
+            $fileInput.removeAttr('capture');
+            setTimeout(() => { $fileInput.click(); }, 300);
+        }
+    });
 }
 
 function handleFileSelect(input, type) {
@@ -443,13 +520,13 @@ function uploadPhoto(file, type) {
     if (!reportId) return;
 
     const $box = $(`#box_${type}`);
-    const originalContent = $box.html(); 
+    const originalContent = $box.html();
     $box.html('<div class="spinner-border text-primary spinner-border-sm"></div>');
 
     resizeImage(file, 1280, 0.7, function(compressedBlob) {
         const fd = new FormData();
         fd.append('action', 'upload_photo');
-        fd.append('file', compressedBlob, file.name.replace(/\.[^/.]+$/, "") + ".jpg"); 
+        fd.append('file', compressedBlob, file.name.replace(/\.[^/.]+$/, "") + ".jpg");
         fd.append('report_id', reportId);
         fd.append('photo_type', type);
 
@@ -458,7 +535,7 @@ function uploadPhoto(file, type) {
             success: function(res) {
                 if (res.success) {
                     showPreview(type, res.path);
-                    setTimeout(validateCompletion, 200); 
+                    setTimeout(validateCompletion, 200);
                 } else { Swal.fire('Failed', res.message, 'error'); $box.html(originalContent); }
             },
             error: function() { Swal.fire('Error', 'Connection failed', 'error'); $box.html(originalContent); }
@@ -500,15 +577,15 @@ function toggleContainerOther() {
 
 function resetInspectionForm() {
     $('input[type="radio"]').prop('checked', false);
-    $('input[type="text"], input[type="datetime-local"], select').val(''); 
+    $('input[type="text"], input[type="datetime-local"], select').val('');
     $('[id^="topic_icon_"]').removeClass('text-success text-warning text-white').addClass('text-white-50');
     $('.camera-box').removeClass('has-image');
     $('.preview-img').remove();
     $('.camera-box i, .camera-box .camera-label').show();
-    
+
     $('#input_container_type_other').addClass('d-none');
     $('#btn_pass_all').prop('disabled', false);
-    
+
     $('#badge-photo').text('0/12').removeClass('bg-success text-white border-success').addClass('bg-light text-dark');
     $('#badge-check').text('0/0').removeClass('bg-success text-white border-success').addClass('bg-light text-dark');
     window.currentErrors = ['Info', 'Photos', 'Checklist'];
