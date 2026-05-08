@@ -115,13 +115,13 @@
                                     
                                     <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
                                         <thead class="bg-light text-muted">
-                                            <tr><th>Max</th><th>Min</th><th>Avg</th></tr>
+                                            <tr><th>Total</th><th>Max</th><th>Min</th></tr>
                                         </thead>
                                         <tbody>
                                             <tr>
-                                                <td id="kpi_time_max" class="fw-bold text-danger">-</td>
+                                                <td id="kpi_time_total" class="fw-bold text-primary">-</td>
+                                                <td id="kpi_time_max" class="text-danger">-</td>
                                                 <td id="kpi_time_min" class="text-success">-</td>
-                                                <td id="kpi_time_avg_small">-</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -223,10 +223,11 @@
                                                 <thead class="bg-light text-secondary sticky-top" style="z-index: 5;">
                                                     <tr>
                                                         <th class="ps-3 py-2" width="20%">Line</th>
-                                                        <th class="py-2" width="30%">Machine</th>
+                                                        <th class="py-2" width="25%">Machine</th>
                                                         <th class="text-center py-2" width="15%">Total Jobs</th>
                                                         <th class="text-center py-2" width="15%">Completed</th>
-                                                        <th class="text-end pe-3 py-2" width="20%">MTTR (min)</th>
+                                                        <th class="text-end pe-3 py-2" width="12%">MTTR (min)</th>
+                                                        <th class="text-end pe-4 py-2" width="13%">Total Time (min)</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody class="border-top-0"></tbody>

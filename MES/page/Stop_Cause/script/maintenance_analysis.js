@@ -99,9 +99,8 @@ const MtDashboard = {
         setVal('kpi_stat_pend', kpi.Count_Pending);
 
         // KPI 3: Time
-        setVal('kpi_mttr', parseInt(kpi.MTTR || 0));
         setVal('kpi_time_avg', parseInt(kpi.Time_Avg || 0));
-        setVal('kpi_time_avg_small', parseInt(kpi.Time_Avg || 0));
+        setVal('kpi_time_total', parseInt(kpi.Time_Total || 0));
         setVal('kpi_time_max', parseInt(kpi.Time_Max || 0));
         setVal('kpi_time_min', parseInt(kpi.Time_Min || 0));
 
@@ -219,8 +218,11 @@ const MtDashboard = {
                 <td>${r.machine}</td>
                 <td class="text-center"><span class="badge bg-light text-dark border">${r.total_count}</span></td>
                 <td class="text-center text-success">${r.completed_count}</td>
-                <td class="text-end pe-4 fw-bold ${r.avg_mttr > 60 ? 'text-danger' : 'text-primary'}">
-                    ${parseInt(r.avg_mttr)} <small class="text-muted fw-normal">min</small>
+                <td class="text-end pe-3">
+                    ${parseInt(r.avg_mttr)} <small class="text-muted">min</small>
+                </td>
+                <td class="text-end pe-4 fw-bold text-dark" style="background-color: rgba(0,0,0,0.02);">
+                    ${parseInt(r.total_repair_time || 0).toLocaleString()}
                 </td>
             </tr>
         `).join('');

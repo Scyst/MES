@@ -8,6 +8,9 @@ let barcodeFound          = false;
 let currentSap            = '';
 let currentProductionType = 'FG';
 let currentPartNo         = '';
+let scanCount             = 0;
+let isProcessing          = false;  // ป้องกัน double-submit
+let saveOkTimer           = null;   // timer สำหรับ barcodeSaveOk badge
 
 // ===== โหลดเริ่มต้น =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -67,7 +70,7 @@ async function loadTodayCount() {
     try {
         const res  = await fetch(`get_today_count.php?_=${Date.now()}`);
         const json = await res.json();
-        document.getElementById('todayDate').textContent = json.success ? json.count : '?';
+        if (json.success) scanCount = parseInt(json.count) || 0;
     } catch (err) {
         console.error('Load today count failed:', err);
     }
@@ -143,12 +146,14 @@ function setupBarcodeInput() {
         barcodeFound  = false;
         currentSap    = '';
         currentPartNo = '';
+        document.getElementById('saveStatus').className = 'status-msg';
     });
 
     // Enter = ค้นหาแล้วบันทึกทันที (ถ้า Lot/Ref + Location พร้อมแล้ว)
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
+            if (isProcessing) return;
             const val = e.target.value.trim();
             if (val.length === 0) return;
 
@@ -171,15 +176,17 @@ function setupBarcodeInput() {
             }
 
             if (val.length === 12) {
+                isProcessing = true;
                 lookupProduct(val).then(found => {
                     const lotRef   = document.getElementById('lotRefInput').value.trim();
                     const location = document.getElementById('locationSelect').value;
 
                     if (!found) {
-                        // Barcode ไม่อยู่ใน master → หยุด (error แสดงใน lookupProduct แล้ว)
+                        isProcessing = false;
                     } else if (found && lotRef && location) {
-                        saveScan();
+                        saveScan().finally(() => { isProcessing = false; });
                     } else {
+                        isProcessing  = false;
                         barcodeFound  = false;
                         currentSap    = '';
                         currentPartNo = '';
@@ -227,36 +234,6 @@ async function lookupProduct(barcode) {
     }
 }
 
-// ===== ตั้งค่าช่อง SKU/Model พร้อมระบุที่มาของข้อมูล =====
-function setFieldValue(inputEl, value, source) {
-    inputEl.value = value;
-
-    const fieldId = inputEl.id;
-    const hintId  = fieldId.replace('Input', '') + 'Hint';
-    const hintEl  = document.getElementById(hintId);
-
-    inputEl.classList.remove('auto-filled', 'manual-filled');
-    if (hintEl) hintEl.className = 'field-hint';
-
-    if (source === 'auto') {
-        inputEl.classList.add('auto-filled');
-        if (hintEl) {
-            hintEl.className = 'field-hint show auto';
-            hintEl.textContent = '✓ Auto-fill';
-        }
-        inputEl.dataset.source = 'auto';
-    } else if (source === 'manual') {
-        inputEl.classList.add('manual-filled');
-        if (hintEl) {
-            hintEl.className = 'field-hint show manual';
-            hintEl.textContent = '✎ กรอกเอง';
-        }
-        inputEl.dataset.source = 'manual';
-    } else {
-        inputEl.dataset.source = '';
-    }
-}
-
 // ===== บันทึกข้อมูล =====
 async function saveScan() {
     const fields = [
@@ -291,7 +268,6 @@ async function saveScan() {
 
     // เก็บค่าหลัง validate ผ่าน
     const barcode      = document.getElementById('barcodeInput').value.trim();
-    const sap          = currentSap;
     const lotRef       = document.getElementById('lotRefInput').value.trim();
     const sel          = document.getElementById('locationSelect');
     const locationId   = sel.value;
@@ -319,9 +295,8 @@ async function saveScan() {
         const json = await res.json();
 
         if (json.success) {
-            const countEl = document.getElementById('todayDate');
-            countEl.textContent = (parseInt(countEl.textContent) || 0) + 1;
-            showStatus(statusEl, 'success', `✅ บันทึกสำเร็จ`);
+            await loadTodayCount();
+            showStatus(statusEl, 'success', '✅ บันทึกสำเร็จ');
 
             // แสดงข้อมูลที่บันทึกไปล่าสุด
             showLastSaved(json.data);
@@ -331,6 +306,12 @@ async function saveScan() {
             currentSap   = '';
             document.getElementById('barcodeInput').value = '';
             document.getElementById('barcodeStatus').classList.remove('show');
+
+            const saveOk = document.getElementById('barcodeSaveOk');
+            saveOk.textContent = 'บันทึกสำเร็จ';
+            saveOk.classList.add('show');
+            if (saveOkTimer) clearTimeout(saveOkTimer);
+            saveOkTimer = setTimeout(() => saveOk.classList.remove('show'), 3000);
             ['barcodeInput', 'lotRefInput', 'locationSelect']
                 .forEach(id => document.getElementById(id).classList.remove('invalid'));
 
@@ -351,38 +332,6 @@ async function saveScan() {
     }
 }
 
-// ===== แสดง Modal แจ้งเตือนทั่วไป =====
-function showInfoModal(icon, title, message) {
-    document.getElementById('alertIcon').textContent    = icon;
-    document.getElementById('alertTitle').textContent   = title;
-    document.getElementById('alertMessage').textContent = message;
-    document.getElementById('missingList').innerHTML    = '';
-    document.getElementById('alertModal').classList.add('show');
-}
-
-// ===== แสดง Modal เตือนกรอกไม่ครบ =====
-function showAlertModal(missingFields) {
-    document.getElementById('alertIcon').textContent  = '⚠️';
-    document.getElementById('alertTitle').textContent = 'กรุณากรอกข้อมูลให้ครบ';
-    document.getElementById('alertMessage').textContent =
-        `กรุณากรอกข้อมูลให้ครบทุกช่อง (ขาด ${missingFields.length} ช่อง):`;
-    document.getElementById('missingList').innerHTML =
-        missingFields.map(f => `<li>${f.label}</li>`).join('');
-    document.getElementById('alertModal').classList.add('show');
-}
-
-function closeAlertModal(event) {
-    // ถ้า click ที่ตัว modal ไม่ใช่ overlay → ไม่ปิด
-    if (event && event.target.id !== 'alertModal' && event.type === 'click') {
-        if (event.target.closest('.alert-dialog')) return;
-    }
-    document.getElementById('alertModal').classList.remove('show');
-}
-
-// ปิด modal เมื่อกด Esc
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeAlertModal();
-});
 
 // ===== เคลียร์ฟอร์ม =====
 function clearForm(full = true) {
@@ -398,12 +347,12 @@ function clearForm(full = true) {
     ['barcodeInput', 'lotRefInput', 'locationSelect']
         .forEach(id => document.getElementById(id).classList.remove('invalid'));
     document.getElementById('barcodeStatus').classList.remove('show');
+    document.getElementById('saveStatus').className = 'status-msg';
     document.getElementById('barcodeInput').focus();
 }
 
 // ===== แสดงข้อมูลที่บันทึกล่าสุด =====
 function showLastSaved(data) {
-    document.getElementById('lsId').textContent       = data.transaction_id || '-';
     document.getElementById('lsBarcode').textContent  = data.barcode        || '-';
     document.getElementById('lsModel').textContent    = currentPartNo       || '-';
     document.getElementById('lsLotRef').textContent   = data.lot_ref        || '-';

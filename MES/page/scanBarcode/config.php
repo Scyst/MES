@@ -1,28 +1,11 @@
 <?php
-// ============================================
-// Database Configuration - Microsoft SQL Server
-// (เชื่อมต่อเข้ากับ Database ที่มีอยู่แล้ว)
-// ============================================
-//
-// ต้องติดตั้ง Driver PHP สำหรับ SQL Server ก่อน:
-//   - Microsoft Drivers for PHP for SQL Server (sqlsrv + pdo_sqlsrv)
-//   - Microsoft ODBC Driver for SQL Server
-//
-// ============================================
-
 // ----- ข้อมูลการเชื่อมต่อ Server -----
 define('DB_HOST',   '10.1.1.31');  // หรือ 'localhost,1433' หรือ IP เช่น '192.168.1.100,1433'
 define('DB_NAME',   'IIOT_TOOLBOX');           // ชื่อ Database หลัก (ตาราง logs)
 define('DB_USER',   'TOOLBOX');                      // SQL Server username
 define('DB_PASS',   'I1o1@T@#1boX');            // SQL Server password
 
-// ตั้งเป็น true ถ้าต้องการใช้ Windows Authentication
 define('USE_WINDOWS_AUTH', false);
-
-// ============================================
-// ----- ตั้งค่าชื่อตาราง / คอลัมน์ ในฐานข้อมูลของคุณ -----
-// ปรับให้ตรงกับโครงสร้างจริงที่มีอยู่ในระบบ
-// ============================================
 
 // ตาราง Master ของสินค้า (IIOT_TOOLBOX)
 define('TBL_PRODUCTS',         '[IIOT_TOOLBOX].[dbo].[ITEMS]');

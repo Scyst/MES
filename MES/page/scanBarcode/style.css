@@ -112,6 +112,15 @@ body {
     font-size: 0.875rem;
 }
 .form-group label .required { color: #dc3545; }
+.save-ok-badge {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #198754;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+}
+.save-ok-badge.show { opacity: 1; }
 
 .form-control {
     width: 100%;

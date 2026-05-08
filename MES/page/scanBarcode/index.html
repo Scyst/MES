@@ -32,7 +32,7 @@
             <form id="scanForm" onsubmit="event.preventDefault(); saveScan();">
 
                 <div class="form-group">
-                    <label>Barcode <span class="required">*</span></label>
+                    <label>Barcode <span class="required">*</span> <span id="barcodeSaveOk" class="save-ok-badge"></span></label>
                     <input type="text" id="barcodeInput" class="form-control"
                            placeholder="ยิงบาร์โค้ดที่นี่..." autocomplete="off" autofocus required>
                     <div id="barcodeStatus" class="status-msg"></div>
@@ -78,20 +78,9 @@
 
         <!-- ===== ข้อมูลที่บันทึกล่าสุด ===== -->
         <div class="card">
-            <div class="stats-row">
-                <div class="stat-box">
-                    <div class="label">ยอดสแกนวันนี้</div>
-                    <div class="value" id="todayDate">-</div>
-                </div>
-            </div>
-
             <div id="lastSavedPanel" class="last-saved-panel">
                 <div class="last-saved-title">บันทึกล่าสุด</div>
                 <div class="last-saved-grid">
-                    <div class="last-saved-row">
-                        <span class="ls-label">ID</span>
-                        <span class="ls-value" id="lsId">-</span>
-                    </div>
                     <div class="last-saved-row">
                         <span class="ls-label">Barcode</span>
                         <span class="ls-value ls-barcode" id="lsBarcode">-</span>
@@ -117,7 +106,7 @@
                         <span class="ls-value" id="lsNotes">-</span>
                     </div>
                     <div class="last-saved-row">
-                        <span class="ls-label">เวลา</span>
+                        <span class="ls-label">Time</span>
                         <span class="ls-value" id="lsDate">-</span>
                     </div>
                 </div>
