@@ -166,6 +166,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         $themeProd = 'text-primary bg-primary bg-opacity-10';
                         renderServiceLink('Production Entry', 'บันทึกผลผลิตประจำวัน', '<i class="fas fa-boxes"></i>', '../production/productionUI.php', 'view_production', $themeProd);
                         renderServiceLink('Mobile Entry', 'ลงยอดผ่านมือถือ', '<i class="fas fa-mobile-alt"></i>', '../production/mobile_app.php', 'view_production', $themeProd);
+                        renderServiceLink('Scan Barcode', 'ระบบสแกนบาร์โค้ด', '<i class="fas fa-barcode"></i>', '../scanBarcode/index.html', 'view_production', $themeProd);
                         renderServiceLink('Tag Printer', 'พิมพ์แท็กส่งงาน (WIP/FG)', '<i class="fas fa-print"></i>', '../production/label_printer.php', 'print_label', $themeProd);
                         renderServiceLink('Stop Causes', 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../Stop_Cause/Stop_Cause.php', 'view_production', $themeProd);
                         ?>
@@ -207,6 +208,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('Management Dashboard', 'แดชบอร์ดผู้บริหารระดับสูง', '<i class="fas fa-tachometer-alt"></i>', '../management/managementDashboard.php', 'view_executive', $themeExec);
                         renderServiceLink('Daily Command Center', 'ศูนย์สั่งการและติดตามสถานะ', '<i class="fas fa-layer-group"></i>', '../planning/daily_meeting.php', 'view_dashboard', $themeExec);
                         renderServiceLink('Manpower', 'จัดการกำลังคนประจำวัน', '<i class="fas fa-users-cog"></i>', '../manpower/manpowerUI.php', 'view_manpower', $themeExec);
+                        renderServiceLink('Mood Insight Report', 'รายงานวิเคราะห์ภาพรวมความรู้สึก', '<i class="fas fa-heartbeat"></i>', '../dailyLog/moodReport.php', 'view_executive', $themeExec);
                         renderServiceLink('Daily P&L', 'บันทึกและวิเคราะห์งบกำไรขาดทุน', '<i class="fas fa-donate"></i>', '../dailyPL/pl_entry.php', 'view_pl', $themeExec);
                         renderServiceLink('Invoice Management', 'ระบบออกบิลและจัดการเวอร์ชัน', '<i class="fas fa-file-invoice-dollar"></i>', '../autoInvoice/finance_dashboard.php', 'manage_invoice', $themeExec);
                         renderServiceLink('Sales Tracking', 'ติดตามสถานะ PO', '<i class="fas fa-shipping-fast"></i>', '../sales/salesDashboard.php', 'view_sales', $themeExec);
