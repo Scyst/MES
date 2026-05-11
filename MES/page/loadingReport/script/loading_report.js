@@ -192,9 +192,35 @@ async function openReport(soId) {
 
         if (h.report_id) {
             $('#current_report_id').val(h.report_id);
+            
+            let hasPrepPhotos = false;
+            let legacyPhotoCount = 0;
+            
+            const claimCheckKeys = ['cargo_top_1', 'cargo_top_2', 'cargo_left', 'cargo_right'];
+            const legacyKeys = ['undercarriage', 'outside_door', 'right_side', 'left_side', 'floor_moisture', 'front_wall', 'cargo_moisture', 'ceiling_roof', 'floor', 'inside_empty', 'inside_loaded', 'seal_lock'];
+            
             if (res.photos) {
-                for (const [type, path] of Object.entries(res.photos)) showPreview(type, path);
+                for (const [type, path] of Object.entries(res.photos)) {
+                    showPreview(type, path);
+                    if (claimCheckKeys.includes(type)) {
+                        hasPrepPhotos = true;
+                    }
+                    if (legacyKeys.includes(type)) {
+                        legacyPhotoCount++;
+                    }
+                }
             }
+            
+            const currentStatus = (h.status || h.report_status || '').toString().toUpperCase().trim();
+            const isLegacyCompleted = (currentStatus === 'COMPLETED' && !hasPrepPhotos);
+            const isLegacyUnlocked = (currentStatus !== 'COMPLETED' && legacyPhotoCount >= 8 && !hasPrepPhotos);
+
+            if (isLegacyCompleted || isLegacyUnlocked) {
+                $('#box_cargo_top_1, #box_cargo_top_2, #box_cargo_left, #box_cargo_right').closest('.camera-wrapper').hide();
+            } else {
+                $('.camera-wrapper').show();
+            }
+
             loadChecklistData();
         } else {
             const saveRes = await saveHeaderPromise();
@@ -384,9 +410,12 @@ function validateCompletion() {
     if (!ctnType || (ctnType === 'OTHER' && !$('#input_container_type_other').val())) infoComplete = false;
     if (!infoComplete) errors.push('Info');
 
-    const totalPhotos = 12;
+    const isLegacy = $('#box_cargo_top_1').closest('.camera-wrapper').is(':hidden');
+    const totalPhotos = isLegacy ? 12 : 16;
+    
     const currentPhotos = $('.camera-box.has-image').length;
     $('#badge-photo').text(`${currentPhotos}/${totalPhotos}`);
+    
     if (currentPhotos === totalPhotos) $('#badge-photo').removeClass('bg-light text-dark').addClass('bg-success text-white border-success');
     else $('#badge-photo').removeClass('bg-success text-white border-success').addClass('bg-light text-dark');
     if (currentPhotos < totalPhotos) errors.push('Photos');
@@ -456,7 +485,7 @@ function finishInspection() {
         if (window.currentErrors && window.currentErrors.length > 0) {
             let errorHtml = '<div class="text-start mt-3"><ul class="mb-0">';
             if (window.currentErrors.includes('Info')) errorHtml += '<li><b class="text-danger">Shipment Info:</b> กรอกข้อมูลสำคัญให้ครบถ้วน</li>';
-            if (window.currentErrors.includes('Photos')) errorHtml += '<li><b class="text-danger">Photos:</b> ถ่ายภาพให้ครบ 12 จุด</li>';
+            if (window.currentErrors.includes('Photos')) errorHtml += '<li><b class="text-danger">Photos:</b> ถ่ายภาพให้ครบ 16 จุด</li>';
             if (window.currentErrors.includes('Checklist')) errorHtml += '<li><b class="text-danger">Checklist:</b> ตรวจสอบรายการให้ครบ 10 ข้อ</li>';
             errorHtml += '</ul></div>';
 
@@ -617,10 +646,8 @@ function resetInspectionForm() {
     $('input[type="radio"]').prop('checked', false);
     $('input[type="text"], input[type="datetime-local"], select').val('');
     $('[id^="topic_icon_"]').removeClass('text-success text-warning text-white').addClass('text-white-50');
-    $('.camera-box').removeClass('has-image');
-    $('.preview-img').remove();
-    $('.camera-box i, .camera-box .camera-label').show();
-
+    $('.camera-box').removeClass('has-image').empty().append('<i class="fas fa-camera fa-2x text-secondary opacity-50"></i>');
+    
     $('#input_container_type_other').addClass('d-none');
     $('#btn_pass_all').prop('disabled', false);
 

@@ -79,15 +79,15 @@ $defaultEnd = date('Y-m-d');
                             <div class="flex-grow-1 overflow-auto hide-scrollbar p-2 px-md-3 py-md-2">
                                 
                                 <div class="card border-0 shadow-sm mb-3 flex-shrink-0">
-                                    <div class="card-header bg-primary text-white p-3 d-flex justify-content-between align-items-center border-0 rounded-top">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <button class="btn btn-sm btn-light text-primary d-lg-none rounded-circle shadow-sm" onclick="switchView('list')" style="width: 32px; height: 32px; padding: 0;">
+                                    <div class="card-header bg-primary text-white p-2 p-md-3 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center border-0 rounded-top gap-2">
+                                        <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
+                                            <button class="btn btn-sm btn-light text-primary d-lg-none rounded-circle shadow-sm flex-shrink-0" onclick="switchView('list')" style="width: 32px; height: 32px; padding: 0;">
                                                 <i class="fas fa-arrow-left"></i>
                                             </button>
-                                            <h5 class="mb-0 fw-bold" id="disp_po_head">LOADING...</h5>
-                                            <span id="save_indicator" class="save-status-indicator ms-2"></span>
+                                            <h5 class="mb-0 fw-bold text-break" id="disp_po_head">LOADING...</h5>
+                                            <span id="save_indicator" class="save-status-indicator flex-shrink-0 ms-auto ms-md-2"></span>
                                         </div>
-                                        <span class="badge bg-white text-primary fw-bold px-2 py-1 fs-6 shadow-sm d-none" id="disp_invoice_badge">INV: <span id="disp_invoice">-</span></span>
+                                        <span class="badge bg-white text-primary fw-bold px-2 py-1 fs-6 shadow-sm align-self-end align-self-md-auto text-break d-none" id="disp_invoice_badge" style="max-width: 100%; white-space: normal;">INV: <span id="disp_invoice">-</span></span>
                                     </div>
                                     <div class="card-body p-2 p-md-2 bg-white rounded-bottom">
                                         <div class="row g-2 text-center">
@@ -101,8 +101,7 @@ $defaultEnd = date('Y-m-d');
 
                                 <ul class="nav nav-pills custom-pills mb-3 w-100" id="reportTabs" role="tablist">
                                     <li class="nav-item flex-fill" role="presentation">
-                                        <button class="nav-link w-100 active text-center" id="info-tab" data-bs-toggle="tab" data-bs-target="#tab-info" type="button" role="tab">ข้อมูล & ภาพถ่าย <span class="badge bg-light text-dark ms-1 border" id="badge-photo">0/12</span>
-                                        </button>
+                                        <button class="nav-link w-100 active text-center" id="info-tab" data-bs-toggle="tab" data-bs-target="#tab-info" type="button" role="tab">ข้อมูล & ภาพถ่าย <span class="badge bg-light text-dark ms-1 border" id="badge-photo">0/16</span></button>
                                     </li>
                                     <li class="nav-item flex-fill" role="presentation">
                                         <button class="nav-link w-100 text-center" id="check-tab" data-bs-toggle="tab" data-bs-target="#tab-check" type="button" role="tab">10-Point Checklist <span class="badge bg-light text-dark ms-1 border" id="badge-check">0/0</span></button>
@@ -163,20 +162,30 @@ $defaultEnd = date('Y-m-d');
                                         </div>
                                         
                                         <div class="card shadow-sm mt-3 border-0 border-top border-warning border-3">
-                                            <div class="card-header bg-white border-bottom fw-bold text-dark py-2"><i class="fas fa-camera text-warning me-2"></i>Photo Evidence (12 Points)</div>
+                                            <div class="card-header bg-white border-bottom fw-bold text-dark py-2"><i class="fas fa-camera text-warning me-2"></i>Photo Evidence (16 Points)</div>
                                             <div class="card-body p-3 pt-0">
                                                 <div class="photo-grid">
                                                     <?php 
-                                                    $photoPoints = [
-                                                        'undercarriage' => '1. Gate Pass (ใบผ่าน รปภ.)', 'outside_door' => '2. Seal Condition (สภาพซีล)',
-                                                        'right_side' => '3. Container No. (เบอร์ตู้)', 'left_side' => '4. Empty Cont. (ตู้เปล่า)',
-                                                        'floor_moisture' => '5. Floor Moisture (ความชื้นพื้นตู้)', 'front_wall' => '6. Half Loaded (ครึ่งตู้)',
-                                                        'cargo_moisture' => '7. Cargo Moisture (ความชื้นสินค้า)', 'ceiling_roof' => '8. Full Loaded (เต็มตู้)',
-                                                        'floor' => '9. Right Door (ปิดขวา)', 'inside_empty' => '10. All Doors (ปิด 2 ฝั่ง)',
-                                                        'inside_loaded' => '11. Seal Lock (ล็อคซีล)', 'seal_lock' => '12. Shipping Doc (ใบของออก)'
-                                                    ];
-                                                    foreach ($photoPoints as $key => $label): 
-                                                    ?>
+                                                        $photoPoints = [
+                                                            'cargo_top_1' => 'Pre-Load: Top 1 (สภาพสินค้า ด้านบน 1)',
+                                                            'cargo_top_2' => 'Pre-Load: Top 2 (สภาพสินค้า ด้านบน 2)',
+                                                            'cargo_left'  => 'Pre-Load: Left Side (สภาพสินค้า ด้านซ้าย)',
+                                                            'cargo_right' => 'Pre-Load: Right Side (สภาพสินค้า ด้านขวา)',
+                                                            'undercarriage'  => 'Gate Pass (ใบผ่าน รปภ.)',
+                                                            'outside_door'   => 'Seal Condition (สภาพซีล)',
+                                                            'right_side'     => 'Container No. (เบอร์ตู้)',
+                                                            'left_side'      => 'Empty Container (ตู้เปล่า)',
+                                                            'floor_moisture' => 'Floor Moisture (ความชื้นพื้นตู้)',
+                                                            'front_wall'     => 'Half Loaded (ครึ่งตู้)',
+                                                            'cargo_moisture' => 'Cargo Moisture (ความชื้นสินค้า)',
+                                                            'ceiling_roof'   => 'Full Loaded (เต็มตู้)',
+                                                            'floor'          => 'Right Door Closed (ปิดขวา)',
+                                                            'inside_empty'   => 'All Doors Closed (ปิด 2 ฝั่ง)',
+                                                            'inside_loaded'  => 'Seal Lock (ล็อคซีล)',
+                                                            'seal_lock'      => 'Shipping Doc (ใบของออก)'
+                                                        ];
+                                                        foreach ($photoPoints as $key => $label): 
+                                                        ?>
                                                     <div class="camera-wrapper">
                                                         <div class="camera-box shadow-sm" id="box_<?php echo $key; ?>" onclick="triggerCamera('<?php echo $key; ?>', this)">
                                                             <i class="fas fa-camera fa-2x text-secondary opacity-50"></i>

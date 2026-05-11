@@ -152,10 +152,22 @@ function renderContainerTypeCheck($currentValue, $targetLabel, $displayLabel = n
         .green-table th { background-color: #6dae48; color: black; border: 1px solid #000; padding: 3px; text-align: center; }
         .green-table td { border: 1px solid #000; padding: 3px; text-align: center; height: 20px; }
 
-        .photo-table { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
+        .photo-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: <?php echo ($photo_count <= 12) ? '20px' : '5px'; ?>;
+            table-layout: fixed; 
+        }
         .photo-table td { border: 1px solid #000; padding: 0; vertical-align: top; width: 25%; }
         .photo-label-top { text-align: center; font-size: 8px; font-weight: bold; padding: 2px 0; border-bottom: 1px solid #000; background: #eee; }
-        .photo-img-box { height: 250px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 2px; }
+        .photo-img-box { 
+            height: <?php echo $img_box_height; ?>;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            overflow: hidden; 
+            padding: 2px; 
+        }
         .photo-img-box img { width: 100%; height: 100%; object-fit: contain; }
 
         .page-footer-blue { margin-top: 10px; height: 35px; background-color: #8faadc; border: 1px solid #000; display: flex; align-items: center; justify-content: center; position: relative; }
@@ -231,20 +243,40 @@ function renderContainerTypeCheck($currentValue, $targetLabel, $displayLabel = n
         <table class="photo-table">
             <?php 
             $photo_list = [
-                'undercarriage' => '1. Gate Pass (ใบผ่าน รปภ.)',
-                'outside_door' => '2. Seal Condition (สภาพซีล)',
-                'right_side' => '3. Container No. (เบอร์ตู้)',
-                'left_side' => '4. Empty Container (ตู้เปล่า)',
-                'floor_moisture' => '5. Floor Moisture (ความชื้นพื้นตู้)',
-                'front_wall' => '6. Half Loaded (ครึ่งตู้)',
-                'cargo_moisture' => '7. Cargo Moisture (ความชื้นสินค้า)',
-                'ceiling_roof' => '8. Full Loaded (เต็มตู้)',
-                'floor' => '9. Right Door Closed (ปิดขวา)',
-                'inside_empty' => '10. All Doors Closed (ปิด 2 ฝั่ง)',
-                'inside_loaded' => '11. Seal Lock (ล็อคซีล)',
-                'seal_lock' => '12. Shipping Doc (ใบของออก)'
+                'cargo_top_1' => 'Pre-Load: Top 1 (สภาพสินค้า ด้านบน 1)',
+                'cargo_top_2' => 'Pre-Load: Top 2 (สภาพสินค้า ด้านบน 2)',
+                'cargo_left'  => 'Pre-Load: Left Side (สภาพสินค้า ด้านซ้าย)',
+                'cargo_right' => 'Pre-Load: Right Side (สภาพสินค้า ด้านขวา)',
+                'undercarriage'  => 'Gate Pass (ใบผ่าน รปภ.)',
+                'outside_door'   => 'Seal Condition (สภาพซีล)',
+                'right_side'     => 'Container No. (เบอร์ตู้)',
+                'left_side'      => 'Empty Container (ตู้เปล่า)',
+                'floor_moisture' => 'Floor Moisture (ความชื้นพื้นตู้)',
+                'front_wall'     => 'Half Loaded (ครึ่งตู้)',
+                'cargo_moisture' => 'Cargo Moisture (ความชื้นสินค้า)',
+                'ceiling_roof'   => 'Full Loaded (เต็มตู้)',
+                'floor'          => 'Right Door Closed (ปิดขวา)',
+                'inside_empty'   => 'All Doors Closed (ปิด 2 ฝั่ง)',
+                'inside_loaded'  => 'Seal Lock (ล็อคซีล)',
+                'seal_lock'      => 'Shipping Doc (ใบของออก)'
             ];
+
+            $claim_keys = ['cargo_top_1', 'cargo_top_2', 'cargo_left', 'cargo_right'];
+            $has_claim_photos = false;
+            foreach ($claim_keys as $ck) {
+                if (isset($photos[$ck])) { $has_claim_photos = true; break; }
+            }
+
+            if (!$has_claim_photos && $header['status'] === 'COMPLETED') {
+                foreach ($claim_keys as $ck) unset($photo_list[$ck]);
+            }
+
+            $photo_count = count($photo_list);
+            $img_box_height = ($photo_count <= 12) ? '245px' : '180px';
+
             $chunks = array_chunk($photo_list, 4, true);
+            $photo_counter = 1; 
+            
             foreach ($chunks as $rowItems):
             ?>
             <tr>
@@ -252,7 +284,7 @@ function renderContainerTypeCheck($currentValue, $targetLabel, $displayLabel = n
                     $img = isset($photos[$key]) ? $photos[$key] : '';
                 ?>
                 <td>
-                    <div class="photo-label-top"><?php echo $label; ?></div>
+                    <div class="photo-label-top"><?php echo $photo_counter++ . '. ' . $label; ?></div>
                     <div class="photo-img-box">
                         <?php if ($img): ?>
                             <img src="<?php echo $img; ?>">
