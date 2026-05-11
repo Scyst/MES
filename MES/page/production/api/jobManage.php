@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../components/init.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+// ตรวจสอบ CSRF Token
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
@@ -47,6 +48,7 @@ try {
 
         case 'start_job':
             $job_id = $input['job_id'];
+
             $stmt = $pdo->prepare("SELECT job_no FROM PRODUCTION_JOBS WHERE job_id = ?");
             $stmt->execute([$job_id]);
             $jobNo = $stmt->fetchColumn();
@@ -75,7 +77,8 @@ try {
 
             $pdo->beginTransaction();
 
-            $stmt = $pdo->prepare("SELECT * FROM PRODUCTION_JOBS WHERE job_id = ? AND status = 'RUNNING' WITH (UPDLOCK)");
+            // 🟢 [FIXED] เลื่อน WITH (UPDLOCK) มาหลังชื่อตาราง
+            $stmt = $pdo->prepare("SELECT * FROM PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ? AND status = 'RUNNING'");
             $stmt->execute([$job_id]);
             $job = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -101,10 +104,12 @@ try {
                 $pdo->prepare($sqlHold)->execute([
                     $newHoldJobNo, $job['location_id'], $job['item_id'], $add_hold, $currentUser['id']
                 ]);
+
                 writeLog($pdo, 'AUTO_CREATE_QA_JOB', 'PRODUCTION_JOBS', $newHoldJobNo, null, ['target_qty' => $add_hold], "Auto generated from hold qty of " . $job['job_no']);
             }
 
             $pdo->commit();
+
             writeLog($pdo, 'RECORD_OUTPUT', 'PRODUCTION_JOBS', $job['job_no'], null, ['add_fg' => $add_actual, 'add_hold' => $add_hold, 'add_scrap' => $add_scrap], "Recorded incremental output");
             
             echo json_encode(['success' => true, 'message' => "บันทึกยอดสะสมเรียบร้อยแล้ว"]);
@@ -132,6 +137,7 @@ try {
         case 'edit_job':
             $job_id = $input['job_id'];
             $target_qty = $input['target_qty'];
+            
             $stmt = $pdo->prepare("SELECT job_no, target_qty FROM PRODUCTION_JOBS WHERE job_id = ?");
             $stmt->execute([$job_id]);
             $oldJob = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -187,7 +193,9 @@ try {
             $pdo->beginTransaction();
 
             $prefix = "WK-" . date('ym') . "-";
-            $stmt = $pdo->prepare("SELECT TOP 1 job_no FROM PRODUCTION_JOBS WHERE job_no LIKE ? WITH (UPDLOCK) ORDER BY job_id DESC");
+            
+            // 🟢 [FIXED] เลื่อน WITH (UPDLOCK) มาหลังชื่อตาราง
+            $stmt = $pdo->prepare("SELECT TOP 1 job_no FROM PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_no LIKE ? ORDER BY job_id DESC");
             $stmt->execute([$prefix . '%']);
             $lastJob = $stmt->fetchColumn();
 
@@ -201,6 +209,7 @@ try {
                     VALUES (?, ?, ?, ?, 'PENDING', ?, GETDATE())";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$job_no, $location_id, $item_id, $target_qty, $currentUser['id']]);
+
             $pdo->commit();
 
             writeLog($pdo, 'CREATE_JOB', 'PRODUCTION_JOBS', $job_no, null, ['location_id' => $location_id, 'item_id' => $item_id, 'target_qty' => $target_qty], "Created new production job");

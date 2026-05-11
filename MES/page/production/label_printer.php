@@ -9,7 +9,6 @@
         exit;
     }
 
-    // 🌟 เปลี่ยนชื่อระบบให้ตรงกับบริบทหน้างานจริง
     $pageTitle = "Production Tag Printer";
     $pageIcon = "fas fa-tags";
     $pageHeaderTitle = "Production Tag Printer";

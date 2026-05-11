@@ -23,7 +23,6 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <style>
-        /* 🌟 Custom Scrollbar & Table Settings (Enterprise Theme) */
         .table-scrollable {
             overflow-x: auto;
             max-height: calc(100vh - 280px);
@@ -41,42 +40,39 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
 
         .table-settings th { font-size: 0.75rem; letter-spacing: 0.5px; vertical-align: middle; text-transform: uppercase; }
         .table-settings td { font-size: 0.8rem; vertical-align: middle; }
-        
-        /* 🚀 1. ปรับแต่ง Nav Pills ให้เลื่อนซ้าย-ขวาได้บนมือถือ */
+    
         .nav-pills.custom-pills {
-            flex-wrap: nowrap; /* ห้ามตกบรรทัด */
-            overflow-x: auto; /* เลื่อนซ้ายขวาได้ */
+            flex-wrap: nowrap;
+            overflow-x: auto;
             overflow-y: hidden;
-            -webkit-overflow-scrolling: touch; /* ปัดลื่นๆ บนมือถือ */
+            -webkit-overflow-scrolling: touch;
             border-bottom: 1px solid var(--bs-border-color);
             padding-bottom: 0.5rem;
-            -ms-overflow-style: none; /* ซ่อน scrollbar IE/Edge */
-            scrollbar-width: none; /* ซ่อน scrollbar Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
         .nav-pills.custom-pills::-webkit-scrollbar {
-            display: none; /* ซ่อน scrollbar Chrome/Safari */
+            display: none;
         }
         .nav-pills.custom-pills .nav-item {
-            flex: 0 0 auto; /* ป้องกันแท็บหดตัว */
+            flex: 0 0 auto;
         }
         .nav-pills.custom-pills .nav-link {
             color: #6c757d; font-weight: 600; font-size: 0.85rem; border-radius: 50rem; padding: 0.4rem 1rem; margin-right: 0.5rem;
-            white-space: nowrap; /* ห้ามข้อความในแท็บตกบรรทัด */
+            white-space: nowrap;
         }
         .nav-pills.custom-pills .nav-link.active {
             background-color: rgba(13, 110, 253, 0.1); color: #0d6efd; border: 1px solid #0d6efd;
         }
 
-        /* 🚀 ซ่อน Scrollbar แนวนอนของปุ่ม Toolbar บนมือถือ */
         .custom-scrollbar-hide {
-            -ms-overflow-style: none; /* IE/Edge */
-            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
         .custom-scrollbar-hide::-webkit-scrollbar {
-            display: none; /* Chrome/Safari */
+            display: none;
         }
 
-        /* FAB Button (Mobile Only) */
         @media (max-width: 991.98px) {
             .fab-container { position: fixed; bottom: 80px; right: 25px; z-index: 1060; }
             .fab-btn {
@@ -87,13 +83,11 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
             .fab-btn:active { transform: scale(0.95); }
         }
 
-        /* 🚀 ซ่อนข้อความปุ่มใน Toolbar บนมือถือ และขยายให้เต็มพื้นที่ (รองรับปุ่ม Dropdown) */
         @media (max-width: 767.98px) {
             #dynamic-button-group {
                 width: 100%;
             }
             
-            /* 🚀 บังคับให้ปุ่มธรรมดา หรือ กล่อง Dropdown ขยายตัวแบ่งพื้นที่เท่าๆ กัน */
             #dynamic-button-group > .btn,
             #dynamic-button-group > .dropdown {
                 flex: 1;
@@ -101,7 +95,7 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
             }
             
             #dynamic-button-group .btn {
-                width: 100%; /* ให้ปุ่มกางเต็มกล่องครอบ */
+                width: 100%;
                 font-size: 0 !important; 
                 padding: 0.45rem 0 !important; 
                 min-width: 36px; 
@@ -117,12 +111,10 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
                 margin: 0 !important; 
             }
 
-            /* ซ่อนลูกศร Dropdown (Caret) เพราะเราโชว์แค่ไอคอนแล้ว */
             #dynamic-button-group .dropdown-toggle::after {
                 display: none !important;
             }
 
-            /* 🚀 ป้องกัน Dropdown Menu โดนบัง */
             #dynamic-button-group .dropdown-menu {
                 z-index: 1060 !important;
                 position: absolute !important;
