@@ -23,7 +23,6 @@ $pageHeaderSubtitle = "ระบบแสดงคิวงานและใบ
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <style>
-        /* 🌟 KFC Board Card Styles */
         .job-card {
             border: 1px solid var(--bs-border-color);
             border-radius: 12px;
@@ -56,7 +55,6 @@ $pageHeaderSubtitle = "ระบบแสดงคิวงานและใบ
             #dynamic-button-group .btn { flex: 1; width: 100%; justify-content: center; }
         }
 
-        /* 🌟 Native Autocomplete Styles (จากระบบเดิมของคุณ) */
         .autocomplete-results {
             background: var(--bs-body-bg); color: var(--bs-body-color); 
             list-style: none; padding: 0; margin: 0; border: 1px solid var(--bs-border-color);
@@ -66,6 +64,10 @@ $pageHeaderSubtitle = "ระบบแสดงคิวงานและใบ
         }
         .autocomplete-results li { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid var(--bs-border-color); font-size: 0.95rem; }
         .autocomplete-results li:hover, .autocomplete-results li.active { background-color: var(--bs-primary); color: #fff; }
+
+        .queue-controls { display: flex; flex-direction: column; gap: 5px; margin-left: 10px; }
+        .btn-queue { padding: 2px 8px; font-size: 0.7rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid white; border-radius: 4px; }
+        .btn-queue:hover { background: white; color: black; }
     </style>
 </head>
 
@@ -79,16 +81,23 @@ $pageHeaderSubtitle = "ระบบแสดงคิวงานและใบ
             <div class="bg-white border rounded-3 shadow-sm p-3 mb-3">
                 
                 <div class="row g-2 align-items-center mb-4 pb-3 border-bottom">
-                    <div class="col-12 col-md-4">
-                        <div class="input-group input-group-sm shadow-sm flex-grow-1">
+                    <div class="col-12 col-md-5 d-flex gap-2"> <div class="input-group input-group-sm shadow-sm flex-grow-1">
                             <span class="input-group-text bg-white"><i class="fas fa-filter text-muted"></i></span>
                             <select id="locationSelect" class="form-select border-start-0 fw-bold text-primary">
                                 <option value="">-- เลือกไลน์ผลิตเพื่อดูคิวงาน --</option>
                             </select>
                         </div>
+                        
+                        <div class="btn-group btn-group-sm shadow-sm" role="group">
+                            <input type="radio" class="btn-check" name="jobfilter" id="filterAll" checked onchange="setJobFilter('ALL')">
+                            <label class="btn btn-outline-secondary fw-bold" for="filterAll">ทั้งหมด</label>
+
+                            <input type="radio" class="btn-check" name="jobfilter" id="filterQA" onchange="setJobFilter('QA')">
+                            <label class="btn btn-outline-warning text-dark fw-bold" for="filterQA" title="งานตรวจสอบ"><i class="fas fa-search"></i> QA</label>
+                        </div>
                     </div>
 
-                    <div class="col-12 col-md-8 d-flex justify-content-start justify-content-md-end gap-2" id="dynamic-button-group">
+                    <div class="col-12 col-md-7 d-flex justify-content-start justify-content-md-end gap-2" id="dynamic-button-group">
                         <?php if ($canAdd): ?>
                         <button class="btn btn-sm btn-primary shadow-sm px-3" onclick="openCreateJobModal()">
                             <i class="fas fa-plus-circle me-1"></i> <b>เปิด Job ใหม่</b>
@@ -215,13 +224,35 @@ $pageHeaderSubtitle = "ระบบแสดงคิวงานและใบ
         </div>
     </div>
 
+    <div class="modal fade" id="jobLogsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">แก้ไขรายการที่บันทึกผิด (Job Logs)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>เวลา</th>
+                                <th>ประเภท</th>
+                                <th class="text-end">จำนวน</th>
+                                <th class="text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jobLogsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const canManage = <?php echo json_encode($canManage); ?>;
         const canAdd = <?php echo json_encode($canAdd); ?>;
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
     </script>
-    
-    <?php include_once '../components/common_scripts.php'; ?>
     <script src="script/jobQueue.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
