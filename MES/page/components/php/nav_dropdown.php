@@ -1,9 +1,4 @@
 <nav class="sidebar" id="sidebar" data-state="collapsed">
-    <?php 
-        $userRole = $_SESSION['user']['role'] ?? null; 
-        $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'Guest';
-    ?>
-    
     <ul class="custom-dropdown list-unstyled" id="desktopAccordionMenu">
         
         <li class="p-2 position-sticky top-0 bg-body" style="z-index: 10;">
@@ -119,6 +114,23 @@
             </div>
         </li>
         <?php endif; ?>
+        
+        <?php if ($userRole && in_array($userRole, ['admin', 'creator'])): ?>
+        <li class="bg-warning bg-opacity-10 border-top border-bottom border-warning border-opacity-50 mt-3">
+            <a class="dropdown-item-icon text-warning-emphasis fw-bold" data-bs-toggle="collapse" href="#collapseSandbox" role="button">
+                <i class="fas fa-flask fa-fw"></i>
+                <span>SANDBOX (TEST)</span>
+                <i class="fas fa-chevron-down ms-auto text-warning-emphasis" style="font-size: 0.7em;"></i>
+            </a>
+            <div class="collapse" id="collapseSandbox" data-bs-parent="#desktopAccordionMenu">
+                <ul class="list-unstyled ms-3 ps-2 border-start border-warning py-1 mb-0">
+                    <li><a class="dropdown-item-icon py-1 text-warning-emphasis" href="../managementCopy/managementDashboard.php"><i class="fas fa-tachometer-alt fa-fw"></i><span>Plan Dashboard (Test)</span></a></li>
+                    <li><a class="dropdown-item-icon py-1 text-warning-emphasis" href="../productionCopy/productionUI.php"><i class="fas fa-boxes fa-fw"></i><span>Production (Test)</span></a></li>
+                    <li><a class="dropdown-item-icon py-1 text-warning-emphasis" href="../salesCopy/salesDashboard.php"><i class="fas fa-shipping-fast fa-fw"></i><span>Sales Tracking (Test)</span></a></li>
+                </ul>
+            </div>
+        </li>
+        <?php endif; ?>
     </ul>
 </nav>
 
@@ -199,6 +211,12 @@
             <?php endif; ?>
             <?php endif; ?>
 
+            <?php if ($userRole && in_array($userRole, ['admin', 'creator'])): ?>
+            <div class="bg-warning px-3 py-2 fw-bold small text-dark text-uppercase border-top border-warning border-opacity-50">SANDBOX (TEST)</div>
+            <a class="list-group-item list-group-item-action text-warning-emphasis fw-bold bg-warning bg-opacity-10" href="../managementCopy/managementDashboard.php"><i class="fas fa-tachometer-alt fa-fw me-3"></i> Plan Dashboard (Test)</a>
+            <a class="list-group-item list-group-item-action text-warning-emphasis fw-bold bg-warning bg-opacity-10" href="../productionCopy/productionUI.php"><i class="fas fa-boxes fa-fw me-3"></i> Production (Test)</a>
+            <a class="list-group-item list-group-item-action text-warning-emphasis fw-bold bg-warning bg-opacity-10 border-bottom border-warning border-opacity-50" href="../salesCopy/salesDashboard.php"><i class="fas fa-shipping-fast fa-fw me-3"></i> Sales (Test)</a>
+            <?php endif; ?>
             <div class="p-3 mt-4 border-top">
                 <a class="btn btn-outline-danger w-100 logout-action" href="../../auth/logout.php">
                     <i class="fas fa-sign-out-alt me-2"></i> ออกจากระบบ

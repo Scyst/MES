@@ -45,7 +45,6 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
     </script>
 </head>
 <body class="dashboard-page">
-
     <div id="main-content">
         <div class="portal-header">
             <div class="d-flex align-items-center">
@@ -228,7 +227,22 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                     </div>
                 </div>
 
-            </div>
+                <?php if ($userRole && in_array($userRole, ['admin', 'creator'])): ?>
+                <div class="service-group mt-4">
+                    <div class="service-group-title fw-bold text-warning border-bottom border-warning border-opacity-50 pb-1 mb-3">
+                        <i class="fas fa-flask me-1"></i> SANDBOX (TEST ENVIRONMENT)
+                    </div>
+                    <div class="service-grid">
+                        <?php
+                        $themeTest = 'text-warning bg-warning bg-opacity-10 border border-warning border-opacity-25';
+                        renderServiceLink('Plan Dashboard (Test)', 'ระบบวางแผนการผลิต (ทดสอบ)', '<i class="fas fa-tachometer-alt"></i>', '../managementCopy/managementDashboard.php', '', $themeTest);
+                        renderServiceLink('Production (Test)', 'ระบบบันทึกผลผลิต (ทดสอบ)', '<i class="fas fa-boxes"></i>', '../productionCopy/productionUI.php', '', $themeTest);
+                        renderServiceLink('Sales Tracking (Test)', 'ติดตามสถานะออเดอร์ (ทดสอบ)', '<i class="fas fa-shipping-fast"></i>', '../salesCopy/salesDashboard.php', '', $themeTest);
+                        ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+                </div>
         </div>
     </div>
 
