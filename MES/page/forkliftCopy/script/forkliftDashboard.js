@@ -40,7 +40,13 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchMappedZones();
     loadAllData();
     startPolling();
-    initWebSocket();
+    //initWebSocket();
+    
+    setInterval(function() {
+        if (typeof loadMapDataOnly === "function") {
+            loadMapDataOnly(); // ฟังก์ชันที่อัปเดตหมุดบนแผนที่ที่คุณมีอยู่แล้ว
+        }
+    }, 3000);
 
     document.addEventListener("visibilitychange", () => {
         if (document.hidden) stopPolling();
@@ -57,9 +63,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initWebSocket() {
-    const wsUrl = `ws://${window.location.hostname}:1880/ws/forklift`;
-    wsForklift = new WebSocket(wsUrl);
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = `${wsProtocol}://${window.location.hostname}:1880/ws/forklift`;
     
+    console.log("Connecting to WebSocket:", wsUrl);
+    wsForklift = new WebSocket(wsUrl);
     wsForklift.onmessage = function(event) {
         try {
             const payload = JSON.parse(event.data);

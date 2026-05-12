@@ -32,7 +32,7 @@
                     <li><a class="dropdown-item-icon py-1" href="../production/productionUI.php"><i class="fas fa-boxes fa-fw"></i><span>Production & Inventory</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../production/mobile_app.php"><i class="fas fa-mobile-alt fa-fw"></i><span>ลงยอดผลิต (Mobile)</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../production/label_printer.php"><i class="fas fa-print fa-fw"></i><span>Tag Printer (WIP/FG)</span></a></li>
-                    <li><a class="dropdown-item-icon py-1" href="../scanBarcode/index.html"><i class="fas fa-barcode fa-fw"></i><span>Scan Barcode</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../scanBarcode/scanBarcodeUI.php"><i class="fas fa-barcode fa-fw"></i><span>Scan Barcode</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../Stop_Cause/Stop_Cause.php"><i class="fas fa-ban fa-fw"></i><span>Stop & Causes</span></a></li>
                 </ul>
             </div>
@@ -154,7 +154,7 @@
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">PRODUCTION</div>
             <a class="list-group-item list-group-item-action text-dark" href="../production/productionUI.php"><i class="fas fa-boxes fa-fw me-3"></i> Production & Inventory</a>
             <a class="list-group-item list-group-item-action text-dark" href="../production/mobile_app.php"><i class="fas fa-mobile-alt fa-fw me-3"></i> ลงยอดผลิต (Mobile)</a>
-            <a class="list-group-item list-group-item-action text-dark" href="../scanBarcode/index.html"><i class="fas fa-barcode fa-fw me-3"></i> Scan Barcode</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../scanBarcode/scanBarcodeUI.php"><i class="fas fa-barcode fa-fw me-3"></i> Scan Barcode</a>
             <a class="list-group-item list-group-item-action text-dark" href="../Stop_Cause/Stop_Cause.php"><i class="fas fa-ban fa-fw me-3"></i> Stop & Causes</a>
 
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">WAREHOUSE & LOGISTICS</div>

@@ -34,7 +34,7 @@ try {
             $status = $_REQUEST['status'] ?? 'ALL';
             $keyword = $_REQUEST['search'] ?? ''; 
             
-            $sqlBase = "SELECT TOP 100 s.id as so_id, s.po_number, s.loading_date, s.container_no, 
+            $sqlBase = "SELECT TOP 100 s.id as so_id, s.po_number, s.description, s.loading_date, s.container_no, 
                         s.quantity, s.booking_no, s.snc_ci_no,
                         r.id as report_id, ISNULL(r.status, 'DRAFT') as report_status
                         FROM " . SALES_ORDERS_TABLE . " s WITH (NOLOCK) 

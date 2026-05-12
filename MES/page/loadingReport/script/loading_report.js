@@ -122,12 +122,22 @@ function loadJobList() {
                         <h6 class="fw-bold text-primary mb-0">${job.po_number}</h6>
                         <div>${badge}</div>
                     </div>
+
                     <div class="d-flex justify-content-between align-items-end mt-1">
-                        <div>
-                            <div class="small text-muted"><i class="fas fa-calendar-day me-2 text-secondary" style="width:16px;"></i>Load Date: <span class="text-dark">${job.loading_date || '-'}</span></div>
-                            <div class="small text-muted"><i class="fas fa-truck-loading me-2 text-secondary" style="width:16px;"></i>Cont: ${job.container_no || '-'}</div>
+                        <div style="min-width: 0; flex: 1; padding-right: 10px;">
+                            <div class="small text-muted">
+                                <i class="fas fa-calendar-day me-2 text-secondary" style="width:16px;"></i>Load Date: <span class="text-dark">${job.loading_date || '-'}</span>
+                            </div>
+                            <div class="small text-muted">
+                                <i class="fas fa-truck-loading me-2 text-secondary" style="width:16px;"></i>Cont: <span class="text-dark">${job.container_no || '-'}</span>
+                            </div>
+                            <div class="small text-muted text-truncate" title="${job.description || '-'} : ${job.quantity ? Number(job.quantity).toLocaleString() : '-'}">
+                                <i class="fas fa-box-open me-2 text-secondary" style="width:16px;"></i><span class="text-dark">${job.description || '-'}</span> : <span class="text-dark fw-bold">${job.quantity ? Number(job.quantity).toLocaleString() : '-'}</span>
+                            </div>
                         </div>
-                        ${printBtn}
+                        <div class="flex-shrink-0">
+                            ${printBtn}
+                        </div>
                     </div>
                 </div>`;
             });
