@@ -70,11 +70,77 @@ async function fetchData() {
             renderNotifications(res.data.replyCount);
             
             const userRole = res.data.userRole;
-            // เช็คว่าเป็นบทบาทที่ดูได้หรือไม่
             if (['admin', 'creator', 'supervisor'].includes(userRole)) {
-                // ถ้ามีฟังก์ชัน renderAdminDashboard (และมีสิทธิ์) ให้ทำงาน
                 if (typeof renderAdminDashboard === 'function') {
                     renderAdminDashboard(res.data.dashboardData, res.data.factoryMood);
+                }
+
+                if (res.data.morningBrief) {
+                    const brief = res.data.morningBrief;
+                    
+                    // ฟังก์ชันหลักในการกรอกข้อมูลลง Modal
+                    const populateBriefData = () => {
+                        document.getElementById('briefDateText').innerText = brief.date_text;
+                        document.getElementById('briefMpTotal').innerText = brief.mp_total;
+                        document.getElementById('briefMpPresent').innerText = brief.mp_present;
+                        document.getElementById('briefMpLeave').innerText = brief.mp_leave;
+                        document.getElementById('briefDlotTotal').innerText = brief.dlot_total;
+                        document.getElementById('briefDlDaily').innerText = brief.dl_daily;
+                        document.getElementById('briefOtTotal').innerText = brief.ot_total;
+                        document.getElementById('briefElecCost').innerText = brief.elec_cost;
+                        document.getElementById('briefGasCost').innerText = brief.gas_cost;
+                        document.getElementById('briefRevenue').innerText = brief.revenue;
+
+                        // Render รายการโมเดลผลิต (แก้ไขดัก NaN และบวก Total)
+                        const modelContainer = document.getElementById('briefModelList');
+                        modelContainer.innerHTML = '';
+                        brief.models.forEach(m => {
+                            const fg = parseInt(m.fg) || 0;
+                            const hold = parseInt(m.hold) || 0;
+                            const scrap = parseInt(m.scrap) || 0;
+                            const total = fg + hold + scrap;
+
+                            modelContainer.innerHTML += `
+                                <div class="d-flex justify-content-between border-bottom border-secondary border-opacity-25 py-2">
+                                    <span>${m.model_name}</span>
+                                    <span>
+                                        <b class="text-warning">${fg.toLocaleString()}</b> ตัว 
+                                        <span class="opacity-50">(Hold ${hold}, Scrap ${scrap}, Total ${total.toLocaleString()})</span>
+                                    </span>
+                                </div>`;
+                        });
+
+                        // Mood Logic
+                        const avg = parseFloat(brief.mood_avg).toFixed(1);
+                        document.getElementById('briefMoodScore').innerText = avg;
+                        const emojis = {1:'😤', 2:'😓', 3:'😐', 4:'🙂', 5:'🤩'};
+                        document.getElementById('briefMoodEmoji').innerText = emojis[Math.round(avg)] || '😐';
+                    };
+
+                    const morningBriefModalEl = document.getElementById('morningBriefModal');
+                    const morningBriefModal = new bootstrap.Modal(morningBriefModalEl);
+
+                    // 1. ตรวจสอบการเด้งอัตโนมัติ
+                    if (localStorage.getItem(`morningBrief_${USER_ROLE}`) !== globalTodayDate) {
+                        populateBriefData();
+                        morningBriefModal.show();
+                    }
+
+                    // 2. ดักจับปุ่ม Hidden (reopenBriefBtn)
+                    const reopenBtn = document.getElementById('reopenBriefBtn');
+                    if(reopenBtn) {
+                        reopenBtn.addEventListener('click', () => {
+                            populateBriefData();
+                            morningBriefModal.show();
+                        });
+                    }
+
+                    // 3. จัดการ Checkbox ตอนปิด
+                    morningBriefModalEl.addEventListener('hide.bs.modal', function () {
+                        if (document.getElementById('dontShowToday').checked) {
+                            localStorage.setItem(`morningBrief_${USER_ROLE}`, globalTodayDate);
+                        }
+                    }, { once: true });
                 }
             }
         }

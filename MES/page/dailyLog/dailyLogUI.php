@@ -60,6 +60,11 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
+                <?php if (in_array($userRole, ['admin', 'creator', 'supervisor'])): ?>
+                    <button class="btn btn-link text-warning p-0 me-2" id="reopenBriefBtn" type="button" title="ดูสรุปประจำวัน">
+                        <i class="fas fa-sun fa-lg"></i>
+                    </button>
+                <?php endif; ?>
                 <span class="d-none d-md-inline text-muted small me-3"><i class="far fa-clock me-1"></i> <?php echo date('d F Y'); ?></span>
                 <button class="btn btn-link text-secondary p-0 me-3" id="portal-theme-btn" type="button" title="Switch Theme">
                     <i class="fas fa-adjust fa-lg"></i>
@@ -250,6 +255,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
     <?php include __DIR__ . '/components/logModals.php'; ?>
     <?php include __DIR__ . '/components/avgMoodModal.php'; ?>
     <?php include __DIR__ . '/components/notificationModal.php'; ?>
+    <?php include __DIR__ . '/components/morningBriefModal.php'; ?>
 
     <script src="script/dailyLog.js?v=<?php echo filemtime(__DIR__ . '/script/dailyLog.js'); ?>"></script>
 </body>
