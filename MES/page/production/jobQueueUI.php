@@ -12,9 +12,6 @@ $canAdd = hasPermission('add_production') || hasPermission('manage_production');
 $currentUserForJS = $_SESSION['user'] ?? null;
 
 $pageTitle = "Live Job Queue | MES TOOLBOX";
-$pageIcon = "fas fa-tv";
-$pageHeaderTitle = "Live Job Queue Board";
-$pageHeaderSubtitle = "ระบบแสดงคิวงานและใบสั่งผลิต (Shop Floor KDS)";
 ?>
 
 <!DOCTYPE html>
@@ -23,227 +20,276 @@ $pageHeaderSubtitle = "ระบบแสดงคิวงานและใบ
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <style>
+        /* สไตล์สำหรับ Card */
         .job-card {
-            border: 1px solid var(--bs-border-color);
+            transition: all 0.2s ease;
             border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            transition: transform 0.2s, box-shadow 0.2s;
             background-color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            overflow: hidden;
         }
-        .job-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.15); }
-        .job-header { padding: 12px 15px; color: #fff; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
-        .status-pending .job-header { background-color: #6c757d; } 
-        .status-running .job-header { background-color: #198754; } 
-        .status-warning .job-header { background-color: #ffc107; color: #000; } 
-        .status-danger .job-header { background-color: #dc3545; } 
-        .job-body { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
-        .job-title { font-size: 1.4rem; font-weight: 800; margin-bottom: 2px; color: #333; }
-        .job-details { font-size: 0.9rem; color: #666; margin-bottom: 15px; }
-        .job-target-box { background: var(--bs-light); border-radius: 8px; padding: 10px; text-align: center; border: 1px solid var(--bs-border-color); margin-bottom: 15px; }
-        .job-target-label { font-size: 0.8rem; font-weight: 600; color: #6c757d; text-transform: uppercase;}
-        .job-target-value { font-size: 1.8rem; font-weight: 900; color: #0d6efd; line-height: 1; margin-top: 5px;}
-        .timer-display { font-size: 1.8rem; font-weight: bold; font-family: 'Courier New', Courier, monospace; text-align: center; margin-top: auto; }
-        .job-footer { padding: 12px 15px; background-color: #f8f9fa; border-top: 1px solid #eee; }
-        .btn-action { width: 100%; padding: 10px; font-size: 1.1rem; font-weight: 700; border-radius: 8px; }
+        .job-card:hover {
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1) !important;
+            transform: translateY(-3px);
+        }
+        .row-running { background-color: #f4fdf8 !important; }
+        .progress-compact { height: 10px; border-radius: 6px; background-color: #e9ecef; }
+        
+        /* สไตล์สำหรับ Drag & Drop */
+        .drag-item.dragging { opacity: 0.5; transform: scale(0.95); }
+        .drag-over-highlight .job-card { border: 2px dashed #0d6efd !important; background-color: #f8f9fa; }
+        .cursor-grab { cursor: grab; }
+        .cursor-grab:active { cursor: grabbing; }
 
+        /* Style สำหรับ Autocomplete */
+        .autocomplete-items {
+            position: absolute; border: 1px solid #d4d4d4; border-bottom: none; border-top: none;
+            z-index: 1050; top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto;
+            background-color: #fff; border-radius: 0 0 6px 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .autocomplete-items li { padding: 10px; cursor: pointer; border-bottom: 1px solid #d4d4d4; list-style: none; font-size: 0.9rem; }
+        .autocomplete-items li:hover { background-color: #f8f9fa; }
+
+        /* 🚀 Sticky Header CSS ตามระบบเดิม */
+        .dashboard-header-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background-color: var(--bs-body-bg);
+            padding: 1rem;
+            padding-bottom: 0.5rem;
+            transition: background-color 0.3s;
+        }
+        @media (max-width: 575.98px) {
+            .dashboard-header-sticky { padding: 0.75rem; }
+        }
         @media (max-width: 767.98px) {
-            #dynamic-button-group { width: 100%; }
-            #dynamic-button-group .btn { flex: 1; width: 100%; justify-content: center; }
+            .dashboard-header-sticky {
+                bottom: 0;
+                border-top: 1px solid var(--bs-border-color);
+                border-bottom: none;
+            }
         }
-
-        .autocomplete-results {
-            background: var(--bs-body-bg); color: var(--bs-body-color); 
-            list-style: none; padding: 0; margin: 0; border: 1px solid var(--bs-border-color);
-            position: absolute; width: 100%; z-index: 1050; max-height: 200px; overflow-y: auto;
-            border-top: none; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        @media (max-width: 1199.98px) {
+            .dashboard-header-sticky { padding: 0.5rem 1rem; }
         }
-        .autocomplete-results li { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid var(--bs-border-color); font-size: 0.95rem; }
-        .autocomplete-results li:hover, .autocomplete-results li.active { background-color: var(--bs-primary); color: #fff; }
-
-        .queue-controls { display: flex; flex-direction: column; gap: 5px; margin-left: 10px; }
-        .btn-queue { padding: 2px 8px; font-size: 0.7rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid white; border-radius: 4px; }
-        .btn-queue:hover { background: white; color: black; }
+        .dashboard-header-sticky { padding: 1rem 2rem; }
+        .dashboard-header-sticky, .sticky-bar {
+            position: sticky;
+            top: 0;
+            padding: 1rem 1.5rem;
+            background-color: var(--bs-secondary-bg);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            z-index: 1030;
+            border-bottom: 1px solid var(--bs-border-color);
+            flex-shrink: 0;
+        }
     </style>
 </head>
-
 <body class="layout-top-header bg-body-tertiary">
     <?php include_once('../components/php/top_header.php'); ?>
 
     <div class="page-container">
-        <main id="main-content" class="px-3 pt-3">
+        <main id="main-content">
             <?php include_once('../components/php/spinner.php'); ?>
-            
-            <div class="bg-white border rounded-3 shadow-sm p-3 mb-3">
-                
-                <div class="row g-2 align-items-center mb-4 pb-3 border-bottom">
-                    <div class="col-12 col-md-5 d-flex gap-2"> <div class="input-group input-group-sm shadow-sm flex-grow-1">
-                            <span class="input-group-text bg-white"><i class="fas fa-filter text-muted"></i></span>
-                            <select id="locationSelect" class="form-select border-start-0 fw-bold text-primary">
-                                <option value="">-- เลือกไลน์ผลิตเพื่อดูคิวงาน --</option>
-                            </select>
-                        </div>
-                        
-                        <div class="btn-group btn-group-sm shadow-sm" role="group">
-                            <input type="radio" class="btn-check" name="jobfilter" id="filterAll" checked onchange="setJobFilter('ALL')">
-                            <label class="btn btn-outline-secondary fw-bold" for="filterAll">ทั้งหมด</label>
 
-                            <input type="radio" class="btn-check" name="jobfilter" id="filterQA" onchange="setJobFilter('QA')">
-                            <label class="btn btn-outline-warning text-dark fw-bold" for="filterQA" title="งานตรวจสอบ"><i class="fas fa-search"></i> QA</label>
-                        </div>
-                    </div>
+            <div class="dashboard-header-sticky px-3 pt-3">
+                <div class="card border-0 shadow-sm mb-0">
+                    <div class="card-body p-2 bg-body-tertiary rounded">
+                        
+                        <div class="d-flex flex-column flex-xl-row gap-2 justify-content-between align-items-xl-center w-100">
+                            
+                            <div class="d-flex flex-column flex-md-row gap-2 flex-grow-1">
+                                
+                                <div class="d-flex gap-2 align-items-center flex-grow-1" style="max-width: 500px;">
+                                    <div class="input-group input-group-sm shadow-sm flex-grow-1">
+                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
+                                        <input type="text" id="searchInput" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="Search Job, Part No..." onkeyup="renderJobBoard()">
+                                    </div>
+                                    <button class="btn btn-outline-secondary btn-sm shadow-sm flex-shrink-0" onclick="fetchJobs(true)" title="Refresh Data" style="width: 32px; height: 32px; padding: 0;"> 
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                    
+                                    <div class="dropdown flex-shrink-0 d-xl-none">
+                                        <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" style="height: 32px;">
+                                            <i class="fas fa-ellipsis-v fa-fw"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem; min-width: 230px;">
+                                            <li><h6 class="dropdown-header text-success fw-bold"><i class="fas fa-tasks me-1"></i> จัดการคิวงาน</h6></li>
+                                            <?php if ($canAdd): ?>
+                                            <li><a class="dropdown-item py-2 fw-bold text-primary" href="#" onclick="openCreateJobModal()"><i class="fas fa-plus fa-fw me-2"></i> สร้างคิวงานใหม่</a></li>
+                                            <?php endif; ?>
+                                            <li><a class="dropdown-item py-2 fw-bold text-dark" href="#" onclick="openJobHistory()"><i class="fas fa-history fa-fw me-2 text-secondary"></i> ประวัติย้อนหลัง</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex gap-2 align-items-center flex-grow-1">
+                                    <div class="input-group input-group-sm shadow-sm flex-grow-1" style="min-width: 180px; max-width: 280px;">
+                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary px-2"><i class="fas fa-map-marker-alt"></i></span>
+                                        <select id="locationSelect" class="form-select border-secondary-subtle fw-bold text-dark px-1">
+                                            <option value="">-- แสดงทุกไลน์ผลิต --</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="input-group input-group-sm shadow-sm d-none d-xl-flex flex-shrink-0" style="width: auto;">
+                                        <span class="input-group-text bg-white border-secondary-subtle text-warning px-2"><i class="fas fa-clock"></i></span>
+                                        <span class="input-group-text bg-white border-secondary-subtle fw-bold text-secondary px-2 sync-time-display">-</span>
+                                    </div>
+                                </div>
 
-                    <div class="col-12 col-md-7 d-flex justify-content-start justify-content-md-end gap-2" id="dynamic-button-group">
-                        <?php if ($canAdd): ?>
-                        <button class="btn btn-sm btn-primary shadow-sm px-3" onclick="openCreateJobModal()">
-                            <i class="fas fa-plus-circle me-1"></i> <b>เปิด Job ใหม่</b>
-                        </button>
-                        <?php endif; ?>
-                        
-                        <button class="btn btn-sm btn-info text-white shadow-sm px-3" onclick="openJobHistory()">
-                            <i class="fas fa-history me-1"></i> <b>ประวัติ (History)</b>
-                        </button>
-                        
-                        <button class="btn btn-sm btn-outline-secondary shadow-sm" onclick="fetchJobs()">
-                            <i class="fas fa-sync-alt me-1"></i> <span class="d-none d-sm-inline">รีเฟรช</span>
-                        </button>
+                            </div>
+
+                            <div id="actionWrapper" class="d-flex gap-2 align-items-center justify-content-between justify-content-xl-end flex-shrink-0 mt-2 mt-xl-0 d-none d-xl-flex">
+                                <button class="btn btn-outline-dark btn-sm shadow-sm fw-bold px-3 py-1 rounded" onclick="openJobHistory()">
+                                    <i class="fas fa-history me-1"></i> ประวัติย้อนหลัง
+                                </button>
+                                <?php if ($canAdd): ?>
+                                <button class="btn btn-primary btn-sm shadow-sm fw-bold px-3 py-1 rounded" onclick="openCreateJobModal()">
+                                    <i class="fas fa-plus me-1"></i> สร้างคิวงาน
+                                </button>
+                                <?php endif; ?>
+                            </div>
+
+                        </div>
+
                     </div>
                 </div>
+            </div>
 
-                <div class="row g-4" id="jobBoardContainer">
+            <div class="px-3">
+                <div class="row g-3" id="jobBoardContainer">
                     <div class="col-12 text-center text-muted py-5" id="emptyState">
                         <i class="fas fa-tv fa-4x mb-3 text-secondary opacity-50"></i>
                         <h5>กรุณาเลือกไลน์ผลิตเพื่อแสดงคิวงาน</h5>
                     </div>
                 </div>
             </div>
-        </main>    
+        </main>
     </div>
+
+    <?php include('components/allProductionModals.php'); ?> 
 
     <div class="modal fade" id="createJobModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+                <div class="modal-header bg-white border-bottom pb-2">
+                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-plus-circle me-2 text-primary"></i>สร้างคิวงานใหม่</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
                 <form id="createJobForm">
-                    <div class="modal-header bg-dark text-white py-3">
-                        <h5 class="modal-title fw-bold"><i class="fas fa-plus-circle me-2"></i>เปิดใบสั่งผลิตใหม่</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body p-4 bg-light">
+                    <div class="modal-body bg-white">
                         <div class="mb-3">
-                            <label class="form-label fw-bold">ไลน์ผลิต (Target Line)</label>
-                            <select id="modal_location" class="form-select border-primary shadow-sm" required>
-                                <option value="">-- โหลดข้อมูล... --</option>
+                            <label class="form-label fw-bold small text-secondary">สถานที่ / ไลน์ผลิต <span class="text-danger">*</span></label>
+                            <select id="modal_location" class="form-select bg-light" required>
+                                <option value="">-- เลือกสถานที่ --</option>
                             </select>
                         </div>
-                        
                         <div class="mb-3 position-relative">
-                            <label class="form-label fw-bold">เลือกสินค้า (Item / Part No.)</label>
-                            <input type="text" id="modal_item_search" class="form-control text-primary fw-bold border-primary shadow-sm" placeholder="พิมพ์เพื่อค้นหา..." autocomplete="off" required>
+                            <label class="form-label fw-bold small text-secondary">สินค้า (Product/Item) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" id="modal_item_search" class="form-control" placeholder="พิมพ์ชื่อ, Part No, หรือ SAP No" required autocomplete="off">
+                            </div>
                             <input type="hidden" id="modal_item" required>
-                            <ul id="item_autocomplete_list" class="autocomplete-results d-none"></ul>
+                            <ul id="item_autocomplete_list" class="autocomplete-items d-none m-0 p-0"></ul>
                         </div>
-                        
-                        <div class="mb-0">
-                            <label class="form-label fw-bold">เป้าหมายการผลิต (Target Quantity)</label>
-                            <input type="number" id="modal_target_qty" class="form-control form-control-lg text-center fw-bold text-primary shadow-sm" placeholder="ระบุจำนวน" required min="1" step="any">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-secondary">เป้าหมาย (Target Qty) <span class="text-danger">*</span></label>
+                            <input type="number" id="modal_target_qty" class="form-control bg-light" min="1" step="1" required>
                         </div>
                     </div>
-                    <div class="modal-footer bg-white border-top-0">
-                        <button type="button" class="btn btn-light border btn-lg w-100 mb-2" data-bs-dismiss="modal">ยกเลิก</button>
-                        <button type="submit" class="btn btn-dark btn-lg w-100 fw-bold shadow-sm">บันทึกและส่งเข้าคิว</button>
+                    <div class="modal-footer bg-light border-top-0 justify-content-center">
+                        <button type="button" class="btn btn-outline-secondary px-4 rounded-pill" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold"><i class="fas fa-save me-1"></i> ยืนยันสร้างคิว</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="historyOffcanvas" style="width: 800px; max-width: 100vw;">
-        <div class="offcanvas-header bg-dark text-white">
-            <h5 class="offcanvas-title fw-bold"><i class="fas fa-history me-2"></i>ประวัติใบสั่งผลิต (Job History)</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body bg-light p-0">
-            <div class="table-responsive h-100">
-                <table class="table table-sm table-hover table-bordered mb-0 text-nowrap table-settings bg-white">
-                    <thead class="table-light text-center sticky-top">
-                        <tr class="text-secondary">
-                            <th class="py-2">Job No.</th>
-                            <th class="py-2">Part No.</th>
-                            <th class="py-2 text-end">Target</th>
-                            <th class="py-2 text-end text-success">FG</th>
-                            <th class="py-2 text-end text-warning">Hold</th>
-                            <th class="py-2 text-end text-danger">Scrap</th>
-                            <th class="py-2">Status</th>
-                            <th class="py-2">Time (Start - End)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyTableBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <div class="modal fade" id="recordOutputModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header bg-success text-white py-3">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>บันทึกยอดผลิต (Record Output)</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 450px;"> 
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+                <div class="modal-header bg-white border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-edit me-2 text-primary"></i>บันทึกผลผลิต</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-4 bg-light">
+                <div class="modal-body pt-2">
                     <input type="hidden" id="record_job_id">
-                    <h4 id="record_job_no" class="text-center text-success fw-bold mb-3 bg-white p-2 rounded border shadow-sm">JOB-XXX</h4>
-                    <div class="alert alert-info py-2 text-center small fw-bold">
-                        <i class="fas fa-info-circle me-1"></i> กรอกเฉพาะยอดที่ผลิตได้ในรอบนี้ (ระบบจะนำไปบวกสะสมให้)
+                    <div class="text-center mb-4">
+                        <span class="badge bg-light text-primary border border-primary px-3 py-2 fs-6 rounded-pill" id="record_job_no"></span>
                     </div>
                     
-                    <div class="bg-white p-3 rounded border shadow-sm mb-3">
-                        <label class="form-label fw-bold text-success"><i class="fas fa-box me-1"></i> ยอดงานดีเพิ่ม (FG)</label>
-                        <input type="number" class="form-control form-control-lg text-center fw-bold text-success border-success" id="input_actual_qty" style="font-size: 2rem;" placeholder="0" min="0" step="any">
+                    <div class="mb-3 p-3 rounded-3" style="background-color: #f0fdf4; border: 1px solid #c3e6cb;">
+                        <label class="form-label fw-bold text-success mb-1"><i class="fas fa-check-circle me-1"></i> ยอดงานดี (FG)</label>
+                        <input type="number" id="input_actual_qty" class="form-control form-control-lg text-center fw-bold text-success border-success" min="0" step="any" placeholder="0">
                     </div>
                     
-                    <div class="bg-white p-3 rounded border shadow-sm mb-3">
-                        <label class="form-label fw-bold text-warning"><i class="fas fa-hand-paper me-1"></i> ยอดรอตรวจสอบเพิ่ม (Hold)</label>
-                        <input type="number" class="form-control form-control-lg text-center fw-bold text-warning border-warning" id="input_hold_qty" style="font-size: 2rem;" placeholder="0" min="0" step="any">
+                    <div class="mb-3 p-3 rounded-3" style="background-color: #fff8e6; border: 1px solid #ffeeba;" id="hold_container">
+                        <label class="form-label fw-bold text-warning mb-1" style="color: #d39e00 !important;"><i class="fas fa-pause-circle me-1"></i> ยอดรอตรวจสอบ (Hold)</label>
+                        <input type="number" id="input_hold_qty" class="form-control form-control-lg text-center fw-bold border-warning" style="color: #d39e00 !important;" min="0" step="any" placeholder="0">
                     </div>
 
-                    <div class="bg-white p-3 rounded border shadow-sm">
-                        <label class="form-label fw-bold text-danger"><i class="fas fa-trash-alt me-1"></i> ยอดของเสียเพิ่ม (Scrap)</label>
-                        <input type="number" class="form-control form-control-lg text-center fw-bold text-danger border-danger" id="input_scrap_qty" style="font-size: 2rem;" placeholder="0" min="0" step="any">
+                    <div class="mb-3 p-3 rounded-3" style="background-color: #fcf0f0; border: 1px solid #f5c6cb;">
+                        <label class="form-label fw-bold text-danger mb-1"><i class="fas fa-times-circle me-1"></i> ยอดของเสีย (Scrap)</label>
+                        <input type="number" id="input_scrap_qty" class="form-control form-control-lg text-center fw-bold text-danger border-danger" min="0" step="any" placeholder="0">
                     </div>
                 </div>
-                <div class="modal-footer bg-white border-top-0">
-                    <button type="button" class="btn btn-light border btn-lg w-100 mb-2" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="button" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" onclick="submitRecordOutput()">บวกทบยอดผลิต</button>
+                <div class="modal-footer bg-white border-top-0 pt-0 justify-content-center">
+                    <button type="button" class="btn btn-light px-4 rounded-pill shadow-sm" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-primary px-4 rounded-pill shadow-sm fw-bold" onclick="submitRecordOutput()"><i class="fas fa-save me-1"></i> บันทึกยอด</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade" id="jobLogsModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title fw-bold">แก้ไขรายการที่บันทึกผิด (Job Logs)</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+                <div class="modal-header bg-white border-bottom pb-2">
+                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-history me-2 text-info"></i>ประวัติการลงยอด</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-0">
-                    <table class="table table-sm table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>เวลา</th>
-                                <th>ประเภท</th>
-                                <th class="text-end">จำนวน</th>
-                                <th class="text-center">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="jobLogsTableBody"></tbody>
-                    </table>
+                    <div class="m-0" style="max-height: 50vh; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0 text-nowrap table-sm">
+                            <thead class="table-light text-secondary small sticky-top" style="z-index: 2;">
+                                <tr>
+                                    <th class="ps-4 py-2">เวลา (Time)</th>
+                                    <th class="py-2">ประเภท</th>
+                                    <th class="text-end py-2">จำนวน</th>
+                                    <th class="text-center pe-4 py-2" width="120">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jobLogsTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="historyOffcanvas" style="width: 800px;">
+        <div class="offcanvas-header bg-white border-bottom">
+            <h5 class="offcanvas-title fw-bold text-dark"><i class="fas fa-clipboard-list me-2 text-secondary"></i>ประวัติคิวงาน (History)</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body bg-light p-0">
+            <div class="table-responsive h-100">
+                <table class="table table-hover align-middle mb-0 text-nowrap table-sm bg-white">
+                    <thead class="table-light small text-secondary sticky-top" style="z-index: 2;">
+                        <tr>
+                            <th class="ps-3 py-2">Job No</th>
+                            <th class="py-2">Part No</th>
+                            <th class="text-end py-2">Target</th>
+                            <th class="text-end py-2">FG</th>
+                            <th class="text-end py-2">Hold</th>
+                            <th class="text-end py-2">Scrap</th>
+                            <th class="text-center py-2">Status</th>
+                            <th class="text-center pe-3 py-2">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody"></tbody>
+                </table>
             </div>
         </div>
     </div>

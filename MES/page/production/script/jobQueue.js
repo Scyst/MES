@@ -1,24 +1,29 @@
 "use strict";
 
 const JOB_API_URL = 'api/jobManage.php';
-const INVENTORY_API_URL = 'api/inventoryManage.php'; 
 let autoRefreshTimer = null;
 let activeJobs = [];
 let allItemsList = [];
 let currentJobFilter = 'ALL';
+let draggedItem = null; // สำหรับ Drag & Drop
 
 document.addEventListener('DOMContentLoaded', async () => {
     await loadLocations();
     await loadItems();
 
+    handleLineChange(document.getElementById('locationSelect').value);
+
     document.getElementById('locationSelect').addEventListener('change', (e) => {
         handleLineChange(e.target.value);
     });
 
-    document.getElementById('createJobForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await submitCreateJob();
-    });
+    const createForm = document.getElementById('createJobForm');
+    if(createForm) {
+        createForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await submitCreateJob();
+        });
+    }
 
     setupVanillaAutocomplete();
 });
@@ -31,13 +36,13 @@ async function loadLocations() {
         const modalSelect = document.getElementById('modal_location');
         
         if (result.success && result.data) {
-            select.innerHTML = '<option value="">-- เลือกไลน์ผลิตเพื่อดูคิวงาน --</option>';
-            modalSelect.innerHTML = '<option value="">-- เลือกไลน์ผลิต --</option>';
+            select.innerHTML = '<option value="">-- แสดงคิวงานทุกไลน์การผลิต --</option>';
+            if(modalSelect) modalSelect.innerHTML = '<option value="">-- เลือกสถานที่ --</option>';
             
             result.data.forEach(loc => {
                 const opt = `<option value="${loc.location_id}">${loc.location_name}</option>`;
                 select.insertAdjacentHTML('beforeend', opt);
-                modalSelect.insertAdjacentHTML('beforeend', opt);
+                if(modalSelect) modalSelect.insertAdjacentHTML('beforeend', opt);
             });
         }
     } catch (e) { console.error("Error loading locations", e); }
@@ -105,177 +110,336 @@ function setupVanillaAutocomplete() {
 }
 
 function handleLineChange(locId) {
-    if (locId) {
-        fetchJobs();
-        if(autoRefreshTimer) clearInterval(autoRefreshTimer);
-        autoRefreshTimer = setInterval(fetchJobs, 10000); 
-    } else {
-        document.getElementById('jobBoardContainer').innerHTML = `
-            <div class="col-12 text-center text-muted py-5" id="emptyState">
-                <i class="fas fa-tv fa-4x mb-3 text-secondary opacity-50"></i>
-                <h5>กรุณาเลือกไลน์ผลิตเพื่อแสดงคิวงาน</h5>
-            </div>`;
-        if(autoRefreshTimer) clearInterval(autoRefreshTimer);
-    }
+    fetchJobs();
+    if(autoRefreshTimer) clearInterval(autoRefreshTimer);
+    autoRefreshTimer = setInterval(() => fetchJobs(true), 10000); 
 }
 
-function setJobFilter(type) {
-    currentJobFilter = type;
-    renderJobBoard();
-}
-
-async function fetchJobs() {
+async function fetchJobs(isSilent = false) {
     const locId = document.getElementById('locationSelect').value;
-    if (!locId) return;
+    const container = document.getElementById('jobBoardContainer');
+
+    if(!isSilent && container) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i>
+                <h5 class="text-secondary fw-bold">กำลังโหลดข้อมูลคิวงาน...</h5>
+            </div>`;
+    }
 
     try {
         const response = await fetch(`${JOB_API_URL}?action=get_active_jobs&location_id=${locId}`);
         const result = await response.json();
         if (result.success) {
             activeJobs = result.data;
+            
+            // 🟢 อัปเดตเวลาทั้ง 2 จุด (Desktop & Mobile)
+            const timeStr = new Date().toLocaleTimeString('th-TH');
+            document.querySelectorAll('.sync-time-display').forEach(el => el.innerText = timeStr);
+            
             renderJobBoard();
         }
-    } catch (e) { console.error("Error fetching jobs", e); }
+    } catch (e) { 
+        console.error("Error fetching jobs", e); 
+        if(!isSilent && container) {
+            container.innerHTML = `<div class="col-12 text-center py-5 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>`;
+        }
+    }
 }
 
 function renderJobBoard() {
     const container = document.getElementById('jobBoardContainer');
+    if(!container) return; 
+
     container.innerHTML = '';
+
+    const searchInputEl = document.getElementById('searchInput');
+    const searchTerm = searchInputEl ? searchInputEl.value.toLowerCase().trim() : '';
 
     let displayJobs = activeJobs.filter(job => {
         let isQA = job.job_no.includes('-QA');
         if (currentJobFilter === 'QA' && !isQA) return false; 
+        
+        if (searchTerm !== '') {
+            const strToSearch = `${job.job_no} ${job.part_no} ${job.part_name || ''}`.toLowerCase();
+            if (!strToSearch.includes(searchTerm)) return false;
+        }
+
         return true;
     });
 
     if (displayJobs.length === 0) {
         container.innerHTML = `
-            <div class="col-12 text-center py-5">
-                <i class="fas fa-clipboard-check fa-4x text-success mb-3 opacity-50"></i>
-                <h4 class="text-secondary fw-bold">คิวงานว่าง (ไม่มีออเดอร์ค้าง)</h4>
+            <div class="col-12 text-center py-5 mt-4">
+                <i class="fas fa-search fa-3x text-secondary mb-3 opacity-25"></i>
+                <h5 class="text-secondary fw-bold">ไม่พบข้อมูลที่ค้นหา</h5>
             </div>`;
         return;
     }
 
-    displayJobs.forEach((job) => {
-        let isQA = job.job_no.includes('-QA'); 
-
-        // 🟢 1. คืนค่าสี Status แบบมาตรฐาน (เขียว/เทา/แดง) ให้ทำงานได้ปกติ
-        let statusClass = 'status-pending';
-        let statusIcon = 'fa-clock';
-        let statusText = 'WAITING';
-        let timerDisplay = '--:--';
-        let actionButton = `<button class="btn btn-outline-success btn-action" onclick="startJob(${job.job_id})"><i class="fas fa-play-circle me-2"></i>เริ่มการผลิต (START)</button>`;
-
-        // 🟢 2. ปรับ Logic การนับยอด Progress (ถ้าเป็น QA ให้นับ FG + Scrap)
-        let actualQty = parseFloat(job.actual_qty || 0);
-        let scrapQty = parseFloat(job.scrap_qty || 0);
-        let targetQty = parseFloat(job.target_qty);
-        
-        let processedQty = isQA ? (actualQty + scrapQty) : actualQty; // QA นับรวมของเสียด้วย
-        
-        let progressPercent = targetQty > 0 ? (processedQty / targetQty) * 100 : 0;
-        let progressColor = progressPercent >= 100 ? 'bg-success' : 'bg-primary';
-
-        let queueBtns = '';
-        if (job.status === 'PENDING') {
-            queueBtns = `
-                <div class="queue-controls ms-2 d-flex flex-column gap-1">
-                    <button class="btn btn-sm btn-secondary py-0 px-2" style="font-size:0.6rem;" onclick="moveQueue(${job.job_id}, 'up')"><i class="fas fa-chevron-up"></i></button>
-                    <button class="btn btn-sm btn-secondary py-0 px-2" style="font-size:0.6rem;" onclick="moveQueue(${job.job_id}, 'down')"><i class="fas fa-chevron-down"></i></button>
-                </div>`;
-        }
-
-        let editHistoryBtn = '';
-        const mins = parseInt(job.minutes_running) || 0;
-        const hrs = Math.floor(mins / 60);
-        const remainMins = mins % 60;
-        timerDisplay = `${hrs.toString().padStart(2, '0')}:${remainMins.toString().padStart(2, '0')} <span style="font-size:1rem">Hrs</span>`;
-
-        if (job.status === 'RUNNING') {
-            statusIcon = 'fa-cogs fa-spin';
-            statusText = 'RUNNING';
-            if (mins > 60) statusClass = 'status-danger';
-            else if (mins > 45) statusClass = 'status-warning';
-            else statusClass = 'status-running';
-            
-            actionButton = `
-                <div class="d-flex gap-2">
-                    <button class="btn btn-success btn-action flex-grow-1 shadow-sm" onclick="openRecordModal(${job.job_id}, '${job.job_no}')"><i class="fas fa-edit"></i> ลงยอด</button>
-                    <button class="btn btn-warning btn-action shadow-sm text-dark" style="width: 80px;" onclick="pauseJob(${job.job_id})"><i class="fas fa-pause"></i> พัก</button>
-                    <button class="btn btn-danger btn-action shadow-sm" style="width: 80px;" onclick="closeJob(${job.job_id}, '${job.job_no}')"><i class="fas fa-stop"></i> ปิด</button>
-                </div>
-            `;
-            editHistoryBtn = `<div class="mt-2 text-end"><button class="btn btn-sm btn-link text-muted p-0 text-decoration-none fw-bold" onclick="viewJobLogs('${job.job_no}', ${job.job_id})"><i class="fas fa-history me-1"></i>ดู/แก้ไขรายการที่ลงแล้ว</button></div>`;
-        } 
-        else if (job.status === 'PAUSED') {
-            statusIcon = 'fa-pause-circle';
-            statusText = 'PAUSED';
-            statusClass = 'status-warning'; 
-            actionButton = `
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary btn-action flex-grow-1 shadow-sm" onclick="startJob(${job.job_id})"><i class="fas fa-play"></i> ทำงานต่อ</button>
-                    <button class="btn btn-danger btn-action shadow-sm" style="width: 80px;" onclick="closeJob(${job.job_id}, '${job.job_no}')"><i class="fas fa-stop"></i> ปิด</button>
-                </div>
-            `;
-            editHistoryBtn = `<div class="mt-2 text-end"><button class="btn btn-sm btn-link text-muted p-0 text-decoration-none fw-bold" onclick="viewJobLogs('${job.job_no}', ${job.job_id})"><i class="fas fa-history me-1"></i>ดู/แก้ไขรายการ</button></div>`;
-        }
-
-        let cardMenu = '';
-        if (typeof canManage !== 'undefined' && canManage) {
-            const deleteText = job.status === 'PENDING' ? 'ลบจ๊อบ' : 'ยกเลิกจ๊อบ';
-            cardMenu = `
-                <div class="dropdown">
-                    <button class="btn btn-sm text-white border-0" type="button" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                        <li><a class="dropdown-item fw-bold" href="#" onclick="editJob(${job.job_id}, ${job.target_qty})"><i class="fas fa-edit text-primary me-2"></i>แก้ไขยอดเป้าหมาย</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item fw-bold text-danger" href="#" onclick="deleteJob(${job.job_id}, '${job.job_no}', '${job.status}')"><i class="fas fa-trash-alt me-2"></i>${deleteText}</a></li>
-                    </ul>
-                </div>`;
-        }
-
-        // 🟢 3. แก้ไขเรื่อง UI Rework (ใช้แถบ Ribbon คาดใต้ Header แทนที่จะทำ Header เหลือง)
-        let qaRibbon = isQA ? `<div class="bg-warning text-dark text-center fw-bold small py-1" style="border-bottom: 1px solid #e0a800;"><i class="fas fa-search me-1"></i> งานตรวจสอบ (QA / REWORK)</div>` : '';
-        let cardBorder = isQA ? 'border-warning border-2' : '';
-
-        const cardHtml = `
-            <div class="col-12 col-md-6 col-lg-4 col-xl-3">
-                <div class="job-card ${statusClass} ${cardBorder}">
-                    <div class="job-header">
-                        <div class="d-flex align-items-center">
-                            <span class="fs-5">${job.job_no}</span>
-                            <span class="badge bg-white text-dark ms-2"><i class="fas ${statusIcon} me-1"></i> ${statusText}</span>
-                            ${queueBtns}
-                        </div>
-                        ${cardMenu}
-                    </div>
-                    ${qaRibbon} <div class="job-body">
-                        <div class="job-title">${job.part_no}</div>
-                        <div class="job-details text-truncate" title="${job.part_name || '-'}">${job.part_name || '-'}</div>
-                        
-                        <div class="job-target-box">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="small fw-bold text-muted">Processed / Target</span>
-                                <span class="small fw-bold text-dark">${processedQty.toLocaleString()} / ${targetQty.toLocaleString()}</span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${progressPercent}%;"></div>
-                            </div>
-                            ${editHistoryBtn}
-                        </div>
-
-                        <div class="timer-display text-muted ${job.status === 'RUNNING' ? 'text-dark' : ''}">
-                            <i class="fas fa-stopwatch me-1"></i> ${timerDisplay}
-                        </div>
-                    </div>
-                    <div class="job-footer">
-                        ${actionButton}
-                    </div>
-                </div>
-            </div>`;
-        container.insertAdjacentHTML('beforeend', cardHtml);
+    const groupedJobs = {};
+    displayJobs.forEach(job => {
+        const locName = job.location_name || 'ไม่ระบุสถานที่';
+        if (!groupedJobs[locName]) groupedJobs[locName] = [];
+        groupedJobs[locName].push(job);
     });
+
+    const isAllLocations = document.getElementById('locationSelect').value === "";
+
+    for (const [locationName, jobsInLocation] of Object.entries(groupedJobs)) {
+        
+        if (isAllLocations) {
+            container.insertAdjacentHTML('beforeend', `
+                <div class="col-12 mt-4 mb-2">
+                    <div class="d-flex align-items-center border-bottom border-2 border-dark pb-2">
+                        <i class="fas fa-industry text-dark fs-5 me-2"></i>
+                        <h5 class="fw-bold text-dark mb-0">${locationName}</h5>
+                        <span class="badge bg-secondary ms-3 rounded-pill">${jobsInLocation.length} คิวงาน</span>
+                    </div>
+                </div>
+            `);
+        }
+
+        const locationGroupId = `loc-group-${jobsInLocation[0].location_id}`;
+        container.insertAdjacentHTML('beforeend', `<div class="row g-3 sortable-list" id="${locationGroupId}" data-location-id="${jobsInLocation[0].location_id}"></div>`);
+        const groupContainer = document.getElementById(locationGroupId);
+
+        jobsInLocation.forEach((job, index) => {
+            let isQA = job.job_no.includes('-QA'); 
+
+            let actualQty = parseFloat(job.actual_qty || 0);
+            let scrapQty = parseFloat(job.scrap_qty || 0);
+            let targetQty = parseFloat(job.target_qty);
+            let processedQty = isQA ? (actualQty + scrapQty) : actualQty; 
+            let progressPercent = targetQty > 0 ? Math.min(100, Math.round((processedQty / targetQty) * 100)) : 0;
+            let progressColor = progressPercent >= 100 ? 'bg-primary' : 'bg-success';
+
+            const mins = parseInt(job.minutes_running) || 0;
+            const hrs = Math.floor(mins / 60);
+            const remainMins = mins % 60;
+            let timerDisplay = `${hrs.toString().padStart(2, '0')}:${remainMins.toString().padStart(2, '0')} h`;
+
+            let borderLeftColor = 'secondary'; 
+            let statusClass = 'bg-secondary text-white';
+            let statusIcon = 'fa-clock';
+            let statusText = 'WAITING';
+            let actionButtons = '';
+            let cardHighlight = '';
+            let isDraggable = 'true'; 
+            let dragHandle = `<i class="fas fa-grip-vertical text-muted cursor-grab me-2" style="opacity: 0.5;" title="ลากเพื่อสลับคิว"></i>`;
+
+            if (job.status === 'PENDING') {
+                borderLeftColor = 'secondary';
+                actionButtons = `<button class="btn btn-outline-success fw-bold w-100 shadow-sm" onclick="startJob(${job.job_id})"><i class="fas fa-play me-2"></i> เริ่มงานผลิต</button>`;
+            } 
+            else if (job.status === 'RUNNING') {
+                borderLeftColor = mins > 60 ? 'danger' : (mins > 45 ? 'warning' : 'success');
+                statusClass = borderLeftColor === 'warning' ? 'bg-warning text-dark' : `bg-${borderLeftColor} text-white`;
+                statusIcon = 'fa-cogs fa-spin';
+                statusText = 'RUNNING';
+                cardHighlight = 'row-running';
+
+                actionButtons = `
+                    <div class="d-flex gap-1 w-100">
+                        <button class="btn btn-success flex-grow-1 fw-bold shadow-sm" onclick="openRecordModal(${job.job_id}, '${job.job_no}')"><i class="fas fa-edit me-1"></i> ลงยอด</button>
+                        <button class="btn btn-outline-warning text-dark px-3 shadow-sm" onclick="pauseJob(${job.job_id})" title="พัก"><i class="fas fa-pause"></i></button>
+                        <button class="btn btn-outline-danger px-3 shadow-sm" onclick="closeJob(${job.job_id}, '${job.job_no}')" title="ปิดงาน"><i class="fas fa-stop"></i></button>
+                    </div>
+                `;
+            } 
+            else if (job.status === 'PAUSED') {
+                borderLeftColor = 'warning';
+                statusClass = 'bg-warning text-dark';
+                statusIcon = 'fa-pause-circle';
+                statusText = 'PAUSED';
+
+                actionButtons = `
+                    <div class="d-flex gap-1 w-100">
+                        <button class="btn btn-primary flex-grow-1 fw-bold shadow-sm" onclick="startJob(${job.job_id})"><i class="fas fa-play me-1"></i> ทำงานต่อ</button>
+                        <button class="btn btn-outline-danger px-3 shadow-sm" onclick="closeJob(${job.job_id}, '${job.job_no}')" title="ปิดงาน"><i class="fas fa-stop"></i></button>
+                    </div>
+                `;
+            }
+
+            let manageMenu = '';
+            if (typeof canManage !== 'undefined' && canManage) {
+                manageMenu = `
+                    <div class="dropdown">
+                        <button class="btn btn-sm text-muted border-0 p-1" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v px-2"></i></button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li><h6 class="dropdown-header">จัดการคิวงาน</h6></li>
+                            <li><a class="dropdown-item fw-bold text-dark" href="#" onclick="editJob(${job.job_id}, ${job.target_qty})"><i class="fas fa-pen text-primary me-2"></i>แก้ไขเป้าหมาย</a></li>
+                            ${(job.status === 'RUNNING' || job.status === 'PAUSED') ? `<li><a class="dropdown-item fw-bold text-dark" href="#" onclick="viewJobLogs('${job.job_no}', ${job.job_id})"><i class="fas fa-history text-info me-2"></i>ประวัติลงยอด</a></li>` : ''}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item fw-bold text-danger" href="#" onclick="deleteJob(${job.job_id}, '${job.job_no}', '${job.status}')"><i class="fas fa-trash-alt me-2"></i>${job.status === 'PENDING' ? 'ลบจ๊อบทิ้ง' : 'บังคับยกเลิกจ๊อบ'}</a></li>
+                        </ul>
+                    </div>
+                `;
+            }
+
+            let qaIcon = isQA ? `<i class="fas fa-search text-warning ms-1" title="งาน Rework / QA"></i>` : '';
+
+            const cardHtml = `
+                <div class="col-12 col-sm-6 col-md-6 col-lg-4 col-xl-3 col-xxl-2 drag-item" draggable="${isDraggable}" data-job-id="${job.job_id}">
+                    <div class="card job-card shadow-sm h-100 border-0 ${cardHighlight}" style="border-left: 5px solid var(--bs-${borderLeftColor}) !important;">
+                        <div class="card-body p-3 d-flex flex-column">
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-baseline">
+                                    ${dragHandle}
+                                    <span class="fw-bolder text-dark lh-1" style="font-size: 1.3rem;">${job.queue_order}</span>
+                                    <span class="text-muted small fw-medium ms-2">#${job.job_no}</span>
+                                </div>
+                                ${manageMenu}
+                            </div>
+                            
+                            <div class="mb-4 pe-1">
+                                <h5 class="fw-bolder text-primary mb-1 text-truncate" style="font-size: 1.2rem;" title="${job.part_no}">
+                                    ${job.part_no} ${qaIcon}
+                                </h5>
+                                <div class="small text-secondary text-truncate" title="${job.part_name || '-'}">
+                                    ${job.part_name || '-'}
+                                </div>
+                            </div>
+                            
+                            <div class="mt-auto"></div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-end mb-2">
+                                    <div class="bg-light rounded p-1 px-2 d-flex align-items-center border border-light-subtle">
+                                        <span class="badge ${statusClass} shadow-sm px-2 py-1 me-2" style="font-size: 0.7rem;">
+                                            <i class="fas ${statusIcon} me-1"></i> ${statusText}
+                                        </span>
+                                        <span class="fw-bold ${job.status === 'RUNNING' ? 'text-dark' : 'text-muted'} small mb-0">
+                                            <i class="fas fa-stopwatch text-secondary me-1"></i> ${timerDisplay}
+                                        </span>
+                                    </div>
+                                    <div class="fw-bold text-dark text-end lh-1" style="font-size: 1.15rem;">
+                                        ${processedQty.toLocaleString()} <span class="text-muted small fw-bold">/ ${targetQty.toLocaleString()}</span>
+                                    </div>
+                                </div>
+                                <div class="progress" style="height: 6px; background-color: #f0f0f0;">
+                                    <div class="progress-bar ${progressColor} ${job.status === 'RUNNING' ? 'progress-bar-striped progress-bar-animated' : ''}" style="width: ${progressPercent}%;"></div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex w-100 mt-1">
+                                ${actionButtons}
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            groupContainer.insertAdjacentHTML('beforeend', cardHtml);
+        });
+    }
+
+    if (typeof setupDragAndDrop === 'function') {
+        setupDragAndDrop();
+    }
+}
+
+// ==========================================
+// DRAG & DROP LOGIC (Vanilla JS)
+// ==========================================
+function setupDragAndDrop() {
+    const dragItems = document.querySelectorAll('.drag-item[draggable="true"]');
+    
+    dragItems.forEach(item => {
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('drop', handleDrop);
+        item.addEventListener('dragenter', handleDragEnter);
+        item.addEventListener('dragleave', handleDragLeave);
+        item.addEventListener('dragend', handleDragEnd);
+    });
+}
+
+function handleDragStart(e) {
+    if(autoRefreshTimer) clearInterval(autoRefreshTimer); // หยุด Refresh ตอนกำลังลาก
+    draggedItem = this;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.innerHTML);
+    setTimeout(() => this.classList.add('dragging'), 0);
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDragEnter(e) {
+    if (this !== draggedItem && this.getAttribute('draggable') === 'true') {
+        this.classList.add('drag-over-highlight');
+    }
+}
+
+function handleDragLeave(e) {
+    this.classList.remove('drag-over-highlight');
+}
+
+function handleDrop(e) {
+    e.stopPropagation();
+    this.classList.remove('drag-over-highlight');
+    
+    if (draggedItem !== this && this.getAttribute('draggable') === 'true') {
+        // หาว่าลากข้ามกลุ่ม (Location) หรือไม่? ถ้าข้ามกลุ่มไม่ให้สลับ
+        if(draggedItem.parentNode.id !== this.parentNode.id) return false;
+
+        let parent = this.parentNode;
+        let siblings = Array.from(parent.children);
+        let draggedIndex = siblings.indexOf(draggedItem);
+        let targetIndex = siblings.indexOf(this);
+        
+        if (draggedIndex < targetIndex) {
+            parent.insertBefore(draggedItem, this.nextSibling);
+        } else {
+            parent.insertBefore(draggedItem, this);
+        }
+    }
+    return false;
+}
+
+function handleDragEnd(e) {
+    this.classList.remove('dragging');
+    document.querySelectorAll('.drag-item').forEach(item => item.classList.remove('drag-over-highlight'));
+    
+    // ดึงลำดับ job_id ใหม่ในกลุ่ม (Location) เดียวกัน ส่งไปให้ API
+    let parent = this.parentNode;
+    let locationId = parent.getAttribute('data-location-id');
+    let newOrderIds = Array.from(parent.children)
+                           .filter(child => child.classList.contains('drag-item'))
+                           .map(child => child.getAttribute('data-job-id'));
+    
+    saveNewQueueOrder(locationId, newOrderIds);
+}
+
+async function saveNewQueueOrder(locationId, jobIdsArray) {
+    if (!jobIdsArray || jobIdsArray.length === 0) {
+        autoRefreshTimer = setInterval(() => fetchJobs(true), 10000); 
+        return;
+    }
+    
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+        const res = await fetch(`${JOB_API_URL}?action=reorder_queue`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body: JSON.stringify({ location_id: locationId, job_ids: jobIdsArray })
+        }).then(r => r.json());
+        
+        if (res.success) {
+            fetchJobs(true); // รีเฟรชแบบเงียบ เพื่อให้เลข Q- อัปเดต
+        }
+    } catch(e) {
+        console.error(e);
+        Swal.fire('Error', 'ไม่สามารถจัดเรียงคิวได้', 'error');
+    } finally {
+        autoRefreshTimer = setInterval(() => fetchJobs(true), 10000); 
+    }
 }
 
 // ==========================================
@@ -283,7 +447,8 @@ function renderJobBoard() {
 // ==========================================
 
 function openCreateJobModal() {
-    document.getElementById('createJobForm').reset();
+    const form = document.getElementById('createJobForm');
+    if(form) form.reset();
     const searchInput = document.getElementById('modal_item_search');
     const hiddenInput = document.getElementById('modal_item');
     if(searchInput) searchInput.value = '';
@@ -318,8 +483,8 @@ async function submitCreateJob() {
             bootstrap.Modal.getInstance(document.getElementById('createJobModal')).hide();
             if(typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
             
-            if(payload.location_id === document.getElementById('locationSelect').value) {
-                fetchJobs();
+            if(payload.location_id === document.getElementById('locationSelect').value || document.getElementById('locationSelect').value === "") {
+                fetchJobs(true);
             } else {
                 document.getElementById('locationSelect').value = payload.location_id;
                 handleLineChange(payload.location_id);
@@ -341,6 +506,7 @@ function startJob(jobId) {
         title: 'เริ่มงานผลิต?',
         icon: 'question',
         showCancelButton: true,
+        confirmButtonColor: '#0d6efd',
         confirmButtonText: 'ตกลง'
     }).then(async (result) => {
         if (result.isConfirmed) {
@@ -352,7 +518,7 @@ function startJob(jobId) {
             });
             const res = await response.json();
             if (res.success) {
-                fetchJobs();
+                fetchJobs(true);
                 if(typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
             }
         }
@@ -368,7 +534,7 @@ async function pauseJob(jobId) {
         body: JSON.stringify({ job_id: jobId })
     }).then(r => r.json());
     
-    if (res.success) { fetchJobs(); }
+    if (res.success) { fetchJobs(true); }
 }
 
 function openRecordModal(jobId, jobNo) {
@@ -381,8 +547,7 @@ function openRecordModal(jobId, jobNo) {
     document.getElementById('input_hold_qty').value = '';
     document.getElementById('input_scrap_qty').value = '';
 
-    // ถ้าเป็นจ๊อบ QA ให้ซ่อนช่องกรอก "ยอดรอตรวจสอบเพิ่ม (Hold)" ป้องกันการ Hold ซ้อน Hold
-    const holdInputContainer = document.getElementById('input_hold_qty').parentElement;
+    const holdInputContainer = document.getElementById('hold_container');
     if (jobNo.includes('-QA')) {
         holdInputContainer.style.display = 'none';
     } else {
@@ -416,11 +581,11 @@ async function submitRecordOutput() {
         
         if (res.success) {
             bootstrap.Modal.getInstance(document.getElementById('recordOutputModal')).hide();
-            fetchJobs();
+            fetchJobs(true);
             if(typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
             
             if (payload.hold_qty > 0) {
-                Swal.fire('คิวตรวจสอบอัตโนมัติ', `ระบบได้สร้าง Job ตรวจสอบ (QA) จำนวน ${payload.hold_qty} ชิ้น อัตโนมัติ`, 'info');
+                Swal.fire('คิวตรวจสอบอัตโนมัติ', `ระบบสร้าง Job ตรวจสอบ (QA) จำนวน ${payload.hold_qty} ชิ้น อัตโนมัติ`, 'info');
             }
         } else {
             Swal.fire('Error', res.message, 'error');
@@ -449,7 +614,7 @@ function closeJob(jobId, jobNo) {
             }).then(r => r.json());
             
             if (res.success) {
-                fetchJobs();
+                fetchJobs(true);
                 if(typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
             } else {
                 Swal.fire('Error', res.message, 'error');
@@ -480,7 +645,7 @@ async function editJob(jobId, currentQty) {
         
         if (res.success) {
             if(typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
-            fetchJobs();
+            fetchJobs(true);
         } else Swal.fire('Error', res.message, 'error');
     }
 }
@@ -506,58 +671,58 @@ async function deleteJob(jobId, jobNo, status) {
         
         if (res.success) {
             if(typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
-            fetchJobs(); 
+            fetchJobs(true); 
         } else Swal.fire('Error', res.message, 'error');
     }
 }
 
 async function openJobHistory() {
     const locId = document.getElementById('locationSelect').value;
-    if (!locId) {
-        Swal.fire('แจ้งเตือน', 'กรุณาเลือกไลน์ผลิตก่อนดูประวัติ', 'warning');
-        return;
-    }
-
+    
     if(typeof showSpinner === 'function') showSpinner();
     try {
         const response = await fetch(`${JOB_API_URL}?action=get_all_jobs`);
         const result = await response.json();
         const tbody = document.getElementById('historyTableBody');
-        tbody.innerHTML = '';
+        if(tbody) tbody.innerHTML = '';
 
         if (result.success && result.data.length > 0) {
             const historyJobs = result.data.filter(j => 
-                j.location_id == locId && 
+                (locId === '' || j.location_id == locId) && 
                 (j.status === 'COMPLETED' || j.status === 'CANCELLED')
             );
 
             if (historyJobs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">ยังไม่มีประวัติการผลิตในไลน์นี้</td></tr>';
+                if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">ยังไม่มีประวัติการผลิต</td></tr>';
             } else {
                 historyJobs.forEach(job => {
                     let badgeClass = job.status === 'COMPLETED' ? 'bg-primary' : 'bg-danger';
                     let startTime = job.start_time ? new Date(job.start_time).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}) : '-';
                     let endTime = job.end_time ? new Date(job.end_time).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}) : '-';
+                    let locTag = locId === '' ? `<br><span class="badge bg-light text-dark border mt-1">${job.location_name}</span>` : '';
 
-                    tbody.insertAdjacentHTML('beforeend', `
-                        <tr>
-                            <td class="fw-bold text-dark text-center">${job.job_no}</td>
-                            <td>${job.part_no}</td>
-                            <td class="text-end fw-bold text-muted">${parseFloat(job.target_qty).toLocaleString()}</td>
-                            <td class="text-end fw-bold text-success">${parseFloat(job.actual_qty || 0).toLocaleString()}</td>
-                            <td class="text-end fw-bold text-warning">${parseFloat(job.hold_qty || 0).toLocaleString()}</td>
-                            <td class="text-end fw-bold text-danger">${parseFloat(job.scrap_qty || 0).toLocaleString()}</td>
-                            <td class="text-center"><span class="badge ${badgeClass}">${job.status}</span></td>
-                            <td class="text-center text-muted small">${startTime} - ${endTime}</td>
-                        </tr>
-                    `);
+                    if(tbody) {
+                        tbody.insertAdjacentHTML('beforeend', `
+                            <tr>
+                                <td class="fw-bold text-dark text-center">${job.job_no}${locTag}</td>
+                                <td>${job.part_no}</td>
+                                <td class="text-end fw-bold text-muted">${parseFloat(job.target_qty).toLocaleString()}</td>
+                                <td class="text-end fw-bold text-success">${parseFloat(job.actual_qty || 0).toLocaleString()}</td>
+                                <td class="text-end fw-bold text-warning">${parseFloat(job.hold_qty || 0).toLocaleString()}</td>
+                                <td class="text-end fw-bold text-danger">${parseFloat(job.scrap_qty || 0).toLocaleString()}</td>
+                                <td class="text-center"><span class="badge ${badgeClass}">${job.status}</span></td>
+                                <td class="text-center text-muted small">${startTime} - ${endTime}</td>
+                            </tr>
+                        `);
+                    }
                 });
             }
         } else {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">ไม่พบข้อมูลประวัติ</td></tr>';
+            if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">ไม่พบข้อมูลประวัติ</td></tr>';
         }
 
-        new bootstrap.Offcanvas(document.getElementById('historyOffcanvas')).show();
+        const offcanvasEl = document.getElementById('historyOffcanvas');
+        if(offcanvasEl) new bootstrap.Offcanvas(offcanvasEl).show();
         
     } catch (e) {
         console.error(e);
@@ -567,22 +732,10 @@ async function openJobHistory() {
     }
 }
 
-// ==========================================
-// QUEUE & CORRECTION FUNCTIONS
-// ==========================================
-
-async function moveQueue(jobId, direction) {
-    const res = await fetch(`${JOB_API_URL}?action=move_queue`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-        body: JSON.stringify({ job_id: jobId, direction: direction })
-    }).then(r => r.json());
-    if (res.success) fetchJobs();
-}
-
 async function viewJobLogs(jobNo, jobId) {
     const res = await fetch(`${JOB_API_URL}?action=get_job_logs&job_no=${jobNo}`).then(r => r.json());
     const tbody = document.getElementById('jobLogsTableBody');
+    if(!tbody) return;
     tbody.innerHTML = '';
     
     if (res.success && res.data && res.data.length > 0) {
@@ -602,7 +755,7 @@ async function viewJobLogs(jobNo, jobId) {
                         <button class="btn btn-sm btn-outline-primary" onclick="editTxn(${log.txn_id}, '${log.txn_type}', ${log.qty}, ${jobId})" title="แก้ไขยอดนี้">
                             <i class="fas fa-pencil-alt"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteTxn(${log.txn_id})" title="ลบรายการนี้">
+                        <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteTxn(${log.txn_id}, ${jobId})" title="ลบรายการนี้">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -612,7 +765,8 @@ async function viewJobLogs(jobNo, jobId) {
     } else {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">ยังไม่มีรายการบันทึก</td></tr>';
     }
-    new bootstrap.Modal(document.getElementById('jobLogsModal')).show();
+    const modalEl = document.getElementById('jobLogsModal');
+    if(modalEl) new bootstrap.Modal(modalEl).show();
 }
 
 async function editTxn(txnId, txnType, currentQty, jobId) {
@@ -631,10 +785,11 @@ async function editTxn(txnId, txnType, currentQty, jobId) {
     if (newQty && newQty != currentQty) {
         if(typeof showSpinner === 'function') showSpinner();
         const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+        
         const resDel = await fetch(`${JOB_API_URL}?action=delete_txn`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-            body: JSON.stringify({ txn_id: txnId })
+            body: JSON.stringify({ txn_id: txnId, job_id: jobId })
         }).then(r => r.json());
         
         if(resDel.success) {
@@ -651,8 +806,9 @@ async function editTxn(txnId, txnType, currentQty, jobId) {
             
             if(resRec.success) {
                 Swal.fire('สำเร็จ', 'แก้ไขและปรับสต็อกเรียบร้อยแล้ว', 'success');
-                bootstrap.Modal.getInstance(document.getElementById('jobLogsModal')).hide();
-                fetchJobs();
+                const modalEl = document.getElementById('jobLogsModal');
+                if(modalEl) bootstrap.Modal.getInstance(modalEl).hide();
+                fetchJobs(true);
             }
         } else {
             Swal.fire('Error', resDel.message, 'error');
@@ -661,12 +817,12 @@ async function editTxn(txnId, txnType, currentQty, jobId) {
     }
 }
 
-async function deleteTxn(txnId) {
-    if(!confirm('ยืนยันลบรายการนี้? ยอดจะถูกหักออกจากจ๊อบและสต็อกอัตโนมัติ')) return;
+async function deleteTxn(txnId, jobId) {
+    if(!confirm('ยืนยันลบรายการนี้? ยอดจะถูกหักออกจากจ๊อบและคืนสต็อกอัตโนมัติ')) return;
     const res = await fetch(`${JOB_API_URL}?action=delete_txn`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-        body: JSON.stringify({ txn_id: txnId })
+        body: JSON.stringify({ txn_id: txnId, job_id: jobId })
     }).then(r => r.json());
     
     if(res.success) {
@@ -677,8 +833,9 @@ async function deleteTxn(txnId) {
             timer: 1500,
             showConfirmButton: false
         });
-        bootstrap.Modal.getInstance(document.getElementById('jobLogsModal')).hide();
-        fetchJobs();
+        const modalEl = document.getElementById('jobLogsModal');
+        if(modalEl) bootstrap.Modal.getInstance(modalEl).hide();
+        fetchJobs(true);
     } else {
         Swal.fire('Error', res.message, 'error');
     }
