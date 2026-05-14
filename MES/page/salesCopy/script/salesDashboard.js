@@ -224,11 +224,15 @@ function renderTable(searchTerm) {
         totalAmountTHB += (parseFloat(item.price || 0) * currentExchangeRate); 
     });
     
-    document.getElementById('sum-containers').innerText = `${totalContainers}`;
+    const elContainers = document.getElementById('sum-containers');
+    if (elContainers) elContainers.innerText = `${totalContainers}`;
+    
     const elQty = document.getElementById('sum-qty');
     if (elQty) elQty.innerText = `${totalQty.toLocaleString()}`;
-    document.getElementById('sum-amount').innerText = `฿${totalAmountTHB.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-
+    
+    const elAmount = document.getElementById('sum-amount');
+    if (elAmount) elAmount.innerText = `฿${totalAmountTHB.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    
     // 4. Pagination Slice
     if (filteredData.length === 0) {
         tbody.innerHTML = '<tr><td colspan="20" class="text-center py-5 text-muted">No data found</td></tr>';
@@ -597,6 +601,55 @@ async function deleteOrder(id, poNum) {
         hideSpinner();
     }
 }
+
+// =================================================================
+// SECTION: CLEAR ALL SALES ORDERS
+// =================================================================
+window.clearAllSalesOrders = async function() {
+    const result = await Swal.fire({
+        title: '⚠️ ยืนยันการล้างข้อมูล?',
+        html: "<span class='text-danger fw-bold'>ข้อมูล Sales Order ทั้งหมดจะถูกลบออกถาวร!</span><br>คุณแน่ใจหรือไม่ที่จะดำเนินการล้างกระดาน?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'ใช่, ลบทั้งหมดเลย',
+        cancelButtonText: 'ยกเลิก'
+    });
+
+    if (result.isConfirmed) {
+        showSpinner();
+
+        try {
+            // 🔥 เปลี่ยนจาก sendRequest มาใช้ fetch ให้ตรงกับสไตล์ของหน้านี้
+            const res = await fetch(`${API_URL}?action=clear_all_orders`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            });
+            const json = await res.json();
+            
+            if (json.success) {
+                await Swal.fire({
+                    title: 'สำเร็จ!',
+                    text: json.message || 'ล้างข้อมูล Sales Order ทั้งหมดเรียบร้อยแล้ว',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                
+                // รีโหลดข้อมูลให้หน้าจอว่างเปล่า
+                loadData();
+            } else {
+                throw new Error(json.message);
+            }
+        } catch (error) {
+            console.error("Clear All Error:", error);
+            Swal.fire('เกิดข้อผิดพลาด', error.message || 'ไม่สามารถลบข้อมูลได้', 'error');
+        } finally {
+            hideSpinner();
+        }
+    }
+};
 
 async function uploadFile(e) {
     const file = e.target.files[0];

@@ -161,12 +161,12 @@ $pageHelpId = "helpModal";
                             </div>
 
                             <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                                
                                 <div class="input-group input-group-sm shadow-sm" style="width: auto;">
                                     <select class="form-select border-secondary-subtle text-secondary small bg-light" id="filterDateType" style="max-width: 130px; border-right: 0; font-weight: 500;">
                                         <option value="loading_date" selected>📅 Load Date</option>
                                         <option value="production_date">🏭 Prod Date</option>
                                     </select>
-                                    
                                     <input type="date" id="filterStartDate" class="form-control border-secondary-subtle" title="Start Date">
                                     <span class="input-group-text bg-white border-secondary-subtle border-start-0 border-end-0">-</span>
                                     <input type="date" id="filterEndDate" class="form-control border-secondary-subtle" title="End Date">
@@ -184,10 +184,7 @@ $pageHelpId = "helpModal";
                                     <div class="vr me-2 opacity-25"></div>
                                     <div class="d-flex align-items-center" title="Exchange Rate">
                                         <span class="small text-muted me-1">1$ =</span>
-                                        <input type="number" id="exchangeRate" 
-                                               class="form-control form-control-sm text-end fw-bold text-primary px-1 border-0 bg-transparent" 
-                                               value="32" step="0.01" 
-                                               style="width: 50px;"> 
+                                        <input type="number" id="exchangeRate" class="form-control form-control-sm text-end fw-bold text-primary px-1 border-0 bg-transparent" value="32" step="0.01" style="width: 50px;"> 
                                     </div>
                                 </div>
 
@@ -202,6 +199,10 @@ $pageHelpId = "helpModal";
 
                                 <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" onclick="openCreateModal()">
                                     <i class="fas fa-plus me-1"></i> New
+                                </button>
+                                
+                                <button class="btn btn-outline-danger btn-sm fw-bold px-3 shadow-sm" onclick="clearAllSalesOrders()" title="ลบออเดอร์ทั้งหมดในระบบ">
+                                    <i class="fas fa-trash-alt me-1"></i> Clear All
                                 </button>
                                 
                                 <input type="file" id="fileInput" hidden accept=".csv, .xlsx, .xls">

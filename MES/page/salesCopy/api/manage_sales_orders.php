@@ -363,6 +363,15 @@ try {
             }
             break;
 
+        case 'clear_all_orders':
+            $method = $_SERVER['REQUEST_METHOD'];
+            if ($method !== 'POST') throw new Exception("Invalid method");
+            
+            $stmt = $pdo->prepare("DELETE FROM $table"); 
+            $stmt->execute();
+            echo json_encode(['success' => true, 'message' => 'ล้างข้อมูลออเดอร์ทั้งหมดในระบบจำลองเรียบร้อยแล้ว']);
+            break;
+
         default:
             echo json_encode(['success'=>false, 'message'=>'Invalid Action']);
             break;
