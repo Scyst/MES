@@ -429,7 +429,7 @@ try {
             $planMode  = $data['planRangeMode'] ?? 'OPEN';
             $setupTime = isset($data['setupTime']) ? floatval($data['setupTime']) : 0;
             $otHours   = isset($data['otHours']) ? floatval($data['otHours']) : 0;
-
+            $totalOTBudget = isset($data['totalOTBudget']) ? floatval($data['totalOTBudget']) : 0; 
             $shiftMode = $data['shiftMode'] ?? 'DAY'; 
             $overwrite = isset($data['overwrite']) && $data['overwrite'] ? 1 : 0;
             $workOnSunday = isset($data['workOnSunday']) && $data['workOnSunday'] ? 1 : 0;
@@ -448,6 +448,7 @@ try {
                     @ShiftMode = :mode, 
                     @SetupTimeHrs = :setup,
                     @OTHours = :ot,
+                    @TotalOTBudget = :ot_budget,
                     @WorkOnSunday = :sunday,
                     @Overwrite = :ow, 
                     @User = :usr";
@@ -465,6 +466,7 @@ try {
                 ':mode' => $shiftMode,
                 ':setup' => $setupTime,
                 ':ot' => $otHours,
+                ':ot_budget' => $totalOTBudget,
                 ':sunday' => $workOnSunday,
                 ':ow' => $overwrite,
                 ':usr' => $currentUser
@@ -473,26 +475,23 @@ try {
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($result && $result['success'] == 1) {
                 $unplanned = isset($result['unplanned_qty']) ? floatval($result['unplanned_qty']) : 0;
-                
-                // 🔥 [NEW] รับค่าก้อน JSON ที่วิเคราะห์ความล่าช้าจาก SQL มาส่งต่อ
                 $delayed_json = isset($result['delayed_details_json']) ? $result['delayed_details_json'] : '[]';
+                $ot_summary_json = isset($result['ot_summary_json']) ? $result['ot_summary_json'] : '[]';
                 
                 echo json_encode([
                     'success' => true, 
                     'message' => $result['message'],
                     'unplanned_qty' => $unplanned,
-                    'delayed_details_json' => $delayed_json // 🔥 ส่งให้ JS เอาไปสร้างตาราง
+                    'delayed_details_json' => $delayed_json,
+                    'ot_summary_json' => $ot_summary_json
                 ]);
             } else {
                 throw new Exception("ไม่พบข้อมูลที่จะสร้าง หรือเกิดข้อผิดพลาด");
             }
             break;
 
-        // 🔥 [NEW] เพิ่มเคสล้างข้อมูลทั้งหมด สำหรับปุ่ม Clear All
         case 'clear_all_plans':
             if ($method !== 'POST') throw new Exception("Invalid method");
-            
-            // คำสั่งนี้จะลบข้อมูลจากตารางที่กำหนดใน $planTable (Production)
             $stmt = $pdo->prepare("DELETE FROM $planTable");
             $stmt->execute();
             

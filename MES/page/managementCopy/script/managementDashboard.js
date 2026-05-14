@@ -1141,7 +1141,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('apsSoEnd').value = endDateFilter.value;
         document.getElementById('apsPlanStart').value = new Date().toISOString().split('T')[0];
         document.getElementById('apsOverwrite').checked = false;
-        document.getElementById('apsOtHours').value = '2.5';
+        document.getElementById('apsOtHours').value = '0';
         
         apsModal.show();
     };
@@ -1288,19 +1288,91 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.error('Error parsing delayed JSON:', e);
                     }
                 }
+
+                // 📌 [NEW] ส่วนการ Parse JSON เพื่อแสดงสรุปวันที่ใช้ Smart OT
+                if (res.ot_summary_json && res.ot_summary_json !== '[]') {
+                    try {
+                        const otItems = JSON.parse(res.ot_summary_json);
+                        if (otItems.length > 0) {
+                            let otHtml = `
+                                <div class="mt-4 text-start">
+                                    <h6 class="text-success fw-bold"><i class="fas fa-clock me-1"></i> สรุปการอนุมัติ Smart OT (รายวัน)</h6>
+                                </div>
+                                <div style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem;">
+                                    <table class="table table-sm table-hover mb-0 text-start" style="font-size: 0.85rem;">
+                                        <thead class="table-success" style="position: sticky; top: 0; z-index: 2;">
+                                            <tr>
+                                                <th>วันที่ระบบเปิด OT ให้</th>
+                                                <th class="text-end">ชั่วโมง OT / กะ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                            `;
+                            
+                            otItems.forEach(item => {
+                                otHtml += `
+                                    <tr>
+                                        <td class="ps-3 fw-bold text-dark"><i class="far fa-calendar-check text-success me-2"></i> ${item.plan_date}</td>
+                                        <td class="text-end text-success fw-bold">+${Number(item.ot_hours).toFixed(2)} ชม.</td>
+                                    </tr>
+                                `;
+                            });
+                            
+                            otHtml += `</tbody></table></div>`;
+                            alertHtml += otHtml; // เอาไปต่อท้ายใน SweetAlert
+                        }
+                    } catch (e) {
+                        console.error('Error parsing OT JSON:', e);
+                    }
+                }
                 
-                // 📌 [UPDATED] ตั้งค่า SweetAlert ใหม่
-                Swal.fire({
+                // เช็คว่ามีตาราง OT ให้โชว์ไหม
+                const showOtTable = (res.ot_summary_json && res.ot_summary_json !== '[]');
+                const swalResult = await Swal.fire({
                     title: (hasUnplanned || hasDelay) ? 'APS จัดแผนเสร็จสิ้น (พบประเด็น)' : 'APS จัดแผนสำเร็จ!',
                     html: alertHtml, 
                     icon: (hasUnplanned || hasDelay) ? 'warning' : 'success',
-                    width: hasDelay ? '750px' : undefined, // ขยายกล่องให้กว้างขึ้นถ้ามีตาราง
+                    width: (hasDelay || showOtTable) ? '750px' : undefined,
                     showConfirmButton: true,
-                    confirmButtonText: (hasUnplanned || hasDelay) ? 'รับทราบ' : 'ตกลง',
-                    confirmButtonColor: (hasUnplanned || hasDelay) ? '#d33' : '#28a745',
+                    showDenyButton: hasDelay,
+                    confirmButtonText: (hasUnplanned || hasDelay) ? 'ใช้แผนนี้' : 'ตกลง',
+                    denyButtonText: '<i class="fas fa-magic"></i> Auto-Fix',
+                    confirmButtonColor: (hasUnplanned || hasDelay) ? '#6c757d' : '#28a745',
+                    denyButtonColor: '#0dcaf0',
                     allowOutsideClick: false
                 });
 
+                if (swalResult.isDenied) {
+                    // 💡 ถ้าผู้ใช้กดปุ่ม Auto-Fix
+                    const delayedItems = JSON.parse(res.delayed_details_json);
+                    const neededHours = delayedItems.reduce((sum, item) => sum + Number(item.ExtraHoursNeeded), 0);
+
+                    const { value: maxOt } = await Swal.fire({
+                        title: 'ตั้งค่า Smart OT',
+                        html: `ระบบต้องการเวลา OT รวม <b>${neededHours.toFixed(2)} ชั่วโมง</b><br>กรุณากำหนดเวลา <b>OT สูงสุดต่อกะ</b>:`,
+                        input: 'number',
+                        inputValue: 2.5,
+                        inputAttributes: { min: 0.5, max: 8, step: 0.5 },
+                        showCancelButton: true,
+                        confirmButtonText: 'เริ่มจัดแผนใหม่',
+                        cancelButtonText: 'ยกเลิก',
+                        confirmButtonColor: '#0dcaf0'
+                    });
+
+                    if (maxOt) {
+                        // ส่ง Payload เดิมกลับไปรันใหม่ แต่ยัดเวลา OT และ TotalBudget เข้าไป และบังคับ Overwrite แผนเดิมทิ้ง
+                        const newPayload = { 
+                            ...payload, 
+                            otHours: parseFloat(maxOt), 
+                            totalOTBudget: neededHours, 
+                            overwrite: true 
+                        };
+                        await executeAutoPlan(newPayload, btnElement); // 🔄 เรียกฟังก์ชันซ้ำ (Recursive)
+                        return; // จบการทำงานรอบนี้
+                    }
+                }
+
+                // ถ้าไม่ได้กด Auto-Fix ให้โหลดตารางปกติ
                 fetchPlans(); 
                 if (fullCalendarInstance) fullCalendarInstance.refetchEvents();
             } else {
@@ -1768,15 +1840,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const events = [];
                 const dailyStats = {};
                 const itemAggregator = {};
+                const dailyOT = {}; // 📌 [NEW] สำหรับเก็บชั่วโมง OT สูงสุดของแต่ละวัน
 
-                // 1. รวมยอด Day + Night
+                // 1. รวมยอด Day + Night และประมวลผล OT
                 result.data.forEach(p => {
                     const original = parseFloat(p.original_planned_quantity || 0);
                     const co = parseFloat(p.carry_over_quantity || 0);
                     const act = parseFloat(p.actual_quantity || 0);
                     const adj = original + co;
 
-                    // กรองเฉพาะแถวที่ว่างเปล่าจริงๆ (0 ทุกช่อง) ถ้ามี Actual หรือ Original ต้องแสดง
+                    // 📌 [NEW] เก็บค่า OT สูงสุดของแต่ละวัน
+                    const ot = parseFloat(p.ot_hours || 0);
+                    if (ot > 0) {
+                        if (!dailyOT[p.plan_date] || ot > dailyOT[p.plan_date]) {
+                            dailyOT[p.plan_date] = ot;
+                        }
+                    }
+
+                    // กรองเฉพาะแถวที่ว่างเปล่าจริงๆ
                     if (original === 0 && co === 0 && act === 0) return;
 
                     const key = `${p.plan_date}_${p.line}_${p.item_id}`;
@@ -1804,7 +1885,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     dailyStats[p.plan_date].actualRevenue += (act * unitPrice);
                 });
 
-                // 2. สร้าง Event
+                // 📌 [NEW] 2. สร้าง Event สำหรับ OT (ให้โชว์อยู่บนสุดของวัน)
+                Object.keys(dailyOT).forEach(date => {
+                    events.push({
+                        title: `⏰ OT: +${dailyOT[date].toFixed(1)} ชม.`,
+                        start: date,
+                        allDay: true,
+                        backgroundColor: '#6f42c1', // สีม่วง
+                        borderColor: '#5a32a3',
+                        textColor: '#fff',
+                        displayOrder: 0, // ดันขึ้นบนสุด
+                        className: 'fw-bold'
+                    });
+                });
+
+                // 3. สร้าง Event สินค้า
                 Object.values(itemAggregator).forEach(item => {
                     const target = item.aggr_adj;
                     const actual = item.aggr_act;
@@ -1813,34 +1908,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Priority 1 (บนสุด): งานเสร็จ (Actual >= Target) โดยที่ต้องมีการผลิตจริง (Actual > 0)
                     if (actual >= target && actual > 0) { 
-                        // สีเขียว
-                        bgColor = 'rgba(75, 192, 192, 0.7)'; 
-                        bdColor = 'rgba(75, 192, 192, 1)';
-                        orderPriority = 1; 
+                        bgColor = 'rgba(75, 192, 192, 0.7)'; bdColor = 'rgba(75, 192, 192, 1)'; orderPriority = 1; 
                     }
                     // Priority 2: งานนอกแผน/Surplus (Target <= 0 แต่มีของ)
                     else if (target <= 0 && actual > 0) { 
-                        // สีม่วง
-                        bgColor = 'rgba(153, 102, 255, 0.7)'; 
-                        bdColor = 'rgba(153, 102, 255, 1)';
-                        orderPriority = 2; 
+                        bgColor = 'rgba(153, 102, 255, 0.7)'; bdColor = 'rgba(153, 102, 255, 1)'; orderPriority = 2; 
                     }
                     // Priority 3: งานรอผลิต (วันนี้/อนาคต)
                     else if (actual < target && item.plan_date >= todayString) { 
-                        // สีฟ้า
-                        bgColor = 'rgba(54, 162, 235, 0.6)'; 
-                        bdColor = 'rgba(54, 162, 235, 1)';
-                        orderPriority = 3; 
+                        bgColor = 'rgba(54, 162, 235, 0.6)'; bdColor = 'rgba(54, 162, 235, 1)'; orderPriority = 3; 
                     }
                     // Priority 4 (ล่างสุด): งานล่าช้า (อดีต)
                     else { 
-                        // สีแดง
-                        bgColor = 'rgba(255, 99, 132, 0.7)'; 
-                        bdColor = 'rgba(255, 99, 132, 1)';
-                        orderPriority = 4; 
+                        bgColor = 'rgba(255, 99, 132, 0.7)'; bdColor = 'rgba(255, 99, 132, 1)'; orderPriority = 4; 
                     }
 
-                    // กรณีพิเศษ: ถ้า Target <= 0 และไม่มี Actual (คือจบแล้ว สบายตัว) ให้ข้ามไปเลย ไม่ต้องโชว์
                     if (target <= 0 && actual === 0) return;
 
                     item.adjusted_planned_quantity = target;
@@ -1850,7 +1932,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     events.push({ 
                         id: `cal_${item.plan_id}_${item.item_id}`, 
-                        // Title: ไม่มีไอคอน
                         title: `${item.sap_no} (${parseInt(actual)}/${parseInt(target)})`, 
                         start: item.plan_date, 
                         backgroundColor: bgColor, 
@@ -1861,7 +1942,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 });
 
-                // 3. Background Events
+                // 4. Background Events
                 Object.keys(dailyStats).forEach(date => {
                     const stat = dailyStats[date];
                     if (stat.planRevenue > 0) {
