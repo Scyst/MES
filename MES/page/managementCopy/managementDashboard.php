@@ -189,6 +189,10 @@ $pageHelpId = "helpModal";
                                             <i class="fas fa-sync-alt me-1"></i> Calc C/O
                                         </button>
 
+                                        <button type="button" class="btn btn-outline-danger btn-sm fw-bold" id="btnClearAllPlans" onclick="clearAllPlans()">
+                                            <i class="fas fa-trash-alt me-1"></i> Clear All
+                                        </button>
+
                                         <button class="btn btn-outline-primary btn-sm ms-2 fw-bold" onclick="openAutoPlanWizard()">
                                             <i class="fas fa-magic me-1"></i> Auto Create Plan
                                         </button>

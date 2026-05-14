@@ -1145,6 +1145,48 @@ document.addEventListener('DOMContentLoaded', () => {
         apsModal.show();
     };
 
+    window.clearAllPlans = async function() {
+        // 1. ถามยืนยันด้วย SweetAlert2 เพื่อป้องกันการกดพลาด
+        const result = await Swal.fire({
+            title: 'ยืนยันการล้างข้อมูล?',
+            text: "ข้อมูลแผนการผลิตทั้งหมดในโหมด Sandbox จะถูกลบออกถาวร! (ไม่กระทบข้อมูลจริง)",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'ใช่, ลบทั้งหมด',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isConfirmed) {
+            showSpinner(); // แสดงหน้าโหลด
+            try {
+                const res = await sendRequest(PLAN_API, 'clear_all_plans', 'POST');
+                if (res.success) {
+                    // 2. แสดงข้อความสำเร็จ
+                    await Swal.fire({
+                        title: 'สำเร็จ!',
+                        text: res.message,
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    // 3. รีเฟรชหน้าจอ กราฟ และปฏิทิน
+                    if (typeof fetchPlans === 'function') fetchPlans();
+                    if (fullCalendarInstance) fullCalendarInstance.refetchEvents();
+                } else {
+                    throw new Error(res.message);
+                }
+            } catch (error) {
+                console.error("Clear All Error:", error);
+                Swal.fire('ข้อผิดพลาด', error.message || 'ไม่สามารถลบข้อมูลได้', 'error');
+            } finally {
+                hideSpinner();
+            }
+        }
+    };
+
     async function executeAutoPlan(payload, btnElement) {
         // UI: เปลี่ยนปุ่มเป็นสถานะ Loading
         const originalBtnText = btnElement.innerHTML;
@@ -1158,15 +1200,65 @@ document.addEventListener('DOMContentLoaded', () => {
                 apsModal.hide();
                 
                 const hasUnplanned = res.unplanned_qty && res.unplanned_qty > 0;
+                let alertHtml = res.message;
+                let hasDelay = false;
+
+                // 📌 [NEW] อ่านก้อน JSON ที่ได้จาก SQL มาวาดเป็นตาราง HTML
+                if (res.delayed_details_json && res.delayed_details_json !== '[]') {
+                    try {
+                        const delayedItems = JSON.parse(res.delayed_details_json);
+                        if (delayedItems.length > 0) {
+                            hasDelay = true;
+                            
+                            let tableHtml = `
+                                <div class="mt-3 text-start">
+                                    <h6 class="text-danger fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> รายละเอียดออเดอร์ที่ตกแผน (Delayed)</h6>
+                                </div>
+                                <div style="max-height: 250px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem;">
+                                    <table class="table table-sm table-striped table-hover mb-0 text-start" style="font-size: 0.85rem;">
+                                        <thead class="table-danger" style="position: sticky; top: 0; z-index: 1;">
+                                            <tr>
+                                                <th>PO Number</th>
+                                                <th>Target Wk</th>
+                                                <th class="text-center">% ตกแผน</th>
+                                                <th class="text-end">ยอด Delay</th>
+                                                <th class="text-end">เวลา OT ที่ต้องเพิ่ม</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                            `;
+
+                            delayedItems.forEach(item => {
+                                tableHtml += `
+                                    <tr>
+                                        <td class="fw-bold text-dark">${item.po_number}</td>
+                                        <td>${item.target_week}</td>
+                                        <td class="text-center text-danger fw-bold">${item.DelayedPercent}%</td>
+                                        <td class="text-end">${Number(item.DelayedQty).toLocaleString()} pcs</td>
+                                        <td class="text-end text-danger fw-bold bg-danger bg-opacity-10">
+                                            <i class="fas fa-clock"></i> ${Number(item.ExtraHoursNeeded).toFixed(2)} ชม.
+                                        </td>
+                                    </tr>
+                                `;
+                            });
+
+                            tableHtml += `</tbody></table></div>`;
+                            alertHtml += tableHtml; // นำตารางไปต่อท้ายข้อความเดิม
+                        }
+                    } catch (e) {
+                        console.error('Error parsing delayed JSON:', e);
+                    }
+                }
                 
+                // 📌 [UPDATED] ตั้งค่า SweetAlert ใหม่
                 Swal.fire({
-                    title: hasUnplanned ? 'เสร็จสิ้น (มีข้อมูลตกหล่น)' : 'จัดแผนสำเร็จ!',
-                    // 📌 สำคัญมาก! บรรทัดนี้ต้องดึง res.message มาใช้ตรงๆ ห้ามไปเขียน `<div>...</div>` ทับมันเด็ดขาด
-                    html: res.message, 
-                    icon: hasUnplanned ? 'warning' : 'success',
+                    title: (hasUnplanned || hasDelay) ? 'APS จัดแผนเสร็จสิ้น (พบประเด็น)' : 'APS จัดแผนสำเร็จ!',
+                    html: alertHtml, 
+                    icon: (hasUnplanned || hasDelay) ? 'warning' : 'success',
+                    width: hasDelay ? '750px' : undefined, // ขยายกล่องให้กว้างขึ้นถ้ามีตาราง
                     showConfirmButton: true,
-                    confirmButtonText: hasUnplanned ? 'รับทราบ' : 'ตกลง',
-                    confirmButtonColor: hasUnplanned ? '#d33' : '#28a745',
+                    confirmButtonText: (hasUnplanned || hasDelay) ? 'รับทราบ' : 'ตกลง',
+                    confirmButtonColor: (hasUnplanned || hasDelay) ? '#d33' : '#28a745',
                     allowOutsideClick: false
                 });
 

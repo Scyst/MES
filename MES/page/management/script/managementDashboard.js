@@ -1,4 +1,4 @@
-/* script/managementDashboard.js (Final Fix: Colors, Import, Export, & Ghost Rows) */
+/* script/managementDashboard.js (Final Fix: Colors, Import, Export, Ghost Rows & APS Deep Analytics) */
 "use strict";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -436,19 +436,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         else if (lines.length > 0) select.value = lines[0];
                     }
                 });
-
-                // --- [แก้ไข] ปิดส่วนนี้ทิ้งครับ เพื่อไม่ให้มันแย่งโหลดก่อนเพื่อน ---
-                // if (planLineFilter.value) {
-                //    fetchPlans();
-                //    fullCalendarInstance?.refetchEvents();
-                // }
-                // -----------------------------------------------------------
             }
         } catch (error) { console.error("Error fetching lines:", error); }
     }
 
     async function fetchAllItemsForPlanning() {
-        // (Logic Cache เดิม)
         const cachedItems = localStorage.getItem('planning_items_cache');
         const cacheTimestamp = localStorage.getItem('planning_items_ts');
         const ONE_HOUR = 60 * 60 * 1000;
@@ -760,53 +752,37 @@ document.addEventListener('DOMContentLoaded', () => {
     function openFinancialDetail(data) {
         if (!dlotModal) return;
 
-        // =========================================================
-        // 1. แก้ไข Logic การดึง Plan Qty (Target)
-        // =========================================================
         let planQty = parseFloat(data.adjusted_planned_quantity || 0);
 
-        // Fallback: ถ้าไม่มี adjusted (เช่น ข้อมูลเก่า) ให้ลองบวกเอง
         if (planQty === 0) {
             const original = parseFloat(data.original_planned_quantity || 0);
             const carryOver = parseFloat(data.carry_over_quantity || 0);
-            // เช็คว่ามีค่าอย่างใดอย่างหนึ่งไหม (ป้องกันกรณีเป็น 0 จริงๆ)
             if (original !== 0 || carryOver !== 0) {
                 planQty = original + carryOver;
             }
         }
 
         const actualQty = parseFloat(data.actual_quantity || 0);
-        
-        // ราคาต่อหน่วย
         const priceUSD = parseFloat(data.price_usd || 0);
         const priceTHB = parseFloat(data.standard_price || 0);
         const unitPrice = priceUSD > 0 ? (priceUSD * 34.0) : priceTHB;
 
-        // 2. คำนวณ Sales (ยอดขาย)
         const planSales = planQty * unitPrice;
         const actualSales = actualQty * unitPrice;
-        
-        // ผลต่างยอดขาย
         const diffSales = actualSales - planSales; 
 
-        // =========================================================
-        // 3. Update UI
-        // =========================================================
-        
-        // จัดการวันที่ (รองรับทั้ง Date String และ Date Object)
         let dateStr = '-';
         if (data.plan_date) {
             const dateObj = new Date(data.plan_date);
             if (!isNaN(dateObj)) {
                 dateStr = dateObj.toLocaleDateString('en-GB');
             } else {
-                dateStr = data.plan_date; // กรณีเป็น String ตรงๆ
+                dateStr = data.plan_date; 
             }
         }
         
         document.getElementById('financialModalSubtitle').textContent = `${dateStr} | ${data.line || '-'} | ${data.part_no || '-'}`;
 
-        // Header: Sales Diff
         const titleLabel = document.querySelector('#dlotModal .text-uppercase');
         if(titleLabel) titleLabel.textContent = 'Sales Difference (Act vs Target)';
 
@@ -814,17 +790,14 @@ document.addEventListener('DOMContentLoaded', () => {
         diffEl.textContent = (diffSales > 0 ? '+' : '') + formatCurrency(diffSales);
         diffEl.className = 'fw-bold mb-0 ' + (diffSales >= 0 ? 'text-success' : 'text-danger');
 
-        // Subtitle: Target Sales
         document.getElementById('finPlanProfitCompare').textContent = `Target Sales: ${formatCurrency(planSales)}`;
 
-        // Table Data
         document.getElementById('finPlanQty').textContent = planQty.toLocaleString();
         document.getElementById('finActualQty').textContent = actualQty.toLocaleString();
 
         document.getElementById('finPlanSales').textContent = formatCurrency(planSales);
         document.getElementById('finActualSales').textContent = formatCurrency(actualSales);
 
-        // เปลี่ยนบรรทัดสุดท้ายเป็น Difference
         const costLabel = document.querySelector('#dlotModal tbody tr:last-child td:first-child');
         if(costLabel) costLabel.textContent = 'Difference';
         
@@ -837,7 +810,6 @@ document.addEventListener('DOMContentLoaded', () => {
             actCostEl.className = 'text-end pe-3 fw-bold ' + (diffSales >= 0 ? 'text-success' : 'text-danger');
         }
 
-        // Progress Bar
         let progress = 0;
         if (planSales > 0) {
             progress = (actualSales / planSales) * 100;
@@ -857,7 +829,6 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (progress < 100) barEl.className = 'progress-bar bg-warning';
         else barEl.className = 'progress-bar bg-success';
 
-        // Footer Info
         document.getElementById('finUnitPrice').textContent = formatCurrency(unitPrice);
         document.getElementById('finUnitCost').textContent = data.part_description || '-';
 
@@ -1054,7 +1025,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const apsModalEl = document.getElementById('autoPlanModal');
     const apsModal = apsModalEl ? new bootstrap.Modal(apsModalEl) : null;
     
-    // 📌 [NEW] Logic สลับโหมด Filter (Date <-> Week)
     document.querySelectorAll('input[name="apsFilterType"]').forEach(radio => {
         radio.addEventListener('change', function() {
             if (this.value === 'DATE') {
@@ -1083,7 +1053,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         document.getElementById('btnExecuteAps').addEventListener('click', async function() {
-            // ดึงโหมดว่าค้นหาด้วยอะไร
             const filterType = document.querySelector('input[name="apsFilterType"]:checked').value;
             
             const soStart = document.getElementById('apsSoStart').value;
@@ -1095,7 +1064,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const pMode = document.getElementById('apsRangeMode').value;
             const pEnd = document.getElementById('apsPlanEnd').value;
 
-            // Validation
             if (filterType === 'DATE' && (!soStart || !soEnd)) {
                 showToast('กรุณาระบุวันที่ SO ให้ครบถ้วน', 'var(--bs-danger)');
                 return;
@@ -1134,9 +1102,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 📌 [NEW] ฟังก์ชันสำหรับล้างข้อมูลแผนการผลิตทั้งหมด (โหมด Production!)
+    window.clearAllPlans = async function() {
+        const result = await Swal.fire({
+            title: '⚠️ ยืนยันการล้างข้อมูลระบบจริง?',
+            html: "<span class='text-danger fw-bold'>คำเตือน: ข้อมูลแผนการผลิตทั้งหมดในระบบจะถูกลบออกถาวร!</span><br>และไม่สามารถกู้คืนได้ ยืนยันที่จะดำเนินการหรือไม่?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'ใช่, ลบข้อมูลทั้งหมด',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isConfirmed) {
+            showSpinner();
+            try {
+                const res = await sendRequest(PLAN_API, 'clear_all_plans', 'POST');
+                if (res.success) {
+                    await Swal.fire({
+                        title: 'สำเร็จ!',
+                        text: res.message,
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    if (typeof fetchPlans === 'function') fetchPlans();
+                    if (fullCalendarInstance) fullCalendarInstance.refetchEvents();
+                } else {
+                    throw new Error(res.message);
+                }
+            } catch (error) {
+                console.error("Clear All Error:", error);
+                Swal.fire('ข้อผิดพลาด', error.message || 'ไม่สามารถลบข้อมูลได้', 'error');
+            } finally {
+                hideSpinner();
+            }
+        }
+    };
+
     window.openAutoPlanWizard = function() {
         if (!apsModal) return;
-        // เซ็ตค่า Default วันที่ให้ตรงกับ Filter ปัจจุบันที่ดูอยู่
         document.getElementById('apsSoStart').value = startDateFilter.value;
         document.getElementById('apsSoEnd').value = endDateFilter.value;
         document.getElementById('apsPlanStart').value = new Date().toISOString().split('T')[0];
@@ -1145,8 +1151,8 @@ document.addEventListener('DOMContentLoaded', () => {
         apsModal.show();
     };
 
+    // 📌 [UPDATED] ฟังก์ชันประมวลผล APS โฉมใหม่ รองรับ JSON Tardiness Table
     async function executeAutoPlan(payload, btnElement) {
-        // UI: เปลี่ยนปุ่มเป็นสถานะ Loading
         const originalBtnText = btnElement.innerHTML;
         btnElement.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>กำลังประมวลผล...`;
         btnElement.disabled = true;
@@ -1158,15 +1164,64 @@ document.addEventListener('DOMContentLoaded', () => {
                 apsModal.hide();
                 
                 const hasUnplanned = res.unplanned_qty && res.unplanned_qty > 0;
+                let alertHtml = res.message;
+                let hasDelay = false;
+
+                // 📌 Parse ก้อน JSON วิเคราะห์ความล่าช้าจาก SQL
+                if (res.delayed_details_json && res.delayed_details_json !== '[]') {
+                    try {
+                        const delayedItems = JSON.parse(res.delayed_details_json);
+                        if (delayedItems.length > 0) {
+                            hasDelay = true;
+                            
+                            let tableHtml = `
+                                <div class="mt-3 text-start">
+                                    <h6 class="text-danger fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> รายละเอียดออเดอร์ที่ตกแผน (Delayed)</h6>
+                                </div>
+                                <div style="max-height: 250px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem;">
+                                    <table class="table table-sm table-striped table-hover mb-0 text-start" style="font-size: 0.85rem;">
+                                        <thead class="table-danger" style="position: sticky; top: 0; z-index: 1;">
+                                            <tr>
+                                                <th>PO Number</th>
+                                                <th>Target Wk</th>
+                                                <th class="text-center">% ตกแผน</th>
+                                                <th class="text-end">ยอด Delay</th>
+                                                <th class="text-end">เวลา OT ที่ต้องเพิ่ม</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                            `;
+
+                            delayedItems.forEach(item => {
+                                tableHtml += `
+                                    <tr>
+                                        <td class="fw-bold text-dark">${item.po_number}</td>
+                                        <td>${item.target_week}</td>
+                                        <td class="text-center text-danger fw-bold">${item.DelayedPercent}%</td>
+                                        <td class="text-end">${Number(item.DelayedQty).toLocaleString()} pcs</td>
+                                        <td class="text-end text-danger fw-bold bg-danger bg-opacity-10">
+                                            <i class="fas fa-clock"></i> ${Number(item.ExtraHoursNeeded).toFixed(2)} ชม.
+                                        </td>
+                                    </tr>
+                                `;
+                            });
+
+                            tableHtml += `</tbody></table></div>`;
+                            alertHtml += tableHtml;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing delayed JSON:', e);
+                    }
+                }
                 
                 Swal.fire({
-                    title: hasUnplanned ? 'เสร็จสิ้น (มีข้อมูลตกหล่น)' : 'จัดแผนสำเร็จ!',
-                    // 📌 สำคัญมาก! บรรทัดนี้ต้องดึง res.message มาใช้ตรงๆ ห้ามไปเขียน `<div>...</div>` ทับมันเด็ดขาด
-                    html: res.message, 
-                    icon: hasUnplanned ? 'warning' : 'success',
+                    title: (hasUnplanned || hasDelay) ? 'APS จัดแผนเสร็จสิ้น (พบประเด็น)' : 'APS จัดแผนสำเร็จ!',
+                    html: alertHtml, 
+                    icon: (hasUnplanned || hasDelay) ? 'warning' : 'success',
+                    width: hasDelay ? '750px' : undefined,
                     showConfirmButton: true,
-                    confirmButtonText: hasUnplanned ? 'รับทราบ' : 'ตกลง',
-                    confirmButtonColor: hasUnplanned ? '#d33' : '#28a745',
+                    confirmButtonText: (hasUnplanned || hasDelay) ? 'รับทราบ' : 'ตกลง',
+                    confirmButtonColor: (hasUnplanned || hasDelay) ? '#d33' : '#28a745',
                     allowOutsideClick: false
                 });
 
@@ -1179,7 +1234,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("APS Error:", error);
             Swal.fire('ข้อผิดพลาด', error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
         } finally {
-            // UI: คืนค่าปุ่มกลับมา
             btnElement.innerHTML = originalBtnText;
             btnElement.disabled = false;
         }
@@ -1203,7 +1257,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = planVsActualChartCanvas.getContext('2d');
         if (!planVsActualChartCanvas || !chartWrapper) return;
 
-        // 1. เตรียม Data Map
         const dateMap = {};
         let curr = new Date(startDateFilter.value);
         const end = new Date(endDateFilter.value);
@@ -1241,18 +1294,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${dateObj.getDate()}/${dateObj.getMonth()+1}`;
         });
         
-        // แยก Array ข้อมูลส่งกราฟ
         const originalRevData = sortedDates.map(d => d.originalRev);
         const carryOverRevData = sortedDates.map(d => d.carryOverRev);
         const actualRevData = sortedDates.map(d => d.actualRev);
-        const totalTargetRevData = sortedDates.map(d => d.originalRev + d.carryOverRev); // สำหรับเส้น Trend
+        const totalTargetRevData = sortedDates.map(d => d.originalRev + d.carryOverRev); 
 
-        // ★★★ สี Actual (เขียว/แดง โปร่งแสง) ★★★
         const actualColors = sortedDates.map(d => {
             const totalTarget = d.originalRev + d.carryOverRev;
             return (d.actualRev >= totalTarget && totalTarget > 0) 
-                ? 'rgba(75, 192, 192, 0.7)'  // เขียว
-                : 'rgba(255, 99, 132, 0.7)'; // แดง
+                ? 'rgba(75, 192, 192, 0.7)'  
+                : 'rgba(255, 99, 132, 0.7)'; 
         });
         
         const actualHoverColors = sortedDates.map(d => {
@@ -1270,7 +1321,6 @@ document.addEventListener('DOMContentLoaded', () => {
             data: {
                 labels: labels,
                 datasets: [
-                    // 1. เส้น Trend (ยอดรวมเป้าหมาย)
                     { 
                         type: 'line', 
                         label: 'Total Target Trend', 
@@ -1286,12 +1336,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         order: 0, 
                         datalabels: { display: false } 
                     },
-                    
-                    // 2. Actual Revenue (แท่งหน้า)
                     { 
                         label: 'Actual Revenue', 
                         data: actualRevData, 
-                        stack: 'ActualStack', // แยก Stack
+                        stack: 'ActualStack', 
                         backgroundColor: actualColors, 
                         hoverBackgroundColor: actualHoverColors, 
                         order: 1, 
@@ -1299,26 +1347,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         categoryPercentage: 0.8, 
                         grouped: false 
                     },
-
-                    // 3. Original Plan Revenue (แท่งหลัง - ล่าง)
                     { 
                         label: 'Original Plan Rev', 
                         data: originalRevData, 
-                        stack: 'PlanStack', // Stack เดียวกับ C/O
-                        backgroundColor: 'rgba(54, 162, 235, 0.5)', // ฟ้าโปร่ง
+                        stack: 'PlanStack', 
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)', 
                         hoverBackgroundColor: 'rgba(54, 162, 235, 0.8)', 
                         order: 2, 
                         barPercentage: 0.7, 
                         categoryPercentage: 0.8, 
                         grouped: false 
                     },
-
-                    // 4. Carry Over Revenue (แท่งหลัง - บน)
                     { 
                         label: 'Carry Over Rev', 
                         data: carryOverRevData, 
-                        stack: 'PlanStack', // Stack เดียวกับ Original
-                        backgroundColor: 'rgba(255, 159, 64, 0.6)', // ส้มโปร่ง
+                        stack: 'PlanStack', 
+                        backgroundColor: 'rgba(255, 159, 64, 0.6)', 
                         hoverBackgroundColor: 'rgba(255, 159, 64, 0.9)', 
                         order: 2, 
                         barPercentage: 0.7, 
@@ -1331,12 +1375,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                 scales: {
                     x: { 
-                        stacked: true, // เปิด Stack แกน X
+                        stacked: true, 
                         grid: { display: false }, 
                         ticks: { font: { size: 10 }, autoSkip: true, maxTicksLimit: 15, maxRotation: 0 } 
                     },
                     y: { 
-                        stacked: true, // เปิด Stack แกน Y
+                        stacked: true, 
                         beginAtZero: true, 
                         grid: { borderDash: [2, 2] }, 
                         title: { display: true, text: 'Revenue (THB)' }, 
@@ -1378,7 +1422,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dateMap[dStr] = { date: dStr, original: 0, carryOver: 0, actual: 0 };
             curr.setDate(curr.getDate() + 1);
         }
-       
+        
         planData.forEach(p => {
             const d = p.plan_date; 
             if (dateMap[d]) {
@@ -1454,7 +1498,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         label: 'Original Plan', 
                         data: originalValues, 
                         stack: 'PlanStack', 
-                        backgroundColor: 'rgba(54, 162, 235, 0.5)', // ฟ้าโปร่ง
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)', 
                         hoverBackgroundColor: 'rgba(54, 162, 235, 0.8)', 
                         order: 2, 
                         barPercentage: 0.7, 
@@ -1465,7 +1509,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         label: 'Carry Over', 
                         data: carryOverValues, 
                         stack: 'PlanStack', 
-                        backgroundColor: 'rgba(255, 159, 64, 0.6)', // ส้มโปร่ง
+                        backgroundColor: 'rgba(255, 159, 64, 0.6)', 
                         hoverBackgroundColor: 'rgba(255, 159, 64, 0.9)', 
                         order: 2, 
                         barPercentage: 0.7, 
@@ -1588,7 +1632,6 @@ document.addEventListener('DOMContentLoaded', () => {
             events: (info, sc, fc) => fetchCalendarEvents(info, sc, fc, todayString),
             eventClick: (info) => { if(info.event.extendedProps.planData) openFinancialDetail(info.event.extendedProps.planData); },
             
-            // (ส่วน dateClick คงเดิม)
             dateClick: (info) => {
                 const clickedDate = info.dateStr;
                 const plansOnDate = currentPlanData.filter(p => p.plan_date === clickedDate);
@@ -1682,34 +1725,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Priority 1 (บนสุด): งานเสร็จ (Actual >= Target) โดยที่ต้องมีการผลิตจริง (Actual > 0)
                     if (actual >= target && actual > 0) { 
-                        // สีเขียว
                         bgColor = 'rgba(75, 192, 192, 0.7)'; 
                         bdColor = 'rgba(75, 192, 192, 1)';
                         orderPriority = 1; 
                     }
                     // Priority 2: งานนอกแผน/Surplus (Target <= 0 แต่มีของ)
                     else if (target <= 0 && actual > 0) { 
-                        // สีม่วง
                         bgColor = 'rgba(153, 102, 255, 0.7)'; 
                         bdColor = 'rgba(153, 102, 255, 1)';
                         orderPriority = 2; 
                     }
                     // Priority 3: งานรอผลิต (วันนี้/อนาคต)
                     else if (actual < target && item.plan_date >= todayString) { 
-                        // สีฟ้า
                         bgColor = 'rgba(54, 162, 235, 0.6)'; 
                         bdColor = 'rgba(54, 162, 235, 1)';
                         orderPriority = 3; 
                     }
                     // Priority 4 (ล่างสุด): งานล่าช้า (อดีต)
                     else { 
-                        // สีแดง
                         bgColor = 'rgba(255, 99, 132, 0.7)'; 
                         bdColor = 'rgba(255, 99, 132, 1)';
                         orderPriority = 4; 
                     }
 
-                    // กรณีพิเศษ: ถ้า Target <= 0 และไม่มี Actual (คือจบแล้ว สบายตัว) ให้ข้ามไปเลย ไม่ต้องโชว์
+                    // กรณีพิเศษ: ถ้า Target <= 0 และไม่มี Actual ให้ข้ามไปเลย
                     if (target <= 0 && actual === 0) return;
 
                     item.adjusted_planned_quantity = target;
@@ -1719,7 +1758,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     events.push({ 
                         id: `cal_${item.plan_id}_${item.item_id}`, 
-                        // Title: ไม่มีไอคอน
                         title: `${item.sap_no} (${parseInt(actual)}/${parseInt(target)})`, 
                         start: item.plan_date, 
                         backgroundColor: bgColor, 
@@ -1793,6 +1831,13 @@ document.addEventListener('DOMContentLoaded', () => {
             tableSearchInput.addEventListener('keyup', handleTableSearch);
             tableSearchInput.addEventListener('search', handleTableSearch);
         }
+
+        // 📌 ผูกปุ่ม Clear All Plans (ถ้าปุ่มถูกสร้างไว้ใน HTML)
+        const btnClearAllPlans = document.getElementById('btnClearAllPlans');
+        if (btnClearAllPlans) {
+            btnClearAllPlans.addEventListener('click', window.clearAllPlans);
+        }
+
         btnAddPlan?.addEventListener('click', () => openPlanModal(null));
 
         fetchDashboardLines()
