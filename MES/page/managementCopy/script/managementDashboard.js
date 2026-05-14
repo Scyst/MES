@@ -1141,10 +1141,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('apsSoEnd').value = endDateFilter.value;
         document.getElementById('apsPlanStart').value = new Date().toISOString().split('T')[0];
         document.getElementById('apsOverwrite').checked = false;
+        document.getElementById('apsOtHours').value = '2.5';
         
         apsModal.show();
     };
-
     window.clearAllPlans = async function() {
         // 1. ถามยืนยันด้วย SweetAlert2 เพื่อป้องกันการกดพลาด
         const result = await Swal.fire({
@@ -1203,23 +1203,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 let alertHtml = res.message;
                 let hasDelay = false;
 
-                // 📌 [NEW] อ่านก้อน JSON ที่ได้จาก SQL มาวาดเป็นตาราง HTML
+                // 📌 [UPDATED] ส่วนการ Parse JSON และจัดกลุ่มตามรายสัปดาห์
                 if (res.delayed_details_json && res.delayed_details_json !== '[]') {
                     try {
                         const delayedItems = JSON.parse(res.delayed_details_json);
                         if (delayedItems.length > 0) {
                             hasDelay = true;
-                            
+
+                            // 1. คำนวณยอดรวมทั้งหมด และนับจำนวน PO ที่ไม่ซ้ำกัน
+                            const totalQty = delayedItems.reduce((sum, item) => sum + Number(item.DelayedQty), 0);
+                            const totalHours = delayedItems.reduce((sum, item) => sum + Number(item.ExtraHoursNeeded), 0);
+                            const uniquePOs = new Set(delayedItems.map(item => item.po_number)).size;
+
+                            // 2. จัดกลุ่มข้อมูลตามสัปดาห์ (Target Week)
+                            const groupedByWeek = delayedItems.reduce((acc, item) => {
+                                if (!acc[item.target_week]) {
+                                    acc[item.target_week] = { items: [], subQty: 0, subHours: 0 };
+                                }
+                                acc[item.target_week].items.push(item);
+                                acc[item.target_week].subQty += Number(item.DelayedQty);
+                                acc[item.target_week].subHours += Number(item.ExtraHoursNeeded);
+                                return acc;
+                            }, {});
+
                             let tableHtml = `
                                 <div class="mt-3 text-start">
-                                    <h6 class="text-danger fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> รายละเอียดออเดอร์ที่ตกแผน (Delayed)</h6>
+                                    <h6 class="text-danger fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> รายละเอียดออเดอร์ที่ตกแผน (แยกตามสัปดาห์)</h6>
                                 </div>
-                                <div style="max-height: 250px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem;">
-                                    <table class="table table-sm table-striped table-hover mb-0 text-start" style="font-size: 0.85rem;">
-                                        <thead class="table-danger" style="position: sticky; top: 0; z-index: 1;">
+                                <div style="max-height: 350px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem;">
+                                    <table class="table table-sm table-hover mb-0 text-start" style="font-size: 0.85rem;">
+                                        <thead class="table-danger" style="position: sticky; top: 0; z-index: 2;">
                                             <tr>
                                                 <th>PO Number</th>
-                                                <th>Target Wk</th>
                                                 <th class="text-center">% ตกแผน</th>
                                                 <th class="text-end">ยอด Delay</th>
                                                 <th class="text-end">เวลา OT ที่ต้องเพิ่ม</th>
@@ -1228,22 +1243,46 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <tbody>
                             `;
 
-                            delayedItems.forEach(item => {
+                            // 3. วนลูปสร้างแถวตามกลุ่มสัปดาห์
+                            Object.keys(groupedByWeek).sort().forEach(week => {
+                                const group = groupedByWeek[week];
+                                
+                                // แถว Header ของกลุ่มสัปดาห์ (Sub-total Header)
                                 tableHtml += `
-                                    <tr>
-                                        <td class="fw-bold text-dark">${item.po_number}</td>
-                                        <td>${item.target_week}</td>
-                                        <td class="text-center text-danger fw-bold">${item.DelayedPercent}%</td>
-                                        <td class="text-end">${Number(item.DelayedQty).toLocaleString()} pcs</td>
-                                        <td class="text-end text-danger fw-bold bg-danger bg-opacity-10">
-                                            <i class="fas fa-clock"></i> ${Number(item.ExtraHoursNeeded).toFixed(2)} ชม.
-                                        </td>
+                                    <tr class="table-light">
+                                        <td colspan="2" class="fw-bold text-primary"><i class="fas fa-calendar-week me-1"></i> Target Week: ${week}</td>
+                                        <td class="text-end fw-bold text-primary">${group.subQty.toLocaleString()} pcs</td>
+                                        <td class="text-end fw-bold text-primary bg-primary bg-opacity-10">${group.subHours.toFixed(2)} ชม.</td>
                                     </tr>
                                 `;
+
+                                // รายการ PO ภายใต้สัปดาห์นั้น
+                                group.items.forEach(item => {
+                                    tableHtml += `
+                                        <tr>
+                                            <td class="ps-4 text-secondary">${item.po_number}</td>
+                                            <td class="text-center text-danger small">${item.DelayedPercent}%</td>
+                                            <td class="text-end text-muted">${Number(item.DelayedQty).toLocaleString()}</td>
+                                            <td class="text-end text-danger small">${Number(item.ExtraHoursNeeded).toFixed(2)} ชม.</td>
+                                        </tr>
+                                    `;
+                                });
                             });
 
-                            tableHtml += `</tbody></table></div>`;
-                            alertHtml += tableHtml; // นำตารางไปต่อท้ายข้อความเดิม
+                            tableHtml += `
+                                        </tbody>
+                                        <tfoot class="table-danger" style="position: sticky; bottom: 0; z-index: 2;">
+                                            <tr class="fw-bold">
+                                                <td class="text-end">รวมทั้งสิ้น (${uniquePOs} POs):</td>
+                                                <td></td>
+                                                <td class="text-end">${totalQty.toLocaleString()} pcs</td>
+                                                <td class="text-end"><i class="fas fa-clock"></i> ${totalHours.toFixed(2)} ชม.</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>`;
+                                
+                            alertHtml += tableHtml;
                         }
                     } catch (e) {
                         console.error('Error parsing delayed JSON:', e);

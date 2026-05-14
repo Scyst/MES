@@ -153,7 +153,7 @@
                                 <div class="col-md-6">
                                     <label class="form-label small text-muted">เวลาล่วงเวลา (OT / กะ)</label>
                                     <div class="input-group input-group-sm">
-                                        <input type="number" class="form-control text-end" id="apsOtHours" value="3.0" min="0" step="0.5">
+                                        <input type="number" class="form-control text-end" id="apsOtHours" value="2.5" min="0" step="0.5">
                                         <span class="input-group-text bg-white">ชั่วโมง</span>
                                     </div>
                                 </div>
