@@ -1343,32 +1343,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (swalResult.isDenied) {
-                    // 💡 ถ้าผู้ใช้กดปุ่ม Auto-Fix
+                    // 💡 ดึงยอดรวมที่ AI ต้องการ
                     const delayedItems = JSON.parse(res.delayed_details_json);
                     const neededHours = delayedItems.reduce((sum, item) => sum + Number(item.ExtraHoursNeeded), 0);
 
-                    const { value: maxOt } = await Swal.fire({
-                        title: 'ตั้งค่า Smart OT',
-                        html: `ระบบต้องการเวลา OT รวม <b>${neededHours.toFixed(2)} ชั่วโมง</b><br>กรุณากำหนดเวลา <b>OT สูงสุดต่อกะ</b>:`,
-                        input: 'number',
-                        inputValue: 2.5,
-                        inputAttributes: { min: 0.5, max: 8, step: 0.5 },
+                    // 🔥 [NEW] เปลี่ยน Popup ให้ Planner คุม OT ได้แบบ 100%
+                    const { value: formValues } = await Swal.fire({
+                        title: 'ตั้งค่า Smart OT (แบบกำหนดเอง)',
+                        html: `
+                            <div class="text-start" style="font-size: 0.95rem;">
+                                <div class="alert alert-warning py-2 mb-3">
+                                    <i class="fas fa-info-circle"></i> ระบบประเมินว่าต้องใช้ OT รวม <b>${neededHours.toFixed(1)} ชม.</b> เพื่อเคลียร์ของที่ช้าทั้งหมด
+                                </div>
+                                <label class="fw-bold text-primary mb-1">1. ให้ทำ OT วันละกี่ชั่วโมง? (ต่อกะ)</label>
+                                <input type="number" id="swalOtPerDay" class="form-control mb-3" value="2.5" step="0.5" min="0.5">
+                                
+                                <label class="fw-bold text-danger mb-1">2. อนุญาตให้ทำ OT ต่อเนื่องสูงสุดกี่วัน?</label>
+                                <input type="number" id="swalOtDays" class="form-control" value="5" step="1" min="1">
+                                <small class="text-muted mt-1 d-block">
+                                    * เมื่อทำ OT ครบจำนวนวันที่กำหนด ระบบจะตัดโอทีเป็น 0 ทันทีเพื่อให้พนักงานพัก
+                                </small>
+                            </div>
+                        `,
+                        focusConfirm: false,
                         showCancelButton: true,
-                        confirmButtonText: 'เริ่มจัดแผนใหม่',
+                        confirmButtonText: 'เริ่มจัดแผนใหม่ <i class="fas fa-play ms-1"></i>',
                         cancelButtonText: 'ยกเลิก',
-                        confirmButtonColor: '#0dcaf0'
+                        confirmButtonColor: '#0dcaf0',
+                        preConfirm: () => {
+                            const otPerDay = document.getElementById('swalOtPerDay').value;
+                            const otDays = document.getElementById('swalOtDays').value;
+                            if (!otPerDay || !otDays) {
+                                Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
+                            }
+                            return { otPerDay: parseFloat(otPerDay), otDays: parseInt(otDays) };
+                        }
                     });
 
-                    if (maxOt) {
-                        // ส่ง Payload เดิมกลับไปรันใหม่ แต่ยัดเวลา OT และ TotalBudget เข้าไป และบังคับ Overwrite แผนเดิมทิ้ง
+                    if (formValues) {
+                        // 🧮 คำนวณโควต้ารวม (OT ต่อวัน x จำนวนวัน) ที่ Planner อนุญาตจริงๆ
+                        const manualBudget = formValues.otPerDay * formValues.otDays;
+
                         const newPayload = { 
                             ...payload, 
-                            otHours: parseFloat(maxOt), 
-                            totalOTBudget: neededHours, 
+                            otHours: formValues.otPerDay, 
+                            totalOTBudget: manualBudget, // 🛑 บังคับ Budget ตามที่คนกำหนด (ไม่สน AI)
                             overwrite: true 
                         };
-                        await executeAutoPlan(newPayload, btnElement); // 🔄 เรียกฟังก์ชันซ้ำ (Recursive)
-                        return; // จบการทำงานรอบนี้
+                        await executeAutoPlan(newPayload, btnElement); // 🔄 รันแผนใหม่
+                        return;
                     }
                 }
 
