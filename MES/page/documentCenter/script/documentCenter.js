@@ -196,16 +196,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function fetchDocuments(page = 1, search = '', category = '') {
-        showSpinner();
+        documentTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>`;
+        
         try {
             const result = await apiRequest('get_documents', { page, search, category }, 'GET');
             currentDocumentCache = result.data || [];
             renderTable(currentDocumentCache);
             setupPagination(result.pagination);
         } catch (error) {
-            documentTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Failed to load documents.</td></tr>`;
-        } finally {
-            hideSpinner();
+            documentTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-5"><i class="fas fa-exclamation-triangle fa-2x mb-3 opacity-50"></i><br>Failed to load documents.</td></tr>`;
         }
     }
     
@@ -226,21 +225,27 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderTable(documents) {
         documentTableBody.innerHTML = '';
         if (!documents || documents.length === 0) {
-            documentTableBody.innerHTML = `<tr><td colspan="5" class="text-center">No documents found.</td></tr>`;
+            documentTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-5">
+                <i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>ไม่พบข้อมูลเอกสารที่ค้นหา
+            </td></tr>`;
             return;
         }
         documents.forEach(doc => {
             const tr = document.createElement('tr');
             tr.dataset.docId = doc.id;
+            tr.style.cursor = 'pointer'; // ให้รู้ว่ากดดูได้
     
             tr.innerHTML = `
-                <td class="checkbox-cell">
+                ${canManage ? `
+                <td class="checkbox-cell text-center">
                     <input class="form-check-input row-checkbox" type="checkbox" data-doc-id="${doc.id}">
-                </td>
-                <td><i class="fas ${getFileIconClass(doc.file_name)} me-2"></i> ${escapeHTML(doc.file_name)}</td>
-                <td>${escapeHTML(doc.file_description) || '<i class="text-muted">No description</i>'}</td>
-                <td class="category-path-cell"></td>
-                <td>${escapeHTML(doc.uploaded_by) || '<i class="text-muted">N/A</i>'}</td>`;
+                </td>` : ''}
+                <td class="fw-bold text-dark"><i class="fas ${getFileIconClass(doc.file_name)} fa-lg me-2"></i> ${escapeHTML(doc.file_name)}</td>
+                <td class="text-secondary small">${escapeHTML(doc.file_description) || '-'}</td>
+                <td class="category-path-cell small"></td>
+                <td>
+                    <span class="badge bg-light text-dark border"><i class="fas fa-user-circle me-1"></i> ${escapeHTML(doc.uploaded_by) || 'N/A'}</span>
+                </td>`;
             
             const categoryPathTd = tr.querySelector('.category-path-cell');
             if (doc.category) {
@@ -254,11 +259,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     categoryLink.href = "#";
                     categoryLink.textContent = escapeHTML(part);
                     categoryLink.dataset.category = fullPath;
-                    categoryLink.classList.add('table-category-link', 'text-primary');
+                    categoryLink.classList.add('table-category-link', 'text-decoration-none', 'fw-bold', 'text-primary');
                     categoryPathTd.appendChild(categoryLink);
                 });
             } else {
-                categoryPathTd.innerHTML = '<i class="text-muted">N/A</i>';
+                categoryPathTd.innerHTML = '-';
             }
     
             documentTableBody.appendChild(tr);

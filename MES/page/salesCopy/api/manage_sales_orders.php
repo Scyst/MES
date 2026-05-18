@@ -66,7 +66,7 @@ try {
             $endDate   = $_GET['end_date'] ?? '';
             
             $dateType  = $_GET['date_type'] ?? 'loading_date';
-            $allowedDateCols = ['loading_date', 'production_date', 'inspection_date'];
+            $allowedDateCols = ['loading_date', 'production_date', 'production_end_date', 'inspection_date']; // [ADDED] production_end_date
             if (!in_array($dateType, $allowedDateCols)) {
                 $dateType = 'loading_date';
             }
@@ -83,7 +83,7 @@ try {
                 $dateParams[] = $endDate;
             }
 
-            // [ADDED] s.team
+            // [ADDED] s.production_end_date
             $columns = "
                 s.id, s.po_number, s.sku, s.quantity, 
                 s.order_date, s.description, s.color,
@@ -91,7 +91,7 @@ try {
                 s.production_status, s.loading_status, 
                 s.is_loading_done, s.is_production_done, 
                 s.is_confirmed, s.custom_order, s.created_at,
-                s.production_date, s.loading_date, s.inspection_date,
+                s.production_date, s.production_end_date, s.loading_date, s.inspection_date,
                 s.inspection_status, s.ticket_number, s.team
             ";
 
@@ -173,10 +173,10 @@ try {
             $maxOrder = $pdo->query($sqlMax)->fetchColumn();
             $currentOrder = ($maxOrder) ? (int)$maxOrder : 0; 
 
-            // [ADDED] parameter team into MERGE
+            // [MODIFIED] Added pend (production_end_date) to MERGE
             $sql = "MERGE INTO $table AS T 
-                    USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
-                    AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pdone, ldate, ldone, ticket, idate, istat, rem, iconf, corder, team)
+                    USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
+                    AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pend, pdone, ldate, ldone, ticket, idate, istat, rem, iconf, corder, team)
                     ON T.po_number = S.po 
                     WHEN MATCHED THEN UPDATE SET 
                         T.sku = S.sku,
@@ -190,6 +190,10 @@ try {
                         T.production_date = CASE 
                             WHEN T.production_date IS NOT NULL AND T.production_date < CAST(GETDATE() AS DATE) THEN T.production_date 
                             ELSE S.pdate 
+                        END,
+                        T.production_end_date = CASE 
+                            WHEN T.production_end_date IS NOT NULL AND T.production_end_date < CAST(GETDATE() AS DATE) THEN T.production_end_date 
+                            ELSE S.pend 
                         END,
                         T.is_production_done = S.pdone,
                         T.loading_date = CASE 
@@ -206,9 +210,9 @@ try {
                         T.updated_at = GETDATE()
                     WHEN NOT MATCHED THEN INSERT 
                         (order_date, description, color, sku, po_number, quantity, dc_location, 
-                        loading_week, shipping_week, production_date, is_production_done, 
+                        loading_week, shipping_week, production_date, production_end_date, is_production_done, 
                         loading_date, is_loading_done, ticket_number, inspection_date, inspection_status, remark, is_confirmed, custom_order, team)
-                    VALUES (S.odate, S.descr, S.color, S.sku, S.po, S.qty, S.dc, S.lweek, S.sweek, S.pdate, S.pdone, S.ldate, S.ldone, S.ticket, S.idate, S.istat, S.rem, S.iconf, S.corder, ISNULL(NULLIF(S.team, ''), 'Team1'));";
+                    VALUES (S.odate, S.descr, S.color, S.sku, S.po, S.qty, S.dc, S.lweek, S.sweek, S.pdate, S.pend, S.pdone, S.ldate, S.ldone, S.ticket, S.idate, S.istat, S.rem, S.iconf, S.corder, ISNULL(NULLIF(S.team, ''), 'Team1'));";
 
             $stmt = $pdo->prepare($sql);
 
@@ -218,7 +222,7 @@ try {
 
                 $po = $getCol($row, ['po', 'po number', 'po_number', 'p.o.']);
                 $sku = $getCol($row, ['sku', 'item code', 'material']);
-                $team = $getCol($row, ['team', 'team group', 'group']); // [ADDED]
+                $team = $getCol($row, ['team', 'team group', 'group']); 
                 
                 if (empty($po)) { 
                     if (implode('', $row) !== '') $skippedCount++; 
@@ -228,7 +232,9 @@ try {
                 try {
                     $currentOrder++; 
 
-                    $rawPrdDate = $getCol($row, ['prd completed date', 'production date', 'pdate']);
+                    // รองรับทั้ง Start Date และ End Date จาก Excel
+                    $rawPrdDate = $getCol($row, ['prd start date', 'production date', 'pdate']);
+                    $rawPrdEndDate = $getCol($row, ['prd end date', 'prd completed date']);
                     $rawLoadDate = $getCol($row, ['load', 'loading date', 'ldate']);
                     $rawInspDate = $getCol($row, ['inspection date', 'insp date']);
                     $txtPrdStatus = $getCol($row, ['production status', 'prd status']);
@@ -236,7 +242,7 @@ try {
                     $txtConfirm = $getCol($row, ['confirmed', 'is_confirmed']);
                     $txtInspStatus = $getCol($row, ['inspection status', 'inspection result']);
 
-                    $prdStatus = ($isYes($txtPrdStatus) || $isYes($rawPrdDate)) ? 1 : 0;
+                    $prdStatus = ($isYes($txtPrdStatus) || $isYes($rawPrdEndDate)) ? 1 : 0;
                     $loadStatus = ($isYes($txtLoadStatus) || $isYes($rawLoadDate)) ? 1 : 0;
                     $isConf = $isYes($txtConfirm) ? 1 : 0;
 
@@ -260,14 +266,16 @@ try {
                         $getCol($row, ['dc', 'dc location']),
                         $getCol($row, ['original loading week', 'loading week']), 
                         $getCol($row, ['original shipping week', 'shipping week']),
-                        $fnDate($rawPrdDate), $prdStatus,
+                        $fnDate($rawPrdDate),
+                        $fnDate($rawPrdEndDate), // [ADDED]
+                        $prdStatus,
                         $fnDate($rawLoadDate), $loadStatus,
                         $getCol($row, ['ticket number', 'ticket']),
                         $fnDate($rawInspDate),
                         $finalInspStatus, 
                         $getCol($row, ['remark', 'comment']),
                         $isConf, $currentOrder,
-                        $team // [ADDED]
+                        $team 
                     ]);
                     $count++;
                 } catch (Exception $ex) {
@@ -308,7 +316,8 @@ try {
                     if ($col === 'is_loading_done' && $val == 1) {
                         $pdo->prepare("UPDATE $table SET is_loading_done = 1, loading_date = COALESCE(loading_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
                     } else if ($col === 'is_production_done' && $val == 1) {
-                        $pdo->prepare("UPDATE $table SET is_production_done = 1, production_date = COALESCE(production_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
+                        // [MODIFIED] Timestamp in production_end_date instead of production_date
+                        $pdo->prepare("UPDATE $table SET is_production_done = 1, production_end_date = COALESCE(production_end_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
                     } else {
                         $pdo->prepare("UPDATE $table SET $col = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $in['id']]);
                     }
@@ -320,8 +329,8 @@ try {
         // 5. UPDATE CELL
         case 'update_cell':
             $in = json_decode(file_get_contents('php://input'), true);
-            // [ADDED] 'team' into allowed fields
-            $allowed = ['quantity', 'loading_week', 'shipping_week', 'remark', 'dc_location', 'order_date', 'production_date', 'loading_date', 'inspection_date', 'ticket_number', 'team'];
+            // [ADDED] 'production_end_date' into allowed fields
+            $allowed = ['quantity', 'loading_week', 'shipping_week', 'remark', 'dc_location', 'order_date', 'production_date', 'production_end_date', 'loading_date', 'inspection_date', 'ticket_number', 'team'];
             if (in_array($in['field'], $allowed)) {
                 $val = $in['value'] ?: null;
                 if ($val && strpos($in['field'], 'date') !== false) $val = $fnDate($val);
@@ -340,7 +349,7 @@ try {
             $maxOrder = $pdo->query("SELECT MAX(custom_order) FROM $table WITH (NOLOCK)")->fetchColumn();
             $nextOrder = $maxOrder ? $maxOrder + 1 : 1;
             $oDate = $fnDate($in['order_date'] ?: null);
-            $team = !empty($in['team']) ? $in['team'] : 'Team1'; // [ADDED] Set Default
+            $team = !empty($in['team']) ? $in['team'] : 'Team1'; 
 
             $sql = "INSERT INTO $table (po_number, sku, order_date, description, color, quantity, dc_location, loading_week, shipping_week, remark, custom_order, team, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
             $pdo->prepare($sql)->execute([

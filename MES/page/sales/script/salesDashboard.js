@@ -298,6 +298,7 @@ function renderTable(searchTerm) {
             <td class="text-center editable" ondblclick="makeEditable(this, ${item.id}, 'shipping_week', '${item.shipping_week}')">${showTxt(item.shipping_week)}</td>
             <td class="text-center fw-bold text-secondary editable" ondblclick="makeEditable(this, ${item.id}, 'team', '${item.team}')">${showTxt(item.team)}</td>
             <td class="text-center bg-warning bg-opacity-10 editable" ondblclick="makeEditable(this, ${item.id}, 'production_date', '${item.production_date}', 'date')">${formatDate(item.production_date)}</td>
+            <td class="text-center bg-warning bg-opacity-10 editable" ondblclick="makeEditable(this, ${item.id}, 'production_end_date', '${item.production_end_date}', 'date')">${formatDate(item.production_end_date)}</td>
             <td class="text-center bg-warning bg-opacity-10"><button class="btn-icon-minimal ${btnPrdClass}" onclick="toggleCheck(${item.id}, 'prod', ${!isPrd})">${btnPrdIcon}</button></td>
             <td class="text-center bg-info bg-opacity-10 editable" ondblclick="makeEditable(this, ${item.id}, 'loading_date', '${item.loading_date}', 'date')">${formatDate(item.loading_date)}</td>
             <td class="text-center bg-info bg-opacity-10"><button class="btn-icon-minimal ${btnLoadClass}" onclick="toggleCheck(${item.id}, 'load', ${!isLoad})">${btnLoadIcon}</button></td>
@@ -420,17 +421,45 @@ async function toggleCheck(id, field, val) {
         if (json.success) {
             const row = allData.find(d => d.id == id);
             if (row) {
-                if(field === 'confirm') row.is_confirmed = dbVal;
-                else if(field === 'prod') row.is_production_done = dbVal;
-                else if(field === 'load') row.is_loading_done = dbVal;
-                else if(field === 'insp') row.inspection_status = dbVal ? 'Pass' : '';
+                // สร้างฟังก์ชันช่วยหาวันที่ปัจจุบัน Format: YYYY-MM-DD
+                const getTodayStr = () => {
+                    const d = new Date();
+                    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                };
+
+                if (field === 'confirm') {
+                    row.is_confirmed = dbVal;
+                }
+                else if (field === 'prod') {
+                    row.is_production_done = dbVal;
+                    // ถ้าเป็นการกด Done (1) และวันที่ยังว่างอยู่ ให้เติมวันที่ปัจจุบันลงไปใน UI ทันที
+                    if (dbVal === 1 && (!row.production_end_date || row.production_end_date === '0000-00-00')) {
+                        row.production_end_date = getTodayStr();
+                    }
+                }
+                else if (field === 'load') {
+                    row.is_loading_done = dbVal;
+                    // เผื่อไว้สำหรับช่อง Load Date ด้วย (ใช้ Logic COALESCE เหมือน backend)
+                    if (dbVal === 1 && (!row.loading_date || row.loading_date === '0000-00-00')) {
+                        row.loading_date = getTodayStr();
+                    }
+                }
+                else if (field === 'insp') {
+                    row.inspection_status = dbVal ? 'Pass' : '';
+                }
             }
+            // รีเฟรชตารางด้วยข้อมูลที่ถูกอัปเดตใน Memory
             renderTable(document.getElementById('universalSearch').value);
         } else {
             showToast('Update failed', '#dc3545');
         }
-    } catch (err) { console.error(err); showToast('Connection failed', '#dc3545'); }
-    finally { hideSpinner(); }
+    } catch (err) { 
+        console.error(err); 
+        showToast('Connection failed', '#dc3545'); 
+    }
+    finally { 
+        hideSpinner(); 
+    }
 }
 
 // --- Sorting & Reordering ---
@@ -685,7 +714,8 @@ async function exportData() {
                 'Loading Week': row.loading_week,
                 'Shipping Week': row.shipping_week,
                 'Team': row.team,
-                'Prd Completed Date': rawDate(row.production_date),
+                'Prd Start Date': rawDate(row.production_date),
+                'Prd End Date': rawDate(row.production_end_date),
                 'Loading Date': rawDate(row.loading_date),
                 'Inspection Date': rawDate(row.inspection_date),
                 'Production Status': isProd,
@@ -718,6 +748,6 @@ async function exportData() {
         console.error(err);
         alert('Export failed');
     } finally {
-        hideSpinner();
+        hideSpinner();  
     }
 }

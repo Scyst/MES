@@ -90,7 +90,7 @@ try {
                 s.production_status, s.loading_status, 
                 s.is_loading_done, s.is_production_done, 
                 s.is_confirmed, s.custom_order, s.created_at,
-                s.production_date, s.loading_date, s.inspection_date,
+                s.production_date, s.production_end_date, s.loading_date, s.inspection_date,
                 s.inspection_status, s.ticket_number, s.team
             ";
 
@@ -307,7 +307,7 @@ try {
                     if ($col === 'is_loading_done' && $val == 1) {
                         $pdo->prepare("UPDATE $table SET is_loading_done = 1, loading_date = COALESCE(loading_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
                     } else if ($col === 'is_production_done' && $val == 1) {
-                        $pdo->prepare("UPDATE $table SET is_production_done = 1, production_date = COALESCE(production_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
+                        $pdo->prepare("UPDATE $table SET is_production_done = 1, production_end_date = COALESCE(production_end_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
                     } else {
                         $pdo->prepare("UPDATE $table SET $col = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $in['id']]);
                     }
@@ -319,8 +319,7 @@ try {
         // 5. UPDATE CELL
         case 'update_cell':
             $in = json_decode(file_get_contents('php://input'), true);
-            // [ADDED] 'team' into allowed fields
-            $allowed = ['quantity', 'loading_week', 'shipping_week', 'remark', 'dc_location', 'order_date', 'production_date', 'loading_date', 'inspection_date', 'ticket_number', 'team'];
+            $allowed = ['quantity', 'loading_week', 'shipping_week', 'remark', 'dc_location', 'order_date', 'production_date', 'production_end_date', 'loading_date', 'inspection_date', 'ticket_number', 'team'];
             if (in_array($in['field'], $allowed)) {
                 $val = $in['value'] ?: null;
                 if ($val && strpos($in['field'], 'date') !== false) $val = $fnDate($val);

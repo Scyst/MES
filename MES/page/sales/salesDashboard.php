@@ -240,8 +240,9 @@ $pageHelpId = "helpModal";
                                     <th class="text-center sortable" data-sort="team">Team <i class="sort-icon fas fa-sort ms-1"></i></th>
 
                                     <th class="text-center bg-warning bg-opacity-10 sortable" data-sort="production_date">
-                                        Prod Date <i class="sort-icon fas fa-sort ms-1"></i>
-                                    </th>
+                                        Prod Start <i class="sort-icon fas fa-sort ms-1"></i> </th>
+                                    <th class="text-center bg-warning bg-opacity-10 sortable" data-sort="production_end_date">
+                                        Prod End <i class="sort-icon fas fa-sort ms-1"></i> </th>
                                     <th class="text-center bg-warning bg-opacity-10 sortable text-nowrap" data-sort="is_production_done" style="min-width: 90px;">
                                         Done? <i class="sort-icon fas fa-sort ms-1"></i>
                                     </th>

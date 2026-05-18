@@ -339,7 +339,7 @@ try {
                 'inspect_type', 'inspection_result', 'dc_location', 
                 'feeder_vessel', 'mother_vessel', 'snc_ci_no', 'ctn_size', 
                 'seal_no', 'container_tare', 'net_weight', 'gross_weight', 'cbm',
-                'shipping_week', 'sku', 'load_time'
+                'shipping_week', 'sku', 'load_time', 'production_end_date'
             ];
             
             if ($id && (in_array($field, $allowed) || $field === 'snc_load_day')) { 
@@ -359,7 +359,7 @@ try {
                  if ($field === 'is_loading_done' && $val == 1) {
                      $pdo->prepare("UPDATE $table SET is_loading_done = 1, loading_date = COALESCE(loading_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$id]);
                  } elseif ($field === 'is_production_done' && $val == 1) {
-                     $pdo->prepare("UPDATE $table SET is_production_done = 1, production_date = COALESCE(production_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$id]);
+                     $pdo->prepare("UPDATE $table SET is_production_done = 1, production_end_date = COALESCE(production_end_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$id]);
                  } else {
                      $pdo->prepare("UPDATE $table SET {$field} = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $id]);
                  }
