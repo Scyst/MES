@@ -27,6 +27,9 @@ $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
 $planTable = PRODUCTION_PLANS_TABLE;
 $itemTable = ITEMS_TABLE;
+$transTable = TRANSACTIONS_TABLE;
+$locationsTable = LOCATIONS_TABLE;
+$routesTable = ROUTES_TABLE;
 
 try {
     switch ($action) {
@@ -41,6 +44,7 @@ try {
             $shift = $_GET['shift'] ?? null;
             $startTs = date('Y-m-d 08:00:00', strtotime($startDate));
             $endTs   = date('Y-m-d 07:59:59', strtotime($endDate . ' +1 day'));
+            
             $actualsSubQuery = "
                 SELECT 
                     CAST(DATEADD(HOUR, -8, transaction_timestamp) AS DATE) AS ActualDate,
@@ -48,8 +52,8 @@ try {
                     CASE WHEN DATEPART(HOUR, DATEADD(HOUR, -8, transaction_timestamp)) < 12 THEN 'DAY' ELSE 'NIGHT' END AS ActualShift,
                     parameter_id AS ActualItemId,
                     SUM(quantity) as ActualQty
-                FROM " . TRANSACTIONS_TABLE . " t
-                JOIN " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
+                FROM $transTable t
+                JOIN $locationsTable l ON t.to_location_id = l.location_id
                 WHERE t.transaction_type = 'PRODUCTION_FG'
                 AND t.transaction_timestamp >= :startTs 
                 AND t.transaction_timestamp <= :endTs
@@ -317,7 +321,6 @@ try {
                 $sqlFindSAP = "SELECT TOP 1 item_id FROM $itemTable WHERE sap_no = :code";
                 $stmtFindSAP = $pdo->prepare($sqlFindSAP);
 
-                $routesTable = ROUTES_TABLE;
                 $sqlFindPart = "
                     SELECT TOP 1 i.item_id 
                     FROM $itemTable i
@@ -433,9 +436,14 @@ try {
             $shiftMode = $data['shiftMode'] ?? 'DAY'; 
             $overwrite = isset($data['overwrite']) && $data['overwrite'] ? 1 : 0;
             $workOnSunday = isset($data['workOnSunday']) && $data['workOnSunday'] ? 1 : 0;
+            $allowedOTDays = $data['allowedOTDays'] ?? '1,2,3,4,5';
             $currentUser = $_SESSION['user']['username'] ?? 'System';
 
+            if (!defined('SP_AUTO_GENERATE_PLAN')) {
+                throw new Exception("Config Error: SP_AUTO_GENERATE_PLAN is not defined.");
+            }
             $spName = SP_AUTO_GENERATE_PLAN;
+            
             $sql = "EXEC $spName 
                     @FilterType = :ftype,
                     @StartDate = :start, 
@@ -451,7 +459,8 @@ try {
                     @TotalOTBudget = :ot_budget,
                     @WorkOnSunday = :sunday,
                     @Overwrite = :ow, 
-                    @User = :usr";
+                    @User = :usr,
+                    @AllowedOTDays = :ot_days";
                     
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -469,7 +478,8 @@ try {
                 ':ot_budget' => $totalOTBudget,
                 ':sunday' => $workOnSunday,
                 ':ow' => $overwrite,
-                ':usr' => $currentUser
+                ':usr' => $currentUser,
+                ':ot_days' => $allowedOTDays
             ]);
             
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -496,6 +506,42 @@ try {
             $stmt->execute();
             
             echo json_encode(['success' => true, 'message' => 'ล้างข้อมูลแผนการผลิตทั้งหมดเรียบร้อยแล้ว']);
+            break;
+
+        case 'delete_plans_by_range':
+            if ($method !== 'POST') throw new Exception("Invalid method");
+            
+            $delStartDate = $data['startDate'] ?? null;
+            $delEndDate = $data['endDate'] ?? null;
+            $delLine = $data['line'] ?? 'ALL';
+            
+            if (!$delStartDate || !$delEndDate) {
+                throw new Exception("กรุณาระบุวันที่เริ่มต้นและสิ้นสุด");
+            }
+            if ($delStartDate > $delEndDate) {
+                throw new Exception("วันที่เริ่มต้นต้องไม่มากกว่าวันที่สิ้นสุด");
+            }
+            
+            $sql = "DELETE FROM $planTable WHERE plan_date BETWEEN :start AND :end";
+            $params = [
+                ':start' => $delStartDate, 
+                ':end' => $delEndDate
+            ];
+            
+            // หากไม่ได้เลือก ALL ให้ลบเฉพาะไลน์ที่ระบุ
+            if ($delLine !== 'ALL') {
+                $sql .= " AND line = :line";
+                $params[':line'] = $delLine;
+            }
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $deletedCount = $stmt->rowCount();
+            
+            echo json_encode([
+                'success' => true, 
+                'message' => "ลบแผนการผลิตสำเร็จจำนวน $deletedCount รายการ"
+            ]);
             break;
 
         default:

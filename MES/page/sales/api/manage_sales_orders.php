@@ -217,11 +217,17 @@ try {
 
                 $po = $getCol($row, ['po', 'po number', 'po_number', 'p.o.']);
                 $sku = $getCol($row, ['sku', 'item code', 'material']);
-                $team = $getCol($row, ['team', 'team group', 'group']); // [ADDED]
+                $team = $getCol($row, ['team', 'team group', 'group']); 
                 
                 if (empty($po)) { 
                     if (implode('', $row) !== '') $skippedCount++; 
                     continue; 
+                }
+
+                if (empty($sku)) {
+                    $skippedCount++;
+                    $errorLogs[] = "แถวที่ " . ($index + 1) . " (PO: $po): ข้ามการนำเข้าเนื่องจากข้อมูลบกพร่อง (ไม่มีการระบุรหัส SKU/รหัสสินค้า)";
+                    continue;
                 }
 
                 try {
@@ -335,6 +341,10 @@ try {
         // 6. CREATE SINGLE
         case 'create_single':
             $in = json_decode(file_get_contents('php://input'), true);
+            if (empty(trim($in['sku'] ?? ''))) {
+                echo json_encode(['success' => false, 'message' => 'ไม่สามารถบันทึกได้: กรุณาระบุรหัส SKU หรือรหัสสินค้า']);
+                break;
+            }
             $maxOrder = $pdo->query("SELECT MAX(custom_order) FROM $table WITH (NOLOCK)")->fetchColumn();
             $nextOrder = $maxOrder ? $maxOrder + 1 : 1;
             $oDate = $fnDate($in['order_date'] ?: null);

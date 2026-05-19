@@ -435,8 +435,13 @@ try {
             $shiftMode = $data['shiftMode'] ?? 'DAY'; 
             $overwrite = isset($data['overwrite']) && $data['overwrite'] ? 1 : 0;
             $workOnSunday = isset($data['workOnSunday']) && $data['workOnSunday'] ? 1 : 0;
+            
+            // 🔴 [NEW] เพิ่มบรรทัดนี้ เพื่อรับค่าวันที่อนุญาตให้ทำ OT
+            $allowedOTDays = $data['allowedOTDays'] ?? '1,2,3,4,5'; 
+            
             $currentUser = $_SESSION['user']['username'] ?? 'System';
 
+            // 🔴 [MODIFIED] เพิ่มพารามิเตอร์ @AllowedOTDays = :ot_days เข้าไปใน SQL
             $spName = 'sp_AutoGenerateProductionPlan_TEST';
             $sql = "EXEC $spName 
                     @FilterType = :ftype,
@@ -453,7 +458,8 @@ try {
                     @TotalOTBudget = :ot_budget,
                     @WorkOnSunday = :sunday,
                     @Overwrite = :ow, 
-                    @User = :usr";
+                    @User = :usr,
+                    @AllowedOTDays = :ot_days"; 
                     
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -471,7 +477,8 @@ try {
                 ':ot_budget' => $totalOTBudget,
                 ':sunday' => $workOnSunday,
                 ':ow' => $overwrite,
-                ':usr' => $currentUser
+                ':usr' => $currentUser,
+                ':ot_days' => $allowedOTDays // 🔴 [NEW] ผูกค่าตัวแปร
             ]);
             
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -502,6 +509,42 @@ try {
             // หลังจากลบแผนแล้ว ควรจะล้าง Carry Over ที่คำนวณค้างไว้ด้วย (ถ้าจำเป็น)
             // หรือส่งข้อความยืนยันกลับไป
             echo json_encode(['success' => true, 'message' => 'ล้างข้อมูลแผนการผลิตใน Sandbox เรียบร้อยแล้ว']);
+            break;
+
+        case 'delete_plans_by_range':
+            if ($method !== 'POST') throw new Exception("Invalid method");
+            
+            $delStartDate = $data['startDate'] ?? null;
+            $delEndDate = $data['endDate'] ?? null;
+            $delLine = $data['line'] ?? 'ALL';
+            
+            if (!$delStartDate || !$delEndDate) {
+                throw new Exception("กรุณาระบุวันที่เริ่มต้นและสิ้นสุด");
+            }
+            if ($delStartDate > $delEndDate) {
+                throw new Exception("วันที่เริ่มต้นต้องไม่มากกว่าวันที่สิ้นสุด");
+            }
+            
+            $sql = "DELETE FROM $planTable WHERE plan_date BETWEEN :start AND :end";
+            $params = [
+                ':start' => $delStartDate, 
+                ':end' => $delEndDate
+            ];
+            
+            // หากไม่ได้เลือก ALL ให้ลบเฉพาะไลน์ที่ระบุ
+            if ($delLine !== 'ALL') {
+                $sql .= " AND line = :line";
+                $params[':line'] = $delLine;
+            }
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $deletedCount = $stmt->rowCount();
+            
+            echo json_encode([
+                'success' => true, 
+                'message' => "ลบแผนการผลิตสำเร็จจำนวน $deletedCount รายการ"
+            ]);
             break;
 
         default:

@@ -168,9 +168,14 @@ $pageHelpId = "helpModal";
                                             <input type="text" id="tableSearchInput" class="form-control border-start-0 bg-light ps-0" 
                                                 placeholder="Search Part, SAP, Note...">
                                         </div>
+
+                                        <input type="checkbox" class="btn-check" id="toggleDailyView" autocomplete="off">
+                                        <label class="btn btn-sm btn-outline-secondary fw-bold ms-2" for="toggleDailyView" title="สลับโหมดรวมกะ/แยกกะ">
+                                            <i class="fas fa-layer-group me-1"></i> Daily View
+                                        </label>
                                     </div>
                                     
-                                    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                                    <div class="d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
                                         
                                         <div class="btn-group btn-group-sm shadow-sm">
                                             <button class="btn btn-outline-secondary bg-white text-dark" onclick="exportToExcel()" title="Download Excel">
@@ -184,16 +189,29 @@ $pageHelpId = "helpModal";
 
                                         <div class="vr mx-1 opacity-25 d-none d-md-block"></div>
 
-                                        <button class="btn btn-sm btn-outline-warning text-dark fw-bold" id="btnCalculateCarryOver" 
-                                                title="Auto Calculate Carry Over">
+                                        <button class="btn btn-sm btn-outline-warning text-dark fw-bold" id="btnCalculateCarryOver" title="Auto Calculate Carry Over">
                                             <i class="fas fa-sync-alt me-1"></i> Calc C/O
                                         </button>
 
-                                        <button type="button" class="btn btn-outline-danger btn-sm fw-bold" id="btnClearAllPlans" onclick="clearAllPlans()">
-                                            <i class="fas fa-trash-alt me-1"></i> Clear All
-                                        </button>
-
-                                        <button class="btn btn-outline-primary btn-sm ms-2 fw-bold" onclick="openAutoPlanWizard()">
+                                        <div class="dropdown d-inline-block">
+                                            <button class="btn btn-sm btn-outline-danger fw-bold dropdown-toggle" type="button" id="deletePlanDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="จัดการลบแผนการผลิต">
+                                                <i class="fas fa-trash-alt me-1"></i> Delete
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="deletePlanDropdown">
+                                                <li>
+                                                    <a class="dropdown-item text-danger py-2" href="#" id="btnDeletePlanRange">
+                                                        <i class="fas fa-calendar-times me-2 w-20px text-center"></i> Delete by Range
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider m-0"></li>
+                                                <li>
+                                                    <a class="dropdown-item text-danger py-2 fw-bold bg-danger bg-opacity-10" href="#" onclick="clearAllPlans()">
+                                                        <i class="fas fa-bomb me-2 w-20px text-center"></i> Clear All Plans
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        <button class="btn btn-outline-primary btn-sm fw-bold" onclick="openAutoPlanWizard()">
                                             <i class="fas fa-magic me-1"></i> Auto Create Plan
                                         </button>
                                         
@@ -218,11 +236,13 @@ $pageHelpId = "helpModal";
                                             <th class="text-end" style="width: 100px;">Target</th>
                                             <th class="text-end" style="width: 100px;">Actual</th>
                                             
+                                            <th class="text-center" style="width: 100px;">OT (Hrs)</th> 
+
                                             <th class="text-end text-secondary" style="width: 130px;">Est. Sales</th>
                                             <th class="text-end text-success fw-bold" style="width: 130px;">Act. Sales</th>
                                             <th class="text-end fw-bold" style="width: 130px;">Sales Diff</th>
                                             
-                                            <th class="text-center" style="width: 200px;">Note</th> 
+                                            <th class="text-center" style="width: 150px;">Note</th> 
                                         </tr>
                                     </thead>
                                     <tbody id="productionPlanTableBody" class="bg-white"></tbody>

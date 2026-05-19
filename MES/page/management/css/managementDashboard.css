@@ -144,10 +144,10 @@
 .editable-plan { 
     cursor: pointer; 
     min-width: 40px; 
-    display: inline-block; 
     padding: 0 2px;
     border-bottom: 1px dashed #adb5bd;
 }
+
 .editable-plan:focus { 
     outline: 2px solid var(--bs-primary); 
     background-color: var(--bs-body-bg);

@@ -84,136 +84,155 @@
 
 <div class="modal fade" id="autoPlanModal" tabindex="-1" aria-labelledby="autoPlanModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
+        <div class="modal-content border-0 shadow">
             
-            <div class="modal-header bg-primary text-white py-3">
-                <h5 class="modal-title fw-bold" id="autoPlanModalLabel">
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title fw-bold mb-0" id="autoPlanModalLabel">
                     <i class="fas fa-robot me-2"></i>APS Auto-Plan Wizard
-                </h5>
+                </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <div class="modal-body bg-light p-4">
+            <div class="modal-body bg-light p-3">
                 <form id="apsPlanForm" onsubmit="return false;">
                     
                     <div class="card border-0 shadow-sm mb-3">
-                        <div class="card-header bg-white border-bottom-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold text-dark mb-0"><i class="fas fa-filter text-primary me-2"></i>1. กรองออเดอร์ (Source Filter)</h6>
-                            
-                            <div class="btn-group" role="group">
-                                <input type="radio" class="btn-check" name="apsFilterType" id="filterTypeDate" value="DATE" checked>
-                                <label class="btn btn-outline-primary btn-sm px-3 py-1" for="filterTypeDate" style="font-size: 0.8rem;">ค้นหาด้วย Date</label>
-
-                                <input type="radio" class="btn-check" name="apsFilterType" id="filterTypeWeek" value="WEEK">
-                                <label class="btn btn-outline-primary btn-sm px-3 py-1" for="filterTypeWeek" style="font-size: 0.8rem;">ค้นหาด้วย Week</label>
+                        <div class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold text-dark mb-0 fs-6">1. กรองออเดอร์ (Source Filter)</h6>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <input type="radio" class="btn-check" name="apsFilterType" id="filterTypeDate" value="DATE">
+                                <label class="btn btn-outline-primary px-3" for="filterTypeDate">Date</label>
+                                
+                                <input type="radio" class="btn-check" name="apsFilterType" id="filterTypeWeek" value="WEEK" checked>
+                                <label class="btn btn-outline-primary px-3" for="filterTypeWeek">Week</label>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <div id="zoneDateFilter" class="row g-2">
+                        <div class="card-body pt-0">
+                            <div id="zoneDateFilter" class="row g-2 d-none">
                                 <div class="col-md-6">
-                                    <label class="form-label small text-muted">SO Date (ตั้งแต่)</label>
+                                    <label class="form-label small text-muted mb-1">SO Date (ตั้งแต่)</label>
                                     <input type="date" class="form-control form-control-sm" id="apsSoStart">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small text-muted">SO Date (ถึง)</label>
+                                    <label class="form-label small text-muted mb-1">SO Date (ถึง)</label>
                                     <input type="date" class="form-control form-control-sm" id="apsSoEnd">
                                 </div>
                             </div>
                             
-                            <div id="zoneWeekFilter" class="row g-2 d-none">
+                            <div id="zoneWeekFilter" class="row g-2">
                                 <div class="col-md-6">
-                                    <label class="form-label small text-muted">Shipping Week (ตั้งแต่) <span class="text-danger">*</span></label>
+                                    <label class="form-label small text-muted mb-1">Shipping Week (ตั้งแต่) <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="apsWeekStart" placeholder="ตัวอย่าง: 9.26">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small text-muted">Shipping Week (ถึง) <span class="text-danger">*</span></label>
+                                    <label class="form-label small text-muted mb-1">Shipping Week (ถึง) <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" id="apsWeekEnd" placeholder="ตัวอย่าง: 13.26">
                                 </div>
                             </div>
-
-                            <div class="small text-muted mt-2 fst-italic">
-                                * ระบบจะจัดคิวความด่วนตาม <strong>Shipping Week</strong> อัตโนมัติเสมอ ไม่ว่าจะเลือกกรองด้วยวิธีใด
+                            <div class="form-text mt-2" style="font-size: 0.75rem;">
+                                * ระบบจะจัดคิวความด่วนตาม <strong>Shipping Week</strong> อัตโนมัติเสมอ
                             </div>
                         </div>
                     </div>
 
                     <div class="card border-0 shadow-sm mb-3">
-                        <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
-                            <h6 class="fw-bold text-dark"><i class="fas fa-cogs text-warning me-2"></i>2. ตัวแปรการผลิต (Production Factors)</h6>
+                        <div class="card-header bg-white border-bottom-0 pt-3 pb-2">
+                            <h6 class="fw-bold text-dark mb-0 fs-6">2. ตัวแปรการผลิต (Production Factors)</h6>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body pt-0">
                             <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label small text-muted">Loss เปลี่ยนรุ่น (Changeover Time)</label>
-                                    <div class="input-group input-group-sm">
-                                        <input type="number" class="form-control text-end" id="apsSetupTime" value="0.5" min="0" step="0.5">
-                                        <span class="input-group-text bg-white">ชั่วโมง</span>
-                                    </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small text-muted mb-1">Loss เปลี่ยนรุ่น (ชม.)</label>
+                                    <input type="number" class="form-control form-control-sm text-end" id="apsSetupTime" value="0.5" min="0" step="0.5">
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small text-muted">เวลาล่วงเวลา (OT / กะ)</label>
-                                    <div class="input-group input-group-sm">
-                                        <input type="number" class="form-control text-end" id="apsOtHours" value="0" min="0" step="0.5">
-                                        <span class="input-group-text bg-white">ชั่วโมง</span>
-                                    </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small text-muted mb-1">เวลา OT / กะ (ชม.)</label>
+                                    <input type="number" class="form-control form-control-sm text-end" id="apsOtHours" value="0" min="0" step="0.5">
                                 </div>
-                                <div class="col-md-12">
-                                    <label class="form-label small text-muted">การกระจายกะ (Shift Allocation)</label>
+                                <div class="col-md-4">
+                                    <label class="form-label small text-muted mb-1">การกระจายกะ</label>
                                     <select class="form-select form-select-sm" id="apsShiftMode">
-                                        <option value="DAY">ลงเฉพาะกะ DAY</option>
-                                        <option value="NIGHT">ลงเฉพาะกะ NIGHT</option>
-                                        <option value="SPLIT">กระจาย 2 กะ (DAY & NIGHT)</option>
+                                        <option value="DAY">เฉพาะ DAY</option>
+                                        <option value="NIGHT">เฉพาะ NIGHT</option>
+                                        <option value="SPLIT">กระจาย 2 กะ</option>
                                     </select>
                                 </div>
+
+                                <div class="col-12 mt-3">
+                                    <label class="form-label small text-muted mb-2">อนุญาตให้แทรก OT ในวันต่อไปนี้:</label>
+                                    <div class="btn-group w-100 shadow-sm" role="group">
+                                        <input type="checkbox" class="btn-check aps-ot-day" id="otMon" value="1" autocomplete="off" checked>
+                                        <label class="btn btn-outline-secondary btn-sm" for="otMon">จ.</label>
+                                        
+                                        <input type="checkbox" class="btn-check aps-ot-day" id="otTue" value="2" autocomplete="off" checked>
+                                        <label class="btn btn-outline-secondary btn-sm" for="otTue">อ.</label>
+                                        
+                                        <input type="checkbox" class="btn-check aps-ot-day" id="otWed" value="3" autocomplete="off" checked>
+                                        <label class="btn btn-outline-secondary btn-sm" for="otWed">พ.</label>
+                                        
+                                        <input type="checkbox" class="btn-check aps-ot-day" id="otThu" value="4" autocomplete="off" checked>
+                                        <label class="btn btn-outline-secondary btn-sm" for="otThu">พฤ.</label>
+                                        
+                                        <input type="checkbox" class="btn-check aps-ot-day" id="otFri" value="5" autocomplete="off" checked>
+                                        <label class="btn btn-outline-secondary btn-sm" for="otFri">ศ.</label>
+                                        
+                                        <input type="checkbox" class="btn-check aps-ot-day" id="otSat" value="6" autocomplete="off">
+                                        <label class="btn btn-outline-danger btn-sm" for="otSat">ส.</label>
+                                        
+                                        <input type="checkbox" class="btn-check aps-ot-day" id="otSun" value="7" autocomplete="off">
+                                        <label class="btn btn-outline-danger btn-sm" for="otSun">อา.</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="card border-0 shadow-sm mb-3">
-                        <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
-                            <h6 class="fw-bold text-dark"><i class="fas fa-calendar-alt text-success me-2"></i>3. กรอบเวลาจัดแผน (Scheduling Horizon)</h6>
+                        <div class="card-header bg-white border-bottom-0 pt-3 pb-2">
+                            <h6 class="fw-bold text-dark mb-0 fs-6">3. กรอบเวลาจัดแผน (Scheduling Horizon)</h6>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body pt-0">
                             <div class="row g-2 align-items-end">
                                 <div class="col-md-4">
-                                    <label class="form-label small text-muted">เริ่มจัดแผนตั้งแต่วันที่</label>
-                                    <input type="date" class="form-control form-control-sm border-success" id="apsPlanStart" required>
+                                    <label class="form-label small text-muted mb-1">เริ่มจัดแผนตั้งแต่วันที่</label>
+                                    <input type="date" class="form-control form-control-sm border-primary" id="apsPlanStart" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small text-muted">โหมดการวางแผน</label>
+                                    <label class="form-label small text-muted mb-1">โหมดการวางแผน</label>
                                     <select class="form-select form-select-sm" id="apsRangeMode">
-                                        <option value="OPEN">เปิดกว้าง (จัดจนกว่าจะหมด)</option>
+                                        <option value="OPEN">เปิดกว้าง (จนกว่าจะหมด)</option>
                                         <option value="CLOSED">กำหนดวันสิ้นสุด (Timebox)</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small text-muted">วันสิ้นสุด (Cut-off)</label>
+                                    <label class="form-label small text-muted mb-1">วันสิ้นสุด (Cut-off)</label>
                                     <input type="date" class="form-control form-control-sm bg-light" id="apsPlanEnd" disabled>
                                 </div>
                             </div>
-                            <div class="row mt-3">
-                                <div class="col-12">
-                                    <div class="form-check form-switch bg-light border rounded p-2 d-flex align-items-center">
-                                        <input class="form-check-input ms-1 me-3" type="checkbox" id="apsWorkOnSunday">
-                                        <label class="form-check-label small fw-bold text-primary mb-0" for="apsWorkOnSunday">
-                                            อนุญาตให้จัดแผนลงวันอาทิตย์ (Sunday OT)
-                                        </label>
-                                    </div>
+                            
+                            <div class="mt-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="apsWorkOnSunday">
+                                    <label class="form-check-label small fw-bold text-dark" for="apsWorkOnSunday">
+                                        อนุญาตให้จัดแผนลงวันอาทิตย์ (Sunday OT)
+                                    </label>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="alert alert-danger bg-danger bg-opacity-10 border-danger border-opacity-25 d-flex align-items-center mb-0">
-                        <div class="form-check form-switch fs-5 mb-0">
-                            <input class="form-check-input" type="checkbox" id="apsOverwrite">
-                        </div>
-                        <div class="ms-2">
-                            <label class="form-check-label fw-bold text-danger mb-0" style="font-size: 0.9rem;" for="apsOverwrite">
-                                ล้างแผน Auto เดิมแล้วเขียนทับ (Clear & Replace)
-                            </label>
-                            <div class="small text-danger opacity-75" style="font-size: 0.75rem;">
-                                ระบบจะลบแผนอัตโนมัติของเก่าในช่วงเวลาที่แผนใหม่ไปตกกระทบ (ไม่ลบแผนที่คีย์มือ)
+                    <div class="card border-danger border-opacity-50 bg-danger bg-opacity-10 shadow-sm">
+                        <div class="card-body py-2 px-3 d-flex align-items-center">
+                            <div class="form-check form-switch mb-0 fs-5">
+                                <input class="form-check-input" type="checkbox" id="apsOverwrite">
+                            </div>
+                            <div class="ms-2">
+                                <label class="form-check-label fw-bold text-danger mb-0" style="font-size: 0.9rem;" for="apsOverwrite">
+                                    ล้างแผน Auto เดิมแล้วเขียนทับ (Clear & Replace)
+                                </label>
+                                <div class="text-danger opacity-75" style="font-size: 0.75rem;">
+                                    ระบบจะลบแผนอัตโนมัติเฉพาะช่วงเวลาที่กระทบ (ไม่ลบแผนที่เพิ่มด้วยมือ)
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -221,10 +240,10 @@
                 </form>
             </div>
 
-            <div class="modal-footer bg-light py-2">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                <button type="button" class="btn btn-sm btn-primary fw-bold" id="btnExecuteAps">
-                    <i class="fas fa-rocket me-1"></i> เริ่มประมวลผล APS
+            <div class="modal-footer bg-white py-2 border-top">
+                <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="btn btn-sm btn-primary fw-bold px-4" id="btnExecuteAps">
+                    เริ่มประมวลผล APS
                 </button>
             </div>
 
