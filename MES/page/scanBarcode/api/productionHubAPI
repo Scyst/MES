@@ -1,0 +1,72 @@
+<?php
+// MES/page/production/api/productionHubAPI.php
+require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/../../components/init.php';
+
+header('Content-Type: application/json; charset=utf-8');
+
+// CSRF Protection
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+    if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'data' => null, 'message' => 'CSRF token validation failed.']);
+        exit;
+    }
+}
+
+$action = $_REQUEST['action'] ?? '';
+$input = json_decode(file_get_contents("php://input"), true);
+$userId = $_SESSION['user']['id'] ?? 0;
+
+switch ($action) {
+    case 'record_production':
+        try {
+            $itemId = $input['itemId'] ?? null;
+            $locationId = $input['locationId'] ?? null;
+            $quantity = $input['quantity'] ?? 0;
+            $productionType = $input['productionType'] ?? 'FG';
+            $inputSource = $input['inputSource'] ?? 'UNKNOWN';
+            $lotNo = $input['lotNo'] ?? '';
+            $notes = $input['notes'] ?? '';
+
+            if (!$itemId || !$locationId || $quantity <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'data' => null, 'message' => 'ข้อมูลไม่ครบถ้วน หรือจำนวนไม่ถูกต้อง']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("EXEC sp_ProductionHub_Execute @itemId=?, @locationId=?, @quantity=?, @productionType=?, @inputSource=?, @lotNo=?, @notes=?, @userId=?");
+            $stmt->execute([$itemId, $locationId, $quantity, $productionType, $inputSource, $lotNo, $notes, $userId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($result && $result['success'] == 1) {
+                echo json_encode([
+                    'success' => true,
+                    'data' => [
+                        'transactionId' => $result['transaction_id'],
+                        'jobLinked' => $result['job_linked']
+                    ],
+                    'message' => "บันทึกยอดการผลิตเรียบร้อยแล้ว (Ref: " . $result['job_linked'] . ")"
+                ]);
+            } else {
+                throw new Exception("ไม่สามารถบันทึกข้อมูลได้");
+            }
+
+        } catch (Exception $e) {
+            // Log Error internally, do not expose raw SQL errors
+            writeLog($pdo, 'ERROR', 'PRODUCTION_HUB', '500', null, null, $e->getMessage());
+            
+            http_response_code(400);
+            echo json_encode([
+                'success' => false, 
+                'data' => null,
+                'message' => 'เกิดข้อผิดพลาดในการประมวลผล กรุณาตรวจสอบข้อมูลหรือติดต่อผู้ดูแลระบบ'
+            ]);
+        }
+        break;
+
+    default:
+        http_response_code(400);
+        echo json_encode(['success' => false, 'data' => null, 'message' => "Action not handled."]);
+        break;
+}
