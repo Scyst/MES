@@ -45,6 +45,7 @@
                     <?php if (in_array($userRole, ['admin', 'creator', 'supervisor'])): ?>
                     <li><a class="dropdown-item-icon py-1" href="../storeManagement/storeDashboard.php"><i class="fas fa-store fa-fw"></i><span>Store Dashboard</span></a></li>
                     <?php endif; ?>
+                    <li><a class="dropdown-item-icon py-1" href="../storeManagement/warehouse_operations.php"><i class="fas fa-warehouse fa-fw"></i><span>Warehouse Operations</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../storeManagement/rmReceiving.php"><i class="fas fa-inbox fa-fw"></i><span>RM Receiving & Tag</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../storeManagement/storeRequest.php"><i class="fas fa-dolly-flatbed fa-fw"></i><span>Scrap & Replacement</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../loadingReport/loading_report.php"><i class="fas fa-truck-loading fa-fw"></i><span>Loading Toolbox</span></a></li>
@@ -175,6 +176,7 @@
             <?php if (in_array($userRole, ['admin', 'creator', 'supervisor'])): ?>
             <a class="list-group-item list-group-item-action text-dark" href="../storeManagement/storeDashboard.php"><i class="fas fa-store fa-fw me-3"></i> Store Dashboard</a>
             <?php endif; ?>
+            <a class="list-group-item list-group-item-action text-dark" href="../storeManagement/warehouse_operations.php"><i class="fas fa-warehouse fa-fw me-3"></i> Warehouse Operations</a>
             <a class="list-group-item list-group-item-action text-dark" href="../storeManagement/rmReceiving.php"><i class="fas fa-inbox fa-fw me-3"></i> RM Receiving & Tag</a>
             <a class="list-group-item list-group-item-action text-dark" href="../storeManagement/storeRequest.php"><i class="fas fa-dolly-flatbed fa-fw me-3"></i> Scrap & Replacement</a>
             <a class="list-group-item list-group-item-action text-dark" href="../loadingReport/loading_report.php"><i class="fas fa-truck-loading fa-fw me-3"></i> Loading Toolbox</a>

@@ -184,6 +184,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         <?php 
                         $themeWh = 'text-warning bg-warning bg-opacity-10';
                         renderServiceLink('Store Dashboard', 'ศูนย์ควบคุมและคิวจ่ายสโตร์', '<i class="fas fa-store"></i>', '../storeManagement/storeDashboard.php', 'view_warehouse', $themeWh);
+                        renderServiceLink('Warehouse Operations', 'จัดการคลังสินค้า (รับเข้า/โหลดขาย)', '<i class="fas fa-warehouse"></i>', '../storeManagement/warehouse_operations.php', 'add_production', $themeWh);
                         renderServiceLink('RM Receiving', 'รับวัตถุดิบเข้าคลัง', '<i class="fas fa-pallet"></i>', '../storeManagement/rmReceiving.php', 'view_warehouse', $themeWh);
                         renderServiceLink('Scrap & Replacement', 'เบิก/คืน วัตถุดิบ', '<i class="fas fa-dolly-flatbed"></i>', '../storeManagement/storeRequest.php', 'view_warehouse', $themeWh);
                         renderServiceLink('Loading Report', 'ตรวจสอบตู้สินค้า (C-TPAT)', '<i class="fas fa-truck-loading"></i>', '../loadingReport/loading_report.php', 'view_warehouse', $themeWh);

@@ -1,44 +1,32 @@
 <?php
-header('Content-Type: application/json');
-require_once __DIR__ . '/../../db.php';
-require_once __DIR__ . '/../../components/init.php';
+// MES/page/production/api/class/TransferController.php
 
-if (!hasPermission('add_production') && !hasPermission('manage_production') && !hasPermission('print_label')) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Permission Denied']);
-    exit;
-}
+class TransferController {
+    private $currentUser;
+    private $input;
 
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'CSRF token validation failed.']);
-        exit;
+    public function __construct($currentUser, $input) {
+        $this->currentUser = $currentUser;
+        $this->input = $input;
     }
-}
 
-$transferTable = TRANSFER_ORDERS_TABLE;
-$itemTable = ITEMS_TABLE;
-$locTable = LOCATIONS_TABLE;
-$spUpdateOnhand = SP_UPDATE_ONHAND;
-$transTable = TRANSACTIONS_TABLE;
+    public function searchItems() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
 
-$action = $_REQUEST['action'] ?? '';
-$input = json_decode(file_get_contents("php://input"), true);
-$currentUser = $_SESSION['user'];
-
-require_once __DIR__ . '/class/TransferController.php';
-$controller = new TransferController($currentUser, $input);
-
-try {
-    switch ($action) {
-        case 'search_items':
-            if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
             
             $q = $_GET['q'] ?? '';
             if (strlen($q) < 2) {
                 echo json_encode(['success' => true, 'data' => []]);
-                break;
+                return;
             }
 
             $sql = "SELECT TOP 150 item_id, sap_no, part_no, part_description 
@@ -53,10 +41,21 @@ try {
             $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $items]);
-            break;
+            return;
+    }
 
-        case 'get_label_history':
-            if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
+    public function getLabelHistory() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
             
             $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
             $limit = isset($_GET['limit']) ? max(1, (int)$_GET['limit']) : 100;
@@ -122,10 +121,21 @@ try {
                 'total_pages' => ceil($totalRecords / $limit),
                 'message' => 'Fetched history successfully'
             ]);
-            break;
+            return;
+    }
 
-        case 'cancel_batch_labels':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+    public function cancelBatchLabels() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
             
             $lot_no = trim($input['lot_no'] ?? '');
             $is_range = isset($input['is_range']) ? (bool)$input['is_range'] : false;
@@ -168,10 +178,21 @@ try {
             } else {
                 throw new Exception("ไม่พบสติ๊กเกอร์สถานะ PENDING ในช่วงที่คุณระบุ (อาจถูกลบ/รับเข้าหมดแล้ว หรือคุณไม่มีสิทธิ์ลบของผู้อื่น)");
             }
-            break;
+            return;
+    }
 
-        case 'cancel_label':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+    public function cancelLabel() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
             
             $transfer_uuid = $input['transfer_uuid'] ?? '';
             if (empty($transfer_uuid)) throw new Exception("Transfer UUID is required.");
@@ -199,10 +220,21 @@ try {
             } else {
                 throw new Exception("ระบบไม่สามารถทำรายการยกเลิกและคืนเลขได้ กรุณาลองใหม่อีกครั้ง");
             }
-            break;
+            return;
+    }
 
-        case 'create_transfer_order':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+    public function createTransferOrder() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
 
             $transfer_uuid = $input['transfer_uuid'] ?? ''; 
             $item_id = $input['item_id'] ?? 0;
@@ -237,10 +269,21 @@ try {
             $pdo->commit();
 
             echo json_encode(['success' => true, 'message' => 'ใบโอนย้ายถูกสร้าง (Pending) สำเร็จ', 'transfer_uuid' => $transfer_uuid, 'transfer_id' => $new_transfer_id]);
-            break;
+            return;
+    }
 
-        case 'get_transfer_details':
-            if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
+    public function getTransferDetails() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
             
             $transfer_uuid = $_GET['transfer_id'] ?? '';
             if (empty($transfer_uuid)) throw new Exception("Missing Transfer ID.");
@@ -265,10 +308,21 @@ try {
             }
 
             echo json_encode(['success' => true, 'data' => $details]);
-            break;
+            return;
+    }
 
-        case 'confirm_transfer':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+    public function confirmTransfer() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
             
             $transfer_uuid = $input['transfer_uuid'] ?? '';
             $confirmed_quantity = floor((float)($input['confirmed_quantity'] ?? 0));
@@ -337,7 +391,7 @@ try {
                              std_cost_oh_machine_snapshot, std_cost_oh_util_snapshot, std_cost_oh_indirect_snapshot, 
                              std_cost_oh_staff_snapshot, std_cost_oh_acc_snapshot, std_cost_oh_other_snapshot) 
                          VALUES 
-                            (?, ?, 'INTERNAL_TRANSFER', ?, ?, ?, ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?)";
+                            (?, ?, 'INTERNAL_TRANSFER', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $transStmt = $pdo->prepare($transSql);
             $transStmt->execute([
                 $item_id, $confirmed_quantity, $transaction_timestamp, $from_loc_id, $to_loc_id, $transfer_uuid, $currentUser['id'],
@@ -348,10 +402,21 @@ try {
 
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'รับของเข้าสำเร็จ! สต็อกถูกอัปเดตแล้ว']);
-            break;
+            return;
+    }
 
-        case 'reverse_transfer':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+    public function reverseTransfer() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
             
             $transfer_uuid = $input['transfer_uuid'] ?? ''; 
             if (empty($transfer_uuid)) throw new Exception("Missing Transfer ID.");
@@ -423,10 +488,21 @@ try {
 
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'ยกเลิกรายการสำเร็จ! สต็อกถูกย้อนกลับแล้ว']);
-            break;
+            return;
+    }
 
-        case 'create_batch_transfer_orders':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+    public function createBatchTransferOrders() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
 
             $parent_lot = trim($input['parent_lot'] ?? '');
             $print_count = (int)($input['print_count'] ?? 1);
@@ -499,10 +575,21 @@ try {
                 'message' => "สร้างและเตรียมพิมพ์ {$print_count} รายการ สำเร็จ", 
                 'labels' => $generated_labels
             ]);
-            break;
+            return;
+    }
 
-        case 'get_pending_shipments':
-            if (!hasPermission('manage_shipment')) {
+    public function getPendingShipments() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if (!hasPermission('manage_shipment')) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'message' => 'Unauthorized to view pending shipments.']);
                 exit;
@@ -558,10 +645,21 @@ try {
             $pending_shipments = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $pending_shipments, 'total' => $total, 'page' => $page]);
-            break;
+            return;
+    }
 
-        case 'confirm_shipment':
-            if (!hasPermission('manage_shipment')) {
+    public function confirmShipment() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if (!hasPermission('manage_shipment')) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'message' => 'Unauthorized to confirm shipments.']);
                 exit;
@@ -604,10 +702,21 @@ try {
                 }
                 throw $e;
             }
-            break;
+            return;
+    }
 
-        case 'check_lot_status':
-            $lot_no = $_GET['lot_no'] ?? '';
+    public function checkLotStatus() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        $lot_no = $_GET['lot_no'] ?? '';
             $sap_no = $_GET['sap_no'] ?? ''; 
             $scan_id = $_GET['scan_id'] ?? null; 
 
@@ -671,10 +780,21 @@ try {
             } else {
                 echo json_encode(['success' => true, 'status' => 'new']);
             }
-            break;
+            return;
+    }
 
-        case 'get_locations_for_qr':
-            if (!hasPermission('print_qr')) {
+    public function getLocationsForQr() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if (!hasPermission('print_qr')) {
                  http_response_code(403);
                  echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
                  exit;
@@ -684,10 +804,21 @@ try {
             $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             echo json_encode(['success' => true, 'locations' => $locations]);
-            break;
+            return;
+    }
 
-        case 'get_next_serial':
-            $parent_lot = $input['parent_lot'] ?? '';
+    public function getNextSerial() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        $parent_lot = $input['parent_lot'] ?? '';
             if (empty($parent_lot)) {
                 throw new Exception("Parent Lot (Lot No.) is required.");
             }
@@ -717,10 +848,21 @@ try {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e;
             }
-            break;
+            return;
+    }
 
-        case 'create_scan_job':
-            $jobData = [
+    public function createScanJob() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        $jobData = [
                 'sap_no' => $input['sap_no'] ?? null,
                 'lot' => $input['lot'] ?? null,
                 'qty' => $input['qty'] ?? null,
@@ -750,10 +892,21 @@ try {
             $stmt->execute([$scan_id, json_encode($jobData)]);
 
             echo json_encode(['success' => true, 'scan_id' => $scan_id]);
-            break;
+            return;
+    }
 
-        case 'get_scan_job_data':
-            $scan_id = $_GET['scan_id'] ?? '';
+    public function getScanJobData() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        $scan_id = $_GET['scan_id'] ?? '';
             if (empty($scan_id)) {
                 throw new Exception("Scan ID is required.");
             }
@@ -768,10 +921,21 @@ try {
             } else {
                 throw new Exception("Scan ID not found or already used.");
             }
-            break;
+            return;
+    }
 
-        case 'update_label':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+    public function updateLabel() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
             
             $transfer_uuid = $input['transfer_uuid'] ?? '';
             $item_id = $input['item_id'] ?? 0;
@@ -804,10 +968,21 @@ try {
             $updStmt->execute([$item_id, $quantity, $from_loc_id, $prod_date, $notes . $note_update, $transfer_uuid]);
 
             echo json_encode(['success' => true, 'message' => "อัปเดตข้อมูล {$transfer_uuid} สำเร็จ"]);
-            break;
+            return;
+    }
 
-        case 'update_batch_labels':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+    public function updateBatchLabels() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
             
             $lot_no = trim($input['lot_no'] ?? '');
             $is_range = isset($input['is_range']) ? (bool)$input['is_range'] : false;
@@ -862,37 +1037,376 @@ try {
             } else {
                 throw new Exception("ไม่พบสติ๊กเกอร์สถานะ PENDING หรือคุณไม่มีสิทธิ์แก้ไข");
             }
-            break;
-
-
-        case 'reroute_and_confirm_transfer':
-            $controller->rerouteAndConfirmTransfer();
-            break;
-        case 'execute_scan_sale':
-            $controller->executeScanSale();
-            break;
-
-        case 'get_pending_receive':
-            $controller->getPendingReceive();
-            break;
-        case 'get_pending_sell':
-            $controller->getPendingSell();
-            break;
-        case 'bulk_confirm_transfer':
-            $controller->bulkConfirmTransfer();
-            break;
-        case 'bulk_execute_scan_sale':
-            $controller->bulkExecuteScanSale();
-            break;
-        default:
-
-
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => "Invalid action: $action"]);
-            break;
+            return;
     }
 
-} catch (Throwable $e) {
-    handleApiError($e, $pdo ?? null, $input ?? $_REQUEST);
+    public function rerouteAndConfirmTransfer() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+        $transfer_uuid = $input['transfer_uuid'] ?? '';
+        $new_to_loc_id = $input['to_location_id'] ?? 0;
+        $confirmed_quantity = floor((float)($input['confirmed_quantity'] ?? 0));
+        if (empty($transfer_uuid) || empty($new_to_loc_id)) {
+            throw new Exception("ข้อมูลไม่ครบถ้วน (ต้องการรหัสแท็ก และคลังปลายทางใหม่)");
+        }
+        $pdo->beginTransaction();
+        
+        $stmtGet = $pdo->prepare("SELECT * FROM $transferTable WITH (UPDLOCK) WHERE transfer_uuid = ?");
+        $stmtGet->execute([$transfer_uuid]);
+        $transfer_order = $stmtGet->fetch(PDO::FETCH_ASSOC);
+        if (!$transfer_order) {
+            $pdo->rollBack();
+            throw new Exception("ไม่พบใบโอนย้ายนี้ในระบบ");
+        }
+        if ($transfer_order['status'] !== 'PENDING') {
+            $pdo->rollBack();
+            throw new Exception("แท็กนี้ถูกใชงานไปแล้ว สถานะปัจจุบันคือ : " . $transfer_order['status']);
+        }
+        if ($confirmed_quantity <= 0) {
+            $confirmed_quantity = floor((float)$transfer_order['quantity']);
+        }
+        $item_id = $transfer_order['item_id'];
+        $from_loc_id = $transfer_order['from_location_id'];
+        $transaction_timestamp = date('Y-m-d H:i:s');
+        
+        $itemStmt = $pdo->prepare("SELECT * FROM $itemTable WITH (NOLOCK) WHERE item_id = ?");
+        $itemStmt->execute([$item_id]);
+        $item_info = $itemStmt->fetch(PDO::FETCH_ASSOC);
+        $oh_total = (float)$item_info['Cost_OH_Machine'] + (float)$item_info['Cost_OH_Utilities'] +
+        (float)$item_info['Cost_OH_Indirect'] +
+        (float)$item_info['Cost_OH_Staff'] + (float)$item_info['Cost_OH_Accessory'] +
+        (float)$item_info['Cost_OH_Others'];
+        $line_cost = (float)$item_info['Cost_Total'] * $confirmed_quantity;
+        
+        $spStock = $pdo->prepare("EXEC $spUpdateOnhand @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+        $spStock->execute([$item_id, $from_loc_id, -$confirmed_quantity]);
+        $spStock->closeCursor();
+        $spStock->execute([$item_id, $new_to_loc_id, $confirmed_quantity]);
+        $spStock->closeCursor();
+        
+        $note_update = "\nRe-routed & Confirmed by " . $currentUser['username'] . " to Location ID: " . $new_to_loc_id;
+        $stmtUpdate = $pdo->prepare("UPDATE $transferTable SET status = 'COMPLETED', to_location_id = ?, confirmed_by_user_id = ?, confirmed_at = ?, notes = ISNULL(notes, '') + ? WHERE transfer_id = ?");
+        $stmtUpdate->execute([$new_to_loc_id, $currentUser['id'], $transaction_timestamp, $note_update, $transfer_order['transfer_id']]);
+        
+        $transSql = "INSERT INTO $transTable (parameter_id, quantity, transaction_type, transaction_timestamp, from_location_id, to_location_id, reference_id, created_by_user_id, std_cost_mat_snapshot, std_cost_dl_snapshot, std_cost_oh_snapshot) VALUES (?, ?, 'INTERNAL_TRANSFER', ?, ?, ?, ?, ?, ?, ?, ?)";
+        $transStmt = $pdo->prepare($transSql);
+        $transStmt->execute([$item_id, $confirmed_quantity, $transaction_timestamp, $from_loc_id, $new_to_loc_id, $transfer_uuid, $currentUser['id'], $item_info['Cost_RM'], $item_info['Cost_DL'], $oh_total]);
+        $pdo->commit();
+        echo json_encode(['success' => true, 'message' => 'เปลี่ยนเส้นทางและยืนยันรับเข้าสต็อกส;าเร็จ!']);
+        return;
+    }
+
+    public function executeScanSale() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $locTable = LOCATIONS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
+        $transfer_uuid = $input['transfer_uuid'] ?? '';
+        if (empty($transfer_uuid)) throw new Exception("กรุณาระบุรหัสแท็กสินค้า (Transfer UUID)");
+        $pdo->beginTransaction();
+        
+        $stmtGet = $pdo->prepare("SELECT * FROM $transferTable WITH (UPDLOCK) WHERE transfer_uuid = ?");
+        $stmtGet->execute([$transfer_uuid]);
+        $transfer_order = $stmtGet->fetch(PDO::FETCH_ASSOC);
+        if (!$transfer_order) {
+            $pdo->rollBack();
+            throw new Exception("ไม่พบแท็กสินค้านี้ในระบบ");
+        }
+        if ($transfer_order['status'] === 'PENDING') {
+            $pdo->rollBack();
+            throw new Exception("ไม่สามารถขายได้: สินค้าชนนี้ยังไม่ได้รับเข้าสต็อกสำเร็จรูป (สถานะ PENDING)");
+        }
+        if ($transfer_order['status'] === 'SHIPPED' || $transfer_order['status'] === 'SOLD') {
+            $pdo->rollBack();
+            throw new Exception("ข้อผิดพลาด: แท็กนี้ถูกสแกนขายและโหลดออกจากคลังไปก่อนหน้านี้แล้ว!");
+        }
+        $item_id = $transfer_order['item_id'];
+        $current_fg_loc = $transfer_order['to_location_id']; 
+        $quantity = floor((float)$transfer_order['quantity']);
+        $transaction_timestamp = date('Y-m-d H:i:s');
+        
+        $itemStmt = $pdo->prepare("SELECT * FROM $itemTable WITH (NOLOCK) WHERE item_id = ?");
+        $itemStmt->execute([$item_id]);
+        $item_info = $itemStmt->fetch(PDO::FETCH_ASSOC);
+        
+        $spStock = $pdo->prepare("EXEC $spUpdateOnhand @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+        $spStock->execute([$item_id, $current_fg_loc, -$quantity]);
+        $spStock->closeCursor();
+        
+        $note_update = "\nSold & Shipped via Barcode Scanner by " . $currentUser['username'] . " at " . $transaction_timestamp;
+        $stmtUpdate = $pdo->prepare("UPDATE $transferTable SET status = 'SHIPPED', notes = ISNULL(notes, '') + ? WHERE transfer_id = ?");
+        $stmtUpdate->execute([$note_update, $transfer_order['transfer_id']]);
+        
+        $transSql = "INSERT INTO $transTable (parameter_id, quantity, transaction_type, transaction_timestamp, from_location_id, to_location_id, reference_id, created_by_user_id) VALUES (?, ?, 'SHIPPED', ?, ?, NULL, ?, ?)";
+        $transStmt = $pdo->prepare($transSql);
+        $transStmt->execute([$item_id, -$quantity, $transaction_timestamp, $current_fg_loc, $transfer_uuid, $currentUser['id']]);
+        $pdo->commit();
+        echo json_encode(['success' => true, 'message' => 'สแกนตัดสต็อกโหลดขายสำเร็จชิ้นงานเรียบร้อย !']);
+        return;
+    }
+    public function getPendingReceive() {
+        global $pdo;
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+
+        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+        $limit = isset($_GET['limit']) ? max(1, (int)$_GET['limit']) : 100;
+        $offset = ($page - 1) * $limit;
+        $search = trim($_GET['search'] ?? '');
+        $location_id = $_GET['location_id'] ?? '';
+
+        $conditions = ["t.status = 'PENDING'", "t.transfer_uuid NOT LIKE 'REQ-%'", "t.transfer_uuid NOT LIKE 'TRF-%'"];
+        $params = [];
+
+        if (!empty($location_id)) {
+            $conditions[] = "t.from_location_id = ?";
+            $params[] = $location_id;
+        }
+
+        if (!empty($search)) {
+            $searchTerm = '%' . $search . '%';
+            $conditions[] = "(t.transfer_uuid LIKE ? OR i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)";
+            array_push($params, $searchTerm, $searchTerm, $searchTerm, $searchTerm);
+        }
+
+        $whereClause = "WHERE " . implode(" AND ", $conditions);
+
+        // Count total
+        $countSql = "SELECT COUNT(*) FROM $transferTable t JOIN $itemTable i ON t.item_id = i.item_id $whereClause";
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->execute($params);
+        $totalRecords = (int)$countStmt->fetchColumn();
+        $totalPages = max(1, ceil($totalRecords / $limit));
+
+        // Fetch paginated data
+        $dataSql = "SELECT t.transfer_uuid, t.quantity, i.sap_no, i.part_no, i.part_description, t.created_at, t.status 
+                    FROM $transferTable t 
+                    JOIN $itemTable i ON t.item_id = i.item_id 
+                    $whereClause
+                    ORDER BY t.created_at DESC
+                    OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        $dataStmt = $pdo->prepare($dataSql);
+        $paramIndex = 1;
+        foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
+        $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
+        $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
+        $dataStmt->execute();
+        $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true, 
+            'data' => $data, 
+            'total' => $totalRecords, 
+            'page' => $page, 
+            'total_pages' => $totalPages
+        ]);
+        return;
+    }
+
+    public function getPendingSell() {
+        global $pdo;
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+
+        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+        $limit = isset($_GET['limit']) ? max(1, (int)$_GET['limit']) : 100;
+        $offset = ($page - 1) * $limit;
+        $search = trim($_GET['search'] ?? '');
+        $location_id = $_GET['location_id'] ?? '';
+
+        $conditions = ["t.status = 'COMPLETED'", "t.transfer_uuid NOT LIKE 'REQ-%'", "t.transfer_uuid NOT LIKE 'TRF-%'"];
+        $params = [];
+
+        if (!empty($location_id)) {
+            $conditions[] = "t.to_location_id = ?";
+            $params[] = $location_id;
+        }
+
+        if (!empty($search)) {
+            $searchTerm = '%' . $search . '%';
+            $conditions[] = "(t.transfer_uuid LIKE ? OR i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ?)";
+            array_push($params, $searchTerm, $searchTerm, $searchTerm, $searchTerm);
+        }
+
+        $whereClause = "WHERE " . implode(" AND ", $conditions);
+
+        // Count total
+        $countSql = "SELECT COUNT(*) FROM $transferTable t JOIN $itemTable i ON t.item_id = i.item_id $whereClause";
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->execute($params);
+        $totalRecords = (int)$countStmt->fetchColumn();
+        $totalPages = max(1, ceil($totalRecords / $limit));
+
+        // Fetch paginated data
+        $dataSql = "SELECT t.transfer_uuid, t.quantity, i.sap_no, i.part_no, i.part_description, t.created_at, t.status 
+                    FROM $transferTable t 
+                    JOIN $itemTable i ON t.item_id = i.item_id 
+                    $whereClause
+                    ORDER BY t.created_at DESC
+                    OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        $dataStmt = $pdo->prepare($dataSql);
+        $paramIndex = 1;
+        foreach ($params as $param) { $dataStmt->bindValue($paramIndex++, $param); }
+        $dataStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
+        $dataStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
+        $dataStmt->execute();
+        $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true, 
+            'data' => $data, 
+            'total' => $totalRecords, 
+            'page' => $page, 
+            'total_pages' => $totalPages
+        ]);
+        return;
+    }
+
+    public function bulkConfirmTransfer() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        $uuids = $input['transfer_uuids'] ?? [];
+        $actual_to_loc_id = $input['to_location_id'] ?? null;
+
+        if (empty($uuids) || !is_array($uuids)) {
+            echo json_encode(['success' => false, 'message' => 'No UUIDs provided']);
+            return;
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $success_count = 0;
+            foreach ($uuids as $transfer_uuid) {
+                $stmtGet = $pdo->prepare("SELECT * FROM $transferTable WITH (UPDLOCK) WHERE transfer_uuid = ?");
+                $stmtGet->execute([$transfer_uuid]);
+                $transfer_order = $stmtGet->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$transfer_order || $transfer_order['status'] !== 'PENDING') {
+                    continue;
+                }
+                
+                $confirmed_quantity = floor((float)$transfer_order['quantity']);
+                $item_id = $transfer_order['item_id'];
+                $from_loc_id = $transfer_order['from_location_id'];
+                $to_loc_id = $actual_to_loc_id ? $actual_to_loc_id : $transfer_order['to_location_id'];
+                $transaction_timestamp = date('Y-m-d H:i:s');
+                
+                $itemStmt = $pdo->prepare("SELECT * FROM $itemTable WITH (NOLOCK) WHERE item_id = ?");
+                $itemStmt->execute([$item_id]);
+                $item_info = $itemStmt->fetch(PDO::FETCH_ASSOC);
+                
+                $oh_total = (float)$item_info['Cost_OH_Machine'] + (float)$item_info['Cost_OH_Utilities'] + (float)$item_info['Cost_OH_Indirect'] + 
+                            (float)$item_info['Cost_OH_Staff'] + (float)$item_info['Cost_OH_Accessory'] + (float)$item_info['Cost_OH_Others'];
+                
+                $spStock = $pdo->prepare("EXEC $spUpdateOnhand @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+                $spStock->execute([$item_id, $from_loc_id, -$confirmed_quantity]);
+                $spStock->closeCursor();
+
+                $spStock->execute([$item_id, $to_loc_id, $confirmed_quantity]);
+                $spStock->closeCursor();
+                
+                $note_update = "\nBulk Confirmed by " . $currentUser['username'] . " at " . $transaction_timestamp;
+                $sqlUpdate = "UPDATE $transferTable SET status = 'COMPLETED', confirmed_by_user_id = ?, confirmed_at = ?, notes = ISNULL(notes, '') + ? WHERE transfer_id = ?";
+                $stmtUpdate = $pdo->prepare($sqlUpdate);
+                $stmtUpdate->execute([$currentUser['id'], $transaction_timestamp, $note_update, $transfer_order['transfer_id']]);
+                
+                $transSql = "INSERT INTO $transTable (parameter_id, quantity, transaction_type, transaction_timestamp, from_location_id, to_location_id, reference_id, created_by_user_id, std_cost_mat_snapshot, std_cost_dl_snapshot, std_cost_oh_snapshot, std_cost_oh_machine_snapshot, std_cost_oh_util_snapshot, std_cost_oh_indirect_snapshot, std_cost_oh_staff_snapshot, std_cost_oh_acc_snapshot, std_cost_oh_other_snapshot) VALUES (?, ?, 'INTERNAL_TRANSFER', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $transStmt = $pdo->prepare($transSql);
+                $transStmt->execute([
+                    $item_id, $confirmed_quantity, $transaction_timestamp, $from_loc_id, $to_loc_id, $transfer_uuid, $currentUser['id'],
+                    $item_info['Cost_RM'], $item_info['Cost_DL'], $oh_total,
+                    $item_info['Cost_OH_Machine'], $item_info['Cost_OH_Utilities'], $item_info['Cost_OH_Indirect'],
+                    $item_info['Cost_OH_Staff'], $item_info['Cost_OH_Accessory'], $item_info['Cost_OH_Others']
+                ]);
+                $success_count++;
+            }
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => "รับเข้าสำเร็จ $success_count รายการ"]);
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        return;
+    }
+
+    public function bulkExecuteScanSale() {
+        global $pdo;
+        $currentUser = $this->currentUser;
+        $input = $this->input;
+        
+        $transferTable = TRANSFER_ORDERS_TABLE;
+        $itemTable = ITEMS_TABLE;
+        $spUpdateOnhand = SP_UPDATE_ONHAND;
+        $transTable = TRANSACTIONS_TABLE;
+
+        $uuids = $input['transfer_uuids'] ?? [];
+        if (empty($uuids) || !is_array($uuids)) {
+            echo json_encode(['success' => false, 'message' => 'No UUIDs provided']);
+            return;
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $success_count = 0;
+            foreach ($uuids as $transfer_uuid) {
+                $stmtGet = $pdo->prepare("SELECT * FROM $transferTable WITH (UPDLOCK) WHERE transfer_uuid = ?");
+                $stmtGet->execute([$transfer_uuid]);
+                $transfer_order = $stmtGet->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$transfer_order || $transfer_order['status'] !== 'COMPLETED') {
+                    continue;
+                }
+                
+                $item_id = $transfer_order['item_id'];
+                $current_fg_loc = $transfer_order['to_location_id']; 
+                $quantity = floor((float)$transfer_order['quantity']);
+                $transaction_timestamp = date('Y-m-d H:i:s');
+                
+                $spStock = $pdo->prepare("EXEC $spUpdateOnhand @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+                $spStock->execute([$item_id, $current_fg_loc, -$quantity]);
+                $spStock->closeCursor();
+                
+                $note_update = "\nBulk Sold & Shipped by " . $currentUser['username'] . " at " . $transaction_timestamp;
+                $stmtUpdate = $pdo->prepare("UPDATE $transferTable SET status = 'SHIPPED', notes = ISNULL(notes, '') + ? WHERE transfer_id = ?");
+                $stmtUpdate->execute([$note_update, $transfer_order['transfer_id']]);
+                
+                $transSql = "INSERT INTO $transTable (parameter_id, quantity, transaction_type, transaction_timestamp, from_location_id, to_location_id, reference_id, created_by_user_id) VALUES (?, ?, 'SHIPPED', ?, ?, NULL, ?, ?)";
+                $transStmt = $pdo->prepare($transSql);
+                $transStmt->execute([$item_id, -$quantity, $transaction_timestamp, $current_fg_loc, $transfer_uuid, $currentUser['id']]);
+                
+                $success_count++;
+            }
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => "ตัดสต็อกสำเร็จ $success_count รายการ"]);
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        return;
+    }
 }
 ?>
+
