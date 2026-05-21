@@ -825,45 +825,45 @@ function executeHiddenPrint(labelsArray) {
         let safeSerial = d.serial_no ? String(d.serial_no).replace(/[^a-zA-Z0-9-]/g, '') : 'unknown';
         let uniqueQrId = `qr-${safeSerial}-${i}`;
         renderHTML += `
-        <div class="tag-card" style="flex-direction: column; align-items: stretch; padding: 2mm;">
-            <div style="display: flex; flex-direction: row; height: 65%; width: 100%; overflow: hidden;">
-                <div class="tag-details" style="width: 70%; height: 100%; padding-right: 5px;">
-                    <div class="t-title">${escapeHTML(d.part_no)}</div>
-                    <div class="t-sub">${escapeHTML(d.sap_no)}</div>
-                    <div class="t-desc" title="${escapeHTML(displayDesc)}">${escapeHTML(displayDesc)}</div>
+        <div class="tag-card" style="display: flex; flex-direction: row; align-items: stretch; padding: 2mm 2mm 2mm 4mm; box-sizing: border-box; width: 4in; height: 2in; overflow: hidden;">
+            <div class="tag-details" style="width: 65%; display: flex; flex-direction: column; justify-content: center; height: 100%; padding-right: 5px; box-sizing: border-box;">
+                <div>
+                    <div class="t-title" style="font-size: 16px; font-weight: bold; line-height: 1.1; margin-bottom: 2px;">${escapeHTML(d.part_no)}</div>
+                    <div class="t-sub" style="font-size: 11px; font-weight: bold; line-height: 1.1; margin-bottom: 2px;">${escapeHTML(d.sap_no)}</div>
+                    <div class="t-desc" style="font-size: 9px; line-height: 1.15; margin-bottom: 4px; border-bottom: 1px solid #000; padding-bottom: 2px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal;" title="${escapeHTML(displayDesc)}">${escapeHTML(displayDesc)}</div>
                     
-                    <table class="t-table">
+                    <table class="t-table" style="width: 100%; font-size: 9px; line-height: 1.1;">
                         <tr>
-                            <td style="width: 55%;">
-                                <div style="display: flex; align-items: baseline; gap: 4px;">
+                            <td style="width: 55%; padding: 1px 0;">
+                                <div style="display: flex; align-items: baseline; gap: 3px;">
                                     <b>QTY:</b> 
-                                    <span class="t-hl">${parseFloat(d.quantity).toLocaleString()}</span>
+                                    <span class="t-hl" style="font-size: 13px; font-weight: bold;">${parseFloat(d.quantity).toLocaleString()}</span>
                                 </div>
                             </td>
-                            <td style="width: 45%;">
-                                <div style="display: flex; align-items: baseline; gap: 4px;">
+                            <td style="width: 45%; padding: 1px 0;">
+                                <div style="display: flex; align-items: baseline; gap: 3px;">
                                     <b>Date:</b> 
                                     <span>${escapeHTML(d.prod_date)}</span>
                                 </div>
                             </td>
                         </tr>
                         <tr>
-                            <td style="padding-right: 5px;">
-                                <div style="display: flex; align-items: baseline; gap: 4px;">
+                            <td style="padding: 1px 0; padding-right: 5px;">
+                                <div style="display: flex; align-items: baseline; gap: 3px;">
                                     <b>Lot:</b> 
-                                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:115px;">${escapeHTML(d.manual_lot)}</span>
+                                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:115px; font-weight: bold;">${escapeHTML(d.manual_lot)}</span>
                                 </div>
                             </td>
-                            <td>
-                                <div style="display: flex; align-items: baseline; gap: 4px;">
+                            <td style="padding: 1px 0;">
+                                <div style="display: flex; align-items: baseline; gap: 3px;">
                                     <b>Loc:</b> 
                                     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100px;">${escapeHTML(d.location_name)}</span>
                                 </div>
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="2">
-                                <div style="display: flex; align-items: baseline; gap: 4px;">
+                            <td colspan="2" style="padding: 1px 0;">
+                                <div style="display: flex; align-items: baseline; gap: 3px;">
                                     <b>Remark:</b> 
                                     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:230px;" title="${escapeHTML(d.remark || '')}">${escapeHTML(d.remark || '-')}</span>
                                 </div>
@@ -871,19 +871,13 @@ function executeHiddenPrint(labelsArray) {
                         </tr>
                     </table>
                 </div>
-                <div class="tag-qr" style="width: 30%; height: 100%; justify-content: center; padding-top: 0; border-left: 1px dashed #ccc;">
-                    <div style="font-size: 8px; font-weight: bold; margin-bottom: 2px;">Mobile Scan</div>
-                    <div id="${uniqueQrId}"></div>
-                </div>
             </div>
-            <div style="height: 35%; width: 100%; display: flex; flex-direction: row; align-items: center; overflow: hidden; border-top: 1px dashed #ccc;">
-                <div style="display: flex; justify-content: center; align-items: center; width: 70%; height: 100%; border-right: 1px dashed #ccc;">
-                    <div style="font-size: 16px; font-weight: bold; letter-spacing: 1px;">${escapeHTML(d.scan_id_display)}</div>
+            <div class="tag-qr" style="width: 35%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px; box-sizing: border-box;">
+                <div id="${uniqueQrId}" style="display: flex; justify-content: center; align-items: center;"></div>
+                <div style="font-size: 8px; font-family: monospace; font-weight: bold; text-align: center; line-height: 1; word-break: break-all; width: 100%; color: #000; padding: 2px 0;">
+                    ${escapeHTML(d.scan_id_display)}
                 </div>
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 30%; height: 100%;">
-                    <div style="font-size: 8px; font-weight: bold; margin-bottom: 2px;">Web Scan</div>
-                    <div id="qr2-${uniqueQrId}"></div>
-                </div>
+                <div id="qr2-${uniqueQrId}" style="display: flex; justify-content: center; align-items: center;"></div>
             </div>
         </div>
         `;
@@ -897,8 +891,8 @@ function executeHiddenPrint(labelsArray) {
             
             new QRCode(document.getElementById(uniqueQrId), {
                 text: String(d.qr_url), 
-                width: 75, 
-                height: 75,
+                width: 72, 
+                height: 72,
                 colorDark : "#000000", 
                 colorLight : "#ffffff", 
                 correctLevel : QRCode.CorrectLevel.M 
@@ -907,8 +901,8 @@ function executeHiddenPrint(labelsArray) {
             // Create second QR code for Web Scanner (Low density)
             new QRCode(document.getElementById("qr2-" + uniqueQrId), {
                 text: String(d.scan_id_display), 
-                width: 60, 
-                height: 60,
+                width: 72, 
+                height: 72,
                 colorDark: "#000000",
                 colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.L

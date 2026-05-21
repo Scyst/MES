@@ -50,19 +50,17 @@
             #printArea, #printArea * { visibility: visible !important; }
             #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
             
-            .tag-card { width: 4in; height: 2in; box-sizing: border-box; padding: 2mm 2mm 2mm 6mm; page-break-after: always; font-family: 'Arial', sans-serif; color: #000; background-color: #fff; display: flex; flex-direction: row; align-items: center; overflow: hidden; }
+            .tag-card { width: 4in; height: 2in; box-sizing: border-box; page-break-after: always; font-family: 'Arial', sans-serif; color: #000; background-color: #fff; display: flex; flex-direction: row; align-items: stretch; overflow: hidden; }
             .tag-card:last-child { page-break-after: auto; }
-            .tag-details { width: 75%; padding-right: 4px; display: flex; flex-direction: column; justify-content: center; height: 100%; }
-            .t-title { font-size: 18px; font-weight: bold; line-height: 1.2; margin-bottom: 2px; }
-            .t-sub { font-size: 11px; font-weight: bold; line-height: 1.2; margin-bottom: 2px; }
-            .t-desc { font-size: 11px; line-height: 1.2; margin-bottom: 4px; border-bottom: 1px solid #000; padding-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
-            .t-table { width: 100%; font-size: 11px; line-height: 1.15; }
-            .t-table td { padding: 2px 0 2px 0; vertical-align: middle; }
-            .t-hl { font-size: 16px; font-weight: bold; line-height: 0.8; display: inline-block; }
-            .tag-qr { width: 26%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
-            .tag-qr canvas, .tag-qr img { width: 75px !important; height: 75px !important; }
-            .t-serial { font-size: 11px; font-weight: bold; text-align: center; word-break: break-all; }
-            .t-barcode { width: 100% !important; max-height: 100% !important; margin: 0; padding: 0; }
+            .tag-details { width: 65%; display: flex; flex-direction: column; justify-content: center; height: 100%; box-sizing: border-box; }
+            .t-title { font-size: 16px; font-weight: bold; line-height: 1.1; margin-bottom: 2px; }
+            .t-sub { font-size: 11px; font-weight: bold; line-height: 1.1; margin-bottom: 2px; }
+            .t-desc { font-size: 9px; line-height: 1.15; margin-bottom: 4px; border-bottom: 1px solid #000; padding-bottom: 2px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+            .t-table { width: 100%; font-size: 9px; line-height: 1.1; }
+            .t-table td { padding: 1px 0; vertical-align: middle; }
+            .t-hl { font-size: 13px; font-weight: bold; line-height: 1; display: inline-block; }
+            .tag-qr { width: 35%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box; }
+            .tag-qr canvas, .tag-qr img { max-width: 100%; height: auto; }
         }
     </style>
 </head>
