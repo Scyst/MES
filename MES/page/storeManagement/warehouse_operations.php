@@ -56,7 +56,6 @@ $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
             width: 100% !important;
             height: auto !important;
             min-height: 250px;
-            object-fit: cover;
             border-radius: 8px;
         }
         #qrScanResult {

@@ -485,12 +485,21 @@ async function startQRScanning() {
             html5QrCodeWh = null;
         }
         
-        html5QrCodeWh = new Html5Qrcode('qr-reader-wh');
+        html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { verbose: false });
         
         try {
             await html5QrCodeWh.start(
                 { facingMode: 'environment' },
-                { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+                { 
+                    fps: 10, 
+                    qrbox: function(viewfinderWidth, viewfinderHeight) {
+                        // Dynamic qrbox size based on screen width, makes scanning easier
+                        const minEdgePercentage = 0.7; // 70% of the smallest edge
+                        const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+                        const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+                        return { width: qrboxSize, height: qrboxSize };
+                    }
+                },
                 (decodedText) => {
                     if (qrIsProcessing) return; // Prevent duplicate scans
                     qrIsProcessing = true;
