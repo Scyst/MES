@@ -872,7 +872,7 @@ function executeHiddenPrint(labelsArray) {
             </div>
             <div class="tag-qr">
                 <div id="${uniqueQrId}"></div>
-                <div class="t-serial">${escapeHTML(d.scan_id_display)}</div>
+                <svg id="bc-${uniqueQrId}" class="t-barcode"></svg>
             </div>
         </div>
         `;
@@ -886,12 +886,26 @@ function executeHiddenPrint(labelsArray) {
             
             new QRCode(document.getElementById(uniqueQrId), {
                 text: String(d.qr_url), 
-                width: 85, 
-                height: 85,
+                width: 75, 
+                height: 75,
                 colorDark : "#000000", 
                 colorLight : "#ffffff", 
                 correctLevel : QRCode.CorrectLevel.M 
             });
+            
+            if (typeof JsBarcode !== 'undefined') {
+                try {
+                    JsBarcode("#bc-" + uniqueQrId, String(d.scan_id_display), {
+                        format: "CODE128",
+                        displayValue: true,
+                        fontSize: 14,
+                        fontOptions: "bold",
+                        margin: 0,
+                        width: 1.2,
+                        height: 25
+                    });
+                } catch(e) { console.error("Barcode Error", e); }
+            }
         });
     }
     setTimeout(() => {

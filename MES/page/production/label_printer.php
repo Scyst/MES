@@ -59,9 +59,10 @@
             .t-table { width: 100%; font-size: 11px; line-height: 1.15; }
             .t-table td { padding: 2px 0 2px 0; vertical-align: middle; }
             .t-hl { font-size: 16px; font-weight: bold; line-height: 0.8; display: inline-block; }
-            .tag-qr { width: 26%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-            .tag-qr canvas, .tag-qr img { width: 85px !important; height: 85px !important; }
-            .t-serial { font-size: 11px; font-weight: bold; margin-top: 5px; text-align: center; word-break: break-all; }
+            .tag-qr { width: 26%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+            .tag-qr canvas, .tag-qr img { width: 75px !important; height: 75px !important; }
+            .t-serial { font-size: 11px; font-weight: bold; text-align: center; word-break: break-all; }
+            .t-barcode { width: 95px !important; height: 35px !important; margin: 0; padding: 0; }
         }
     </style>
 </head>
@@ -334,6 +335,7 @@
         document.getElementById('prod_date').valueAsDate = new Date();
     </script>
     <script src="../../utils/libs/qrcode.min.js"></script>
+    <script src="../../utils/libs/JsBarcode.all.min.js"></script>
     <script src="script/label_printer.js?v=<?php echo time(); ?>" defer></script>
 </body>
 </html>
