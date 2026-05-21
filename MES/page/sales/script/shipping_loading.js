@@ -522,7 +522,7 @@ async function exportToCSV() {
         const rawDate = (d) => {
             if (!d || d === '0000-00-00') return '';
             const ds = getDateObj(d);
-            return ds ? `${String(ds.getDate()).padStart(2, '0')}/${String(ds.getMonth()+1).padStart(2, '0')}/${ds.getFullYear()}` : d;
+            return ds ? `${ds.getFullYear()}-${String(ds.getMonth()+1).padStart(2, '0')}-${String(ds.getDate()).padStart(2, '0')}` : d;
         };
 
         const excelData = dataToExport.map(row => {
@@ -604,8 +604,8 @@ async function uploadFile() {
         reader.onload = async function(event) {
             try {
                 const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, {type: 'array', cellDates: true});
-                const csvOutput = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]], { dateNF: 'yyyy-mm-dd', defval: '' });
+                const workbook = XLSX.read(data, {type: 'array'});
+                const csvOutput = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]], { raw: true, defval: '' });
                 const blob = new Blob([csvOutput], { type: 'text/csv' });
                 const formData = new FormData();
                 formData.append('file', blob, 'converted.csv');

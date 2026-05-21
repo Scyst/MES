@@ -194,7 +194,7 @@ window.openStockOrder = async function(reqId) {
         currentItems.forEach(item => {
             const reqQty = parseFloat(item.qty_requested); const onHand = parseFloat(item.onhand_qty);
             const isStockShort = onHand < reqQty; 
-            const defaultIssueQty = item.qty_issued !== null ? parseFloat(item.qty_issued) : reqQty;
+            const defaultIssueQty = item.qty_issued !== null ? parseFloat(item.qty_issued) : Math.min(reqQty, onHand);
             let issueClass = 'text-success';
             if (!isEditable && defaultIssueQty < reqQty) issueClass = 'text-warning text-dark';
             if (!isEditable && defaultIssueQty === 0) issueClass = 'text-danger';
@@ -233,7 +233,7 @@ window.openStockOrder = async function(reqId) {
                             <div class="d-flex align-items-center justify-content-center w-100" style="height: 26px;">
                                 <input type="number" 
                                     class="text-center fw-bold ${isEditable ? 'text-success' : issueClass} issue-qty-input p-0 m-0 border-0 bg-transparent w-100" 
-                                    data-rowid="${item.row_id}" data-itemid="${item.item_id}" data-itemcode="${safeItemCode}" value="${defaultIssueQty}" min="0" max="${onHand}" ${!isEditable ? 'disabled' : ''} 
+                                    data-rowid="${item.row_id}" data-itemid="${item.item_id}" data-itemcode="${safeItemCode}" data-requested="${reqQty}" value="${defaultIssueQty}" min="0" max="${onHand}" ${!isEditable ? 'disabled' : ''} 
                                     style="font-size: 1.25rem; line-height: 1; outline: none; box-shadow: none; -moz-appearance: textfield;">
                             </div>
                         </div>
@@ -277,7 +277,7 @@ window.rejectOrder = function(reqId) {
         if (result.isConfirmed) {
             try {
                 await fetchAPI('reject_order', 'POST', { req_id: reqId, reason: result.value }, 'btnRejectOrder');
-                Swal.fire('Rejected', 'ยกเลิกออเดอร์เรียบร้อย', 'success'); loadActiveQueue(true); openStockOrder(reqId); 
+                Swal.fire('Rejected', 'ยกเลิกออเดอร์เรียบร้อย', 'success').then(() => { loadActiveQueue(true); switchView('list'); }); 
             } catch (error) {}
         }
     });
@@ -289,8 +289,10 @@ window.confirmIssue = async function(reqId) {
     for (const input of inputs) {
         const rowId = input.dataset.rowid; const itemId = input.dataset.itemid; const itemCode = input.dataset.itemcode;
         const issueQty = parseFloat(input.value); const maxQty = parseFloat(input.getAttribute('max')); 
+        const reqQty = parseFloat(input.dataset.requested);
         if (isNaN(issueQty) || issueQty < 0) { hasError = `กรุณากรอกจำนวนให้ถูกต้อง (SAP: ${itemCode})`; break; }
         if (issueQty > maxQty) { hasError = `สต๊อกมีไม่พอจ่าย! (SAP: ${itemCode} จ่ายได้สูงสุด ${maxQty})`; break; }
+        if (issueQty > reqQty) { hasError = `จำนวนจ่ายจริงห้ามเกินจำนวนที่ขอเบิก! (SAP: ${itemCode} ขอเบิก ${reqQty})`; break; }
         issueData.push({ row_id: rowId, item_id: itemId, item_code: itemCode, qty_issued: issueQty });
     }
     if (hasError) { Swal.fire('ข้อมูลไม่ถูกต้อง', hasError, 'warning'); return; }

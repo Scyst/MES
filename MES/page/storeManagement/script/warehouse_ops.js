@@ -14,17 +14,6 @@ $(document).ready(function() {
     // Load table on page ready
     loadTableData();
     
-    // Handle barcode scanner input (enter key)
-    $('#barcodeInput').on('keypress', function(e) {
-        if (e.which == 13) {
-            e.preventDefault();
-            const uuid = $(this).val().trim();
-            if (uuid) {
-                processSingleScan(uuid);
-            }
-        }
-    });
-    
     // Search input debounce (500ms)
     $('#listSearchInput').on('input', function() {
         clearTimeout(searchTimer);
@@ -56,22 +45,31 @@ function switchMode(mode) {
         $('body').addClass('mode-receive').removeClass('mode-sell');
         $('#btnModeReceive').removeClass('btn-outline-success').addClass('btn-success');
         $('#btnModeSell').removeClass('btn-primary').addClass('btn-outline-primary');
-        $('#destinationSelectorDiv').show();
-        $('#barcodeInput').attr('placeholder', 'สแกนแท็กรับเข้าที่นี่...');
+        
+        // Update main page scan button styling to green (Success)
+        $('#btnOpenQRScannerMain').removeClass('btn-primary').addClass('btn-success');
+        
+        // Show location selector inside the modal
+        $('#modalReceiveLocationDiv').show();
+        
         $('#btnBulkAction').removeClass('btn-primary').addClass('btn-success');
         $('#btnBulkActionText').text('ยืนยันรับเข้าที่เลือก');
     } else {
         $('body').addClass('mode-sell').removeClass('mode-receive');
         $('#btnModeSell').removeClass('btn-outline-primary').addClass('btn-primary');
         $('#btnModeReceive').removeClass('btn-success').addClass('btn-outline-success');
-        $('#destinationSelectorDiv').hide();
-        $('#barcodeInput').attr('placeholder', 'สแกนแท็กโหลดขายที่นี่...');
+        
+        // Update main page scan button styling to blue (Primary)
+        $('#btnOpenQRScannerMain').removeClass('btn-success').addClass('btn-primary');
+        
+        // Hide location selector inside the modal
+        $('#modalReceiveLocationDiv').hide();
+        
         $('#btnBulkAction').removeClass('btn-success').addClass('btn-primary');
         $('#btnBulkActionText').text('ยืนยันตัดสต็อกที่เลือก');
     }
     
     // Reset
-    $('#barcodeInput').val('').focus();
     hideScanFeedback();
     selectedUuids.clear();
     $('#selectAllCheckbox').prop('checked', false);
@@ -121,54 +119,7 @@ function hideScanFeedback() {
     $('#scanFeedback').attr('style', 'display: none !important; font-size: 0.85rem;');
 }
 
-// === Single Scan ===
-function processSingleScan(uuid) {
-    const input = $('#barcodeInput');
-    input.prop('disabled', true);
-    showScanFeedback('processing', 'กำลังประมวลผล...');
-    
-    let apiUrl = '';
-    let payload = { transfer_uuid: uuid };
-    
-    if (currentMode === 'receive') {
-        const locId = $('#receiveLocationId').val();
-        if (!locId) {
-            showScanFeedback('error', 'กรุณาเลือกคลังสินค้าปลายทางก่อนสแกนรับเข้า');
-            input.prop('disabled', false).val('').focus();
-            return;
-        }
-        apiUrl = '../production/api/transferManage.php?action=confirm_transfer';
-        payload.to_location_id = locId;
-    } else {
-        apiUrl = '../production/api/transferManage.php?action=execute_scan_sale';
-    }
-    
-    fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-        body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            showScanFeedback('success', `สำเร็จ! ${data.message}`);
-            // Flash the table to indicate update
-            $('#tagsTable').addClass('scan-flash');
-            setTimeout(() => $('#tagsTable').removeClass('scan-flash'), 600);
-            loadTableData(); // Refresh table after successful scan
-        } else {
-            showScanFeedback('error', `ผิดพลาด: ${data.message}`);
-            $('#tagsTable').addClass('scan-flash-error');
-            setTimeout(() => $('#tagsTable').removeClass('scan-flash-error'), 600);
-        }
-    })
-    .catch(err => {
-        showScanFeedback('error', 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว');
-    })
-    .finally(() => {
-        input.prop('disabled', false).val('').focus();
-    });
-}
+
 
 // === Table Data Loading (with Pagination) ===
 function loadTableData(page) {
@@ -310,15 +261,61 @@ function processBulkAction() {
     if (currentMode === 'receive') {
         const locId = $('#receiveLocationId').val();
         if (!locId) {
-            alert('กรุณาเลือกคลังสินค้าปลายทางก่อนรับเข้า');
+            // Collect locations for SweetAlert2 select input from our modal select options
+            const options = {};
+            $('#receiveLocationId option').each(function() {
+                const val = $(this).val();
+                const text = $(this).text();
+                if (val) {
+                    options[val] = text;
+                }
+            });
+            
+            Swal.fire({
+                title: 'กรุณาเลือกคลังสินค้าปลายทาง',
+                input: 'select',
+                inputOptions: options,
+                inputPlaceholder: '-- เลือกคลังสินค้าปลายทาง --',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยันรับเข้า',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#198754',
+                customClass: {
+                    input: 'form-select form-select-sm fw-bold text-success'
+                },
+                inputValidator: (value) => {
+                    return new Promise((resolve) => {
+                        if (value) {
+                            resolve();
+                        } else {
+                            resolve('กรุณาเลือกคลังสินค้าปลายทาง');
+                        }
+                    });
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const selectedLocId = result.value;
+                    // Sync to modal dropdown
+                    $('#receiveLocationId').val(selectedLocId);
+                    
+                    apiUrl = '../production/api/transferManage.php?action=bulk_confirm_transfer';
+                    payload.to_location_id = selectedLocId;
+                    sendBulkRequest(apiUrl, payload);
+                }
+            });
             return;
         }
+        
         apiUrl = '../production/api/transferManage.php?action=bulk_confirm_transfer';
         payload.to_location_id = locId;
     } else {
         apiUrl = '../production/api/transferManage.php?action=bulk_execute_scan_sale';
     }
     
+    sendBulkRequest(apiUrl, payload);
+}
+
+function sendBulkRequest(apiUrl, payload) {
     const btn = $('#btnBulkAction');
     const originalText = btn.html();
     btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> กำลังประมวลผล...');
@@ -367,6 +364,11 @@ $(document).ready(function() {
         qrScannerModal = new bootstrap.Modal(qrModalEl);
         
         qrModalEl.addEventListener('shown.bs.modal', function() {
+            if (currentMode === 'receive') {
+                $('#modalReceiveLocationDiv').show();
+            } else {
+                $('#modalReceiveLocationDiv').hide();
+            }
             initCameraList().then(() => startQRScanning());
             $('#qrManualInput').focus();
         });
@@ -496,13 +498,6 @@ function parseQRContent(decodedText) {
 
 // --- Open Modal ---
 function openQRScannerModal() {
-    if (currentMode === 'receive') {
-        const locId = $('#receiveLocationId').val();
-        if (!locId) {
-            showScanFeedback('error', 'กรุณาเลือกคลังสินค้าปลายทางก่อนเปิดกล้องสแกน');
-            return;
-        }
-    }
     qrScannerModal.show();
 }
 
@@ -594,7 +589,8 @@ function processQRScan(transferUuid) {
     if (currentMode === 'receive') {
         const locId = $('#receiveLocationId').val();
         if (!locId) {
-            showQRScanResult('error', 'ไม่ได้เลือกคลังปลายทาง', 'กรุณาปิด Modal แล้วเลือกคลังก่อน');
+            showQRScanResult('error', 'ไม่ได้เลือกคลังสินค้าปลายทาง', 'กรุณาเลือกคลังสินค้าด้านบนก่อนทำการสแกน');
+            playSound('errorSound');
             qrIsProcessing = false;
             return;
         }

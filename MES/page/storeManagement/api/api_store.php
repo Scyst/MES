@@ -336,10 +336,7 @@ try {
                 throw new Exception("ไม่มีรายการสินค้า");
             }
 
-            $stmt = $pdo->prepare("EXEC dbo.sp_Store_SubmitRequisition 
-                                    @UserId = ?, @Remark = ?, @RequestType = ?, 
-                                    @CartJson = ?, @StoreLocationId = ?, 
-                                    @NewReqNumber = ? OUTPUT");
+            $stmt = $pdo->prepare("{CALL dbo.sp_Store_SubmitRequisition(?, ?, ?, ?, ?, ?)}");
             
             $stmt->bindParam(1, $userId, PDO::PARAM_INT);
             $stmt->bindParam(2, $remark, PDO::PARAM_STR);

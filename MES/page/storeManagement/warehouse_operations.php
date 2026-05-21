@@ -124,27 +124,12 @@ $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </button>
                             </div>
 
-                            <!-- Right: Scan Box > Location Scan > Switch Receive/Load Sell -->
+                            <!-- Right: Dynamic Open Scanner Button > Switch Receive/Load Sell -->
                             <div class="d-flex flex-wrap align-items-center gap-2">
-                                <!-- Scanner Box -->
-                                <div class="input-group input-group-sm shadow-sm" style="flex: 1 1 200px; max-width: 350px;">
-                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-barcode"></i></span>
-                                    <input type="text" class="form-control border-secondary-subtle border-start-0 ps-0 fw-bold scanner-input" id="barcodeInput" placeholder="สแกนแท็กรับเข้าที่นี่..." autofocus autocomplete="off">
-                                    <button class="btn btn-outline-success border-secondary-subtle" type="button" id="btnOpenQRScanner" onclick="openQRScannerModal()" title="เปิดกล้องสแกน QR Code">
-                                        <i class="fas fa-qrcode"></i>
-                                    </button>
-                                </div>
-
-                                <!-- Location Scan (Destination) -->
-                                <div class="input-group input-group-sm shadow-sm" id="destinationSelectorDiv" style="flex: 0 1 180px;">
-                                    <span class="input-group-text bg-white border-success text-success"><i class="fas fa-map-marker-alt"></i></span>
-                                    <select class="form-select border-success fw-bold text-success" id="receiveLocationId">
-                                        <option value="">-- เลือกปลายทาง --</option>
-                                        <?php foreach ($locations as $loc): ?>
-                                            <option value="<?php echo htmlspecialchars($loc['location_id']); ?>"><?php echo htmlspecialchars($loc['location_name']); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
+                                <!-- Open Scanner Button (dynamically styled in JS) -->
+                                <button class="btn btn-success btn-sm shadow-sm fw-bold px-3 py-1.5 flex-shrink-0" type="button" id="btnOpenQRScannerMain" onclick="openQRScannerModal()" title="เปิดกล้องสแกน QR / Barcode" style="height: 32px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fas fa-qrcode"></i> <span>เปิดกล้องสแกน</span>
+                                </button>
 
                                 <!-- Switch Mode (Receive/Load Sell) -->
                                 <div class="btn-group btn-group-sm shadow-sm" role="group">
@@ -225,6 +210,22 @@ $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
                 <div class="modal-body p-2 p-md-3 bg-body-tertiary d-flex flex-column gap-2">
                     
+                    <!-- Destination Location Selector (Receive Mode only) -->
+                    <div id="modalReceiveLocationDiv" class="bg-white border border-success border-opacity-25 rounded-3 shadow-sm p-2 mb-1" style="display: none;">
+                        <div class="d-flex align-items-center gap-2 mb-2 px-1">
+                            <div class="d-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success rounded-circle" style="width: 26px; height: 26px;">
+                                <i class="fas fa-map-marker-alt" style="font-size: 0.85rem;"></i>
+                            </div>
+                            <span class="fw-bold text-success" style="font-size: 0.85rem;">คลังสินค้าปลายทาง (รับเข้า)</span>
+                        </div>
+                        <select class="form-select form-select-sm border-success fw-bold text-success shadow-sm" id="receiveLocationId" style="height: 34px; font-size: 0.85rem; border-width: 1px;">
+                            <option value="" class="text-secondary fw-normal">-- เลือกคลังสินค้าปลายทาง --</option>
+                            <?php foreach ($locations as $loc): ?>
+                                <option value="<?php echo htmlspecialchars($loc['location_id']); ?>"><?php echo htmlspecialchars($loc['location_name']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
                     <div class="bg-white border rounded shadow-sm p-2">
                         <!-- Controls: Continuous Toggle + Upload -->
                         <div class="d-flex justify-content-between align-items-center mb-2 px-1">
