@@ -415,7 +415,7 @@ $(document).ready(function() {
         cropModalEl.addEventListener('shown.bs.modal', function() {
             if (qrCropper) qrCropper.destroy();
             qrCropper = new Cropper(document.getElementById('qrImageToCrop'), {
-                aspectRatio: 1,
+                aspectRatio: NaN,
                 viewMode: 1,
                 autoCropArea: 0.8,
             });
@@ -528,7 +528,8 @@ async function startQRScanning() {
             html5QrCodeWh = null;
         }
         
-        html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { verbose: false });
+        const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.CODE_128] : undefined;
+        html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { verbose: false, formatsToSupport: formats });
         
         // Use string ID if explicitly selected, otherwise use environment config
         const cameraConfig = selectedCameraId ? selectedCameraId : { facingMode: 'environment' };
@@ -649,7 +650,8 @@ async function handleQRImageScan(file) {
     
     try {
         if (!html5QrCodeWh) {
-            html5QrCodeWh = new Html5Qrcode('qr-reader-wh');
+            const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.CODE_128] : undefined;
+            html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { verbose: false, formatsToSupport: formats });
         }
         const decodedText = await html5QrCodeWh.scanFile(file, false);
         const transferUuid = parseQRContent(decodedText.trim());

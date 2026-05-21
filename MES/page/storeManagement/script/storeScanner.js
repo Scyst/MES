@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cropModalEl.addEventListener('shown.bs.modal', function () {
             if (cropper) cropper.destroy();
             cropper = new Cropper(imageToCrop, {
-                aspectRatio: 1, viewMode: 1, autoCropArea: 0.8,
+                aspectRatio: NaN, viewMode: 1, autoCropArea: 0.8,
             });
         });
 
@@ -124,7 +124,10 @@ async function handleTraceFileScan(file) {
     document.getElementById('traceActionArea').classList.add('d-none');
 
     try {
-        if (!html5QrCodeTrace) html5QrCodeTrace = new Html5Qrcode("qr-reader-trace");
+        if (!html5QrCodeTrace) {
+            const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.CODE_128] : undefined;
+            html5QrCodeTrace = new Html5Qrcode("qr-reader-trace", { verbose: false, formatsToSupport: formats });
+        }
         const decodedText = await html5QrCodeTrace.scanFile(file, false);
         currentScannedBarcode = decodedText.trim();
         document.getElementById('scanInput').value = currentScannedBarcode;
@@ -188,7 +191,8 @@ async function startTraceScanning() {
             html5QrCodeTrace = null;
         }
 
-        html5QrCodeTrace = new Html5Qrcode("qr-reader-trace");
+        const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.CODE_128] : undefined;
+        html5QrCodeTrace = new Html5Qrcode("qr-reader-trace", { verbose: false, formatsToSupport: formats });
 
         try {
             await html5QrCodeTrace.start(
