@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Barcode Scanner Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+        #reader { width: 100%; margin: 20px 0; }
+        #result { padding: 15px; background: #f0f0f0; border-radius: 8px; margin-top: 10px; word-break: break-all; }
+        .log { font-size: 12px; color: #666; margin: 5px 0; }
+        button { padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer; }
+        h3 { margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <h2>🔬 Barcode Scanner Test Page</h2>
+    
+    <h3>1. Check Html5QrcodeSupportedFormats</h3>
+    <div id="formatCheck"></div>
+    
+    <h3>2. Camera Scanner</h3>
+    <p>กดปุ่มด้านล่างเพื่อเปิดกล้อง แล้วเอามือถือไปจ่อที่ Barcode</p>
+    <button onclick="startScan()">🎥 เปิดกล้องแสกน</button>
+    <button onclick="stopScan()">⏹️ หยุด</button>
+    <div id="reader"></div>
+    
+    <h3>3. ผลลัพธ์</h3>
+    <div id="result">รอการแสกน...</div>
+    
+    <h3>4. Log</h3>
+    <div id="log"></div>
+
+    <script src="../../utils/libs/html5-qrcode.min.js"></script>
+    <script>
+        const logEl = document.getElementById('log');
+        const resultEl = document.getElementById('result');
+        let html5QrCode = null;
+
+        function log(msg) {
+            console.log(msg);
+            logEl.innerHTML += `<div class="log">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+        }
+
+        // Check formats
+        (function checkFormats() {
+            const el = document.getElementById('formatCheck');
+            if (typeof Html5QrcodeSupportedFormats === 'undefined') {
+                el.innerHTML = '<b style="color:red">❌ Html5QrcodeSupportedFormats is UNDEFINED!</b>';
+                log('Html5QrcodeSupportedFormats is UNDEFINED');
+                return;
+            }
+            
+            let html = '<table border="1" cellpadding="5" style="font-size:12px;">';
+            html += '<tr><th>Format Name</th><th>Value</th></tr>';
+            
+            const names = Object.keys(Html5QrcodeSupportedFormats).filter(k => isNaN(Number(k)));
+            if (names.length === 0) {
+                // It's a numeric enum, show all
+                for (const [key, val] of Object.entries(Html5QrcodeSupportedFormats)) {
+                    html += `<tr><td>${key}</td><td>${val}</td></tr>`;
+                }
+            } else {
+                names.forEach(name => {
+                    html += `<tr><td>${name}</td><td>${Html5QrcodeSupportedFormats[name]}</td></tr>`;
+                });
+            }
+            html += '</table>';
+            el.innerHTML = html;
+            
+            log('QR_CODE = ' + Html5QrcodeSupportedFormats.QR_CODE);
+            log('CODE_128 = ' + Html5QrcodeSupportedFormats.CODE_128);
+            log('CODE_39 = ' + Html5QrcodeSupportedFormats.CODE_39);
+            log('EAN_13 = ' + Html5QrcodeSupportedFormats.EAN_13);
+        })();
+
+        async function startScan() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                await html5QrCode.stop();
+            }
+            
+            // Try with ALL common barcode formats
+            const formats = [
+                Html5QrcodeSupportedFormats.QR_CODE,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.CODE_93,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.ITF,
+                Html5QrcodeSupportedFormats.CODABAR
+            ].filter(f => f !== undefined && f !== null);
+            
+            log('Formats to scan: ' + JSON.stringify(formats));
+            
+            html5QrCode = new Html5Qrcode('reader', { 
+                verbose: true,
+                formatsToSupport: formats
+            });
+            
+            try {
+                await html5QrCode.start(
+                    { facingMode: 'environment' },
+                    { 
+                        fps: 15,
+                        qrbox: function(viewfinderWidth, viewfinderHeight) {
+                            return { 
+                                width: Math.floor(viewfinderWidth * 0.9), 
+                                height: Math.floor(viewfinderHeight * 0.4) 
+                            };
+                        }
+                    },
+                    (decodedText, decodedResult) => {
+                        log('✅ DECODED: ' + decodedText);
+                        log('Format: ' + JSON.stringify(decodedResult.result.format));
+                        resultEl.innerHTML = `<b style="color:green">✅ สแกนสำเร็จ!</b><br>` +
+                            `<b>ข้อมูล:</b> ${decodedText}<br>` +
+                            `<b>Format:</b> ${JSON.stringify(decodedResult.result.format)}<br>` +
+                            `<b>เวลา:</b> ${new Date().toLocaleTimeString()}`;
+                    },
+                    (errorMessage) => {
+                        // Scan error - normal when nothing detected
+                    }
+                );
+                log('Camera started successfully');
+            } catch (err) {
+                log('❌ Camera error: ' + err);
+                resultEl.innerHTML = `<b style="color:red">❌ ไม่สามารถเปิดกล้อง:</b> ${err}`;
+            }
+        }
+
+        async function stopScan() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                await html5QrCode.stop();
+                log('Camera stopped');
+            }
+        }
+    </script>
+</body>
+</html>
