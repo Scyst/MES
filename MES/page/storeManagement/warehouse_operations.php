@@ -29,6 +29,7 @@ $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <title><?php echo $pageTitle; ?></title>
     <meta name="csrf-token" content="<?php echo $_SESSION['csrf_token'] ?? ''; ?>">
     <?php include_once '../components/common_head.php'; ?>
+    <link href="../../utils/libs/cropper.min.css" rel="stylesheet">
     <style>
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -45,6 +46,35 @@ $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
         @keyframes flashError {
             0% { background-color: rgba(220,53,69,0.2); }
             100% { background-color: transparent; }
+        }
+
+        /* QR Scanner Modal */
+        #qr-reader-wh__dashboard_section { display: none !important; }
+        #html5-qrcode-button-camera-stop { display: none !important; }
+        #html5-qrcode-anchor-scan-type-change { display: none !important; }
+        #qr-reader-wh video {
+            width: 100% !important;
+            height: auto !important;
+            min-height: 250px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        #qrScanResult {
+            transition: all 0.3s ease;
+        }
+        #qrScanResult.flash-success {
+            animation: qrFlashSuccess 0.8s ease;
+        }
+        #qrScanResult.flash-error {
+            animation: qrFlashError 0.8s ease;
+        }
+        @keyframes qrFlashSuccess {
+            0% { transform: scale(1.05); box-shadow: 0 0 20px rgba(25,135,84,0.5); }
+            100% { transform: scale(1); box-shadow: none; }
+        }
+        @keyframes qrFlashError {
+            0% { transform: scale(1.05); box-shadow: 0 0 20px rgba(220,53,69,0.5); }
+            100% { transform: scale(1); box-shadow: none; }
         }
     </style>
 </head>
@@ -101,6 +131,9 @@ $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <div class="input-group input-group-sm shadow-sm" style="flex: 1 1 200px; max-width: 350px;">
                                     <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-barcode"></i></span>
                                     <input type="text" class="form-control border-secondary-subtle border-start-0 ps-0 fw-bold scanner-input" id="barcodeInput" placeholder="สแกนแท็กรับเข้าที่นี่..." autofocus autocomplete="off">
+                                    <button class="btn btn-outline-success border-secondary-subtle" type="button" id="btnOpenQRScanner" onclick="openQRScannerModal()" title="เปิดกล้องสแกน QR Code">
+                                        <i class="fas fa-qrcode"></i>
+                                    </button>
                                 </div>
 
                                 <!-- Location Scan (Destination) -->
@@ -183,6 +216,97 @@ $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
+    <!-- QR Scanner Modal -->
+    <div class="modal fade" id="qrScannerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white py-2 px-3 border-bottom-0">
+                    <h6 class="modal-title fw-bold mb-0"><i class="fas fa-qrcode me-2"></i> สแกน QR Code</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="font-size: 0.8rem;"></button>
+                </div>
+                <div class="modal-body p-2 p-md-3 bg-body-tertiary d-flex flex-column gap-2">
+                    
+                    <div class="bg-white border rounded shadow-sm p-2">
+                        <!-- Controls: Continuous Toggle + Upload -->
+                        <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                            <div class="form-check form-switch mb-0 d-flex align-items-center gap-2">
+                                <input class="form-check-input mt-0" type="checkbox" id="qrContinuousScan" style="cursor: pointer; transform: scale(1.1);">
+                                <label class="form-check-label fw-bold text-primary small" for="qrContinuousScan" style="cursor: pointer;">สแกนต่อเนื่อง</label>
+                            </div>
+                            <label for="qr-image-file" class="btn btn-sm btn-light border shadow-sm py-1 px-2 rounded cursor-pointer fw-bold text-dark" style="font-size: 0.75rem;">
+                                <i class="fas fa-image text-primary me-1"></i> อัปโหลดรูป
+                            </label>
+                            <input type="file" id="qr-image-file" accept="image/*" class="d-none">
+                        </div>
+
+                        <!-- Camera Preview -->
+                        <div class="position-relative bg-dark rounded-3 overflow-hidden shadow-sm" style="min-height: 250px; display: flex; align-items: center; justify-content: center;">
+                            <div id="qr-reader-wh" class="w-100"></div>
+                            <!-- Resume Overlay -->
+                            <div id="qrResumeOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-none flex-column align-items-center justify-content-center bg-dark bg-opacity-75" style="z-index: 10;">
+                                <button class="btn btn-outline-light rounded-circle shadow mb-2 d-flex align-items-center justify-content-center" onclick="resumeQRScanning()" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-qrcode fa-2x"></i>
+                                </button>
+                                <span class="text-white fw-bold small">แตะเพื่อสแกน QR ถัดไป</span>
+                            </div>
+                        </div>
+
+                        <!-- Manual Input -->
+                        <div class="input-group input-group-sm mt-3 shadow-sm">
+                            <span class="input-group-text bg-light text-primary border-secondary-subtle"><i class="fas fa-keyboard"></i></span>
+                            <input type="text" id="qrManualInput" class="form-control border-secondary-subtle fw-bold" placeholder="พิมพ์รหัสแท็กด้วยมือ..." autocomplete="off">
+                            <button class="btn btn-primary fw-bold px-3" type="button" onclick="submitQRManualInput()">
+                                <i class="fas fa-paper-plane me-1"></i> ส่ง
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Scan Result Area -->
+                    <div id="qrScanResult" class="d-none">
+                        <div class="alert mb-0 py-2 px-3 d-flex align-items-center" id="qrScanResultAlert">
+                            <i class="me-2 fs-5" id="qrScanResultIcon"></i>
+                            <div>
+                                <div class="fw-bold small" id="qrScanResultTitle"></div>
+                                <div class="small" id="qrScanResultMsg"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scan Counter -->
+                    <div class="d-flex justify-content-between align-items-center px-1">
+                        <small class="text-muted"><i class="fas fa-check-double me-1"></i> สแกนสำเร็จ: <strong id="qrScanCount">0</strong> รายการ</small>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="resetQRScanCount()" title="รีเซ็ตตัวนับ"><i class="fas fa-undo"></i></button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crop Modal (for image upload) -->
+    <div class="modal fade" id="qrCropModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-crop-alt me-2"></i> ครอบตัดเฉพาะ QR Code</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center bg-light p-3">
+                    <p class="text-muted small mb-2">เลื่อนและขยายกรอบให้พอดีกับ QR Code</p>
+                    <div style="max-height: 60vh; overflow: hidden; border: 1px dashed #ccc; background: #fff;">
+                        <img id="qrImageToCrop" src="" style="max-width: 100%; display: block;">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-primary fw-bold px-4" id="btnQrConfirmCrop">
+                        <i class="fas fa-check me-1"></i> ยืนยันและสแกน
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Audio feedback -->
     <audio id="successSound" src="../../assets/sounds/success.mp3" preload="auto"></audio>
     <audio id="errorSound" src="../../assets/sounds/error.mp3" preload="auto"></audio>
@@ -191,6 +315,8 @@ $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
     </script>
     <script src="../../utils/libs/jquery-3.6.0.min.js"></script>
+    <script src="../../utils/libs/html5-qrcode.min.js"></script>
+    <script src="../../utils/libs/cropper.min.js"></script>
     <script src="script/warehouse_ops.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

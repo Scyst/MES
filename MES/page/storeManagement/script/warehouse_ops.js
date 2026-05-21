@@ -347,3 +347,310 @@ function processBulkAction() {
         btn.prop('disabled', false).html(originalText);
     });
 }
+
+// =====================================================
+// === QR Camera Scanner ===
+// =====================================================
+let html5QrCodeWh = null;
+let qrScannerModal = null;
+let qrCropModal = null;
+let qrCropper = null;
+let qrScanCount = 0;
+let qrIsProcessing = false;
+
+// --- Init QR Scanner on DOM Ready ---
+$(document).ready(function() {
+    const qrModalEl = document.getElementById('qrScannerModal');
+    if (qrModalEl) {
+        qrScannerModal = new bootstrap.Modal(qrModalEl);
+        
+        qrModalEl.addEventListener('shown.bs.modal', function() {
+            startQRScanning();
+            $('#qrManualInput').focus();
+        });
+        
+        qrModalEl.addEventListener('hidden.bs.modal', function() {
+            stopQRScanning();
+            resetQRScanResult();
+        });
+        
+        // Manual input enter key
+        $('#qrManualInput').on('keypress', function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                submitQRManualInput();
+            }
+        });
+    }
+
+    // Crop Modal
+    const cropModalEl = document.getElementById('qrCropModal');
+    if (cropModalEl) {
+        qrCropModal = new bootstrap.Modal(cropModalEl);
+        
+        // Image file input
+        $('#qr-image-file').on('change', function(e) {
+            if (e.target.files && e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    $('#qrImageToCrop').attr('src', event.target.result);
+                    qrCropModal.show();
+                };
+                reader.readAsDataURL(file);
+                e.target.value = null;
+            }
+        });
+        
+        // Init cropper when crop modal opens
+        cropModalEl.addEventListener('shown.bs.modal', function() {
+            if (qrCropper) qrCropper.destroy();
+            qrCropper = new Cropper(document.getElementById('qrImageToCrop'), {
+                aspectRatio: 1,
+                viewMode: 1,
+                autoCropArea: 0.8,
+            });
+        });
+        
+        // Confirm crop button
+        $('#btnQrConfirmCrop').on('click', function() {
+            if (!qrCropper) return;
+            const btn = $(this);
+            const originalHtml = btn.html();
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> กำลังครอป...');
+            
+            qrCropper.getCroppedCanvas({ fillColor: '#fff' }).toBlob(async function(blob) {
+                const croppedFile = new File([blob], 'cropped_qr.png', { type: 'image/png' });
+                qrCropModal.hide();
+                await handleQRImageScan(croppedFile);
+                btn.prop('disabled', false).html(originalHtml);
+            });
+        });
+    }
+});
+
+// --- Parse QR Content ---
+// Supports: URL format (mobile_app.php?type=receipt&transfer_id=XXX) and plain transfer_uuid
+function parseQRContent(decodedText) {
+    const text = decodedText.trim();
+    
+    // Try to parse as URL (from label_printer.php)
+    try {
+        if (text.includes('transfer_id=') || text.includes('http')) {
+            const url = new URL(text, window.location.origin);
+            const transferId = url.searchParams.get('transfer_id');
+            if (transferId) return transferId;
+        }
+    } catch (e) {
+        // Not a valid URL, try manual regex
+        const match = text.match(/transfer_id=([^&]+)/);
+        if (match) return match[1];
+    }
+    
+    // Return as-is (direct transfer_uuid like "L-202604-001")
+    return text;
+}
+
+// --- Open Modal ---
+function openQRScannerModal() {
+    if (currentMode === 'receive') {
+        const locId = $('#receiveLocationId').val();
+        if (!locId) {
+            showScanFeedback('error', 'กรุณาเลือกคลังสินค้าปลายทางก่อนเปิดกล้องสแกน');
+            return;
+        }
+    }
+    qrScannerModal.show();
+}
+
+// --- Start Camera ---
+async function startQRScanning() {
+    const qrContainer = document.getElementById('qr-reader-wh');
+    if (!qrContainer) return;
+    
+    $('#qrResumeOverlay').addClass('d-none');
+    
+    const tryStartCamera = async (attempts = 0) => {
+        const currentWidth = qrContainer.clientWidth || qrContainer.offsetWidth;
+        if (currentWidth === 0 && attempts < 20) {
+            setTimeout(() => tryStartCamera(attempts + 1), 100);
+            return;
+        }
+        
+        if (html5QrCodeWh) {
+            if (html5QrCodeWh.isScanning) {
+                try { await html5QrCodeWh.stop(); } catch(e) {}
+            }
+            html5QrCodeWh.clear();
+            html5QrCodeWh = null;
+        }
+        
+        html5QrCodeWh = new Html5Qrcode('qr-reader-wh');
+        
+        try {
+            await html5QrCodeWh.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+                (decodedText) => {
+                    if (qrIsProcessing) return; // Prevent duplicate scans
+                    qrIsProcessing = true;
+                    stopQRScanning();
+                    const transferUuid = parseQRContent(decodedText);
+                    processQRScan(transferUuid);
+                }
+            );
+        } catch (err) {
+            console.warn('QR Camera start failed:', err);
+            showQRScanResult('error', 'ไม่สามารถเปิดกล้องได้', 'กรุณาอนุญาตให้เข้าถึงกล้อง หรือใช้ช่องพิมพ์ด้านล่าง');
+        }
+    };
+    
+    setTimeout(() => tryStartCamera(0), 200);
+}
+
+// --- Stop Camera ---
+function stopQRScanning() {
+    if (html5QrCodeWh && html5QrCodeWh.isScanning) {
+        html5QrCodeWh.stop().catch(err => console.log('Stop camera error:', err));
+    }
+    $('#qrResumeOverlay').removeClass('d-none').addClass('d-flex');
+}
+
+// --- Resume Scanning ---
+function resumeQRScanning() {
+    resetQRScanResult();
+    $('#qrResumeOverlay').removeClass('d-flex').addClass('d-none');
+    startQRScanning();
+    setTimeout(() => $('#qrManualInput').focus(), 300);
+}
+
+// --- Process QR Scan (send to API via processSingleScan logic) ---
+function processQRScan(transferUuid) {
+    if (!transferUuid) {
+        showQRScanResult('error', 'ไม่สามารถอ่าน QR ได้', 'ลองสแกนใหม่อีกครั้ง');
+        qrIsProcessing = false;
+        return;
+    }
+    
+    showQRScanResult('processing', 'กำลังประมวลผล...', transferUuid);
+    
+    let apiUrl = '';
+    let payload = { transfer_uuid: transferUuid };
+    
+    if (currentMode === 'receive') {
+        const locId = $('#receiveLocationId').val();
+        if (!locId) {
+            showQRScanResult('error', 'ไม่ได้เลือกคลังปลายทาง', 'กรุณาปิด Modal แล้วเลือกคลังก่อน');
+            qrIsProcessing = false;
+            return;
+        }
+        apiUrl = '../production/api/transferManage.php?action=confirm_transfer';
+        payload.to_location_id = locId;
+    } else {
+        apiUrl = '../production/api/transferManage.php?action=execute_scan_sale';
+    }
+    
+    fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            qrScanCount++;
+            $('#qrScanCount').text(qrScanCount);
+            showQRScanResult('success', 'สำเร็จ!', `${data.message} (${transferUuid})`);
+            playSound('successSound');
+            loadTableData(); // Refresh table
+            
+            // Auto-resume if continuous mode
+            const isContinuous = $('#qrContinuousScan').is(':checked');
+            if (isContinuous) {
+                setTimeout(() => {
+                    qrIsProcessing = false;
+                    resumeQRScanning();
+                }, 1500);
+            } else {
+                qrIsProcessing = false;
+            }
+        } else {
+            showQRScanResult('error', 'ผิดพลาด', `${data.message} (${transferUuid})`);
+            playSound('errorSound');
+            qrIsProcessing = false;
+        }
+    })
+    .catch(err => {
+        showQRScanResult('error', 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว', 'กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
+        playSound('errorSound');
+        qrIsProcessing = false;
+    });
+}
+
+// --- Image Upload Scan ---
+async function handleQRImageScan(file) {
+    if (!file) return;
+    
+    showQRScanResult('processing', 'กำลังอ่าน QR จากรูปภาพ...', '');
+    
+    try {
+        if (!html5QrCodeWh) {
+            html5QrCodeWh = new Html5Qrcode('qr-reader-wh');
+        }
+        const decodedText = await html5QrCodeWh.scanFile(file, false);
+        const transferUuid = parseQRContent(decodedText.trim());
+        processQRScan(transferUuid);
+    } catch (err) {
+        showQRScanResult('error', 'ไม่พบ QR Code ในรูปภาพ', 'ลองครอปให้ชัดเจนกว่านี้');
+    }
+}
+
+// --- Manual Input ---
+function submitQRManualInput() {
+    const value = $('#qrManualInput').val().trim();
+    if (!value) return;
+    
+    const transferUuid = parseQRContent(value);
+    stopQRScanning();
+    processQRScan(transferUuid);
+    $('#qrManualInput').val('');
+}
+
+// --- Show Scan Result ---
+function showQRScanResult(type, title, message) {
+    const container = $('#qrScanResult');
+    const alert = $('#qrScanResultAlert');
+    const icon = $('#qrScanResultIcon');
+    
+    container.removeClass('d-none flash-success flash-error');
+    alert.removeClass('alert-success alert-danger alert-warning alert-info');
+    icon.removeClass('fas fa-check-circle fa-times-circle fa-spinner fa-spin fa-exclamation-triangle');
+    
+    if (type === 'success') {
+        alert.addClass('alert-success');
+        icon.addClass('fas fa-check-circle text-success');
+        container.addClass('flash-success');
+    } else if (type === 'error') {
+        alert.addClass('alert-danger');
+        icon.addClass('fas fa-times-circle text-danger');
+        container.addClass('flash-error');
+    } else { // processing
+        alert.addClass('alert-info');
+        icon.addClass('fas fa-spinner fa-spin text-info');
+    }
+    
+    $('#qrScanResultTitle').text(title);
+    $('#qrScanResultMsg').text(message || '');
+}
+
+// --- Reset Scan Result ---
+function resetQRScanResult() {
+    $('#qrScanResult').addClass('d-none');
+    qrIsProcessing = false;
+}
+
+// --- Reset Scan Counter ---
+function resetQRScanCount() {
+    qrScanCount = 0;
+    $('#qrScanCount').text('0');
+}
