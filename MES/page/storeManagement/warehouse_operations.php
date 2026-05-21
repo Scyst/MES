@@ -237,6 +237,13 @@ $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </label>
                             <input type="file" id="qr-image-file" accept="image/*" class="d-none">
                         </div>
+                        
+                        <!-- Camera Selector -->
+                        <div class="mb-2 px-1" id="qrCameraSelectContainer" style="display: none;">
+                            <select id="qrCameraSelect" class="form-select form-select-sm shadow-sm border-secondary-subtle fw-bold text-secondary">
+                                <option value="">-- กำลังค้นหากล้อง... --</option>
+                            </select>
+                        </div>
 
                         <!-- Camera Preview -->
                         <div class="position-relative bg-dark rounded-3 overflow-hidden shadow-sm" style="min-height: 250px; display: flex; align-items: center; justify-content: center;">

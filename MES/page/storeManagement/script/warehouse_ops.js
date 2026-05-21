@@ -357,6 +357,8 @@ let qrCropModal = null;
 let qrCropper = null;
 let qrScanCount = 0;
 let qrIsProcessing = false;
+let qrCameras = [];
+let selectedCameraId = null;
 
 // --- Init QR Scanner on DOM Ready ---
 $(document).ready(function() {
@@ -365,7 +367,7 @@ $(document).ready(function() {
         qrScannerModal = new bootstrap.Modal(qrModalEl);
         
         qrModalEl.addEventListener('shown.bs.modal', function() {
-            startQRScanning();
+            initCameraList().then(() => startQRScanning());
             $('#qrManualInput').focus();
         });
         
@@ -380,6 +382,13 @@ $(document).ready(function() {
                 e.preventDefault();
                 submitQRManualInput();
             }
+        });
+        
+        // Camera select change
+        $('#qrCameraSelect').on('change', function() {
+            selectedCameraId = $(this).val();
+            stopQRScanning();
+            setTimeout(() => startQRScanning(), 200);
         });
     }
 
@@ -428,6 +437,40 @@ $(document).ready(function() {
         });
     }
 });
+
+// --- Init Camera List ---
+async function initCameraList() {
+    if (qrCameras.length > 0) return; // Already initialized
+    try {
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+            qrCameras = devices;
+            const select = $('#qrCameraSelect');
+            select.empty();
+            
+            devices.forEach((device, index) => {
+                const label = device.label || `กล้อง ${index + 1}`;
+                select.append(new Option(label, device.id));
+            });
+            
+            // Try to default to a back camera
+            let defaultId = devices[devices.length - 1].id; // usually last is back
+            for (let i = 0; i < devices.length; i++) {
+                if (devices[i].label.toLowerCase().includes('back') || devices[i].label.toLowerCase().includes('environment')) {
+                    defaultId = devices[i].id;
+                    break;
+                }
+            }
+            
+            select.val(defaultId);
+            selectedCameraId = defaultId;
+            $('#qrCameraSelectContainer').show();
+        }
+    } catch (err) {
+        console.warn('Error getting cameras', err);
+        $('#qrCameraSelectContainer').hide();
+    }
+}
 
 // --- Parse QR Content ---
 // Supports: URL format (mobile_app.php?type=receipt&transfer_id=XXX) and plain transfer_uuid
@@ -487,13 +530,14 @@ async function startQRScanning() {
         
         html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { verbose: false });
         
+        const cameraConfig = selectedCameraId ? { deviceId: { exact: selectedCameraId } } : { facingMode: 'environment' };
+        
         try {
             await html5QrCodeWh.start(
-                { facingMode: 'environment' },
+                cameraConfig,
                 { 
                     fps: 10, 
                     qrbox: function(viewfinderWidth, viewfinderHeight) {
-                        // Dynamic qrbox size based on screen width, makes scanning easier
                         const minEdgePercentage = 0.7; // 70% of the smallest edge
                         const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
                         const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
