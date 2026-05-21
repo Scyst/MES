@@ -637,8 +637,8 @@ async function uploadFile(e) {
         const reader = new FileReader();
         reader.onload = async function(event) {
             const data = new Uint8Array(event.target.result);
-            const workbook = XLSX.read(data, {type: 'array', cellDates: true});
-            const csvOutput = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]], { dateNF: 'yyyy-mm-dd', defval: '' });
+            const workbook = XLSX.read(data, {type: 'array', dateNF: 'dd/mm/yyyy'});
+            const csvOutput = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]], { raw: false, defval: '' });
             const blob = new Blob([csvOutput], { type: 'text/csv' });
             const formData = new FormData();
             formData.append('file', blob, 'converted.csv');
@@ -653,18 +653,187 @@ async function uploadFile(e) {
     e.target.value = '';
 }
 
+let previewImportData = [];
+let previewModal = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    previewModal = new bootstrap.Modal(document.getElementById('importPreviewModal'));
+});
+
 async function sendFileToBackend(formData) {
     showSpinner();
     try {
-        const res = await fetch(`${API_URL}?action=import`, { method: 'POST', body: formData });
+        const res = await fetch(`${API_URL}?action=preview_import`, { method: 'POST', body: formData });
         const json = await res.json();
-        if (json.success) { showImportResultModal(json); loadData(); } 
-        else { alert('Import Error: ' + json.message); }
-    } catch (err) { alert('Upload failed'); } finally { hideSpinner(); }
+        hideSpinner();
+        
+        if (json.success) {
+            previewImportData = json.data;
+            renderPreviewTable();
+            previewModal.show();
+        } else {
+            alert('Preview Error: ' + json.message);
+        }
+    } catch (err) {
+        hideSpinner();
+        alert('Upload failed: ' + err.message);
+    }
 }
 
+function renderPreviewTable() {
+    const tbody = document.getElementById('previewTableBody');
+    tbody.innerHTML = '';
+    let errorCount = 0;
+    previewImportData.forEach(r => {
+        errorCount += Object.keys(r.warnings || {}).length;
+    });
+    
+    const searchVal = (document.getElementById('previewSearchInput') ? document.getElementById('previewSearchInput').value.toLowerCase() : '');
+    const errOnly = (document.getElementById('previewErrorFilter') ? document.getElementById('previewErrorFilter').checked : false);
+    
+    previewImportData.forEach((row, idx) => {
+        const hasWarning = Object.keys(row.warnings || {}).length > 0;
+        
+        // Filter logic
+        if (errOnly && !hasWarning) return;
+        
+        if (searchVal) {
+            const rowText = `${row.po_number || ''} ${row.sku || ''} ${row.description || ''}`.toLowerCase();
+            if (!rowText.includes(searchVal)) return;
+        }
+
+        const tr = document.createElement('tr');
+        
+        const makeDateCell = (key, val) => {
+            const isWarn = row.warnings && row.warnings[key];
+            
+            const displayVal = formatDate(val).replace(/<[^>]+>/g, '') === '-' ? '' : formatDate(val);
+            
+            return `<td class="${isWarn ? 'bg-danger bg-opacity-10 border-danger border-2' : ''}">
+                <input type="text" class="form-control form-control-sm border-0 bg-transparent text-center ${isWarn ? 'text-danger fw-bold' : ''}" 
+                    value="${displayVal}" 
+                    placeholder="DD/MM/YYYY"
+                    onchange="updatePreviewData(${idx}, '${key}', this.value, event)"
+                    ${isWarn ? 'title="ปี < 2023 กรุณาแก้ไข (วว/ดด/ปปปป)"' : ''}>
+            </td>`;
+        };
+
+        tr.innerHTML = `
+            <td class="text-muted text-center">${row.row_index}</td>
+            <td class="fw-bold">${row.po_number || '-'}</td>
+            <td>${row.sku || '-'}</td>
+            ${makeDateCell('order_date', row.order_date)}
+            ${makeDateCell('production_date', row.production_date)}
+            ${makeDateCell('production_end_date', row.production_end_date)}
+            ${makeDateCell('loading_date', row.loading_date)}
+            ${makeDateCell('inspection_date', row.inspection_date)}
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    document.getElementById('previewErrorCount').innerText = errorCount;
+}
+
+window.updatePreviewData = function(index, key, value, event) {
+    let ymd = null;
+    value = value.trim();
+    if (value) {
+        const m = value.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (m) {
+            let y = parseInt(m[3], 10);
+            if (y < 100) y += (y < 50 ? 2000 : 1900);
+            const mo = m[2].padStart(2, '0');
+            const d = m[1].padStart(2, '0');
+            ymd = `${y}-${mo}-${d}`;
+        } else {
+            const m2 = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+            if (m2) {
+                ymd = value;
+            } else {
+                alert("รูปแบบวันที่ไม่ถูกต้อง กรุณาใช้รูปแบบ วัน/เดือน/ปี เช่น 09/05/2026");
+                if (event && event.target) {
+                    const oldVal = previewImportData[index][key];
+                    event.target.value = oldVal ? formatDate(oldVal).replace(/<[^>]+>/g, '') : '';
+                }
+                return;
+            }
+        }
+    }
+
+    previewImportData[index][key] = ymd;
+    // Re-evaluate if it's still a warning
+    if (ymd) {
+        const year = parseInt(ymd.split('-')[0], 10);
+        if (year >= 2023) {
+            if (previewImportData[index].warnings) {
+                delete previewImportData[index].warnings[key];
+            }
+        } else {
+            previewImportData[index].warnings = previewImportData[index].warnings || {};
+            previewImportData[index].warnings[key] = true;
+        }
+    } else {
+        if (previewImportData[index].warnings) delete previewImportData[index].warnings[key];
+    }
+    
+    // Update total error count
+    let totalErrors = 0;
+    previewImportData.forEach(r => {
+        totalErrors += Object.keys(r.warnings || {}).length;
+    });
+    document.getElementById('previewErrorCount').innerText = totalErrors;
+    
+    // Visually update the input field's parent styling
+    if (event && event.target) {
+        const input = event.target;
+        const td = input.parentElement;
+        if (previewImportData[index].warnings && previewImportData[index].warnings[key]) {
+            td.className = 'bg-danger bg-opacity-10 border-danger border-2';
+            input.classList.add('text-danger', 'fw-bold');
+        } else {
+            td.className = '';
+            input.classList.remove('text-danger', 'fw-bold');
+        }
+    }
+};
+
+window.confirmImport = async function() {
+    // Check if there are still errors
+    let stillHasErrors = false;
+    previewImportData.forEach(r => {
+        if (Object.keys(r.warnings || {}).length > 0) stillHasErrors = true;
+    });
+    
+    if (stillHasErrors) {
+        if (!confirm('ยังมีข้อมูลบางช่องที่เป็นสีแดง (เช่น ปี < 2023) คุณแน่ใจหรือไม่ว่าจะบันทึกข้อมูลนี้?')) return;
+    }
+    
+    previewModal.hide();
+    showSpinner();
+    
+    try {
+        const res = await fetch(`${API_URL}?action=import_json`, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: previewImportData }) 
+        });
+        const json = await res.json();
+        
+        if (json.success) { 
+            showImportResultModal(json); 
+            loadData(); 
+        } else { 
+            alert('Import Error: ' + json.message); 
+        }
+    } catch (err) { 
+        alert('Save failed: ' + err.message); 
+    } finally { 
+        hideSpinner(); 
+    }
+};
+
 function showImportResultModal(json) {
-    document.getElementById('importSuccessCount').innerText = json.imported_count;
+    document.getElementById('importSuccessCount').innerText = json.imported_count || 0;
     const errorSection = document.getElementById('importErrorSection');
     const successMsg = document.getElementById('importAllSuccess');
     if (json.skipped_count > 0) {
@@ -688,7 +857,7 @@ async function exportData() {
         const rawDate = (d) => {
             if (!d || d === '0000-00-00') return '';
             const ds = getDateObj(d);
-            return ds ? `${String(ds.getDate()).padStart(2, '0')}/${String(ds.getMonth()+1).padStart(2, '0')}/${ds.getFullYear()}` : d;
+            return ds ? `${ds.getFullYear()}-${String(ds.getMonth()+1).padStart(2, '0')}-${String(ds.getDate()).padStart(2, '0')}` : d;
         };
 
         const excelData = dataToExport.map(row => {

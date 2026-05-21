@@ -37,23 +37,50 @@ try {
     $fnDate = function ($val) {
         if (empty($val) || $val === 'null' || $val === 'NULL') return null;
         $val = trim($val);
+        // Remove invisible/non-printable characters
+        $val = preg_replace('/[\x00-\x1F\x7F\xC2\xA0]/u', '', $val);
         $val = explode(' ', $val)[0]; 
+        if ($val === '' || $val === '0000-00-00') return null;
 
-        if (is_numeric($val)) {
-             return gmdate("Y-m-d", ($val - 25569) * 86400);
+        // 1. Excel serial number (integer days since 1899-12-30)
+        if (is_numeric($val) && $val > 40000) {
+            $unix = ($val - 25569) * 86400;
+            return gmdate("Y-m-d", (int)$unix);
         }
 
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $val)) {
-            return $val;
+        // 2. ISO format: YYYY-MM-DD
+        if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $val, $m)) {
+            $year = (int)$m[1];
+            // Auto-correct years corrupted by previous export cycles (1925→2025, 1926→2026, etc.)
+            if ($year >= 1900 && $year < 1990) $year += 100;
+            return sprintf('%04d-%02d-%02d', $year, $m[2], $m[3]);
         }
 
-        $d = DateTime::createFromFormat('d/m/Y', $val);
-        if ($d && $d->format('d/m/Y') === $val) return $d->format('Y-m-d');
-        $d2 = DateTime::createFromFormat('m/d/Y', $val);
-        if ($d2 && $d2->format('m/d/Y') === $val) return $d2->format('Y-m-d');
+        // 3. ISO with slashes: YYYY/MM/DD
+        if (preg_match('/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/', $val, $m) && $m[1] > 1900) {
+            $year = (int)$m[1];
+            if ($year >= 1900 && $year < 1990) $year += 100;
+            return sprintf('%04d-%02d-%02d', $year, $m[2], $m[3]);
+        }
 
-        $ts = strtotime(str_replace('/', '-', $val));
-        if ($ts !== false) return date('Y-m-d', $ts);
+        // 4. DD/MM/YYYY or DD/MM/YY (Thai/European format — this is the primary user format)
+        if (preg_match('/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/', $val, $m)) {
+            $day   = (int)$m[1];
+            $month = (int)$m[2];
+            $year  = (int)$m[3];
+            // Convert 2-digit year: 00-49 → 2000-2049, 50-99 → 1950-1999
+            if ($year < 100) {
+                $year += ($year < 50) ? 2000 : 1900;
+            }
+            // Auto-correct years corrupted by previous export cycles (1925→2025, 1926→2026, etc.)
+            if ($year >= 1900 && $year < 1990) $year += 100;
+            // Validate day/month ranges
+            if ($month >= 1 && $month <= 12 && $day >= 1 && $day <= 31) {
+                if (checkdate($month, $day, $year)) {
+                    return sprintf('%04d-%02d-%02d', $year, $month, $day);
+                }
+            }
+        }
         
         return null; 
     };

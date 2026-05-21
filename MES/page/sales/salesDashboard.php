@@ -305,6 +305,64 @@ $pageHelpId = "helpModal";
         </div>
     </div>
 
+    <!-- Import Preview Modal -->
+    <div class="modal fade" id="importPreviewModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-warning bg-opacity-10">
+                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-search me-2"></i>Preview & Validate Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="alert alert-info rounded-0 mb-0 border-start-0 border-end-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        ตรวจสอบข้อมูลก่อนบันทึก หากพบช่องที่มี <strong><span class="text-danger">สีแดง</span></strong> (เช่น ปีที่ต่ำกว่า 2023) โปรดแก้ไขข้อมูลให้ถูกต้องก่อนกดยืนยัน
+                    </div>
+                    <div class="bg-white p-2 border-bottom d-flex gap-3 align-items-center">
+                        <div class="input-group input-group-sm" style="max-width: 300px;">
+                            <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" id="previewSearchInput" placeholder="ค้นหา PO, SKU..." onkeyup="renderPreviewTable()">
+                        </div>
+                        <div class="form-check form-switch ms-auto">
+                            <input class="form-check-input" type="checkbox" id="previewErrorFilter" onchange="renderPreviewTable()">
+                            <label class="form-check-label text-danger fw-bold" for="previewErrorFilter">แสดงเฉพาะรายการที่มีปัญหา</label>
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="max-height: 60vh;">
+                        <table class="table table-bordered table-hover align-middle mb-0 text-nowrap" id="previewTable" style="font-size: 0.85rem;">
+                            <thead class="bg-light sticky-top">
+                                <tr>
+                                    <th>Row</th>
+                                    <th>PO Number</th>
+                                    <th>SKU</th>
+                                    <th>Order Date</th>
+                                    <th>Prod Start</th>
+                                    <th>Prod End</th>
+                                    <th>Load Date</th>
+                                    <th>Insp Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="previewTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-body-tertiary border-0 justify-content-between">
+                    <div>
+                        <span class="fw-bold text-danger" id="previewErrorCount">0</span> <span class="text-muted small">Issues Found</span>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">ยกเลิก (Cancel)</button>
+                        <button type="button" class="btn btn-primary fw-bold" onclick="confirmImport()">
+                            <i class="fas fa-save me-1"></i> ยืนยันบันทึก (Confirm & Save)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <?php
         include('components/createOrderModal.php');
         include 'components/helpModal.php';
