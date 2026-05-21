@@ -597,11 +597,37 @@ async function uploadFile() {
 
     const file = fileInput.files[0];
     showSpinner();
+    
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'xlsx' || ext === 'xls') {
+        const reader = new FileReader();
+        reader.onload = async function(event) {
+            try {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, {type: 'array', cellDates: true});
+                const csvOutput = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]], { dateNF: 'yyyy-mm-dd', defval: '' });
+                const blob = new Blob([csvOutput], { type: 'text/csv' });
+                const formData = new FormData();
+                formData.append('file', blob, 'converted.csv');
+                formData.append('action', 'import_file');
+                sendFileToBackend(formData);
+            } catch (err) {
+                hideSpinner();
+                alert('Invalid Excel file format.');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('action', 'import_file'); 
+        sendFileToBackend(formData);
+    }
+    
+    fileInput.value = '';
+}
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('action', 'import_file'); 
-
+async function sendFileToBackend(formData) {
     try {
         const res = await fetch(API_URL, {
             method: 'POST',
@@ -622,8 +648,6 @@ async function uploadFile() {
         console.error(e);
         alert("Server Connection Error: " + e.message);
     }
-    
-    fileInput.value = '';
 }
 
 function showImportResult(res) {

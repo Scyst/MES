@@ -637,8 +637,8 @@ async function uploadFile(e) {
         const reader = new FileReader();
         reader.onload = async function(event) {
             const data = new Uint8Array(event.target.result);
-            const workbook = XLSX.read(data, {type: 'array'});
-            const csvOutput = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]], { dateNF: 'dd/mm/yyyy', defval: '' });
+            const workbook = XLSX.read(data, {type: 'array', cellDates: true});
+            const csvOutput = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]], { dateNF: 'yyyy-mm-dd', defval: '' });
             const blob = new Blob([csvOutput], { type: 'text/csv' });
             const formData = new FormData();
             formData.append('file', blob, 'converted.csv');

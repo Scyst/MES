@@ -42,6 +42,11 @@ try {
         if (is_numeric($val)) {
              return gmdate("Y-m-d", ($val - 25569) * 86400);
         }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $val)) {
+            return $val;
+        }
+
         $d = DateTime::createFromFormat('d/m/Y', $val);
         if ($d && $d->format('d/m/Y') === $val) return $d->format('Y-m-d');
         $d2 = DateTime::createFromFormat('m/d/Y', $val);
