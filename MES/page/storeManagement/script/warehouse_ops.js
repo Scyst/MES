@@ -528,8 +528,7 @@ async function startQRScanning() {
             html5QrCodeWh = null;
         }
         
-        const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [Html5QrcodeSupportedFormats.QR_CODE] : undefined;
-        html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { verbose: false, formatsToSupport: formats });
+        html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { verbose: false });
         
         // Use string ID if explicitly selected, otherwise use environment config
         const cameraConfig = selectedCameraId ? selectedCameraId : { facingMode: 'environment' };
@@ -540,10 +539,10 @@ async function startQRScanning() {
                 { 
                     fps: 10, 
                     qrbox: function(viewfinderWidth, viewfinderHeight) {
-                        const minEdgePercentage = 0.7; // 70% of the smallest edge
-                        const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
-                        const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
-                        return { width: qrboxSize, height: qrboxSize };
+                        return { 
+                            width: Math.floor(viewfinderWidth * 0.9), 
+                            height: Math.floor(viewfinderHeight * 0.5) 
+                        };
                     }
                 },
                 (decodedText) => {

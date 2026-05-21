@@ -193,7 +193,15 @@ async function startTraceScanning() {
         try {
             await html5QrCodeTrace.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+                { 
+                    fps: 10, 
+                    qrbox: function(viewfinderWidth, viewfinderHeight) {
+                        return { 
+                            width: Math.floor(viewfinderWidth * 0.9), 
+                            height: Math.floor(viewfinderHeight * 0.5) 
+                        };
+                    } 
+                },
                 (decodedText) => {
                     stopTraceScanning(); 
                     document.getElementById('scanInput').value = decodedText.trim();
