@@ -528,9 +528,16 @@ async function startQRScanning() {
             html5QrCodeWh = null;
         }
         
-        html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { verbose: false });
+        html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { 
+            verbose: false,
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            }
+        });
         
-        const cameraConfig = selectedCameraId ? { deviceId: { exact: selectedCameraId } } : { facingMode: 'environment' };
+        const cameraConfig = selectedCameraId 
+            ? { deviceId: { exact: selectedCameraId }, width: { ideal: 1920 }, height: { ideal: 1080 } } 
+            : { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } };
         
         try {
             await html5QrCodeWh.start(
