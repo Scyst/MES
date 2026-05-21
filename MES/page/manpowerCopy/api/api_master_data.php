@@ -1,0 +1,283 @@
+<?php
+// MES/page/manpowerCopy/api/api_master_data.php
+
+// 1. Header & Error Handling
+header('Content-Type: application/json');
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
+require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/../../../auth/check_auth.php';
+require_once __DIR__ . '/../../../config/config.php';
+
+// 2. Auth Check
+if (!isset($_SESSION['user'])) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    exit;
+}
+
+$currentUser = $_SESSION['user'];
+$updatedBy = $currentUser['username'];
+
+// 3. Input Handling
+$input = json_decode(file_get_contents('php://input'), true);
+$action = $_GET['action'] ?? ($input['action'] ?? '');
+
+// 4. Performance (Unlock Session)
+session_write_close();
+
+try {
+    switch ($action) {
+        case 'read_structure':
+            // Lines (TEST)
+            $stmtLine = $pdo->query("SELECT DISTINCT line FROM dbo.MANPOWER_EMPLOYEES_TEST WHERE line IS NOT NULL AND line != '' ORDER BY line ASC");
+            $lines = $stmtLine->fetchAll(PDO::FETCH_COLUMN);
+
+            // Teams (TEST)
+            $stmtTeam = $pdo->query("SELECT DISTINCT team_group FROM dbo.MANPOWER_EMPLOYEES_TEST WHERE team_group IS NOT NULL AND team_group != '' ORDER BY team_group ASC");
+            $teams = $stmtTeam->fetchAll(PDO::FETCH_COLUMN);
+
+            echo json_encode(['success' => true, 'lines' => $lines, 'teams' => $teams]);
+            break;
+
+        case 'read_single_employee':
+            $empId = $_GET['emp_id'] ?? '';
+            if (!$empId) throw new Exception("Employee ID is required.");
+
+            $sql = "SELECT emp_id, name_th, position, line, team_group, 
+                           default_shift_id, is_active, start_date, resign_date 
+                    FROM dbo.MANPOWER_EMPLOYEES_TEST 
+                    WHERE emp_id = ?";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$empId]);
+            $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$data) throw new Exception("Employee not found in DB.");
+
+            echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
+        case 'read_employees':
+            $showAll = filter_var($_GET['show_all'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $sql = "SELECT 
+                        E.emp_id, 
+                        E.name_th, 
+                        E.position, 
+                        E.line, 
+                        E.team_group, 
+                        E.default_shift_id, 
+                        E.is_active, 
+                        CM.rate_type as emp_type,
+                        S.shift_name,
+                        CONVERT(VARCHAR(10), E.start_date, 120) as start_date,
+                        CONVERT(VARCHAR(10), E.resign_date, 120) as resign_date
+
+                    FROM dbo.MANPOWER_EMPLOYEES_TEST E
+                    LEFT JOIN dbo.MANPOWER_SHIFTS_TEST S ON E.default_shift_id = S.shift_id
+                    OUTER APPLY (
+                        SELECT TOP 1 rate_type 
+                        FROM dbo.MANPOWER_CATEGORY_MAPPING_TEST M 
+                        WHERE E.position LIKE '%' + M.keyword + '%' 
+                        ORDER BY LEN(M.keyword) DESC
+                    ) CM ";
+
+            if (!$showAll) {
+                $sql .= " WHERE E.is_active = 1";
+            }
+            
+            $sql .= " ORDER BY E.emp_id ASC";
+
+            $stmt = $pdo->query($sql);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
+        case 'read_team_shifts':
+            $sql = "SELECT line, team_group, MAX(default_shift_id) as default_shift_id, COUNT(emp_id) as member_count
+                    FROM dbo.MANPOWER_EMPLOYEES_TEST
+                    WHERE is_active = 1 AND team_group IS NOT NULL AND team_group != ''
+                    GROUP BY line, team_group
+                    ORDER BY line, team_group";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        case 'update_team_shift':
+            if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
+
+            $line = $input['line'] ?? '';
+            $team = $input['team'] ?? '';
+            $newShiftId = $input['new_shift_id'] ?? '';
+
+            if (empty($line) || empty($team) || empty($newShiftId)) throw new Exception("Missing parameters");
+
+            $sql = "UPDATE dbo.MANPOWER_EMPLOYEES_TEST SET default_shift_id = ? WHERE line = ? AND team_group = ? AND is_active = 1";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$newShiftId, $line, $team]);
+            
+            $count = $stmt->rowCount();
+            $pdo->prepare("INSERT INTO dbo.USER_LOGS (action_by, action_type, detail, created_at) VALUES (?, 'SHIFT_PLAN', ?, GETDATE())")
+                ->execute([$updatedBy, "Shift Change (TEST): $line Team $team -> Shift $newShiftId ($count updated)"]);
+
+            echo json_encode(['success' => true, 'message' => "Updated $count employees."]);
+            break;
+
+        case 'create_employee':
+            if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
+
+            $empId = trim($input['emp_id']);
+            $name = trim($input['name_th']);
+            $pos = trim($input['position'] ?? 'Operator');
+            $line = trim($input['line']);
+            $shift = $input['shift_id'] ?? 1;
+            $team = trim($input['team_group'] ?? '-');
+            $startDate = !empty($input['start_date']) ? $input['start_date'] : date('Y-m-d');
+
+            // Duplicate Check
+            $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM dbo.MANPOWER_EMPLOYEES_TEST WHERE emp_id = ?");
+            $stmtCheck->execute([$empId]);
+            if ($stmtCheck->fetchColumn() > 0) throw new Exception("Employee ID already exists!");
+
+            $sql = "INSERT INTO dbo.MANPOWER_EMPLOYEES_TEST 
+                    (emp_id, name_th, position, line, default_shift_id, team_group, is_active, created_at, start_date)
+                    VALUES (?, ?, ?, ?, ?, ?, 1, GETDATE(), ?)";
+            
+            $pdo->prepare($sql)->execute([$empId, $name, $pos, $line, $shift, $team, $startDate]);
+            echo json_encode(['success' => true, 'message' => 'Created successfully']);
+            break;
+
+        case 'update_employee':
+            if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized");
+
+            $updatedBy = $_SESSION['user']['username'] ?? 'SYSTEM'; 
+            $empId      = trim($input['emp_id'] ?? '');
+            $name       = trim($input['name_th'] ?? '');
+            $pos        = trim($input['position'] ?? '');
+            $line       = trim($input['line'] ?? '');
+            $shift      = $input['shift_id'] ?? ($input['default_shift_id'] ?? null);
+            $team       = trim($input['team_group'] ?? '-');
+            $active     = isset($input['is_active']) ? intval($input['is_active']) : 1;
+            $startDate  = !empty($input['start_date']) ? $input['start_date'] : null;
+            $resignDate = !empty($input['resign_date']) ? $input['resign_date'] : null;
+
+            if (empty($empId)) throw new Exception("Employee ID is missing.");
+
+            $pdo->beginTransaction();
+
+            try {
+                $sql = "UPDATE dbo.MANPOWER_EMPLOYEES_TEST 
+                        SET name_th = ?, position = ?, line = ?, default_shift_id = ?, team_group = ?, is_active = ?, last_sync_at = GETDATE(),
+                        start_date = ?, resign_date = ? 
+                        WHERE emp_id = ?";
+                
+                $pdo->prepare($sql)->execute([$name, $pos, $line, $shift, $team, $active, $startDate, $resignDate, $empId]);
+
+                if (!empty($input['update_logs']) && !empty($input['effective_date'])) {
+                    $effDate = $input['effective_date'];
+                    
+                    $sqlRetro = "UPDATE dbo.MANPOWER_DAILY_LOGS_TEST
+                                 SET actual_line = ?,
+                                     actual_team = ?,
+                                     shift_id = ?,
+                                     updated_at = GETDATE(),
+                                     updated_by = ?
+                                 WHERE emp_id = ? 
+                                   AND log_date >= ?
+                                   AND (is_verified = 0 OR is_verified IS NULL)";
+
+                    $pdo->prepare($sqlRetro)->execute([$line, $team, $shift, $updatedBy, $empId, $effDate]);
+                }
+
+                if ($active === 0) {
+                    $sqlCleanLog = "DELETE FROM dbo.MANPOWER_DAILY_LOGS_TEST 
+                                    WHERE emp_id = ? 
+                                      AND log_date >= CAST(GETDATE() AS DATE) 
+                                      AND (is_verified = 0 OR is_verified IS NULL)";
+                    $pdo->prepare($sqlCleanLog)->execute([$empId]);
+                }
+
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'Updated successfully']);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
+        case 'terminate_employee':
+            $emp_id = $input['emp_id'] ?? '';
+            $resign_date = $input['resign_date'] ?? '';
+
+            if (!$emp_id || !$resign_date) {
+                echo json_encode(['success' => false, 'message' => 'Missing Employee ID or Resign Date']);
+                break;
+            }
+
+            try {
+                $pdo->beginTransaction();
+                $sqlUpdate = "UPDATE dbo.MANPOWER_EMPLOYEES_TEST 
+                              SET is_active = 0, resign_date = :resign_date 
+                              WHERE emp_id = :emp_id";
+                $stmtUpdate = $pdo->prepare($sqlUpdate);
+                $stmtUpdate->execute([
+                    ':resign_date' => $resign_date,
+                    ':emp_id' => $emp_id
+                ]);
+
+                $sqlDelete = "DELETE FROM dbo.MANPOWER_DAILY_LOGS_TEST 
+                              WHERE emp_id = :emp_id AND log_date >= :resign_date";
+                $stmtDelete = $pdo->prepare($sqlDelete);
+                $stmtDelete->execute([
+                    ':emp_id' => $emp_id,
+                    ':resign_date' => $resign_date
+                ]);
+
+                $pdo->commit();
+
+                echo json_encode(['success' => true, 'message' => 'Terminated and logs cleared']);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            }
+            break;
+
+        case 'read_mappings':
+            $stmt = $pdo->prepare("SELECT * FROM dbo.MANPOWER_CATEGORY_MAPPING_TEST ORDER BY category_name ASC, keyword ASC");
+            $stmt->execute();
+            echo json_encode(['success' => true, 'categories' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        case 'save_mappings':
+            if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized.");
+
+            $categories = $input['categories'] ?? [];
+            $pdo->beginTransaction();
+            $pdo->exec("DELETE FROM dbo.MANPOWER_CATEGORY_MAPPING_TEST");
+            $stmt = $pdo->prepare("INSERT INTO dbo.MANPOWER_CATEGORY_MAPPING_TEST (keyword, category_name, hourly_rate, rate_type) VALUES (?, ?, ?, ?)");
+            
+            foreach ($categories as $cat) {
+                $rate = $cat['hourly_rate'] ?? 0;
+                $type = $cat['rate_type'] ?? 'MONTHLY';
+                $stmt->execute([trim($cat['keyword']), trim($cat['category_name']), $rate, $type]);
+            }
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Mappings saved successfully']);
+            break;
+
+        default:
+            throw new Exception("Invalid Action or Method");
+    }
+
+} catch (Exception $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+}
+?>
