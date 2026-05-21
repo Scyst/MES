@@ -1329,9 +1329,9 @@ class TransferController {
                 $spStock->closeCursor();
                 
                 $note_update = "\nBulk Confirmed by " . $currentUser['username'] . " at " . $transaction_timestamp;
-                $sqlUpdate = "UPDATE $transferTable SET status = 'COMPLETED', confirmed_by_user_id = ?, confirmed_at = ?, notes = ISNULL(notes, '') + ? WHERE transfer_id = ?";
+                $sqlUpdate = "UPDATE $transferTable SET status = 'COMPLETED', to_location_id = ?, confirmed_by_user_id = ?, confirmed_at = ?, notes = ISNULL(notes, '') + ? WHERE transfer_id = ?";
                 $stmtUpdate = $pdo->prepare($sqlUpdate);
-                $stmtUpdate->execute([$currentUser['id'], $transaction_timestamp, $note_update, $transfer_order['transfer_id']]);
+                $stmtUpdate->execute([$to_loc_id, $currentUser['id'], $transaction_timestamp, $note_update, $transfer_order['transfer_id']]);
                 
                 $transSql = "INSERT INTO $transTable (parameter_id, quantity, transaction_type, transaction_timestamp, from_location_id, to_location_id, reference_id, created_by_user_id, std_cost_mat_snapshot, std_cost_dl_snapshot, std_cost_oh_snapshot, std_cost_oh_machine_snapshot, std_cost_oh_util_snapshot, std_cost_oh_indirect_snapshot, std_cost_oh_staff_snapshot, std_cost_oh_acc_snapshot, std_cost_oh_other_snapshot) VALUES (?, ?, 'INTERNAL_TRANSFER', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 $transStmt = $pdo->prepare($transSql);

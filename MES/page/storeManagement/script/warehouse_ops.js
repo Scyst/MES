@@ -528,16 +528,11 @@ async function startQRScanning() {
             html5QrCodeWh = null;
         }
         
-        html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { 
-            verbose: false,
-            experimentalFeatures: {
-                useBarCodeDetectorIfSupported: true
-            }
-        });
+        const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [Html5QrcodeSupportedFormats.QR_CODE] : undefined;
+        html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { verbose: false, formatsToSupport: formats });
         
-        const cameraConfig = selectedCameraId 
-            ? { deviceId: { exact: selectedCameraId }, width: { ideal: 1920 }, height: { ideal: 1080 } } 
-            : { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } };
+        // Use string ID if explicitly selected, otherwise use environment config
+        const cameraConfig = selectedCameraId ? selectedCameraId : { facingMode: 'environment' };
         
         try {
             await html5QrCodeWh.start(
