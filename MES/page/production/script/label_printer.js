@@ -904,11 +904,11 @@ function executeHiddenPrint(labelsArray) {
                         JsBarcode(svgNode, String(d.scan_id_display), {
                             format: "CODE128",
                             displayValue: true,
-                            fontSize: 13,
+                            fontSize: 14,
                             fontOptions: "bold",
-                            margin: 0,
-                            width: 1.5,
-                            height: 30
+                            margin: 2,
+                            width: 2,
+                            height: 40
                         });
                     }
                 } catch(e) { console.error("Barcode Error:", e); }

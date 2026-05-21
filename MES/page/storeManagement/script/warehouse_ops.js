@@ -543,13 +543,7 @@ async function startQRScanning() {
             await html5QrCodeWh.start(
                 cameraConfig,
                 { 
-                    fps: 10, 
-                    qrbox: function(viewfinderWidth, viewfinderHeight) {
-                        return { 
-                            width: Math.floor(viewfinderWidth * 0.9), 
-                            height: Math.floor(viewfinderHeight * 0.5) 
-                        };
-                    }
+                    fps: 10
                 },
                 (decodedText) => {
                     if (qrIsProcessing) return; // Prevent duplicate scans
