@@ -528,7 +528,12 @@ async function startQRScanning() {
             html5QrCodeWh = null;
         }
         
-        const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.CODE_128] : undefined;
+        const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [
+            Html5QrcodeSupportedFormats.QR_CODE, 
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13
+        ] : undefined;
         html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { verbose: false, formatsToSupport: formats });
         
         // Use string ID if explicitly selected, otherwise use environment config
@@ -650,7 +655,12 @@ async function handleQRImageScan(file) {
     
     try {
         if (!html5QrCodeWh) {
-            const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.CODE_128] : undefined;
+            const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [
+            Html5QrcodeSupportedFormats.QR_CODE, 
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13
+        ] : undefined;
             html5QrCodeWh = new Html5Qrcode('qr-reader-wh', { verbose: false, formatsToSupport: formats });
         }
         const decodedText = await html5QrCodeWh.scanFile(file, false);

@@ -125,7 +125,12 @@ async function handleTraceFileScan(file) {
 
     try {
         if (!html5QrCodeTrace) {
-            const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.CODE_128] : undefined;
+            const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [
+            Html5QrcodeSupportedFormats.QR_CODE, 
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13
+        ] : undefined;
             html5QrCodeTrace = new Html5Qrcode("qr-reader-trace", { verbose: false, formatsToSupport: formats });
         }
         const decodedText = await html5QrCodeTrace.scanFile(file, false);
@@ -191,7 +196,12 @@ async function startTraceScanning() {
             html5QrCodeTrace = null;
         }
 
-        const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.CODE_128] : undefined;
+        const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [
+            Html5QrcodeSupportedFormats.QR_CODE, 
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13
+        ] : undefined;
         html5QrCodeTrace = new Html5Qrcode("qr-reader-trace", { verbose: false, formatsToSupport: formats });
 
         try {
