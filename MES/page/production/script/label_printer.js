@@ -825,53 +825,57 @@ function executeHiddenPrint(labelsArray) {
         let safeSerial = d.serial_no ? String(d.serial_no).replace(/[^a-zA-Z0-9-]/g, '') : 'unknown';
         let uniqueQrId = `qr-${safeSerial}-${i}`;
         renderHTML += `
-        <div class="tag-card">
-            <div class="tag-details">
-                <div class="t-title">${escapeHTML(d.part_no)}</div>
-                <div class="t-sub">${escapeHTML(d.sap_no)}</div>
-                <div class="t-desc" title="${escapeHTML(displayDesc)}">${escapeHTML(displayDesc)}</div>
-                
-                <table class="t-table">
-                    <tr>
-                        <td style="width: 55%;">
-                            <div style="display: flex; align-items: baseline; gap: 4px;">
-                                <b>QTY:</b> 
-                                <span class="t-hl">${parseFloat(d.quantity).toLocaleString()}</span>
-                            </div>
-                        </td>
-                        <td style="width: 45%;">
-                            <div style="display: flex; align-items: baseline; gap: 4px;">
-                                <b>Date:</b> 
-                                <span>${escapeHTML(d.prod_date)}</span>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding-right: 5px;">
-                            <div style="display: flex; align-items: baseline; gap: 4px;">
-                                <b>Lot:</b> 
-                                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:115px;">${escapeHTML(d.manual_lot)}</span>
-                            </div>
-                        </td>
-                        <td>
-                            <div style="display: flex; align-items: baseline; gap: 4px;">
-                                <b>Loc:</b> 
-                                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100px;">${escapeHTML(d.location_name)}</span>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2">
-                            <div style="display: flex; align-items: baseline; gap: 4px;">
-                                <b>Remark:</b> 
-                                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:230px;" title="${escapeHTML(d.remark || '')}">${escapeHTML(d.remark || '-')}</span>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
+        <div class="tag-card" style="flex-direction: column; align-items: stretch; padding: 2mm;">
+            <div style="display: flex; flex-direction: row; height: 70%; width: 100%; overflow: hidden;">
+                <div class="tag-details" style="width: 75%; height: 100%;">
+                    <div class="t-title">${escapeHTML(d.part_no)}</div>
+                    <div class="t-sub">${escapeHTML(d.sap_no)}</div>
+                    <div class="t-desc" title="${escapeHTML(displayDesc)}">${escapeHTML(displayDesc)}</div>
+                    
+                    <table class="t-table">
+                        <tr>
+                            <td style="width: 55%;">
+                                <div style="display: flex; align-items: baseline; gap: 4px;">
+                                    <b>QTY:</b> 
+                                    <span class="t-hl">${parseFloat(d.quantity).toLocaleString()}</span>
+                                </div>
+                            </td>
+                            <td style="width: 45%;">
+                                <div style="display: flex; align-items: baseline; gap: 4px;">
+                                    <b>Date:</b> 
+                                    <span>${escapeHTML(d.prod_date)}</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-right: 5px;">
+                                <div style="display: flex; align-items: baseline; gap: 4px;">
+                                    <b>Lot:</b> 
+                                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:115px;">${escapeHTML(d.manual_lot)}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="display: flex; align-items: baseline; gap: 4px;">
+                                    <b>Loc:</b> 
+                                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100px;">${escapeHTML(d.location_name)}</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <div style="display: flex; align-items: baseline; gap: 4px;">
+                                    <b>Remark:</b> 
+                                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:230px;" title="${escapeHTML(d.remark || '')}">${escapeHTML(d.remark || '-')}</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="tag-qr" style="width: 25%; height: 100%; justify-content: flex-start; padding-top: 5px;">
+                    <div id="${uniqueQrId}"></div>
+                </div>
             </div>
-            <div class="tag-qr">
-                <div id="${uniqueQrId}"></div>
+            <div style="height: 30%; width: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden;">
                 <svg id="bc-${uniqueQrId}" class="t-barcode"></svg>
             </div>
         </div>
@@ -895,16 +899,21 @@ function executeHiddenPrint(labelsArray) {
             
             if (typeof JsBarcode !== 'undefined') {
                 try {
-                    JsBarcode("#bc-" + uniqueQrId, String(d.scan_id_display), {
-                        format: "CODE128",
-                        displayValue: true,
-                        fontSize: 14,
-                        fontOptions: "bold",
-                        margin: 0,
-                        width: 1.2,
-                        height: 25
-                    });
-                } catch(e) { console.error("Barcode Error", e); }
+                    let svgNode = document.getElementById("bc-" + uniqueQrId);
+                    if (svgNode) {
+                        JsBarcode(svgNode, String(d.scan_id_display), {
+                            format: "CODE128",
+                            displayValue: true,
+                            fontSize: 13,
+                            fontOptions: "bold",
+                            margin: 0,
+                            width: 1.5,
+                            height: 30
+                        });
+                    }
+                } catch(e) { console.error("Barcode Error:", e); }
+            } else {
+                console.error("JsBarcode is not defined!");
             }
         });
     }

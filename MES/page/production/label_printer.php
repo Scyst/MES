@@ -62,7 +62,7 @@
             .tag-qr { width: 26%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
             .tag-qr canvas, .tag-qr img { width: 75px !important; height: 75px !important; }
             .t-serial { font-size: 11px; font-weight: bold; text-align: center; word-break: break-all; }
-            .t-barcode { width: 95px !important; height: 35px !important; margin: 0; padding: 0; }
+            .t-barcode { width: 100% !important; max-height: 100% !important; margin: 0; padding: 0; }
         }
     </style>
 </head>
