@@ -875,8 +875,14 @@ function executeHiddenPrint(labelsArray) {
                     <div id="${uniqueQrId}"></div>
                 </div>
             </div>
-            <div style="height: 30%; width: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden;">
-                <svg id="bc-${uniqueQrId}" class="t-barcode"></svg>
+            <div style="height: 35%; width: 100%; display: flex; flex-direction: row; justify-content: space-between; align-items: center; overflow: hidden; padding-top: 5px; border-top: 1px dashed #ccc;">
+                <div style="display: flex; flex-direction: column; align-items: center; width: 60%;">
+                    <div style="font-size: 14px; font-weight: bold; letter-spacing: 1px;">${escapeHTML(d.scan_id_display)}</div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 40%;">
+                    <div style="font-size: 8px; font-weight: bold; margin-bottom: 2px;">แสกนเข้าระบบ Web</div>
+                    <div id="qr2-${uniqueQrId}"></div>
+                </div>
             </div>
         </div>
         `;
@@ -897,24 +903,15 @@ function executeHiddenPrint(labelsArray) {
                 correctLevel : QRCode.CorrectLevel.M 
             });
             
-            if (typeof JsBarcode !== 'undefined') {
-                try {
-                    let svgNode = document.getElementById("bc-" + uniqueQrId);
-                    if (svgNode) {
-                        JsBarcode(svgNode, String(d.scan_id_display), {
-                            format: "CODE128",
-                            displayValue: true,
-                            fontSize: 14,
-                            fontOptions: "bold",
-                            margin: 2,
-                            width: 2,
-                            height: 40
-                        });
-                    }
-                } catch(e) { console.error("Barcode Error:", e); }
-            } else {
-                console.error("JsBarcode is not defined!");
-            }
+            // Create second QR code for Web Scanner (Low density)
+            new QRCode(document.getElementById("qr2-" + uniqueQrId), {
+                text: String(d.scan_id_display), 
+                width: 60, 
+                height: 60,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.L
+            });
         });
     }
     setTimeout(() => {

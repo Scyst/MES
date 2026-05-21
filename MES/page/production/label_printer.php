@@ -335,7 +335,7 @@
         document.getElementById('prod_date').valueAsDate = new Date();
     </script>
     <script src="../../utils/libs/qrcode.min.js"></script>
-    <script src="../../utils/libs/JsBarcode.all.min.js"></script>
+
     <script src="script/label_printer.js?v=<?php echo time(); ?>" defer></script>
 </body>
 </html>
