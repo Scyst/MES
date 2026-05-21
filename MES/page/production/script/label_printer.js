@@ -826,8 +826,8 @@ function executeHiddenPrint(labelsArray) {
         let uniqueQrId = `qr-${safeSerial}-${i}`;
         renderHTML += `
         <div class="tag-card" style="flex-direction: column; align-items: stretch; padding: 2mm;">
-            <div style="display: flex; flex-direction: row; height: 70%; width: 100%; overflow: hidden;">
-                <div class="tag-details" style="width: 75%; height: 100%;">
+            <div style="display: flex; flex-direction: row; height: 65%; width: 100%; overflow: hidden;">
+                <div class="tag-details" style="width: 70%; height: 100%; padding-right: 5px;">
                     <div class="t-title">${escapeHTML(d.part_no)}</div>
                     <div class="t-sub">${escapeHTML(d.sap_no)}</div>
                     <div class="t-desc" title="${escapeHTML(displayDesc)}">${escapeHTML(displayDesc)}</div>
@@ -871,16 +871,17 @@ function executeHiddenPrint(labelsArray) {
                         </tr>
                     </table>
                 </div>
-                <div class="tag-qr" style="width: 25%; height: 100%; justify-content: flex-start; padding-top: 5px;">
+                <div class="tag-qr" style="width: 30%; height: 100%; justify-content: center; padding-top: 0; border-left: 1px dashed #ccc;">
+                    <div style="font-size: 8px; font-weight: bold; margin-bottom: 2px;">Mobile Scan</div>
                     <div id="${uniqueQrId}"></div>
                 </div>
             </div>
-            <div style="height: 35%; width: 100%; display: flex; flex-direction: row; justify-content: space-between; align-items: center; overflow: hidden; padding-top: 5px; border-top: 1px dashed #ccc;">
-                <div style="display: flex; flex-direction: column; align-items: center; width: 60%;">
-                    <div style="font-size: 14px; font-weight: bold; letter-spacing: 1px;">${escapeHTML(d.scan_id_display)}</div>
+            <div style="height: 35%; width: 100%; display: flex; flex-direction: row; align-items: center; overflow: hidden; border-top: 1px dashed #ccc;">
+                <div style="display: flex; justify-content: center; align-items: center; width: 70%; height: 100%; border-right: 1px dashed #ccc;">
+                    <div style="font-size: 16px; font-weight: bold; letter-spacing: 1px;">${escapeHTML(d.scan_id_display)}</div>
                 </div>
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 40%;">
-                    <div style="font-size: 8px; font-weight: bold; margin-bottom: 2px;">แสกนเข้าระบบ Web</div>
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 30%; height: 100%;">
+                    <div style="font-size: 8px; font-weight: bold; margin-bottom: 2px;">Web Scan</div>
                     <div id="qr2-${uniqueQrId}"></div>
                 </div>
             </div>
