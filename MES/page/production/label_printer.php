@@ -59,7 +59,7 @@
             .t-table { width: 100%; font-size: 9px; line-height: 1.1; }
             .t-table td { padding: 1px 0; vertical-align: middle; }
             .t-hl { font-size: 13px; font-weight: bold; line-height: 1; display: inline-block; }
-            .tag-qr { width: 30%; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 6px; box-sizing: border-box; }
+            .tag-qr { width: 30%; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; box-sizing: border-box; }
             .tag-qr canvas, .tag-qr img { max-width: 100%; height: auto; }
         }
     </style>
@@ -107,8 +107,8 @@
                                         <input type="hidden" id="item_id" name="item_id" required>
                                     </div>
                                     <div class="mb-2">
-                                        <label class="form-label fw-bold small text-secondary mb-1">เลข Lot / Master Pallet</label>
-                                        <input type="text" id="lot_no" name="lot_no" class="form-control form-control-sm text-uppercase fw-bold" required placeholder="เช่น L-202604">
+                                        <label class="form-label fw-bold small text-secondary mb-1">บรรจุต่อกล่อง (Qty / Remark)</label>
+                                        <input type="text" id="quantity" name="quantity" class="form-control form-control-sm fw-bold text-dark" required placeholder="เช่น 100 ชิ้น">
                                     </div>
                                     <div>
                                         <label class="form-label fw-bold small text-secondary mb-1">หมายเหตุ (Remark)</label>
@@ -119,13 +119,9 @@
                                 <div class="form-section border-primary border-opacity-25 bg-primary bg-opacity-10 mb-4">
                                     <div class="form-section-title text-primary"><i class="fas fa-print me-1"></i> ตั้งค่าการพิมพ์</div>
                                     <div class="row g-2">
-                                        <div class="col-6">
-                                            <label class="form-label fw-bold small text-secondary mb-1">จำนวนต่อกล่อง (QTY)</label>
-                                            <input type="number" id="quantity" name="quantity" class="form-control form-control-sm text-center fw-bold text-dark" min="1" value="1" required>
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="form-label fw-bold small text-primary mb-1">พิมพ์กี่ดวง (Tags)</label>
-                                            <input type="number" id="print_count" name="print_count" class="form-control form-control-sm text-center border-primary fw-bold" min="1" max="500" value="1" required>
+                                        <div class="col-12">
+                                            <label class="form-label fw-bold small text-primary mb-1">ยอดรวมใน Lot (Total Lot Size)</label>
+                                            <input type="number" id="lot_no" name="lot_no" class="form-control form-control-sm text-center border-primary fw-bold fs-6 text-primary" min="1" required placeholder="ระบุจำนวนทั้งหมดในล็อตนี้ (ระบบจะสร้างแท็กตามจำนวนนี้)">
                                         </div>
                                     </div>
                                 </div>

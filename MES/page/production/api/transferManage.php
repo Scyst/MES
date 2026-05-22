@@ -41,15 +41,15 @@ try {
                 break;
             }
 
-            $sql = "SELECT TOP 150 item_id, sap_no, part_no, part_description 
+            $sql = "SELECT TOP 150 item_id, sap_no, part_no, part_description, sku 
                     FROM $itemTable WITH (NOLOCK) 
                     WHERE is_active = 1 
-                      AND (sap_no LIKE :q1 OR part_no LIKE :q2 OR part_description LIKE :q3)
+                      AND (sap_no LIKE :q1 OR part_no LIKE :q2 OR part_description LIKE :q3 OR sku LIKE :q4)
                     ORDER BY sap_no ASC";
             
             $stmt = $pdo->prepare($sql);
             $searchTerm = "%{$q}%";
-            $stmt->execute(['q1' => $searchTerm, 'q2' => $searchTerm, 'q3' => $searchTerm]);
+            $stmt->execute(['q1' => $searchTerm, 'q2' => $searchTerm, 'q3' => $searchTerm, 'q4' => $searchTerm]);
             $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $items]);
@@ -426,6 +426,13 @@ try {
             break;
 
         case 'create_batch_transfer_orders':
+            try {
+                $pdo->exec("ALTER TABLE STOCK_TRANSFER_ORDERS ALTER COLUMN transfer_uuid VARCHAR(50) NOT NULL");
+                $pdo->exec("ALTER TABLE STOCK_TRANSFER_ORDERS_TEST ALTER COLUMN transfer_uuid VARCHAR(50) NOT NULL");
+            } catch (Exception $e) {
+                // Ignore if already altered or no permission
+            }
+
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
 
             $parent_lot = trim($input['parent_lot'] ?? '');
@@ -477,9 +484,10 @@ try {
             $insertStmt = $pdo->prepare($insertSql);
 
             $generated_labels = [];
+            $padLength = max(3, strlen((string)$print_count));
 
             for ($i = $start_serial; $i <= $end_serial; $i++) {
-                $serialSuffix = '-' . str_pad($i, 3, '0', STR_PAD_LEFT);
+                $serialSuffix = '-' . str_pad($i, $padLength, '0', STR_PAD_LEFT);
                 $transfer_uuid = $parent_lot . $serialSuffix;
 
                 $insertStmt->execute([
