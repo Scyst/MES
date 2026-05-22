@@ -97,16 +97,18 @@ try {
 
     foreach ($empInfoMap as $apiEmpId => $info) {
         $deptApi = $info['DEPARTMENT'] ?? '';
-        
         // --- 💡 ลอจิกจัดหมวดหมู่ใหม่ ---
         $isToolbox = (stripos($deptApi, 'Toolbox') !== false);
         $isTeam1 = (stripos($deptApi, 'Team1') !== false);
         
-        // API บอกว่าควร Active หรือไม่ (ต้องเป็น Toolbox + Team1 เท่านั้นถึงจะเข้ากะผลิต)
-        $apiCalculatedActive = ($isToolbox && $isTeam1) ? 1 : 0;
+        // รับพนักงานทุกคนเข้าเป็น Active ทั้งหมด เพื่อให้ระบบสร้าง Daily Log (ให้หัวหน้างาน/HR จัดการกรองอีกที)
+        $apiCalculatedActive = 1;
         
-        // กำหนด Line เริ่มต้น
-        $defaultLine = $isToolbox ? 'TOOLBOX_POOL' : 'OTHER_DEPT';
+        // กำหนด Line เริ่มต้นให้เป็นแผนกที่ได้จาก API
+        $defaultLine = $deptApi ? trim($deptApi) : 'OTHER_DEPT';
+        if ($isToolbox) {
+            $defaultLine = 'TOOLBOX_POOL';
+        }
 
         if (!$isToolbox) $stats['outsiders']++;
 

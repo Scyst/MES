@@ -396,8 +396,11 @@ const UI = {
         } else if (isParent) {
             let icon = (viewMode === 'PAYMENT') ? 'fa-coins text-warning' : (viewMode === 'TYPE' ? 'fa-user-tag' : (viewMode === 'SHIFT' ? 'fa-clock' : 'fa-layer-group'));
             nameHtml = `${chevron}<i class="fas ${icon} me-2 opacity-50"></i>${label}`;
-            if (viewMode === 'LINE') { tLine = rawName; canClick = true; }
-            else if (viewMode === 'TYPE') { tType = rawName; canClick = true; }
+            canClick = true;
+            if (viewMode === 'LINE' || viewMode === 'GROUP') { tLine = rawName; }
+            else if (viewMode === 'TYPE') { tType = rawName; }
+            else if (viewMode === 'SHIFT') { tShift = (rawName.includes('Day')) ? '1' : '2'; }
+            else if (viewMode === 'PAYMENT') { tType = rawName.includes('Monthly') ? 'RATE:MONTHLY' : 'RATE:DAILY'; }
         } else if (isChild) {
             nameHtml = `<div style="padding: 0 0 0 25px; margin: 0; border-left: 3px solid #dee2e6; line-height: 1.2;">${chevron}${label}</div>`;
             if (meta) { tLine = meta.line || ''; tShift = meta.shift || ''; tType = meta.type || 'ALL'; canClick = true; }
@@ -411,45 +414,45 @@ const UI = {
 
         let columnsHtml = '';
         if (viewMode === 'PAYMENT') {
-            const cellClass = "text-end align-middle font-monospace";
+            const cellClass = "text-end align-middle font-monospace " + hoverClass;
             const payableCount = (stats.present || 0) + (stats.late || 0) + (stats.leave || 0);
 
             columnsHtml = `
-                <td class="text-center text-primary border-end border-light opacity-75 small align-middle">${stats.hc || '-'}</td>
+                <td class="text-center text-primary border-end border-light opacity-75 small align-middle ${hoverClass}" ${clickAttr('ALL')}>${stats.hc || '-'}</td>
                 <td class="text-center text-success ${hoverClass} align-middle" ${clickAttr('PRESENT')}>${stats.present || '-'}</td>
                 <td class="text-center text-warning ${hoverClass} align-middle" ${clickAttr('LATE')}>${stats.late || '-'}</td>
                 <td class="text-center text-danger ${hoverClass} align-middle" ${clickAttr('ABSENT')}>${stats.absent || '-'}</td>
                 <td class="text-center text-info ${hoverClass} align-middle" ${clickAttr('LEAVE')}>${stats.leave || '-'}</td>
                 <td class="text-center fw-bold bg-light border-start ${hoverClass} align-middle" ${clickAttr('PRESENT_AND_LATE')}>${stats.actual}</td>
                 
-                <td class="text-center fw-bold text-primary bg-white border-start border-end align-middle" title="ยอดที่ต้องจ่ายเงิน (มา + ลา)">
+                <td class="text-center fw-bold text-primary bg-white border-start border-end align-middle ${hoverClass}" title="ยอดที่ต้องจ่ายเงิน (มา + ลา)" ${clickAttr('ALL')}>
                     ${payableCount > 0 ? payableCount : '-'}
                 </td>
                 
-                <td class="${cellClass}">
+                <td class="${cellClass}" ${clickAttr('ALL')}>
                     <div class="text-primary fw-bold">฿ ${fmt(stats.dl)}</div>
                     <div class="small text-muted" style="font-size: 0.7rem;"><i class="fas fa-user opacity-50 me-1"></i>${fmtNum(stats.dl_count)} คน</div>
                 </td>
-                <td class="${cellClass}">
+                <td class="${cellClass}" ${clickAttr('ALL')}>
                     <div class="text-danger fw-bold">฿ ${fmt(stats.ot)}</div>
                     <div class="small text-muted" style="font-size: 0.7rem;">${fmtNum(stats.ot_count)} คน | ${fmtNum(stats.ot_hours)} ชม.</div>
                 </td>
-                <td class="${cellClass} pe-4 bg-light border-start">
+                <td class="${cellClass} pe-4 bg-light border-start" ${clickAttr('ALL')}>
                     <div class="text-dark fw-bold" style="font-size: 1.1em;">฿ ${fmt(stats.dlot)}</div>
                 </td>
             `;
         } else {
             let diffClass = stats.diff < 0 ? 'text-danger fw-bold' : (stats.diff > 0 ? 'text-warning fw-bold text-dark' : 'text-success fw-bold');
             columnsHtml = `
-                <td class="text-center text-primary border-end border-light opacity-75 small align-middle">${stats.hc || '-'}</td>
-                <td class="text-center fw-bold align-middle" style="display: none;" ${clickAttr('ALL')}>${stats.plan}</td>
+                <td class="text-center text-primary border-end border-light opacity-75 small align-middle ${hoverClass}" ${clickAttr('ALL')}>${stats.hc || '-'}</td>
+                <td class="text-center fw-bold align-middle ${hoverClass}" style="display: none;" ${clickAttr('ALL')}>${stats.plan}</td>
                 <td class="text-center text-success ${hoverClass} align-middle" ${clickAttr('PRESENT')}>${stats.present || '-'}</td>
                 <td class="text-center text-warning ${hoverClass} align-middle" ${clickAttr('LATE')}>${stats.late || '-'}</td>
                 <td class="text-center text-danger ${hoverClass} align-middle" ${clickAttr('ABSENT')}>${stats.absent || '-'}</td>
                 <td class="text-center text-info ${hoverClass} align-middle" ${clickAttr('LEAVE')}>${stats.leave || '-'}</td>
                 <td class="text-center fw-bold border-start border-end bg-light ${hoverClass} align-middle" ${clickAttr('PRESENT_AND_LATE')}>${stats.actual}</td>
-                <td class="text-center ${diffClass} align-middle">${stats.diff > 0 ? '+' : ''}${stats.diff}</td>
-                <td class="text-end pe-4 text-secondary small align-middle font-monospace">${fmt(stats.cost)}</td>
+                <td class="text-center ${diffClass} align-middle ${hoverClass}" ${clickAttr('ALL')}>${stats.diff > 0 ? '+' : ''}${stats.diff}</td>
+                <td class="text-end pe-4 text-secondary small align-middle font-monospace ${hoverClass}" ${clickAttr('ALL')}>${fmt(stats.cost)}</td>
             `;
         }
 
@@ -1443,6 +1446,116 @@ const Actions = {
     _lastDetailParams: { line: '', shiftId: '', empType: '', filterStatus: 'ALL' },
     _cachedAnalysisData: null,
 
+    async openTeamSettings() {
+        UI.showLoader();
+        try {
+            const res = await fetch(`api/api_master_data.php?action=read_team_settings`);
+            const data = await res.json();
+            
+            const tbody = document.getElementById('teamSettingsBody');
+            if (data && data.success) {
+                if (data.data && data.data.length > 0) {
+                    tbody.innerHTML = '';
+                    data.data.forEach(item => {
+                        this.appendTeamSettingRow(item.department_api, item.hc_group);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No configuration found. Please add teams.</td></tr>';
+                }
+            } else {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">API Error: ${data?.message || 'Unknown error'}</td></tr>`;
+            }
+        } catch (err) {
+            console.error(err);
+            document.getElementById('teamSettingsBody').innerHTML = '<tr><td colspan="3" class="text-center text-danger">Error fetching data.</td></tr>';
+        } finally {
+            UI.hideLoader();
+            const modal = new bootstrap.Modal(document.getElementById('teamSettingsModal'));
+            modal.show();
+        }
+    },
+
+    appendTeamSettingRow(dept, hc_group) {
+        const tbody = document.getElementById('teamSettingsBody');
+        const emptyMsg = tbody.querySelector('td.text-muted');
+        if (emptyMsg) tbody.innerHTML = '';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <input type="text" class="form-control form-control-sm team-dept-input" value="${dept}" placeholder="Department (API)">
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm team-hc-input" list="hcGroupList" value="${hc_group}" placeholder="e.g. Team 1, Exclude" autocomplete="off">
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()" title="Remove Team">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    },
+
+    addTeamSettingRow() {
+        this.appendTeamSettingRow('', 'MAIN');
+    },
+
+    async saveTeamSettings() {
+        const rows = document.querySelectorAll('#teamSettingsBody tr');
+        const settings = [];
+        
+        let isValid = true;
+        rows.forEach(tr => {
+            const deptInput = tr.querySelector('.team-dept-input');
+            const hcInput = tr.querySelector('.team-hc-input');
+            
+            if (deptInput && hcInput) {
+                const dept = deptInput.value.trim();
+                const hc = hcInput.value.trim();
+                if (!dept) isValid = false;
+                
+                if (dept) {
+                    settings.push({
+                        department_api: dept,
+                        hc_group: hc || 'MAIN'
+                    });
+                }
+            }
+        });
+
+        if (settings.length === 0) {
+            UI.showToast("No settings to save", "warning");
+            return;
+        }
+
+        UI.showLoader();
+        try {
+            const fd = new FormData();
+            fd.append('action', 'save_team_settings');
+            settings.forEach((s, i) => {
+                fd.append(`settings[${i}][department_api]`, s.department_api);
+                fd.append(`settings[${i}][hc_group]`, s.hc_group);
+            });
+
+            const res = await fetch(`api/api_master_data.php`, { method: 'POST', body: fd });
+            const result = await res.json();
+            
+            if (result.success) {
+                UI.showToast("✅ Team Settings saved successfully!", "success");
+                bootstrap.Modal.getInstance(document.getElementById('teamSettingsModal')).hide();
+                App.loadData();
+            } else {
+                UI.showToast("❌ Error: " + result.message, "danger");
+            }
+        } catch (err) {
+            console.error(err);
+            UI.showToast("❌ Failed to save settings.", "danger");
+        } finally {
+            UI.hideLoader();
+        }
+    },
+
     async openDetailModal(line, shiftId, empType = 'ALL', filterStatus = 'ALL') {
         if (arguments.length === 3 && (empType === 'ALL' || empType === 'PRESENT' || empType === 'LATE' || empType === 'ABSENT')) {
             filterStatus = empType; empType = 'ALL';
@@ -1460,13 +1573,14 @@ const Actions = {
         document.getElementById('detailModalTable').innerHTML = `
             <thead>
                 <tr class="table-light text-secondary small text-center">
-                    <th>พนักงาน</th><th width="10%">ไลน์</th><th width="8%">ทีม</th><th width="8%">กะ</th>
-                    <th width="10%">เข้า</th><th width="10%">ออก</th><th width="10%">สถานะ</th>
-                    <th width="15%">หมายเหตุ</th><th width="10%" class="text-end">Cost</th><th width="8%">Action</th>
+                    <th width="4%" class="align-middle"><input type="checkbox" class="form-check-input" id="checkAllLogs" onclick="Actions.toggleAllLogs(this)"></th>
+                    <th class="align-middle">พนักงาน</th><th width="10%" class="align-middle">ไลน์</th><th width="8%" class="align-middle">ทีม</th><th width="8%" class="align-middle">กะ</th>
+                    <th width="8%" class="align-middle">เข้า</th><th width="8%" class="align-middle">ออก</th><th width="10%" class="align-middle">สถานะ</th>
+                    <th width="15%" class="align-middle">หมายเหตุ</th><th width="10%" class="text-end align-middle">Cost</th><th width="8%" class="align-middle">Action</th>
                 </tr>
             </thead>
             <tbody id="detailModalBody">
-                ${UI.getSkeletonRow(10)}
+                ${UI.getSkeletonRow(11)}
             </tbody>`;
 
         const searchInput = document.getElementById('searchDetail');
@@ -1488,10 +1602,17 @@ const Actions = {
     async fetchDetailData() {
         const { line, shiftId, empType, filterStatus } = this._lastDetailParams;
         const date = document.getElementById('filterDate').value;
-        if (this._structureCache.lines.length === 0) await this.initDropdowns();
+        const hcGroup = document.getElementById('filterHcGroup')?.value || 'ALL';
 
+        if (this._structureCache.lines.length === 0) await this.initDropdowns();
+        
+        const teamFilter = document.getElementById('filterDetailTeam');
+        if (teamFilter && teamFilter.options.length <= 1) {
+            teamFilter.innerHTML = '<option value="">ทั้งหมด (All Teams)</option>' + 
+                this._structureCache.teams.map(t => `<option value="${t}">${t}</option>`).join('');
+        }
         try {
-            const url = `api/api_daily_operations.php?action=read_daily&date=${date}&line=${encodeURIComponent(line)}&type=${encodeURIComponent(empType)}`;
+            const url = `api/api_daily_operations.php?action=read_daily&date=${date}&line=${encodeURIComponent(line)}&type=${encodeURIComponent(empType)}&hcGroup=${encodeURIComponent(hcGroup)}`;
             const res = await fetch(url);
             const json = await res.json();
 
@@ -1691,7 +1812,17 @@ const Actions = {
             modal.show();
         }
 
-        document.getElementById('detailModalBody').innerHTML = UI.getSkeletonRow(10);
+        document.getElementById('detailModalTable').innerHTML = `
+            <thead>
+                <tr class="table-light text-secondary small text-center">
+                    <th width="12%" class="align-middle">วันที่ (Date)</th><th class="align-middle">พนักงาน</th><th width="10%" class="align-middle">ไลน์</th><th width="8%" class="align-middle">ทีม</th><th width="8%" class="align-middle">กะ</th>
+                    <th width="8%" class="align-middle">เข้า</th><th width="8%" class="align-middle">ออก</th><th width="10%" class="align-middle">สถานะ</th>
+                    <th width="15%" class="align-middle">หมายเหตุ</th><th width="10%" class="text-end align-middle">Cost</th><th width="8%" class="align-middle">Action</th>
+                </tr>
+            </thead>
+            <tbody id="detailModalBody">
+                ${UI.getSkeletonRow(11)}
+            </tbody>`;
 
         try {
             const url = `api/api_daily_operations.php?action=read_daily&startDate=${startDate}&endDate=${today}&emp_id=${empId}`;
@@ -1702,7 +1833,7 @@ const Actions = {
                 const history = json.data.filter(r => r.emp_id === empId);
                 history.sort((a, b) => new Date(b.log_date) - new Date(a.log_date));
 
-                this.renderDetailTable(history);
+                this.renderDetailTable(history, true);
             }
         } catch (err) {
             console.error(err);
@@ -1720,7 +1851,7 @@ const Actions = {
         );
     },
 
-    renderDetailTable(list) {
+    renderDetailTable(list, isHistoryMode = false) {
         const tbody = document.getElementById('detailModalBody');
 
         if (!list || list.length === 0) {
@@ -1728,125 +1859,186 @@ const Actions = {
             return;
         }
 
-        const createOptions = (items, selectedVal) => items.map(val => `<option value="${val}" ${val == selectedVal ? 'selected' : ''}>${val}</option>`).join('');
         const statusMap = {
             'WAITING': '⏳ รอเข้างาน', 'PRESENT': '✅ มา (Present)', 'LATE': '⏰ สาย (Late)',
             'ABSENT': '❌ ขาด (Absent)', 'SICK': '🤢 ลาป่วย (Sick)', 'BUSINESS': '👜 ลากิจ (Business)',
             'VACATION': '🏖️ พักร้อน (Vacation)', 'OTHER': '⚪ อื่นๆ (Other)'
         };
-        const statusOptionsArr = Object.entries(statusMap).map(([val, label]) => ({ val, label }));
+        const getStatusBadgeClass = (status) => {
+            const map = { 'PRESENT': 'bg-success', 'LATE': 'bg-warning text-dark', 'ABSENT': 'bg-danger', 'SICK': 'bg-info text-dark', 'BUSINESS': 'bg-primary', 'VACATION': 'bg-purple', 'WAITING': 'bg-secondary' };
+            return map[status] || 'bg-light text-dark border';
+        };
+
         const rowsHTML = list.map(row => {
             const uid = row.emp_id;
-            const lineOpts = createOptions(this._structureCache.lines, row.actual_line || row.line);
-            const teamOpts = createOptions(this._structureCache.teams, row.actual_team || row.team_group);
-            const shift1Sel = (row.shift_id == 1 || (!row.shift_id && row.default_shift_id == 1)) ? 'selected' : '';
-            const shift2Sel = (row.shift_id == 2 || (!row.shift_id && row.default_shift_id == 2)) ? 'selected' : '';
-            const statusOptsHtml = statusOptionsArr.map(opt => `<option value="${opt.val}" ${row.status === opt.val ? 'selected' : ''}>${opt.label}</option>`).join('');
+            const logId = row.log_id || '0';
             const costVal = parseFloat(row.est_cost || 0);
             const costHtml = costVal > 0 ? `<span class="fw-bold ${costVal > 1000 ? 'text-primary' : 'text-dark'}">${costVal.toLocaleString()}</span>` : '<span class="text-muted">-</span>';
 
-            let outTimeDisplay = row.out_time;
+            let outTimeDisplay = row.out_time ? row.out_time.substring(0,5) : '-';
             let trClass = '';
-            let forgotOutHtml = '';
-
+            
             if (parseInt(row.is_forgot_out) === 1) {
                 trClass = 'table-danger bg-opacity-10';
-                outTimeDisplay = `<span class="text-danger fw-bold small"><i class="fas fa-exclamation-circle"></i> ลืมรูด</span>`;
-                forgotOutHtml = `<a href="#" class="small text-decoration-none" onclick="this.previousElementSibling.classList.remove('d-none'); this.previousElementSibling.previousElementSibling.style.display='none'; this.style.display='none'; return false;">แก้</a>`;
+                outTimeDisplay = `<span class="badge bg-danger"><i class="fas fa-exclamation-circle"></i> ลืมรูด</span>`;
             }
 
-            const masterJson = encodeURIComponent(JSON.stringify({
-                emp_id: row.emp_id,
-                name_th: row.name_th,
-                position: row.position,
-                line: row.line,
-                team_group: row.team_group,
-                default_shift_id: row.default_shift_id,
-                is_active: row.is_active
-            }));
+            const shiftDisplay = (row.shift_id == 1 || (!row.shift_id && row.default_shift_id == 1)) ? '<span class="badge bg-primary shadow-sm"><i class="fas fa-sun"></i> DAY</span>' : '<span class="badge bg-dark shadow-sm"><i class="fas fa-moon"></i> NIGHT</span>';
+
+            const masterJson = encodeURIComponent(JSON.stringify(row));
+            
+            const dFmt = (dStr) => {
+                if (!dStr) return '-';
+                const d = new Date(dStr);
+                return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear().toString().substr(-2)}`;
+            };
+
+            const firstCellHtml = isHistoryMode 
+                ? `<td class="text-center align-middle font-monospace text-primary fw-bold">${dFmt(row.log_date)}</td>`
+                : `<td class="text-center align-middle">
+                        <input type="checkbox" class="form-check-input log-checkbox" value="${uid}" onchange="Actions.updateBatchSelectedCount()">
+                   </td>`;
+
             return `
-                <tr class="${trClass}">
+                <tr class="${trClass}" data-uid="${uid}" data-logid="${logId}" data-team="${row.actual_team || row.team_group || ''}">
+                    ${firstCellHtml}
                     <td class="ps-4">
                         <div class="fw-bold text-dark text-truncate" style="max-width: 150px;">${row.name_th}</div>
                         <small class="text-muted font-monospace" style="font-size:0.75rem;">${row.emp_id}</small>
                     </td>
-                    <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent small shadow-none" id="line_${uid}" style="font-size: 0.8rem;">${lineOpts}</select></td>
-                    <td class="p-1"><select class="form-select form-select-sm border-0 bg-transparent small shadow-none" id="team_${uid}" style="font-size: 0.8rem;"><option value="-">-</option>${teamOpts}</select></td>
-                    <td class="p-1">
-                        <select class="form-select form-select-sm border-0 bg-transparent small fw-bold text-primary shadow-none" id="shift_${uid}" style="font-size: 0.8rem;">
-                            <option value="1" ${shift1Sel}>Day</option><option value="2" ${shift2Sel}>Night</option>
-                        </select>
+                    <td class="text-center align-middle text-secondary small fw-bold">${row.actual_line || row.line || '-'}</td>
+                    <td class="text-center align-middle text-secondary small fw-bold">${row.actual_team || row.team_group || '-'}</td>
+                    <td class="text-center align-middle">${shiftDisplay}</td>
+                    <td class="text-center align-middle font-monospace fw-bold text-primary">${row.in_time ? row.in_time.substring(0,5) : '-'}</td>
+                    <td class="text-center align-middle font-monospace fw-bold text-primary">${outTimeDisplay}</td>
+                    <td class="text-center align-middle">
+                        <span class="badge ${getStatusBadgeClass(row.status)} shadow-sm px-2 py-1" style="font-size: 0.75rem;">${statusMap[row.status] || row.status}</span>
                     </td>
-                    <td class="p-1 text-center cursor-pointer-cell">
-                        <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0" id="in_${uid}" value="${row.in_time || ''}">
-                    </td>
-                    <td class="p-1 text-center cursor-pointer-cell">
-                        ${parseInt(row.is_forgot_out) === 1 ? outTimeDisplay : ''}
-                        <input type="time" class="form-control form-control-sm border-0 bg-transparent text-center p-0 ${parseInt(row.is_forgot_out) === 1 ? 'd-none' : ''}" id="out_${uid}" value="${row.out_time || ''}">
-                        ${forgotOutHtml}
-                    </td>
-                    <td class="p-1">
-                        <select class="form-select form-select-sm border-0 bg-transparent fw-bold shadow-none text-uppercase" id="status_${uid}" style="font-size: 0.75rem;">${statusOptsHtml}</select>
-                    </td>
-                    <td class="p-1"><input type="text" class="form-control form-control-sm border-0 border-bottom rounded-0 bg-transparent shadow-none" id="remark_${uid}" value="${row.remark || ''}" placeholder="..."></td>
+                    <td class="align-middle text-muted small text-truncate" style="max-width: 150px;" title="${row.remark || ''}">${row.remark || '-'}</td>
                     <td class="text-end pe-3 align-middle">${costHtml}</td>
                     
                     <td class="text-center text-nowrap align-middle">
-                        
-                        <button class="btn btn-sm btn-primary rounded-circle shadow-sm me-1" 
+                        <button class="btn btn-sm btn-light text-primary border rounded-circle shadow-sm me-1" 
                                 style="width: 32px; height: 32px;" 
-                                onclick="Actions.saveLogStatus('${row.log_id}', '${uid}')" 
-                                title="บันทึกข้อมูล">
-                            <i class="fas fa-save"></i>
+                                onclick="Actions.openEditLogModal('${masterJson}')" 
+                                title="แก้ไขรายการ">
+                            <i class="fas fa-pen"></i>
                         </button>
-
                         <div class="btn-group">
-                            <button class="btn btn-sm btn-light text-secondary rounded-circle" 
+                            <button class="btn btn-sm btn-light text-secondary border rounded-circle shadow-sm" 
                                     style="width: 32px; height: 32px;" 
                                     data-bs-toggle="dropdown" 
                                     data-bs-boundary="viewport"  aria-expanded="false">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
-                            
                             <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="font-size: 0.85rem; min-width: 180px;">
-                                
-                                <li><h6 class="dropdown-header text-uppercase small my-0">Quick Actions</h6></li>
-                                
-                                <li><a class="dropdown-item" href="#" onclick="Actions.setLeaveRecord('${uid}', '${row.log_date}', 'SICK')"><i class="fas fa-procedures text-warning me-2"></i>ลาป่วย (Sick)</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.setLeaveRecord('${uid}', '${row.log_date}', 'BUSINESS')"><i class="fas fa-briefcase text-info me-2"></i>ลากิจ (Business)</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.setLeaveRecord('${uid}', '${row.log_date}', 'VACATION')"><i class="fas fa-umbrella-beach text-success me-2"></i>พักร้อน (Vacation)</a></li>
-                                
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openKpiDashboard('${uid}', '${row.name_th}')"><i class="fas fa-chart-pie text-success me-2"></i>ดูผลประเมิน (KPI)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.viewEmployeeHistory('${uid}', '${row.name_th}')"><i class="fas fa-history text-info me-2"></i>ดูประวัติย้อนหลัง</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmpEdit('${encodeURIComponent(JSON.stringify(row))}')"><i class="fas fa-user-edit text-secondary me-2"></i>แก้ไขข้อมูล Master</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                
-                                <li><a class="dropdown-item" href="#" onclick="Actions.viewEmployeeHistory('${uid}', '${row.name_th}')"><i class="fas fa-history text-secondary me-2"></i>ดูประวัติย้อนหลัง</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmpEdit('${row.emp_id}')"><i class="fas fa-user-edit text-secondary me-2"></i>แก้ไขข้อมูลหลัก</a></li>
-
-                                <li><hr class="dropdown-divider"></li>
-                                
-                                <li><a class="dropdown-item text-danger" href="#" onclick="Actions.deleteLog('${row.log_id}', '${row.name_th}')"><i class="fas fa-trash-alt me-2"></i>ลบรายการวันนี้</a></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="Actions.deleteLog('${logId}', '${row.name_th}')"><i class="fas fa-trash-alt me-2"></i>ลบรายการวันนี้</a></li>
                             </ul>
                         </div>
-
                     </td>
                 </tr>`;
         }).join('');
         tbody.innerHTML = rowsHTML;
     },
 
-    async saveLogStatus(logId, empId) {
-        const elStatus = document.getElementById(`status_${empId}`);
-        const elLine = document.getElementById(`line_${empId}`);
-        const elTeam = document.getElementById(`team_${empId}`);
-        const elShift = document.getElementById(`shift_${empId}`);
-        const elRemark = document.getElementById(`remark_${empId}`);
-        const elIn = document.getElementById(`in_${empId}`);
-        const elOut = document.getElementById(`out_${empId}`);
+    toggleAllLogs(checkbox) {
+        const checkboxes = document.querySelectorAll('.log-checkbox');
+        checkboxes.forEach(cb => cb.checked = checkbox.checked);
+        this.updateBatchSelectedCount();
+    },
 
-        if (!elStatus || !elLine) return;
+    updateBatchSelectedCount() {
+        const count = document.querySelectorAll('.log-checkbox:checked').length;
+        const countSpan = document.getElementById('batchSelectedCount');
+        if (countSpan) countSpan.innerText = count;
+    },
 
+    async batchSetStatus(status) {
+        const checkboxes = document.querySelectorAll('.log-checkbox:checked');
+        if (checkboxes.length === 0) {
+            UI.showToast("กรุณาเลือกพนักงานอย่างน้อย 1 คน", "warning");
+            return;
+        }
+
+        if (!confirm(`ยืนยันการตั้งสถานะเป็น ${status} ให้พนักงาน ${checkboxes.length} คน?`)) return;
+
+        UI.showLoader();
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const cb of checkboxes) {
+            const tr = cb.closest('tr');
+            const uid = tr.dataset.uid;
+            const logId = tr.dataset.logid;
+            const date = document.getElementById('filterDate').value;
+
+            try {
+                const res = await fetch('api/api_daily_operations.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'update_log',
+                        log_id: logId == '0' ? '' : logId,
+                        emp_id: uid,
+                        log_date: date,
+                        status: status,
+                        remark: 'Batch Update'
+                    })
+                });
+                const json = await res.json();
+                if (json.success) successCount++;
+                else failCount++;
+            } catch (err) {
+                failCount++;
+            }
+        }
+
+        UI.hideLoader();
+        if (successCount > 0) UI.showToast(`✅ อัปเดตสำเร็จ ${successCount} รายการ`, "success");
+        if (failCount > 0) UI.showToast(`❌ ล้มเหลว ${failCount} รายการ`, "danger");
+
+        const checkAll = document.getElementById('checkAllLogs');
+        if (checkAll) checkAll.checked = false;
+        this.updateBatchSelectedCount();
+
+        await this.fetchDetailData();
+        App.loadData();
+    },
+
+    openEditLogModal(masterJsonString) {
+        const data = JSON.parse(decodeURIComponent(masterJsonString));
+        
+        const createOptions = (items, selectedVal) => items.map(val => `<option value="${val}" ${val == selectedVal ? 'selected' : ''}>${val}</option>`).join('');
+        
+        document.getElementById('editLogLine').innerHTML = createOptions(this._structureCache.lines, data.actual_line || data.line);
+        document.getElementById('editLogTeam').innerHTML = '<option value="-">-</option>' + createOptions(this._structureCache.teams, data.actual_team || data.team_group);
+
+        document.getElementById('editLogId').value = data.log_id || '';
+        document.getElementById('editEmpIdHidden').value = data.emp_id;
+        document.getElementById('editEmpName').value = data.name_th + ' (' + data.emp_id + ')';
+        document.getElementById('editStatus').value = data.status || 'PRESENT';
+        document.getElementById('editLogShift').value = data.shift_id || data.default_shift_id || '1';
+        
+        const formatTime = (t) => t ? t.substring(0,5) : '';
+        document.getElementById('editScanInTime').value = formatTime(data.in_time);
+        document.getElementById('editScanOutTime').value = formatTime(data.out_time);
+        document.getElementById('editRemark').value = data.remark || '';
+
+        const modal = new bootstrap.Modal(document.getElementById('editLogModal'));
+        modal.show();
+    },
+
+    async saveLogChanges() {
+        const logId = document.getElementById('editLogId').value;
+        const empId = document.getElementById('editEmpIdHidden').value;
         const dateStr = document.getElementById('filterDate').value;
-        const timeIn = elIn.value;
-        const timeOut = elOut.value;
+        
+        const timeIn = document.getElementById('editScanInTime').value;
+        const timeOut = document.getElementById('editScanOutTime').value;
 
         let scanInFull = timeIn ? `${dateStr} ${timeIn}:00` : null;
         let scanOutFull = null;
@@ -1854,7 +2046,6 @@ const Actions = {
         if (timeOut) {
             let outDate = dateStr;
             const hourOut = parseInt(timeOut.split(':')[0]);
-
             if ((timeIn && timeOut < timeIn) || (hourOut >= 0 && hourOut <= 7)) {
                 const d = new Date(dateStr + 'T12:00:00');
                 d.setDate(d.getDate() + 1);
@@ -1863,39 +2054,43 @@ const Actions = {
             scanOutFull = `${outDate} ${timeOut}:00`;
         }
 
-        const btn = event.currentTarget;
-        const originalIcon = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+        const payload = {
+            action: 'update_log',
+            log_id: logId,
+            emp_id: empId,
+            log_date: dateStr,
+            actual_line: document.getElementById('editLogLine').value,
+            actual_team: document.getElementById('editLogTeam').value,
+            status: document.getElementById('editStatus').value,
+            shift_id: document.getElementById('editLogShift').value,
+            scan_in_time: scanInFull,
+            scan_out_time: scanOutFull,
+            remark: document.getElementById('editRemark').value
+        };
 
+        UI.showLoader();
         try {
             const res = await fetch('api/api_daily_operations.php', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'update_log', log_id: logId, emp_id: empId, log_date: dateStr,
-                    actual_line: elLine.value, actual_team: elTeam.value, shift_id: elShift.value,
-                    status: elStatus.value, remark: elRemark.value,
-                    scan_in_time: scanInFull, scan_out_time: scanOutFull
-                })
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
             const json = await res.json();
+            
             if (json.success) {
-                btn.classList.replace('btn-primary', 'btn-success');
-                btn.innerHTML = '<i class="fas fa-check"></i>';
-
-                setTimeout(async () => {
-                    btn.classList.replace('btn-success', 'btn-primary');
-                    btn.innerHTML = originalIcon;
-                    btn.disabled = false;
-
-                    if (typeof App !== 'undefined') App.loadData(true);
-                    await Actions.fetchDetailData();
-                }, 1000);
+                bootstrap.Modal.getInstance(document.getElementById('editLogModal')).hide();
+                UI.showToast("บันทึกสำเร็จ", "success");
+                await this.fetchDetailData();
+                App.loadData();
             } else {
-                alert('Error: ' + json.message);
-                btn.innerHTML = originalIcon;
-                btn.disabled = false;
+                UI.showToast("Error: " + json.message, "danger");
             }
-        } catch (err) { alert('Failed: ' + err.message); btn.innerHTML = originalIcon; btn.disabled = false; }
+        } catch (err) {
+            UI.showToast("Failed to save", "danger");
+            console.error(err);
+        } finally {
+            UI.hideLoader();
+        }
     },
 
     async initDropdowns() {
@@ -1922,52 +2117,49 @@ const Actions = {
 
     initSearch() {
         const input = document.getElementById('searchDetail');
+        const teamFilter = document.getElementById('filterDetailTeam');
         if (!input) return;
 
         let debounceTimer;
-        input.onkeyup = null;
-
-        input.onkeyup = function () {
+        
+        const filterFn = () => {
             clearTimeout(debounceTimer);
-
-            const searchTerm = this.value.toLowerCase().trim();
+            const searchTerm = input.value.toLowerCase().trim();
+            const teamTerm = teamFilter ? teamFilter.value.toLowerCase().trim() : '';
             const tbody = document.getElementById('detailModalBody');
-            if (searchTerm === '') {
-                const rows = tbody.querySelectorAll('tr');
-                requestAnimationFrame(() => {
-                    rows.forEach(r => {
-                        r.style.display = '';
-                        r.classList.remove('search-reveal');
-                    });
-                });
-                return;
-            }
 
             debounceTimer = setTimeout(() => {
                 const rows = tbody.querySelectorAll('tr');
-
                 requestAnimationFrame(() => {
                     rows.forEach(row => {
                         const text = row.innerText.toLowerCase();
-                        const isCurrentlyVisible = row.style.display !== 'none';
-                        const isMatch = text.includes(searchTerm) || text.includes('loading');
-
+                        const rowTeam = (row.dataset.team || '').toLowerCase();
+                        
+                        const isMatchSearch = searchTerm === '' || text.includes(searchTerm) || text.includes('loading');
+                        const isMatchTeam = teamTerm === '' || rowTeam === teamTerm || text.includes('loading');
+                        
+                        const isMatch = isMatchSearch && isMatchTeam;
+                        
                         if (isMatch) {
-                            if (!isCurrentlyVisible) {
+                            if (row.style.display === 'none') {
                                 row.style.display = '';
                                 row.classList.remove('search-reveal');
                                 void row.offsetWidth;
                                 row.classList.add('search-reveal');
                             }
                         } else {
-                            row.style.display = 'none';
-                            row.classList.remove('search-reveal');
+                            if (row.style.display !== 'none') {
+                                row.style.display = 'none';
+                                row.classList.remove('search-reveal');
+                            }
                         }
                     });
                 });
-
-            }, 300);
+            }, 150);
         };
+
+        input.onkeyup = filterFn;
+        if (teamFilter) teamFilter.onchange = filterFn;
     },
 
     async exportTrendExcel(days) {
@@ -2355,6 +2547,7 @@ const Actions = {
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openKpiDashboard('${emp.emp_id}', '${emp.name_th}')"><i class="fas fa-chart-pie text-success me-2"></i>ดูผลประเมิน (KPI)</a></li>
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openEmpEdit('${encodeURIComponent(JSON.stringify(emp))}')"><i class="fas fa-pen text-primary me-2"></i>Edit Details</a></li>
                                 <li><a class="dropdown-item" href="#" onclick="Actions.viewEmployeeHistory('${emp.emp_id}', '${emp.name_th}')"><i class="fas fa-history text-info me-2"></i>View History</a></li>
                                 ${isActive ? `<li><hr class="dropdown-divider"></li><li><a class="dropdown-item text-danger" href="#" onclick="Actions.terminateStaff('${emp.emp_id}', '${emp.name_th}')"><i class="fas fa-user-times me-2"></i>Resign User</a></li>` : ''}
@@ -2367,6 +2560,179 @@ const Actions = {
         if (list.length > 100) {
             tbody.innerHTML += `<tr><td colspan="7" class="text-center text-muted small py-2">... and ${list.length - 100} more (Use search to find specific user) ...</td></tr>`;
         }
+    },
+    async openKpiDashboard(empId, name) {
+        document.getElementById('empKpiSubtitle').innerText = name + ' (' + empId + ')';
+        document.getElementById('empKpiRate').innerText = '--%';
+        document.getElementById('empKpiTotal').innerText = '--';
+        document.getElementById('empKpiPresent').innerText = '--';
+        document.getElementById('empKpiLate').innerText = '--';
+        document.getElementById('empKpiAbsent').innerText = '--';
+        document.getElementById('empKpiLeave').innerText = '--';
+
+        const modal = new bootstrap.Modal(document.getElementById('empKpiModal'));
+        modal.show();
+
+        try {
+            const res = await fetch(`api/api_daily_operations.php?action=read_kpi_summary&emp_id=${empId}`);
+            const json = await res.json();
+            if (json.success && json.data.length > 0) {
+                const data = json.data[0];
+                const total = parseInt(data.total_working_days);
+                const present = parseInt(data.count_present);
+                const late = parseInt(data.count_late);
+                const absent = parseInt(data.count_absent);
+                const leave = parseInt(data.count_sick) + parseInt(data.count_business) + parseInt(data.count_vacation);
+
+                document.getElementById('empKpiTotal').innerText = total;
+                document.getElementById('empKpiPresent').innerText = present;
+                document.getElementById('empKpiLate').innerText = late;
+                document.getElementById('empKpiAbsent').innerText = absent;
+                document.getElementById('empKpiLeave').innerText = leave;
+
+                let rate = 0;
+                // Exclude leaves from total expected working days? Or just Attendance = (Present + Late) / Total
+                if (total > 0) {
+                    rate = ((present + late) / total * 100).toFixed(1);
+                }
+                document.getElementById('empKpiRate').innerText = rate + '%';
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    },
+
+    async openExecReport() {
+        const modal = new bootstrap.Modal(document.getElementById('execReportModal'));
+        modal.show();
+
+        const tbody = document.getElementById('execReportBody');
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i><br>กำลังดึงข้อมูล...</td></tr>';
+
+        // Populate filters if needed
+        if (this._structureCache && this._structureCache.lines.length > 0) {
+            const lineSelect = document.getElementById('execReportLineFilter');
+            const teamSelect = document.getElementById('execReportTeamFilter');
+            if (lineSelect.options.length <= 1) {
+                lineSelect.innerHTML = '<option value="">ทุกแผนก (All Lines)</option>' + this._structureCache.lines.map(l => `<option value="${l}">${l}</option>`).join('');
+            }
+            if (teamSelect.options.length <= 1) {
+                teamSelect.innerHTML = '<option value="">ทุกทีม (All Teams)</option>' + this._structureCache.teams.map(t => `<option value="${t}">${t}</option>`).join('');
+            }
+        }
+
+        try {
+            const res = await fetch(`api/api_daily_operations.php?action=read_kpi_summary`);
+            const json = await res.json();
+            if (json.success) {
+                this._execReportData = json.data;
+                this.renderExecReport();
+            } else {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-danger">Error: ${json.message}</td></tr>`;
+            }
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-danger">Failed to load data</td></tr>`;
+        }
+    },
+
+    renderExecReport() {
+        const tbody = document.getElementById('execReportBody');
+        if (!this._execReportData || this._execReportData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5">ไม่พบข้อมูล</td></tr>';
+            return;
+        }
+
+        const lineF = document.getElementById('execReportLineFilter')?.value || '';
+        const teamF = document.getElementById('execReportTeamFilter')?.value || '';
+        const searchF = (document.getElementById('execReportSearch')?.value || '').toLowerCase().trim();
+
+        const filtered = this._execReportData.filter(r => {
+            if (lineF && r.line !== lineF) return false;
+            if (teamF && r.team_group !== teamF) return false;
+            if (searchF) {
+                const text = (r.emp_id + ' ' + r.name_th).toLowerCase();
+                if (!text.includes(searchF)) return false;
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</td></tr>';
+            return;
+        }
+
+        const html = filtered.map(r => {
+            const total = parseInt(r.total_working_days);
+            const present = parseInt(r.count_present);
+            const late = parseInt(r.count_late);
+            const absent = parseInt(r.count_absent);
+            const leave = parseInt(r.count_sick) + parseInt(r.count_business) + parseInt(r.count_vacation);
+            let rate = 0;
+            if (total > 0) rate = ((present + late) / total * 100).toFixed(1);
+
+            let rateHtml = `<span class="fw-bold ${rate >= 95 ? 'text-success' : (rate >= 80 ? 'text-warning' : 'text-danger')}">${rate}%</span>`;
+
+            return `
+                <tr>
+                    <td class="ps-3">
+                        <div class="fw-bold text-dark">${r.name_th}</div>
+                        <div class="small text-muted font-monospace">${r.emp_id}</div>
+                    </td>
+                    <td>${r.line || '-'}</td>
+                    <td>${r.team_group || '-'}</td>
+                    <td class="text-center fw-bold">${total}</td>
+                    <td class="text-center text-success">${present}</td>
+                    <td class="text-center text-warning text-dark">${late}</td>
+                    <td class="text-center text-info">${leave}</td>
+                    <td class="text-center text-danger">${absent}</td>
+                    <td class="text-center">${rateHtml}</td>
+                </tr>
+            `;
+        }).join('');
+
+        tbody.innerHTML = html;
+    },
+
+    exportExecReport() {
+        if (!this._execReportData) return;
+        
+        const lineF = document.getElementById('execReportLineFilter')?.value || '';
+        const teamF = document.getElementById('execReportTeamFilter')?.value || '';
+        const searchF = (document.getElementById('execReportSearch')?.value || '').toLowerCase().trim();
+
+        const filtered = this._execReportData.filter(r => {
+            if (lineF && r.line !== lineF) return false;
+            if (teamF && r.team_group !== teamF) return false;
+            if (searchF) {
+                const text = (r.emp_id + ' ' + r.name_th).toLowerCase();
+                if (!text.includes(searchF)) return false;
+            }
+            return true;
+        });
+
+        let csv = 'EmpID,Name,Line,Team,Total_Working_Days,Present,Late,Leave,Absent,Attendance_Rate\n';
+        filtered.forEach(r => {
+            const total = parseInt(r.total_working_days);
+            const present = parseInt(r.count_present);
+            const late = parseInt(r.count_late);
+            const absent = parseInt(r.count_absent);
+            const leave = parseInt(r.count_sick) + parseInt(r.count_business) + parseInt(r.count_vacation);
+            let rate = 0;
+            if (total > 0) rate = ((present + late) / total * 100).toFixed(1);
+
+            csv += `"${r.emp_id}","${r.name_th}","${r.line || ''}","${r.team_group || ''}",${total},${present},${late},${leave},${absent},${rate}%\n`;
+        });
+
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Executive_Report_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     },
 
     openEmpEdit: async function (dataOrEmpId) {

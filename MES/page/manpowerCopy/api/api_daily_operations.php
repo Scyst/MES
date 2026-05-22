@@ -25,6 +25,54 @@ session_write_close();
 
 try {
     switch ($action) {
+        case 'read_kpi_summary':
+            $empIdFilter = isset($_GET['emp_id']) ? trim($_GET['emp_id']) : '';
+            $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+            
+            $startDate = "$year-01-01";
+            $endDate = date('Y-m-d');
+            
+            $sql = "SELECT 
+                        E.emp_id, E.name_th, E.line, E.team_group,
+                        COUNT(C.calendar_date) as total_working_days,
+                        SUM(CASE WHEN ISNULL(L.status, CASE WHEN C.calendar_date < CAST(GETDATE() AS DATE) THEN 'ABSENT' ELSE 'WAITING' END) = 'PRESENT' THEN 1 ELSE 0 END) as count_present,
+                        SUM(CASE WHEN ISNULL(L.status, CASE WHEN C.calendar_date < CAST(GETDATE() AS DATE) THEN 'ABSENT' ELSE 'WAITING' END) = 'LATE' THEN 1 ELSE 0 END) as count_late,
+                        SUM(CASE WHEN ISNULL(L.status, CASE WHEN C.calendar_date < CAST(GETDATE() AS DATE) THEN 'ABSENT' ELSE 'WAITING' END) = 'ABSENT' THEN 1 ELSE 0 END) as count_absent,
+                        SUM(CASE WHEN ISNULL(L.status, 'WAITING') = 'SICK' THEN 1 ELSE 0 END) as count_sick,
+                        SUM(CASE WHEN ISNULL(L.status, 'WAITING') = 'BUSINESS' THEN 1 ELSE 0 END) as count_business,
+                        SUM(CASE WHEN ISNULL(L.status, 'WAITING') = 'VACATION' THEN 1 ELSE 0 END) as count_vacation
+                    FROM dbo.MANPOWER_EMPLOYEES_TEST E WITH (NOLOCK)
+                    JOIN dbo.MANPOWER_CALENDAR C WITH (NOLOCK)
+                        ON C.calendar_date BETWEEN :startDate AND :endDate
+                        AND C.day_type != 'HOLIDAY'
+                        AND C.calendar_date >= ISNULL(E.start_date, '2000-01-01')
+                        AND C.calendar_date <= ISNULL(E.resign_date, CAST(GETDATE() AS DATE))
+                    LEFT JOIN dbo.MANPOWER_DAILY_LOGS_TEST L WITH (NOLOCK)
+                        ON E.emp_id = L.emp_id AND C.calendar_date = L.log_date
+                    WHERE 1=1 ";
+            
+            $params = [
+                ':startDate' => $startDate,
+                ':endDate' => $endDate
+            ];
+
+            if ($empIdFilter !== '') {
+                $sql .= " AND E.emp_id = :emp_id ";
+                $params[':emp_id'] = $empIdFilter;
+            } else {
+                $sql .= " AND (E.is_active = 1 OR E.resign_date >= :startDate2) ";
+                $params[':startDate2'] = $startDate;
+            }
+
+            $sql .= " GROUP BY E.emp_id, E.name_th, E.line, E.team_group ";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode(['success' => true, 'data' => $data]);
+            exit;
+
         case 'read_daily':
             $startDate  = $_GET['startDate'] ?? ($_GET['date'] ?? date('Y-m-d'));
             $endDate    = $_GET['endDate']   ?? $startDate; 
@@ -114,13 +162,27 @@ try {
                 ':calDate' => $startDate, ':t0Date' => $startDate, ':createDateCheck' => $startDate
             ];
 
+            $hcGroupFilter = $_GET['hcGroup'] ?? 'ALL';
+
             if (!empty($lineFilter) && $lineFilter !== 'ALL' && $lineFilter !== 'undefined' && $lineFilter !== 'null') {
                 $sql .= " AND ISNULL(L.actual_line, E.line) = :line";
                 $params[':line'] = $lineFilter;
             }
 
+            if ($hcGroupFilter !== 'ALL' && $hcGroupFilter !== 'undefined' && $hcGroupFilter !== 'null') {
+                $sql .= " AND E.department_api IN (SELECT department_api FROM dbo.MANPOWER_TEAM_SETTINGS_TEST WHERE hc_group = :hcGroup)";
+                $params[':hcGroup'] = $hcGroupFilter;
+            }
+
             if (!empty($empTypeFilter) && $empTypeFilter !== 'ALL' && $empTypeFilter !== 'undefined') {
-                if ($empTypeFilter === 'Other') {
+                if (strpos($empTypeFilter, 'RATE:') === 0) {
+                    $rateType = substr($empTypeFilter, 5);
+                    if ($rateType === 'MONTHLY') {
+                        $sql .= " AND CM.rate_type LIKE 'MONTHLY%'";
+                    } else {
+                        $sql .= " AND ISNULL(CM.rate_type, 'DAILY') = 'DAILY'";
+                    }
+                } else if ($empTypeFilter === 'Other') {
                     $sql .= " AND (CM.category_name IS NULL)";
                 } else {
                     $sql .= " AND (CM.category_name = :empType)";
@@ -172,11 +234,13 @@ try {
             ]);
             
             $rawData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $finalData = array_map(function($row) {
-                return [
+            $finalData = [];
+            foreach($rawData as $row) {
+                $finalData[] = [
                     'line_name'   => $row['Line'],
                     'shift_name'  => $row['Shift'],
                     'team_group'  => $row['Team'],
+                    'hc_group'    => $row['HC_Group'] ?? 'MAIN',
                     
                     'emp_type'    => $row['Category'],
                     'rate_type'   => $row['RateType'],
@@ -195,7 +259,7 @@ try {
                     'ot_cost'     => $row['OT_Cost'],
                     'ot_hours'    => isset($row['OT_Hours']) ? (float)$row['OT_Hours'] : 0
                 ];
-            }, $rawData);
+            }
 
             echo json_encode(['success' => true, 'raw_data' => $finalData, 'last_update' => date('d/m/Y H:i:s')]);
             break;
@@ -284,7 +348,13 @@ try {
         case 'read_trend':
             $endDateStr   = $_GET['endDate']   ?? date('Y-m-d');
             $startDateStr = $_GET['startDate'] ?? date('Y-m-d', strtotime('-6 days'));
+            $hcGroupFilter = $_GET['hcGroup'] ?? 'ALL';
             $funcName     = 'fn_GetManpowerSummary_TEST'; // เปลี่ยนไปใช้ fn _TEST
+
+            $sqlCondition = "";
+            if ($hcGroupFilter !== 'ALL' && $hcGroupFilter !== 'undefined' && $hcGroupFilter !== 'null') {
+                $sqlCondition = "WHERE f.hc_group = :hcGroup";
+            }
 
             $sql = "
                 WITH DateRange AS (
@@ -304,13 +374,18 @@ try {
                     SUM(f.Count_Leave) as total_leave
                 FROM DateRange d
                 CROSS APPLY $funcName(d.SummaryDate) f
+                $sqlCondition
                 GROUP BY d.SummaryDate
                 ORDER BY d.SummaryDate ASC
                 OPTION (MAXRECURSION 366);
             ";
 
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([':start' => $startDateStr, ':end'   => $endDateStr]);
+            $params = [':start' => $startDateStr, ':end' => $endDateStr];
+            if ($hcGroupFilter !== 'ALL' && $hcGroupFilter !== 'undefined' && $hcGroupFilter !== 'null') {
+                $params[':hcGroup'] = $hcGroupFilter;
+            }
+            $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $data]);

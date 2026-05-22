@@ -27,7 +27,7 @@ const API = {
         }
     },
 
-    async getTrend(days = 7) {
+    async getTrend(days = 7, hcGroup = 'ALL') {
         try {
             // คำนวณวันที่ Start/End ใน JS
             const end = new Date();
@@ -37,7 +37,7 @@ const API = {
             const sStr = start.toISOString().split('T')[0];
             const eStr = end.toISOString().split('T')[0];
 
-            const response = await fetch(`api/api_daily_operations.php?action=read_trend&startDate=${sStr}&endDate=${eStr}`);
+            const response = await fetch(`api/api_daily_operations.php?action=read_trend&startDate=${sStr}&endDate=${eStr}&hcGroup=${encodeURIComponent(hcGroup)}`);
             const json = await response.json();
             return json.success ? json.data : [];
         } catch (error) {

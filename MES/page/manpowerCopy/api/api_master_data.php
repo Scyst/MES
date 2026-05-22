@@ -22,7 +22,7 @@ $updatedBy = $currentUser['username'];
 
 // 3. Input Handling
 $input = json_decode(file_get_contents('php://input'), true);
-$action = $_GET['action'] ?? ($input['action'] ?? '');
+$action = $_GET['action'] ?? ($_POST['action'] ?? ($input['action'] ?? ''));
 
 // 4. Performance (Unlock Session)
 session_write_close();
@@ -269,6 +269,49 @@ try {
 
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'Mappings saved successfully']);
+            break;
+
+        case 'read_team_settings':
+            $pdo->exec("
+                IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MANPOWER_TEAM_SETTINGS_TEST' and xtype='U')
+                CREATE TABLE dbo.MANPOWER_TEAM_SETTINGS_TEST (
+                    department_api VARCHAR(255) NOT NULL,
+                    hc_group VARCHAR(50) DEFAULT 'MAIN',
+                    PRIMARY KEY (department_api)
+                )
+            ");
+            $stmt = $pdo->query("
+                SELECT 
+                    e.department_api AS department_api, 
+                    ISNULL(s.hc_group, 'MAIN') as hc_group
+                FROM (
+                    SELECT DISTINCT department_api 
+                    FROM dbo.MANPOWER_EMPLOYEES_TEST 
+                    WHERE department_api IS NOT NULL AND department_api != ''
+                ) e
+                LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS_TEST s 
+                  ON e.department_api = s.department_api
+                ORDER BY e.department_api
+            ");
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        case 'save_team_settings':
+            if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized.");
+            
+            // Allow reading from $_POST if FormData is used
+            $settings = $_POST['settings'] ?? ($input['settings'] ?? []);
+            
+            $pdo->beginTransaction();
+            $pdo->exec("DELETE FROM dbo.MANPOWER_TEAM_SETTINGS_TEST");
+            $stmt = $pdo->prepare("INSERT INTO dbo.MANPOWER_TEAM_SETTINGS_TEST (department_api, hc_group) VALUES (?, ?)");
+            
+            foreach ($settings as $s) {
+                $stmt->execute([trim($s['department_api'] ?? ''), trim($s['hc_group'] ?? 'MAIN')]);
+            }
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Team Settings saved successfully']);
             break;
 
         default:

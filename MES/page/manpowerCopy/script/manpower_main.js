@@ -6,7 +6,7 @@ const App = {
     viewMode: 'LINE', // LINE or SHIFT
     autoRefreshTimer: null,
     
-    useNewFormula: false,
+    useNewFormula: true,
 
     init() {
         const dateInput = document.getElementById('filterDate');
@@ -26,6 +26,11 @@ const App = {
             toggleBtn.addEventListener('click', () => this.toggleFormula());
         }
 
+        const hcGroupFilter = document.getElementById('filterHcGroup');
+        if (hcGroupFilter) {
+            hcGroupFilter.addEventListener('change', () => this.loadData());
+        }
+
         this.loadData();
         this.loadTrend(7);
         this.startAutoRefresh();
@@ -41,10 +46,10 @@ const App = {
         const btn = document.getElementById('btnFormulaToggle');
         if (btn) {
             if (this.useNewFormula) {
-                btn.className = 'btn btn-warning btn-sm shadow-sm fw-bold transition-btn text-dark';
+                btn.className = 'btn btn-warning btn-sm shadow-sm fw-bold transition-btn text-dark ms-1';
                 btn.innerHTML = '<i class="fas fa-flask me-2"></i>New Logic (Sim)';
             } else {
-                btn.className = 'btn btn-white border text-secondary btn-sm shadow-sm fw-bold transition-btn';
+                btn.className = 'btn btn-white border text-secondary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm transition-btn';
                 btn.innerHTML = '<i class="fas fa-calculator me-2"></i>Standard Cost';
             }
         }
@@ -119,14 +124,44 @@ const App = {
             const data = await API.getSummary(this.currentDate, this.useNewFormula);
             
             if (data) {
-                UI.renderKPI(data);
-                UI.renderCharts(data);
+                const filterSelect = document.getElementById('filterHcGroup');
+                if (filterSelect) {
+                    const currentVal = filterSelect.value;
+                    const uniqueGroups = [...new Set(data.map(r => r.hc_group || 'MAIN'))].sort();
+                    
+                    let html = '<option value="ALL">ALL GROUPS</option>';
+                    uniqueGroups.forEach(g => {
+                        html += `<option value="${g}">${g.toUpperCase()}</option>`;
+                    });
+                    
+                    filterSelect.innerHTML = html;
+                    if (uniqueGroups.includes(currentVal) || currentVal === 'ALL') {
+                        filterSelect.value = currentVal;
+                    }
+                }
+
+                const hcGroupFilter = document.getElementById('filterHcGroup')?.value || 'ALL';
+                let filteredData = data;
+                if (hcGroupFilter !== 'ALL') {
+                    filteredData = data.filter(r => (r.hc_group || 'MAIN') === hcGroupFilter);
+                }
+                
+                UI.renderKPI(filteredData);
+                UI.renderCharts(filteredData);
                 
                 // ถ้า User ไม่ได้เปิด Modal ดูรายละเอียดอยู่ ก็ให้อัปเดตตารางหลัก
                 const isModalOpen = document.getElementById('detailModal')?.classList.contains('show');
                 if (!isModalOpen) {
-                    UI.renderTable(data, this.viewMode);
+                    UI.renderTable(filteredData, this.viewMode);
                 }
+
+                // อัปเดตกราฟ Trend ให้ตรงกับ Filter ที่เลือก
+                const activeTrendBtn = document.querySelector('#view-chart-trend .btn-group button.active') || document.querySelector('#footer-trend .btn-group button.active');
+                let days = 7;
+                if (activeTrendBtn) {
+                    days = parseInt(activeTrendBtn.innerText) || 7;
+                }
+                this.loadTrend(days);
             }
         } catch (err) {
             console.error(err);
@@ -174,8 +209,9 @@ const App = {
             }
         }
 
+        const hcGroup = document.getElementById('filterHcGroup')?.value || 'ALL';
         // ดึงข้อมูลและเรนเดอร์กราฟตามปกติ
-        const data = await API.getTrend(days);
+        const data = await API.getTrend(days, hcGroup);
         UI.renderTrendChart(data);
     }
 };

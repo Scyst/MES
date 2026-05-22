@@ -62,11 +62,11 @@
                         </div>
                         <div class="col-6">
                             <label class="form-label">Scan In</label>
-                            <input type="datetime-local" class="form-control" id="editScanInTime"> 
+                            <input type="time" class="form-control" id="editScanInTime"> 
                         </div>
                         <div class="col-6">
                             <label class="form-label">Scan Out</label>
-                            <input type="datetime-local" class="form-control" id="editScanOutTime"> 
+                            <input type="time" class="form-control" id="editScanOutTime"> 
                         </div>
                     </div>
 
@@ -102,9 +102,27 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
 
-                    <div class="input-group input-group-lg mb-3 shadow-sm">
-                        <span class="input-group-text bg-light border-end-0 ps-3"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" class="form-control bg-light border-start-0" id="searchDetail" placeholder="ค้นหาชื่อพนักงาน, รหัส, หรือสถานะ..." style="font-size: 0.95rem;">
+                    <div class="d-flex gap-2 mb-3">
+                        <div class="input-group input-group-sm shadow-sm flex-grow-1">
+                            <span class="input-group-text bg-light border-end-0 ps-2"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" class="form-control bg-light border-start-0 py-1" id="searchDetail" placeholder="ค้นหาชื่อพนักงาน, รหัส, หรือสถานะ...">
+                        </div>
+                        <select id="filterDetailTeam" class="form-select form-select-sm shadow-sm w-auto" style="min-width: 120px;" onchange="Actions.initSearch()">
+                            <option value="">ทั้งหมด (All Teams)</option>
+                        </select>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-primary shadow-sm px-3 dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-tasks"></i> จัดการหลายรายการ <span id="batchSelectedCount" class="badge bg-primary ms-1">0</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="min-width: 200px;">
+                                <li><h6 class="dropdown-header text-uppercase small">ตั้งสถานะ (Set Status)</h6></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.batchSetStatus('PRESENT')"><i class="fas fa-check text-success me-2"></i>มา (PRESENT)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.batchSetStatus('ABSENT')"><i class="fas fa-times text-danger me-2"></i>ขาด (ABSENT)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.batchSetStatus('SICK')"><i class="fas fa-procedures text-warning me-2"></i>ลาป่วย (SICK)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.batchSetStatus('BUSINESS')"><i class="fas fa-briefcase text-info me-2"></i>ลากิจ (BUSINESS)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.batchSetStatus('VACATION')"><i class="fas fa-umbrella-beach text-primary me-2"></i>พักร้อน (VACATION)</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -295,12 +313,12 @@
 <div class="modal fade" id="empEditModal" tabindex="-1" style="z-index: 1065;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-edit me-2"></i><span id="empEditTitle">Edit Employee</span>
-                    <span id="empStatusBadge" class="badge bg-secondary ms-3 border border-light" style="font-size: 0.7rem;">Loading...</span>
+            <div class="modal-header bg-white border-bottom py-2">
+                <h5 class="modal-title fw-bold text-dark">
+                    <i class="fas fa-user-edit text-primary me-2"></i><span id="empEditTitle">Edit Employee</span>
+                    <span id="empStatusBadge" class="badge bg-secondary ms-2" style="font-size: 0.7rem;">Loading...</span>
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="empEditForm">
@@ -722,6 +740,166 @@
                 <button type="button" class="btn btn-success btn-sm shadow-sm" onclick="Actions.exportSimTable()">
                     <i class="fas fa-file-excel me-1"></i> Export Full Report
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="teamSettingsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <div>
+                    <h5 class="modal-title fw-bold"><i class="fas fa-users-cog me-2"></i>Team Settings (HC Group)</h5>
+                    <small class="text-white-50">ตั้งค่าว่ากลุ่มไหนจะถูกนำไปคำนวณในหน้าจอหลัก (Main Manpower)</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-light text-primary fw-bold ms-auto me-3 shadow-sm" onclick="Actions.addTeamSettingRow()">
+                    <i class="fas fa-plus me-1"></i> Add Team
+                </button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light p-3">
+                <div class="alert alert-info py-2 small">
+                    <i class="fas fa-info-circle me-1"></i> ทีมที่ถูกตั้งเป็น <strong>EXCLUDE</strong> จะไม่ถูกนำไปรวมใน HC และ Cost หลัก (เว้นแต่จะเลือกดูจาก Filter บน Dashboard)
+                </div>
+                <div class="table-responsive bg-white rounded border" style="max-height: 60vh;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-secondary" style="position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th class="ps-3 py-3">Department (API)</th>
+                                <th class="text-center" style="width: 150px;">HC Group</th>
+                                <th class="text-center" style="width: 50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="teamSettingsBody">
+                            <tr><td colspan="3" class="text-center py-4">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-white border-top">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="Actions.saveTeamSettings()">
+                    <i class="fas fa-save me-1"></i> Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Modal (Individual) -->
+<div class="modal fade" id="empKpiModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-white border-bottom py-2 pe-3">
+                <div class="d-flex flex-column">
+                    <h5 class="modal-title fw-bold text-primary">
+                        <i class="fas fa-chart-pie me-2"></i> Individual KPI Dashboard
+                    </h5>
+                    <div class="small text-muted" id="empKpiSubtitle">Loading...</div>
+                </div>
+                <div class="ms-auto">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body bg-light p-4">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <div class="card border-0 shadow-sm h-100 rounded-4">
+                            <div class="card-body text-center d-flex flex-column justify-content-center">
+                                <h6 class="text-muted text-uppercase fw-bold mb-3">Attendance Rate</h6>
+                                <h1 class="display-3 fw-bold text-success mb-0" id="empKpiRate">--%</h1>
+                                <p class="text-muted small mt-2">เปอร์เซ็นต์การเข้างาน (ไม่รวมลากิจ/ป่วย)</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                                    <div class="text-muted small fw-bold">วันทำงานรวม (YTD)</div>
+                                    <h3 class="fw-bold mb-0 text-dark" id="empKpiTotal">--</h3>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                                    <div class="text-muted small fw-bold">มาทำงาน (Present)</div>
+                                    <h3 class="fw-bold mb-0 text-success" id="empKpiPresent">--</h3>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                                    <div class="text-muted small fw-bold">มาสาย (Late)</div>
+                                    <h3 class="fw-bold mb-0 text-warning" id="empKpiLate">--</h3>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                                    <div class="text-muted small fw-bold">ขาดงาน (Absent)</div>
+                                    <h3 class="fw-bold mb-0 text-danger" id="empKpiAbsent">--</h3>
+                                </div>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                                    <div class="text-muted small fw-bold">ลางานทั้งหมด (Sick/Business/Vacation)</div>
+                                    <h3 class="fw-bold mb-0 text-info" id="empKpiLeave">--</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Executive Report Modal -->
+<div class="modal fade" id="execReportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white border-bottom py-3 pe-3">
+                <div class="d-flex flex-column">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fas fa-chart-line text-info me-2"></i> Executive KPI Report
+                    </h5>
+                    <div class="small text-white-50">สรุปการเข้างานพนักงานทั้งหมด (Year-To-Date)</div>
+                </div>
+                <div class="ms-auto d-flex gap-2 align-items-center">
+                    <select class="form-select form-select-sm bg-dark text-white border-secondary" id="execReportLineFilter" onchange="Actions.renderExecReport()" style="width: 150px;">
+                        <option value="">ทุกแผนก (All Lines)</option>
+                    </select>
+                    <select class="form-select form-select-sm bg-dark text-white border-secondary" id="execReportTeamFilter" onchange="Actions.renderExecReport()" style="width: 150px;">
+                        <option value="">ทุกทีม (All Teams)</option>
+                    </select>
+                    <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" id="execReportSearch" placeholder="ค้นหาชื่อ..." onkeyup="Actions.renderExecReport()" style="width: 150px;">
+                    
+                    <button class="btn btn-success btn-sm fw-bold shadow-sm text-nowrap" onclick="Actions.exportExecReport()">
+                        <i class="fas fa-file-excel me-1"></i> Export
+                    </button>
+                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body bg-light p-0">
+                <div class="table-responsive" style="max-height: 70vh;">
+                    <table class="table table-hover table-striped align-middle mb-0 bg-white" id="execReportTable">
+                        <thead class="bg-light text-secondary shadow-sm" style="position: sticky; top: 0; z-index: 1;">
+                            <tr class="text-center small">
+                                <th class="text-start ps-3 py-3">พนักงาน</th>
+                                <th width="10%">แผนก (Line)</th>
+                                <th width="10%">ทีม</th>
+                                <th width="10%">วันทำงานรวม</th>
+                                <th width="10%">มาทำงาน</th>
+                                <th width="10%">มาสาย</th>
+                                <th width="10%">ลางาน</th>
+                                <th width="10%">ขาดงาน</th>
+                                <th width="10%">Attendance %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="execReportBody">
+                            <tr><td colspan="9" class="text-center py-5">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
