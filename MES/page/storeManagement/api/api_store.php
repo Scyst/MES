@@ -1038,8 +1038,9 @@ try {
             $response = ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
             break;
 
+        case 'issue_rm':
         case 'issue_selected_tags':
-            $serials = $_POST['serials'] ?? '';
+            $serials = $_POST['serials'] ?? $_POST['barcode'] ?? '';
             $to_location = (int)($_POST['to_location'] ?? 0);
             $ignore_fifo = isset($_POST['ignore_fifo']) && $_POST['ignore_fifo'] === 'true'; 
 
@@ -1290,14 +1291,16 @@ try {
                 ];
             }
 
-            $transSql = "SELECT t.transaction_timestamp, t.transaction_type, t.quantity, t.notes, ISNULL(e.name_th, u.username) AS actor_name
-                         FROM dbo.STOCK_TRANSACTIONS t WITH (NOLOCK)
-                         LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
-                         LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
-                         WHERE t.reference_id = ? ORDER BY t.transaction_timestamp ASC";
-            $transStmt = $pdo->prepare($transSql);
-            $transStmt->execute([$tagInfo['po_number']]);
-            $history = array_merge($history, $transStmt->fetchAll(PDO::FETCH_ASSOC));
+            if (!empty($tagInfo['po_number'])) {
+                $transSql = "SELECT t.transaction_timestamp, t.transaction_type, t.quantity, t.notes, ISNULL(e.name_th, u.username) AS actor_name
+                             FROM dbo.STOCK_TRANSACTIONS t WITH (NOLOCK)
+                             LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                             LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                             WHERE t.reference_id = ? ORDER BY t.transaction_timestamp ASC";
+                $transStmt = $pdo->prepare($transSql);
+                $transStmt->execute([$tagInfo['po_number']]);
+                $history = array_merge($history, $transStmt->fetchAll(PDO::FETCH_ASSOC));
+            }
 
             $response = ['success' => true, 'data' => ['tag_info' => $tagInfo, 'history' => $history]];
             break;
