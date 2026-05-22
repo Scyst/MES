@@ -156,8 +156,15 @@ try {
             $stats['new']++;
         }
     }
+    // 5. Fetch Calendar / Holidays
+    $holidays = [];
+    $stmtCal = $pdo->prepare("SELECT calendar_date FROM dbo.MANPOWER_CALENDAR WHERE calendar_date BETWEEN ? AND ? AND day_type = 'HOLIDAY'");
+    $stmtCal->execute([$startDate, $endDate]);
+    while ($r = $stmtCal->fetch(PDO::FETCH_ASSOC)) {
+        $holidays[$r['calendar_date']] = true;
+    }
 
-    // 5. Process Logs (ลงตาราง TEST)
+    // 6. Process Logs (ลงตาราง TEST)
     $stmtCheckLog = $pdo->prepare("SELECT log_id, is_verified, shift_id, status FROM dbo.MANPOWER_DAILY_LOGS_TEST WHERE emp_id = ? AND log_date = ?");
     $stmtDeleteLog = $pdo->prepare("DELETE FROM dbo.MANPOWER_DAILY_LOGS_TEST WHERE log_id = ?");
     
@@ -248,11 +255,15 @@ try {
                     $stmtInsertLog->execute([$procDate, $empId, $inTimeStr, $outTimeStr, $status, $targetShiftId, $snapLine, $snapTeam, $snapType]);
                 }
             } else {
-                $targetStatus = ($procDate < date('Y-m-d')) ? 'ABSENT' : 'WAITING';
+                if (isset($holidays[$procDate]) || date('w', strtotime($procDate)) == 0) {
+                    $targetStatus = 'HOLIDAY';
+                } else {
+                    $targetStatus = ($procDate < date('Y-m-d')) ? 'ABSENT' : 'WAITING';
+                }
 
                 if ($logExist) {
-                    if ($logExist['status'] === 'WAITING' && $targetStatus === 'ABSENT') {
-                        $pdo->prepare("UPDATE dbo.MANPOWER_DAILY_LOGS_TEST SET status = 'ABSENT', updated_at = GETDATE() WHERE log_id = ?")->execute([$logExist['log_id']]);
+                    if ($logExist['status'] !== $targetStatus && in_array($logExist['status'], ['WAITING', 'ABSENT', 'HOLIDAY'])) {
+                        $pdo->prepare("UPDATE dbo.MANPOWER_DAILY_LOGS_TEST SET status = ?, updated_at = GETDATE() WHERE log_id = ?")->execute([$targetStatus, $logExist['log_id']]);
                     }
                 } else {
                     $stmtInsertLog->execute([$procDate, $empId, null, null, $targetStatus, $targetShiftId, $snapLine, $snapTeam, $snapType]);

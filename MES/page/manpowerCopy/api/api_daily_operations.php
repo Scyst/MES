@@ -89,7 +89,8 @@ try {
                         
                         CASE 
                             WHEN L.status IS NOT NULL THEN L.status
-                            WHEN :startDateCheck < CAST(GETDATE() AS DATE) THEN 'ABSENT'
+                            WHEN Cal.day_type = 'HOLIDAY' OR DATENAME(dw, ISNULL(L.log_date, :startDateCheck)) = 'Sunday' THEN 'HOLIDAY'
+                            WHEN ISNULL(L.log_date, :startDateCheck) < CAST(GETDATE() AS DATE) THEN 'ABSENT'
                             ELSE 'WAITING'
                         END as status,
 

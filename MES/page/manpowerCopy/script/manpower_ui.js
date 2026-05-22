@@ -1862,10 +1862,10 @@ const Actions = {
         const statusMap = {
             'WAITING': '⏳ รอเข้างาน', 'PRESENT': '✅ มา (Present)', 'LATE': '⏰ สาย (Late)',
             'ABSENT': '❌ ขาด (Absent)', 'SICK': '🤢 ลาป่วย (Sick)', 'BUSINESS': '👜 ลากิจ (Business)',
-            'VACATION': '🏖️ พักร้อน (Vacation)', 'OTHER': '⚪ อื่นๆ (Other)'
+            'VACATION': '🏖️ พักร้อน (Vacation)', 'HOLIDAY': '🎉 วันหยุด (Holiday)', 'OTHER': '⚪ อื่นๆ (Other)'
         };
         const getStatusBadgeClass = (status) => {
-            const map = { 'PRESENT': 'bg-success', 'LATE': 'bg-warning text-dark', 'ABSENT': 'bg-danger', 'SICK': 'bg-info text-dark', 'BUSINESS': 'bg-primary', 'VACATION': 'bg-purple', 'WAITING': 'bg-secondary' };
+            const map = { 'PRESENT': 'bg-success', 'LATE': 'bg-warning text-dark', 'ABSENT': 'bg-danger', 'SICK': 'bg-info text-dark', 'BUSINESS': 'bg-primary', 'VACATION': 'bg-purple', 'WAITING': 'bg-secondary', 'HOLIDAY': 'bg-success bg-opacity-75' };
             return map[status] || 'bg-light text-dark border';
         };
 
