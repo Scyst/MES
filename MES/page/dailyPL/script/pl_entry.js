@@ -557,10 +557,13 @@ async function fetchWorkingDays() {
         const res = await fetch(`api/manage_pl_entry.php?action=get_working_days&year=${year}&month=${month}`);
         const json = await res.json();
         if (json.success) {
-            currentWorkingDays = json.days;
+            currentWorkingDays = json.days; // Used for calculation
+            let displayDays = json.actual_days || currentWorkingDays;
+            let calcStr = json.actual_days && json.actual_days !== currentWorkingDays ? ` (Calc: ${currentWorkingDays})` : '';
+
             badge.className = 'badge bg-success text-white shadow-sm user-select-none position-relative';
             badge.innerHTML = `
-                <i class="far fa-calendar-check me-1"></i>Working Days: ${currentWorkingDays} 
+                <i class="far fa-calendar-check me-1"></i>Working: ${displayDays}${calcStr}
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning border border-light" style="font-size: 0.5rem; padding: 0.3em 0.5em;">
                     <i class="fas fa-pen"></i>
                 </span>
@@ -606,7 +609,8 @@ function renderTargetStructure() {
     
     items.forEach(item => {
         const level = parseInt(item.item_level) || 0;
-        const isCalc = item.data_source === 'CALCULATED'; 
+        // ปลดล็อคช่องกรอกเป้าหมายให้สามารถกรอกได้ หากเป็น USE_TARGET
+        const isCalc = item.data_source === 'CALCULATED' && item.calculation_formula !== 'USE_TARGET'; 
         
         let rowClass = '', nameStyle = '', iconHtml = '';
         if (level === 0) {
@@ -1095,9 +1099,9 @@ function buildYearlyAOA(data, year, isExecutive) {
 // ========================================================
 function formatNumberShort(num) {
     num = parseFloat(num) || 0; 
-    if (Math.abs(num) >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (Math.abs(num) >= 1000) return (num / 1000).toFixed(1) + 'k';
-    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (num === 0) return '-';
+    // ปรับให้ใช้ M ทั้งหมดตามที่ร้องขอ
+    return (num / 1000000).toFixed(2) + 'M';
 }
 
 async function openRateModal() {
@@ -1513,9 +1517,9 @@ const getExecTemplate = (getAct, getTgt) => {
         
         { label: "RM", isBold: true, calcAct: (p) => getAct("GRP_RM", p) + getAct("CR_R", p), calcTgt: (p) => getTgt("GRP_RM", p) + getTgt("CR_R", p) },
         
-        { label: "DLOT", code: "GRP_DL", isBold: true },
-        { label: "DL", indent: 1, calcAct: (p) => getAct("522001", p) + getAct("522003", p) + getAct("DL_SCAN", p), calcTgt: (p) => getTgt("522001", p) + getTgt("522003", p) + getTgt("DL_SCAN", p) },
-        { label: "OT", indent: 1, calcAct: (p) => getAct("522002", p) + getAct("522004", p) + getAct("OT_SCAN", p), calcTgt: (p) => getTgt("522002", p) + getTgt("522004", p) + getTgt("OT_SCAN", p) },
+        { label: "DLOT", isBold: true, calcAct: (p) => getAct("522001+3", p) + getAct("DL_SCAN", p) + getAct("522002+4", p) + getAct("OT_SCAN", p), calcTgt: (p) => getTgt("522001+3", p) + getTgt("DL_SCAN", p) + getTgt("522002+4", p) + getTgt("OT_SCAN", p) },
+        { label: "DL", indent: 1, calcAct: (p) => getAct("522001+3", p) + getAct("DL_SCAN", p), calcTgt: (p) => getTgt("522001+3", p) + getTgt("DL_SCAN", p) },
+        { label: "OT", indent: 1, calcAct: (p) => getAct("522002+4", p) + getAct("OT_SCAN", p), calcTgt: (p) => getTgt("522002+4", p) + getTgt("OT_SCAN", p) },
         
         { label: "OH", isBold: true, calcAct: (p) => getAct("OH_FC", p) + getAct("OH_VC", p), calcTgt: (p) => getTgt("OH_FC", p) + getTgt("OH_VC", p) },
         

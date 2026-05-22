@@ -119,11 +119,33 @@ try {
                 exit;
             }
             
+            // 1. Get original working days from SP (Excludes HOLIDAY, SUNDAY, OFFDAY)
             $stmt = $pdo->prepare("EXEC dbo." . SP_GET_WORKING_DAYS . " :year, :month");
             $stmt->execute([':year' => $year, ':month' => $month]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $base_days = (int)($result['working_days'] ?? 25);
+
+            // 2. [PL Feature] Exclude Saturdays for P&L plan calculation
+            $stmtSat = $pdo->prepare("
+                SELECT COUNT(*) as sat_count 
+                FROM dbo.MANPOWER_CALENDAR 
+                WHERE YEAR(calendar_date) = :year 
+                  AND MONTH(calendar_date) = :month 
+                  AND DATENAME(weekday, calendar_date) = 'Saturday'
+                  AND day_type NOT IN ('HOLIDAY', 'SUNDAY', 'OFFDAY')
+            ");
+            $stmtSat->execute([':year' => $year, ':month' => $month]);
+            $satRes = $stmtSat->fetch(PDO::FETCH_ASSOC);
+            $sat_count = (int)($satRes['sat_count'] ?? 0);
+
+            $pl_working_days = $base_days - $sat_count;
+            if ($pl_working_days < 1) $pl_working_days = 1; // Prevent division by zero
             
-            echo json_encode(['success' => true, 'days' => (int)($result['working_days'] ?? 25)]);
+            echo json_encode([
+                'success' => true, 
+                'days' => $pl_working_days,
+                'actual_days' => $base_days
+            ]);
             break;
             
         case 'get_target_data':
