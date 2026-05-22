@@ -253,6 +253,9 @@
 
                             <input type="radio" class="btn-check" name="empStatusFilter" id="filterStatusAll" value="ALL" onchange="Actions.filterEmployeeList()">
                             <label class="btn btn-outline-primary px-2" for="filterStatusAll">All</label>
+
+                            <input type="radio" class="btn-check" name="empStatusFilter" id="filterOutsider" value="OUTSIDER" onchange="Actions.filterEmployeeList()">
+                            <label class="btn btn-outline-warning px-2" for="filterOutsider" title="คนนอกแผนก / ตกหล่น"><i class="fas fa-exclamation-circle"></i> ตกหล่น</label>
                         </div>
 
                     </div>
