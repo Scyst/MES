@@ -149,7 +149,7 @@ class TransferController {
 
             $pdo->beginTransaction();
             $delSql = "DELETE FROM $transferTable 
-                       WHERE status = 'PENDING' 
+                       WHERE status IN ('PENDING', 'CANCELLED') 
                          AND transfer_uuid LIKE ?";
             
             $params = [$lot_no . '-%'];
