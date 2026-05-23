@@ -540,13 +540,13 @@
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-bold" id="tab-financial-btn" data-bs-toggle="tab" data-bs-target="#tab-financial" type="button" role="tab">
-                            <i class="fas fa-coins me-2 text-warning"></i>Financial Analysis
+                        <button class="nav-link fw-bold" id="tab-executive-btn" data-bs-toggle="tab" data-bs-target="#tab-executive" type="button" role="tab">
+                            <i class="fas fa-users-cog me-2 text-primary"></i>Employee KPIs
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-bold" id="tab-executive-btn" data-bs-toggle="tab" data-bs-target="#tab-executive" type="button" role="tab">
-                            <i class="fas fa-users-cog me-2 text-primary"></i>Employee KPIs
+                        <button class="nav-link fw-bold" id="tab-financial-btn" data-bs-toggle="tab" data-bs-target="#tab-financial" type="button" role="tab">
+                            <i class="fas fa-coins me-2 text-warning"></i>Financial Analysis
                         </button>
                     </li>
                 </ul>

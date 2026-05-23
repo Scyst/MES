@@ -2687,8 +2687,8 @@ const Actions = {
                         <div class="fw-bold text-dark">${r.name_th}</div>
                         <div class="small text-muted font-monospace">${r.emp_id}</div>
                     </td>
-                    <td>${r.line || '-'}</td>
-                    <td>${r.team_group || '-'}</td>
+                    <td class="text-center">${r.line || '-'}</td>
+                    <td class="text-center">${r.team_group || '-'}</td>
                     <td class="text-center fw-bold">${total}</td>
                     <td class="text-center text-success">${present}</td>
                     <td class="text-center text-warning text-dark">${late}</td>

@@ -1343,7 +1343,10 @@ function copyToClipboard(text) {
             toast: true, position: 'top-end', icon: 'success', 
             title: 'คัดลอก URL แล้ว!', showConfirmButton: false, timer: 1500
         });
-    }
+    }).catch(err => {
+        console.error('Could not copy text: ', err);
+    });
+}
 
 // ========================================================
 // 🔄 Action Checks (Start, Return, Force Return)
