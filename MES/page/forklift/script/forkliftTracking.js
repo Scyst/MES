@@ -156,8 +156,18 @@ function drawLeafletGrid() {
 
             // เช็คว่ามีข้อมูลหรือยังเพื่อระบายสีเขียว
             const isMapped = mappedZones.some(z => z.zone_name === fullZoneName);
-            const fillColor = isMapped ? '#198754' : 'transparent';
-            const fillOpacity = isMapped ? 0.4 : 0;
+            let isIndoorSim = indoorSimGrids.includes(gridName);
+            
+            let fillColor = 'transparent';
+            let fillOpacity = 0.05;
+            if (isIndoorSim) {
+                fillColor = '#00aaff';
+                fillOpacity = 0.4;
+            }
+            if (isMapped) {
+                fillColor = '#198754';
+                fillOpacity = 0.4;
+            }
 
             // สร้างกรอบสี่เหลี่ยม Leaflet
             const rect = L.rectangle(bounds, {
@@ -167,8 +177,29 @@ function drawLeafletGrid() {
                 fillOpacity: fillOpacity
             });
 
-            // ผูก Event Click ให้เปิด Modal
-            rect.on('click', function() {
+            // ผูก Event Click
+            rect.on('click', function(e) {
+                if (isIndoorSetupMode) {
+                    const index = indoorSimGrids.indexOf(gridName);
+                    if (index > -1) {
+                        indoorSimGrids.splice(index, 1);
+                        this.setStyle({ fillColor: 'transparent', fillOpacity: 0.05 });
+                    } else {
+                        indoorSimGrids.push(gridName);
+                        this.setStyle({ fillColor: '#00aaff', fillOpacity: 0.4 });
+                    }
+                    localStorage.setItem('indoorSimGrids', JSON.stringify(indoorSimGrids));
+                    
+                    L.DomEvent.stopPropagation(e);
+                    return;
+                }
+
+                if (isSimulatorMode && !isSimPlaying) {
+                    addSimWaypoint(e.latlng);
+                    L.DomEvent.stopPropagation(e);
+                    return;
+                }
+
                 openZoneModal(c, r, fullZoneName);
             });
 

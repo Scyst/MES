@@ -544,6 +544,11 @@
                             <i class="fas fa-coins me-2 text-warning"></i>Financial Analysis
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="tab-executive-btn" data-bs-toggle="tab" data-bs-target="#tab-executive" type="button" role="tab">
+                            <i class="fas fa-users-cog me-2 text-primary"></i>Employee KPIs
+                        </button>
+                    </li>
                 </ul>
 
                 <div class="tab-content p-3" id="iaTabContent">
@@ -763,17 +768,42 @@
                         </div>
                     </div>
 
-                </div>
-            </div>
+                    <div class="tab-pane fade" id="tab-executive" role="tabpanel">
+                        <div class="card border shadow-sm">
+                            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                                <span class="fw-bold small text-uppercase text-secondary">
+                                    <i class="fas fa-users-cog me-2 text-primary"></i>Individual Employee KPIs
+                                </span>
+                                <div>
+                                    <input type="text" class="form-control form-control-sm border-secondary" id="execReportSearch" placeholder="Search Employee..." onkeyup="Actions.renderExecReport()" style="width: 250px;">
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive" style="max-height: 60vh;">
+                                    <table class="table table-hover table-striped align-middle mb-0 bg-white" id="execReportTable">
+                                        <thead class="bg-light text-secondary shadow-sm" style="position: sticky; top: 0; z-index: 1;">
+                                            <tr class="text-center small">
+                                                <th class="text-start ps-3 py-3">Employee</th>
+                                                <th width="10%">Line</th>
+                                                <th width="10%">Team</th>
+                                                <th width="10%">Total Working Days</th>
+                                                <th width="10%">Present</th>
+                                                <th width="10%">Late</th>
+                                                <th width="10%">Leave</th>
+                                                <th width="10%">Absent</th>
+                                                <th width="10%">Attendance %</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="execReportBody">
+                                            <tr><td colspan="9" class="text-center py-5">Loading...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="modal-footer bg-light py-2">
-                <div class="me-auto small text-muted">
-                    <i class="fas fa-info-circle me-1"></i> Values calculated based on daily logs & master rates.
                 </div>
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success btn-sm shadow-sm" onclick="Actions.exportSimTable()">
-                    <i class="fas fa-file-excel me-1"></i> Export Full Report
-                </button>
             </div>
         </div>
     </div>
@@ -886,55 +916,4 @@
         </div>
     </div>
 </div>
-
-<!-- Executive Report Modal -->
-<div class="modal fade" id="execReportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-dark text-white border-bottom py-3 pe-3">
-                <div class="d-flex flex-column">
-                    <h5 class="modal-title fw-bold">
-                        <i class="fas fa-chart-line text-info me-2"></i> Executive KPI Report
-                    </h5>
-                    <div class="small text-white-50">สรุปการเข้างานพนักงานทั้งหมด (Year-To-Date)</div>
-                </div>
-                <div class="ms-auto d-flex gap-2 align-items-center">
-                    <select class="form-select form-select-sm bg-dark text-white border-secondary" id="execReportLineFilter" onchange="Actions.renderExecReport()" style="width: 150px;">
-                        <option value="">ทุกแผนก (All Lines)</option>
-                    </select>
-                    <select class="form-select form-select-sm bg-dark text-white border-secondary" id="execReportTeamFilter" onchange="Actions.renderExecReport()" style="width: 150px;">
-                        <option value="">ทุกทีม (All Teams)</option>
-                    </select>
-                    <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" id="execReportSearch" placeholder="ค้นหาชื่อ..." onkeyup="Actions.renderExecReport()" style="width: 150px;">
-                    
-                    <button class="btn btn-success btn-sm fw-bold shadow-sm text-nowrap" onclick="Actions.exportExecReport()">
-                        <i class="fas fa-file-excel me-1"></i> Export
-                    </button>
-                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal"></button>
-                </div>
-            </div>
-            <div class="modal-body bg-light p-0">
-                <div class="table-responsive" style="max-height: 70vh;">
-                    <table class="table table-hover table-striped align-middle mb-0 bg-white" id="execReportTable">
-                        <thead class="bg-light text-secondary shadow-sm" style="position: sticky; top: 0; z-index: 1;">
-                            <tr class="text-center small">
-                                <th class="text-start ps-3 py-3">พนักงาน</th>
-                                <th width="10%">แผนก (Line)</th>
-                                <th width="10%">ทีม</th>
-                                <th width="10%">วันทำงานรวม</th>
-                                <th width="10%">มาทำงาน</th>
-                                <th width="10%">มาสาย</th>
-                                <th width="10%">ลางาน</th>
-                                <th width="10%">ขาดงาน</th>
-                                <th width="10%">Attendance %</th>
-                            </tr>
-                        </thead>
-                        <tbody id="execReportBody">
-                            <tr><td colspan="9" class="text-center py-5">Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+

@@ -29,8 +29,9 @@ try {
             $empIdFilter = isset($_GET['emp_id']) ? trim($_GET['emp_id']) : '';
             $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
             
-            $startDate = "$year-01-01";
-            $endDate = date('Y-m-d');
+            // Allow explicit startDate and endDate, otherwise fallback to YTD
+            $startDate = isset($_GET['startDate']) ? trim($_GET['startDate']) : "$year-01-01";
+            $endDate = isset($_GET['endDate']) ? trim($_GET['endDate']) : date('Y-m-d');
             
             $sql = "SELECT 
                         E.emp_id, E.name_th, E.line, E.team_group,

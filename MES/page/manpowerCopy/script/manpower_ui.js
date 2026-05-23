@@ -2647,13 +2647,13 @@ const Actions = {
             return;
         }
 
-        const lineF = document.getElementById('execReportLineFilter')?.value || '';
-        const teamF = document.getElementById('execReportTeamFilter')?.value || '';
+        const lineF = document.getElementById('superLineSelect')?.value || 'ALL';
+        const teamF = document.getElementById('ia_hcGroupSelect')?.value || 'ALL';
         const searchF = (document.getElementById('execReportSearch')?.value || '').toLowerCase().trim();
 
         const filtered = this._execReportData.filter(r => {
-            if (lineF && r.line !== lineF) return false;
-            if (teamF && r.team_group !== teamF) return false;
+            if (lineF !== 'ALL' && r.line !== lineF) return false;
+            if (teamF !== 'ALL' && r.team_group !== teamF) return false;
             if (searchF) {
                 const text = (r.emp_id + ' ' + r.name_th).toLowerCase();
                 if (!text.includes(searchF)) return false;
@@ -2696,47 +2696,6 @@ const Actions = {
         }).join('');
 
         tbody.innerHTML = html;
-    },
-
-    exportExecReport() {
-        if (!this._execReportData) return;
-        
-        const lineF = document.getElementById('execReportLineFilter')?.value || '';
-        const teamF = document.getElementById('execReportTeamFilter')?.value || '';
-        const searchF = (document.getElementById('execReportSearch')?.value || '').toLowerCase().trim();
-
-        const filtered = this._execReportData.filter(r => {
-            if (lineF && r.line !== lineF) return false;
-            if (teamF && r.team_group !== teamF) return false;
-            if (searchF) {
-                const text = (r.emp_id + ' ' + r.name_th).toLowerCase();
-                if (!text.includes(searchF)) return false;
-            }
-            return true;
-        });
-
-        let csv = 'EmpID,Name,Line,Team,Total_Working_Days,Present,Late,Leave,Absent,Attendance_Rate\n';
-        filtered.forEach(r => {
-            const total = parseInt(r.total_working_days);
-            const present = parseInt(r.count_present);
-            const late = parseInt(r.count_late);
-            const absent = parseInt(r.count_absent);
-            const leave = parseInt(r.count_sick) + parseInt(r.count_business) + parseInt(r.count_vacation);
-            let rate = 0;
-            if (total > 0) rate = ((present + late) / total * 100).toFixed(1);
-
-            csv += `"${r.emp_id}","${r.name_th}","${r.line || ''}","${r.team_group || ''}",${total},${present},${late},${leave},${absent},${rate}%\n`;
-        });
-
-        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Executive_Report_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     },
 
     openEmpEdit: async function (dataOrEmpId) {
@@ -3499,8 +3458,36 @@ const Actions = {
             XLSX.utils.book_append_sheet(wb, wsTrend, "Daily Trend");
         }
 
+        if (this._execReportData && this._execReportData.length > 0) {
+            const kpiData = this._execReportData.map(r => {
+                const total = parseInt(r.total_working_days);
+                const present = parseInt(r.count_present);
+                const late = parseInt(r.count_late);
+                const absent = parseInt(r.count_absent);
+                const leave = parseInt(r.count_sick) + parseInt(r.count_business) + parseInt(r.count_vacation);
+                let rate = 0;
+                if (total > 0) rate = ((present + late) / total * 100).toFixed(1);
+
+                return {
+                    "EmpID": r.emp_id,
+                    "Name": r.name_th,
+                    "Line": r.line || '',
+                    "Team": r.team_group || '',
+                    "Total Working Days": total,
+                    "Present": present,
+                    "Late": late,
+                    "Leave": leave,
+                    "Absent": absent,
+                    "Attendance Rate (%)": rate
+                };
+            });
+
+            const wsKpi = XLSX.utils.json_to_sheet(kpiData);
+            XLSX.utils.book_append_sheet(wb, wsKpi, "Employee KPIs");
+        }
+
         const dateStr = new Date().toISOString().split('T')[0];
-        XLSX.writeFile(wb, `Manpower_Analysis_Report_${dateStr}.xlsx`);
+        XLSX.writeFile(wb, `Integrated_Manpower_Analysis_${dateStr}.xlsx`);
     },
 
     renderSimulationTable(data, apiSummary, isAllLines, targetTbodyId = 'simTableBody') {
@@ -3589,11 +3576,18 @@ const Actions = {
         UI.showLoader();
 
         try {
-            const response = await fetch(`api/api_daily_operations.php?action=integrated_analysis&startDate=${start}&endDate=${end}&line=${encodeURIComponent(line)}&hcGroup=${encodeURIComponent(hcGroup)}`);
-            const result = await response.json();
+            const [analysisRes, kpiRes] = await Promise.all([
+                fetch(`api/api_daily_operations.php?action=integrated_analysis&startDate=${start}&endDate=${end}&line=${encodeURIComponent(line)}&hcGroup=${encodeURIComponent(hcGroup)}`),
+                fetch(`api/api_daily_operations.php?action=read_kpi_summary&startDate=${start}&endDate=${end}`)
+            ]);
+            
+            const result = await analysisRes.json();
+            const kpiResult = await kpiRes.json();
 
             if (result.success) {
                 this._cachedAnalysisData = result.data;
+                this._execReportData = kpiResult.success ? kpiResult.data : [];
+                this.renderExecReport(); // Render the newly fetched KPI data
                 const { summary, trend, financials, distribution } = result.data;
                 const calcStats = (dataArray, key) => {
                     if (!dataArray || dataArray.length === 0) return { max: 0, min: 0, avg: 0 };
