@@ -678,44 +678,44 @@
     
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
-                                <div class="card border-start border-4 border-secondary shadow-sm h-100">
-                                    <div class="card-body py-2">
-                                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
-                                            Current Logic (สูตรเดิม)
+                                <div class="card border-0 shadow-sm h-100 bg-secondary bg-opacity-10" style="border-radius: 12px;">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="fw-bold text-secondary small text-uppercase">
+                                                <i class="fas fa-calculator me-1"></i> Current Logic (สูตรเดิม)
+                                            </div>
                                         </div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="fin_old_total">-</div>
-                                        <div class="small text-muted mt-1">Standard Calculation</div>
+                                        <div class="h4 mb-0 fw-bold text-dark" id="fin_old_total">-</div>
+                                        <div class="small text-muted mt-2"><i class="fas fa-info-circle me-1"></i>Standard Calculation</div>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="col-md-4">
-                                <div class="card border-start border-4 border-primary shadow-sm h-100">
-                                    <div class="card-body py-2">
-                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                            New Logic (สูตรใหม่)
+                                <div class="card border-0 shadow-sm h-100 bg-primary bg-opacity-10" style="border-radius: 12px;">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="fw-bold text-primary small text-uppercase">
+                                                <i class="fas fa-magic me-1"></i> New Logic (สูตรใหม่)
+                                            </div>
                                         </div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="fin_new_total">-</div>
-                                        <div class="small text-muted mt-1">Adj. Sat/Sun & Holiday</div>
+                                        <div class="h4 mb-0 fw-bold text-primary" id="fin_new_total">-</div>
+                                        <div class="small text-primary text-opacity-75 mt-2"><i class="fas fa-calendar-check me-1"></i>Adj. Sat/Sun & Holiday</div>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="col-md-4">
-                                <div class="card border-start border-4 border-info shadow-sm h-100" id="fin_impact_card">
-                                    <div class="card-body py-2">
-                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                            Net Impact (ผลต่าง)
-                                        </div>
-                                        <div class="row no-gutters align-items-center">
-                                            <div class="col mr-2">
-                                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="fin_diff_total">-</div>
+                                <div class="card border-0 shadow-sm h-100 bg-info bg-opacity-10" id="fin_impact_card" style="border-radius: 12px; transition: all 0.3s ease;">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="fw-bold text-info small text-uppercase">
+                                                <i class="fas fa-balance-scale me-1"></i> Net Impact (ผลต่าง)
                                             </div>
-                                            <div class="col-auto">
-                                                <span class="badge bg-light text-dark border" id="fin_diff_percent">0%</span>
-                                            </div>
+                                            <span class="badge bg-white text-dark shadow-sm" id="fin_diff_percent" style="font-size: 0.8rem;">0%</span>
                                         </div>
-                                        <div class="small text-muted mt-1" id="fin_impact_text">Variance Analysis</div>
+                                        <div class="h4 mb-0 fw-bold text-dark" id="fin_diff_total">-</div>
+                                        <div class="small text-muted mt-2" id="fin_impact_text"><i class="fas fa-chart-pie me-1"></i>Variance Analysis</div>
                                     </div>
                                 </div>
                             </div>
@@ -779,7 +779,7 @@
                                 </div>
                             </div>
                             <div class="card-body p-0">
-                                <div class="table-responsive" style="max-height: 60vh;">
+                                <div class="table-responsive" style="max-height: calc(100vh - 220px); min-height: 60vh;">
                                     <table class="table table-hover table-striped align-middle mb-0 bg-white" id="execReportTable">
                                         <thead class="bg-light text-secondary shadow-sm" style="position: sticky; top: 0; z-index: 1;">
                                             <tr class="text-center small">

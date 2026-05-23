@@ -1492,10 +1492,8 @@ async function submitReturn() {
         }
     } catch(e) { console.error(e); Swal.fire('Error', 'System Error', 'error'); }
     finally { if(submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalText; } }
-}).catch(err => {
-        console.error('Could not copy text: ', err);
-    });
 }
+
 
 function editForklift(id, code, name, status, loc) {
     document.getElementById('manage_action').value = 'update_forklift';
