@@ -509,6 +509,12 @@
                             <input type="date" id="ia_endDate" class="form-control border-start-0 ps-0" value="<?php echo date('Y-m-d'); ?>">
                         </div>
                     </div>
+                    <div class="col-md-2">
+                        <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">Team / Group</label>
+                        <select id="ia_hcGroupSelect" class="form-select form-select-sm">
+                            <option value="ALL">All Teams</option>
+                        </select>
+                    </div>
                     <div class="col-md-3">
                         <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">Focus Line</label>
                         <select id="superLineSelect" class="form-select form-select-sm">

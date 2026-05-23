@@ -3548,11 +3548,21 @@ const Actions = {
         const startInput = document.getElementById('ia_startDate');
         const endInput = document.getElementById('ia_endDate');
         const lineSelect = document.getElementById('superLineSelect');
+        const hcGroupSelect = document.getElementById('ia_hcGroupSelect');
 
         if (startInput) startInput.value = toLocalISO(firstDay);
         if (endInput) endInput.value = document.getElementById('filterDate').value || toLocalISO(today);
 
-        const inputs = [startInput, endInput, lineSelect];
+        if (hcGroupSelect) {
+            // Copy options from the main filterHcGroup
+            const mainFilter = document.getElementById('filterHcGroup');
+            if (mainFilter) {
+                hcGroupSelect.innerHTML = mainFilter.innerHTML;
+                hcGroupSelect.value = mainFilter.value;
+            }
+        }
+
+        const inputs = [startInput, endInput, lineSelect, hcGroupSelect];
         inputs.forEach(el => {
             if (el) {
                 el.onchange = null;
@@ -3574,11 +3584,15 @@ const Actions = {
         const start = document.getElementById('ia_startDate').value;
         const end = document.getElementById('ia_endDate').value;
         const line = document.getElementById('superLineSelect')?.value || 'ALL';
+        const hcGroup = document.getElementById('ia_hcGroupSelect')?.value || 'ALL';
 
         UI.showLoader();
 
         try {
-            const response = await fetch(`api/api_daily_operations.php?action=integrated_analysis&startDate=${start}&endDate=${end}&line=${encodeURIComponent(line)}`);
+            // 🛠️ ตรวจสอบและอัปเดต SP แบบ Silent ก่อนรันจริง เพื่อรองรับ HcGroup Filter
+            await fetch('api/api_daily_operations.php?action=update_sp_analysis').catch(() => {});
+
+            const response = await fetch(`api/api_daily_operations.php?action=integrated_analysis&startDate=${start}&endDate=${end}&line=${encodeURIComponent(line)}&hcGroup=${encodeURIComponent(hcGroup)}`);
             const result = await response.json();
 
             if (result.success) {

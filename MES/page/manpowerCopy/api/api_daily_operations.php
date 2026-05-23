@@ -533,10 +533,11 @@ try {
                 $startDate = $_GET['startDate'] ?? date('Y-m-01');
                 $endDate   = $_GET['endDate']   ?? date('Y-m-d');
                 $line      = $_GET['line']      ?? 'ALL';
+                $hcGroup   = $_GET['hcGroup']   ?? 'ALL';
 
-                $sql = "EXEC sp_GetIntegratedManpowerAnalysis_TEST @StartDate = ?, @EndDate = ?, @Line = ?"; // เปลี่ยนเป็น _TEST
+                $sql = "EXEC sp_GetIntegratedManpowerAnalysis_TEST @StartDate = ?, @EndDate = ?, @Line = ?, @HcGroup = ?";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$startDate, $endDate, $line]);
+                $stmt->execute([$startDate, $endDate, $line, $hcGroup]);
                 
                 // 1. Fetch Summary (Layer 1)
                 $summary = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -575,6 +576,10 @@ try {
                     'message' => 'Database Error: ' . $e->getMessage()
                 ]);
             }
+            break;
+
+        case 'update_sp_analysis':
+            require_once __DIR__ . '/../../../utils/SQL/alter_analysis_sp.php';
             break;
 
         default:
