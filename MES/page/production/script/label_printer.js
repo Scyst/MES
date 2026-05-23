@@ -608,9 +608,16 @@ async function processAndPrintUUIDs(uuids) {
         results.forEach((res) => {
             if (res.status === 'fulfilled' && res.value.success && res.value.data) {
                 const data = res.value.data;
+                
+                if (data.status === 'CANCELLED') {
+                    notFoundCount++;
+                    return; // Skip cancelled tags
+                }
+
                 let parts = data.transfer_uuid.split('-');
                 let serial = parts.pop();
                 let manualLot = parts.join('-');
+                let formattedLot = `${manualLot}/${serial}`;
 
                 labelsToPrint.push({
                     sap_no: data.sap_no,
@@ -622,7 +629,7 @@ async function processAndPrintUUIDs(uuids) {
                     location_name: data.from_location_name || '',
                     prod_date: data.prod_date || "-",
                     remark: data.notes || '',
-                    scan_id_display: data.transfer_uuid,
+                    scan_id_display: formattedLot,
                     qr_url: `${baseUrl}?type=receipt&transfer_id=${data.transfer_uuid}`
                 });
             } else {
@@ -736,15 +743,15 @@ async function handleGenerateLabel(event) {
                 const locName = locObj ? locObj.location_name : '';
 
                 const labelsToPrint = res.labels.map((l, index) => {
-                    const seqStr = "/" + String(index + 1).padStart(padLen, '0');
-                    const formattedLot = `${parentLot}${seqStr}`;
+                    const actualSerial = l.serial_no.replace('-', '');
+                    const formattedLot = `${parentLot}/${actualSerial}`;
                     return {
                         sap_no: selectedItem.sap_no,
                         part_no: selectedItem.part_no,
                         description: selectedItem.part_description || '',
                         quantity: qtyInput,
                         manual_lot: parentLot,
-                        serial_no: l.serial_no,
+                        serial_no: actualSerial,
                         location_name: locName,
                         prod_date: prodDate,
                         remark: remark,
