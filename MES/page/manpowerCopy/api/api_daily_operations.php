@@ -34,7 +34,7 @@ try {
             $endDate = isset($_GET['endDate']) ? trim($_GET['endDate']) : date('Y-m-d');
             
             $sql = "SELECT 
-                        E.emp_id, E.name_th, E.line, E.team_group,
+                        E.emp_id, E.name_th, E.line, ISNULL(TS.hc_group, E.team_group) as team_group,
                         COUNT(C.calendar_date) as total_working_days,
                         SUM(CASE WHEN ISNULL(L.status, CASE WHEN C.calendar_date < CAST(GETDATE() AS DATE) THEN 'ABSENT' ELSE 'WAITING' END) = 'PRESENT' THEN 1 ELSE 0 END) as count_present,
                         SUM(CASE WHEN ISNULL(L.status, CASE WHEN C.calendar_date < CAST(GETDATE() AS DATE) THEN 'ABSENT' ELSE 'WAITING' END) = 'LATE' THEN 1 ELSE 0 END) as count_late,
@@ -43,6 +43,7 @@ try {
                         SUM(CASE WHEN ISNULL(L.status, 'WAITING') = 'BUSINESS' THEN 1 ELSE 0 END) as count_business,
                         SUM(CASE WHEN ISNULL(L.status, 'WAITING') = 'VACATION' THEN 1 ELSE 0 END) as count_vacation
                     FROM dbo.MANPOWER_EMPLOYEES_TEST E WITH (NOLOCK)
+                    LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS_TEST TS WITH (NOLOCK) ON E.department_api = TS.department_api
                     JOIN dbo.MANPOWER_CALENDAR C WITH (NOLOCK)
                         ON C.calendar_date BETWEEN :startDate AND :endDate
                         AND C.day_type != 'HOLIDAY'
@@ -66,7 +67,7 @@ try {
                 $params[':startDate2'] = $startDate;
             }
 
-            $sql .= " GROUP BY E.emp_id, E.name_th, E.line, E.team_group ";
+            $sql .= " GROUP BY E.emp_id, E.name_th, E.line, ISNULL(TS.hc_group, E.team_group) ";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
