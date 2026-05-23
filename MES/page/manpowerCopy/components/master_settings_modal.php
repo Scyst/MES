@@ -99,7 +99,7 @@
                                     <thead class="bg-light text-secondary small text-uppercase" style="position: sticky; top: 0; z-index: 1;">
                                         <tr>
                                             <th class="ps-4" width="25%">Employee Profile</th>
-                                            <th width="15%">Line / Section</th>
+                                            <th width="15%">Dept / Line / Team</th>
                                             <th class="text-center" width="10%">Shift</th>
                                             <th class="text-center" width="10%">Type</th>
                                             <th class="text-center" width="18%">Status / Timeline</th>

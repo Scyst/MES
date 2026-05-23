@@ -75,17 +75,20 @@ try {
                         E.emp_id, 
                         E.name_th, 
                         E.position, 
+                        E.department_api,
                         E.line, 
                         E.team_group, 
                         E.default_shift_id, 
                         E.is_active, 
                         CM.rate_type as emp_type,
                         S.shift_name,
+                        TS.hc_group,
                         CONVERT(VARCHAR(10), E.start_date, 120) as start_date,
                         CONVERT(VARCHAR(10), E.resign_date, 120) as resign_date
 
                     FROM dbo.MANPOWER_EMPLOYEES_TEST E
                     LEFT JOIN dbo.MANPOWER_SHIFTS_TEST S ON E.default_shift_id = S.shift_id
+                    LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS_TEST TS ON E.department_api = TS.department_api
                     OUTER APPLY (
                         SELECT TOP 1 rate_type 
                         FROM dbo.MANPOWER_CATEGORY_MAPPING_TEST M 

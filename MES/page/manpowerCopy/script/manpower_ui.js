@@ -2353,18 +2353,20 @@ const Actions = {
             filterSelect.innerHTML = '<option value="">All Lines</option>' +
                 this._structureCache.lines.map(l => `<option value="${l}">${l}</option>`).join('');
         }
-        const teamFilter = document.getElementById('empFilterTeam');
-        if (teamFilter && teamFilter.options.length <= 1 && this._structureCache.teams.length > 0) {
-            teamFilter.innerHTML = '<option value="">All Teams</option>' +
-                this._structureCache.teams.map(t => `<option value="${t}">${t}</option>`).join('');
-        }
-
         try {
             const res = await fetch(`api/api_master_data.php?action=read_employees&show_all=true`);
             const json = await res.json();
 
             if (json.success) {
                 this._employeeCache = json.data;
+                
+                // Populate Team Filter with unique hc_group values
+                const teamFilter = document.getElementById('empFilterTeam');
+                if (teamFilter && teamFilter.options.length <= 1) {
+                    const uniqueGroups = [...new Set(this._employeeCache.map(e => e.hc_group).filter(g => g))].sort();
+                    teamFilter.innerHTML = '<option value="">All Teams</option>' +
+                        uniqueGroups.map(g => `<option value="${g}">${g}</option>`).join('');
+                }
                 if (keepFilters && savedState) {
                     document.getElementById('empSearchBox').value = savedState.term;
                     document.getElementById('empFilterLine').value = savedState.line;
@@ -2444,7 +2446,7 @@ const Actions = {
 
             // 3. ตรวจสอบเงื่อนไขไลน์และทีม
             if (lineFilter && emp.line !== lineFilter) return false;
-            if (teamFilter && emp.team_group !== teamFilter) return false;
+            if (teamFilter && emp.hc_group !== teamFilter) return false;
 
             // 4. ตรวจสอบช่วงวันที่
             if (dateType && dateType !== '') {
@@ -2583,8 +2585,15 @@ const Actions = {
             tbody.innerHTML += `
                 <tr class="${!isActive ? 'bg-light text-muted' : ''}"> <td class="ps-4">${profileHtml}</td>
                     <td>
-                        <div class="fw-bold ${isActive ? 'text-dark' : 'text-secondary'}">${emp.line || '-'}</div>
-                        <div class="small text-muted">${emp.position || ''}</div>
+                        <div class="d-flex align-items-center mb-1">
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-2" style="font-size: 0.65rem;">${emp.hc_group || 'No Group'}</span>
+                            <span class="fw-bold text-dark" style="font-size: 0.85rem;">${emp.department_api || '-'}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="fw-bold ${isActive ? 'text-secondary' : 'text-muted'}" style="font-size: 0.8rem;"><i class="fas fa-industry me-1 opacity-50"></i>${emp.line || '-'}</div>
+                            ${emp.team_group ? `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" style="font-size: 0.65rem;">${emp.team_group}</span>` : ''}
+                        </div>
+                        <div class="small text-muted mt-1" style="font-size: 0.75rem;"><i class="fas fa-briefcase me-1 opacity-50"></i>${emp.position || '-'}</div>
                     </td>
                     <td class="text-center small">${shiftText}</td>
                     <td class="text-center">${typeBadge}</td>
