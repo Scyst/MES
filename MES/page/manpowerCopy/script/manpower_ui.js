@@ -1447,9 +1447,30 @@ const Actions = {
     _structureCache: { lines: [], teams: [] },
     _lastDetailParams: { line: '', shiftId: '', empType: '', filterStatus: 'ALL' },
     _cachedAnalysisData: null,
+    openMasterSettingsTab(tabId) {
+        const modalEl = document.getElementById('masterSettingsModal');
+        if (!modalEl) return;
+        
+        let modal = bootstrap.Modal.getInstance(modalEl);
+        if (!modal) {
+            modal = new bootstrap.Modal(modalEl);
+        }
+        
+        // Only show if not already shown to avoid backdrop issues
+        if (!modalEl.classList.contains('show')) {
+            modal.show();
+        }
+
+        const tabTrigger = document.querySelector(`button[data-bs-target="#${tabId}"]`);
+        if (tabTrigger) {
+            const tab = new bootstrap.Tab(tabTrigger);
+            tab.show();
+        }
+    },
 
     async openTeamSettings() {
         UI.showLoader();
+        this.openMasterSettingsTab('v-pills-team');
         try {
             const res = await fetch(`api/api_master_data.php?action=read_team_settings`);
             const data = await res.json();
@@ -1472,8 +1493,6 @@ const Actions = {
             document.getElementById('teamSettingsBody').innerHTML = '<tr><td colspan="3" class="text-center text-danger">Error fetching data.</td></tr>';
         } finally {
             UI.hideLoader();
-            const modal = new bootstrap.Modal(document.getElementById('teamSettingsModal'));
-            modal.show();
         }
     },
 
@@ -2321,7 +2340,8 @@ const Actions = {
             };
         }
 
-        const modal = new bootstrap.Modal(document.getElementById('empListModal'));
+        this.openMasterSettingsTab('v-pills-emp-tab');
+
         if (!keepFilters) {
             document.getElementById('empListBody').innerHTML = UI.getSkeletonRow(7);
         }
@@ -2330,8 +2350,6 @@ const Actions = {
             filterSelect.innerHTML = '<option value="">All Lines</option>' +
                 this._structureCache.lines.map(l => `<option value="${l}">${l}</option>`).join('');
         }
-
-        if (!document.getElementById('empListModal').classList.contains('show')) modal.show();
 
         try {
             const res = await fetch(`api/api_master_data.php?action=read_employees&show_all=true`);
@@ -3220,9 +3238,8 @@ const Actions = {
     },
 
     async openShiftPlanner() {
-        const modal = new bootstrap.Modal(document.getElementById('shiftPlannerModal'));
+        this.openMasterSettingsTab('v-pills-shift-tab');
         document.getElementById('shiftPlannerBody').innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-warning"></div></td></tr>`;
-        modal.show();
         try {
             const res = await fetch('api/api_master_data.php?action=read_team_shifts');
             const json = await res.json();
@@ -3252,8 +3269,7 @@ const Actions = {
 
     _mappingCache: [],
     async openMappingManager() {
-        const modal = new bootstrap.Modal(document.getElementById('mappingModal'));
-        modal.show();
+        this.openMasterSettingsTab('v-pills-map-tab');
         const res = await fetch('api/api_master_data.php?action=read_mappings');
         const json = await res.json();
         if (json.success) this.renderMappingTable(json.categories);

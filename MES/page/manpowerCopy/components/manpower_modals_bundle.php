@@ -1,4 +1,4 @@
-<?php 
+﻿<?php 
 // MES/page/manpower/components/manpower_modals_bundle.php
 ?>
 
@@ -150,35 +150,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="shiftPlannerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-warning bg-opacity-10">
-                <div>
-                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-users-cog me-2"></i>Shift Rotation Manager</h5>
-                    <small class="text-muted">จัดการกะการทำงานแบบยกทีม</small>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light text-secondary">
-                            <tr>
-                                <th class="ps-4 py-3">Line / Section</th>
-                                <th class="text-center">Current Shift</th>
-                                <th class="text-center">Shift ID</th>
-                                <th class="text-center pe-4">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="shiftPlannerBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div class="modal fade" id="syncConfirmModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -197,114 +168,6 @@
                 <button type="button" class="btn btn-primary fw-bold" onclick="App.syncNow(); bootstrap.Modal.getInstance(document.getElementById('syncConfirmModal')).hide();">
                     ยืนยัน Sync
                 </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="empListModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-            
-            <div class="modal-header bg-white border-bottom py-2 pe-3">
-                <div class="d-flex flex-column me-3">
-                    <h5 class="modal-title fw-bold text-dark">
-                        <i class="fas fa-users-cog text-primary me-2"></i>Employee Management
-                    </h5>
-                </div>
-                
-                <div class="ms-auto d-flex align-items-center gap-2">
-                    <button class="btn btn-primary btn-sm shadow-sm text-nowrap" onclick="Actions.openEmpEdit()">
-                        <i class="fas fa-plus me-1"></i> New
-                    </button>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-            </div>
-
-            <div class="modal-body bg-light border-bottom py-2 px-3">
-                
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    
-                    <div class="d-flex align-items-center gap-2">
-                        
-                        <div class="input-group input-group-sm" style="width: 200px;">
-                            <span class="input-group-text bg-white border-end-0 text-muted ps-2"><i class="fas fa-search"></i></span>
-                            <input type="text" id="empSearchBox" class="form-control border-start-0 py-1" placeholder="Search..." onkeyup="Actions.filterEmployeeList()">
-                        </div>
-
-                        <div class="input-group input-group-sm" style="width: 150px;">
-                            <span class="input-group-text bg-white text-muted border-end-0"><i class="fas fa-industry"></i></span>
-                            <select id="empFilterLine" class="form-select border-start-0" onchange="Actions.filterEmployeeList()">
-                                <option value="">All Lines</option>
-                                </select>
-                        </div>
-
-                        <div class="d-flex align-items-center bg-white rounded border shadow-sm p-0 overflow-hidden">
-                            
-                            <select id="empDateType" class="form-select form-select-sm border-0 fw-bold text-primary" style="width: 130px; background-color: transparent;" onchange="Actions.toggleDateInputs(); Actions.filterEmployeeList();">
-                                <option value="">📅 Any Date</option>
-                                <option value="JOIN">Joined Date</option>
-                                <option value="RESIGN">Resigned Date</option>
-                            </select>
-
-                            <div id="empDateWrapper" class="d-none d-flex align-items-center border-start ps-2 pe-2 gap-1 bg-light animate__animated animate__fadeInLeft animate__fast">
-                                <input type="date" id="empDateFrom" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 110px;" onchange="Actions.filterEmployeeList()">
-                                <span class="text-muted small">-</span>
-                                <input type="date" id="empDateTo" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 110px;" onchange="Actions.filterEmployeeList()">
-                            </div>
-
-                        </div>
-
-                        <button class="btn btn-sm btn-link text-secondary text-decoration-none" onclick="Actions.resetEmployeeFilters()" title="Reset Filters">
-                            <i class="fas fa-undo"></i>
-                        </button>
-                    </div>
-
-                    <div class="d-flex flex-wrap align-items-center gap-2 justify-content-end">
-
-                        <div class="btn-group btn-group-sm shadow-sm me-2" role="group">
-                            <input type="radio" class="btn-check" name="empStatusFilter" id="filterStatusActive" value="1" checked onchange="Actions.filterEmployeeList()">
-                            <label class="btn btn-outline-success px-2" for="filterStatusActive">Active</label>
-
-                            <input type="radio" class="btn-check" name="empStatusFilter" id="filterStatusInactive" value="0" onchange="Actions.filterEmployeeList()">
-                            <label class="btn btn-outline-secondary px-2" for="filterStatusInactive">Resigned</label>
-
-                            <input type="radio" class="btn-check" name="empStatusFilter" id="filterStatusAll" value="ALL" onchange="Actions.filterEmployeeList()">
-                            <label class="btn btn-outline-primary px-2" for="filterStatusAll">All</label>
-
-                            <input type="radio" class="btn-check" name="empStatusFilter" id="filterOutsider" value="OUTSIDER" onchange="Actions.filterEmployeeList()">
-                            <label class="btn btn-outline-warning px-2" for="filterOutsider" title="คนนอกแผนก / ตกหล่น"><i class="fas fa-exclamation-circle"></i> ตกหล่น</label>
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="modal-body p-0 bg-white">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" style="min-width: 1000px;">
-                        <thead class="bg-light text-secondary small text-uppercase">
-                            <tr>
-                                <th class="ps-4" width="25%">Employee Profile</th>
-                                <th width="15%">Line / Section</th>
-                                <th class="text-center" width="10%">Shift</th>
-                                <th class="text-center" width="10%">Type</th>
-                                <th class="text-center" width="18%">Status / Timeline</th>
-                                <th width="15%">Tags / Data Check</th>
-                                <th class="text-end pe-4" width="10%">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="empListBody">
-                            </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div class="modal-footer bg-light py-2 justify-content-between">
-                <div class="small text-muted" id="empListCount">Loaded: 0 records</div>
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -427,56 +290,6 @@
                 <button type="button" class="btn btn-primary px-4" onclick="Actions.saveEmployee()">
                     <i class="fas fa-save me-1"></i> Save Data
                 </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="mappingModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-indigo text-white" style="background-color: #6610f2;">
-                <div>
-                    <h5 class="modal-title"><i class="fas fa-tags me-2"></i>Position Mapping</h5>
-                    <p class="mb-0 small opacity-75">จับคู่ "คำในตำแหน่ง" ให้เป็น "ประเภทพนักงาน"</p>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light text-secondary small text-uppercase">
-                            <tr>
-                                <th class="ps-4">Keyword (คำในตำแหน่ง)</th>
-                                <th>Map to Type</th>
-                                <th class="text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="mappingBody">
-                            </tbody>
-                        <tfoot class="bg-light border-top">
-                            <tr>
-                                <td class="ps-4">
-                                    <input type="text" class="form-control form-control-sm" id="newMapKeyword" placeholder="เช่น Driver, Admin...">
-                                </td>
-                                <td>
-                                    <input class="form-control form-control-sm" list="typeList" id="newMapType" placeholder="เลือกหรือพิมพ์ใหม่...">
-                                    <datalist id="typeList">
-                                    </datalist>
-                                </td>
-                                <td class="text-center">
-                                    <button class="btn btn-sm btn-primary rounded-circle shadow-sm" onclick="Actions.addMapping()" title="Add">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer bg-light py-2">
-                <small class="text-muted me-auto"><i class="fas fa-info-circle me-1"></i>ระบบจะเรียนรู้ประเภทใหม่ๆ จากสิ่งที่คุณพิมพ์เพิ่มเข้าไป</small>
-                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -809,48 +622,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="teamSettingsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white">
-                <div>
-                    <h5 class="modal-title fw-bold"><i class="fas fa-users-cog me-2"></i>Team Settings (HC Group)</h5>
-                    <small class="text-white-50">ตั้งค่าว่ากลุ่มไหนจะถูกนำไปคำนวณในหน้าจอหลัก (Main Manpower)</small>
-                </div>
-                <button type="button" class="btn btn-sm btn-light text-primary fw-bold ms-auto me-3 shadow-sm" onclick="Actions.addTeamSettingRow()">
-                    <i class="fas fa-plus me-1"></i> Add Team
-                </button>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body bg-light p-3">
-                <div class="alert alert-info py-2 small">
-                    <i class="fas fa-info-circle me-1"></i> ทีมที่ถูกตั้งเป็น <strong>EXCLUDE</strong> จะไม่ถูกนำไปรวมใน HC และ Cost หลัก (เว้นแต่จะเลือกดูจาก Filter บน Dashboard)
-                </div>
-                <div class="table-responsive bg-white rounded border" style="max-height: 60vh;">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light text-secondary" style="position: sticky; top: 0; z-index: 1;">
-                            <tr>
-                                <th class="ps-3 py-3">Department (API)</th>
-                                <th class="text-center" style="width: 150px;">HC Group</th>
-                                <th class="text-center" style="width: 50px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="teamSettingsBody">
-                            <tr><td colspan="3" class="text-center py-4">Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer bg-white border-top">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="Actions.saveTeamSettings()">
-                    <i class="fas fa-save me-1"></i> Save Settings
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- KPI Modal (Individual) -->
 <div class="modal fade" id="empKpiModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -916,4 +687,6 @@
         </div>
     </div>
 </div>
-
+
+
+<?php require_once __DIR__ . '/master_settings_modal.php'; ?>
