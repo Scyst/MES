@@ -307,6 +307,11 @@ function fetchMapData() {
                 if (container) {
                     renderMapMarkers(res.data);
                     renderList(res.data);
+                    
+                    const simSelect = document.getElementById('sim-forklift-select');
+                    if (simSelect && simSelect.options.length <= 1) {
+                        populateSimDropdown();
+                    }
                 }
                 const timeEl = document.getElementById('last-update-time');
                 if(timeEl) timeEl.innerText = new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
@@ -446,39 +451,46 @@ function renderList(data) {
             </div>`;
         }
 
+        let stripColor = 'success';
+        if (fl.status === 'MAINTENANCE') stripColor = 'secondary';
+        else if (fl.status === 'IN_USE') stripColor = 'primary';
+        else if (fl.status === 'CHARGING') stripColor = 'warning';
+
         html += `
-        <li class="list-group-item p-3 fleet-list-item" onclick="flyToForklift('${fl.code}')" style="cursor: pointer;">
-            <div class="d-flex justify-content-between align-items-center mb-2">
+        <li class="list-group-item p-3 fleet-list-item position-relative" onclick="flyToForklift('${fl.code}')" style="cursor: pointer;">
+            <div class="bg-${stripColor}" style="height: 4px; width: 100%; position: absolute; top: 0; left: 0;"></div>
+            
+            <div class="d-flex justify-content-between align-items-start mb-2 mt-1">
                 <div>
-                    <h6 class="fw-bold mb-0 text-dark" style="font-size: 1.05rem;">${fl.code}</h6>
-                    <small class="text-muted">${fl.name}</small>
+                    <h6 class="fw-bold mb-1 text-dark" style="font-size: 1.1rem;">${fl.code}</h6>
+                    <div class="text-muted mb-1" style="font-size: 0.8rem;">${fl.name}</div>
+                    <div class="text-muted fw-bold" style="font-size: 0.8rem;">
+                        ${statusIcon} ${fl.current_battery||0}% <i class="fas ${batIcon} ms-1"></i>
+                    </div>
                 </div>
                 <div class="text-end">
-                    <span class="badge ${stateClass} mb-1 shadow-sm" style="font-size: 0.75rem;">${stateText}</span><br>
-                    <small class="text-muted" style="font-size: 0.75rem;">${statusIcon} ${fl.current_battery||0}% <i class="fas ${batIcon} ms-1"></i></small>
+                    <span class="badge ${stateClass} shadow-sm px-2 py-1" style="font-size: 0.75rem;">${stateText}</span>
                 </div>
             </div>
             
-            <div class="bg-light p-2 rounded mb-2 border" style="font-size: 0.8rem;">
-                <div class="row g-2 text-muted">
-                    <div class="col-6 text-truncate" title="${fl.current_driver||'-'}">
-                        <i class="fas fa-user-circle text-primary opacity-75 me-1"></i> ${fl.current_driver||'-'}
-                    </div>
-                    <div class="col-6 text-truncate text-end" title="${fl.last_location||'Unknown'}">
-                        <i class="fas fa-map-marker-alt text-danger opacity-75 me-1"></i> ${fl.last_location||'Unknown'}
-                    </div>
+            <div class="bg-light p-2 rounded mb-3 border d-flex justify-content-between text-muted" style="font-size: 0.85rem;">
+                <div class="text-truncate flex-grow-1 border-end me-2 pe-2 fw-bold" title="${fl.current_driver||'-'}">
+                    <i class="fas fa-user-circle text-primary opacity-75"></i> ${fl.current_driver||'-'}
+                </div>
+                <div class="text-truncate" style="max-width: 50%;" title="${fl.last_location||'Unknown'}">
+                    <i class="fas fa-map-marker-alt text-danger opacity-75"></i> ${fl.last_location||'Unknown'}
                 </div>
             </div>
 
             ${activeTaskHtml}
 
-            <div class="d-flex justify-content-between align-items-center mt-2">
+            <div class="d-flex justify-content-between align-items-center">
                 <div class="btn-group shadow-sm flex-shrink-0" role="group">
-                    <button class="btn btn-sm btn-light border px-2" onclick="initPlayback('${fl.code}', event)" title="Playback"><i class="fas fa-play-circle text-secondary"></i></button>
-                    <button class="btn btn-sm ${trailBtnClass} border px-2" onclick="toggleSnailTrail('${fl.code}', event)" title="Trail"><i class="fas fa-route"></i></button>
-                    <button class="btn btn-sm ${followBtnClass} border px-2" onclick="toggleFollow('${fl.code}', event)" title="Follow"><i class="fas fa-crosshairs"></i></button>
+                    <button class="btn btn-light border px-2" onclick="initPlayback('${fl.code}', event)" title="Playback"><i class="fas fa-play-circle text-secondary"></i></button>
+                    <button class="btn ${trailBtnClass} border px-2" onclick="toggleSnailTrail('${fl.code}', event)" title="Trail"><i class="fas fa-route"></i></button>
+                    <button class="btn ${followBtnClass} border px-2" onclick="toggleFollow('${fl.code}', event)" title="Follow"><i class="fas fa-crosshairs"></i></button>
                 </div>
-                <div class="ms-2 flex-grow-1">
+                <div class="ms-2 flex-grow-1 text-end">
                     ${actionBtn}
                 </div>
             </div>

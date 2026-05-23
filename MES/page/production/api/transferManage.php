@@ -141,6 +141,7 @@ try {
             $note_update = "\nBulk Cancelled by " . $currentUser['username'] . " at " . date('Y-m-d H:i:s');
             $updSql = "UPDATE $transferTable 
                        SET status = 'CANCELLED', 
+                           transfer_uuid = LEFT(transfer_uuid, 35) + '-C' + CAST(transfer_id AS VARCHAR),
                            notes = ISNULL(notes, '') + ? 
                        WHERE status = 'PENDING' 
                          AND transfer_uuid LIKE ?";
@@ -160,6 +161,22 @@ try {
             $stmt = $pdo->prepare($updSql);
             $stmt->execute($params);
             $affectedRows = $stmt->rowCount();
+
+            if ($affectedRows > 0) {
+                // Recalculate last_serial for this lot
+                $maxSerialSql = "
+                    SELECT ISNULL(MAX(TRY_CAST(RIGHT(transfer_uuid, CHARINDEX('-', REVERSE(transfer_uuid)) - 1) AS INT)), 0) 
+                    FROM $transferTable 
+                    WHERE transfer_uuid LIKE ? AND status != 'CANCELLED'
+                ";
+                $maxSerialStmt = $pdo->prepare($maxSerialSql);
+                $maxSerialStmt->execute([$lot_no . '-%']);
+                $max_active_serial = (int)$maxSerialStmt->fetchColumn();
+
+                $updateLotSql = "UPDATE " . LOT_SERIALS_TABLE . " SET last_serial = ? WHERE parent_lot = ?";
+                $updateLotStmt = $pdo->prepare($updateLotSql);
+                $updateLotStmt->execute([$max_active_serial, $lot_no]);
+            }
 
             $pdo->commit();
 
@@ -432,6 +449,10 @@ try {
             } catch (Exception $e) {
                 // Ignore if already altered or no permission
             }
+
+            try {
+                $pdo->exec("UPDATE STOCK_TRANSFER_ORDERS SET transfer_uuid = LEFT(transfer_uuid, 35) + '-C' + CAST(transfer_id AS VARCHAR) WHERE status = 'CANCELLED' AND transfer_uuid NOT LIKE '%-C%'");
+            } catch (Exception $e) {}
 
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Invalid request method.");
 

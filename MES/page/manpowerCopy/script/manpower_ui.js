@@ -2542,8 +2542,8 @@ const Actions = {
                         ${emp.name_th.charAt(0)}
                     </div>
                     <div>
-                        <div class="fw-bold text-dark">${emp.name_th}</div>
-                        <div class="small text-muted font-monospace"><i class="fas fa-id-badge me-1 opacity-50"></i>${emp.emp_id}</div>
+                        <div class="fw-bold text-dark" style="font-size: 0.85rem;">${emp.name_th}</div>
+                        <div class="text-muted font-monospace" style="font-size: 0.75rem;"><i class="fas fa-id-badge me-1 opacity-50"></i>${emp.emp_id}</div>
                     </div>
                 </div>
              `;
@@ -2558,16 +2558,16 @@ const Actions = {
             if (isActive) {
                 statusHtml = `
                     <div class="d-flex flex-column align-items-center">
-                        <span class="badge bg-success bg-opacity-10 text-success border border-success mb-1" style="min-width: 70px;">ACTIVE</span>
-                        <div class="small font-monospace text-muted" style="font-size: 0.7rem;" title="Start Date">
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success mb-1" style="min-width: 70px; font-size: 0.65rem;">ACTIVE</span>
+                        <div class="font-monospace text-muted" style="font-size: 0.75rem;" title="Start Date">
                             <i class="fas fa-sign-in-alt text-success me-1"></i>${dFmt(emp.start_date)}
                         </div>
                     </div>`;
             } else {
                 statusHtml = `
                     <div class="d-flex flex-column align-items-center">
-                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary mb-1" style="min-width: 70px;">RESIGNED</span>
-                        <div class="d-flex align-items-center small font-monospace bg-light rounded px-1 border" style="font-size: 0.7rem;">
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary mb-1" style="min-width: 70px; font-size: 0.65rem;">RESIGNED</span>
+                        <div class="d-flex align-items-center font-monospace bg-light rounded px-1 border" style="font-size: 0.75rem;">
                             <span class="text-success" title="Joined">${dFmt(emp.start_date)}</span>
                             <i class="fas fa-arrow-right mx-1 text-muted" style="font-size: 0.6rem;"></i>
                             <span class="text-danger fw-bold" title="Resigned">${dFmt(emp.resign_date)}</span>
@@ -2576,10 +2576,10 @@ const Actions = {
             }
 
             let tagsHtml = '';
-            if (!emp.line) tagsHtml += `<span class="badge bg-danger mb-1 me-1">No Line</span>`;
-            if (!emp.default_shift_id) tagsHtml += `<span class="badge bg-warning text-dark mb-1 me-1">No Shift</span>`;
-            if (!emp.team_group) tagsHtml += `<span class="badge bg-info text-dark mb-1 me-1">No Team</span>`;
-            if (tagsHtml === '') tagsHtml = `<span class="text-muted small"><i class="fas fa-check-circle text-success me-1"></i>Data OK</span>`;
+            if (!emp.line) tagsHtml += `<span class="badge bg-danger mb-1 me-1" style="font-size: 0.65rem;">No Line</span>`;
+            if (!emp.default_shift_id) tagsHtml += `<span class="badge bg-warning text-dark mb-1 me-1" style="font-size: 0.65rem;">No Shift</span>`;
+            if (!emp.team_group) tagsHtml += `<span class="badge bg-info text-dark mb-1 me-1" style="font-size: 0.65rem;">No Team</span>`;
+            if (tagsHtml === '') tagsHtml = `<span class="text-muted" style="font-size: 0.75rem;"><i class="fas fa-check-circle text-success me-1"></i>Data OK</span>`;
 
             const shiftText = emp.shift_name ? (emp.shift_name.includes('Day') ? '<i class="fas fa-sun text-warning me-1"></i>Day' : '<i class="fas fa-moon text-indigo me-1"></i>Night') : '-';
             tbody.innerHTML += `
@@ -2592,13 +2592,13 @@ const Actions = {
                     </td>
                     <td>
                         <div class="d-flex align-items-center gap-2 mb-1">
-                            <div class="fw-bold ${isActive ? 'text-secondary' : 'text-muted'}" style="font-size: 0.8rem;"><i class="fas fa-industry me-1 opacity-50"></i>${emp.line || '-'}</div>
+                            <div class="fw-bold ${isActive ? 'text-dark' : 'text-muted'}" style="font-size: 0.85rem;"><i class="fas fa-industry me-1 opacity-50"></i>${emp.line || '-'}</div>
                             ${emp.team_group ? `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" style="font-size: 0.65rem;">${emp.team_group}</span>` : ''}
                         </div>
-                        <div class="small text-muted" style="font-size: 0.75rem;"><i class="fas fa-briefcase me-1 opacity-50"></i>${emp.position || '-'}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;"><i class="fas fa-briefcase me-1 opacity-50"></i>${emp.position || '-'}</div>
                     </td>
-                    <td class="text-center small">${shiftText}</td>
-                    <td class="text-center">${typeBadge}</td>
+                    <td class="text-center" style="font-size: 0.8rem;">${shiftText}</td>
+                    <td class="text-center" style="font-size: 0.75rem;">${typeBadge}</td>
                     <td class="text-center">${statusHtml}</td>
                     <td>${tagsHtml}</td>
                     <td class="text-end pe-4">
