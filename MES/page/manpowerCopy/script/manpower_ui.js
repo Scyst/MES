@@ -1447,6 +1447,8 @@ const Actions = {
     _structureCache: { lines: [], teams: [] },
     _lastDetailParams: { line: '', shiftId: '', empType: '', filterStatus: 'ALL' },
     _cachedAnalysisData: null,
+    _empCurrentPage: 1,
+    _empItemsPerPage: 50,
     openMasterSettingsTab(tabId) {
         const modalEl = document.getElementById('masterSettingsModal');
         if (!modalEl) return;
@@ -2333,6 +2335,7 @@ const Actions = {
             savedState = {
                 term: document.getElementById('empSearchBox')?.value || '',
                 line: document.getElementById('empFilterLine')?.value || '',
+                team: document.getElementById('empFilterTeam')?.value || '',
                 status: statusEl ? statusEl.value : '1',
                 dateType: document.getElementById('empDateType')?.value || '',
                 dFrom: document.getElementById('empDateFrom')?.value || '',
@@ -2350,6 +2353,11 @@ const Actions = {
             filterSelect.innerHTML = '<option value="">All Lines</option>' +
                 this._structureCache.lines.map(l => `<option value="${l}">${l}</option>`).join('');
         }
+        const teamFilter = document.getElementById('empFilterTeam');
+        if (teamFilter && teamFilter.options.length <= 1 && this._structureCache.teams.length > 0) {
+            teamFilter.innerHTML = '<option value="">All Teams</option>' +
+                this._structureCache.teams.map(t => `<option value="${t}">${t}</option>`).join('');
+        }
 
         try {
             const res = await fetch(`api/api_master_data.php?action=read_employees&show_all=true`);
@@ -2360,6 +2368,7 @@ const Actions = {
                 if (keepFilters && savedState) {
                     document.getElementById('empSearchBox').value = savedState.term;
                     document.getElementById('empFilterLine').value = savedState.line;
+                    if (document.getElementById('empFilterTeam')) document.getElementById('empFilterTeam').value = savedState.team;
 
                     const rad = document.querySelector(`input[name="empStatusFilter"][value="${savedState.status}"]`);
                     if (rad) rad.checked = true;
@@ -2379,6 +2388,7 @@ const Actions = {
                     }
                     if (document.getElementById('empSearchBox')) document.getElementById('empSearchBox').value = '';
                     if (document.getElementById('empFilterLine')) document.getElementById('empFilterLine').value = '';
+                    if (document.getElementById('empFilterTeam')) document.getElementById('empFilterTeam').value = '';
                 }
                 this.filterEmployeeList();
             }
@@ -2395,6 +2405,7 @@ const Actions = {
 
         const term = document.getElementById('empSearchBox')?.value.toLowerCase().trim() || '';
         const lineFilter = document.getElementById('empFilterLine')?.value || '';
+        const teamFilter = document.getElementById('empFilterTeam')?.value || '';
 
         let statusVal = 'ALL';
         const radioActive = document.querySelector('input[name="empStatusFilter"]:checked');
@@ -2431,8 +2442,9 @@ const Actions = {
                 if (!searchStr.includes(term)) return false;
             }
 
-            // 3. ตรวจสอบเงื่อนไขไลน์
+            // 3. ตรวจสอบเงื่อนไขไลน์และทีม
             if (lineFilter && emp.line !== lineFilter) return false;
+            if (teamFilter && emp.team_group !== teamFilter) return false;
 
             // 4. ตรวจสอบช่วงวันที่
             if (dateType && dateType !== '') {
@@ -2446,13 +2458,28 @@ const Actions = {
             return true;
         });
 
-        console.log(`🔍 Found: ${filtered.length} items`);
-        this.renderEmployeeTable(filtered);
+        const totalItems = filtered.length;
+        const totalPages = Math.ceil(totalItems / this._empItemsPerPage) || 1;
+        if (this._empCurrentPage > totalPages) this._empCurrentPage = 1;
+        if (this._empCurrentPage < 1) this._empCurrentPage = 1;
+
+        const startIdx = (this._empCurrentPage - 1) * this._empItemsPerPage;
+        const pageData = filtered.slice(startIdx, startIdx + this._empItemsPerPage);
+
+        this.renderEmployeeTable(pageData, totalItems);
+        this.renderEmployeePagination(totalPages, this._empCurrentPage);
+    },
+
+    changeEmpPage(pageNum) {
+        this._empCurrentPage = pageNum;
+        this.filterEmployeeList();
     },
 
     resetEmployeeFilters() {
+        this._empCurrentPage = 1;
         document.getElementById('empSearchBox').value = '';
         document.getElementById('empFilterLine').value = '';
+        if (document.getElementById('empFilterTeam')) document.getElementById('empFilterTeam').value = '';
         if (document.getElementById('filterStatusActive')) {
             document.getElementById('filterStatusActive').checked = true;
         }
@@ -2487,18 +2514,18 @@ const Actions = {
         }
     },
 
-    renderEmployeeTable(list) {
+    renderEmployeeTable(list, totalItems) {
         const tbody = document.getElementById('empListBody');
         tbody.innerHTML = '';
 
-        document.getElementById('empListCount').innerText = `Showing: ${list.length} records`;
+        document.getElementById('empListCount').innerText = `Showing: ${list.length} of ${totalItems} records`;
 
         if (!list || list.length === 0) {
             tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted opacity-50"><i class="fas fa-search fa-3x mb-3"></i><br>ไม่พบข้อมูลพนักงานตามเงื่อนไข</td></tr>`;
             return;
         }
 
-        const displayList = list.slice(0, 100);
+        const displayList = list;
         const dFmt = (dStr) => {
             if (!dStr) return '<span class="text-muted opacity-50">-</span>';
             const d = new Date(dStr);
@@ -2579,9 +2606,51 @@ const Actions = {
                 </tr>`;
         });
 
-        if (list.length > 100) {
-            tbody.innerHTML += `<tr><td colspan="7" class="text-center text-muted small py-2">... and ${list.length - 100} more (Use search to find specific user) ...</td></tr>`;
+        });
+    },
+
+    renderEmployeePagination(totalPages, currentPage) {
+        const pagination = document.getElementById('empPagination');
+        if (!pagination) return;
+        pagination.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // Previous button
+        pagination.innerHTML += `
+            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <button class="page-link" onclick="Actions.changeEmpPage(${currentPage - 1})">Prev</button>
+            </li>
+        `;
+
+        // Page numbers
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+        
+        if (startPage > 1) {
+            pagination.innerHTML += `<li class="page-item"><button class="page-link" onclick="Actions.changeEmpPage(1)">1</button></li>`;
+            if (startPage > 2) pagination.innerHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
         }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pagination.innerHTML += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <button class="page-link" onclick="Actions.changeEmpPage(${i})">${i}</button>
+                </li>
+            `;
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) pagination.innerHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            pagination.innerHTML += `<li class="page-item"><button class="page-link" onclick="Actions.changeEmpPage(${totalPages})">${totalPages}</button></li>`;
+        }
+
+        // Next button
+        pagination.innerHTML += `
+            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <button class="page-link" onclick="Actions.changeEmpPage(${currentPage + 1})">Next</button>
+            </li>
+        `;
     },
     async openKpiDashboard(empId, name) {
         document.getElementById('empKpiSubtitle').innerText = name + ' (' + empId + ')';

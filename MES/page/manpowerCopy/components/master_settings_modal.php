@@ -56,6 +56,12 @@
                                                 <option value="">All Lines</option>
                                             </select>
                                         </div>
+                                        <div class="input-group input-group-sm" style="width: 150px;">
+                                            <span class="input-group-text bg-white text-muted border-end-0"><i class="fas fa-users"></i></span>
+                                            <select id="empFilterTeam" class="form-select border-start-0" onchange="Actions.filterEmployeeList()">
+                                                <option value="">All Teams</option>
+                                            </select>
+                                        </div>
                                         <div class="d-flex align-items-center bg-white rounded border shadow-sm p-0 overflow-hidden">
                                             <select id="empDateType" class="form-select form-select-sm border-0 fw-bold text-primary" style="width: 130px; background-color: transparent;" onchange="Actions.toggleDateInputs(); Actions.filterEmployeeList();">
                                                 <option value="">📅 Any Date</option>
@@ -104,8 +110,12 @@
                                     <tbody id="empListBody"></tbody>
                                 </table>
                             </div>
-                            <div class="card-footer bg-light py-2 justify-content-between d-flex flex-shrink-0">
+                            <div class="card-footer bg-light py-2 justify-content-between d-flex flex-shrink-0 align-items-center">
                                 <div class="small text-muted" id="empListCount">Loaded: 0 records</div>
+                                <nav>
+                                    <ul class="pagination pagination-sm mb-0" id="empPagination">
+                                    </ul>
+                                </nav>
                             </div>
                         </div>
                     </div>
