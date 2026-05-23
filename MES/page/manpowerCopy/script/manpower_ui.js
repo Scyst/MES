@@ -3589,9 +3589,6 @@ const Actions = {
         UI.showLoader();
 
         try {
-            // 🛠️ ตรวจสอบและอัปเดต SP แบบ Silent ก่อนรันจริง เพื่อรองรับ HcGroup Filter
-            await fetch('api/api_daily_operations.php?action=update_sp_analysis').catch(() => {});
-
             const response = await fetch(`api/api_daily_operations.php?action=integrated_analysis&startDate=${start}&endDate=${end}&line=${encodeURIComponent(line)}&hcGroup=${encodeURIComponent(hcGroup)}`);
             const result = await response.json();
 
