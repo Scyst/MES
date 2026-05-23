@@ -678,10 +678,10 @@
     
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
-                                <div class="card border-0 shadow-sm h-100 bg-secondary bg-opacity-10" style="border-radius: 12px;">
+                                <div class="card border-0 shadow-sm h-100 bg-warning bg-opacity-10" style="border-radius: 12px;">
                                     <div class="card-body p-3">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <div class="fw-bold text-secondary small text-uppercase">
+                                            <div class="fw-bold text-warning small text-uppercase" style="filter: brightness(0.8);">
                                                 <i class="fas fa-calculator me-1"></i> Current Logic (สูตรเดิม)
                                             </div>
                                         </div>
@@ -692,15 +692,15 @@
                             </div>
 
                             <div class="col-md-4">
-                                <div class="card border-0 shadow-sm h-100 bg-primary bg-opacity-10" style="border-radius: 12px;">
+                                <div class="card border-0 shadow-sm h-100 bg-success bg-opacity-10" style="border-radius: 12px;">
                                     <div class="card-body p-3">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <div class="fw-bold text-primary small text-uppercase">
+                                            <div class="fw-bold text-success small text-uppercase">
                                                 <i class="fas fa-magic me-1"></i> New Logic (สูตรใหม่)
                                             </div>
                                         </div>
-                                        <div class="h4 mb-0 fw-bold text-primary" id="fin_new_total">-</div>
-                                        <div class="small text-primary text-opacity-75 mt-2"><i class="fas fa-calendar-check me-1"></i>Adj. Sat/Sun & Holiday</div>
+                                        <div class="h4 mb-0 fw-bold text-success" id="fin_new_total">-</div>
+                                        <div class="small text-success text-opacity-75 mt-2"><i class="fas fa-calendar-check me-1"></i>Adj. Sat/Sun & Holiday</div>
                                     </div>
                                 </div>
                             </div>
@@ -723,9 +723,9 @@
 
                         <div class="row g-3">
                             <div class="col-lg-12">
-                                <div class="card shadow-sm mb-3">
-                                    <div class="card-header py-2 bg-light d-flex justify-content-between align-items-center">
-                                        <h6 class="m-0 font-weight-bold text-dark small">
+                                <div class="card border-0 shadow-sm mb-3">
+                                    <div class="card-header py-3 bg-white border-bottom-0 d-flex justify-content-between align-items-center">
+                                        <h6 class="m-0 fw-bold text-primary text-uppercase" style="letter-spacing: 0.5px;">
                                             <i class="fas fa-chart-bar me-1"></i> Cost Impact by Line
                                         </h6>
                                     </div>
@@ -738,16 +738,16 @@
                             </div>
 
                             <div class="col-lg-12">
-                                <div class="card shadow-sm">
-                                    <div class="card-header py-2 bg-light">
-                                        <h6 class="m-0 font-weight-bold text-dark small">
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-header py-3 bg-white border-bottom-0">
+                                        <h6 class="m-0 fw-bold text-primary text-uppercase" style="letter-spacing: 0.5px;">
                                             <i class="fas fa-table me-1"></i> Detailed Breakdown
                                         </h6>
                                     </div>
                                     <div class="card-body p-0">
                                         <div class="table-responsive">
                                             <table class="table table-sm table-hover mb-0 align-middle" style="font-size: 0.85rem;">
-                                                <thead class="bg-light text-secondary">
+                                                <thead class="bg-primary bg-gradient text-white shadow-sm">
                                                     <tr>
                                                         <th class="ps-3" width="20%">Line</th>
                                                         <th class="text-end" width="15%">Old (Std)</th>
@@ -779,7 +779,7 @@
                                 </div>
                             </div>
                             <div class="card-body p-0">
-                                <div class="table-responsive" style="max-height: calc(100vh - 220px); min-height: 60vh;">
+                                <div class="table-responsive" style="max-height: calc(100vh - 250px); min-height: 50vh;">
                                     <table class="table table-hover table-striped align-middle mb-0 bg-white" id="execReportTable">
                                         <thead class="bg-light text-secondary shadow-sm" style="position: sticky; top: 0; z-index: 1;">
                                             <tr class="text-center small">
