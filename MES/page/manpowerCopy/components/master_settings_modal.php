@@ -98,13 +98,14 @@
                                 <table class="table table-hover align-middle mb-0" style="min-width: 1000px;">
                                     <thead class="bg-light text-secondary small text-uppercase" style="position: sticky; top: 0; z-index: 1;">
                                         <tr>
-                                            <th class="ps-4" width="25%">Employee Profile</th>
-                                            <th width="15%">Dept / Line / Team</th>
-                                            <th class="text-center" width="10%">Shift</th>
-                                            <th class="text-center" width="10%">Type</th>
-                                            <th class="text-center" width="18%">Status / Timeline</th>
-                                            <th width="15%">Tags / Data Check</th>
-                                            <th class="text-end pe-4" width="10%">Action</th>
+                                            <th class="ps-4" width="22%">Employee Profile</th>
+                                            <th width="13%">Dept / Group</th>
+                                            <th width="15%">Line / Position</th>
+                                            <th class="text-center" width="8%">Shift</th>
+                                            <th class="text-center" width="8%">Type</th>
+                                            <th class="text-center" width="16%">Status / Timeline</th>
+                                            <th width="12%">Tags / Check</th>
+                                            <th class="text-end pe-4" width="6%">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="empListBody"></tbody>

@@ -2585,15 +2585,17 @@ const Actions = {
             tbody.innerHTML += `
                 <tr class="${!isActive ? 'bg-light text-muted' : ''}"> <td class="ps-4">${profileHtml}</td>
                     <td>
-                        <div class="d-flex align-items-center mb-1">
-                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-2" style="font-size: 0.65rem;">${emp.hc_group || 'No Group'}</span>
-                            <span class="fw-bold text-dark" style="font-size: 0.85rem;">${emp.department_api || '-'}</span>
+                        <div class="mb-1">
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary" style="font-size: 0.65rem;">${emp.hc_group || 'No Group'}</span>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="fw-bold text-dark text-truncate" style="font-size: 0.85rem; max-width: 150px;" title="${emp.department_api || ''}">${emp.department_api || '-'}</div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2 mb-1">
                             <div class="fw-bold ${isActive ? 'text-secondary' : 'text-muted'}" style="font-size: 0.8rem;"><i class="fas fa-industry me-1 opacity-50"></i>${emp.line || '-'}</div>
                             ${emp.team_group ? `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" style="font-size: 0.65rem;">${emp.team_group}</span>` : ''}
                         </div>
-                        <div class="small text-muted mt-1" style="font-size: 0.75rem;"><i class="fas fa-briefcase me-1 opacity-50"></i>${emp.position || '-'}</div>
+                        <div class="small text-muted" style="font-size: 0.75rem;"><i class="fas fa-briefcase me-1 opacity-50"></i>${emp.position || '-'}</div>
                     </td>
                     <td class="text-center small">${shiftText}</td>
                     <td class="text-center">${typeBadge}</td>
