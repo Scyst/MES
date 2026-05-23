@@ -45,6 +45,7 @@ try {
                     JOIN dbo.MANPOWER_CALENDAR C WITH (NOLOCK)
                         ON C.calendar_date BETWEEN :startDate AND :endDate
                         AND C.day_type != 'HOLIDAY'
+                        AND DATENAME(dw, C.calendar_date) != 'Sunday'
                         AND C.calendar_date >= ISNULL(E.start_date, '2000-01-01')
                         AND C.calendar_date <= ISNULL(E.resign_date, CAST(GETDATE() AS DATE))
                     LEFT JOIN dbo.MANPOWER_DAILY_LOGS_TEST L WITH (NOLOCK)
@@ -90,7 +91,7 @@ try {
                         CASE 
                             WHEN L.status IS NOT NULL THEN L.status
                             WHEN Cal.day_type = 'HOLIDAY' OR DATENAME(dw, ISNULL(L.log_date, :startDateCheck)) = 'Sunday' THEN 'HOLIDAY'
-                            WHEN ISNULL(L.log_date, :startDateCheck) < CAST(GETDATE() AS DATE) THEN 'ABSENT'
+                            WHEN ISNULL(L.log_date, :startDateCheck2) < CAST(GETDATE() AS DATE) THEN 'ABSENT'
                             ELSE 'WAITING'
                         END as status,
 
@@ -159,8 +160,8 @@ try {
                     ";
             
             $params = [
-                ':startDateDisp' => $startDate, ':startDateCheck' => $startDate, ':start' => $startDate, ':end' => $endDate,
-                ':calDate' => $startDate, ':t0Date' => $startDate, ':createDateCheck' => $startDate
+                ':startDateDisp' => $startDate, ':startDateCheck' => $startDate, ':startDateCheck2' => $startDate, 
+                ':start' => $startDate, ':end' => $endDate, ':calDate' => $startDate, ':t0Date' => $startDate, ':createDateCheck' => $startDate
             ];
 
             $hcGroupFilter = $_GET['hcGroup'] ?? 'ALL';

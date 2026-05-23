@@ -178,7 +178,8 @@ try {
         (log_date, emp_id, scan_in_time, scan_out_time, status, shift_id, actual_line, actual_team, actual_emp_type, updated_at) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())");
 
-    $currTs = strtotime($startDate); 
+    // Start processing from 1 day before startDate to auto-heal previous day's night shift clock-outs
+    $currTs = strtotime('-1 day', strtotime($startDate)); 
     
     while ($currTs <= strtotime($endDate)) {
         $procDate = date('Y-m-d', $currTs);
@@ -274,6 +275,15 @@ try {
         }
         $currTs = strtotime('+1 day', $currTs);
     }
+
+    // --- Cleanup Historical ABSENT on Holidays/Sundays ---
+    $sqlFix = "UPDATE dbo.MANPOWER_DAILY_LOGS_TEST 
+               SET status = 'HOLIDAY', updated_at = GETDATE() 
+               WHERE status = 'ABSENT' AND is_verified = 0
+               AND (DATEPART(dw, log_date) = 1 OR log_date IN (SELECT calendar_date FROM dbo.MANPOWER_CALENDAR WHERE day_type = 'HOLIDAY'))";
+    $stmtFix = $pdo->prepare($sqlFix);
+    $stmtFix->execute();
+    $stats['fixed_historical_holidays'] = $stmtFix->rowCount();
 
     $pdo->commit();
     echo json_encode(['success' => true, 'message' => 'Test Sync Completed (All Users Ingested)', 'stats' => $stats]);
