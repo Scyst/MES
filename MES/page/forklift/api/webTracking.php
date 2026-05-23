@@ -23,7 +23,7 @@ try {
         // 🗺️ ดึงข้อมูลรถล่าสุด (Real-time Map)
         // ------------------------------------------------
         case 'get_realtime':
-            $sql = "SELECT id, code, name, status, current_battery, last_location, location_type, indoor_x, indoor_y, last_updated,
+            $sql = "SELECT id, code, name, status, current_battery, last_location, location_type, lat, lng, indoor_x, indoor_y, last_updated,
                     CASE WHEN DATEDIFF(MINUTE, last_updated, GETDATE()) > 3 THEN 1 ELSE 0 END as is_offline
                     FROM dbo.FORKLIFTS WITH (NOLOCK) WHERE is_active = 1";
             echo json_encode(['success' => true, 'data' => $pdo->query($sql)->fetchAll()]);

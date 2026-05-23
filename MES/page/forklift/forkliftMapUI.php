@@ -122,8 +122,9 @@ $pageHeaderSubtitle = "ระบบติดตามตำแหน่งรถ
                                             <label class="small">ความเร็วการจำลอง</label>
                                             <input type="range" id="sim-speed" class="form-range" min="1" max="10" value="3">
                                         </div>
-                                        <div class="d-flex justify-content-between">
+                                        <div class="d-flex justify-content-between mt-2">
                                             <button class="btn btn-sm btn-outline-danger" onclick="clearSimRoute()">ล้างเส้นทาง</button>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="hideSimUI()"><i class="fas fa-eye-slash"></i> ซ่อน UI</button>
                                             <button id="sim-start-btn" class="btn btn-sm btn-success" onclick="toggleSimPlaying()">
                                                 <i class="fas fa-play" id="sim-play-icon"></i> เริ่มจำลอง
                                             </button>

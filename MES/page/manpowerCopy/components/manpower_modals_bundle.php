@@ -483,14 +483,19 @@
 </div>
 
 <div class="modal fade" id="integratedAnalysisModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
+    <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
+        <div class="modal-content border-0">
             
-            <div class="modal-header bg-dark text-white py-2 border-bottom-0">
-                <h5 class="modal-title small text-uppercase fw-bold">
+            <div class="modal-header bg-dark text-white py-2 border-bottom-0 d-flex justify-content-between align-items-center">
+                <h5 class="modal-title small text-uppercase fw-bold mb-0">
                     <i class="fas fa-chart-network me-2 text-info"></i>Integrated Manpower Analysis
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-light me-2" onclick="Actions.exportAnalysisToExcel()">
+                        <i class="fas fa-file-excel me-1 text-success"></i> Export Excel
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
             </div>
 
             <div class="bg-light border-bottom p-3">
@@ -542,47 +547,67 @@
                     
                     <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
                         <div class="row g-2 mb-3">
-                            <div class="col-md-3">
-                                <div class="p-2 bg-white border rounded shadow-sm h-100">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="text-uppercase fw-bold small text-secondary">Total HC</span>
-                                        <span id="ia_rpt_attrition" class="badge bg-light text-muted border" style="font-size: 0.7rem;">--</span>
+                            <div class="col-md-2">
+                                <div class="p-2 bg-gradient-primary text-white border rounded shadow-sm h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+                                    <div class="d-flex justify-content-between align-items-center mb-1 position-relative z-index-1">
+                                        <span class="text-uppercase fw-bold small opacity-75">Total HC</span>
+                                        <span id="ia_rpt_attrition" class="badge bg-white text-primary rounded-pill shadow-sm" style="font-size: 0.7rem;">--</span>
                                     </div>
-                                    <h3 id="ia_rpt_hc" class="mb-2 fw-bold text-primary text-center">0</h3>
-                                    <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
-                                        <thead class="bg-light text-muted"><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
+                                    <h3 id="ia_rpt_hc" class="mb-2 fw-bold text-center position-relative z-index-1" style="font-size: 1.8rem;">0</h3>
+                                    <table class="table table-borderless table-sm mb-0 small text-center text-white opacity-75 position-relative z-index-1" style="font-size: 0.7rem;">
+                                        <thead><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
                                         <tbody><tr><td id="ia_rpt_hc_max" class="fw-bold">0</td><td id="ia_rpt_hc_min">0</td><td id="ia_rpt_hc_avg">0</td></tr></tbody>
                                     </table>
+                                    <i class="fas fa-users position-absolute opacity-25" style="font-size: 4rem; right: -10px; bottom: -10px;"></i>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="p-2 bg-white border rounded shadow-sm h-100">
-                                    <div class="text-uppercase fw-bold small text-secondary mb-1">Actual Present</div>
-                                    <h3 id="ia_rpt_actual" class="mb-2 fw-bold text-success text-center">0</h3>
-                                    <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
-                                        <thead class="bg-light text-muted"><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
+                            <div class="col-md-2">
+                                <div class="p-2 bg-gradient-success text-white border rounded shadow-sm h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);">
+                                    <div class="text-uppercase fw-bold small opacity-75 mb-1 position-relative z-index-1">Actual Present</div>
+                                    <h3 id="ia_rpt_actual" class="mb-2 fw-bold text-center position-relative z-index-1" style="font-size: 1.8rem;">0</h3>
+                                    <table class="table table-borderless table-sm mb-0 small text-center text-white opacity-75 position-relative z-index-1" style="font-size: 0.7rem;">
+                                        <thead><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
                                         <tbody><tr><td id="ia_rpt_actual_max" class="fw-bold">0</td><td id="ia_rpt_actual_min">0</td><td id="ia_rpt_actual_avg">0</td></tr></tbody>
                                     </table>
+                                    <i class="fas fa-user-check position-absolute opacity-25" style="font-size: 4rem; right: -10px; bottom: -10px;"></i>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="p-2 bg-white border rounded shadow-sm h-100">
-                                    <div class="text-uppercase fw-bold small text-secondary mb-1">Total Absent</div>
-                                    <h3 id="ia_rpt_absent" class="mb-2 fw-bold text-danger text-center">0</h3>
-                                    <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
-                                        <thead class="bg-light text-muted"><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
+                            <div class="col-md-2">
+                                <div class="p-2 bg-gradient-danger text-white border rounded shadow-sm h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%);">
+                                    <div class="text-uppercase fw-bold small opacity-75 mb-1 position-relative z-index-1">Total Absent</div>
+                                    <h3 id="ia_rpt_absent" class="mb-2 fw-bold text-center position-relative z-index-1" style="font-size: 1.8rem;">0</h3>
+                                    <table class="table table-borderless table-sm mb-0 small text-center text-white opacity-75 position-relative z-index-1" style="font-size: 0.7rem;">
+                                        <thead><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
                                         <tbody><tr><td id="ia_rpt_absent_max" class="fw-bold">0</td><td id="ia_rpt_absent_min">0</td><td id="ia_rpt_absent_avg">0</td></tr></tbody>
                                     </table>
+                                    <i class="fas fa-user-times position-absolute opacity-25" style="font-size: 4rem; right: -10px; bottom: -10px;"></i>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="p-2 bg-white border rounded shadow-sm h-100">
-                                    <div class="text-uppercase fw-bold small text-secondary mb-1">Total Leave</div>
-                                    <h3 id="ia_rpt_leave" class="mb-2 fw-bold text-info text-center">0</h3>
-                                    <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
-                                        <thead class="bg-light text-muted"><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
+                            <div class="col-md-2">
+                                <div class="p-2 bg-gradient-info text-white border rounded shadow-sm h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #36b9cc 0%, #258391 100%);">
+                                    <div class="text-uppercase fw-bold small opacity-75 mb-1 position-relative z-index-1">Total Leave</div>
+                                    <h3 id="ia_rpt_leave" class="mb-2 fw-bold text-center position-relative z-index-1" style="font-size: 1.8rem;">0</h3>
+                                    <table class="table table-borderless table-sm mb-0 small text-center text-white opacity-75 position-relative z-index-1" style="font-size: 0.7rem;">
+                                        <thead><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
                                         <tbody><tr><td id="ia_rpt_leave_max" class="fw-bold">0</td><td id="ia_rpt_leave_min">0</td><td id="ia_rpt_leave_avg">0</td></tr></tbody>
                                     </table>
+                                    <i class="fas fa-user-injured position-absolute opacity-25" style="font-size: 4rem; right: -10px; bottom: -10px;"></i>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="p-2 bg-white border rounded shadow-sm h-100 position-relative overflow-hidden">
+                                    <div class="text-uppercase fw-bold small text-success mb-1 position-relative z-index-1">New Joiners</div>
+                                    <h3 id="ia_rpt_new_joiners" class="mb-2 fw-bold text-center text-success position-relative z-index-1" style="font-size: 1.8rem;">0</h3>
+                                    <div class="text-center small text-muted mt-3 pt-2 border-top">In selected range</div>
+                                    <i class="fas fa-user-plus position-absolute text-success opacity-10" style="font-size: 4rem; right: -10px; bottom: -10px;"></i>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="p-2 bg-white border rounded shadow-sm h-100 position-relative overflow-hidden">
+                                    <div class="text-uppercase fw-bold small text-danger mb-1 position-relative z-index-1">Resigned</div>
+                                    <h3 id="ia_rpt_resigned" class="mb-2 fw-bold text-center text-danger position-relative z-index-1" style="font-size: 1.8rem;">0</h3>
+                                    <div class="text-center small text-muted mt-3 pt-2 border-top">In selected range</div>
+                                    <i class="fas fa-user-minus position-absolute text-danger opacity-10" style="font-size: 4rem; right: -10px; bottom: -10px;"></i>
                                 </div>
                             </div>
                         </div>
