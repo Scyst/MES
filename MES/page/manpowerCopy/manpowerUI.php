@@ -97,7 +97,6 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                             <?php if (hasPermission('manage_manpower')): ?>
                                 
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openIntegratedAnalysis()"><i class="fas fa-chart-pie text-primary me-2"></i>Analysis Report</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openExecReport()"><i class="fas fa-chart-line text-info me-2"></i>Executive KPI Report</a></li>
                                 <li><hr class="dropdown-divider"></li>
 
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openEmployeeManager()">Staff Manager</a></li>

@@ -2652,10 +2652,12 @@ const Actions = {
         const searchF = (document.getElementById('execReportSearch')?.value || '').toLowerCase().trim();
 
         const filtered = this._execReportData.filter(r => {
-            if (lineF !== 'ALL' && r.line !== lineF) return false;
-            if (teamF !== 'ALL' && r.team_group !== teamF) return false;
+            const rLine = (r.line || '').trim();
+            const rTeam = (r.team_group || '').trim();
+            if (lineF !== 'ALL' && rLine !== lineF) return false;
+            if (teamF !== 'ALL' && rTeam !== teamF) return false;
             if (searchF) {
-                const text = (r.emp_id + ' ' + r.name_th).toLowerCase();
+                const text = ((r.emp_id || '') + ' ' + (r.name_th || '')).toLowerCase();
                 if (!text.includes(searchF)) return false;
             }
             return true;

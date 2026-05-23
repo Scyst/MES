@@ -40,6 +40,7 @@ let simInterval = null;
 let isSimPlaying = false;
 let simCurrentPosition = null;
 let simTargetIndex = 0;
+let simIndoorTicks = 0; // ตัวนับเวลาว่าอยู่ในตึกนานแค่ไหน
 
 document.addEventListener('DOMContentLoaded', function() {
     initMap();
@@ -930,6 +931,7 @@ function clearSimRoute() {
     simRouteLayer = null;
     simCurrentPosition = null;
     simTargetIndex = 0;
+    simIndoorTicks = 0;
 }
 
 function toggleSimPlaying() {
@@ -961,6 +963,7 @@ function toggleSimPlaying() {
         if (!simCurrentPosition) {
             simCurrentPosition = { ...simWaypoints[0] };
             simTargetIndex = 1;
+            simIndoorTicks = 0;
         }
         
         // Start Interval loop
@@ -1042,9 +1045,17 @@ function processSimStep(code, speed, tick) {
     // ถ้ารถอยู่ในขอบเขตตึกที่ตั้งค่าไว้ (หรือมีเสา Wi-Fi แล้ว ก็ให้เป็น Wi-Fi Snap เลย)
     const isMapped = window.mappedZones && window.mappedZones.some(z => z.grid_col === colName && z.grid_row === rowNum.toString());
     if (indoorSimGrids.includes(cellId) || isMapped) {
-        // คืนค่ากลับไปเป็นพิกัด "กึ่งกลาง" ของช่อง Grid นั้นๆ
-        displayLat = latTop - (rIndex * latStep) - (latStep / 2);
-        displayLng = lngLeft + (cIndex * lngStep) + (lngStep / 2);
+        simIndoorTicks++;
+        // จำลองสถานการณ์: รอให้เข้ามาในอาคารนานกว่า 20 Ticks (2 วินาที) ก่อนถึงจะจับสัญญาณ Wi-Fi ได้
+        // เพื่อป้องกันอาการกระตุกเวลาเฉียดขอบตึก
+        if (simIndoorTicks > 20) {
+            // คืนค่ากลับไปเป็นพิกัด "กึ่งกลาง" ของช่อง Grid นั้นๆ
+            displayLat = latTop - (rIndex * latStep) - (latStep / 2);
+            displayLng = lngLeft + (cIndex * lngStep) + (lngStep / 2);
+        }
+    } else {
+        // ถ้ารถออกมานอกขอบเขตตึก ให้รีเซ็ตเวลาใหม่
+        simIndoorTicks = 0;
     }
 
     // อัปเดตพิกัด Marker บนหน้าจอทันที เพื่อไม่ให้เกิดภาพกระตุก (Warping)
