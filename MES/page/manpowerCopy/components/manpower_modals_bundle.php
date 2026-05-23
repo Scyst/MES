@@ -491,8 +491,8 @@
                     <i class="fas fa-chart-network me-2 text-info"></i>Integrated Manpower Analysis
                 </h5>
                 <div>
-                    <button type="button" class="btn btn-sm btn-outline-light me-2" onclick="Actions.exportAnalysisToExcel()">
-                        <i class="fas fa-file-excel me-1 text-success"></i> Export Excel
+                    <button type="button" class="btn btn-sm btn-outline-light me-2" onclick="Actions.saveAnalysisAsImage()">
+                        <i class="fas fa-camera-retro me-1 text-warning"></i> Save as Image
                     </button>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>

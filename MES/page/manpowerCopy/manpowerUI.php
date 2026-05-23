@@ -32,6 +32,8 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
             transition: all 0.3s ease;
         }
     </style>
+    <!-- Add html2canvas for saving modal as image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQmJb0MtwTytB1B0W5ZlX51/h1zZ2/q5V7e8H1S8h3+zQpZ4d3J3xP5s9fO2H0bZ2F6p+kK+dO2a3/8g5Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 
 <body class="dashboard-page layout-top-header">

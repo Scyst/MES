@@ -16,17 +16,16 @@ const FACTORY_BOUNDS = [
     [12.883121, 101.096783]  // Lat, Lng ขวาล่างของอาคาร
 ];
 
-// 📌 [สำคัญ] พิกัดจำลองของพื้นที่ "ภายในอาคาร" (Indoor)
-// ถ้ารถเข้ามาในขอบเขตนี้ จะทำงานแบบ Wi-Fi Tracking (บล็อก)
-const INDOOR_BOUNDS = [
-    [12.888000, 101.090000], // ซ้ายบนของ Indoor
-    [12.884500, 101.094500]  // ขวาล่างของ Indoor
-];
+
 
 let map;
 let forkliftMarkers = {}; 
 let gridLayerGroup; // สำหรับเก็บเส้น Grid และสีไฮไลต์
 let isGridVisible = false; // ปิดเส้นตารางไว้ก่อนตอนเริ่มต้น
+
+// สถานะสำหรับการตั้งค่าตึกจำลอง
+let isIndoorSetupMode = false;
+let indoorSimGrids = JSON.parse(localStorage.getItem('indoorSimGrids') || '[]');
 
 // [FUTURE FEATURE] ตัวแปรสำหรับ X-Ray Mode
 let xrayLayer;
@@ -108,6 +107,8 @@ function toggleXray() {
         map.removeLayer(xrayLayer); // ดึงแผ่นใสออก
     }
 }
+
+
 
 // ========================================================
 // 2. โหลดข้อมูล Zone ที่เคย Map ไว้แล้ว
@@ -854,6 +855,24 @@ function hideSimUI() {
     Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'ซ่อน UI แล้ว (กดจอยสติ๊ก 🎮 มุมล่างซ้ายเพื่อเปิดใหม่)', showConfirmButton: false, timer: 3000 });
 }
 
+function toggleIndoorSetupMode() {
+    isIndoorSetupMode = !isIndoorSetupMode;
+    const btn = document.getElementById('indoor-setup-btn');
+    if (isIndoorSetupMode) {
+        btn.classList.replace('btn-outline-info', 'btn-info');
+        btn.classList.add('text-white');
+        
+        // บังคับเปิดตาราง Grid ถ้ายังไม่เปิด
+        if (!isGridVisible) toggleGrid();
+        
+        Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'โหมดตั้งค่าตึก: คลิกที่ช่อง Grid เพื่อกำหนดเป็นพื้นที่ในอาคาร', showConfirmButton: false, timer: 4000 });
+    } else {
+        btn.classList.replace('btn-info', 'btn-outline-info');
+        btn.classList.remove('text-white');
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'ออกจากโหมดตั้งค่าตึกแล้ว', showConfirmButton: false, timer: 2000 });
+    }
+}
+
 function addSimWaypoint(latlng) {
     simWaypoints.push(latlng);
     
@@ -968,27 +987,30 @@ function processSimStep(code, speed, tick) {
     let displayLat = simCurrentPosition.lat;
     let displayLng = simCurrentPosition.lng;
 
-    // เช็คว่าอยู่ใน INDOOR_BOUNDS หรือไม่
-    if (displayLat <= INDOOR_BOUNDS[0][0] && displayLat >= INDOOR_BOUNDS[1][0] &&
-        displayLng >= INDOOR_BOUNDS[0][1] && displayLng <= INDOOR_BOUNDS[1][1]) {
-        
-        // อยู่ในอาคาร -> คำนวณหาช่องตาราง (Grid Cell) ปัจจุบัน
-        const latTop = FACTORY_BOUNDS[0][0];
-        const lngLeft = FACTORY_BOUNDS[0][1];
-        const latBottom = FACTORY_BOUNDS[1][0];
-        const lngRight = FACTORY_BOUNDS[1][1];
+    const latTop = FACTORY_BOUNDS[0][0];
+    const lngLeft = FACTORY_BOUNDS[0][1];
+    const latBottom = FACTORY_BOUNDS[1][0];
+    const lngRight = FACTORY_BOUNDS[1][1];
 
-        const latStep = (latTop - latBottom) / GRID_ROWS;
-        const lngStep = (lngRight - lngLeft) / GRID_COLS;
+    const latStep = (latTop - latBottom) / GRID_ROWS;
+    const lngStep = (lngRight - lngLeft) / GRID_COLS;
 
-        // หาสัดส่วนว่าอยู่ Index ที่เท่าไหร่
-        let rIndex = Math.floor((latTop - displayLat) / latStep);
-        let cIndex = Math.floor((displayLng - lngLeft) / lngStep);
-        
-        // Limit bound safety
-        if (rIndex < 0) rIndex = 0; if (rIndex >= GRID_ROWS) rIndex = GRID_ROWS - 1;
-        if (cIndex < 0) cIndex = 0; if (cIndex >= GRID_COLS) cIndex = GRID_COLS - 1;
+    // หาช่องตารางที่รถอยู่ปัจจุบัน
+    let rIndex = Math.floor((latTop - displayLat) / latStep);
+    let cIndex = Math.floor((displayLng - lngLeft) / lngStep);
+    
+    // Safety
+    if (rIndex < 0) rIndex = 0; if (rIndex >= GRID_ROWS) rIndex = GRID_ROWS - 1;
+    if (cIndex < 0) cIndex = 0; if (cIndex >= GRID_COLS) cIndex = GRID_COLS - 1;
 
+    // แปลงกลับเป็นชื่อ Grid (เช่น C4)
+    const rowNum = rIndex + 1;
+    const colName = String.fromCharCode(65 + cIndex);
+    const cellId = colName + rowNum;
+
+    // ถ้ารถอยู่ในขอบเขตตึกที่ตั้งค่าไว้ (หรือมีเสา Wi-Fi แล้ว ก็ให้เป็น Wi-Fi Snap เลย)
+    const isMapped = window.mappedZones && window.mappedZones.some(z => z.grid_col === colName && z.grid_row === rowNum.toString());
+    if (indoorSimGrids.includes(cellId) || isMapped) {
         // คืนค่ากลับไปเป็นพิกัด "กึ่งกลาง" ของช่อง Grid นั้นๆ
         displayLat = latTop - (rIndex * latStep) - (latStep / 2);
         displayLng = lngLeft + (cIndex * lngStep) + (lngStep / 2);

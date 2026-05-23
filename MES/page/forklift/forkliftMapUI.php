@@ -123,7 +123,8 @@ $pageHeaderSubtitle = "ระบบติดตามตำแหน่งรถ
                                             <input type="range" id="sim-speed" class="form-range" min="1" max="10" value="3">
                                         </div>
                                         <div class="d-flex justify-content-between mt-2">
-                                            <button class="btn btn-sm btn-outline-danger" onclick="clearSimRoute()">ล้างเส้นทาง</button>
+                                            <button class="btn btn-sm btn-outline-info" onclick="toggleIndoorSetupMode()" id="indoor-setup-btn" title="ตั้งค่าพื้นที่อาคาร"><i class="fas fa-cog"></i></button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="clearSimRoute()" title="ล้างเส้นทาง"><i class="fas fa-trash"></i></button>
                                             <button class="btn btn-sm btn-outline-secondary" onclick="hideSimUI()"><i class="fas fa-eye-slash"></i> ซ่อน UI</button>
                                             <button id="sim-start-btn" class="btn btn-sm btn-success" onclick="toggleSimPlaying()">
                                                 <i class="fas fa-play" id="sim-play-icon"></i> เริ่มจำลอง

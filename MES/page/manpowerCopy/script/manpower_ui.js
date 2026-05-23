@@ -3689,66 +3689,45 @@ const Actions = {
         }
     },
 
-    exportAnalysisToExcel() {
-        if (!this._cachedAnalysisData) {
-            alert('No data to export!');
+    async saveAnalysisAsImage() {
+        if (typeof html2canvas === 'undefined') {
+            alert('Image capture library is not loaded. Please refresh the page and try again.');
             return;
         }
-        
-        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-        const start = document.getElementById('ia_startDate').value;
-        const end = document.getElementById('ia_endDate').value;
-        const line = document.getElementById('superLineSelect')?.options[document.getElementById('superLineSelect').selectedIndex].text || 'ALL';
-        const team = document.getElementById('ia_hcGroupSelect')?.options[document.getElementById('ia_hcGroupSelect').selectedIndex].text || 'ALL';
 
-        csvContent += `Report Period: ${start} to ${end}\r\n`;
-        csvContent += `Focus Line: ${line}\r\n`;
-        csvContent += `Team / Group: ${team}\r\n\r\n`;
-        
-        // 1. KPI Summary
-        csvContent += "=== KPI SUMMARY ===\r\n";
-        const summary = this._cachedAnalysisData.summary;
-        csvContent += "Total HC,Actual Present,Total Absent,Total Leave,New Joiners,Resigned\r\n";
-        csvContent += `${summary.Total_Unique_HC || 0},${summary.Total_Present_ManDays || 0},${summary.Total_Absent_ManDays || 0},${summary.Total_Leave_ManDays || 0},${summary.New_Joiners || 0},${summary.Resigned || 0}\r\n\r\n`;
-        
-        // 2. Trend Data
-        csvContent += "=== DAILY TREND ===\r\n";
-        const trend = this._cachedAnalysisData.trend;
-        if (trend && trend.length > 0) {
-            csvContent += Object.keys(trend[0]).join(",") + "\r\n";
-            trend.forEach(row => {
-                csvContent += Object.values(row).map(v => `"${v}"`).join(",") + "\r\n";
+        const modalBody = document.querySelector('#integratedAnalysisModal .modal-body');
+        if (!modalBody) return;
+
+        UI.showLoader();
+        try {
+            // Adjust styling temporarily for better capture if needed
+            const originalOverflow = modalBody.style.overflow;
+            modalBody.style.overflow = 'visible';
+
+            const canvas = await html2canvas(modalBody, {
+                scale: 2, // Higher quality
+                useCORS: true,
+                backgroundColor: '#f8f9fc',
+                logging: false
             });
-            csvContent += "\r\n";
-        }
 
-        // 3. Financials
-        csvContent += "=== FINANCIALS ===\r\n";
-        const fin = this._cachedAnalysisData.financials;
-        if (fin && fin.length > 0) {
-            csvContent += Object.keys(fin[0]).join(",") + "\r\n";
-            fin.forEach(row => {
-                csvContent += Object.values(row).map(v => `"${v}"`).join(",") + "\r\n";
-            });
-            csvContent += "\r\n";
-        }
+            // Restore styling
+            modalBody.style.overflow = originalOverflow;
 
-        // 4. Distribution
-        csvContent += "=== DISTRIBUTION ===\r\n";
-        const dist = this._cachedAnalysisData.distribution;
-        if (dist && dist.length > 0) {
-            csvContent += Object.keys(dist[0]).join(",") + "\r\n";
-            dist.forEach(row => {
-                csvContent += Object.values(row).map(v => `"${v}"`).join(",") + "\r\n";
-            });
+            // Trigger download
+            const image = canvas.toDataURL("image/jpeg", 0.9);
+            const link = document.createElement('a');
+            
+            const start = document.getElementById('ia_startDate').value;
+            const end = document.getElementById('ia_endDate').value;
+            link.download = `Manpower_Analysis_${start}_to_${end}.jpg`;
+            link.href = image;
+            link.click();
+        } catch (err) {
+            console.error("Error capturing image:", err);
+            alert("Failed to capture image: " + err.message);
+        } finally {
+            UI.hideLoader();
         }
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `Integrated_Analysis_${start}_to_${end}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     }
 };
