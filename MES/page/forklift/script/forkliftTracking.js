@@ -43,18 +43,22 @@ let simTargetIndex = 0;
 let simIndoorTicks = 0; // ตัวนับเวลาว่าอยู่ในตึกนานแค่ไหน
 
 document.addEventListener('DOMContentLoaded', function() {
-    initMap();
     fetchMapData();
-    fetchMappedZones(); // โหลดข้อมูล Zone ทั้งหมดมาเก็บไว้ตอนเปิดหน้าเว็บ
     setInterval(fetchMapData, 3000);
 
-    // ========================================================
-    // 🛠️ DEV TOOL: คลิกบนแผนที่เพื่อ Map Wi-Fi Zone
-    // ========================================================
-    document.getElementById('map-container').addEventListener('click', function(e) {
-        // ให้ฟังก์ชันนี้ทำงานผ่าน Leaflet map.on('click') แทนจะดีกว่า เพื่อให้ตรงพิกัด
-        // แต่ถ้าผูกไว้กับ Grid Rectangle แล้ว ส่วนนี้อาจจะไม่ค่อยได้ใช้ครับ
-    });
+    const mapContainer = document.getElementById('map-container');
+    if (mapContainer) {
+        initMap();
+        fetchMappedZones(); // โหลดข้อมูล Zone ทั้งหมดมาเก็บไว้ตอนเปิดหน้าเว็บ
+
+        // ========================================================
+        // 🛠️ DEV TOOL: คลิกบนแผนที่เพื่อ Map Wi-Fi Zone
+        // ========================================================
+        mapContainer.addEventListener('click', function(e) {
+            // ให้ฟังก์ชันนี้ทำงานผ่าน Leaflet map.on('click') แทนจะดีกว่า เพื่อให้ตรงพิกัด
+            // แต่ถ้าผูกไว้กับ Grid Rectangle แล้ว ส่วนนี้อาจจะไม่ค่อยได้ใช้ครับ
+        });
+    }
 
     // คำนวณเวลาคืนรถอัตโนมัติ (+1 ชม.) สำหรับหน้า Booking
     const bookStartInput = document.getElementById('book_start_time');
@@ -293,13 +297,19 @@ function getColumnLetter(colIndex) {
 // 5. ดึงข้อมูลรถโฟล์คลิฟต์
 // ========================================================
 function fetchMapData() {
-    // 💡 อัปเดต Path เป็น webTracking.php
     fetch('api/webTracking.php?action=get_realtime')
         .then(response => response.json())
         .then(res => {
             if(res.success) {
-                renderMapMarkers(res.data);
-                renderList(res.data);
+                globalForkliftData = res.data;
+                if(typeof updateKPIs === 'function') updateKPIs(globalForkliftData);
+                const container = document.getElementById('map-container');
+                if (container) {
+                    renderMapMarkers(res.data);
+                    renderList(res.data);
+                }
+                const timeEl = document.getElementById('last-update-time');
+                if(timeEl) timeEl.innerText = new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
             }
         })
         .catch(err => console.error("Map Fetch Error:", err));
@@ -376,66 +386,100 @@ function renderMapMarkers(data) {
 // 7. วาด List รายการรถด้านขวามือ
 // ========================================================
 function renderList(data) {
-    window.lastData = data;
     const list = document.getElementById('forklift-list');
-    list.innerHTML = '';
+    if(!list) return;
+    let html = '';
+
+    if (data.length === 0) {
+        list.innerHTML = '<li class="list-group-item text-center text-muted">ไม่พบข้อมูล</li>';
+        return;
+    }
 
     data.forEach(fl => {
-        const statusBadge = fl.is_offline == 1 
-            ? '<span class="badge bg-secondary">Offline</span>' 
-            : '<span class="badge bg-success">Online</span>';
+        const isOffline = fl.is_offline == 1 || (new Date() - new Date(fl.last_updated)) > 180000;
+        const statusIcon = isOffline ? '<i class="fas fa-wifi text-secondary" title="Offline"></i>' : '<i class="fas fa-wifi text-success" title="Online"></i>';
         
-        const batteryColor = fl.current_battery > 20 ? 'text-success' : 'text-danger';
-        const locTypeBadge = fl.location_type === 'OUTDOOR' 
-            ? '<span class="badge bg-primary ms-1"><i class="fas fa-satellite"></i> GPS</span>' 
-            : '<span class="badge bg-info ms-1"><i class="fas fa-wifi"></i> WiFi</span>';
-        const loc = fl.last_location || 'Unknown';
+        let stateText = 'ว่าง (Available)'; let stateClass = 'bg-success';
+        if (fl.status === 'MAINTENANCE') { stateText = 'ซ่อมบำรุง'; stateClass = 'bg-secondary'; }
+        else if (fl.status === 'IN_USE') { stateText = 'กำลังใช้งาน'; stateClass = 'bg-primary'; }
+        else if (fl.status === 'CHARGING') { stateText = 'กำลังชาร์จ'; stateClass = 'bg-warning text-dark'; }
 
-        // เช็คว่าคันนี้กำลังถูก Follow อยู่ไหม เพื่อเปลี่ยนสีปุ่ม
+        let batIcon = 'fa-battery-full text-success';
+        if(fl.current_battery < 20) batIcon = 'fa-battery-empty text-danger';
+        else if(fl.current_battery < 50) batIcon = 'fa-battery-half text-warning';
+
         const isFollowing = (followedForklift === fl.code);
-        // เช็คว่ากำลังโชว์เส้นทางคันนี้อยู่ไหม
         const isShowingTrail = (showingTrailFor === fl.code); 
+        const followBtnClass = isFollowing ? 'btn-danger' : 'btn-light';
+        const trailBtnClass = isShowingTrail ? 'btn-info text-white' : 'btn-light';
+
+        const myPendingBooking = typeof globalBookings !== 'undefined' ? globalBookings.find(b => b.forklift_id == fl.id && b.user_name === CURRENT_USER_NAME && b.status === 'BOOKED') : null;
+        let actionBtn = '';
         
-        const followBtnClass = isFollowing ? 'btn-danger' : 'btn-outline-primary';
-        const trailBtnClass = isShowingTrail ? 'btn-info text-white' : 'btn-outline-info';
+        if (fl.status === 'MAINTENANCE') {
+            actionBtn = `<button class="btn btn-sm btn-light border text-muted w-100" disabled><i class="fas fa-ban me-1"></i> ปิดใช้งาน</button>`;
+        } else if (fl.status === 'IN_USE') {
+            if (fl.current_driver === CURRENT_USER_NAME || (typeof IS_ADMIN !== 'undefined' && IS_ADMIN)) {
+                let bClass = (fl.current_driver === CURRENT_USER_NAME) ? 'btn-warning' : 'btn-danger';
+                let bText = (fl.current_driver === CURRENT_USER_NAME) ? 'คืนรถ' : 'บังคับคืน';
+                actionBtn = `<button class="btn btn-sm ${bClass} w-100 fw-bold shadow-sm" onclick="event.stopPropagation(); checkAction(${fl.id})"><i class="fas fa-undo me-1"></i>${bText}</button>`;
+            } else {
+                actionBtn = `<button class="btn btn-sm btn-outline-primary w-100 fw-bold shadow-sm" onclick="event.stopPropagation(); openBookingModal(${fl.id}, '${fl.code}', '${fl.name}')"><i class="far fa-clock me-1"></i> จองคิว</button>`;
+            }
+        } else if (myPendingBooking) {
+            actionBtn = `<button class="btn btn-sm btn-success w-100 fw-bold shadow-sm" onclick="event.stopPropagation(); checkAction(${fl.id})"><i class="fas fa-play me-1"></i> เริ่มงาน</button>`;
+        } else {
+            actionBtn = `<button class="btn btn-sm btn-primary w-100 fw-bold shadow-sm" onclick="event.stopPropagation(); checkAction(${fl.id})"><i class="fas fa-key me-1"></i> เบิกใช้</button>`;
+        }
 
-        const li = `
-            <li class="list-group-item d-flex justify-content-between align-items-center list-hover-effect" 
-                style="cursor: pointer; transition: background 0.3s;" 
-                onclick="flyToForklift('${fl.code}')"
-                onmouseover="this.style.backgroundColor='#f8f9fa'" 
-                onmouseout="this.style.backgroundColor='transparent'">
-                
-                <div class="ms-2 me-auto">
-                    <div class="fw-bold">${fl.code} - ${fl.name || 'Forklift'} ${locTypeBadge}</div>
-                    <small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i> ${loc}</small>
+        let activeTaskHtml = '';
+        if (fl.status === 'IN_USE' && fl.usage_details) {
+            let estReturn = fl.end_time_est ? fl.end_time_est.substring(11, 16) : '-';
+            activeTaskHtml = `
+            <div class="mt-2 mb-2 p-2 rounded bg-primary bg-opacity-10 border border-primary border-opacity-25" style="font-size: 0.75rem;">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-primary fw-bold"><i class="fas fa-tasks me-1"></i> ${fl.usage_details}</span>
                 </div>
-                
-                <div class="text-end me-3">
-                    ${statusBadge}<br>
-                    <small class="${batteryColor}"><i class="fas fa-battery-half"></i> ${fl.current_battery || 0}%</small>
+                <div class="d-flex justify-content-between text-muted">
+                    <span><i class="fas fa-hourglass-half me-1"></i> คืนรถ(Est): <strong class="text-danger">${estReturn}</strong></span>
                 </div>
+            </div>`;
+        }
 
-                <div class="btn-group">
-                    <button class="btn btn-sm btn-outline-success" onclick="openBookingModal('${fl.id}', '${fl.code}', '${fl.name}', event)" title="จองรถ / เบิกใช้">
-                        <i class="far fa-calendar-plus"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-warning text-dark" onclick="initPlayback('${fl.code}', event)" title="จำลองการวิ่งย้อนหลัง">
-                        <i class="fas fa-play-circle"></i>
-                    </button>
-                    
-                    <button class="btn btn-sm ${trailBtnClass}" onclick="toggleSnailTrail('${fl.code}', event)" title="ดูเส้นทางย้อนหลัง 1 ชม.">
-                        <i class="fas fa-route"></i>
-                    </button>
-                    <button class="btn btn-sm ${followBtnClass}" onclick="toggleFollow('${fl.code}', event)" title="ล็อกเป้าติดตาม">
-                        <i class="fas fa-crosshairs"></i>
-                    </button>
+        html += `
+        <li class="list-group-item p-3 fleet-list-item" onclick="flyToForklift('${fl.code}')" style="cursor: pointer;">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark">${fl.code} <span class="text-muted fw-normal ms-1" style="font-size:0.75rem;">${fl.name}</span></h6>
                 </div>
-            </li>
-        `;
-        list.insertAdjacentHTML('beforeend', li);
+                <div>
+                    ${statusIcon} <span class="badge ${stateClass} ms-1">${stateText}</span>
+                </div>
+            </div>
+            
+            <div class="fleet-info-grid">
+                <div class="text-truncate" title="${fl.current_driver||'-'}"><i class="fas fa-user-circle"></i> ${fl.current_driver||'-'}</div>
+                <div class="text-end"><i class="fas ${batIcon}"></i> ${fl.current_battery||0}%</div>
+                <div class="text-truncate" style="grid-column: span 2;" title="${fl.last_location||'Unknown'}"><i class="fas fa-map-marker-alt"></i> ${fl.last_location||'Unknown'}</div>
+            </div>
+
+            ${activeTaskHtml}
+
+            <div class="d-flex justify-content-between align-items-center mt-2">
+                <div class="btn-group shadow-sm" role="group">
+                    <button class="btn btn-sm btn-light border" onclick="initPlayback('${fl.code}', event)" title="Playback"><i class="fas fa-play-circle text-secondary"></i></button>
+                    <button class="btn btn-sm ${trailBtnClass} border" onclick="toggleSnailTrail('${fl.code}', event)" title="Trail"><i class="fas fa-route"></i></button>
+                    <button class="btn btn-sm ${followBtnClass} border" onclick="toggleFollow('${fl.code}', event)" title="Follow"><i class="fas fa-crosshairs"></i></button>
+                </div>
+                <div style="min-width: 100px;">
+                    ${actionBtn}
+                </div>
+            </div>
+        </li>`;
     });
-    filterForkliftList();
+    
+    list.innerHTML = html;
+    if(typeof filterForkliftList === 'function') filterForkliftList();
 }
 
 // ========================================================
@@ -1134,7 +1178,7 @@ function openBookingModal(id, code, name, event) {
         startTimeInput.dispatchEvent(new Event('change'));
     }
     
-    new bootstrap.Modal(document.getElementById('bookingModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('bookingModal')).show();
 }
 
 async function submitBooking() {
@@ -1157,10 +1201,11 @@ async function submitBooking() {
         const res = await fetch('api/forkliftManage.php', { method: 'POST', body: formData });
         const json = await res.json();
         
-        if (json.status) {
+        if (json.status || json.success) {
             bootstrap.Modal.getInstance(modalEl).hide();
             Swal.fire({icon: 'success', title: 'จองสำเร็จ!', timer: 1500, showConfirmButton: false});
             fetchMapData(); // โหลดข้อมูลใหม่
+            fetchTimelineData();
         } else {
             Swal.fire('แจ้งเตือน', json.message, 'warning');
         }
@@ -1173,4 +1218,313 @@ async function submitBooking() {
             submitBtn.innerHTML = originalText;
         }
     }
+}
+
+// ========================================================
+// 📊 Dashboard KPIs & Modals
+// ========================================================
+function updateKPIs(data) {
+    let total = data.length;
+    let avail = 0, inUse = 0, maint = 0;
+    
+    data.forEach(fl => {
+        if (fl.status === 'MAINTENANCE') maint++;
+        else if (fl.status === 'IN_USE') inUse++;
+        else avail++; 
+    });
+
+    if(document.getElementById('kpi-total')) document.getElementById('kpi-total').innerText = total;
+    if(document.getElementById('kpi-avail')) document.getElementById('kpi-avail').innerText = avail;
+    if(document.getElementById('kpi-use')) document.getElementById('kpi-use').innerText = inUse;
+    if(document.getElementById('kpi-maint')) document.getElementById('kpi-maint').innerText = maint;
+}
+
+async function openHistoryModal() {
+    try {
+        const fd = new FormData(); fd.append('action', 'get_history');
+        const res = await fetch('api/forkliftManage.php', { method: 'POST', body: fd });
+        const json = await res.json();
+        if (json.success || json.status) {
+            let tbody = '';
+            json.data.forEach(h => {
+                const st = h.start_time ? h.start_time.substring(0, 16) : '-';
+                const et = (h.status === 'COMPLETED' && h.end_time_actual) ? h.end_time_actual.substring(11, 16) : (h.end_time_est ? h.end_time_est.substring(11, 16) + ' (Est)' : '-');
+                
+                let statusBadge = '';
+                if (h.status === 'ACTIVE') statusBadge = '<span class="badge bg-primary">ใช้งานอยู่</span>';
+                else if (h.status === 'BOOKED') statusBadge = '<span class="badge bg-warning text-dark">จองล่วงหน้า</span>';
+                else statusBadge = '<span class="badge bg-secondary">คืนแล้ว</span>';
+
+                tbody += `<tr>
+                    <td class="ps-3">${st}</td>
+                    <td class="fw-bold">${h.forklift_code}</td>
+                    <td>${h.user_name}</td>
+                    <td>
+                        <div class="text-truncate" style="max-width: 150px;" title="${h.usage_details || '-'}">${h.usage_details || '-'}</div>
+                    </td>
+                    <td>${st.substring(11,16)} - ${et}</td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td class="text-center text-muted">${h.start_battery || '-'}%</td>
+                    <td class="text-center fw-bold">${h.end_battery || '-'}%</td>
+                </tr>`;
+            });
+
+            document.querySelector('#historyTableBody').innerHTML = tbody;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('historyModal')).show();
+        }
+    } catch (e) { console.error(e); }
+}
+
+function openManageModal() {
+    let tbody = '';
+    globalForkliftData.forEach(fl => {
+        let stClass = fl.status === 'AVAILABLE' ? 'text-success' : (fl.status === 'MAINTENANCE' ? 'text-secondary' : 'text-primary');
+        
+        tbody += `<tr>
+            <td class="ps-4 fw-bold">${fl.code}</td>
+            <td>${fl.name}</td>
+            <td class="${stClass} fw-bold">${fl.status}</td>
+            <td>${fl.last_location || '-'}</td>
+            <td class="text-end pe-4">
+                <button class="btn btn-sm btn-outline-dark me-1" onclick="generateQRCode('${fl.code}')" title="สร้าง QR Code">
+                    <i class="fas fa-qrcode"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-primary" onclick="editForklift(${fl.id}, '${fl.code}', '${fl.name}', '${fl.status}', '${fl.last_location||''}')" title="แก้ไข">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </td>
+        </tr>`;
+    });
+    
+    document.getElementById('manageTableBody').innerHTML = tbody;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('manageModal')).show();
+}
+
+function generateQRCode(code) {
+    const host = window.location.origin;
+    const mobileUrl = `${host}/MES/page/forklift/scan.php?code=${encodeURIComponent(code)}`;
+
+    Swal.fire({
+        title: `<h5 class="fw-bold mb-0">QR Code ประจำรถ: <span class="text-primary">${code}</span></h5>`,
+        html: `
+            <div class="text-center mt-3">
+                <div id="qrcode-container" class="d-inline-block p-2 bg-white border rounded-3 shadow-sm mb-3"></div>
+                <div class="bg-light p-2 rounded border small text-break user-select-all" style="font-family: monospace;">
+                    ${mobileUrl}
+                </div>
+                <button class="btn btn-sm btn-dark mt-3 w-100 fw-bold" onclick="copyToClipboard('${mobileUrl}')">
+                    <i class="fas fa-copy me-2"></i> คัดลอก URL
+                </button>
+            </div>
+        `,
+        didOpen: () => {
+            const qrContainer = document.getElementById("qrcode-container");
+            if (qrContainer) {
+                qrContainer.innerHTML = "";
+                new QRCode(qrContainer, {
+                    text: mobileUrl,
+                    width: 250,
+                    height: 250,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            }
+        },
+        showConfirmButton: true,
+        confirmButtonText: 'ปิด (Close)',
+        confirmButtonColor: '#6c757d'
+    });
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        Swal.fire({
+            toast: true, position: 'top-end', icon: 'success', 
+            title: 'คัดลอก URL แล้ว!', showConfirmButton: false, timer: 1500
+        });
+    }
+
+// ========================================================
+// 🔄 Action Checks (Start, Return, Force Return)
+// ========================================================
+
+async function checkAction(forkliftId, code, name) {
+    const flData = globalForkliftData.find(f => f.id == forkliftId);
+    if (flData && flData.status === 'MAINTENANCE') {
+        Swal.fire('แจ้งเตือน', 'รถคันนี้งดให้บริการ (Maintenance)', 'warning');
+        return;
+    }
+
+    const safeName = flData ? flData.name : (name || 'Forklift');
+    const safeCode = flData ? flData.code : (code || '-');
+    const currentBatt = flData ? flData.current_battery : 100;
+
+    // 1. คืนรถ (เราขับเอง)
+    if (flData.status === 'IN_USE' && flData.current_driver === CURRENT_USER_NAME) {
+        openReturnModal(flData.active_booking_id, flData.id, safeCode, currentBatt);
+        return; 
+    }
+
+    // 2. คนอื่นใช้
+    if (flData.status === 'IN_USE') {
+        if (typeof IS_ADMIN !== 'undefined' && IS_ADMIN) {
+             if(confirm(`⚠️ Admin Action: รถคันนี้ใช้งานโดย "${flData.current_driver}"\nคุณต้องการบังคับคืนรถ (Force Return) ใช่หรือไม่?`)) {
+                 openReturnModal(flData.active_booking_id, flData.id, safeCode, currentBatt);
+             }
+             return;
+        }
+        Swal.fire('ไม่สามารถใช้งานได้', `รถคันนี้กำลังถูกใช้งานโดย: ${flData.current_driver}`, 'warning');
+        return;
+    }
+
+    // 3. เริ่มงานที่จองไว้
+    const myBooking = typeof globalBookings !== 'undefined' ? globalBookings.find(b => 
+        b.forklift_id == forkliftId && 
+        b.user_name === CURRENT_USER_NAME && 
+        b.status === 'BOOKED'
+    ) : null;
+    
+    if (myBooking) {
+        openStartJobModal(myBooking.booking_id, forkliftId, safeName, myBooking.usage_details, currentBatt);
+    } else {
+        openStartJobModal(null, forkliftId, safeName, '', currentBatt);
+    }
+}
+
+function syncBatteryInput(prefix, val) {
+    const range = document.getElementById(prefix + '_battery_range');
+    const input = document.getElementById(prefix + '_battery_input');
+    if(range) range.value = val;
+    if(input) input.value = val;
+}
+
+function openStartJobModal(bookingId, forkliftId, name, details, currentBatt) {
+    document.getElementById('startJobForm').reset();
+    document.getElementById('start_booking_id').value = bookingId || '';
+    document.getElementById('start_forklift_id').value = forkliftId;
+    document.getElementById('start_usage_details').value = details || '';
+    if(document.getElementById('start_forklift_name')) document.getElementById('start_forklift_name').innerText = name;
+
+    const batt = currentBatt || 100;
+    syncBatteryInput('start', batt);
+    
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('startJobModal')).show();
+}
+
+async function submitStartJob() {
+    const form = document.getElementById('startJobForm');
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    
+    const formData = new FormData(form);
+    const bookingId = document.getElementById('start_booking_id').value;
+
+    if (bookingId) {
+        formData.append('action', 'start_job');
+    } else {
+        formData.append('action', 'book_forklift');
+        formData.append('booking_type', 'INSTANT');
+        const now = new Date();
+        const nextHour = new Date(now.getTime() + 60*60*1000);
+        const toLocalISO = (date) => {
+            const offset = date.getTimezoneOffset() * 60000;
+            return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+        };
+        formData.append('start_time', toLocalISO(now));
+        formData.append('end_time_est', toLocalISO(nextHour));
+    }
+
+    const modalEl = document.querySelector('#startJobModal');
+    const submitBtn = modalEl.querySelector('.modal-footer .btn-primary');
+    const originalText = submitBtn ? submitBtn.innerHTML : '';
+    if(submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...'; }
+
+    try {
+        const res = await fetch('api/forkliftManage.php', { method: 'POST', body: formData });
+        const json = await res.json();
+        if (json.status || json.success) {
+            bootstrap.Modal.getInstance(modalEl).hide();
+            Swal.fire({icon: 'success', title: 'เริ่มงานแล้ว!', timer: 1500, showConfirmButton: false});
+            fetchMapData();
+        } else {
+            Swal.fire('แจ้งเตือน', json.message, 'warning');
+        }
+    } catch(e) { console.error(e); Swal.fire('Error', 'System Error', 'error'); }
+    finally { if(submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalText; } }
+}
+
+function openReturnModal(bookingId, forkliftId, code, currentBatt) {
+    document.getElementById('returnForm').reset();
+    document.getElementById('return_booking_id').value = bookingId;
+    document.getElementById('return_forklift_id').value = forkliftId;
+    if(document.getElementById('return_forklift_name')) document.getElementById('return_forklift_name').innerText = code;
+    
+    const batt = currentBatt || 100;
+    syncBatteryInput('return', batt);
+
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('returnModal')).show();
+}
+
+async function submitReturn() {
+    const form = document.getElementById('returnForm');
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    
+    const formData = new FormData(form);
+    formData.append('action', 'return_forklift');
+    
+    const modalEl = document.querySelector('#returnModal');
+    const submitBtn = modalEl.querySelector('.modal-footer .btn-danger');
+    const originalText = submitBtn ? submitBtn.innerHTML : '';
+    if(submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...'; }
+
+    try {
+        const res = await fetch('api/forkliftManage.php', { method: 'POST', body: formData });
+        const json = await res.json();
+        if (json.status || json.success) {
+            bootstrap.Modal.getInstance(modalEl).hide();
+            Swal.fire({icon: 'success', title: 'คืนรถเรียบร้อย!', timer: 1500, showConfirmButton: false});
+            fetchMapData();
+        } else {
+            Swal.fire('แจ้งเตือน', json.message, 'warning');
+        }
+    } catch(e) { console.error(e); Swal.fire('Error', 'System Error', 'error'); }
+    finally { if(submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalText; } }
+}).catch(err => {
+        console.error('Could not copy text: ', err);
+    });
+}
+
+function editForklift(id, code, name, status, loc) {
+    document.getElementById('manage_action').value = 'update_forklift';
+    document.getElementById('manage_id').value = id;
+    document.getElementById('manage_code').value = code;
+    document.getElementById('manage_name').value = name;
+    document.getElementById('manage_status').value = status;
+    document.getElementById('manage_location').value = loc;
+    document.getElementById('btn-cancel-edit').style.display = 'inline-block';
+}
+
+function resetManageForm() {
+    document.getElementById('manageForkliftForm').reset();
+    document.getElementById('manage_action').value = 'add_forklift';
+    document.getElementById('manage_id').value = '';
+    document.getElementById('btn-cancel-edit').style.display = 'none';
+}
+
+async function saveForklift() {
+    const form = document.getElementById('manageForkliftForm');
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    
+    const formData = new FormData(form);
+    try {
+        const res = await fetch('api/forkliftManage.php', { method: 'POST', body: formData });
+        const json = await res.json();
+        if(json.status || json.success) {
+            resetManageForm();
+            openManageModal(); 
+            fetchMapData();
+        } else {
+            alert(json.message);
+        }
+    } catch(e) { console.error(e); }
 }

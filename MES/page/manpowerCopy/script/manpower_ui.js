@@ -1231,12 +1231,12 @@ const UI = {
         return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' });
     },
 
-    populateAnalysisDropdown: async function () {
+    populateAnalysisDropdown: async function (hcGroup = 'ALL') {
         const selectEl = document.getElementById('superLineSelect');
         if (!selectEl) return;
 
         try {
-            const response = await fetch('api/api_master_data.php?action=read_structure');
+            const response = await fetch(`api/api_master_data.php?action=read_structure&hcGroup=${encodeURIComponent(hcGroup)}`);
             const json = await response.json();
             if (json.success && json.lines) {
                 const currentValue = selectEl.value;
@@ -3571,19 +3571,28 @@ const Actions = {
             }
         }
 
-        const inputs = [startInput, endInput, lineSelect, hcGroupSelect];
-        inputs.forEach(el => {
+        const runIfValid = () => {
+            if (startInput.value && endInput.value) {
+                this.runSuperAnalysis();
+            }
+        };
+
+        [startInput, endInput, lineSelect].forEach(el => {
             if (el) {
                 el.onchange = null;
-                el.onchange = () => {
-                    if (startInput.value && endInput.value) {
-                        this.runSuperAnalysis();
-                    }
-                };
+                el.onchange = runIfValid;
             }
         });
 
-        UI.populateAnalysisDropdown();
+        if (hcGroupSelect) {
+            hcGroupSelect.onchange = null;
+            hcGroupSelect.onchange = async () => {
+                await UI.populateAnalysisDropdown(hcGroupSelect.value);
+                runIfValid();
+            };
+        }
+
+        UI.populateAnalysisDropdown(hcGroupSelect ? hcGroupSelect.value : 'ALL');
         const modal = new bootstrap.Modal(modalEl);
         modal.show();
         setTimeout(() => this.runSuperAnalysis(), 300);
@@ -3639,13 +3648,14 @@ const Actions = {
                     if (document.getElementById(`ia_rpt_${prefix}_avg`)) document.getElementById(`ia_rpt_${prefix}_avg`).innerText = statsObj.avg;
                 };
 
-                setCardStats('hc', summary.Total_Unique_HC, calcStats(trend, 'Daily_HC'));
-                setCardStats('actual', summary.Total_Present_ManDays, calcStats(trend, 'Act_Present'));
-                setCardStats('absent', summary.Total_Absent_ManDays, calcStats(trend, 'Act_Absent'));
-                setCardStats('leave', summary.Total_Leave_ManDays, calcStats(trend, 'Act_Leave'));
+                const safeSummary = summary || {};
+                setCardStats('hc', safeSummary.Total_Unique_HC || 0, calcStats(trend || [], 'Daily_HC'));
+                setCardStats('actual', safeSummary.Total_Present_ManDays || 0, calcStats(trend || [], 'Act_Present'));
+                setCardStats('absent', safeSummary.Total_Absent_ManDays || 0, calcStats(trend || [], 'Act_Absent'));
+                setCardStats('leave', safeSummary.Total_Leave_ManDays || 0, calcStats(trend || [], 'Act_Leave'));
                 const elAttr = document.getElementById('ia_rpt_attrition');
-                const newJoin = parseInt(summary.New_Joiners || 0);
-                const resign = parseInt(summary.Resigned || 0);
+                const newJoin = parseInt(safeSummary.New_Joiners || 0);
+                const resign = parseInt(safeSummary.Resigned || 0);
 
                 if (elAttr) {
                     if (newJoin === 0 && resign === 0) {

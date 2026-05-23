@@ -30,8 +30,18 @@ session_write_close();
 try {
     switch ($action) {
         case 'read_structure':
-            // Lines (TEST)
-            $stmtLine = $pdo->query("SELECT DISTINCT line FROM dbo.MANPOWER_EMPLOYEES_TEST WHERE line IS NOT NULL AND line != '' ORDER BY line ASC");
+            $hcGroup = $_GET['hcGroup'] ?? 'ALL';
+            $sqlLine = "SELECT DISTINCT line FROM dbo.MANPOWER_EMPLOYEES_TEST E ";
+            
+            if ($hcGroup !== 'ALL' && $hcGroup !== 'undefined' && $hcGroup !== '') {
+                $sqlLine .= " LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS_TEST TS ON E.department_api = TS.department_api ";
+                $sqlLine .= " WHERE TS.hc_group = :hcGroup AND E.line IS NOT NULL AND E.line != '' ORDER BY E.line ASC";
+                $stmtLine = $pdo->prepare($sqlLine);
+                $stmtLine->execute([':hcGroup' => $hcGroup]);
+            } else {
+                $sqlLine .= " WHERE E.line IS NOT NULL AND E.line != '' ORDER BY E.line ASC";
+                $stmtLine = $pdo->query($sqlLine);
+            }
             $lines = $stmtLine->fetchAll(PDO::FETCH_COLUMN);
 
             // Teams (TEST)
