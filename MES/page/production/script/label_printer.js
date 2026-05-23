@@ -393,7 +393,10 @@ async function openBulkEditMode() {
     });
 
     if (formValues) {
-        const previewSerial = formValues.isRange ? `${formValues.lot}-${formValues.start}` : `${formValues.lot}-1`;
+        const startNo = formValues.isRange ? formValues.start : '1';
+        const padLen = Math.max(3, String(startNo).length);
+        const startStr = String(startNo).padStart(padLen, '0');
+        const previewSerial = `${formValues.lot}-${startStr}`;
 
         const res = await sendRequest(TRANSFER_API_URL, 'get_transfer_details', 'GET', null, { transfer_id: previewSerial });
 
