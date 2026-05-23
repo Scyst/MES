@@ -441,6 +441,7 @@ try {
             break;
 
         case 'save_batch':
+            if (!hasPermission('manage_pl')) throw new Exception("Permission Denied: Manage P&L right is required.");
             $checkLock = $pdo->prepare("SELECT is_locked FROM dbo.DAILY_PL_STATUS WHERE entry_date = :d AND section_name = :s");
             $checkLock->execute([':d' => $_POST['entry_date'], ':s' => $_POST['section']]);
             if ($checkLock->fetchColumn() == 1) {

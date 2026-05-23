@@ -767,6 +767,7 @@ try {
             break;
 
         case 'process_transfer_request':
+            if (!hasPermission('manage_warehouse')) { throw new Exception("Unauthorized: ไม่มีสิทธิ์การจัดการคลังสินค้า"); }
             $transfer_id = (int)($_POST['transfer_id'] ?? 0);
             $action_status = $_POST['action_status'] ?? '';
 
@@ -784,6 +785,7 @@ try {
             break;
 
         case 'bulk_process_transfer_request':
+            if (!hasPermission('manage_warehouse')) { throw new Exception("Unauthorized: ไม่มีสิทธิ์การจัดการคลังสินค้า"); }
             $transferIdsJson = is_string($_POST['transfer_ids']) ? $_POST['transfer_ids'] : json_encode($_POST['transfer_ids']);
             $action_status = $_POST['action_status'] ?? '';
 
@@ -1135,6 +1137,7 @@ try {
             break;
 
         case 'import_excel':
+            if (!hasPermission('manage_warehouse')) { throw new Exception("Unauthorized: ไม่มีสิทธิ์การจัดการคลังสินค้า"); }
             $jsonData = $_POST['data'] ?? '';
             if (empty($jsonData)) throw new Exception("ไม่พบข้อมูลสำหรับการนำเข้า");
 
@@ -1162,6 +1165,7 @@ try {
             break;
 
         case 'group_master_pallet':
+            if (!hasPermission('manage_warehouse')) { throw new Exception("Unauthorized: ไม่มีสิทธิ์การจัดการคลังสินค้า"); }
             $serials = json_decode($_POST['serials'], true);
             if (!is_array($serials) || empty($serials)) throw new Exception("ไม่มีข้อมูลที่เลือกจัดพาเลท");
 
@@ -1195,6 +1199,7 @@ try {
             break;
 
         case 'delete_tag':
+            if (!hasPermission('manage_warehouse')) { throw new Exception("Unauthorized: ไม่มีสิทธิ์การจัดการคลังสินค้า"); }
             $serial_no = $_POST['serial_no'] ?? '';
             if (empty($serial_no)) throw new Exception("ไม่พบ Serial No.");
 
@@ -1207,11 +1212,52 @@ try {
                 throw new Exception('ไม่อนุญาตให้ลบ เนื่องจากวัตถุดิบนี้ถูกเบิกจ่าย หรือเข้าสู่กระบวนการผลิตแล้ว!');
             }
 
+            try {
+                // Check if table DELETED_SERIAL_TAGS exists. If not, create it automatically.
+                $pdo->exec("
+                    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='DELETED_SERIAL_TAGS' and xtype='U')
+                    CREATE TABLE dbo.DELETED_SERIAL_TAGS (
+                        deleted_id INT IDENTITY(1,1) PRIMARY KEY,
+                        serial_no VARCHAR(50) NOT NULL,
+                        master_pallet_no VARCHAR(50) NULL,
+                        item_id INT NOT NULL,
+                        qty_per_pallet DECIMAL(18,4) DEFAULT 0,
+                        current_qty DECIMAL(18,4) DEFAULT 0,
+                        status VARCHAR(50) NULL,
+                        po_number VARCHAR(100) NULL,
+                        warehouse_no VARCHAR(100) NULL,
+                        pallet_no VARCHAR(100) NULL,
+                        ctn_number VARCHAR(100) NULL,
+                        week_no VARCHAR(50) NULL,
+                        remark NVARCHAR(MAX) NULL,
+                        original_created_at DATETIME NULL,
+                        original_created_by INT NULL,
+                        deleted_at DATETIME DEFAULT GETDATE(),
+                        deleted_by INT NOT NULL
+                    )
+                ");
+            } catch (Exception $e) {}
+
+            try {
+                $insStmt = $pdo->prepare("
+                    INSERT INTO dbo.DELETED_SERIAL_TAGS (
+                        serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status,
+                        po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, original_created_at, original_created_by,
+                        deleted_by
+                    )
+                    SELECT serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status,
+                           po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, created_at, created_by, ?
+                    FROM dbo.RM_SERIAL_TAGS WHERE serial_no = ?
+                ");
+                $insStmt->execute([$currentUser['id'] ?? 0, $serial_no]);
+            } catch (Exception $e) { }
+
             $pdo->prepare("DELETE FROM dbo.RM_SERIAL_TAGS WHERE serial_no = ?")->execute([$serial_no]);
             $response = ['success' => true];
             break;
 
         case 'delete_bulk_tags':
+            if (!hasPermission('manage_warehouse')) { throw new Exception("Unauthorized: ไม่มีสิทธิ์การจัดการคลังสินค้า"); }
             $serials = json_decode($_POST['serials'], true);
             if (!is_array($serials) || empty($serials)) throw new Exception('ไม่มีข้อมูลให้ลบ');
 
@@ -1223,11 +1269,52 @@ try {
 
             if (count($usedTags) > 0) throw new Exception('ไม่อนุญาตให้ลบ! มีบางรายการถูกเบิกจ่ายไปแล้ว: ' . implode(', ', $usedTags));
 
+            try {
+                $pdo->exec("
+                    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='DELETED_SERIAL_TAGS' and xtype='U')
+                    CREATE TABLE dbo.DELETED_SERIAL_TAGS (
+                        deleted_id INT IDENTITY(1,1) PRIMARY KEY,
+                        serial_no VARCHAR(50) NOT NULL,
+                        master_pallet_no VARCHAR(50) NULL,
+                        item_id INT NOT NULL,
+                        qty_per_pallet DECIMAL(18,4) DEFAULT 0,
+                        current_qty DECIMAL(18,4) DEFAULT 0,
+                        status VARCHAR(50) NULL,
+                        po_number VARCHAR(100) NULL,
+                        warehouse_no VARCHAR(100) NULL,
+                        pallet_no VARCHAR(100) NULL,
+                        ctn_number VARCHAR(100) NULL,
+                        week_no VARCHAR(50) NULL,
+                        remark NVARCHAR(MAX) NULL,
+                        original_created_at DATETIME NULL,
+                        original_created_by INT NULL,
+                        deleted_at DATETIME DEFAULT GETDATE(),
+                        deleted_by INT NOT NULL
+                    )
+                ");
+            } catch (Exception $e) {}
+
+            try {
+                $insParams = array_merge([$currentUser['id'] ?? 0], $serials);
+                $insStmt = $pdo->prepare("
+                    INSERT INTO dbo.DELETED_SERIAL_TAGS (
+                        serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status,
+                        po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, original_created_at, original_created_by,
+                        deleted_by
+                    )
+                    SELECT serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status,
+                           po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, created_at, created_by, ?
+                    FROM dbo.RM_SERIAL_TAGS WHERE serial_no IN ($placeholders)
+                ");
+                $insStmt->execute($insParams);
+            } catch (Exception $e) { }
+
             $pdo->prepare("DELETE FROM dbo.RM_SERIAL_TAGS WHERE serial_no IN ($placeholders)")->execute($serials);
             $response = ['success' => true];
             break;
 
         case 'edit_tag':
+            if (!hasPermission('manage_warehouse')) { throw new Exception("Unauthorized: ไม่มีสิทธิ์การจัดการคลังสินค้า"); }
             $serial_no = $_POST['serial_no'] ?? '';
             if (empty($serial_no)) throw new Exception("ไม่พบ Serial No.");
 
@@ -1274,6 +1361,17 @@ try {
             $tagInfo = $stmtTag->fetch(PDO::FETCH_ASSOC);
 
             if (!$tagInfo || empty($tagInfo['item_no'])) {
+                try {
+                    $delStmt = $pdo->prepare("SELECT d.deleted_at, u.fullname FROM dbo.DELETED_SERIAL_TAGS d LEFT JOIN dbo.USERS u ON d.deleted_by = u.id WHERE d.serial_no = ?");
+                    $delStmt->execute([$barcode]);
+                    $delInfo = $delStmt->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $delInfo = false; }
+                
+                if (!empty($delInfo)) {
+                    $dateDel = date('d/m/Y H:i', strtotime($delInfo['deleted_at']));
+                    $userDel = $delInfo['fullname'] ?? 'Unknown';
+                    throw new Exception("แท็กนี้ถูกลบทิ้งไปแล้วเมื่อ $dateDel โดย $userDel");
+                }
                 throw new Exception('ไม่พบข้อมูลในระบบ');
             }
 
