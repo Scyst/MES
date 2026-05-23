@@ -3691,8 +3691,21 @@ const Actions = {
 
     async saveAnalysisAsImage() {
         if (typeof html2canvas === 'undefined') {
-            alert('Image capture library is not loaded. Please refresh the page and try again.');
-            return;
+            UI.showLoader();
+            try {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'script/html2canvas.min.js?v=1.4.1';
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            } catch (e) {
+                alert('Failed to dynamically load Image Capture Library. Please check your network.');
+                UI.hideLoader();
+                return;
+            }
+            UI.hideLoader();
         }
 
         const modalBody = document.querySelector('#integratedAnalysisModal .modal-body');
