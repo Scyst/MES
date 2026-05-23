@@ -148,28 +148,44 @@ class TransferController {
             }
 
             $pdo->beginTransaction();
-            $note_update = "\nBulk Cancelled by " . $currentUser['username'] . " at " . date('Y-m-d H:i:s');
-            $updSql = "UPDATE $transferTable 
-                       SET status = 'CANCELLED', 
-                           notes = ISNULL(notes, '') + ? 
+            $delSql = "DELETE FROM $transferTable 
                        WHERE status = 'PENDING' 
                          AND transfer_uuid LIKE ?";
             
-            $params = [$note_update, $lot_no . '-%'];
+            $params = [$lot_no . '-%'];
             if (!hasPermission('manage_production')) {
-                $updSql .= " AND created_by_user_id = ?";
+                $delSql .= " AND created_by_user_id = ?";
                 $params[] = $currentUser['id'];
             }
 
             if ($is_range) {
-                $updSql .= " AND TRY_CAST(RIGHT(transfer_uuid, CHARINDEX('-', REVERSE(transfer_uuid)) - 1) AS INT) BETWEEN ? AND ?";
+                $delSql .= " AND TRY_CAST(RIGHT(transfer_uuid, CHARINDEX('-', REVERSE(transfer_uuid)) - 1) AS INT) BETWEEN ? AND ?";
                 $params[] = $start_no;
                 $params[] = $end_no;
             }
             
-            $stmt = $pdo->prepare($updSql);
+            $stmt = $pdo->prepare($delSql);
             $stmt->execute($params);
             $affectedRows = $stmt->rowCount();
+
+            if ($affectedRows > 0) {
+                $logSql = "INSERT INTO dbo.USER_LOGS (action_by, action_type, detail, created_at)
+                           VALUES (?, 'CANCEL_BATCH_TAGS', ?, GETDATE())";
+                $logDetail = "Bulk Cancelled $affectedRows tags for Lot $lot_no";
+                if ($is_range) $logDetail .= " (Range: $start_no to $end_no)";
+                $pdo->prepare($logSql)->execute([(string)$currentUser['id'], $logDetail]);
+
+                $recalcSql = "
+                    UPDATE dbo.LOT_SERIALS
+                    SET last_serial = ISNULL((
+                        SELECT MAX(TRY_CAST(RIGHT(transfer_uuid, CHARINDEX('-', REVERSE(transfer_uuid)) - 1) AS INT))
+                        FROM $transferTable WITH (NOLOCK)
+                        WHERE transfer_uuid LIKE ?
+                    ), 0)
+                    WHERE parent_lot = ?
+                ";
+                $pdo->prepare($recalcSql)->execute([$lot_no . '-%', $lot_no]);
+            }
 
             $pdo->commit();
 
