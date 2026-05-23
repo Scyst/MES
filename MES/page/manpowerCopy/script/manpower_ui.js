@@ -2605,8 +2605,6 @@ const Actions = {
                     </td>
                 </tr>`;
         });
-
-        });
     },
 
     renderEmployeePagination(totalPages, currentPage) {

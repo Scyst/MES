@@ -448,30 +448,37 @@ function renderList(data) {
 
         html += `
         <li class="list-group-item p-3 fleet-list-item" onclick="flyToForklift('${fl.code}')" style="cursor: pointer;">
-            <div class="d-flex justify-content-between align-items-start mb-1">
+            <div class="d-flex justify-content-between align-items-center mb-2">
                 <div>
-                    <h6 class="fw-bold mb-0 text-dark">${fl.code} <span class="text-muted fw-normal ms-1" style="font-size:0.75rem;">${fl.name}</span></h6>
+                    <h6 class="fw-bold mb-0 text-dark" style="font-size: 1.05rem;">${fl.code}</h6>
+                    <small class="text-muted">${fl.name}</small>
                 </div>
-                <div>
-                    ${statusIcon} <span class="badge ${stateClass} ms-1">${stateText}</span>
+                <div class="text-end">
+                    <span class="badge ${stateClass} mb-1 shadow-sm" style="font-size: 0.75rem;">${stateText}</span><br>
+                    <small class="text-muted" style="font-size: 0.75rem;">${statusIcon} ${fl.current_battery||0}% <i class="fas ${batIcon} ms-1"></i></small>
                 </div>
             </div>
             
-            <div class="fleet-info-grid">
-                <div class="text-truncate" title="${fl.current_driver||'-'}"><i class="fas fa-user-circle"></i> ${fl.current_driver||'-'}</div>
-                <div class="text-end"><i class="fas ${batIcon}"></i> ${fl.current_battery||0}%</div>
-                <div class="text-truncate" style="grid-column: span 2;" title="${fl.last_location||'Unknown'}"><i class="fas fa-map-marker-alt"></i> ${fl.last_location||'Unknown'}</div>
+            <div class="bg-light p-2 rounded mb-2 border" style="font-size: 0.8rem;">
+                <div class="row g-2 text-muted">
+                    <div class="col-6 text-truncate" title="${fl.current_driver||'-'}">
+                        <i class="fas fa-user-circle text-primary opacity-75 me-1"></i> ${fl.current_driver||'-'}
+                    </div>
+                    <div class="col-6 text-truncate text-end" title="${fl.last_location||'Unknown'}">
+                        <i class="fas fa-map-marker-alt text-danger opacity-75 me-1"></i> ${fl.last_location||'Unknown'}
+                    </div>
+                </div>
             </div>
 
             ${activeTaskHtml}
 
             <div class="d-flex justify-content-between align-items-center mt-2">
-                <div class="btn-group shadow-sm" role="group">
-                    <button class="btn btn-sm btn-light border" onclick="initPlayback('${fl.code}', event)" title="Playback"><i class="fas fa-play-circle text-secondary"></i></button>
-                    <button class="btn btn-sm ${trailBtnClass} border" onclick="toggleSnailTrail('${fl.code}', event)" title="Trail"><i class="fas fa-route"></i></button>
-                    <button class="btn btn-sm ${followBtnClass} border" onclick="toggleFollow('${fl.code}', event)" title="Follow"><i class="fas fa-crosshairs"></i></button>
+                <div class="btn-group shadow-sm flex-shrink-0" role="group">
+                    <button class="btn btn-sm btn-light border px-2" onclick="initPlayback('${fl.code}', event)" title="Playback"><i class="fas fa-play-circle text-secondary"></i></button>
+                    <button class="btn btn-sm ${trailBtnClass} border px-2" onclick="toggleSnailTrail('${fl.code}', event)" title="Trail"><i class="fas fa-route"></i></button>
+                    <button class="btn btn-sm ${followBtnClass} border px-2" onclick="toggleFollow('${fl.code}', event)" title="Follow"><i class="fas fa-crosshairs"></i></button>
                 </div>
-                <div style="min-width: 100px;">
+                <div class="ms-2 flex-grow-1">
                     ${actionBtn}
                 </div>
             </div>
