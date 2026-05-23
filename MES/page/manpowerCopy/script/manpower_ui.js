@@ -76,7 +76,7 @@ const UI = {
         const dataActual = [];
         const actualColors = [];
         const grouped = {};
-        let sumPresent = 0, sumLate = 0, sumAbsent = 0, sumLeave = 0;
+        let sumPresent = 0, sumLate = 0, sumAbsent = 0, sumLeave = 0, sumPlan = 0;
 
         data.forEach(row => {
             const line = row.line_name || 'Other';
@@ -93,6 +93,7 @@ const UI = {
             sumLate += late;
             sumAbsent += parseInt(row.absent || 0);
             sumLeave += parseInt(row.leave || 0);
+            sumPlan += plan;
         });
 
         for (const [line, val] of Object.entries(grouped)) {
@@ -165,7 +166,8 @@ const UI = {
             }
         });
 
-        const newData = [sumPresent, sumLate, sumAbsent, sumLeave];
+        const sumOther = Math.max(0, sumPlan - (sumPresent + sumLate + sumAbsent + sumLeave));
+        const newData = [sumPresent, sumLate, sumAbsent, sumLeave, sumOther];
 
         if (this.charts.pie) {
             this.charts.pie.data.datasets[0].data = newData;
@@ -175,10 +177,10 @@ const UI = {
             this.charts.pie = new Chart(ctxPie, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Present', 'Late', 'Absent', 'Leave'],
+                    labels: ['Present', 'Late', 'Absent', 'Leave', 'Holiday/Wait'],
                     datasets: [{
                         data: newData,
-                        backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc'],
+                        backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc', '#858796'],
                         borderWidth: 2, borderColor: '#ffffff', hoverOffset: 4
                     }]
                 },
@@ -186,7 +188,7 @@ const UI = {
                     onClick: (e, elements) => {
                         if (elements.length > 0) {
                             const index = elements[0].index;
-                            const statuses = ['PRESENT', 'LATE', 'ABSENT', 'LEAVE'];
+                            const statuses = ['PRESENT', 'LATE', 'ABSENT', 'LEAVE', 'HOLIDAY_WAITING'];
                             Actions.openDetailModal('', '', 'ALL', statuses[index]);
                         }
                     },
@@ -1621,8 +1623,10 @@ const Actions = {
                 if (filterStatus !== 'ALL') {
                     if (filterStatus === 'PRESENT_AND_LATE') filteredData = json.data.filter(r => r.status === 'PRESENT' || r.status === 'LATE');
                     else if (filterStatus === 'LEAVE') {
-                        const nonLeaveStatus = ['PRESENT', 'LATE', 'ABSENT', 'WAITING'];
-                        filteredData = json.data.filter(r => !nonLeaveStatus.includes(r.status));
+                        const nonLeaveStatus = ['PRESENT', 'LATE', 'ABSENT', 'WAITING', 'HOLIDAY'];
+                        filteredData = json.data.filter(r => !nonLeaveStatus.includes(r.status) && r.status);
+                    } else if (filterStatus === 'HOLIDAY_WAITING') {
+                        filteredData = json.data.filter(r => r.status === 'HOLIDAY' || r.status === 'WAITING' || r.status === 'GHOST' || !r.status);
                     } else filteredData = json.data.filter(r => r.status === filterStatus);
                 }
                 if (shiftId) filteredData = filteredData.filter(r => r.shift_id == shiftId || r.default_shift_id == shiftId);
