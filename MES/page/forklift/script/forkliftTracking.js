@@ -55,6 +55,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // ให้ฟังก์ชันนี้ทำงานผ่าน Leaflet map.on('click') แทนจะดีกว่า เพื่อให้ตรงพิกัด
         // แต่ถ้าผูกไว้กับ Grid Rectangle แล้ว ส่วนนี้อาจจะไม่ค่อยได้ใช้ครับ
     });
+
+    // คำนวณเวลาคืนรถอัตโนมัติ (+1 ชม.) สำหรับหน้า Booking
+    const bookStartInput = document.getElementById('book_start_time');
+    if (bookStartInput) {
+        bookStartInput.addEventListener('change', function() {
+            if(this.value) {
+                let d = new Date(this.value);
+                d.setHours(d.getHours() + 1);
+                let iso = d.toLocaleString('sv').replace(' ', 'T').slice(0, 16);
+                document.getElementById('book_end_time').value = iso;
+            }
+        });
+    }
 });
 
 // ========================================================
@@ -404,6 +417,9 @@ function renderList(data) {
                 </div>
 
                 <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-success" onclick="openBookingModal('${fl.id}', '${fl.code}', '${fl.name}', event)" title="จองรถ / เบิกใช้">
+                        <i class="far fa-calendar-plus"></i>
+                    </button>
                     <button class="btn btn-sm btn-outline-warning text-dark" onclick="initPlayback('${fl.code}', event)" title="จำลองการวิ่งย้อนหลัง">
                         <i class="fas fa-play-circle"></i>
                     </button>
@@ -702,7 +718,7 @@ function drawHeatmap(logs) {
         radius: 35,       // ขนาดรัศมีของเมฆแต่ละจุด (ขยายให้ดูฟุ้งๆ)
         blur: 20,         // ความเบลอขอบ
         maxZoom: 18,      // ซูมระดับไหนถึงจะเห็นชัดสุด
-        max: 5,           // ถ้ามีจุดทับกัน 5 จุด จะกลายเป็น "สีแดงเข้มสุด"
+        max: 30,          // เพิ่มจาก 5 เป็น 30 เพื่อให้แดงยากขึ้น (ต้องวิ่งซ้ำๆ หรือจุดเดิมบ่อยๆ ถึงจะแดง)
         gradient: {
             0.4: 'blue',  // ทับกันนิดหน่อย (สีฟ้า)
             0.6: 'cyan',  // ปานกลาง (สีเขียวอมฟ้า)
@@ -1098,5 +1114,63 @@ function processSimStep(code, speed, tick) {
             body: JSON.stringify(payload)
         })
         .catch(err => console.error("Sim Error:", err));
+    }
+}
+
+// ========================================================
+// 📝 ฟีเจอร์เสริม: การจองรถ (Booking)
+// ========================================================
+function openBookingModal(id, code, name, event) {
+    if (event) event.stopPropagation();
+    document.getElementById('bookingForm').reset();
+    document.getElementById('book_forklift_id').value = id;
+    document.getElementById('book_forklift_name').innerText = code + " : " + (name || 'Forklift');
+    
+    const now = new Date();
+    const isoNow = now.toLocaleString('sv').replace(' ', 'T').slice(0, 16);
+    const startTimeInput = document.getElementById('book_start_time');
+    if (startTimeInput) {
+        startTimeInput.value = isoNow;
+        startTimeInput.dispatchEvent(new Event('change'));
+    }
+    
+    new bootstrap.Modal(document.getElementById('bookingModal')).show();
+}
+
+async function submitBooking() {
+    const form = document.getElementById('bookingForm');
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    
+    const formData = new FormData(form);
+    formData.append('action', 'book_forklift');
+    
+    const modalEl = document.querySelector('#bookingModal');
+    const submitBtn = modalEl.querySelector('.modal-footer .btn-primary');
+    const originalText = submitBtn ? submitBtn.innerHTML : '';
+
+    if(submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+    }
+
+    try {
+        const res = await fetch('api/forkliftManage.php', { method: 'POST', body: formData });
+        const json = await res.json();
+        
+        if (json.status) {
+            bootstrap.Modal.getInstance(modalEl).hide();
+            Swal.fire({icon: 'success', title: 'จองสำเร็จ!', timer: 1500, showConfirmButton: false});
+            fetchMapData(); // โหลดข้อมูลใหม่
+        } else {
+            Swal.fire('แจ้งเตือน', json.message, 'warning');
+        }
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Error', 'System Error: เชื่อมต่อ Server ไม่ได้', 'error');
+    } finally {
+        if(submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
     }
 }

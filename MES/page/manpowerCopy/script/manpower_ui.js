@@ -2650,12 +2650,14 @@ const Actions = {
         const lineF = document.getElementById('superLineSelect')?.value || 'ALL';
         const teamF = document.getElementById('ia_hcGroupSelect')?.value || 'ALL';
         const searchF = (document.getElementById('execReportSearch')?.value || '').toLowerCase().trim();
+        const cmpLine = lineF.trim().toUpperCase();
+        const cmpTeam = teamF.trim().toUpperCase();
 
         const filtered = this._execReportData.filter(r => {
-            const rLine = (r.line || '').trim();
-            const rTeam = (r.team_group || '').trim();
-            if (lineF !== 'ALL' && rLine !== lineF) return false;
-            if (teamF !== 'ALL' && rTeam !== teamF) return false;
+            const rLine = (r.line || '').trim().toUpperCase();
+            const rTeam = (r.team_group || '').trim().toUpperCase();
+            if (cmpLine !== 'ALL' && rLine !== cmpLine) return false;
+            if (cmpTeam !== 'ALL' && rTeam !== cmpTeam) return false;
             if (searchF) {
                 const text = ((r.emp_id || '') + ' ' + (r.name_th || '')).toLowerCase();
                 if (!text.includes(searchF)) return false;
@@ -3461,7 +3463,25 @@ const Actions = {
         }
 
         if (this._execReportData && this._execReportData.length > 0) {
-            const kpiData = this._execReportData.map(r => {
+            const lineF = document.getElementById('superLineSelect')?.value || 'ALL';
+            const teamF = document.getElementById('ia_hcGroupSelect')?.value || 'ALL';
+            const searchF = (document.getElementById('execReportSearch')?.value || '').toLowerCase().trim();
+            const cmpLine = lineF.trim().toUpperCase();
+            const cmpTeam = teamF.trim().toUpperCase();
+
+            const filteredExec = this._execReportData.filter(r => {
+                const rLine = (r.line || '').trim().toUpperCase();
+                const rTeam = (r.team_group || '').trim().toUpperCase();
+                if (cmpLine !== 'ALL' && rLine !== cmpLine) return false;
+                if (cmpTeam !== 'ALL' && rTeam !== cmpTeam) return false;
+                if (searchF) {
+                    const text = ((r.emp_id || '') + ' ' + (r.name_th || '')).toLowerCase();
+                    if (!text.includes(searchF)) return false;
+                }
+                return true;
+            });
+
+            const kpiData = filteredExec.map(r => {
                 const total = parseInt(r.total_working_days);
                 const present = parseInt(r.count_present);
                 const late = parseInt(r.count_late);

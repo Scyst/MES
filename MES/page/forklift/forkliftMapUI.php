@@ -75,7 +75,7 @@ $pageHeaderSubtitle = "ระบบติดตามตำแหน่งรถ
                         <div class="card-body p-0 position-relative">
                             
                             <div class="map-wrapper">
-                                <div id="map-container" style="width: 100%; height: 600px; z-index: 1;"></div>
+                                <div id="map-container" style="width: 100%; height: calc(100vh - 130px); z-index: 1;"></div>
                                 
                                 <div class="btn-group shadow-sm" style="position: absolute; bottom: 30px; left: 15px; z-index: 1000; background: white; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
                                     <button class="btn btn-light d-flex align-items-center" onclick="toggleGrid()" title="เปิด/ปิด ตารางกริด (Grid)" style="border-radius: 4px 0 0 4px; padding: 4px 8px; border-right: 1px solid #ddd;">
@@ -104,7 +104,21 @@ $pageHeaderSubtitle = "ระบบติดตามตำแหน่งรถ
                                     </button>
                                 </div>
 
-                                <div id="playback-controls" class="card shadow-lg d-none" style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 400px; border: 2px solid #0d6efd;"></div>
+                                <div id="playback-controls" class="card shadow-lg d-none" style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 400px; border: 2px solid #0d6efd;">
+                                    <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0" id="playback-title">Playback</h6>
+                                        <button type="button" class="btn-close btn-close-white" onclick="closePlayback()"></button>
+                                    </div>
+                                    <div class="card-body p-2 text-center">
+                                        <p id="playback-time" class="small mb-2 fw-bold text-muted">🕒 --:-- | 📍 --</p>
+                                        <input type="range" id="playback-slider" class="form-range" min="0" max="100" value="0" oninput="seekPlayback()">
+                                        <div class="mt-2">
+                                            <button class="btn btn-primary btn-sm rounded-circle shadow" onclick="togglePlayback()" style="width: 40px; height: 40px;">
+                                                <i class="fas fa-play" id="icon-play"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <div id="simulator-controls" class="card shadow-lg d-none" style="position: absolute; top: 15px; left: 15px; z-index: 1000; width: 300px; border: 2px solid #198754;">
                                     <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
@@ -150,7 +164,7 @@ $pageHeaderSubtitle = "ระบบติดตามตำแหน่งรถ
 
                             <input type="text" id="search-forklift" class="form-control form-control-sm" placeholder="🔍 ค้นหารหัสรถ หรือโซน..." onkeyup="filterForkliftList()">
                         </div>
-                        <div class="card-body p-0">
+                        <div class="card-body p-0" style="height: calc(100vh - 180px); overflow-y: auto;">
                             <ul class="list-group list-group-flush" id="forklift-list">
                                 <li class="list-group-item text-center text-muted py-4">กำลังโหลดข้อมูล...</li>
                             </ul>
@@ -161,6 +175,7 @@ $pageHeaderSubtitle = "ระบบติดตามตำแหน่งรถ
         </div>  
     </main>
     
+    <?php include '../components/forkliftModals.php'; ?>
     <?php include 'components/forkliftMapModal.php'; ?>
     
     <script src="../../utils/libs/leaflet.js"></script>
