@@ -25,6 +25,16 @@ let isGridVisible = true;
 let xrayLayer;
 let isXrayOn = false;
 
+// Simulator Variables
+let isSimulatorMode = false;
+let simWaypoints = [];
+let simRouteLayer = null;
+let simMarkers = [];
+let simInterval = null;
+let isSimPlaying = false;
+let simCurrentPosition = null;
+let simTargetIndex = 0;
+
 document.addEventListener('DOMContentLoaded', function() {
     initMap();
     fetchMapData();
@@ -66,6 +76,13 @@ function initMap() {
 
     // สร้าง Layer Group ไว้ใส่ Grid จะได้สั่งเปิด/ปิดได้ง่ายๆ
     gridLayerGroup = L.layerGroup().addTo(map);
+
+    // Event Click บนแผนที่สำหรับ Simulator Mode
+    map.on('click', function(e) {
+        if (isSimulatorMode) {
+            addSimWaypoint(e.latlng);
+        }
+    });
 }
 
 // ========================================================
@@ -780,4 +797,158 @@ function resetMapView() {
         animate: true,
         duration: 1.0 // ใช้เวลาบินกลับ 1 วินาที ให้ดูสมูทๆ
     });
+}
+
+// ========================================================
+// 🎮 ฟีเจอร์เสริม: Simulator Mode (จำลองการวิ่งบนแผนที่)
+// ========================================================
+function toggleSimulatorMode() {
+    isSimulatorMode = !isSimulatorMode;
+    const panel = document.getElementById('simulator-controls');
+    
+    if (isSimulatorMode) {
+        panel.classList.remove('d-none');
+        Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'เปิด Simulator Mode (คลิกบนแผนที่เพื่อวาดเส้นทาง)', showConfirmButton: false, timer: 3000 });
+        
+        // Populate Forklift Dropdown
+        const select = document.getElementById('sim-forklift-select');
+        select.innerHTML = '<option value="">-- เลือกรถที่ต้องการจำลอง --</option>';
+        if (window.lastData) {
+            window.lastData.forEach(fl => {
+                select.innerHTML += `<option value="${fl.code}">${fl.code} - ${fl.name || ''}</option>`;
+            });
+        }
+    } else {
+        panel.classList.add('d-none');
+        if (isSimPlaying) toggleSimPlaying();
+        clearSimRoute();
+    }
+}
+
+function addSimWaypoint(latlng) {
+    simWaypoints.push(latlng);
+    
+    const marker = L.circleMarker(latlng, { radius: 5, color: 'red', fillColor: '#f03', fillOpacity: 1 }).addTo(map);
+    simMarkers.push(marker);
+    
+    drawSimRoute();
+}
+
+function drawSimRoute() {
+    if (simRouteLayer) map.removeLayer(simRouteLayer);
+    if (simWaypoints.length > 1) {
+        simRouteLayer = L.polyline(simWaypoints, { color: 'green', weight: 4, dashArray: '5, 10' }).addTo(map);
+    }
+}
+
+function clearSimRoute() {
+    if (isSimPlaying) toggleSimPlaying();
+    
+    simWaypoints = [];
+    simMarkers.forEach(m => map.removeLayer(m));
+    simMarkers = [];
+    if (simRouteLayer) map.removeLayer(simRouteLayer);
+    simRouteLayer = null;
+    simCurrentPosition = null;
+    simTargetIndex = 0;
+}
+
+function toggleSimPlaying() {
+    if (!isSimulatorMode) return;
+    
+    const code = document.getElementById('sim-forklift-select').value;
+    if (!code) {
+        Swal.fire('แจ้งเตือน', 'กรุณาเลือกรถที่ต้องการจำลองก่อน', 'warning');
+        return;
+    }
+    
+    if (simWaypoints.length < 2) {
+        Swal.fire('แจ้งเตือน', 'กรุณาคลิกสร้างเส้นทางบนแผนที่อย่างน้อย 2 จุด', 'warning');
+        return;
+    }
+    
+    isSimPlaying = !isSimPlaying;
+    const btnIcon = document.getElementById('sim-play-icon');
+    const btn = document.getElementById('sim-start-btn');
+    
+    if (isSimPlaying) {
+        btnIcon.className = 'fas fa-pause';
+        btn.classList.replace('btn-success', 'btn-warning');
+        btn.innerHTML = '<i class="fas fa-pause" id="sim-play-icon"></i> หยุดจำลอง';
+        
+        if (!simCurrentPosition) {
+            simCurrentPosition = { ...simWaypoints[0] };
+            simTargetIndex = 1;
+        }
+        
+        // Start Interval loop
+        const speedMultiplier = parseInt(document.getElementById('sim-speed').value); 
+        simInterval = setInterval(() => processSimStep(code, speedMultiplier), 1000);
+        
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'เริ่มจำลองการวิ่ง...', showConfirmButton: false, timer: 1500 });
+    } else {
+        btnIcon.className = 'fas fa-play';
+        btn.classList.replace('btn-warning', 'btn-success');
+        btn.innerHTML = '<i class="fas fa-play" id="sim-play-icon"></i> เริ่มจำลอง';
+        clearInterval(simInterval);
+    }
+}
+
+function processSimStep(code, speed) {
+    if (simTargetIndex >= simWaypoints.length) {
+        // วิ่งสุดเส้นทางแล้ว ให้วนกลับไปจุดเริ่มต้นใหม่
+        simCurrentPosition = { ...simWaypoints[0] };
+        simTargetIndex = 1;
+    }
+
+    const target = simWaypoints[simTargetIndex];
+    
+    // คำนวณระยะทางและทิศทาง
+    const dLat = target.lat - simCurrentPosition.lat;
+    const dLng = target.lng - simCurrentPosition.lng;
+    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+    
+    // สมมติว่าความเร็ว 1 สเกล = 0.00005 องศาต่อวินาที
+    const stepSize = 0.00005 * speed; 
+    
+    if (dist <= stepSize) {
+        // ถึงเป้าหมายแล้ว
+        simCurrentPosition = { ...target };
+        simTargetIndex++;
+    } else {
+        // ค่อยๆ เขยิบไปตามเส้นทาง
+        simCurrentPosition.lat += (dLat / dist) * stepSize;
+        simCurrentPosition.lng += (dLng / dist) * stepSize;
+    }
+    
+    // จำลองแบตเตอรี่แบบลดลงเรื่อยๆ
+    let simBat = Math.floor(Math.random() * 10) + 70; // สุ่ม 70-80 หรือใช้ของเดิม
+    // ดึงแบตเตอรี่ปัจจุบันจากหน้าจอ
+    if (window.lastData) {
+        const fl = window.lastData.find(f => f.code === code);
+        if (fl && fl.current_battery) {
+            simBat = fl.current_battery;
+            // จำลองแบตลด 1% ทุกๆ ความน่าจะเป็น 5%
+            if (Math.random() < 0.05 && simBat > 5) simBat--; 
+        }
+    }
+
+    // ยิง API ไปที่ hardwareTracking.php
+    const payload = {
+        forklift_code: code,
+        lat: simCurrentPosition.lat.toFixed(6),
+        lng: simCurrentPosition.lng.toFixed(6),
+        bssid_1: "SIMULATOR", // ส่งเป็นคีย์จำลอง
+        rssi_1: -50,
+        battery: simBat
+    };
+
+    fetch('api/hardwareTracking.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+    .catch(err => console.error("Sim Error:", err));
 }

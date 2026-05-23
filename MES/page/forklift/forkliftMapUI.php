@@ -81,8 +81,11 @@ $pageHeaderSubtitle = "ระบบติดตามตำแหน่งรถ
                                     <button class="btn btn-light d-flex align-items-center" onclick="toggleGrid()" title="เปิด/ปิด ตารางกริด (Grid)" style="border-radius: 4px 0 0 4px; padding: 4px 8px; border-right: 1px solid #ddd;">
                                         <i class="fas fa-th text-secondary"></i>
                                     </button>
-                                    <button class="btn btn-light d-flex align-items-center" onclick="toggleHeatmap()" title="ดูความหนาแน่น (Heatmap)" style="border-radius: 0 4px 4px 0; padding: 4px 8px;">
+                                    <button class="btn btn-light d-flex align-items-center" onclick="toggleHeatmap()" title="ดูความหนาแน่น (Heatmap)" style="padding: 4px 8px; border-right: 1px solid #ddd;">
                                         <i class="fas fa-fire text-danger"></i>
+                                    </button>
+                                    <button class="btn btn-light d-flex align-items-center" onclick="toggleSimulatorMode()" title="โหมดจำลองการวิ่ง (Simulator)" style="border-radius: 0 4px 4px 0; padding: 4px 8px;">
+                                        <i class="fas fa-gamepad text-success"></i>
                                     </button>
                                 </div>
 
@@ -102,6 +105,31 @@ $pageHeaderSubtitle = "ระบบติดตามตำแหน่งรถ
                                 </div>
 
                                 <div id="playback-controls" class="card shadow-lg d-none" style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 400px; border: 2px solid #0d6efd;"></div>
+
+                                <div id="simulator-controls" class="card shadow-lg d-none" style="position: absolute; top: 15px; left: 15px; z-index: 1000; width: 300px; border: 2px solid #198754;">
+                                    <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0"><i class="fas fa-gamepad"></i> Simulator Control</h6>
+                                        <button type="button" class="btn-close btn-close-white" onclick="toggleSimulatorMode()" aria-label="Close"></button>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <p class="small text-muted mb-2">คลิกบนแผนที่เพื่อสร้างจุดเส้นทาง (Waypoints)</p>
+                                        <div class="mb-2">
+                                            <select id="sim-forklift-select" class="form-select form-select-sm">
+                                                <option value="">-- เลือกรถที่ต้องการจำลอง --</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="small">ความเร็วการจำลอง</label>
+                                            <input type="range" id="sim-speed" class="form-range" min="1" max="10" value="3">
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <button class="btn btn-sm btn-outline-danger" onclick="clearSimRoute()">ล้างเส้นทาง</button>
+                                            <button id="sim-start-btn" class="btn btn-sm btn-success" onclick="toggleSimPlaying()">
+                                                <i class="fas fa-play" id="sim-play-icon"></i> เริ่มจำลอง
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -72,7 +72,7 @@ BEGIN
     CROSS APPLY dbo.fn_GetLaborCost_Split_V2(dr.d) N
     WHERE O.display_section = N.display_section
       AND (@LineFilter IS NULL OR O.display_section = @LineFilter)
-      AND (@HcGroupFilter IS NULL OR COALESCE(O.hc_group, N.hc_group, 'MAIN') = @HcGroupFilter)
+      -- NOTE: HcGroup Filter cannot be applied here because fn_GetLaborCost_Split does not output HcGroup
     GROUP BY COALESCE(O.display_section, N.display_section)
     OPTION (MAXRECURSION 366);
 
@@ -99,7 +99,9 @@ END
 
 try {
     $pdo->exec($sql);
+    file_put_contents(__DIR__ . '/sp_update.log', "SP Updated successfully!");
     echo "SP Updated successfully!";
 } catch (Exception $e) {
+    file_put_contents(__DIR__ . '/sp_update.log', "Error: " . $e->getMessage());
     echo "Error: " . $e->getMessage();
 }
