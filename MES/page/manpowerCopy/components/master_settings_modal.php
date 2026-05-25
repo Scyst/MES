@@ -32,7 +32,7 @@
                 </div>
                 
                 <!-- Content Area -->
-                <div class="tab-content flex-grow-1 p-0 p-lg-4 overflow-auto" id="v-pills-tabContent" style="background-color: #f8f9fa;">
+                <div class="tab-content flex-grow-1 p-0 px-lg-4 pb-lg-4 pt-lg-0 overflow-auto" id="v-pills-tabContent" style="background-color: #f8f9fa;">
                     
                     <!-- Staff Manager Tab -->
                     <div class="tab-pane fade show active h-100" id="v-pills-emp" role="tabpanel">

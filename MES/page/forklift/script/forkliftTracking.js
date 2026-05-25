@@ -7,6 +7,12 @@ let followedForklift = null;
 let snailTrailLayer = null;
 let showingTrailFor = null;
 let heatmapLayer = null;
+let globalForkliftData = [];
+let globalBookings = [];
+let dashboardInterval = null;
+let lastListHtml = '';
+const safeUserName = typeof CURRENT_USER_NAME !== 'undefined' ? CURRENT_USER_NAME : '';
+
 
 
 // 📌 [สำคัญ] พิกัดขอบเขตของรูปโรงงานคุณ (มุมซ้ายบน, มุมขวาล่าง)
@@ -43,8 +49,17 @@ let simTargetIndex = 0;
 let simIndoorTicks = 0; // ตัวนับเวลาว่าอยู่ในตึกนานแค่ไหน
 
 document.addEventListener('DOMContentLoaded', function() {
-    fetchMapData();
-    setInterval(fetchMapData, 3000);
+    startPolling();
+    
+    // Smart Polling
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            stopPolling();
+        } else {
+            fetchMapData(); 
+            startPolling();
+        }
+    });
 
     const mapContainer = document.getElementById('map-container');
     if (mapContainer) {
@@ -296,7 +311,35 @@ function getColumnLetter(colIndex) {
 // ========================================================
 // 5. ดึงข้อมูลรถโฟล์คลิฟต์
 // ========================================================
-function fetchMapData() {
+function startPolling() {
+    if (dashboardInterval) clearInterval(dashboardInterval);
+    fetchMapData();
+    dashboardInterval = setInterval(fetchMapData, 3000);
+}
+
+function stopPolling() {
+    if (dashboardInterval) {
+        clearInterval(dashboardInterval);
+        dashboardInterval = null;
+    }
+}
+
+async function fetchTimelineData() {
+    try {
+        const formData = new FormData();
+        formData.append('action', 'get_timeline');
+        const res = await fetch('api/forkliftManage.php', { method: 'POST', body: formData });
+        const json = await res.json();
+        if(json.status) {
+            globalBookings = json.data;
+        }
+    } catch(e) {
+        console.error("Fetch timeline error:", e);
+    }
+}
+
+async function fetchMapData() {
+    await fetchTimelineData();
     fetch('api/webTracking.php?action=get_realtime')
         .then(response => response.json())
         .then(res => {
@@ -363,6 +406,7 @@ function renderMapMarkers(data) {
         });
 
         const popupContent = `<b>${fl.code}</b><br>Location: ${fl.last_location}<br>Battery: ${fl.current_battery || 0}%`;
+        const markerStateHash = `${fl.status}_${fl.current_battery}_${fl.is_offline}`;
 
         // เช็คว่ารถคันนี้กำลังถูกเปิด Simulator จากเบราว์เซอร์นี้อยู่หรือไม่
         const isCurrentlySimulating = (isSimulatorMode && typeof isSimPlaying !== 'undefined' && isSimPlaying && fl.code === document.getElementById('sim-forklift-select').value);
@@ -373,12 +417,18 @@ function renderMapMarkers(data) {
             if (!isCurrentlySimulating) {
                 forkliftMarkers[fl.code].setLatLng([finalLat, finalLng]);
             }
-            forkliftMarkers[fl.code].setIcon(customIcon);
-            forkliftMarkers[fl.code].getPopup().setContent(popupContent);
+            if (forkliftMarkers[fl.code].lastStateHash !== markerStateHash) {
+                forkliftMarkers[fl.code].setIcon(customIcon);
+                forkliftMarkers[fl.code].lastStateHash = markerStateHash;
+            }
+            if (forkliftMarkers[fl.code].getPopup().getContent() !== popupContent) {
+                forkliftMarkers[fl.code].getPopup().setContent(popupContent);
+            }
         } else {
             forkliftMarkers[fl.code] = L.marker([finalLat, finalLng], { icon: customIcon })
                 .addTo(map)
                 .bindPopup(popupContent);
+            forkliftMarkers[fl.code].lastStateHash = markerStateHash;
         }
 
         if (followedForklift === fl.code) {
@@ -418,15 +468,15 @@ function renderList(data) {
         const followBtnClass = isFollowing ? 'btn-danger' : 'btn-light';
         const trailBtnClass = isShowingTrail ? 'btn-info text-white' : 'btn-light';
 
-        const myPendingBooking = typeof globalBookings !== 'undefined' ? globalBookings.find(b => b.forklift_id == fl.id && b.user_name === CURRENT_USER_NAME && b.status === 'BOOKED') : null;
+        const myPendingBooking = typeof globalBookings !== 'undefined' ? globalBookings.find(b => b.forklift_id == fl.id && b.user_name === safeUserName && b.status === 'BOOKED') : null;
         let actionBtn = '';
         
         if (fl.status === 'MAINTENANCE') {
             actionBtn = `<button class="btn btn-sm btn-light border text-muted w-100" disabled><i class="fas fa-ban me-1"></i> ปิดใช้งาน</button>`;
         } else if (fl.status === 'IN_USE') {
-            if (fl.current_driver === CURRENT_USER_NAME || (typeof IS_ADMIN !== 'undefined' && IS_ADMIN)) {
-                let bClass = (fl.current_driver === CURRENT_USER_NAME) ? 'btn-warning' : 'btn-danger';
-                let bText = (fl.current_driver === CURRENT_USER_NAME) ? 'คืนรถ' : 'บังคับคืน';
+            if (fl.current_driver === safeUserName || (typeof IS_ADMIN !== 'undefined' && IS_ADMIN)) {
+                let bClass = (fl.current_driver === safeUserName) ? 'btn-warning' : 'btn-danger';
+                let bText = (fl.current_driver === safeUserName) ? 'คืนรถ' : 'บังคับคืน';
                 actionBtn = `<button class="btn btn-sm ${bClass} w-100 fw-bold shadow-sm" onclick="event.stopPropagation(); checkAction(${fl.id})"><i class="fas fa-undo me-1"></i>${bText}</button>`;
             } else {
                 actionBtn = `<button class="btn btn-sm btn-outline-primary w-100 fw-bold shadow-sm" onclick="event.stopPropagation(); openBookingModal(${fl.id}, '${fl.code}', '${fl.name}')"><i class="far fa-clock me-1"></i> จองคิว</button>`;
@@ -457,48 +507,64 @@ function renderList(data) {
         else if (fl.status === 'CHARGING') stripColor = 'warning';
 
         html += `
-        <li class="list-group-item p-3 fleet-list-item position-relative" onclick="flyToForklift('${fl.code}')" style="cursor: pointer;">
-            <div class="bg-${stripColor}" style="height: 4px; width: 100%; position: absolute; top: 0; left: 0;"></div>
+        <li class="list-group-item p-3 fleet-list-item position-relative shadow-sm mb-3 rounded-4 border-0" onclick="flyToForklift('${fl.code}')" style="cursor: pointer; background: #fff; transition: all 0.2s ease;">
+            <div class="bg-${stripColor}" style="height: 5px; width: 100%; position: absolute; top: 0; left: 0; border-top-left-radius: 12px; border-top-right-radius: 12px;"></div>
             
-            <div class="d-flex justify-content-between align-items-start mb-2 mt-1">
-                <div>
-                    <h6 class="fw-bold mb-1 text-dark" style="font-size: 1.1rem;">${fl.code}</h6>
-                    <div class="text-muted mb-1" style="font-size: 0.8rem;">${fl.name}</div>
-                    <div class="text-muted fw-bold" style="font-size: 0.8rem;">
-                        ${statusIcon} ${fl.current_battery||0}% <i class="fas ${batIcon} ms-1"></i>
+            <div class="d-flex justify-content-between align-items-center mb-3 mt-1">
+                <div class="d-flex align-items-center">
+                    <div class="bg-${stripColor} bg-opacity-10 rounded-circle d-flex justify-content-center align-items-center text-${stripColor} border border-${stripColor} border-opacity-25" style="width: 48px; height: 48px;">
+                        <i class="fas fa-truck-loading fs-5"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="fw-bold mb-0 text-dark" style="font-size: 1.15rem;">${fl.code}</h6>
+                        <small class="text-muted d-block">${fl.name}</small>
                     </div>
                 </div>
                 <div class="text-end">
-                    <span class="badge ${stateClass} shadow-sm px-2 py-1" style="font-size: 0.75rem;">${stateText}</span>
+                    <span class="badge ${stateClass} px-3 py-2 rounded-pill shadow-sm mb-1">${stateText}</span><br>
+                    <small class="text-muted fw-bold">${statusIcon} ${fl.current_battery||0}% <i class="fas ${batIcon} ms-1"></i></small>
                 </div>
             </div>
             
-            <div class="bg-light p-2 rounded mb-3 border d-flex justify-content-between text-muted" style="font-size: 0.85rem;">
-                <div class="text-truncate flex-grow-1 border-end me-2 pe-2 fw-bold" title="${fl.current_driver||'-'}">
-                    <i class="fas fa-user-circle text-primary opacity-75"></i> ${fl.current_driver||'-'}
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <div class="bg-light p-2 rounded-3 border h-100 d-flex flex-column justify-content-center">
+                        <small class="text-muted mb-1" style="font-size: 0.7rem;">คนขับ</small>
+                        <div class="text-truncate fw-bold text-dark" style="font-size: 0.85rem;" title="${fl.current_driver||'-'}">
+                            <i class="fas fa-user-circle text-primary opacity-75 me-1"></i> ${fl.current_driver||'-'}
+                        </div>
+                    </div>
                 </div>
-                <div class="text-truncate" style="max-width: 50%;" title="${fl.last_location||'Unknown'}">
-                    <i class="fas fa-map-marker-alt text-danger opacity-75"></i> ${fl.last_location||'Unknown'}
+                <div class="col-6">
+                    <div class="bg-light p-2 rounded-3 border h-100 d-flex flex-column justify-content-center">
+                        <small class="text-muted mb-1" style="font-size: 0.7rem;">ตำแหน่ง</small>
+                        <div class="text-truncate fw-bold text-dark" style="font-size: 0.85rem;" title="${fl.last_location||'Unknown'}">
+                            <i class="fas fa-map-marker-alt text-danger opacity-75 me-1"></i> ${fl.last_location||'Unknown'}
+                        </div>
+                    </div>
                 </div>
             </div>
 
             ${activeTaskHtml}
 
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="btn-group shadow-sm flex-shrink-0" role="group">
-                    <button class="btn btn-light border px-2" onclick="initPlayback('${fl.code}', event)" title="Playback"><i class="fas fa-play-circle text-secondary"></i></button>
-                    <button class="btn ${trailBtnClass} border px-2" onclick="toggleSnailTrail('${fl.code}', event)" title="Trail"><i class="fas fa-route"></i></button>
-                    <button class="btn ${followBtnClass} border px-2" onclick="toggleFollow('${fl.code}', event)" title="Follow"><i class="fas fa-crosshairs"></i></button>
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-2">
+                <div class="btn-group shadow-sm bg-white border rounded-3" role="group">
+                    <button class="btn btn-outline-secondary px-3 py-2 border-0" onclick="initPlayback('${fl.code}', event)" title="Playback"><i class="fas fa-play-circle"></i></button>
+                    <button class="btn btn-outline-secondary ${trailBtnClass.includes('info') ? 'active text-info' : ''} px-3 py-2 border-0 border-start border-end" onclick="toggleSnailTrail('${fl.code}', event)" title="Trail"><i class="fas fa-route"></i></button>
+                    <button class="btn btn-outline-secondary ${followBtnClass.includes('danger') ? 'active text-danger' : ''} px-3 py-2 border-0" onclick="toggleFollow('${fl.code}', event)" title="Follow"><i class="fas fa-crosshairs"></i></button>
                 </div>
-                <div class="ms-2 flex-grow-1 text-end">
-                    ${actionBtn}
+                <div class="ms-2 flex-grow-1 d-flex justify-content-end">
+                    <div style="min-width: 120px;">${actionBtn}</div>
                 </div>
             </div>
         </li>`;
     });
     
-    list.innerHTML = html;
-    if(typeof filterForkliftList === 'function') filterForkliftList();
+    if (lastListHtml !== html) {
+        list.innerHTML = html;
+        lastListHtml = html;
+        if(typeof filterForkliftList === 'function') filterForkliftList();
+    }
 }
 
 // ========================================================
@@ -1242,6 +1308,16 @@ async function submitBooking() {
 // ========================================================
 // 📊 Dashboard KPIs & Modals
 // ========================================================
+function populateSimDropdown() {
+    const simSelect = document.getElementById('sim-forklift-select');
+    if (!simSelect) return;
+    simSelect.innerHTML = '<option value="">-- เลือกรถที่ต้องการจำลอง --</option>';
+    globalForkliftData.forEach(fl => {
+        simSelect.innerHTML += `<option value="${fl.code}">${fl.code} - ${fl.name}</option>`;
+    });
+    simSelect.disabled = false;
+}
+
 function updateKPIs(data) {
     let total = data.length;
     let avail = 0, inUse = 0, maint = 0;
@@ -1383,7 +1459,7 @@ async function checkAction(forkliftId, code, name) {
     const currentBatt = flData ? flData.current_battery : 100;
 
     // 1. คืนรถ (เราขับเอง)
-    if (flData.status === 'IN_USE' && flData.current_driver === CURRENT_USER_NAME) {
+    if (flData.status === 'IN_USE' && flData.current_driver === safeUserName) {
         openReturnModal(flData.active_booking_id, flData.id, safeCode, currentBatt);
         return; 
     }
@@ -1403,7 +1479,7 @@ async function checkAction(forkliftId, code, name) {
     // 3. เริ่มงานที่จองไว้
     const myBooking = typeof globalBookings !== 'undefined' ? globalBookings.find(b => 
         b.forklift_id == forkliftId && 
-        b.user_name === CURRENT_USER_NAME && 
+        b.user_name === safeUserName && 
         b.status === 'BOOKED'
     ) : null;
     
