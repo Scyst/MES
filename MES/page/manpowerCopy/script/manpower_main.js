@@ -173,7 +173,19 @@ const App = {
 
     async resetDailyData() {
         const targetDate = document.getElementById('filterDate').value;
-        if (!confirm(`⚠️ คำเตือน: คุณต้องการ "ล้างข้อมูล" และ "ดึงใหม่" ของวันที่ [${targetDate}] ใช่หรือไม่?\n\nข้อมูลการแก้ไข Manual (Remark/Status) จะหายไปทั้งหมด!`)) {
+        
+        const confirmResult = await Swal.fire({
+            title: 'ยืนยันการรีเซ็ตข้อมูล?',
+            html: `คำเตือน: คุณต้องการ "ล้างข้อมูล" และ "ดึงใหม่" ของวันที่ <b>${targetDate}</b> ใช่หรือไม่?<br><br><span class="text-danger fw-bold">ข้อมูลการแก้ไข Manual (Remark/Status) จะหายไปทั้งหมด!</span>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'ใช่, ล้างข้อมูลและดึงใหม่',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (!confirmResult.isConfirmed) {
             return;
         }
 
@@ -186,11 +198,17 @@ const App = {
             console.log("2. Syncing new data...");
             await API.triggerSync(targetDate); 
 
-            UI.showToast(`✅ รีเซ็ตข้อมูลวันที่ ${targetDate} เรียบร้อยแล้ว`, "success");
+            Swal.fire({
+                title: 'สำเร็จ!',
+                text: `รีเซ็ตข้อมูลวันที่ ${targetDate} เรียบร้อยแล้ว`,
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
             await this.loadData();
         } catch (err) {
             console.error(err);
-            UI.showToast("❌ เกิดข้อผิดพลาด: " + err.message, "danger");
+            Swal.fire('ข้อผิดพลาด', err.message, 'error');
         } finally {
             UI.hideLoader();
         }
