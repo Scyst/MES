@@ -614,7 +614,7 @@ const UI = {
         }
     },
 
-    showToast(message, type) { alert(message); },
+    showToast(message, type) { Swal.fire(message); },
     showLoader() { if (document.getElementById('syncLoader')) document.getElementById('syncLoader').style.display = 'block'; },
     hideLoader() { if (document.getElementById('syncLoader')) document.getElementById('syncLoader').style.display = 'none'; },
 
@@ -1674,7 +1674,7 @@ const Actions = {
 
     async deleteLog(logId, empName) {
         if (!logId || logId == '0') {
-            alert('รายการนี้ยังไม่มีในระบบ (เป็นแค่ Plan ลอยๆ) ไม่สามารถลบได้\n(หากต้องการลบถาวร ให้ไปปิด Active ที่ตัวพนักงาน)');
+            Swal.fire('รายการนี้ยังไม่มีในระบบ (เป็นแค่ Plan ลอยๆ) ไม่สามารถลบได้\n(หากต้องการลบถาวร ให้ไปปิด Active ที่ตัวพนักงาน)');
             return;
         }
 
@@ -1698,11 +1698,11 @@ const Actions = {
                 await Actions.fetchDetailData();
                 App.loadData();
             } else {
-                alert('Error: ' + json.message);
+                Swal.fire('Error: ' + json.message);
             }
         } catch (err) {
             console.error(err);
-            alert('Failed: ' + err.message);
+            Swal.fire('Failed: ' + err.message);
         }
     },
 
@@ -1740,12 +1740,12 @@ const Actions = {
                 if (document.getElementById('empListModal').classList.contains('show')) {
                     Actions.openEmployeeManager();
                 }
-                alert('✅ ปิดใช้งานเรียบร้อย (ลบ Plan วันนี้ออกแล้ว)');
+                Swal.fire('✅ ปิดใช้งานเรียบร้อย (ลบ Plan วันนี้ออกแล้ว)');
             } else {
-                alert('Error: ' + json.message);
+                Swal.fire('Error: ' + json.message);
             }
         } catch (e) {
-            alert('Failed: ' + e.message);
+            Swal.fire('Failed: ' + e.message);
         }
     },
 
@@ -1777,12 +1777,12 @@ const Actions = {
                     if (document.getElementById('empListModal').classList.contains('show')) {
                         Actions.openEmployeeManager();
                     }
-                    alert('✅ แจ้งลาออกและปิดสถานะพนักงานเรียบร้อย');
+                    Swal.fire('✅ แจ้งลาออกและปิดสถานะพนักงานเรียบร้อย');
                 } else {
-                    alert('❌ Error: ' + json.message);
+                    Swal.fire('❌ Error: ' + json.message);
                 }
             } catch (err) {
-                alert('❌ Failed to connect API');
+                Swal.fire('❌ Failed to connect API');
             }
         }
     },
@@ -2278,11 +2278,11 @@ const Actions = {
                 XLSX.writeFile(wb, fileName);
 
             } else {
-                alert("ไม่พบข้อมูลในช่วงเวลาที่เลือก");
+                Swal.fire("ไม่พบข้อมูลในช่วงเวลาที่เลือก");
             }
         } catch (err) {
             console.error(err);
-            alert("Export Failed: " + err.message);
+            Swal.fire("Export Failed: " + err.message);
         } finally {
             UI.hideLoader();
         }
@@ -2317,11 +2317,11 @@ const Actions = {
 
                 XLSX.writeFile(wb, `Manpower_Daily_${date}.xlsx`);
             } else {
-                alert("ไม่พบข้อมูลสำหรับวันที่เลือก");
+                Swal.fire("ไม่พบข้อมูลสำหรับวันที่เลือก");
             }
         } catch (err) {
             console.error(err);
-            alert("Export Error: " + err.message);
+            Swal.fire("Export Error: " + err.message);
         } finally {
             UI.hideLoader();
         }
@@ -2873,7 +2873,7 @@ const Actions = {
                 }
 
             } catch (e) {
-                alert("Error: " + e.message);
+                Swal.fire("Error: " + e.message);
                 return;
             } finally {
                 UI.hideLoader();
@@ -2987,14 +2987,14 @@ const Actions = {
                     await this.fetchDetailData();
                 }
 
-                alert('✅ บันทึกข้อมูลเรียบร้อย');
+                Swal.fire('✅ บันทึกข้อมูลเรียบร้อย');
             } else {
                 throw new Error(json.message);
             }
 
         } catch (e) {
             console.error("Save Error:", e);
-            alert('❌ Failed: ' + e.message);
+            Swal.fire('❌ Failed: ' + e.message);
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalHtml;
@@ -3045,7 +3045,7 @@ const Actions = {
         const shift = document.getElementById('rpt_shift').value;
         const type = document.getElementById('rpt_type').value;
 
-        if (!sDate || !eDate) return alert("Please select dates");
+        if (!sDate || !eDate) return Swal.fire("Please select dates");
 
         const loadingIds = ['rpt_hc', 'rpt_actual', 'rpt_absent', 'rpt_leave',
             'hc_max', 'hc_min', 'hc_avg',
@@ -3238,7 +3238,7 @@ const Actions = {
         const eDate = document.getElementById('simEndDate').value;
 
         if (!sDate || !eDate) {
-            alert("Please select both Start and End dates.");
+            Swal.fire("Please select both Start and End dates.");
             return;
         }
 
@@ -3304,7 +3304,7 @@ const Actions = {
                 tbody.innerHTML = html;
 
             } else {
-                alert('Error: ' + json.message);
+                Swal.fire('Error: ' + json.message);
             }
         } catch (err) {
             console.error(err);
@@ -3341,8 +3341,8 @@ const Actions = {
         try {
             const res = await fetch('api/api_master_data.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update_team_shift', line, team, new_shift_id: newShiftId }) });
             const json = await res.json();
-            if (json.success) { this.openShiftPlanner(); } else alert(json.message);
-        } catch (err) { alert(err.message); }
+            if (json.success) { this.openShiftPlanner(); } else Swal.fire(json.message);
+        } catch (err) { Swal.fire(err.message); }
     },
 
     _mappingCache: [],
@@ -3362,7 +3362,7 @@ const Actions = {
     async addMapping() {
         const key = document.getElementById('newMapKeyword').value.trim();
         const type = document.getElementById('newMapType').value.trim();
-        if (!key || !type) return alert('Required fields missing');
+        if (!key || !type) return Swal.fire('Required fields missing');
         this._mappingCache.push({ keyword: key, category_name: type });
         await this.saveMappings();
         this.renderMappingTable(this._mappingCache);
@@ -3511,7 +3511,7 @@ const Actions = {
 
     exportSimTable() {
         if (!this._cachedAnalysisData) {
-            alert("กรุณากด Run Analysis เพื่อโหลดข้อมูลก่อน Export");
+            Swal.fire("กรุณากด Run Analysis เพื่อโหลดข้อมูลก่อน Export");
             return;
         }
 
@@ -3800,7 +3800,7 @@ const Actions = {
                 UI.renderFinancialAnalysis(financials);
 
             } else {
-                alert("Analysis Error: " + result.message);
+                Swal.fire("Analysis Error: " + result.message);
             }
         } catch (err) {
             console.error("Critical Analysis Error:", err);
@@ -3821,7 +3821,7 @@ const Actions = {
                     document.head.appendChild(script);
                 });
             } catch (e) {
-                alert('Failed to dynamically load Image Capture Library. Please check your network.');
+                Swal.fire('Failed to dynamically load Image Capture Library. Please check your network.');
                 UI.hideLoader();
                 return;
             }
@@ -3858,7 +3858,7 @@ const Actions = {
             link.click();
         } catch (err) {
             console.error("Error capturing image:", err);
-            alert("Failed to capture image: " + err.message);
+            Swal.fire("Failed to capture image: " + err.message);
         } finally {
             UI.hideLoader();
         }

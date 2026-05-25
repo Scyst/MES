@@ -98,13 +98,8 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                                 
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openIntegratedAnalysis()"><i class="fas fa-chart-pie text-primary me-2"></i>Analysis Report</a></li>
                                 <li><hr class="dropdown-divider"></li>
-
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmployeeManager()">Staff Manager</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openTeamSettings()">Team Settings</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openShiftPlanner()">Shift Planner</a></li>
-                                
-                                <li><a class="dropdown-item" href="holidayUI.php">Holiday Settings</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openMappingManager()">Maps Config</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmployeeManager()"><i class="fas fa-cogs text-secondary me-2"></i>Master Settings</a></li>
+                                <li><a class="dropdown-item" href="holidayUI.php"><i class="fas fa-calendar-day text-success me-2"></i>Holiday Settings</a></li>
                                 
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="#" onclick="App.resetDailyData()">Reset Daily Data</a></li>
