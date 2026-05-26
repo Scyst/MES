@@ -128,7 +128,7 @@ try {
 
             $pdo->beginTransaction();
 
-            // 1. Insert Log
+            // 1. Insert Log (1 Row per scan always)
             $stmt = $pdo->prepare("
                 INSERT INTO " . SCAN_LOGS_TABLE . " (
                     barcode_no, sap_no, lot_ref, location_id, location_name, production_type, logdate, notes, scanned_by
@@ -136,40 +136,108 @@ try {
             ");
             $stmt->execute([$barcode, $final_sap, $lot_ref, $location_id, $location_name, $production_type, $notes, $username]);
 
-            // 2. Execute Production (Stock Transaction)
-            $logdate = date('Y-m-d');
+            // 2. Execute Production (Aggregate by Hour)
             $current_time = date('H:i:s');
-            $timestamp = $logdate . ' ' . $current_time;
-            $prod_notes = trim("Scan: " . $notes);
+            $current_hour = date('Y-m-d H');
+            $prod_type_full = 'PRODUCTION_' . $production_type;
             
-            $prodStmt = $pdo->prepare("
-                EXEC dbo.sp_ExecuteProduction 
-                    @item_id = ?, 
-                    @location_id = ?, 
-                    @quantity = ?, 
-                    @count_type = ?, 
-                    @lot_no = ?, 
-                    @notes = ?, 
-                    @timestamp = ?, 
-                    @start_time = ?, 
-                    @end_time = ?, 
-                    @user_id = ?, 
-                    @username = ?
+            $findTxnStmt = $pdo->prepare("
+                SELECT TOP 1 transaction_id, quantity 
+                FROM " . TRANSACTIONS_TABLE . " 
+                WHERE parameter_id = ? 
+                  AND to_location_id = ? 
+                  AND transaction_type = ? 
+                  AND reference_id = ?
+                  AND created_by_user_id = ?
+                  AND CONVERT(varchar(13), transaction_timestamp, 120) = ?
+                  AND notes LIKE 'Scan:%'
+                ORDER BY transaction_id DESC
             ");
-            
-            $prodStmt->execute([
+            $findTxnStmt->execute([
                 $item_id,
                 $location_id,
-                1, // Quantity 1 per scan
-                $production_type,
+                $prod_type_full,
                 $lot_ref,
-                $prod_notes,
-                $timestamp,
-                $current_time,
-                $current_time,
                 $user_id,
-                $username
+                $current_hour
             ]);
+            $existingTxn = $findTxnStmt->fetch(PDO::FETCH_ASSOC);
+
+            $total_qty = 1;
+
+            if ($existingTxn) {
+                $txn_id = $existingTxn['transaction_id'];
+                $total_qty = $existingTxn['quantity'] + 1;
+
+                // Update FG Transaction (+1)
+                $updateTxnStmt = $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET quantity = quantity + 1 WHERE transaction_id = ?");
+                $updateTxnStmt->execute([$txn_id]);
+
+                // Update FG OnHand (+1)
+                $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = 1");
+                $spStock->execute([$item_id, $location_id]);
+
+                // Update BOM Consumption
+                $consumeNote = "Auto-consumed for production ID: " . $txn_id;
+                $bomStmt = $pdo->prepare("
+                    SELECT component_item_id, quantity_required 
+                    FROM " . BOM_TABLE . " 
+                    WHERE fg_item_id = ? AND bom_status = 'ACTIVE'
+                ");
+                $bomStmt->execute([$item_id]);
+                $boms = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if (!empty($boms)) {
+                    $updateConsumeStmt = $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET quantity = quantity - ? WHERE notes = ? AND parameter_id = ?");
+                    $spRmStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+
+                    foreach ($boms as $bom) {
+                        $comp_id = $bom['component_item_id'];
+                        $req_qty = $bom['quantity_required'];
+                        
+                        // Transaction stores negative for consumption
+                        $updateConsumeStmt->execute([$req_qty, $consumeNote, $comp_id]);
+                        
+                        // RM Stock drops
+                        $spRmStock->execute([$comp_id, $location_id, -$req_qty]);
+                    }
+                }
+            } else {
+                // Execute standard production (first scan of the hour)
+                $logdate = date('Y-m-d');
+                $end_of_hour_time = date('H:59:59');
+                $timestamp = $logdate . ' ' . $end_of_hour_time;
+                $prod_notes = trim("Scan: " . $notes);
+                
+                $prodStmt = $pdo->prepare("
+                    EXEC dbo.sp_ExecuteProduction 
+                        @item_id = ?, 
+                        @location_id = ?, 
+                        @quantity = ?, 
+                        @count_type = ?, 
+                        @lot_no = ?, 
+                        @notes = ?, 
+                        @timestamp = ?, 
+                        @start_time = ?, 
+                        @end_time = ?, 
+                        @user_id = ?, 
+                        @username = ?
+                ");
+                
+                $prodStmt->execute([
+                    $item_id,
+                    $location_id,
+                    1, // Quantity 1
+                    $production_type,
+                    $lot_ref,
+                    $prod_notes,
+                    $timestamp,
+                    $current_time,
+                    $end_of_hour_time,
+                    $user_id,
+                    $username
+                ]);
+            }
 
             $pdo->commit();
 
@@ -188,6 +256,7 @@ try {
                     'production_type' => $production_type,
                     'logdate'         => $logdate_format,
                     'notes'           => $notes,
+                    'quantity_added'  => $total_qty
                 ]
             ]);
             break;

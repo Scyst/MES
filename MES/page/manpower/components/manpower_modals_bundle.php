@@ -1,4 +1,4 @@
-<?php 
+﻿<?php 
 // MES/page/manpower/components/manpower_modals_bundle.php
 ?>
 
@@ -62,11 +62,11 @@
                         </div>
                         <div class="col-6">
                             <label class="form-label">Scan In</label>
-                            <input type="datetime-local" class="form-control" id="editScanInTime"> 
+                            <input type="time" class="form-control" id="editScanInTime"> 
                         </div>
                         <div class="col-6">
                             <label class="form-label">Scan Out</label>
-                            <input type="datetime-local" class="form-control" id="editScanOutTime"> 
+                            <input type="time" class="form-control" id="editScanOutTime"> 
                         </div>
                     </div>
 
@@ -102,9 +102,27 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
 
-                    <div class="input-group input-group-lg mb-3 shadow-sm">
-                        <span class="input-group-text bg-light border-end-0 ps-3"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" class="form-control bg-light border-start-0" id="searchDetail" placeholder="ค้นหาชื่อพนักงาน, รหัส, หรือสถานะ..." style="font-size: 0.95rem;">
+                    <div class="d-flex gap-2 mb-3">
+                        <div class="input-group input-group-sm shadow-sm flex-grow-1">
+                            <span class="input-group-text bg-light border-end-0 ps-2"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" class="form-control bg-light border-start-0 py-1" id="searchDetail" placeholder="ค้นหาชื่อพนักงาน, รหัส, หรือสถานะ...">
+                        </div>
+                        <select id="filterDetailTeam" class="form-select form-select-sm shadow-sm w-auto" style="min-width: 120px;" onchange="Actions.initSearch()">
+                            <option value="">ทั้งหมด (All Teams)</option>
+                        </select>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-primary shadow-sm px-3 dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-tasks"></i> จัดการหลายรายการ <span id="batchSelectedCount" class="badge bg-primary ms-1">0</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="min-width: 200px;">
+                                <li><h6 class="dropdown-header text-uppercase small">ตั้งสถานะ (Set Status)</h6></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.batchSetStatus('PRESENT')"><i class="fas fa-check text-success me-2"></i>มา (PRESENT)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.batchSetStatus('ABSENT')"><i class="fas fa-times text-danger me-2"></i>ขาด (ABSENT)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.batchSetStatus('SICK')"><i class="fas fa-procedures text-warning me-2"></i>ลาป่วย (SICK)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.batchSetStatus('BUSINESS')"><i class="fas fa-briefcase text-info me-2"></i>ลากิจ (BUSINESS)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.batchSetStatus('VACATION')"><i class="fas fa-umbrella-beach text-primary me-2"></i>พักร้อน (VACATION)</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -127,35 +145,6 @@
                     <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>สีแดง = ลืมรูดบัตร (คิดเงิน 8 ชม.)</span>
                 </div>
                 <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="shiftPlannerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-warning bg-opacity-10">
-                <div>
-                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-users-cog me-2"></i>Shift Rotation Manager</h5>
-                    <small class="text-muted">จัดการกะการทำงานแบบยกทีม</small>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light text-secondary">
-                            <tr>
-                                <th class="ps-4 py-3">Line / Section</th>
-                                <th class="text-center">Current Shift</th>
-                                <th class="text-center">Shift ID</th>
-                                <th class="text-center pe-4">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="shiftPlannerBody"></tbody>
-                    </table>
-                </div>
             </div>
         </div>
     </div>
@@ -184,120 +173,15 @@
     </div>
 </div>
 
-<div class="modal fade" id="empListModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-            
-            <div class="modal-header bg-white border-bottom py-2 pe-3">
-                <div class="d-flex flex-column me-3">
-                    <h5 class="modal-title fw-bold text-dark">
-                        <i class="fas fa-users-cog text-primary me-2"></i>Employee Management
-                    </h5>
-                </div>
-                
-                <div class="ms-auto d-flex align-items-center gap-2">
-                    <button class="btn btn-primary btn-sm shadow-sm text-nowrap" onclick="Actions.openEmpEdit()">
-                        <i class="fas fa-plus me-1"></i> New
-                    </button>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-            </div>
-
-            <div class="modal-body bg-light border-bottom py-2 px-3">
-                
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    
-                    <div class="d-flex align-items-center gap-2">
-                        
-                        <div class="input-group input-group-sm" style="width: 200px;">
-                            <span class="input-group-text bg-white border-end-0 text-muted ps-2"><i class="fas fa-search"></i></span>
-                            <input type="text" id="empSearchBox" class="form-control border-start-0 py-1" placeholder="Search..." onkeyup="Actions.filterEmployeeList()">
-                        </div>
-
-                        <div class="input-group input-group-sm" style="width: 150px;">
-                            <span class="input-group-text bg-white text-muted border-end-0"><i class="fas fa-industry"></i></span>
-                            <select id="empFilterLine" class="form-select border-start-0" onchange="Actions.filterEmployeeList()">
-                                <option value="">All Lines</option>
-                                </select>
-                        </div>
-
-                        <div class="d-flex align-items-center bg-white rounded border shadow-sm p-0 overflow-hidden">
-                            
-                            <select id="empDateType" class="form-select form-select-sm border-0 fw-bold text-primary" style="width: 130px; background-color: transparent;" onchange="Actions.toggleDateInputs(); Actions.filterEmployeeList();">
-                                <option value="">📅 Any Date</option>
-                                <option value="JOIN">Joined Date</option>
-                                <option value="RESIGN">Resigned Date</option>
-                            </select>
-
-                            <div id="empDateWrapper" class="d-none d-flex align-items-center border-start ps-2 pe-2 gap-1 bg-light animate__animated animate__fadeInLeft animate__fast">
-                                <input type="date" id="empDateFrom" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 110px;" onchange="Actions.filterEmployeeList()">
-                                <span class="text-muted small">-</span>
-                                <input type="date" id="empDateTo" class="form-control form-control-sm border-0 bg-transparent p-0" style="width: 110px;" onchange="Actions.filterEmployeeList()">
-                            </div>
-
-                        </div>
-
-                        <button class="btn btn-sm btn-link text-secondary text-decoration-none" onclick="Actions.resetEmployeeFilters()" title="Reset Filters">
-                            <i class="fas fa-undo"></i>
-                        </button>
-                    </div>
-
-                    <div class="d-flex flex-wrap align-items-center gap-2 justify-content-end">
-
-                        <div class="btn-group btn-group-sm shadow-sm me-2" role="group">
-                            <input type="radio" class="btn-check" name="empStatusFilter" id="filterStatusActive" value="1" checked onchange="Actions.filterEmployeeList()">
-                            <label class="btn btn-outline-success px-2" for="filterStatusActive">Active</label>
-
-                            <input type="radio" class="btn-check" name="empStatusFilter" id="filterStatusInactive" value="0" onchange="Actions.filterEmployeeList()">
-                            <label class="btn btn-outline-secondary px-2" for="filterStatusInactive">Resigned</label>
-
-                            <input type="radio" class="btn-check" name="empStatusFilter" id="filterStatusAll" value="ALL" onchange="Actions.filterEmployeeList()">
-                            <label class="btn btn-outline-primary px-2" for="filterStatusAll">All</label>
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="modal-body p-0 bg-white">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" style="min-width: 1000px;">
-                        <thead class="bg-light text-secondary small text-uppercase">
-                            <tr>
-                                <th class="ps-4" width="25%">Employee Profile</th>
-                                <th width="15%">Line / Section</th>
-                                <th class="text-center" width="10%">Shift</th>
-                                <th class="text-center" width="10%">Type</th>
-                                <th class="text-center" width="18%">Status / Timeline</th>
-                                <th width="15%">Tags / Data Check</th>
-                                <th class="text-end pe-4" width="10%">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="empListBody">
-                            </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div class="modal-footer bg-light py-2 justify-content-between">
-                <div class="small text-muted" id="empListCount">Loaded: 0 records</div>
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div class="modal fade" id="empEditModal" tabindex="-1" style="z-index: 1065;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-edit me-2"></i><span id="empEditTitle">Edit Employee</span>
-                    <span id="empStatusBadge" class="badge bg-secondary ms-3 border border-light" style="font-size: 0.7rem;">Loading...</span>
+            <div class="modal-header bg-white border-bottom py-2">
+                <h5 class="modal-title fw-bold text-dark">
+                    <i class="fas fa-user-edit text-primary me-2"></i><span id="empEditTitle">Edit Employee</span>
+                    <span id="empStatusBadge" class="badge bg-secondary ms-2" style="font-size: 0.7rem;">Loading...</span>
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="empEditForm">
@@ -411,65 +295,23 @@
     </div>
 </div>
 
-<div class="modal fade" id="mappingModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-indigo text-white" style="background-color: #6610f2;">
-                <div>
-                    <h5 class="modal-title"><i class="fas fa-tags me-2"></i>Position Mapping</h5>
-                    <p class="mb-0 small opacity-75">จับคู่ "คำในตำแหน่ง" ให้เป็น "ประเภทพนักงาน"</p>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light text-secondary small text-uppercase">
-                            <tr>
-                                <th class="ps-4">Keyword (คำในตำแหน่ง)</th>
-                                <th>Map to Type</th>
-                                <th class="text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="mappingBody">
-                            </tbody>
-                        <tfoot class="bg-light border-top">
-                            <tr>
-                                <td class="ps-4">
-                                    <input type="text" class="form-control form-control-sm" id="newMapKeyword" placeholder="เช่น Driver, Admin...">
-                                </td>
-                                <td>
-                                    <input class="form-control form-control-sm" list="typeList" id="newMapType" placeholder="เลือกหรือพิมพ์ใหม่...">
-                                    <datalist id="typeList">
-                                    </datalist>
-                                </td>
-                                <td class="text-center">
-                                    <button class="btn btn-sm btn-primary rounded-circle shadow-sm" onclick="Actions.addMapping()" title="Add">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer bg-light py-2">
-                <small class="text-muted me-auto"><i class="fas fa-info-circle me-1"></i>ระบบจะเรียนรู้ประเภทใหม่ๆ จากสิ่งที่คุณพิมพ์เพิ่มเข้าไป</small>
-                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div class="modal fade" id="integratedAnalysisModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
+    <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
+        <div class="modal-content border-0">
             
-            <div class="modal-header bg-dark text-white py-2 border-bottom-0">
-                <h5 class="modal-title small text-uppercase fw-bold">
+            <div class="modal-header bg-dark text-white py-2 border-bottom-0 d-flex justify-content-between align-items-center">
+                <h5 class="modal-title small text-uppercase fw-bold mb-0">
                     <i class="fas fa-chart-network me-2 text-info"></i>Integrated Manpower Analysis
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="Actions.exportSimTable()">
+                        <i class="fas fa-file-excel me-1"></i> Export Full Report
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-light me-2" onclick="Actions.saveAnalysisAsImage()">
+                        <i class="fas fa-camera-retro me-1 text-warning"></i> Save as Image
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
             </div>
 
             <div class="bg-light border-bottom p-3">
@@ -488,6 +330,12 @@
                             <input type="date" id="ia_endDate" class="form-control border-start-0 ps-0" value="<?php echo date('Y-m-d'); ?>">
                         </div>
                     </div>
+                    <div class="col-md-2">
+                        <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">Team / Group</label>
+                        <select id="ia_hcGroupSelect" class="form-select form-select-sm">
+                            <option value="ALL">All Teams</option>
+                        </select>
+                    </div>
                     <div class="col-md-3">
                         <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">Focus Line</label>
                         <select id="superLineSelect" class="form-select form-select-sm">
@@ -505,6 +353,11 @@
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="tab-executive-btn" data-bs-toggle="tab" data-bs-target="#tab-executive" type="button" role="tab">
+                            <i class="fas fa-users-cog me-2 text-primary"></i>Employee KPIs
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
                         <button class="nav-link fw-bold" id="tab-financial-btn" data-bs-toggle="tab" data-bs-target="#tab-financial" type="button" role="tab">
                             <i class="fas fa-coins me-2 text-warning"></i>Financial Analysis
                         </button>
@@ -515,47 +368,67 @@
                     
                     <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
                         <div class="row g-2 mb-3">
-                            <div class="col-md-3">
-                                <div class="p-2 bg-white border rounded shadow-sm h-100">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="text-uppercase fw-bold small text-secondary">Total HC</span>
-                                        <span id="ia_rpt_attrition" class="badge bg-light text-muted border" style="font-size: 0.7rem;">--</span>
+                            <div class="col-md-2">
+                                <div class="p-2 bg-gradient-primary text-white border rounded shadow-sm h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+                                    <div class="d-flex justify-content-between align-items-center mb-1 position-relative z-index-1">
+                                        <span class="text-uppercase fw-bold small opacity-75">Total HC</span>
+                                        <span id="ia_rpt_attrition" class="badge bg-white text-primary rounded-pill shadow-sm" style="font-size: 0.7rem;">--</span>
                                     </div>
-                                    <h3 id="ia_rpt_hc" class="mb-2 fw-bold text-primary text-center">0</h3>
-                                    <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
-                                        <thead class="bg-light text-muted"><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
+                                    <h3 id="ia_rpt_hc" class="mb-2 fw-bold text-center position-relative z-index-1" style="font-size: 1.8rem;">0</h3>
+                                    <table class="table table-borderless table-sm mb-0 small text-center text-white opacity-75 position-relative z-index-1" style="font-size: 0.7rem;">
+                                        <thead><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
                                         <tbody><tr><td id="ia_rpt_hc_max" class="fw-bold">0</td><td id="ia_rpt_hc_min">0</td><td id="ia_rpt_hc_avg">0</td></tr></tbody>
                                     </table>
+                                    <i class="fas fa-users position-absolute opacity-25" style="font-size: 4rem; right: -10px; bottom: -10px;"></i>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="p-2 bg-white border rounded shadow-sm h-100">
-                                    <div class="text-uppercase fw-bold small text-secondary mb-1">Actual Present</div>
-                                    <h3 id="ia_rpt_actual" class="mb-2 fw-bold text-success text-center">0</h3>
-                                    <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
-                                        <thead class="bg-light text-muted"><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
+                            <div class="col-md-2">
+                                <div class="p-2 bg-gradient-success text-white border rounded shadow-sm h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);">
+                                    <div class="text-uppercase fw-bold small opacity-75 mb-1 position-relative z-index-1">Actual Present</div>
+                                    <h3 id="ia_rpt_actual" class="mb-2 fw-bold text-center position-relative z-index-1" style="font-size: 1.8rem;">0</h3>
+                                    <table class="table table-borderless table-sm mb-0 small text-center text-white opacity-75 position-relative z-index-1" style="font-size: 0.7rem;">
+                                        <thead><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
                                         <tbody><tr><td id="ia_rpt_actual_max" class="fw-bold">0</td><td id="ia_rpt_actual_min">0</td><td id="ia_rpt_actual_avg">0</td></tr></tbody>
                                     </table>
+                                    <i class="fas fa-user-check position-absolute opacity-25" style="font-size: 4rem; right: -10px; bottom: -10px;"></i>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="p-2 bg-white border rounded shadow-sm h-100">
-                                    <div class="text-uppercase fw-bold small text-secondary mb-1">Total Absent</div>
-                                    <h3 id="ia_rpt_absent" class="mb-2 fw-bold text-danger text-center">0</h3>
-                                    <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
-                                        <thead class="bg-light text-muted"><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
+                            <div class="col-md-2">
+                                <div class="p-2 bg-gradient-danger text-white border rounded shadow-sm h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%);">
+                                    <div class="text-uppercase fw-bold small opacity-75 mb-1 position-relative z-index-1">Total Absent</div>
+                                    <h3 id="ia_rpt_absent" class="mb-2 fw-bold text-center position-relative z-index-1" style="font-size: 1.8rem;">0</h3>
+                                    <table class="table table-borderless table-sm mb-0 small text-center text-white opacity-75 position-relative z-index-1" style="font-size: 0.7rem;">
+                                        <thead><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
                                         <tbody><tr><td id="ia_rpt_absent_max" class="fw-bold">0</td><td id="ia_rpt_absent_min">0</td><td id="ia_rpt_absent_avg">0</td></tr></tbody>
                                     </table>
+                                    <i class="fas fa-user-times position-absolute opacity-25" style="font-size: 4rem; right: -10px; bottom: -10px;"></i>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="p-2 bg-white border rounded shadow-sm h-100">
-                                    <div class="text-uppercase fw-bold small text-secondary mb-1">Total Leave</div>
-                                    <h3 id="ia_rpt_leave" class="mb-2 fw-bold text-info text-center">0</h3>
-                                    <table class="table table-bordered table-sm mb-0 small text-center" style="font-size: 0.7rem;">
-                                        <thead class="bg-light text-muted"><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
+                            <div class="col-md-2">
+                                <div class="p-2 bg-gradient-info text-white border rounded shadow-sm h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #36b9cc 0%, #258391 100%);">
+                                    <div class="text-uppercase fw-bold small opacity-75 mb-1 position-relative z-index-1">Total Leave</div>
+                                    <h3 id="ia_rpt_leave" class="mb-2 fw-bold text-center position-relative z-index-1" style="font-size: 1.8rem;">0</h3>
+                                    <table class="table table-borderless table-sm mb-0 small text-center text-white opacity-75 position-relative z-index-1" style="font-size: 0.7rem;">
+                                        <thead><tr><th>Max</th><th>Min</th><th>Avg</th></tr></thead>
                                         <tbody><tr><td id="ia_rpt_leave_max" class="fw-bold">0</td><td id="ia_rpt_leave_min">0</td><td id="ia_rpt_leave_avg">0</td></tr></tbody>
                                     </table>
+                                    <i class="fas fa-user-injured position-absolute opacity-25" style="font-size: 4rem; right: -10px; bottom: -10px;"></i>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="p-2 bg-white border rounded shadow-sm h-100 position-relative overflow-hidden">
+                                    <div class="text-uppercase fw-bold small text-success mb-1 position-relative z-index-1">New Joiners</div>
+                                    <h3 id="ia_rpt_new_joiners" class="mb-2 fw-bold text-center text-success position-relative z-index-1" style="font-size: 1.8rem;">0</h3>
+                                    <div class="text-center small text-muted mt-3 pt-2 border-top">In selected range</div>
+                                    <i class="fas fa-user-plus position-absolute text-success opacity-10" style="font-size: 4rem; right: -10px; bottom: -10px;"></i>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="p-2 bg-white border rounded shadow-sm h-100 position-relative overflow-hidden">
+                                    <div class="text-uppercase fw-bold small text-danger mb-1 position-relative z-index-1">Resigned</div>
+                                    <h3 id="ia_rpt_resigned" class="mb-2 fw-bold text-center text-danger position-relative z-index-1" style="font-size: 1.8rem;">0</h3>
+                                    <div class="text-center small text-muted mt-3 pt-2 border-top">In selected range</div>
+                                    <i class="fas fa-user-minus position-absolute text-danger opacity-10" style="font-size: 4rem; right: -10px; bottom: -10px;"></i>
                                 </div>
                             </div>
                         </div>
@@ -618,44 +491,44 @@
     
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
-                                <div class="card border-start border-4 border-secondary shadow-sm h-100">
-                                    <div class="card-body py-2">
-                                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
-                                            Current Logic (สูตรเดิม)
+                                <div class="card border-0 shadow-sm h-100 bg-warning bg-opacity-10" style="border-radius: 12px;">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="fw-bold text-warning small text-uppercase" style="filter: brightness(0.8);">
+                                                <i class="fas fa-calculator me-1"></i> Current Logic (สูตรเดิม)
+                                            </div>
                                         </div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="fin_old_total">-</div>
-                                        <div class="small text-muted mt-1">Standard Calculation</div>
+                                        <div class="h4 mb-0 fw-bold text-dark" id="fin_old_total">-</div>
+                                        <div class="small text-muted mt-2"><i class="fas fa-info-circle me-1"></i>Standard Calculation</div>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="col-md-4">
-                                <div class="card border-start border-4 border-primary shadow-sm h-100">
-                                    <div class="card-body py-2">
-                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                            New Logic (สูตรใหม่)
+                                <div class="card border-0 shadow-sm h-100 bg-success bg-opacity-10" style="border-radius: 12px;">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="fw-bold text-success small text-uppercase">
+                                                <i class="fas fa-magic me-1"></i> New Logic (สูตรใหม่)
+                                            </div>
                                         </div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="fin_new_total">-</div>
-                                        <div class="small text-muted mt-1">Adj. Sat/Sun & Holiday</div>
+                                        <div class="h4 mb-0 fw-bold text-success" id="fin_new_total">-</div>
+                                        <div class="small text-success text-opacity-75 mt-2"><i class="fas fa-calendar-check me-1"></i>Adj. Sat/Sun & Holiday</div>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="col-md-4">
-                                <div class="card border-start border-4 border-info shadow-sm h-100" id="fin_impact_card">
-                                    <div class="card-body py-2">
-                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                            Net Impact (ผลต่าง)
-                                        </div>
-                                        <div class="row no-gutters align-items-center">
-                                            <div class="col mr-2">
-                                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="fin_diff_total">-</div>
+                                <div class="card border-0 shadow-sm h-100 bg-info bg-opacity-10" id="fin_impact_card" style="border-radius: 12px; transition: all 0.3s ease;">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="fw-bold text-info small text-uppercase">
+                                                <i class="fas fa-balance-scale me-1"></i> Net Impact (ผลต่าง)
                                             </div>
-                                            <div class="col-auto">
-                                                <span class="badge bg-light text-dark border" id="fin_diff_percent">0%</span>
-                                            </div>
+                                            <span class="badge bg-white text-dark shadow-sm" id="fin_diff_percent" style="font-size: 0.8rem;">0%</span>
                                         </div>
-                                        <div class="small text-muted mt-1" id="fin_impact_text">Variance Analysis</div>
+                                        <div class="h4 mb-0 fw-bold text-dark" id="fin_diff_total">-</div>
+                                        <div class="small text-muted mt-2" id="fin_impact_text"><i class="fas fa-chart-pie me-1"></i>Variance Analysis</div>
                                     </div>
                                 </div>
                             </div>
@@ -663,9 +536,9 @@
 
                         <div class="row g-3">
                             <div class="col-lg-12">
-                                <div class="card shadow-sm mb-3">
-                                    <div class="card-header py-2 bg-light d-flex justify-content-between align-items-center">
-                                        <h6 class="m-0 font-weight-bold text-dark small">
+                                <div class="card border-0 shadow-sm mb-3">
+                                    <div class="card-header py-3 bg-white border-bottom-0 d-flex justify-content-between align-items-center">
+                                        <h6 class="m-0 fw-bold text-primary text-uppercase" style="letter-spacing: 0.5px;">
                                             <i class="fas fa-chart-bar me-1"></i> Cost Impact by Line
                                         </h6>
                                     </div>
@@ -678,16 +551,16 @@
                             </div>
 
                             <div class="col-lg-12">
-                                <div class="card shadow-sm">
-                                    <div class="card-header py-2 bg-light">
-                                        <h6 class="m-0 font-weight-bold text-dark small">
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-header py-3 bg-white border-bottom-0">
+                                        <h6 class="m-0 fw-bold text-primary text-uppercase" style="letter-spacing: 0.5px;">
                                             <i class="fas fa-table me-1"></i> Detailed Breakdown
                                         </h6>
                                     </div>
                                     <div class="card-body p-0">
                                         <div class="table-responsive">
                                             <table class="table table-sm table-hover mb-0 align-middle" style="font-size: 0.85rem;">
-                                                <thead class="bg-light text-secondary">
+                                                <thead class="bg-primary bg-gradient text-white shadow-sm">
                                                     <tr>
                                                         <th class="ps-3" width="20%">Line</th>
                                                         <th class="text-end" width="15%">Old (Std)</th>
@@ -708,18 +581,112 @@
                         </div>
                     </div>
 
-                </div>
-            </div>
+                    <div class="tab-pane fade" id="tab-executive" role="tabpanel">
+                        <div class="card border shadow-sm">
+                            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                                <span class="fw-bold small text-uppercase text-secondary">
+                                    <i class="fas fa-users-cog me-2 text-primary"></i>Individual Employee KPIs
+                                </span>
+                                <div>
+                                    <input type="text" class="form-control form-control-sm border-secondary" id="execReportSearch" placeholder="Search Employee..." onkeyup="Actions.renderExecReport()" style="width: 250px;">
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive" style="max-height: calc(100vh - 250px); min-height: 50vh;">
+                                    <table class="table table-hover table-striped align-middle mb-0 bg-white" id="execReportTable">
+                                        <thead class="bg-light text-secondary shadow-sm" style="position: sticky; top: 0; z-index: 1;">
+                                            <tr class="text-center small">
+                                                <th class="text-start ps-3 py-3">Employee</th>
+                                                <th width="10%">Line</th>
+                                                <th width="10%">Team</th>
+                                                <th width="10%">Total Working Days</th>
+                                                <th width="10%">Present</th>
+                                                <th width="10%">Late</th>
+                                                <th width="10%">Leave</th>
+                                                <th width="10%">Absent</th>
+                                                <th width="10%">Attendance %</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="execReportBody">
+                                            <tr><td colspan="9" class="text-center py-5">Loading...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="modal-footer bg-light py-2">
-                <div class="me-auto small text-muted">
-                    <i class="fas fa-info-circle me-1"></i> Values calculated based on daily logs & master rates.
                 </div>
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success btn-sm shadow-sm" onclick="Actions.exportSimTable()">
-                    <i class="fas fa-file-excel me-1"></i> Export Full Report
-                </button>
             </div>
         </div>
     </div>
 </div>
+
+<!-- KPI Modal (Individual) -->
+<div class="modal fade" id="empKpiModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-white border-bottom py-2 pe-3">
+                <div class="d-flex flex-column">
+                    <h5 class="modal-title fw-bold text-primary">
+                        <i class="fas fa-chart-pie me-2"></i> Individual KPI Dashboard
+                    </h5>
+                    <div class="small text-muted" id="empKpiSubtitle">Loading...</div>
+                </div>
+                <div class="ms-auto">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body bg-light p-4">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <div class="card border-0 shadow-sm h-100 rounded-4">
+                            <div class="card-body text-center d-flex flex-column justify-content-center">
+                                <h6 class="text-muted text-uppercase fw-bold mb-3">Attendance Rate</h6>
+                                <h1 class="display-3 fw-bold text-success mb-0" id="empKpiRate">--%</h1>
+                                <p class="text-muted small mt-2">เปอร์เซ็นต์การเข้างาน (ไม่รวมลากิจ/ป่วย)</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                                    <div class="text-muted small fw-bold">วันทำงานรวม (YTD)</div>
+                                    <h3 class="fw-bold mb-0 text-dark" id="empKpiTotal">--</h3>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                                    <div class="text-muted small fw-bold">มาทำงาน (Present)</div>
+                                    <h3 class="fw-bold mb-0 text-success" id="empKpiPresent">--</h3>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                                    <div class="text-muted small fw-bold">มาสาย (Late)</div>
+                                    <h3 class="fw-bold mb-0 text-warning" id="empKpiLate">--</h3>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                                    <div class="text-muted small fw-bold">ขาดงาน (Absent)</div>
+                                    <h3 class="fw-bold mb-0 text-danger" id="empKpiAbsent">--</h3>
+                                </div>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                                    <div class="text-muted small fw-bold">ลางานทั้งหมด (Sick/Business/Vacation)</div>
+                                    <h3 class="fw-bold mb-0 text-info" id="empKpiLeave">--</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<?php require_once __DIR__ . '/master_settings_modal.php'; ?>

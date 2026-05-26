@@ -270,11 +270,11 @@
                                 </div>
                                 <div class="col-4 mt-2">
                                     <label class="form-label fw-bold small text-muted mb-1">เวลาเริ่ม</label>
-                                    <input type="time" class="form-control form-control-sm px-1 text-dark" id="edit_production_start_time" name="start_time" required>
+                                    <input type="time" class="form-control form-control-sm px-1 text-dark" id="edit_production_start_time" name="start_time" step="1" required>
                                 </div>
                                 <div class="col-4 mt-2">
                                     <label class="form-label fw-bold small text-muted mb-1">เวลาจบ</label>
-                                    <input type="time" class="form-control form-control-sm px-1 text-dark" id="edit_production_end_time" name="end_time" required>
+                                    <input type="time" class="form-control form-control-sm px-1 text-dark" id="edit_production_end_time" name="end_time" step="1" required>
                                 </div>
                             </div>
                         </div>

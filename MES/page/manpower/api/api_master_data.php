@@ -1,5 +1,5 @@
 <?php
-// MES/page/manpower/api/api_master_data.php
+// MES/page/manpowerCopy/api/api_master_data.php
 
 // 1. Header & Error Handling
 header('Content-Type: application/json');
@@ -22,7 +22,7 @@ $updatedBy = $currentUser['username'];
 
 // 3. Input Handling
 $input = json_decode(file_get_contents('php://input'), true);
-$action = $_GET['action'] ?? ($input['action'] ?? '');
+$action = $_GET['action'] ?? ($_POST['action'] ?? ($input['action'] ?? ''));
 
 // 4. Performance (Unlock Session)
 session_write_close();
@@ -30,12 +30,22 @@ session_write_close();
 try {
     switch ($action) {
         case 'read_structure':
-            // Lines
-            $stmtLine = $pdo->query("SELECT DISTINCT line FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE line IS NOT NULL AND line != '' ORDER BY line ASC");
+            $hcGroup = $_GET['hcGroup'] ?? 'ALL';
+            $sqlLine = "SELECT DISTINCT line FROM dbo.MANPOWER_EMPLOYEES E ";
+            
+            if ($hcGroup !== 'ALL' && $hcGroup !== 'undefined' && $hcGroup !== '') {
+                $sqlLine .= " LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS ON E.department_api = TS.department_api ";
+                $sqlLine .= " WHERE TS.hc_group = :hcGroup AND E.line IS NOT NULL AND E.line != '' ORDER BY E.line ASC";
+                $stmtLine = $pdo->prepare($sqlLine);
+                $stmtLine->execute([':hcGroup' => $hcGroup]);
+            } else {
+                $sqlLine .= " WHERE E.line IS NOT NULL AND E.line != '' ORDER BY E.line ASC";
+                $stmtLine = $pdo->query($sqlLine);
+            }
             $lines = $stmtLine->fetchAll(PDO::FETCH_COLUMN);
 
-            // Teams
-            $stmtTeam = $pdo->query("SELECT DISTINCT team_group FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE team_group IS NOT NULL AND team_group != '' ORDER BY team_group ASC");
+            // Teams (TEST)
+            $stmtTeam = $pdo->query("SELECT DISTINCT team_group FROM dbo.MANPOWER_EMPLOYEES WHERE team_group IS NOT NULL AND team_group != '' ORDER BY team_group ASC");
             $teams = $stmtTeam->fetchAll(PDO::FETCH_COLUMN);
 
             echo json_encode(['success' => true, 'lines' => $lines, 'teams' => $teams]);
@@ -47,7 +57,7 @@ try {
 
             $sql = "SELECT emp_id, name_th, position, line, team_group, 
                            default_shift_id, is_active, start_date, resign_date 
-                    FROM " . MANPOWER_EMPLOYEES_TABLE . " 
+                    FROM dbo.MANPOWER_EMPLOYEES 
                     WHERE emp_id = ?";
             
             $stmt = $pdo->prepare($sql);
@@ -65,20 +75,23 @@ try {
                         E.emp_id, 
                         E.name_th, 
                         E.position, 
+                        E.department_api,
                         E.line, 
                         E.team_group, 
                         E.default_shift_id, 
                         E.is_active, 
                         CM.rate_type as emp_type,
                         S.shift_name,
+                        TS.hc_group,
                         CONVERT(VARCHAR(10), E.start_date, 120) as start_date,
                         CONVERT(VARCHAR(10), E.resign_date, 120) as resign_date
 
-                    FROM " . MANPOWER_EMPLOYEES_TABLE . " E
-                    LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S ON E.default_shift_id = S.shift_id
+                    FROM dbo.MANPOWER_EMPLOYEES E
+                    LEFT JOIN dbo.MANPOWER_SHIFTS S ON E.default_shift_id = S.shift_id
+                    LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS ON E.department_api = TS.department_api
                     OUTER APPLY (
                         SELECT TOP 1 rate_type 
-                        FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M 
+                        FROM dbo.MANPOWER_CATEGORY_MAPPING M 
                         WHERE E.position LIKE '%' + M.keyword + '%' 
                         ORDER BY LEN(M.keyword) DESC
                     ) CM ";
@@ -97,7 +110,7 @@ try {
 
         case 'read_team_shifts':
             $sql = "SELECT line, team_group, MAX(default_shift_id) as default_shift_id, COUNT(emp_id) as member_count
-                    FROM " . MANPOWER_EMPLOYEES_TABLE . "
+                    FROM dbo.MANPOWER_EMPLOYEES
                     WHERE is_active = 1 AND team_group IS NOT NULL AND team_group != ''
                     GROUP BY line, team_group
                     ORDER BY line, team_group";
@@ -116,13 +129,13 @@ try {
 
             if (empty($line) || empty($team) || empty($newShiftId)) throw new Exception("Missing parameters");
 
-            $sql = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " SET default_shift_id = ? WHERE line = ? AND team_group = ? AND is_active = 1";
+            $sql = "UPDATE dbo.MANPOWER_EMPLOYEES SET default_shift_id = ? WHERE line = ? AND team_group = ? AND is_active = 1";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$newShiftId, $line, $team]);
             
             $count = $stmt->rowCount();
-            $pdo->prepare("INSERT INTO " . USER_LOGS_TABLE . " (action_by, action_type, detail, created_at) VALUES (?, 'SHIFT_PLAN', ?, GETDATE())")
-                ->execute([$updatedBy, "Shift Change: $line Team $team -> Shift $newShiftId ($count updated)"]);
+            $pdo->prepare("INSERT INTO dbo.USER_LOGS (action_by, action_type, detail, created_at) VALUES (?, 'SHIFT_PLAN', ?, GETDATE())")
+                ->execute([$updatedBy, "Shift Change (TEST): $line Team $team -> Shift $newShiftId ($count updated)"]);
 
             echo json_encode(['success' => true, 'message' => "Updated $count employees."]);
             break;
@@ -139,11 +152,11 @@ try {
             $startDate = !empty($input['start_date']) ? $input['start_date'] : date('Y-m-d');
 
             // Duplicate Check
-            $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM " . MANPOWER_EMPLOYEES_TABLE . " WHERE emp_id = ?");
+            $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM dbo.MANPOWER_EMPLOYEES WHERE emp_id = ?");
             $stmtCheck->execute([$empId]);
             if ($stmtCheck->fetchColumn() > 0) throw new Exception("Employee ID already exists!");
 
-            $sql = "INSERT INTO " . MANPOWER_EMPLOYEES_TABLE . " 
+            $sql = "INSERT INTO dbo.MANPOWER_EMPLOYEES 
                     (emp_id, name_th, position, line, default_shift_id, team_group, is_active, created_at, start_date)
                     VALUES (?, ?, ?, ?, ?, ?, 1, GETDATE(), ?)";
             
@@ -170,7 +183,7 @@ try {
             $pdo->beginTransaction();
 
             try {
-                $sql = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
+                $sql = "UPDATE dbo.MANPOWER_EMPLOYEES 
                         SET name_th = ?, position = ?, line = ?, default_shift_id = ?, team_group = ?, is_active = ?, last_sync_at = GETDATE(),
                         start_date = ?, resign_date = ? 
                         WHERE emp_id = ?";
@@ -180,7 +193,7 @@ try {
                 if (!empty($input['update_logs']) && !empty($input['effective_date'])) {
                     $effDate = $input['effective_date'];
                     
-                    $sqlRetro = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . "
+                    $sqlRetro = "UPDATE dbo.MANPOWER_DAILY_LOGS
                                  SET actual_line = ?,
                                      actual_team = ?,
                                      shift_id = ?,
@@ -194,7 +207,7 @@ try {
                 }
 
                 if ($active === 0) {
-                    $sqlCleanLog = "DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " 
+                    $sqlCleanLog = "DELETE FROM dbo.MANPOWER_DAILY_LOGS 
                                     WHERE emp_id = ? 
                                       AND log_date >= CAST(GETDATE() AS DATE) 
                                       AND (is_verified = 0 OR is_verified IS NULL)";
@@ -221,7 +234,7 @@ try {
 
             try {
                 $pdo->beginTransaction();
-                $sqlUpdate = "UPDATE " . MANPOWER_EMPLOYEES_TABLE . " 
+                $sqlUpdate = "UPDATE dbo.MANPOWER_EMPLOYEES 
                               SET is_active = 0, resign_date = :resign_date 
                               WHERE emp_id = :emp_id";
                 $stmtUpdate = $pdo->prepare($sqlUpdate);
@@ -230,7 +243,7 @@ try {
                     ':emp_id' => $emp_id
                 ]);
 
-                $sqlDelete = "DELETE FROM MANPOWER_DAILY_LOGS 
+                $sqlDelete = "DELETE FROM dbo.MANPOWER_DAILY_LOGS 
                               WHERE emp_id = :emp_id AND log_date >= :resign_date";
                 $stmtDelete = $pdo->prepare($sqlDelete);
                 $stmtDelete->execute([
@@ -248,7 +261,7 @@ try {
             break;
 
         case 'read_mappings':
-            $stmt = $pdo->prepare("SELECT * FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " ORDER BY category_name ASC, keyword ASC");
+            $stmt = $pdo->prepare("SELECT * FROM dbo.MANPOWER_CATEGORY_MAPPING ORDER BY category_name ASC, keyword ASC");
             $stmt->execute();
             echo json_encode(['success' => true, 'categories' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
@@ -258,8 +271,8 @@ try {
 
             $categories = $input['categories'] ?? [];
             $pdo->beginTransaction();
-            $pdo->exec("DELETE FROM " . MANPOWER_CATEGORY_MAPPING_TABLE);
-            $stmt = $pdo->prepare("INSERT INTO " . MANPOWER_CATEGORY_MAPPING_TABLE . " (keyword, category_name, hourly_rate, rate_type) VALUES (?, ?, ?, ?)");
+            $pdo->exec("DELETE FROM dbo.MANPOWER_CATEGORY_MAPPING");
+            $stmt = $pdo->prepare("INSERT INTO dbo.MANPOWER_CATEGORY_MAPPING (keyword, category_name, hourly_rate, rate_type) VALUES (?, ?, ?, ?)");
             
             foreach ($categories as $cat) {
                 $rate = $cat['hourly_rate'] ?? 0;
@@ -269,6 +282,49 @@ try {
 
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'Mappings saved successfully']);
+            break;
+
+        case 'read_team_settings':
+            $pdo->exec("
+                IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MANPOWER_TEAM_SETTINGS' and xtype='U')
+                CREATE TABLE dbo.MANPOWER_TEAM_SETTINGS (
+                    department_api VARCHAR(255) NOT NULL,
+                    hc_group VARCHAR(50) DEFAULT 'MAIN',
+                    PRIMARY KEY (department_api)
+                )
+            ");
+            $stmt = $pdo->query("
+                SELECT 
+                    e.department_api AS department_api, 
+                    ISNULL(s.hc_group, 'MAIN') as hc_group
+                FROM (
+                    SELECT DISTINCT department_api 
+                    FROM dbo.MANPOWER_EMPLOYEES 
+                    WHERE department_api IS NOT NULL AND department_api != ''
+                ) e
+                LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS s 
+                  ON e.department_api = s.department_api
+                ORDER BY e.department_api
+            ");
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        case 'save_team_settings':
+            if (!hasRole(['admin', 'creator'])) throw new Exception("Unauthorized.");
+            
+            // Allow reading from $_POST if FormData is used
+            $settings = $_POST['settings'] ?? ($input['settings'] ?? []);
+            
+            $pdo->beginTransaction();
+            $pdo->exec("DELETE FROM dbo.MANPOWER_TEAM_SETTINGS");
+            $stmt = $pdo->prepare("INSERT INTO dbo.MANPOWER_TEAM_SETTINGS (department_api, hc_group) VALUES (?, ?)");
+            
+            foreach ($settings as $s) {
+                $stmt->execute([trim($s['department_api'] ?? ''), trim($s['hc_group'] ?? 'MAIN')]);
+            }
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Team Settings saved successfully']);
             break;
 
         default:

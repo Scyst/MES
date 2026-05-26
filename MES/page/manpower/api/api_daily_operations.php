@@ -1,5 +1,5 @@
 <?php
-// MES/page/manpower/api/api_daily_operations.php
+// MES/page/manpowerCopy/api/api_daily_operations.php
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../db.php';
@@ -25,6 +25,57 @@ session_write_close();
 
 try {
     switch ($action) {
+        case 'read_kpi_summary':
+            $empIdFilter = isset($_GET['emp_id']) ? trim($_GET['emp_id']) : '';
+            $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+            
+            // Allow explicit startDate and endDate, otherwise fallback to YTD
+            $startDate = isset($_GET['startDate']) ? trim($_GET['startDate']) : "$year-01-01";
+            $endDate = isset($_GET['endDate']) ? trim($_GET['endDate']) : date('Y-m-d');
+            
+            $sql = "SELECT 
+                        E.emp_id, E.name_th, E.line, ISNULL(TS.hc_group, E.team_group) as team_group,
+                        COUNT(C.calendar_date) as total_working_days,
+                        SUM(CASE WHEN ISNULL(L.status, CASE WHEN C.calendar_date < CAST(GETDATE() AS DATE) THEN 'ABSENT' ELSE 'WAITING' END) = 'PRESENT' THEN 1 ELSE 0 END) as count_present,
+                        SUM(CASE WHEN ISNULL(L.status, CASE WHEN C.calendar_date < CAST(GETDATE() AS DATE) THEN 'ABSENT' ELSE 'WAITING' END) = 'LATE' THEN 1 ELSE 0 END) as count_late,
+                        SUM(CASE WHEN ISNULL(L.status, CASE WHEN C.calendar_date < CAST(GETDATE() AS DATE) THEN 'ABSENT' ELSE 'WAITING' END) = 'ABSENT' THEN 1 ELSE 0 END) as count_absent,
+                        SUM(CASE WHEN ISNULL(L.status, 'WAITING') = 'SICK' THEN 1 ELSE 0 END) as count_sick,
+                        SUM(CASE WHEN ISNULL(L.status, 'WAITING') = 'BUSINESS' THEN 1 ELSE 0 END) as count_business,
+                        SUM(CASE WHEN ISNULL(L.status, 'WAITING') = 'VACATION' THEN 1 ELSE 0 END) as count_vacation
+                    FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                    LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
+                    JOIN dbo.MANPOWER_CALENDAR C WITH (NOLOCK)
+                        ON C.calendar_date BETWEEN :startDate AND :endDate
+                        AND C.day_type != 'HOLIDAY'
+                        AND DATENAME(dw, C.calendar_date) != 'Sunday'
+                        AND C.calendar_date >= ISNULL(E.start_date, '2000-01-01')
+                        AND C.calendar_date <= ISNULL(E.resign_date, CAST(GETDATE() AS DATE))
+                    LEFT JOIN dbo.MANPOWER_DAILY_LOGS L WITH (NOLOCK)
+                        ON E.emp_id = L.emp_id AND C.calendar_date = L.log_date
+                    WHERE 1=1 ";
+            
+            $params = [
+                ':startDate' => $startDate,
+                ':endDate' => $endDate
+            ];
+
+            if ($empIdFilter !== '') {
+                $sql .= " AND E.emp_id = :emp_id ";
+                $params[':emp_id'] = $empIdFilter;
+            } else {
+                $sql .= " AND (E.is_active = 1 OR E.resign_date >= :startDate2) ";
+                $params[':startDate2'] = $startDate;
+            }
+
+            $sql .= " GROUP BY E.emp_id, E.name_th, E.line, ISNULL(TS.hc_group, E.team_group) ";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode(['success' => true, 'data' => $data]);
+            exit;
+
         case 'read_daily':
             $startDate  = $_GET['startDate'] ?? ($_GET['date'] ?? date('Y-m-d'));
             $endDate    = $_GET['endDate']   ?? $startDate; 
@@ -41,7 +92,8 @@ try {
                         
                         CASE 
                             WHEN L.status IS NOT NULL THEN L.status
-                            WHEN :startDateCheck < CAST(GETDATE() AS DATE) THEN 'ABSENT'
+                            WHEN Cal.day_type = 'HOLIDAY' OR DATENAME(dw, ISNULL(L.log_date, :startDateCheck)) = 'Sunday' THEN 'HOLIDAY'
+                            WHEN ISNULL(L.log_date, :startDateCheck2) < CAST(GETDATE() AS DATE) THEN 'ABSENT'
                             ELSE 'WAITING'
                         END as status,
 
@@ -81,17 +133,17 @@ try {
                             ELSE 0 
                         END as is_forgot_out
 
-                    FROM " . MANPOWER_EMPLOYEES_TABLE . " E WITH (NOLOCK)
-                    LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S_Master WITH (NOLOCK) ON E.default_shift_id = S_Master.shift_id
+                    FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                    LEFT JOIN dbo.MANPOWER_SHIFTS S_Master WITH (NOLOCK) ON E.default_shift_id = S_Master.shift_id
                     OUTER APPLY (
-                        SELECT TOP 1 * FROM " . MANPOWER_CATEGORY_MAPPING_TABLE . " M WITH (NOLOCK)
+                        SELECT TOP 1 * FROM dbo.MANPOWER_CATEGORY_MAPPING M WITH (NOLOCK)
                         WHERE E.position LIKE '%' + M.keyword + '%' 
                         ORDER BY LEN(M.keyword) DESC
                     ) CM
-                    LEFT JOIN " . MANPOWER_DAILY_LOGS_TABLE . " L WITH (NOLOCK)
+                    LEFT JOIN dbo.MANPOWER_DAILY_LOGS L WITH (NOLOCK)
                         ON E.emp_id = L.emp_id 
                         AND L.log_date BETWEEN :start AND :end
-                    LEFT JOIN " . MANPOWER_SHIFTS_TABLE . " S WITH (NOLOCK) ON L.shift_id = S.shift_id
+                    LEFT JOIN dbo.MANPOWER_SHIFTS S WITH (NOLOCK) ON L.shift_id = S.shift_id
                     LEFT JOIN dbo.MANPOWER_CALENDAR Cal WITH (NOLOCK) ON (L.log_date = Cal.calendar_date OR Cal.calendar_date = :calDate)
                     CROSS APPLY (SELECT CASE WHEN CM.rate_type='MONTHLY_NO_OT' THEN 0.0 WHEN Cal.day_type='HOLIDAY' THEN 3.0 ELSE 1.5 END AS OT_Multiplier, CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN 0.0 ELSE 1.0 END AS Work_Multiplier, CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN COALESCE(CM.hourly_rate, 0)/30.0/8.0 WHEN CM.rate_type='DAILY' THEN COALESCE(CM.hourly_rate,0)/8.0 ELSE COALESCE(CM.hourly_rate,0) END AS Hourly_Base) AS Rate
                     CROSS APPLY (SELECT CAST(CONCAT(ISNULL(L.log_date, :t0Date), ' ', ISNULL(S.start_time, S_Master.start_time)) AS DATETIME) AS Shift_Start) AS T0
@@ -110,17 +162,31 @@ try {
                     ";
             
             $params = [
-                ':startDateDisp' => $startDate, ':startDateCheck' => $startDate, ':start' => $startDate, ':end' => $endDate,
-                ':calDate' => $startDate, ':t0Date' => $startDate, ':createDateCheck' => $startDate
+                ':startDateDisp' => $startDate, ':startDateCheck' => $startDate, ':startDateCheck2' => $startDate, 
+                ':start' => $startDate, ':end' => $endDate, ':calDate' => $startDate, ':t0Date' => $startDate, ':createDateCheck' => $startDate
             ];
+
+            $hcGroupFilter = $_GET['hcGroup'] ?? 'ALL';
 
             if (!empty($lineFilter) && $lineFilter !== 'ALL' && $lineFilter !== 'undefined' && $lineFilter !== 'null') {
                 $sql .= " AND ISNULL(L.actual_line, E.line) = :line";
                 $params[':line'] = $lineFilter;
             }
 
+            if ($hcGroupFilter !== 'ALL' && $hcGroupFilter !== 'undefined' && $hcGroupFilter !== 'null') {
+                $sql .= " AND E.department_api IN (SELECT department_api FROM dbo.MANPOWER_TEAM_SETTINGS WHERE hc_group = :hcGroup)";
+                $params[':hcGroup'] = $hcGroupFilter;
+            }
+
             if (!empty($empTypeFilter) && $empTypeFilter !== 'ALL' && $empTypeFilter !== 'undefined') {
-                if ($empTypeFilter === 'Other') {
+                if (strpos($empTypeFilter, 'RATE:') === 0) {
+                    $rateType = substr($empTypeFilter, 5);
+                    if ($rateType === 'MONTHLY') {
+                        $sql .= " AND CM.rate_type LIKE 'MONTHLY%'";
+                    } else {
+                        $sql .= " AND ISNULL(CM.rate_type, 'DAILY') = 'DAILY'";
+                    }
+                } else if ($empTypeFilter === 'Other') {
                     $sql .= " AND (CM.category_name IS NULL)";
                 } else {
                     $sql .= " AND (CM.category_name = :empType)";
@@ -161,7 +227,7 @@ try {
             $date = $_GET['date'] ?? date('Y-m-d');
             
             $useNewFormula = isset($_GET['use_new_formula']) && $_GET['use_new_formula'] === 'true' ? 1 : 0;
-            $spName = 'sp_GetManpowerDashboardData';
+            $spName = 'sp_GetManpowerDashboardData'; // เน€เธเธฅเธตเนเธขเธเน€เธเนเธ _TEST
             
             $sql = "EXEC $spName @StartDate = :start, @EndDate = :end, @UseNewFormula = :formula";
             $stmt = $pdo->prepare($sql);
@@ -172,11 +238,13 @@ try {
             ]);
             
             $rawData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $finalData = array_map(function($row) {
-                return [
+            $finalData = [];
+            foreach($rawData as $row) {
+                $finalData[] = [
                     'line_name'   => $row['Line'],
                     'shift_name'  => $row['Shift'],
                     'team_group'  => $row['Team'],
+                    'hc_group'    => $row['HC_Group'] ?? 'MAIN',
                     
                     'emp_type'    => $row['Category'],
                     'rate_type'   => $row['RateType'],
@@ -195,7 +263,7 @@ try {
                     'ot_cost'     => $row['OT_Cost'],
                     'ot_hours'    => isset($row['OT_Hours']) ? (float)$row['OT_Hours'] : 0
                 ];
-            }, $rawData);
+            }
 
             echo json_encode(['success' => true, 'raw_data' => $finalData, 'last_update' => date('d/m/Y H:i:s')]);
             break;
@@ -211,13 +279,13 @@ try {
             $pdo->beginTransaction();
 
             if (!empty($line) && $line !== 'ALL') {
-                $sql = "DELETE L FROM " . MANPOWER_DAILY_LOGS_TABLE . " L
-                        LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " E ON L.emp_id = E.emp_id
+                $sql = "DELETE L FROM dbo.MANPOWER_DAILY_LOGS L
+                        LEFT JOIN dbo.MANPOWER_EMPLOYEES E ON L.emp_id = E.emp_id
                         WHERE L.log_date = ? AND (L.actual_line = ? OR E.line = ?)";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$date, $line, $line]);
             } else {
-                $stmt = $pdo->prepare("DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE log_date = ?");
+                $stmt = $pdo->prepare("DELETE FROM dbo.MANPOWER_DAILY_LOGS WHERE log_date = ?");
                 $stmt->execute([$date]);
             }
             
@@ -236,17 +304,17 @@ try {
             if (empty($logId) || empty($status)) throw new Exception("Missing parameters");
 
             // Get Date for Recalc
-            $stmtDate = $pdo->prepare("SELECT log_date FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE log_id = ?");
+            $stmtDate = $pdo->prepare("SELECT log_date FROM dbo.MANPOWER_DAILY_LOGS WHERE log_id = ?");
             $stmtDate->execute([$logId]);
             $rowDate = $stmtDate->fetch(PDO::FETCH_ASSOC);
 
             // Update
-            $sql = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . "
+            $sql = "UPDATE dbo.MANPOWER_DAILY_LOGS
                 SET status = ?, remark = ?, updated_at = GETDATE(), updated_by = ?, is_verified = 1 
                 WHERE log_id = ?";
             $pdo->prepare($sql)->execute([$status, $remark, $updatedBy, $logId]);
 
-            // Recalc
+            // Recalc (เน€เธเธฅเธตเนเธขเธเนเธเนเธเน _TEST)
             if ($rowDate) {
                 $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?")->execute([$rowDate['log_date'], $rowDate['log_date']]);
             }
@@ -260,22 +328,22 @@ try {
             $logId = $input['log_id'] ?? '';
             if (empty($logId)) throw new Exception("Missing Log ID");
 
-            $stmtCheck = $pdo->prepare("SELECT status, log_date FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE log_id = ?");
+            $stmtCheck = $pdo->prepare("SELECT status, log_date FROM dbo.MANPOWER_DAILY_LOGS WHERE log_id = ?");
             $stmtCheck->execute([$logId]);
             $log = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
             if (!$log) throw new Exception("Record not found.");
             
             if (in_array($log['status'], ['PRESENT', 'LATE']) && !hasRole(['admin', 'creator'])) {
-                throw new Exception("ไม่สามารถลบรายการที่มีการสแกนเข้างานแล้วได้ (ต้องใช้สิทธิ์ Admin)");
+                throw new Exception("เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธฅเธเธฃเธฒเธขเธเธฒเธฃเธ—เธตเนเธกเธตเธเธฒเธฃเธชเนเธเธเน€เธเนเธฒเธเธฒเธเนเธฅเนเธงเนเธ”เน (เธ•เนเธญเธเนเธเนเธชเธดเธ—เธเธดเน Admin)");
             }
 
             $pdo->beginTransaction();
-            $pdo->prepare("DELETE FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE log_id = ?")->execute([$logId]);
+            $pdo->prepare("DELETE FROM dbo.MANPOWER_DAILY_LOGS WHERE log_id = ?")->execute([$logId]);
             $pdo->prepare("INSERT INTO " . USER_LOGS_TABLE . " (action_by, action_type, detail, created_at) VALUES (?, 'MANPOWER_DELETE_LOG', ?, GETDATE())")->execute([$updatedBy, "Deleted Log ID: $logId"]);
             $pdo->commit();
 
-            // Recalc
+            // Recalc (เน€เธเธฅเธตเนเธขเธเนเธเนเธเน _TEST)
             $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?")->execute([$log['log_date'], $log['log_date']]);
 
             echo json_encode(['success' => true, 'message' => 'Record deleted successfully']);
@@ -284,7 +352,13 @@ try {
         case 'read_trend':
             $endDateStr   = $_GET['endDate']   ?? date('Y-m-d');
             $startDateStr = $_GET['startDate'] ?? date('Y-m-d', strtotime('-6 days'));
-            $funcName     = 'fn_GetManpowerSummary';
+            $hcGroupFilter = $_GET['hcGroup'] ?? 'ALL';
+            $funcName     = 'fn_GetManpowerSummary_V2'; 
+
+            $sqlCondition = "";
+            if ($hcGroupFilter !== 'ALL' && $hcGroupFilter !== 'undefined' && $hcGroupFilter !== 'null') {
+                $sqlCondition = "WHERE f.hc_group = :hcGroup";
+            }
 
             $sql = "
                 WITH DateRange AS (
@@ -304,13 +378,18 @@ try {
                     SUM(f.Count_Leave) as total_leave
                 FROM DateRange d
                 CROSS APPLY $funcName(d.SummaryDate) f
+                $sqlCondition
                 GROUP BY d.SummaryDate
                 ORDER BY d.SummaryDate ASC
                 OPTION (MAXRECURSION 366);
             ";
 
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([':start' => $startDateStr, ':end'   => $endDateStr]);
+            $params = [':start' => $startDateStr, ':end' => $endDateStr];
+            if ($hcGroupFilter !== 'ALL' && $hcGroupFilter !== 'undefined' && $hcGroupFilter !== 'null') {
+                $params[':hcGroup'] = $hcGroupFilter;
+            }
+            $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $data]);
@@ -323,7 +402,7 @@ try {
             $shift = isset($_GET['shift']) ? $_GET['shift'] : null;
             $type  = isset($_GET['type']) ? $_GET['type'] : null;
 
-            $spName = 'sp_GetExecutiveRangeReport';
+            $spName = 'sp_GetExecutiveRangeReport'; // เน€เธเธฅเธตเนเธขเธเนเธเนเธเน SP _TEST
 
             $stmt = $pdo->prepare("EXEC $spName @StartDate = ?, @EndDate = ?, @Line = ?, @Shift = ?, @EmpType = ?");
             $stmt->execute([$startDate, $endDate, $line, $shift, $type]);
@@ -341,7 +420,7 @@ try {
 
         case 'update_log':
             if (!hasPermission('manage_manpower')) {
-                throw new Exception("Permission Denied: คุณไม่มีสิทธิ์แก้ไขข้อมูล");
+                throw new Exception("Permission Denied: เธเธธเธ“เนเธกเนเธกเธตเธชเธดเธ—เธเธดเนเนเธเนเนเธเธเนเธญเธกเธนเธฅ");
             }
 
             $logId  = $input['log_id'] ?? '';
@@ -357,22 +436,23 @@ try {
 
             $pdo->beginTransaction();
 
-            $stmtCheck = $pdo->prepare("SELECT log_id FROM " . MANPOWER_DAILY_LOGS_TABLE . " WHERE (log_id = ? AND log_id != '0') OR (emp_id = ? AND log_date = ?)");
+            $stmtCheck = $pdo->prepare("SELECT log_id FROM dbo.MANPOWER_DAILY_LOGS WHERE (log_id = ? AND log_id != '0') OR (emp_id = ? AND log_date = ?)");
             $stmtCheck->execute([$logId, $empId, $logDate]);
             $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
             if ($existing) {
-                $sql = "UPDATE " . MANPOWER_DAILY_LOGS_TABLE . " 
+                $sql = "UPDATE dbo.MANPOWER_DAILY_LOGS 
                         SET status = ?, remark = ?, scan_in_time = ?, scan_out_time = ?, actual_line = ?, actual_team = ?, shift_id = ?, updated_by = ?, updated_at = GETDATE(), is_verified = 1 
                         WHERE log_id = ?";
                 $pdo->prepare($sql)->execute([$status, $remark, $scanIn, $scanOut, $actualLine, $actualTeam, $shiftId, $updatedBy, $existing['log_id']]);
             } else {
-                $sql = "INSERT INTO " . MANPOWER_DAILY_LOGS_TABLE . " 
+                $sql = "INSERT INTO dbo.MANPOWER_DAILY_LOGS 
                         (log_date, emp_id, status, remark, scan_in_time, scan_out_time, actual_line, actual_team, shift_id, updated_by, updated_at, is_verified)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), 1)";
                 $pdo->prepare($sql)->execute([$logDate, $empId, $status, $remark, $scanIn, $scanOut, $actualLine, $actualTeam, $shiftId, $updatedBy]);
             }
 
+            // Recalc (เน€เธเธฅเธตเนเธขเธเนเธเนเธเน SP _TEST)
             $recalcStmt = $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?");
             $recalcStmt->execute([$logDate, $logDate]);
 
@@ -383,7 +463,7 @@ try {
         case 'export_history':
             $endDateStr   = $_GET['endDate']   ?? date('Y-m-d');
             $startDateStr = $_GET['startDate'] ?? date('Y-m-d', strtotime('-6 days'));
-            $funcName = 'fn_GetManpowerSummary';
+            $funcName = 'fn_GetManpowerSummary_V2'; // เน€เธเธฅเธตเนเธขเธเนเธเนเธเน fn _TEST
 
             $sql = "
                 WITH DateRange AS (
@@ -423,7 +503,7 @@ try {
             $startDate = $_GET['startDate'] ?? date('Y-m-d');
             $endDate   = $_GET['endDate']   ?? $startDate; 
             
-            $sql = "EXEC sp_CompareLaborCost_Logic @StartDate = :start, @EndDate = :end";
+            $sql = "EXEC sp_CompareLaborCost_Logic @StartDate = :start, @EndDate = :end"; // เน€เธเธฅเธตเนเธขเธเน€เธเนเธ _TEST
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 ':start' => $startDate,
@@ -455,10 +535,11 @@ try {
                 $startDate = $_GET['startDate'] ?? date('Y-m-01');
                 $endDate   = $_GET['endDate']   ?? date('Y-m-d');
                 $line      = $_GET['line']      ?? 'ALL';
+                $hcGroup   = $_GET['hcGroup']   ?? 'ALL';
 
-                $sql = "EXEC sp_GetIntegratedManpowerAnalysis @StartDate = ?, @EndDate = ?, @Line = ?";
+                $sql = "EXEC sp_GetIntegratedManpowerAnalysis @StartDate = ?, @EndDate = ?, @Line = ?, @HcGroup = ?";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$startDate, $endDate, $line]);
+                $stmt->execute([$startDate, $endDate, $line, $hcGroup]);
                 
                 // 1. Fetch Summary (Layer 1)
                 $summary = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -499,6 +580,10 @@ try {
             }
             break;
 
+        case 'update_sp_analysis':
+            require_once __DIR__ . '/../../../utils/SQL/alter_analysis_sp.php';
+            break;
+
         default:
             throw new Exception("Invalid Action: " . htmlspecialchars($action));
     }
@@ -509,3 +594,4 @@ try {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>
+

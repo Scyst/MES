@@ -63,12 +63,22 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
 
                     <div class="vr mx-1 text-muted opacity-25 my-1"></div>
 
+                    <div class="d-flex align-items-center px-2">
+                        <span class="text-muted small text-uppercase fw-bold me-2"><i class="fas fa-users-cog"></i> Group:</span>
+                        <select id="filterHcGroup" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0 ps-1" style="width: 100px; cursor: pointer; box-shadow: none;">
+                            <option value="TEAM 1">TEAM 1</option>
+                            <option value="ALL">ALL GROUPS</option>
+                        </select>
+                    </div>
+
+                    <div class="vr mx-1 text-muted opacity-25 my-1"></div>
+
                     <button class="btn btn-light btn-sm text-secondary fw-bold px-2 py-1 rounded ms-1 shadow-sm" onclick="App.loadData()" title="Reload Data">
                         <i class="fas fa-sync-alt"></i>
                     </button>
 
-                    <button id="btnFormulaToggle" class="btn btn-white border text-secondary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm transition-btn" title="Switch Calculation Formula">
-                        <i class="fas fa-calculator me-2"></i>Standard Cost
+                    <button id="btnFormulaToggle" class="btn btn-warning btn-sm shadow-sm fw-bold transition-btn text-dark ms-1" title="Switch Calculation Formula">
+                        <i class="fas fa-flask me-2"></i>New Logic (Sim)
                     </button>
 
                     <button class="btn btn-primary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="App.syncNow()" title="Sync from Cloud">
@@ -88,12 +98,8 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                                 
                                 <li><a class="dropdown-item" href="#" onclick="Actions.openIntegratedAnalysis()"><i class="fas fa-chart-pie text-primary me-2"></i>Analysis Report</a></li>
                                 <li><hr class="dropdown-divider"></li>
-
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmployeeManager()">Staff Manager</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openShiftPlanner()">Shift Planner</a></li>
-                                
-                                <li><a class="dropdown-item" href="holidayUI.php">Holiday Settings</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openMappingManager()">Maps Config</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmployeeManager()"><i class="fas fa-cogs text-secondary me-2"></i>Master Settings</a></li>
+                                <li><a class="dropdown-item" href="holidayUI.php"><i class="fas fa-calendar-day text-success me-2"></i>Holiday Settings</a></li>
                                 
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="#" onclick="App.resetDailyData()">Reset Daily Data</a></li>
@@ -309,6 +315,7 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
         </div>
     </div>
 
+    <script src="script/html2canvas.min.js"></script>
     <script src="script/manpower_api.js?v=<?php echo filemtime(__DIR__ . '/script/manpower_api.js'); ?>" defer></script>
     <script src="script/manpower_ui.js?v=<?php echo filemtime(__DIR__ . '/script/manpower_ui.js'); ?>" defer></script>
     <script src="script/manpower_main.js?v=<?php echo filemtime(__DIR__ . '/script/manpower_main.js'); ?>" defer></script>

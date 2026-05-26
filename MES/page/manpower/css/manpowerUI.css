@@ -385,7 +385,7 @@ div[style*="border-left"] {
     background-color: #ffffff !important;
 }
 /* Hover แล้วให้ตัวหนังสือพนักงานเป็นสีน้ำเงิน */
-.bg-white:hover td {
+tr.bg-white:hover td {
     color: #224abe !important; 
     background-color: #f0f4ff !important;
 }

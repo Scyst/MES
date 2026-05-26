@@ -20,6 +20,10 @@ try {
             $startRaw = $_GET['start'] ?? date('Y-m-01');
             $endRaw   = $_GET['end']   ?? date('Y-m-t');
             
+            // Repair space back to plus if it was unencoded
+            $startRaw = str_replace(' ', '+', $startRaw);
+            $endRaw   = str_replace(' ', '+', $endRaw);
+
             $start = date('Y-m-d', strtotime($startRaw));
             $end   = date('Y-m-d', strtotime($endRaw));
 
@@ -65,31 +69,22 @@ try {
 
         case 'save':
             $date = $input['date'];
-            $desc = $input['description'];
+            $desc = $input['description'] ?? '';
             $type = $input['day_type'] ?? 'HOLIDAY';
             $workRate = $input['work_rate'] ?? 2.0;
             $otRate = $input['ot_rate'] ?? 3.0;
+            $user_name = $_SESSION['user']['username'] ?? 'System';
 
-            if (!$date || !$desc) throw new Exception("Missing required fields");
+            if (!$date) throw new Exception("Date is required");
 
-            $sql = "MERGE INTO dbo.MANPOWER_CALENDAR AS Target
-                    USING (SELECT ? AS d) AS Source
-                    ON (Target.calendar_date = Source.d)
-                    WHEN MATCHED THEN
-                        UPDATE SET 
-                            day_type = ?, 
-                            description = ?, 
-                            work_rate_holiday = ?, 
-                            ot_rate_holiday = ?
-                    WHEN NOT MATCHED THEN
-                        INSERT (calendar_date, day_type, description, work_rate_holiday, ot_rate_holiday)
-                        VALUES (?, ?, ?, ?, ?);";
-
-            $stmt = $pdo->prepare($sql);
+            $stmt = $pdo->prepare("EXEC dbo." . SP_SAVE_CALENDAR . " :date, :type, :desc, :wRate, :oRate, :user");
             $stmt->execute([
-                $date, 
-                $type, $desc, $workRate, $otRate,
-                $date, $type, $desc, $workRate, $otRate
+                ':date'  => $date,
+                ':type'  => $type,
+                ':desc'  => $desc,
+                ':wRate' => floatval($workRate),
+                ':oRate' => floatval($otRate),
+                ':user'  => $user_name
             ]);
 
             echo json_encode(['success' => true]);

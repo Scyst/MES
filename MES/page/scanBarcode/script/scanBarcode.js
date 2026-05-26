@@ -517,8 +517,8 @@ function showLastSaved(data) {
     
     document.getElementById('lsLocation').textContent   = data.location_name || '-';
     
-    // แอบเติมจำนวน (Qty) เข้าไปที่ท้าย Notes เพื่อให้คนสแกนรู้ว่าตะกี้บวกไปกี่ชิ้น
-    const qtyStr = data.quantity_added ? ` (+${data.quantity_added} PCS)` : '';
+    // แสดงจำนวนรวมในรอบชั่วโมง
+    const qtyStr = data.quantity_added ? ` (รวมรอบชั่วโมง: ${data.quantity_added} PCS)` : '';
     document.getElementById('lsNotes').textContent      = (data.notes || '-') + qtyStr;
     
     // เวลา
