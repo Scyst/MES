@@ -319,6 +319,54 @@
         </div>
     </div>
 
+    <div class="modal fade" id="bulkEditModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-warning py-3">
+                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-edit me-2"></i> แก้ไขข้อมูลแบบกลุ่ม</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <input type="hidden" id="be_lot_no">
+                    <input type="hidden" id="be_is_range">
+                    <input type="hidden" id="be_start_no">
+                    <input type="hidden" id="be_end_no">
+                    <input type="hidden" id="be_item_id">
+
+                    <div class="alert alert-warning mb-3 small border-warning border-opacity-50 text-dark">
+                        <i class="fas fa-info-circle me-1"></i> ระบบกำลังแก้ไข Lot: <strong id="be_lot_display">...</strong>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small text-secondary mb-1">วันที่ผลิต (MFG Date)</label>
+                        <input type="date" id="be_prod_date" class="form-control form-control-sm fw-bold" required>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small text-secondary mb-1">สถานีต้นทาง / คลัง (Source)</label>
+                        <select id="be_from_location_id" class="form-select form-select-sm fw-bold text-primary" required></select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small text-secondary mb-1">บรรจุต่อกล่อง (Qty)</label>
+                        <input type="number" id="be_quantity" class="form-control form-control-sm fw-bold text-dark" required>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small text-secondary mb-1">หมายเหตุ (Remark)</label>
+                        <input type="text" id="be_notes" class="form-control form-control-sm">
+                    </div>
+                </div>
+                <div class="modal-footer bg-white">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-warning fw-bold px-4 text-dark" id="btnConfirmBulkEdit" onclick="submitBulkEdit()">
+                        <i class="fas fa-save me-1"></i> บันทึก
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="printArea" class="d-none"></div>
 
     <script>

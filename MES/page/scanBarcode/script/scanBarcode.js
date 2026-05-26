@@ -451,7 +451,7 @@ async function saveScan() {
         const json = await res.json();
 
         if (json.success) {
-            showStatus(statusEl, 'success', '✅ บันทึกสำเร็จ');
+            showStatus(statusEl, 'success', '✅ ' + (json.message || 'บันทึกสำเร็จ'));
             showLastSaved(json.data);
 
             const picker = document.getElementById('logDatePicker');
@@ -464,7 +464,7 @@ async function saveScan() {
             document.getElementById('barcodeStatus').classList.remove('show');
 
             const saveOk = document.getElementById('barcodeSaveOk');
-            saveOk.textContent = 'บันทึกสำเร็จ';
+            saveOk.textContent = json.message || 'บันทึกสำเร็จ';
             saveOk.classList.add('show');
             if (saveOkTimer) clearTimeout(saveOkTimer);
             saveOkTimer = setTimeout(() => saveOk.classList.remove('show'), 3000);

@@ -110,27 +110,83 @@ try {
                 throw new Exception('กรุณากรอกข้อมูล Barcode และ Location ให้ครบถ้วน');
             }
 
+            // Find item_id for Stock Transaction
+            $itemStmt = $pdo->prepare("
+                SELECT TOP 1 item_id, sap_no 
+                FROM " . ITEMS_TABLE . " 
+                WHERE (barcode = :barcode OR sap_no = :sap) AND is_active = 1
+            ");
+            $searchSap = !empty($sap) ? $sap : $barcode;
+            $itemStmt->execute([':barcode' => $barcode, ':sap' => $searchSap]);
+            $item = $itemStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$item) {
+                throw new Exception("ไม่พบข้อมูลสินค้าในระบบ (Barcode/SAP ไม่ถูกต้อง)");
+            }
+            $item_id = $item['item_id'];
+            $final_sap = !empty($sap) ? $sap : $item['sap_no'];
+
+            $pdo->beginTransaction();
+
+            // 1. Insert Log
             $stmt = $pdo->prepare("
                 INSERT INTO " . SCAN_LOGS_TABLE . " (
                     barcode_no, sap_no, lot_ref, location_id, location_name, production_type, logdate, notes, scanned_by
                 ) VALUES (?, ?, ?, ?, ?, ?, GETDATE(), ?, ?)
             ");
-            $stmt->execute([$barcode, $sap, $lot_ref, $location_id, $location_name, $production_type, $notes, $username]);
+            $stmt->execute([$barcode, $final_sap, $lot_ref, $location_id, $location_name, $production_type, $notes, $username]);
+
+            // 2. Execute Production (Stock Transaction)
+            $logdate = date('Y-m-d');
+            $current_time = date('H:i:s');
+            $timestamp = $logdate . ' ' . $current_time;
+            $prod_notes = trim("Scan: " . $notes);
+            
+            $prodStmt = $pdo->prepare("
+                EXEC dbo.sp_ExecuteProduction 
+                    @item_id = ?, 
+                    @location_id = ?, 
+                    @quantity = ?, 
+                    @count_type = ?, 
+                    @lot_no = ?, 
+                    @notes = ?, 
+                    @timestamp = ?, 
+                    @start_time = ?, 
+                    @end_time = ?, 
+                    @user_id = ?, 
+                    @username = ?
+            ");
+            
+            $prodStmt->execute([
+                $item_id,
+                $location_id,
+                1, // Quantity 1 per scan
+                $production_type,
+                $lot_ref,
+                $prod_notes,
+                $timestamp,
+                $current_time,
+                $current_time,
+                $user_id,
+                $username
+            ]);
+
+            $pdo->commit();
 
             writeLog($pdo, 'CREATE', 'SCAN_BARCODE', $barcode, null,
                 compact('barcode', 'lot_ref', 'location_name', 'production_type', 'username'));
 
-            $logdate = (new DateTime('now', new DateTimeZone('Asia/Bangkok')))->format('Y-m-d H:i:s');
+            $logdate_format = (new DateTime('now', new DateTimeZone('Asia/Bangkok')))->format('Y-m-d H:i:s');
             echo json_encode([
                 'success' => true,
-                'message' => 'บันทึกข้อมูลสำเร็จ',
+                'message' => 'บันทึกข้อมูลและตัดสต็อกสำเร็จ',
                 'data'    => [
                     'barcode'         => $barcode,
-                    'sap'             => $sap,
+                    'sap'             => $final_sap,
                     'lot_ref'         => $lot_ref,
                     'location_name'   => $location_name,
                     'production_type' => $production_type,
-                    'logdate'         => $logdate,
+                    'logdate'         => $logdate_format,
                     'notes'           => $notes,
                 ]
             ]);

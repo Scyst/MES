@@ -387,11 +387,14 @@ try {
             $id = $_POST['id'] ?? null;
             $field = $_POST['field'] ?? null;
             $val = isset($_POST['checked']) ? (int)$_POST['checked'] : 0;
-            if ($id && in_array($field, ['is_loading_done', 'is_production_done'])) {
+            if ($id && in_array($field, ['is_loading_done', 'is_production_done', 'inspection_status'])) {
                  if ($field === 'is_loading_done' && $val == 1) {
                      $pdo->prepare("UPDATE $table SET is_loading_done = 1, loading_date = COALESCE(loading_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$id]);
                  } elseif ($field === 'is_production_done' && $val == 1) {
                      $pdo->prepare("UPDATE $table SET is_production_done = 1, production_end_date = COALESCE(production_end_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$id]);
+                 } elseif ($field === 'inspection_status') {
+                     $statusStr = ($val == 1) ? 'Pass' : '';
+                     $pdo->prepare("UPDATE $table SET inspection_status = ?, updated_at = GETDATE() WHERE id = ?")->execute([$statusStr, $id]);
                  } else {
                      $pdo->prepare("UPDATE $table SET {$field} = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $id]);
                  }

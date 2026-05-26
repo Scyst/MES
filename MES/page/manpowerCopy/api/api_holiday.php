@@ -20,6 +20,10 @@ try {
             $startRaw = $_GET['start'] ?? date('Y-m-01');
             $endRaw   = $_GET['end']   ?? date('Y-m-t');
             
+            // Repair space back to plus if it was unencoded
+            $startRaw = str_replace(' ', '+', $startRaw);
+            $endRaw   = str_replace(' ', '+', $endRaw);
+
             $start = date('Y-m-d', strtotime($startRaw));
             $end   = date('Y-m-d', strtotime($endRaw));
 

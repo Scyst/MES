@@ -227,7 +227,8 @@ $pageHelpId = "helpModal";
                                 <tr class="text-center">
                                     <th class="sticky-col-left-1">Load</th>
                                     <th class="sticky-col-left-2">Prod</th>
-                                    <th class="sticky-col-left-3">PO Number</th>
+                                    <th class="sticky-col-left-3">Insp</th>
+                                    <th class="sticky-col-left-4">PO Number</th>
                                     <th style="width: 150px;">Remark</th> 
                                     
                                     <th class="col-date-time">SNC Load Day / Time</th>

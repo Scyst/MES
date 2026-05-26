@@ -58,6 +58,12 @@ try {
         case 'get_label_history':
             if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Invalid request method.");
             
+            // Auto-cleanup corrupted notes from previous bug
+            try {
+                $pdo->exec("UPDATE STOCK_TRANSFER_ORDERS SET notes = SUBSTRING(notes, 1, CHARINDEX(CHAR(10) + 'Bulk Edited by', notes) - 1) WHERE notes LIKE '%' + CHAR(10) + 'Bulk Edited by%'");
+                $pdo->exec("UPDATE STOCK_TRANSFER_ORDERS SET notes = SUBSTRING(notes, 1, CHARINDEX(CHAR(10) + 'Edited by', notes) - 1) WHERE notes LIKE '%' + CHAR(10) + 'Edited by%'");
+            } catch (Exception $e) {}
+
             $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
             $limit = isset($_GET['limit']) ? max(1, (int)$_GET['limit']) : 100;
             $offset = ($page - 1) * $limit;
@@ -471,8 +477,8 @@ try {
                 throw new Exception("ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบฟอร์มอีกครั้ง");
             }
 
-            if ($print_count > 500) {
-                throw new Exception("ป้องกัน Memory Limit - อนุญาตให้ปริ้นสูงสุด 500 ดวงต่อครั้ง");
+            if ($print_count > 10000) {
+                throw new Exception("ป้องกัน Memory Limit - อนุญาตให้ปริ้นสูงสุด 10000 ดวงต่อครั้ง");
             }
 
             $pdo->beginTransaction();
@@ -828,7 +834,7 @@ try {
             $note_update = "\nEdited by " . $currentUser['username'] . " at " . date('Y-m-d H:i:s');
             $updStmt = $pdo->prepare("UPDATE $transferTable 
                                       SET item_id = ?, quantity = ?, from_location_id = ?, 
-                                          prod_date = ?, notes = ISNULL(notes, '') + ? 
+                                          prod_date = ?, notes = ? 
                                       WHERE transfer_uuid = ?");
             $updStmt->execute([$item_id, $quantity, $from_loc_id, $prod_date, $notes . $note_update, $transfer_uuid]);
 
@@ -863,7 +869,7 @@ try {
             
             $updSql = "UPDATE $transferTable 
                        SET item_id = ?, quantity = ?, from_location_id = ?, 
-                           prod_date = ?, notes = ISNULL(notes, '') + ? 
+                           prod_date = ?, notes = ? 
                        WHERE status = 'PENDING' 
                          AND transfer_uuid LIKE ?";
             

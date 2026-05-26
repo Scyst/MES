@@ -262,6 +262,8 @@ function renderTable() {
     const rowsHtml = paginatedData.map(row => {
         const isLoad = row.is_loading_done == 1;
         const isProd = row.is_production_done == 1;
+        const inspRaw = (row.inspection_status || '').toLowerCase();
+        const isInsp = (inspRaw === 'pass' || inspRaw === 'ok' || inspRaw === 'done' || inspRaw === 'yes');
         
         const btnLoad = isCustomer 
             ? `<div class="btn-icon-minimal ${isLoad ? 'status-done' : 'status-wait'}"><i class="fas ${isLoad ? 'fa-check' : 'fa-truck-loading'}"></i></div>`
@@ -270,6 +272,10 @@ function renderTable() {
         const btnProd = isCustomer 
             ? `<div class="btn-icon-minimal ${isProd ? 'status-done' : 'status-wait'}"><i class="fas ${isProd ? 'fa-check' : 'fa-industry'}"></i></div>`
             : `<button class="btn-icon-minimal ${isProd ? 'status-done' : 'status-wait'}" onclick="toggleStatus(${row.id}, 'production', ${row.is_production_done})"><i class="fas ${isProd ? 'fa-check' : 'fa-industry'}"></i></button>`;
+
+        const btnInsp = isCustomer 
+            ? `<div class="btn-icon-minimal ${isInsp ? 'status-done' : 'status-wait'}"><i class="fas ${isInsp ? 'fa-check' : 'fa-microscope'}"></i></div>`
+            : `<button class="btn-icon-minimal ${isInsp ? 'status-done' : 'status-wait'}" onclick="toggleStatus(${row.id}, 'inspection', ${isInsp ? 1 : 0})" style="${isInsp ? 'background-color:#d1e7dd; color:#198754;' : ''}"><i class="fas ${isInsp ? 'fa-check' : 'fa-microscope'}"></i></button>`;
 
         const inputHTML = (field, val, align = 'center') => {
             if(isCustomer) {
@@ -317,7 +323,8 @@ function renderTable() {
         return `<tr>
             <td class="sticky-col-left-1 bg-white text-center">${btnLoad}</td>
             <td class="sticky-col-left-2 bg-white text-center">${btnProd}</td>
-            <td class="sticky-col-left-3 bg-white text-center fw-bold">${poHtml}</td>
+            <td class="sticky-col-left-3 bg-white text-center">${btnInsp}</td>
+            <td class="sticky-col-left-4 bg-white text-center fw-bold">${poHtml}</td>
             <td class="text-center">${inputHTML('remark', row.remark)}</td>
 
             <td class="text-center">
@@ -494,14 +501,23 @@ function upd(id, field, val, inputElement) {
 function toggleStatus(id, type, currentVal) {
     if(isCustomer) return;
     showSpinner();
-    const field = (type === 'loading') ? 'is_loading_done' : 'is_production_done';
+    let field = '';
+    if (type === 'loading') field = 'is_loading_done';
+    else if (type === 'production') field = 'is_production_done';
+    else if (type === 'inspection') field = 'inspection_status';
     const newVal = (currentVal == 1) ? 0 : 1;
     
     $.post(API_URL, { action: 'update_check', id, field, checked: newVal })
     .done(res => {
         if(res.success) {
             const row = allData.find(d => d.id == id);
-            if(row) row[field] = newVal;
+            if(row) {
+                if (field === 'inspection_status') {
+                    row.inspection_status = newVal ? 'Pass' : '';
+                } else {
+                    row[field] = newVal;
+                }
+            }
             updateSummary();
             
             calculateKPI(allData); 
@@ -528,6 +544,9 @@ async function exportToCSV() {
         const excelData = dataToExport.map(row => {
             const isLoad = row.is_loading_done == 1 ? 'Done' : 'Wait';
             const isProd = row.is_production_done == 1 ? 'Done' : 'Wait';
+            const inspRaw = (row.inspection_status || '').toLowerCase();
+            const isInsp = (inspRaw === 'pass' || inspRaw === 'ok' || inspRaw === 'done' || inspRaw === 'yes');
+            const isInspStr = isInsp ? 'Pass' : 'Wait';
             
             return {
                 'Seq': row.custom_order,
@@ -538,6 +557,7 @@ async function exportToCSV() {
                 'Quantity': parseInt(row.quantity || 0),
                 'Load Status': isLoad,
                 'Prod Status': isProd,
+                'Insp Status': isInspStr,
                 'Load Date': rawDate(row.loading_date),
                 'Load Time': row.load_time ? row.load_time.substring(0, 5) : '',
                 'DC Location': row.dc_location,
@@ -570,11 +590,11 @@ async function exportToCSV() {
 
         ws['!cols'] = [
             { wch: 8 },  { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 40 }, { wch: 10 },
-            { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 15 },
-            { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 10 },
-            { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 20 }, { wch: 15 },
+            { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 15 },
+            { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 },
+            { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 20 },
             { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
-            { wch: 15 }, { wch: 12 }
+            { wch: 15 }, { wch: 15 }, { wch: 12 }
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, "Shipping Data");

@@ -21,34 +21,54 @@ $pageBackLink = "manpowerUI.php";
     <script src="../../utils/libs/fullcalendar.global.min.js"></script> 
     
     <style>
-        body.layout-top-header { overflow: hidden; }
+        body.layout-top-header { overflow: hidden; background-color: #f8f9fc; }
 
         #main-content {
             height: calc(100vh - var(--header-height)); 
             display: flex;
             flex-direction: column;
-            padding: 1rem;
+            padding: 1.5rem;
             overflow: hidden; 
         }
 
         .calendar-wrapper {
-            background: #fff;
-            padding: 10px 15px;
-            border-radius: 8px;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.1);
             flex: 1; 
             display: flex;
             flex-direction: column;
             overflow: hidden; 
+            border: 1px solid #e3e6f0;
         }
 
         #calendar { flex: 1; height: 100%; }
-        .fc-event { cursor: pointer; border: none; padding: 2px 4px; font-size: 0.85rem; transition: transform 0.1s; }
-        .fc-event:hover { transform: scale(1.02); filter: brightness(0.9); }
-        .fc-daygrid-day.fc-day-today { background-color: rgba(78, 115, 223, 0.05) !important; }
-        .fc-col-header-cell-cushion { text-decoration: none; color: #4e73df; font-weight: 800; }
-        .fc-toolbar-title { font-size: 1.25rem !important; }
-        .fc-button { font-size: 0.85rem !important; }
+        
+        /* Premium Calendar Styling */
+        .fc .fc-toolbar-title { font-size: 1.5rem !important; font-weight: 800; color: #4e73df; text-transform: uppercase; letter-spacing: 0.05rem; }
+        .fc .fc-button-primary { background-color: #4e73df; border-color: #4e73df; text-transform: capitalize; font-weight: 600; padding: 0.4rem 1rem; border-radius: 0.35rem; }
+        .fc .fc-button-primary:hover { background-color: #2e59d9; border-color: #2653d4; }
+        .fc .fc-button-primary:not(:disabled).fc-button-active, .fc .fc-button-primary:not(:disabled):active { background-color: #2e59d9; border-color: #2653d4; box-shadow: inset 0 3px 5px rgba(0,0,0,.125); }
+        
+        /* Header styling */
+        .fc-theme-standard th { border-color: #e3e6f0; background: #f8f9fc; padding: 10px 0; }
+        .fc-col-header-cell-cushion { text-decoration: none !important; color: #5a5c69 !important; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; }
+        
+        /* Weekend columns coloring */
+        .fc-day-sat, .fc-day-sun { background-color: rgba(234, 236, 244, 0.3); }
+        .fc-day-sat .fc-col-header-cell-cushion { color: #4e73df !important; }
+        .fc-day-sun .fc-col-header-cell-cushion { color: #e74a3b !important; }
+
+        /* Day cells */
+        .fc-theme-standard td, .fc-theme-standard th { border-color: #e3e6f0; }
+        .fc-daygrid-day-number { color: #858796; font-weight: 600; text-decoration: none !important; padding: 8px !important; }
+        .fc-daygrid-day.fc-day-today { background-color: rgba(78, 115, 223, 0.08) !important; }
+        .fc-daygrid-day:hover { background-color: rgba(234, 236, 244, 0.5); transition: background-color 0.2s; }
+        
+        /* Events */
+        .fc-event { cursor: pointer; border: none; padding: 3px 5px; font-size: 0.85rem; transition: all 0.2s ease-in-out; border-radius: 6px; }
+        .fc-event:hover { transform: translateY(-2px); filter: brightness(0.95); box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important; z-index: 5; }
     </style>
 </head>
 
@@ -131,7 +151,7 @@ $pageBackLink = "manpowerUI.php";
                     list: 'รายการ'
                 },
                 events: function(fetchInfo, successCallback, failureCallback) {
-                    fetch(`api/api_holiday.php?action=read&start=${fetchInfo.startStr}&end=${fetchInfo.endStr}`)
+                    fetch(`api/api_holiday.php?action=read&start=${encodeURIComponent(fetchInfo.startStr)}&end=${encodeURIComponent(fetchInfo.endStr)}`)
                         .then(response => response.json())
                         .then(result => {
                             if (result.success) {
@@ -170,25 +190,38 @@ $pageBackLink = "manpowerUI.php";
                 
                 eventDidMount: function(info) {
                     const type = info.event.extendedProps.day_type;
+                    
                     if (type === 'HOLIDAY') {
                         info.el.style.backgroundColor = 'var(--bs-danger)';
                         info.el.style.borderColor = 'var(--bs-danger)';
                         info.el.style.color = '#fff';
+                        info.el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
                     } else if (type === 'OFFDAY') {
                         info.el.style.backgroundColor = 'var(--bs-warning)';
                         info.el.style.borderColor = 'var(--bs-warning)';
                         info.el.style.color = '#000';
+                        info.el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
                     } else if (type === 'SUNDAY') {
-                        info.el.style.backgroundColor = 'var(--bs-secondary)';
-                        info.el.style.borderColor = 'var(--bs-secondary)';
-                        info.el.style.color = '#fff';
+                        // Make Sunday a subtle gray if it's default, or normal secondary if saved
+                        const isDefault = info.event.extendedProps.is_default;
+                        if (isDefault) {
+                            info.el.style.backgroundColor = 'rgba(133, 135, 150, 0.1)';
+                            info.el.style.borderColor = 'rgba(133, 135, 150, 0.2)';
+                            info.el.style.color = '#858796';
+                        } else {
+                            info.el.style.backgroundColor = 'var(--bs-secondary)';
+                            info.el.style.borderColor = 'var(--bs-secondary)';
+                            info.el.style.color = '#fff';
+                            info.el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                        }
                     } else if (type === 'NORMAL') {
-                        info.el.style.backgroundColor = 'var(--bs-success)';
-                        info.el.style.borderColor = 'var(--bs-success)';
-                        info.el.style.color = '#fff';
+                        // Make normal working days more solid but still distinct
+                        info.el.style.backgroundColor = '#d1e7dd';
+                        info.el.style.borderColor = '#badbcc';
+                        info.el.style.color = '#0f5132';
+                        info.el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
                     }
-                    // Add a nice subtle shadow
-                    info.el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                    
                     info.el.style.borderRadius = '4px';
                 },
 

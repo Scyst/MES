@@ -402,37 +402,98 @@ async function openBulkEditMode() {
 
         if (res.success && res.data) {
             const data = res.data;
-            document.getElementById('from_location_id').value = data.from_location_id;
+            document.getElementById('be_lot_no').value = formValues.lot;
+            document.getElementById('be_is_range').value = formValues.isRange ? '1' : '0';
+            document.getElementById('be_start_no').value = formValues.start;
+            document.getElementById('be_end_no').value = formValues.end;
+            document.getElementById('be_item_id').value = data.item_id;
 
-            selectedItem = { item_id: data.item_id, sap_no: data.sap_no, part_no: data.part_no, part_description: data.part_description };
-            document.getElementById('item_id').value = data.item_id;
-            document.getElementById('item_search').value = `${data.sap_no} | ${data.part_no}`;
+            let displayTxt = formValues.lot;
+            if (formValues.isRange) {
+                displayTxt += ` (ดวงที่ ${formValues.start} - ${formValues.end})`;
+            }
+            document.getElementById('be_lot_display').innerText = displayTxt;
 
-            document.getElementById('lot_no').value = formValues.lot;
-            document.getElementById('lot_no').disabled = true;
-            document.getElementById('notes').value = data.notes || '';
-            document.getElementById('quantity').value = Math.floor(data.quantity);
-            if (data.prod_date) document.getElementById('prod_date').value = data.prod_date;
+            if (data.prod_date) {
+                document.getElementById('be_prod_date').value = data.prod_date;
+            } else {
+                document.getElementById('be_prod_date').valueAsDate = new Date();
+            }
+            document.getElementById('be_quantity').value = Math.floor(data.quantity);
+            document.getElementById('be_notes').value = data.notes || '';
 
+            // Setup locations
+            const locSelect = document.getElementById('be_from_location_id');
+            locSelect.innerHTML = '';
+            if (typeof allLocations !== 'undefined') {
+                allLocations.forEach(l => {
+                    let opt = new Option(`${l.location_name}`, l.location_id);
+                    locSelect.add(opt);
+                });
+            }
+            locSelect.value = data.from_location_id;
 
-
-
-
-            document.getElementById('edit_transfer_uuid').value = 'BULK-' + JSON.stringify(formValues);
-
-            document.getElementById('cancel-edit-btn').classList.remove('d-none');
-            const btn = document.getElementById('generate-label-btn');
-            btn.classList.replace('btn-primary', 'btn-warning');
-            btn.classList.replace('text-white', 'text-dark');
-
-            let btnText = formValues.isRange ? `บันทึกการแก้ไข (ดวงที่ ${formValues.start} ถึง ${formValues.end})` : `บันทึกการแก้ไข (ทั้ง Lot)`;
-            btn.innerHTML = `<i class="fas fa-save me-2"></i> ${btnText}`;
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            if (typeof showToast === 'function') showToast('ดึงข้อมูลสำเร็จ กรุณาแก้ไขและกดบันทึก', 'var(--bs-info)');
+            const modal = new bootstrap.Modal(document.getElementById('bulkEditModal'));
+            modal.show();
         } else {
             Swal.fire('ไม่พบข้อมูล', `ไม่สามารถดึงข้อมูล ${previewSerial} ได้ อาจจะถูกลบหรือรับเข้าคลังไปแล้ว`, 'error');
         }
+    }
+}
+
+async function submitBulkEdit() {
+    const lotNo = document.getElementById('be_lot_no').value;
+    const isRange = document.getElementById('be_is_range').value === '1';
+    const startNo = document.getElementById('be_start_no').value;
+    const endNo = document.getElementById('be_end_no').value;
+    
+    const itemId = document.getElementById('be_item_id').value;
+    const prodDate = document.getElementById('be_prod_date').value;
+    const fromLocId = document.getElementById('be_from_location_id').value;
+    const quantity = document.getElementById('be_quantity').value;
+    const notes = document.getElementById('be_notes').value;
+
+    if (!prodDate || !fromLocId || !quantity) {
+        if (typeof showToast === 'function') showToast("กรุณากรอกข้อมูลให้ครบถ้วน", 'var(--bs-warning)');
+        return;
+    }
+
+    const payload = {
+        lot_no: lotNo,
+        is_range: isRange,
+        start_no: startNo,
+        end_no: endNo,
+        item_id: itemId,
+        quantity: quantity,
+        from_loc_id: fromLocId,
+        prod_date: prodDate,
+        notes: notes
+    };
+
+    const btn = document.getElementById('btnConfirmBulkEdit');
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>กำลังบันทึก...';
+
+    try {
+        const res = await sendRequest(TRANSFER_API_URL, 'update_batch_labels', 'POST', payload);
+        if (res.success) {
+            if (typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
+            const modalEl = document.getElementById('bulkEditModal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+            loadLabelHistory(1);
+        } else {
+            if (typeof showToast === 'function') showToast(res.message, 'var(--bs-danger)');
+        }
+    } catch (error) {
+        console.error(error);
+        if (typeof showToast === 'function') showToast('เกิดข้อผิดพลาดในการบันทึก', 'var(--bs-danger)');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
     }
 }
 
@@ -675,8 +736,8 @@ async function handleGenerateLabel(event) {
         return;
     }
 
-    if (printCount > 1000) {
-        if (typeof showToast === 'function') showToast("อนุญาตให้สร้างได้สูงสุด 1000 ดวงต่อครั้ง เพื่อป้องกันระบบทำงานหนักเกินไป", 'var(--bs-warning)');
+    if (printCount > 10000) {
+        if (typeof showToast === 'function') showToast("อนุญาตให้สร้างได้สูงสุด 10000 ดวงต่อครั้ง เพื่อป้องกันระบบทำงานหนักเกินไป", 'var(--bs-warning)');
         return;
     }
 
@@ -693,23 +754,45 @@ async function handleGenerateLabel(event) {
 
     try {
         if (editUuid) {
-            // Edit Mode (kept for backward compatibility, although users rarely edit bulk tags this way)
-            const payload = {
-                transfer_uuid: editUuid,
-                item_id: selectedItem.item_id,
-                quantity: safeNumQty,
-                from_loc_id: fromLocationId,
-                prod_date: prodDate,
-                notes: remark
-            };
-            const res = await sendRequest(TRANSFER_API_URL, 'update_label', 'POST', payload);
-            if (res.success) {
-                if (typeof showToast === 'function') showToast('อัปเดตข้อมูลสำเร็จ', 'var(--bs-success)');
-                reprintLabel(editUuid);
-                clearPrinterForm();
-                loadLabelHistory(1);
+            if (editUuid.startsWith('BULK-')) {
+                const bulkData = JSON.parse(editUuid.substring(5));
+                const payload = {
+                    lot_no: bulkData.lot,
+                    is_range: bulkData.isRange,
+                    start_no: bulkData.start,
+                    end_no: bulkData.end,
+                    item_id: selectedItem.item_id,
+                    quantity: safeNumQty,
+                    from_loc_id: fromLocationId,
+                    prod_date: prodDate,
+                    notes: remark
+                };
+                const res = await sendRequest(TRANSFER_API_URL, 'update_batch_labels', 'POST', payload);
+                if (res.success) {
+                    if (typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
+                    clearPrinterForm();
+                    loadLabelHistory(1);
+                } else {
+                    if (typeof showToast === 'function') showToast(res.message, 'var(--bs-danger)');
+                }
             } else {
-                if (typeof showToast === 'function') showToast(res.message, 'var(--bs-danger)');
+                const payload = {
+                    transfer_uuid: editUuid,
+                    item_id: selectedItem.item_id,
+                    quantity: safeNumQty,
+                    from_loc_id: fromLocationId,
+                    prod_date: prodDate,
+                    notes: remark
+                };
+                const res = await sendRequest(TRANSFER_API_URL, 'update_label', 'POST', payload);
+                if (res.success) {
+                    if (typeof showToast === 'function') showToast('อัปเดตข้อมูลสำเร็จ', 'var(--bs-success)');
+                    reprintLabel(editUuid);
+                    clearPrinterForm();
+                    loadLabelHistory(1);
+                } else {
+                    if (typeof showToast === 'function') showToast(res.message, 'var(--bs-danger)');
+                }
             }
         } else {
             let dummyToLocId = 1;

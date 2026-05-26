@@ -105,6 +105,7 @@ thead.sticky-top th {
 tbody td.sticky-col-left-1,
 tbody td.sticky-col-left-2,
 tbody td.sticky-col-left-3,
+tbody td.sticky-col-left-4,
 tbody td.sticky-col-right-1,
 tbody td.sticky-col-right-2 {
     position: sticky !important;
@@ -116,6 +117,7 @@ tbody td.sticky-col-right-2 {
 thead.sticky-top th.sticky-col-left-1,
 thead.sticky-top th.sticky-col-left-2,
 thead.sticky-top th.sticky-col-left-3,
+thead.sticky-top th.sticky-col-left-4,
 thead.sticky-top th.sticky-col-right-1,
 thead.sticky-top th.sticky-col-right-2 {
     position: sticky !important;
@@ -199,6 +201,12 @@ table:not(.sales-table) .sticky-col-left-2 {
 }
 table:not(.sales-table) .sticky-col-left-3 { 
     left: 90px !important; 
+    width: 45px !important; min-width: 45px !important; max-width: 45px !important;
+    border-right: 1px solid #dee2e6;
+    padding: 4px !important;
+}
+table:not(.sales-table) .sticky-col-left-4 { 
+    left: 135px !important; 
     width: 150px !important; min-width: 150px !important; max-width: 150px !important;
     border-right: 2px solid #dee2e6; 
     box-shadow: 4px 0 5px -2px rgba(0,0,0,0.1); 
