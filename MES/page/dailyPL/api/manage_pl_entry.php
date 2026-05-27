@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // page/pl_daily/api/manage_pl_entry.php
 header('Content-Type: application/json');
 
@@ -308,19 +308,32 @@ try {
         // GROUP 5: UTILITIES
         // =================================================================
         case 'get_active_lines':
-            // ใช้ SQL ธรรมดาแทน SP เพราะ Logic ง่ายและไม่ซับซ้อน
-            $sql = "
-                SELECT DISTINCT line 
-                FROM (
-                    SELECT line FROM MANPOWER_EMPLOYEES WITH (NOLOCK) WHERE is_active = 1
-                    UNION
-                    SELECT line FROM MES_MANUAL_DAILY_COSTS WITH (NOLOCK)
-                ) AS AllLines
-                WHERE line IS NOT NULL AND line <> '' AND line <> 'ALL'
-                ORDER BY line
-            ";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute();
+            $team = $_GET['team'] ?? 'ALL';
+            if ($team !== 'ALL') {
+                $sql = "
+                    SELECT DISTINCT E.line 
+                    FROM MANPOWER_EMPLOYEES E WITH (NOLOCK) 
+                    LEFT JOIN MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
+                    WHERE E.is_active = 1 AND TS.hc_group = :team 
+                      AND E.line IS NOT NULL AND E.line <> '' AND E.line <> 'ALL'
+                    ORDER BY E.line
+                ";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([':team' => $team]);
+            } else {
+                $sql = "
+                    SELECT DISTINCT line 
+                    FROM (
+                        SELECT line FROM MANPOWER_EMPLOYEES WITH (NOLOCK) WHERE is_active = 1
+                        UNION
+                        SELECT line FROM MES_MANUAL_DAILY_COSTS WITH (NOLOCK)
+                    ) AS AllLines
+                    WHERE line IS NOT NULL AND line <> '' AND line <> 'ALL'
+                    ORDER BY line
+                ";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute();
+            }
             $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
             
             array_unshift($lines, 'ALL'); // Default Option
