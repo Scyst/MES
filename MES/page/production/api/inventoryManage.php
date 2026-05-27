@@ -105,8 +105,7 @@ try {
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $isExport = isset($_GET['limit']) && $_GET['limit'] == -1;
             
-            $default_limit = ($action === 'get_all_transactions') ? 50 : 25;
-            $limit = $isExport ? 10000 : $default_limit;
+            $limit = $isExport ? 10000 : 50;
             $offset = ($page - 1) * $limit;
             
             $params = [];
