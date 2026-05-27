@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 
 // ========================================================
 // GLOBAL VARIABLES
@@ -130,6 +130,7 @@ function switchMode(mode) {
 
 function handleSectionChange() {
     const section = document.getElementById('sectionFilter').value;
+    const team = document.getElementById('teamFilter')?.value || 'ALL';
     localStorage.setItem('last_selected_section', section);
     refreshCurrentView();
 }
@@ -581,10 +582,11 @@ async function fetchMonthlyBudgets() {
     const monthStr = document.getElementById('budgetMonth').value;
     const [year, month] = monthStr.split('-');
     const section = document.getElementById('sectionFilter').value;
+    const team = document.getElementById('teamFilter')?.value || 'ALL';
 
     try {
         // เพิ่ม encodeURIComponent เพื่อจัดการอักขระพิเศษและเว้นวรรค
-        const res = await fetch(`api/manage_pl_entry.php?action=get_target_data&year=${year}&month=${month}&section=${encodeURIComponent(section)}`);
+        const res = await fetch(`api/manage_pl_entry.php?action=get_target_data&year=${year}&month=${month}&section=${encodeURIComponent(section)}&team=${encodeURIComponent(team)}`);
         const json = await res.json();
         
         if (json.success) {
@@ -668,6 +670,7 @@ async function saveTarget() {
     const monthStr = document.getElementById('budgetMonth').value; 
     const [year, month] = monthStr.split('-');
     const section = document.getElementById('sectionFilter').value;
+    const team = document.getElementById('teamFilter')?.value || 'ALL';
 
     try {
         isSaving = true;
@@ -961,6 +964,7 @@ async function apiCalendarAction(action, payload) {
 // ========================================================
 async function exportMasterExcel() {
     const section = document.getElementById('sectionFilter')?.value || 'ALL';
+    const team = document.getElementById('teamFilter')?.value || 'ALL';
     const date = document.getElementById('targetDate')?.value || new Date().toISOString().split('T')[0];
     const year = date.split('-')[0];
     const safeSection = section.replace(/[^a-zA-Z0-9]/g, "_");
@@ -974,8 +978,8 @@ async function exportMasterExcel() {
 
     try {
         const [resDaily, resYearly] = await Promise.all([
-            fetch(`api/manage_pl_entry.php?action=read&entry_date=${date}&section=${encodeURIComponent(section)}`),
-            fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${encodeURIComponent(section)}`)
+            fetch(`api/manage_pl_entry.php?action=read&entry_date=${date}&section=${encodeURIComponent(section)}&team=${encodeURIComponent(team)}`),
+            fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${encodeURIComponent(section)}&team=${encodeURIComponent(team)}`)
         ]);
         
         const jsonDaily = await resDaily.json();
@@ -1156,13 +1160,14 @@ async function openRateModal() {
 async function loadStatementData() {
     const tbody = document.getElementById('statementTableBody');
     const section = document.getElementById('sectionFilter')?.value || 'ALL';
+    const team = document.getElementById('teamFilter')?.value || 'ALL';
     tbody.innerHTML = '<tr><td class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
 
     try {
         let res, json;
         if (currentStatementView === 'yearly') {
             const year = document.getElementById('statementYear')?.value || new Date().getFullYear();
-            res = await fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${encodeURIComponent(section)}`);
+            res = await fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${encodeURIComponent(section)}&team=${encodeURIComponent(team)}`);
             json = await res.json();
             if (json.success) {
                 calculateStatementFormulas(json.data, 'yearly');
@@ -1171,7 +1176,7 @@ async function loadStatementData() {
         } else {
             const monthStr = document.getElementById('statementMonth')?.value || new Date().toISOString().slice(0,7);
             const [year, month] = monthStr.split('-');
-            res = await fetch(`api/manage_pl_entry.php?action=statement_daily&year=${year}&month=${month}&section=${encodeURIComponent(section)}`);
+            res = await fetch(`api/manage_pl_entry.php?action=statement_daily&year=${year}&month=${month}&section=${encodeURIComponent(section)}&team=${encodeURIComponent(team)}`);
             json = await res.json();
             if (json.success) {
                 calculateStatementFormulas(json.data, 'daily');
@@ -1467,13 +1472,14 @@ function changeExecView(view) {
 async function loadExecutiveData() {
     const tbody = document.getElementById('execTableBody');
     const section = document.getElementById('sectionFilter')?.value || 'ALL';
+    const team = document.getElementById('teamFilter')?.value || 'ALL';
     tbody.innerHTML = '<tr><td class="text-center py-5"><div class="spinner-border text-dark"></div></td></tr>';
 
     try {
         let res, json;
         if (currentExecMode === 'yearly') {
             const year = document.getElementById('execYear')?.value || new Date().getFullYear();
-            res = await fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${encodeURIComponent(section)}`);
+            res = await fetch(`api/manage_pl_entry.php?action=statement_yearly&year=${year}&section=${encodeURIComponent(section)}&team=${encodeURIComponent(team)}`);
             json = await res.json();
             if (json.success) {
                 calculateStatementFormulas(json.data, 'yearly');
@@ -1482,7 +1488,7 @@ async function loadExecutiveData() {
         } else {
             const monthStr = document.getElementById('execMonth')?.value || new Date().toISOString().slice(0,7);
             const [year, month] = monthStr.split('-');
-            res = await fetch(`api/manage_pl_entry.php?action=statement_daily&year=${year}&month=${month}&section=${encodeURIComponent(section)}`);
+            res = await fetch(`api/manage_pl_entry.php?action=statement_daily&year=${year}&month=${month}&section=${encodeURIComponent(section)}&team=${encodeURIComponent(team)}`);
             json = await res.json();
             if (json.success) {
                 calculateStatementFormulas(json.data, 'daily');
@@ -1728,17 +1734,18 @@ async function loadEntryData() {
         </tr>`;
 
     const section = document.getElementById('sectionFilter')?.value || 'ALL';
+    const team = document.getElementById('teamFilter')?.value || 'ALL';
     const todayStr = new Date().toISOString().split('T')[0];
     let url = '';
 
     if (currentMode === 'daily') {
         const date = document.getElementById('targetDate')?.value || todayStr;
-        url = `api/manage_pl_entry.php?action=read&entry_date=${date}&section=${encodeURIComponent(section)}`;
+        url = `api/manage_pl_entry.php?action=read&entry_date=${date}&section=${encodeURIComponent(section)}&team=${encodeURIComponent(team)}`;
         if (typeof fetchWorkingDays === 'function') fetchWorkingDays(); 
     } else {
         const start = document.getElementById('startDate')?.value || todayStr;
         const end = document.getElementById('endDate')?.value || todayStr;
-        url = `api/manage_pl_entry.php?action=report_range&start_date=${start}&end_date=${end}&section=${encodeURIComponent(section)}`;
+        url = `api/manage_pl_entry.php?action=report_range&start_date=${start}&end_date=${end}&section=${encodeURIComponent(section)}&team=${encodeURIComponent(team)}`;
     }
 
     try {
@@ -1803,6 +1810,7 @@ async function togglePeriodLock() {
 
     const start = document.getElementById('targetDate')?.value || new Date().toISOString().split('T')[0];
     const section = document.getElementById('sectionFilter')?.value || 'ALL';
+    const team = document.getElementById('teamFilter')?.value || 'ALL';
 
     clearTimeout(autoSaveTimer);
 

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // page/pl_daily/api/manage_pl_entry.php
 header('Content-Type: application/json');
 
@@ -27,6 +27,7 @@ try {
     switch ($action) {
         case 'read':
             $date = $_GET['entry_date'] ?? date('Y-m-d');
+            $team = $_GET['team'] ?? 'ALL';
             if (!validateDate($date)) throw new Exception("Invalid Date Format");
             
             $section = trim($_GET['section'] ?? '');
@@ -35,8 +36,8 @@ try {
             $lockStmt = $pdo->prepare("SELECT is_locked FROM dbo.DAILY_PL_STATUS WITH (NOLOCK) WHERE entry_date = :d AND section_name = :s");
             $lockStmt->execute([':d' => $date, ':s' => $section]);
             $is_locked_status = (int)$lockStmt->fetchColumn();
-            $stmt = $pdo->prepare("EXEC dbo." . SP_GET_PL_ENTRY . " :date, :section");
-            $stmt->execute([':date' => $date, ':section' => $section]);
+            $stmt = $pdo->prepare("EXEC dbo." . SP_GET_PL_ENTRY . " :date, :section, :team");
+            $stmt->execute([':date' => $date, ':section' => $section, ':team' => $team]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             foreach ($data as &$row) {
