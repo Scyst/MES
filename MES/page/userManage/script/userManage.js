@@ -111,6 +111,11 @@ function renderTable(users) {
     const tbody = document.getElementById('userTable');
     tbody.innerHTML = '';
     
+    const countDisplay = document.getElementById('userCountDisplay');
+    if (countDisplay) {
+        countDisplay.innerHTML = `<i class="fas fa-users me-1"></i> Showing <span class="text-primary fw-bold">${users.length}</span> users`;
+    }
+    
     if (users.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4">No data found.</td></tr>`;
         return;

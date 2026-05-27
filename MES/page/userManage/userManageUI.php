@@ -18,9 +18,10 @@ $pageIcon = "fas fa-users-cog";
     <?php include_once '../components/common_head.php'; ?>
     <style>
         .user-card { border-radius: 12px; border: none; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); }
-        .table-custom th { background-color: var(--bs-tertiary-bg); color: var(--bs-secondary-color); font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
+        .table-custom th { background-color: var(--bs-tertiary-bg); color: var(--bs-secondary-color); font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; position: sticky; top: 0; z-index: 1; }
         .badge-role { font-size: 0.75rem; padding: 0.4em 0.6em; }
         .avatar-circle { width: 40px; height: 40px; background: var(--bs-primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .table-fixed-height { max-height: calc(100vh - 280px); min-height: 400px; overflow-y: auto; }
     </style>
 </head>
 <body class="layout-top-header">
@@ -74,7 +75,7 @@ $pageIcon = "fas fa-users-cog";
                     </div>
                     <div class="card user-card">
                         <div class="card-body p-0">
-                            <div class="table-responsive">
+                            <div class="table-responsive table-fixed-height">
                                 <table class="table table-hover table-custom align-middle mb-0">
                                     <thead>
                                         <tr>
@@ -91,6 +92,9 @@ $pageIcon = "fas fa-users-cog";
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                        <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
+                            <span class="text-muted small fw-medium" id="userCountDisplay">Showing 0 users</span>
                         </div>
                     </div>
                 </div>
