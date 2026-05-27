@@ -201,7 +201,7 @@ function renderTableHTML(data) {
         const fmtNum = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         data.forEach(row => {
-            let reason = row.notes || '-';
+            let reason = (row.notes || '-').replace(/\[TXN:\d+\]/g, '').trim();
             if (reason.includes('Reason: ')) reason = reason.split('Reason: ')[1];
             else if (reason.includes('Defect: ')) reason = reason.split('Defect: ')[1];
             else if (reason.includes('Replacement: ')) reason = reason.split('Replacement: ')[1];
@@ -396,7 +396,7 @@ async function exportData() {
             'From Loc': row.from_loc,
             'To Loc': row.to_loc,
             'Status': row.status,
-            'Reason/Notes': row.notes,
+            'Reason/Notes': (row.notes || '').replace(/\[TXN:\d+\]/g, '').trim(),
             'Requester': row.requester,
             'Approver': row.approver
         }));
