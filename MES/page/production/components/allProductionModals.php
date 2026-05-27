@@ -147,6 +147,19 @@
                                     <label class="form-label fw-bold small text-danger mb-1">SCRAP</label>
                                     <input type="number" id="out_qty_scrap" name="quantity_scrap" class="form-control form-control-sm text-center fw-bold border-danger text-danger" min="0" step="1" placeholder="0">
                                 </div>
+                                <div class="col-12 mt-2">
+                                    <label class="form-label fw-bold small text-danger mb-1">แหล่งที่มาของเสีย <span class="text-muted">(ใช้เมื่อมียอด SCRAP)</span></label>
+                                    <div class="row g-2"> 
+                                        <div class="col-6">
+                                            <input type="radio" class="btn-check" name="defect_source" id="out_source_snc" value="SNC" checked>
+                                            <label class="btn btn-sm btn-outline-danger w-100 fw-bold" for="out_source_snc">SNC (ภายใน)</label>
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="radio" class="btn-check" name="defect_source" id="out_source_vendor" value="Vendor">
+                                            <label class="btn btn-sm btn-outline-danger w-100 fw-bold" for="out_source_vendor">Vendor (ภายนอก)</label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         

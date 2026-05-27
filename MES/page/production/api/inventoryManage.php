@@ -638,6 +638,25 @@ try {
                     $currentUser['username']
                 ]);
                 
+                $getTxnStmt = $pdo->prepare("SELECT TOP 1 transaction_id FROM " . TRANSACTIONS_TABLE . " WHERE parameter_id = ? AND transaction_type = ? AND created_by_user_id = ? ORDER BY transaction_id DESC");
+                $getTxnStmt->execute([$fg_item_id, 'PRODUCTION_' . $count_type, $currentUser['id']]);
+                $last_txn_id = $getTxnStmt->fetchColumn();
+
+                // Auto-create Scrap Replacement Request if count_type is SCRAP
+                if ($count_type === 'SCRAP') {
+                    $store_loc_id = 1008; // Default Store Location ID
+                    $defect_source = $input['defect_source'] ?? 'SNC';
+                    $uuid = 'REQ-' . strtoupper(uniqid());
+                    $clean_notes = preg_replace('/\[TEAM_OVERRIDE:\s*[^\]]+\]\s*/', '', $notes);
+                    $repl_notes = "[" . $defect_source . "] " . trim($clean_notes);
+                    if ($last_txn_id) {
+                        $repl_notes .= " [TXN:" . $last_txn_id . "]";
+                    }
+                    
+                    $reqStmt = $pdo->prepare("INSERT INTO dbo.STOCK_TRANSFER_ORDERS (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes, created_at) VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?)");
+                    $reqStmt->execute([$uuid, $fg_item_id, $quantity, $store_loc_id, $location_id, $currentUser['id'], $repl_notes, $timestamp]);
+                }
+                
                 echo json_encode([
                     'success' => true, 
                     'message' => "บันทึกการผลิตและตัดสต็อกวัตถุดิบสำเร็จ"
@@ -720,6 +739,11 @@ try {
                     $new_location_id = (int)($input['location_id'] ?? 0);
                     $new_lot_no = $input['lot_no'] ?? null;
                     $new_notes = $input['notes'] ?? null;
+                    if (!empty($old_transaction['notes']) && preg_match('/(\[TEAM_OVERRIDE:\s*[^\]]+\])/', $old_transaction['notes'], $matches)) {
+                        if (strpos($new_notes, '[TEAM_OVERRIDE:') === false) {
+                            $new_notes = $matches[1] . " " . trim($new_notes);
+                        }
+                    }
                     $new_log_date = $input['log_date'] ?? null;
                     $new_start_time = $input['start_time'] ?? null;
                     $new_end_time = $input['end_time'] ?? null;
@@ -756,6 +780,34 @@ try {
                     ]);
 
                     $spStock->execute([$old_transaction['parameter_id'], $new_location_id, $new_quantity]);
+
+                    // Sync logic for SCRAP replacements
+                    if ($old_transaction['transaction_type'] === 'PRODUCTION_SCRAP' && $new_transaction_type === 'PRODUCTION_SCRAP') {
+                        $updReqStmt = $pdo->prepare("
+                            UPDATE dbo.STOCK_TRANSFER_ORDERS 
+                            SET quantity = ?, to_location_id = ?, created_at = ?
+                            WHERE status = 'PENDING' AND CHARINDEX('[TXN:' + CAST(? AS VARCHAR) + ']', notes) > 0
+                        ");
+                        $updReqStmt->execute([
+                            $new_quantity, 
+                            $new_location_id,
+                            $new_timestamp,
+                            $transaction_id
+                        ]);
+                    } elseif ($old_transaction['transaction_type'] === 'PRODUCTION_SCRAP' && $new_transaction_type !== 'PRODUCTION_SCRAP') {
+                        $delReqStmt = $pdo->prepare("
+                            DELETE FROM dbo.STOCK_TRANSFER_ORDERS 
+                            WHERE status = 'PENDING' AND CHARINDEX('[TXN:' + CAST(? AS VARCHAR) + ']', notes) > 0
+                        ");
+                        $delReqStmt->execute([$transaction_id]);
+                    } elseif ($old_transaction['transaction_type'] !== 'PRODUCTION_SCRAP' && $new_transaction_type === 'PRODUCTION_SCRAP') {
+                        $store_loc_id = 1008;
+                        $uuid = 'REQ-' . strtoupper(uniqid());
+                        $clean_notes = preg_replace('/\[TEAM_OVERRIDE:\s*[^\]]+\]\s*/', '', $new_notes);
+                        $repl_notes = "[SNC] " . trim($clean_notes) . " [TXN:" . $transaction_id . "]";
+                        $reqStmt = $pdo->prepare("INSERT INTO dbo.STOCK_TRANSFER_ORDERS (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes, created_at) VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?)");
+                        $reqStmt->execute([$uuid, $old_transaction['parameter_id'], $new_quantity, $store_loc_id, $new_location_id, $old_transaction['created_by_user_id'], $repl_notes, $new_timestamp]);
+                    }
 
                     if (in_array($new_count_type, ['FG', 'NG', 'SCRAP'])) {
                         $bomSql = "SELECT b.component_item_id, b.quantity_required, c.Cost_RM, c.Cost_DL, c.Cost_OH_Machine, c.Cost_OH_Utilities, c.Cost_OH_Indirect, c.Cost_OH_Staff, c.Cost_OH_Accessory, c.Cost_OH_Others 
@@ -913,6 +965,14 @@ try {
 
                 $deleteStmt = $pdo->prepare("DELETE FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
                 $deleteStmt->execute([$transaction_id]);
+
+                if ($transaction['transaction_type'] === 'PRODUCTION_SCRAP') {
+                    $delReqStmt = $pdo->prepare("
+                        DELETE FROM dbo.STOCK_TRANSFER_ORDERS 
+                        WHERE status = 'PENDING' AND CHARINDEX('[TXN:' + CAST(? AS VARCHAR) + ']', notes) > 0
+                    ");
+                    $delReqStmt->execute([$transaction_id]);
+                }
 
                 $pdo->commit();
                 writeLog($pdo, 'DELETE', 'INVENTORY_API', $transaction_id);

@@ -31,7 +31,7 @@ $pageIcon = "fas fa-users-cog";
     <main id="main-content">
         <div class="container-fluid py-4">
 
-            <ul class="nav nav-tabs mb-4" id="userManageTabs" role="tablist">
+            <ul class="nav nav-tabs" id="userManageTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active fw-bold" id="users-tab" data-bs-toggle="tab" data-bs-target="#tab-users" type="button" role="tab"><i class="fas fa-users me-2"></i>Users List</button>
                 </li>
@@ -55,14 +55,14 @@ $pageIcon = "fas fa-users-cog";
                                     <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
                                     <input type="text" id="searchUserInput" class="form-control border-start-0 ps-0" placeholder="Search by Name, ID...">
                                 </div>
-                                <select id="filterRole" class="form-select form-select-sm" style="width: 140px;">
-                                    <option value="">All Roles</option>
+                                <select id="filterTeam" class="form-select form-select-sm" style="width: 150px;">
+                                    <option value="">All Teams</option>
                                 </select>
                                 <select id="filterLine" class="form-select form-select-sm" style="width: 140px;">
                                     <option value="">All Lines</option>
                                 </select>
-                                <select id="filterTeam" class="form-select form-select-sm" style="width: 150px;">
-                                    <option value="">All Teams</option>
+                                <select id="filterRole" class="form-select form-select-sm" style="width: 140px;">
+                                    <option value="">All Roles</option>
                                 </select>
                             </div>
                             <div class="d-flex gap-2">
@@ -129,7 +129,6 @@ $pageIcon = "fas fa-users-cog";
                         <div class="card-body bg-light rounded">
                             <form id="filterLogsForm" class="row g-2 align-items-end">
                                 <div class="col-md-3">
-                                    <label class="form-label small fw-bold mb-1">Date Range</label>
                                     <div class="input-group input-group-sm">
                                         <input type="date" class="form-control" id="logStartDate" name="startDate">
                                         <span class="input-group-text px-2">-</span>
@@ -137,15 +136,12 @@ $pageIcon = "fas fa-users-cog";
                                     </div>
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label small fw-bold mb-1">Action Type</label>
                                     <input type="text" class="form-control form-control-sm" id="logActionType" name="action_type" placeholder="e.g. UPDATE, LOGIN, API_ERROR">
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label small fw-bold mb-1">Module</label>
                                     <input type="text" class="form-control form-control-sm" id="logModule" name="module" placeholder="e.g. INVENTORY_API">
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label small fw-bold mb-1">Keyword Search</label>
                                     <input type="text" class="form-control form-control-sm" id="logSearch" name="search" placeholder="Search in remark, values, ref_id...">
                                 </div>
                                 <div class="col-md-2 d-grid">

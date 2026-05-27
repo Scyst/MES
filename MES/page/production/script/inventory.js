@@ -491,7 +491,7 @@ function renderReceiptHistoryTable(data) {
             <td class="text-center" data-label="Lot. / Ref.">${row.lot_no || ''}</td>
             <td class="text-center" data-label="Quantity">${Math.floor(row.quantity).toLocaleString()}</td>
             <td class="text-center" data-label="User">${row.created_by || 'N/A'}</td>
-            <td class="text-center" data-label="Notes">${row.notes || ''}</td>
+            <td class="text-center" data-label="Notes">${row.notes ? row.notes.replace(/\[TEAM_OVERRIDE:\s*[^\]]+\]\s*/g, '') : ''}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -557,7 +557,7 @@ function renderProductionHistoryTable(data) {
             <td class="text-center" data-label="Quantity">${Math.floor(row.quantity).toLocaleString()}</td>
             <td class="text-center" data-label="Type">${row.count_type}</td>
             <td class="text-center" data-label="User">${row.created_by || 'N/A'}</td>
-            <td class="text-center" data-label="Notes">${row.notes || ''}</td>
+            <td class="text-center" data-label="Notes">${row.notes ? row.notes.replace(/\[TEAM_OVERRIDE:\s*[^\]]+\]\s*/g, '') : ''}</td>
         `;
         
         tbody.appendChild(tr);
@@ -719,7 +719,7 @@ function renderAllTransactionsTable(data) {
             <td class="text-center fw-bold ${quantityClass}" data-label="Change">${quantityPrefix}${quantity.toLocaleString()}</td>
             <td class="text-center" data-label="Type"><span class="badge bg-secondary">${row.transaction_type}</span></td>
             <td class="text-center" data-label="User">${row.created_by || 'N/A'}</td> 
-            <td class="text-center" data-label="Notes">${row.notes || ''}</td>
+            <td class="text-center" data-label="Notes">${row.notes ? row.notes.replace(/\[TEAM_OVERRIDE:\s*[^\]]+\]\s*/g, '') : ''}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -1273,7 +1273,8 @@ async function handleFormSubmit(event) {
                 start_time: startTime,
                 end_time: endTime,
                 notes: data.notes,
-                override_team: data.override_team
+                override_team: data.override_team,
+                defect_source: data.defect_source
             };
             
             const transactions = [];
@@ -1471,7 +1472,7 @@ async function editTransaction(transactionId, type) {
                 
                 document.getElementById('edit_entry_quantity').value = Math.floor(data.quantity);
                 document.getElementById('edit_entry_lot_no').value = data.reference_id;
-                document.getElementById('edit_entry_notes').value = data.notes;
+                document.getElementById('edit_entry_notes').value = data.notes ? data.notes.replace(/\[TEAM_OVERRIDE:\s*[^\]]+\]\s*/g, '') : '';
                 
                 if (data.transaction_timestamp) {
                     const dateObj = new Date(data.transaction_timestamp);
@@ -1497,7 +1498,7 @@ async function editTransaction(transactionId, type) {
                 document.getElementById('edit_production_quantity').value = Math.floor(data.quantity);
                 document.getElementById('edit_production_lot_no').value = data.reference_id;
                 document.getElementById('edit_production_count_type').value = data.transaction_type.replace('PRODUCTION_', '');
-                document.getElementById('edit_production_notes').value = data.notes;
+                document.getElementById('edit_production_notes').value = data.notes ? data.notes.replace(/\[TEAM_OVERRIDE:\s*[^\]]+\]\s*/g, '') : '';
                 if (data.transaction_timestamp) {
                     const datePart = data.transaction_timestamp.split(' ')[0];
                     document.getElementById('edit_production_log_date').value = datePart;

@@ -202,6 +202,24 @@ try {
                         $spRmStock->execute([$comp_id, $location_id, -$req_qty]);
                     }
                 }
+
+                if ($production_type === 'SCRAP') {
+                    $updateOrderStmt = $pdo->prepare("
+                        UPDATE dbo.STOCK_TRANSFER_ORDERS
+                        SET quantity = quantity + 1
+                        WHERE status = 'PENDING' AND CHARINDEX('[TXN:' + CAST(? AS VARCHAR) + ']', notes) > 0
+                    ");
+                    $updateOrderStmt->execute([$txn_id]);
+                    
+                    if ($updateOrderStmt->rowCount() === 0) {
+                        $store_loc_id = 1008;
+                        $uuid = 'REQ-' . strtoupper(uniqid());
+                        $repl_notes = "[SNC] Auto-Scan Fallback [TXN:" . $txn_id . "]";
+                        $timestamp_now = date('Y-m-d H:i:s');
+                        $reqStmt = $pdo->prepare("INSERT INTO dbo.STOCK_TRANSFER_ORDERS (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes, created_at) VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?)");
+                        $reqStmt->execute([$uuid, $item_id, $total_qty, $store_loc_id, $location_id, $user_id, $repl_notes, $timestamp_now]);
+                    }
+                }
             } else {
                 // Execute standard production (first scan of the hour)
                 $logdate = date('Y-m-d');
@@ -238,6 +256,22 @@ try {
                     $user_id,
                     $username
                 ]);
+
+                $getTxnStmt = $pdo->prepare("SELECT TOP 1 transaction_id FROM " . TRANSACTIONS_TABLE . " WHERE parameter_id = ? AND transaction_type = ? AND created_by_user_id = ? ORDER BY transaction_id DESC");
+                $getTxnStmt->execute([$item_id, 'PRODUCTION_' . $production_type, $user_id]);
+                $last_txn_id = $getTxnStmt->fetchColumn();
+
+                if ($production_type === 'SCRAP') {
+                    $store_loc_id = 1008;
+                    $uuid = 'REQ-' . strtoupper(uniqid());
+                    $repl_notes = "[SNC] " . $prod_notes;
+                    if ($last_txn_id) {
+                        $repl_notes .= " [TXN:" . $last_txn_id . "]";
+                    }
+                    
+                    $reqStmt = $pdo->prepare("INSERT INTO dbo.STOCK_TRANSFER_ORDERS (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes, created_at) VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?)");
+                    $reqStmt->execute([$uuid, $item_id, 1, $store_loc_id, $location_id, $user_id, $repl_notes, $timestamp]);
+                }
             }
 
             $pdo->commit();
