@@ -5,8 +5,8 @@
 
 ignore_user_abort(true); 
 set_time_limit(600); 
-error_reporting(0);
-ini_set('display_errors', 0);
+//error_reporting(0);
+//ini_set('display_errors', 0);
 
 header('Content-Type: application/json');
 
@@ -82,7 +82,7 @@ try {
 
     // 4. Update Master Data (TEST Table)
     $existingEmployees = [];
-    $sqlEmp = "SELECT E.emp_id, E.line, E.default_shift_id, E.team_group, E.is_active, 
+    $sqlEmp = "SELECT E.emp_id, E.line, E.default_shift_id, E.team_group, E.is_active, E.position, E.department_api,
                       ISNULL(CM.category_name, 'Other') as emp_type
                FROM dbo.MANPOWER_EMPLOYEES E
                LEFT JOIN dbo.MANPOWER_CATEGORY_MAPPING CM ON E.position LIKE '%' + CM.keyword + '%'";
@@ -115,32 +115,38 @@ try {
         if (!$isToolbox) $stats['outsiders']++;
 
         if (isset($existingEmployees[$apiEmpId])) {
-            // --- เธกเธตเนเธเธฃเธฐเธเธเนเธฅเนเธง เธ•เธฃเธงเธเธชเธญเธเธฅเธญเธเธดเธเธซเนเธฒเธกเน€เธเธตเธขเธเธ—เธฑเธ (Anti-Overwrite) ---
+            // --- มีในระบบแล้ว ตรวจสอบลอจิกห้ามเขียนทับ (Anti-Overwrite) ---
             $currentDbActive = (int)$existingEmployees[$apiEmpId]['is_active'];
             $finalStatus = 0;
 
             if ($currentDbActive === 1) {
-                // เธ–เนเธฒเธฃเธฐเธเธเน€เธ”เธดเธก (เนเธ MES) เธกเธตเธเธเธ•เธฑเนเธเนเธซเน Active เนเธเธฅเธงเนเธฒเธซเธฑเธงเธซเธเนเธฒเธเธฒเธเธ•เนเธญเธเธเธฒเธฃเนเธซเนเธเธเธเธตเนเธ—เธณเธเธฒเธ เนเธซเนเธฃเธฑเธเธฉเธฒเธเนเธฒเน€เธ”เธดเธกเนเธงเน
+                // ถ้าเดิมเป็น Active ให้รักษาค่าไว้
                 $finalStatus = 1;
             } else {
-                // เธ–เนเธฒเธฃเธฐเธเธเน€เธ”เธดเธก Inactive เธญเธขเธนเน เนเธซเนเน€เธเธทเนเธญเธเธฑเธ API 
+                // ถ้าเดิมเป็น Inactive ให้เชื่อ API
                 $finalStatus = $apiCalculatedActive;
             }
 
-            $stmtUpdateEmp->execute([
-                $info['POSITION'] ?? '-', 
-                $deptApi, 
-                $finalStatus, 
-                $apiEmpId
-            ]);
+            $dbPos = $existingEmployees[$apiEmpId]['position'] ?? '';
+            $dbDept = $existingEmployees[$apiEmpId]['department_api'] ?? '';
+            $apiPos = $info['POSITION'] ?? '-';
+
+            if ($dbPos !== $apiPos || $dbDept !== $deptApi || $currentDbActive !== $finalStatus) {
+                $stmtUpdateEmp->execute([
+                    $apiPos, 
+                    $deptApi, 
+                    $finalStatus, 
+                    $apiEmpId
+                ]);
+                
+                if ($finalStatus == 0) $stats['deactivated']++;
+                else $stats['updated']++;
+            }
             
             $existingEmployees[$apiEmpId]['is_active'] = $finalStatus;
-            
-            if ($finalStatus == 0) $stats['deactivated']++;
-            else $stats['updated']++;
 
         } else {
-            // --- เธเธเนเธซเธกเนเธ—เธฑเนเธเธซเธกเธ” เธเธฑเธเธ—เธถเธเธ•เธฒเธก API 100% ---
+            // --- คนใหม่ทั้งหมด บันทึกตาม API 100% ---
             $stmtInsertEmp->execute([
                 $apiEmpId, 
                 $info['NAME'] ?? '-', 
@@ -166,8 +172,15 @@ try {
         $holidays[$r['calendar_date']] = true;
     }
 
-    // 6. Process Logs (เธฅเธเธ•เธฒเธฃเธฒเธ TEST)
-    $stmtCheckLog = $pdo->prepare("SELECT log_id, is_verified, shift_id, status FROM dbo.MANPOWER_DAILY_LOGS WHERE emp_id = ? AND log_date = ?");
+    // 6. Process Logs (ลงตาราง TEST)
+    $existingLogs = [];
+    $startDateSql = date('Y-m-d', strtotime('-1 day', strtotime($startDate)));
+    $stmtAllLogs = $pdo->prepare("SELECT log_id, emp_id, log_date, is_verified, shift_id, status FROM dbo.MANPOWER_DAILY_LOGS WHERE log_date BETWEEN ? AND ?");
+    $stmtAllLogs->execute([$startDateSql, $endDate]);
+    while ($row = $stmtAllLogs->fetch(PDO::FETCH_ASSOC)) {
+        $existingLogs[$row['emp_id']][$row['log_date']] = $row;
+    }
+
     $stmtDeleteLog = $pdo->prepare("DELETE FROM dbo.MANPOWER_DAILY_LOGS WHERE log_id = ?");
     
     $stmtUpdateLog = $pdo->prepare("UPDATE dbo.MANPOWER_DAILY_LOGS 
@@ -191,8 +204,7 @@ try {
             
             // เธเนเธฒเธกเธเธเธ—เธตเน Inactive เนเธเน€เธฅเธข (เนเธกเนเธ•เนเธญเธเธชเธฃเนเธฒเธ Log) เนเธ•เนเธ•เนเธญเธเน€เธเธฅเธตเธขเธฃเนเธเธญเธเน€เธเนเธฒเธ—เธดเนเธเธ–เนเธฒเธขเธฑเธเนเธกเน Confirm
             if (isset($empData['is_active']) && $empData['is_active'] == 0) {
-                $stmtCheckLog->execute([$empId, $procDate]);
-                $ghostLog = $stmtCheckLog->fetch(PDO::FETCH_ASSOC);
+                $ghostLog = $existingLogs[$empId][$procDate] ?? null;
                 
                 if ($ghostLog && $ghostLog['is_verified'] == 0) {
                     $stmtDeleteLog->execute([$ghostLog['log_id']]);
@@ -201,8 +213,7 @@ try {
                 continue;
             }
 
-            $stmtCheckLog->execute([$empId, $procDate]);
-            $logExist = $stmtCheckLog->fetch(PDO::FETCH_ASSOC);
+            $logExist = $existingLogs[$empId][$procDate] ?? null;
             if ($logExist && $logExist['is_verified'] == 1) continue; 
 
             $snapLine = $empData['line'];
