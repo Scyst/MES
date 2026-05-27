@@ -1,4 +1,4 @@
-﻿// MES/page/dailyLog/script/dailyLog.js
+// MES/page/dailyLog/script/dailyLog.js
 "use strict";
 
 const API_URL = 'api/dailyLogManage.php';
@@ -79,7 +79,8 @@ async function fetchData() {
                     const brief = res.data.morningBrief;
                     
                     // ฟังก์ชันหลักในการกรอกข้อมูลลง Modal
-                    const populateBriefData = () => {
+                    const populateBriefData = (brief) => {
+                        if (!brief) return;
                         document.getElementById('briefDateText').innerText = brief.date_text;
                         document.getElementById('briefMpTotal').innerText = brief.mp_total;
                         document.getElementById('briefMpPresent').innerText = brief.mp_present;
@@ -120,22 +121,52 @@ async function fetchData() {
                     const morningBriefModalEl = document.getElementById('morningBriefModal');
                     const morningBriefModal = new bootstrap.Modal(morningBriefModalEl);
 
-                    // 1. ตรวจสอบการเด้งอัตโนมัติ
+                    // 1. ตั้งค่า Default Team และดักจับ Event
+                    const teamFilter = document.getElementById('briefTeamFilter');
+                    if (teamFilter) {
+                        const myTeam = res.data.myTeamGroup || 'ALL';
+                        teamFilter.value = myTeam;
+                        
+                        teamFilter.addEventListener('change', async (e) => {
+                            const val = e.target.value;
+                            try {
+                                document.getElementById('briefMpTotal').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                                
+                                const formData = new FormData();
+                                formData.append('action', 'get_morning_brief');
+                                formData.append('team', val);
+                                
+                                const response = await fetch(API_URL, { method: 'POST', body: formData });
+                                const newRes = await response.json();
+                                
+                                if (newRes.success && newRes.data) {
+                                    populateBriefData(newRes.data);
+                                }
+                            } catch (err) {
+                                console.error(err);
+                            }
+                        });
+                    }
+
+                    // 2. ตรวจสอบการเด้งอัตโนมัติ
                     if (localStorage.getItem(`morningBrief_${USER_ROLE}`) !== globalTodayDate) {
-                        populateBriefData();
+                        populateBriefData(res.data.morningBrief);
                         morningBriefModal.show();
                     }
 
-                    // 2. ดักจับปุ่ม Hidden (reopenBriefBtn)
+                    // 3. ดักจับปุ่ม Hidden (reopenBriefBtn)
                     const reopenBtn = document.getElementById('reopenBriefBtn');
                     if(reopenBtn) {
                         reopenBtn.addEventListener('click', () => {
-                            populateBriefData();
+                            populateBriefData(res.data.morningBrief);
+                            if (teamFilter && res.data.myTeamGroup) {
+                                teamFilter.value = res.data.myTeamGroup;
+                            }
                             morningBriefModal.show();
                         });
                     }
 
-                    // 3. จัดการ Checkbox ตอนปิด
+                    // 4. จัดการ Checkbox ตอนปิด
                     morningBriefModalEl.addEventListener('hide.bs.modal', function () {
                         if (document.getElementById('dontShowToday').checked) {
                             localStorage.setItem(`morningBrief_${USER_ROLE}`, globalTodayDate);
