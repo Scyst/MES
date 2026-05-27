@@ -39,7 +39,8 @@ async function loadSectionList() {
     const savedSection = localStorage.getItem('last_selected_section');
 
     try {
-        const res = await fetch('api/manage_pl_entry.php?action=get_active_lines');
+        const team = document.getElementById('teamFilter')?.value || 'ALL';
+        const res = await fetch(`api/manage_pl_entry.php?action=get_active_lines&team=${encodeURIComponent(team)}`);
         const json = await res.json();
 
         if (json.success && json.data.length > 0) {
@@ -126,6 +127,11 @@ function switchMode(mode) {
         document.getElementById('view-executive').style.display = 'flex';
         loadExecutiveData();
     }
+}
+
+async function handleTeamChange() {
+    await loadSectionList();
+    refreshCurrentView();
 }
 
 function handleSectionChange() {

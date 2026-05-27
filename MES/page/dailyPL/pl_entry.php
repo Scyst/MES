@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // page/pl_daily/pl_entry.php
 require_once __DIR__ . '/../components/init.php';
 
@@ -50,7 +50,7 @@ $v = filemtime(__DIR__ . '/script/pl_entry.js');
 
                         <div class="input-group input-group-sm shadow-sm" style="width: auto; min-width: 140px;">
                             <span class="input-group-text bg-white border-end-0 text-secondary"><i class="fas fa-users"></i></span>
-                            <select id="teamFilter" class="form-select border-start-0 fw-bold" onchange="handleSectionChange()">
+                            <select id="teamFilter" class="form-select border-start-0 fw-bold" onchange="handleTeamChange()">
                                 <option value="ALL">-- All Teams --</option>
                                 <option value="TEAM 1" <?php echo empty($_SESSION['user']['team_group']) || $_SESSION['user']['team_group'] === 'TEAM 1' ? 'selected' : ''; ?>>TEAM 1</option>
                                 <option value="TEAM 2" <?php echo ($_SESSION['user']['team_group'] ?? '') === 'TEAM 2' ? 'selected' : ''; ?>>TEAM 2</option>
