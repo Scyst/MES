@@ -48,36 +48,39 @@ $pageIcon = "fas fa-users-cog";
             <div class="tab-content" id="userManageTabsContent">
                 
                 <div class="tab-pane fade show active" id="tab-users" role="tabpanel">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                        <div class="d-flex gap-2 flex-wrap">
-                            <div class="input-group" style="width: 250px;">
-                                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                                <input type="text" id="searchUserInput" class="form-control border-start-0 ps-0" placeholder="Search by Name, ID...">
+                    <div class="card user-card border-0 mb-3 shadow-sm">
+                        <div class="card-body bg-light rounded d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="d-flex gap-2 flex-wrap">
+                                <div class="input-group input-group-sm" style="width: 250px;">
+                                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                    <input type="text" id="searchUserInput" class="form-control border-start-0 ps-0" placeholder="Search by Name, ID...">
+                                </div>
+                                <select id="filterRole" class="form-select form-select-sm" style="width: 140px;">
+                                    <option value="">All Roles</option>
+                                </select>
+                                <select id="filterLine" class="form-select form-select-sm" style="width: 140px;">
+                                    <option value="">All Lines</option>
+                                </select>
+                                <select id="filterTeam" class="form-select form-select-sm" style="width: 150px;">
+                                    <option value="">All Teams</option>
+                                </select>
                             </div>
-                            <select id="filterRole" class="form-select" style="width: 140px;">
-                                <option value="">All Roles</option>
-                            </select>
-                            <select id="filterLine" class="form-select" style="width: 140px;">
-                                <option value="">All Lines</option>
-                            </select>
-                            <select id="filterTeam" class="form-select" style="width: 150px;">
-                                <option value="">All Teams</option>
-                            </select>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-primary shadow-sm" onclick="openModal('addUserModal')">
-                                <i class="fas fa-user-plus me-1"></i> Add User
-                            </button>
-                            <button class="btn btn-outline-success shadow-sm" id="btnSyncManpower">
-                                <i class="fas fa-sync-alt me-1"></i> Sync Manpower
-                            </button>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary btn-sm shadow-sm fw-bold" onclick="openModal('addUserModal')">
+                                    <i class="fas fa-user-plus me-1"></i> Add User
+                                </button>
+                                <button class="btn btn-outline-success btn-sm shadow-sm fw-bold" id="btnSyncManpower">
+                                    <i class="fas fa-sync-alt me-1"></i> Sync Manpower
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="card user-card">
+                    
+                    <div class="card user-card shadow-sm border-0">
                         <div class="card-body p-0">
                             <div class="table-responsive table-fixed-height">
-                                <table class="table table-hover table-custom align-middle mb-0">
-                                    <thead>
+                                <table class="table table-hover table-custom align-middle mb-0" style="font-size: 0.85rem;">
+                                    <thead class="position-sticky top-0" style="z-index: 1; background-color: var(--bs-tertiary-bg);">
                                         <tr>
                                             <th class="ps-4">Employee Details</th> 
                                             <th>Username</th> 
