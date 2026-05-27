@@ -60,13 +60,13 @@ try {
             
             if ($shift === 'day') {
                 $rangeStart = $d->format('Y-m-d') . ' 08:00:00';
-                $rangeEnd   = $d->format('Y-m-d') . ' 19:59:59';
+                $rangeEnd   = $d->format('Y-m-d') . ' 20:00:00';
             } elseif ($shift === 'night') {
                 $rangeStart = $d->format('Y-m-d') . ' 20:00:00';
-                $rangeEnd   = $dNext->format('Y-m-d') . ' 07:59:59';
+                $rangeEnd   = $dNext->format('Y-m-d') . ' 08:00:00';
             } else {
                 $rangeStart = $d->format('Y-m-d') . ' 08:00:00';
-                $rangeEnd   = $dNext->format('Y-m-d') . ' 07:59:59';
+                $rangeEnd   = $dNext->format('Y-m-d') . ' 08:00:00';
             }
 
             $locationClause = !empty($location) ? "AND l.location_name = :location" : "";
@@ -77,7 +77,7 @@ try {
                     CONVERT(varchar(19), l.logdate, 120) AS logdate, l.notes
                 FROM " . SCAN_LOGS_TABLE . " l
                 LEFT JOIN " . ITEMS_TABLE . " i ON i.barcode = l.barcode_no AND i.material_type = 'FG'
-                WHERE l.logdate BETWEEN :rangeStart AND :rangeEnd AND LOWER(l.lot_ref) NOT LIKE '%test%' {$locationClause}
+                WHERE l.logdate >= :rangeStart AND l.logdate < :rangeEnd AND LOWER(l.lot_ref) NOT LIKE '%test%' {$locationClause}
                 ORDER BY l.logdate DESC
             ";
             
@@ -205,6 +205,7 @@ try {
             } else {
                 // Execute standard production (first scan of the hour)
                 $logdate = date('Y-m-d');
+                $start_of_hour_time = date('H:00:00');
                 $end_of_hour_time = date('H:59:59');
                 $timestamp = $logdate . ' ' . $end_of_hour_time;
                 $prod_notes = trim("Scan: " . $notes);
@@ -232,7 +233,7 @@ try {
                     $lot_ref,
                     $prod_notes,
                     $timestamp,
-                    $current_time,
+                    $start_of_hour_time,
                     $end_of_hour_time,
                     $user_id,
                     $username

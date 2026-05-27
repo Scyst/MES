@@ -191,8 +191,8 @@ try {
                     ) AS model,
                     REPLACE(t.transaction_type, 'PRODUCTION_', '') AS count_type,
                     loc.location_name, t.reference_id as lot_no, ISNULL(NULLIF(u.fullname, ''), u.username) AS created_by, t.notes,
-                    FORMAT(t.start_time, N'hh\:mm\:ss') as start_time,
-                    FORMAT(t.end_time, N'hh\:mm\:ss') as end_time,
+                    FORMAT(t.start_time, N'HH\:mm\:ss') as start_time,
+                    FORMAT(t.end_time, N'HH\:mm\:ss') as end_time,
                     (SELECT location_name FROM " . LOCATIONS_TABLE . " WHERE location_id = t.from_location_id) as source_location,
                     (SELECT location_name FROM " . LOCATIONS_TABLE . " WHERE location_id = t.to_location_id) as destination_location
                 " . $baseSql . "

@@ -19,6 +19,114 @@ try {
         // =====================================================================
         // CASE: GET INITIAL DATA (โหลดข้อมูลปฏิทิน & Dashboard)
         // =====================================================================
+        
+
+        case 'get_morning_brief':
+            $userRole = $_SESSION['user']['role'] ?? 'guest';
+            if (!in_array($userRole, ['admin', 'creator', 'supervisor'])) {
+                throw new Exception("Permission denied");
+            }
+            $reqTeam = $_POST['team'] ?? ($_SESSION['user']['team_group'] ?? null);
+            if ($reqTeam === 'ALL') $reqTeam = null;
+
+            $currentHour = (int)date('H');
+            $actualProdDate = ($currentHour < 8) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d');
+            $yesterday = date('Y-m-d', strtotime('-1 day', strtotime($actualProdDate)));
+            
+            // --- [1] Manpower Data ---
+            $mpQuery = "SELECT COUNT(L.emp_id) as total,
+                SUM(CASE WHEN L.status IN ('PRESENT', 'LATE') THEN 1 ELSE 0 END) as present,
+                SUM(CASE WHEN L.status IN ('SICK', 'BUSINESS', 'VACATION', 'LEAVE') THEN 1 ELSE 0 END) as leave_count
+                FROM MANPOWER_DAILY_LOGS L WITH (NOLOCK) 
+                LEFT JOIN MANPOWER_EMPLOYEES E WITH (NOLOCK) ON L.emp_id = E.emp_id
+                LEFT JOIN MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
+                WHERE L.log_date = ? AND L.status != 'GHOST'";
+            $mpParams = [$yesterday];
+            if (!empty($reqTeam)) {
+                $mpQuery .= " AND ISNULL(TS.hc_group, '') = ?";
+                $mpParams[] = $reqTeam;
+            }
+            $stmtMp = $pdo->prepare($mpQuery);
+            $stmtMp->execute($mpParams);
+            $mp = $stmtMp->fetch();
+
+            // --- [2] Labor Cost ---
+            $costQuery = "SELECT ISNULL(SUM(Normal_Cost + OT_Cost), 0) as total_dlot,
+                ISNULL(SUM(OT_Cost), 0) as total_ot,
+                ISNULL(SUM(CASE WHEN rate_type = 'DAILY' THEN Normal_Cost ELSE 0 END), 0) as daily_dl
+                FROM dbo.fn_GetManpowerSummary_V2(?)";
+            $costParams = [$yesterday];
+            if (!empty($reqTeam)) {
+                $costQuery .= " WHERE hc_group = ?";
+                $costParams[] = $reqTeam;
+            }
+            $stmtCost = $pdo->prepare($costQuery);
+            $stmtCost->execute($costParams);
+            $cost = $stmtCost->fetch();
+
+            // --- [3] Utilities Cost ---
+            $stmtUtil = $pdo->prepare("SELECT 
+                ISNULL(SUM(CASE WHEN m.utility_type = 'ELECTRIC' THEN s.calculated_cost ELSE 0 END), 0) as elec_cost,
+                ISNULL(SUM(CASE WHEN m.utility_type = 'LPG' THEN s.calculated_cost ELSE 0 END), 0) as gas_cost
+                FROM UTILITY_HOURLY_SUMMARY s WITH (NOLOCK)
+                JOIN UTILITY_METERS m WITH (NOLOCK) ON s.meter_id = m.meter_id
+                WHERE s.log_date = ? AND m.is_active = 1 AND m.meter_name != 'MDB'");
+            $stmtUtil->execute([$yesterday]);
+            $util = $stmtUtil->fetch();
+
+            // --- [4] Production & Revenue ---
+            $stmtProd = $pdo->prepare("SELECT 
+                ISNULL(r.model, i.part_no) as model_name,
+                SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) as fg,
+                SUM(CASE WHEN t.transaction_type = 'PRODUCTION_HOLD' THEN t.quantity ELSE 0 END) as hold,
+                SUM(CASE WHEN t.transaction_type = 'PRODUCTION_SCRAP' THEN t.quantity ELSE 0 END) as scrap,
+                SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN 
+                    t.quantity * CASE 
+                        WHEN ISNULL(t.std_price_usd_snapshot, 0) > 0 THEN (t.std_price_usd_snapshot * ISNULL(cal.exchange_rate, 32.0))
+                        ELSE ISNULL(t.std_price_snapshot, i.StandardPrice) 
+                    END
+                ELSE 0 END) as revenue
+                FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
+                JOIN ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
+                LEFT JOIN MANUFACTURING_ROUTES r WITH (NOLOCK) ON i.item_id = r.item_id
+                LEFT JOIN MANPOWER_CALENDAR cal WITH (NOLOCK) ON cal.calendar_date = CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE)
+                WHERE CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) = ?
+                AND t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
+                AND i.material_type = 'FG'
+                GROUP BY ISNULL(r.model, i.part_no)
+                HAVING SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) > 0");
+            $stmtProd->execute([$yesterday]);
+            $prodList = $stmtProd->fetchAll();
+
+            $totalRevenue = 0;
+            foreach($prodList as $p) { $totalRevenue += $p['revenue']; }
+
+            // --- [5] Mood Avg ---
+            $stmtMood = $pdo->prepare("SELECT ISNULL(AVG(CAST(mood_score AS FLOAT)), 0) as avg_mood 
+                                         FROM OPERATOR_DAILY_LOGS WITH (NOLOCK) 
+                                         WHERE log_date = ? AND mood_score > 0");
+            $stmtMood->execute([$yesterday]);
+            $moodYesterday = $stmtMood->fetchColumn();
+
+            $morningBrief = [
+                'date_text' => date('d/m/Y', strtotime($yesterday)),
+                'mp_total' => $mp['total'] ?? 0,
+                'mp_present' => $mp['present'] ?? 0,
+                'mp_leave' => $mp['leave_count'] ?? 0,
+                'dlot_total' => number_format($cost['total_dlot'], 0),
+                'dl_daily' => number_format($cost['daily_dl'], 0),
+                'ot_total' => number_format($cost['total_ot'], 0),
+                'elec_cost' => number_format($util['elec_cost'], 0),
+                'gas_cost' => number_format($util['gas_cost'], 0),
+                'revenue' => number_format($totalRevenue, 2),
+                'models' => $prodList,
+                'mood_avg' => $moodYesterday
+            ];
+
+            $response = ['success' => true, 'data' => $morningBrief];
+            break;
+
+
         case 'get_initial_data':
             $startOfMonth = date('Y-m-01');
             $endOfMonth = date('Y-m-t');
@@ -84,9 +192,10 @@ try {
                 }
             }
 
-            // [NEW] 1.3 Morning Brief Data (เฉพาะผู้บริหาร) พร้อมตัดรอบ 08:00 น.
-            $morningBrief = null;
-            if (in_array($userRole, ['admin', 'creator', 'supervisor'])) {
+
+        // [NEW] 1.3 Morning Brief Data
+        $morningBrief = null;
+        if (in_array($userRole, ['admin', 'creator', 'supervisor'])) {
                 
                 $currentHour = (int)date('H');
                 $actualProdDate = ($currentHour < 8) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d');
