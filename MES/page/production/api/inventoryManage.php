@@ -783,15 +783,19 @@ try {
 
                     // Sync logic for SCRAP replacements
                     if ($old_transaction['transaction_type'] === 'PRODUCTION_SCRAP' && $new_transaction_type === 'PRODUCTION_SCRAP') {
+                        $clean_notes = preg_replace('/\[TEAM_OVERRIDE:\s*[^\]]+\]\s*/', '', $new_notes);
+                        $repl_notes = "[SNC] " . trim($clean_notes) . " [TXN:" . $transaction_id . "]";
+                        
                         $updReqStmt = $pdo->prepare("
                             UPDATE dbo.STOCK_TRANSFER_ORDERS 
-                            SET quantity = ?, to_location_id = ?, created_at = ?
+                            SET quantity = ?, to_location_id = ?, created_at = ?, notes = ?
                             WHERE status = 'PENDING' AND CHARINDEX('[TXN:' + CAST(? AS VARCHAR) + ']', notes) > 0
                         ");
                         $updReqStmt->execute([
                             $new_quantity, 
                             $new_location_id,
                             $new_timestamp,
+                            $repl_notes,
                             $transaction_id
                         ]);
                     } elseif ($old_transaction['transaction_type'] === 'PRODUCTION_SCRAP' && $new_transaction_type !== 'PRODUCTION_SCRAP') {
