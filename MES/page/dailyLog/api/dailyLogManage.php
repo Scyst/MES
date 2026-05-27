@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // MES/page/dailyLog/api/dailyLogManage.php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../../config/config.php';
@@ -75,7 +75,7 @@ try {
             $util = $stmtUtil->fetch();
 
             // --- [4] Production & Revenue ---
-            $stmtProd = $pdo->prepare("SELECT 
+            $prodQuery = "SELECT 
                 ISNULL(r.model, i.part_no) as model_name,
                 SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) as fg,
                 SUM(CASE WHEN t.transaction_type = 'PRODUCTION_HOLD' THEN t.quantity ELSE 0 END) as hold,
@@ -90,22 +90,38 @@ try {
                 JOIN ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
                 LEFT JOIN MANUFACTURING_ROUTES r WITH (NOLOCK) ON i.item_id = r.item_id
                 LEFT JOIN MANPOWER_CALENDAR cal WITH (NOLOCK) ON cal.calendar_date = CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE)
+                LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON t.created_by_user_id = u.id
                 WHERE CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) = ?
                 AND t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
-                AND i.material_type = 'FG'
-                GROUP BY ISNULL(r.model, i.part_no)
-                HAVING SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) > 0");
-            $stmtProd->execute([$yesterday]);
+                AND i.material_type = 'FG'";
+            $prodParams = [$yesterday];
+            if (!empty($reqTeam)) {
+                $prodQuery .= " AND (u.team_group = ? OR t.notes LIKE ?)";
+                $prodParams[] = $reqTeam;
+                $prodParams[] = '%[[]TEAM_OVERRIDE: ' . $reqTeam . ']%';
+            }
+            $prodQuery .= " GROUP BY ISNULL(r.model, i.part_no)
+                            HAVING SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) > 0";
+            
+            $stmtProd = $pdo->prepare($prodQuery);
+            $stmtProd->execute($prodParams);
             $prodList = $stmtProd->fetchAll();
 
             $totalRevenue = 0;
             foreach($prodList as $p) { $totalRevenue += $p['revenue']; }
 
             // --- [5] Mood Avg ---
-            $stmtMood = $pdo->prepare("SELECT ISNULL(AVG(CAST(mood_score AS FLOAT)), 0) as avg_mood 
-                                         FROM OPERATOR_DAILY_LOGS WITH (NOLOCK) 
-                                         WHERE log_date = ? AND mood_score > 0");
-            $stmtMood->execute([$yesterday]);
+            $moodQuery = "SELECT ISNULL(AVG(CAST(l.mood_score AS FLOAT)), 0) as avg_mood 
+                          FROM OPERATOR_DAILY_LOGS l WITH (NOLOCK) 
+                          LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON l.user_id = u.id
+                          WHERE l.log_date = ? AND l.mood_score > 0";
+            $moodParams = [$yesterday];
+            if (!empty($reqTeam)) {
+                $moodQuery .= " AND u.team_group = ?";
+                $moodParams[] = $reqTeam;
+            }
+            $stmtMood = $pdo->prepare($moodQuery);
+            $stmtMood->execute($moodParams);
             $moodYesterday = $stmtMood->fetchColumn();
 
             $morningBrief = [
@@ -251,7 +267,7 @@ try {
                 $util = $stmtUtil->fetch();
 
                 // --- [4] Production & Revenue (กรองเฉพาะ FG) ---
-                $stmtProd = $pdo->prepare("SELECT 
+                $prodQuery = "SELECT 
                     ISNULL(r.model, i.part_no) as model_name,
                     SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) as fg,
                     SUM(CASE WHEN t.transaction_type = 'PRODUCTION_HOLD' THEN t.quantity ELSE 0 END) as hold,
@@ -266,13 +282,21 @@ try {
                     JOIN ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
                     LEFT JOIN MANUFACTURING_ROUTES r WITH (NOLOCK) ON i.item_id = r.item_id
                     LEFT JOIN MANPOWER_CALENDAR cal WITH (NOLOCK) ON cal.calendar_date = CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE)
+                    LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON t.created_by_user_id = u.id
                     WHERE CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) = ?
                     AND t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
-                    AND i.material_type = 'FG' -- 🔥 บังคับเฉพาะ FG เท่านั้น
-                    GROUP BY ISNULL(r.model, i.part_no)
-                    HAVING SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) > 0 -- ตัดโมเดลที่ไม่ได้ผลิต FG ออก
-                    ");
-                $stmtProd->execute([$yesterday]);
+                    AND i.material_type = 'FG'";
+                $prodParams = [$yesterday];
+                if (!empty($myTeam)) {
+                    $prodQuery .= " AND (u.team_group = ? OR t.notes LIKE ?)";
+                    $prodParams[] = $myTeam;
+                    $prodParams[] = '%[[]TEAM_OVERRIDE: ' . $myTeam . ']%';
+                }
+                $prodQuery .= " GROUP BY ISNULL(r.model, i.part_no)
+                                HAVING SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) > 0";
+                
+                $stmtProd = $pdo->prepare($prodQuery);
+                $stmtProd->execute($prodParams);
                 $prodList = $stmtProd->fetchAll();
 
                 $totalRevenue = 0;
@@ -281,10 +305,17 @@ try {
                 }
 
                 // --- [5] Mood Avg ---
-                $stmtMood = $pdo->prepare("SELECT ISNULL(AVG(CAST(mood_score AS FLOAT)), 0) as avg_mood 
-                                           FROM OPERATOR_DAILY_LOGS WITH (NOLOCK) 
-                                           WHERE log_date = ? AND mood_score > 0");
-                $stmtMood->execute([$yesterday]);
+                $moodQuery = "SELECT ISNULL(AVG(CAST(l.mood_score AS FLOAT)), 0) as avg_mood 
+                              FROM OPERATOR_DAILY_LOGS l WITH (NOLOCK) 
+                              LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON l.user_id = u.id
+                              WHERE l.log_date = ? AND l.mood_score > 0";
+                $moodParams = [$yesterday];
+                if (!empty($myTeam)) {
+                    $moodQuery .= " AND u.team_group = ?";
+                    $moodParams[] = $myTeam;
+                }
+                $stmtMood = $pdo->prepare($moodQuery);
+                $stmtMood->execute($moodParams);
                 $moodYesterday = $stmtMood->fetchColumn();
 
                 $morningBrief = [

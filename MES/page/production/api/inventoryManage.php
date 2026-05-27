@@ -164,6 +164,16 @@ try {
                 $params[] = $_GET['endDate'];
             }
 
+            if (!empty($_GET['line'])) {
+                $conditions[] = "loc.production_line = ?";
+                $params[] = $_GET['line'];
+            }
+            if (!empty($_GET['team'])) {
+                $conditions[] = "(u.team_group = ? OR t.notes LIKE ?)";
+                $params[] = $_GET['team'];
+                $params[] = '%[[]TEAM_OVERRIDE: ' . $_GET['team'] . ']%';
+            }
+
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
             $baseSql = "
                 FROM " . TRANSACTIONS_TABLE . " t
@@ -573,6 +583,12 @@ try {
             $count_type = strtoupper($input['count_type'] ?? 'FG');
             $lot_no = $input['lot_no'] ?? null;
             $notes = trim($input['notes'] ?? '');
+            
+            $override_team = trim($input['override_team'] ?? '');
+            $current_user_team = $currentUser['team_group'] ?? '';
+            if (!empty($override_team) && $override_team !== $current_user_team) {
+                $notes = "[TEAM_OVERRIDE: " . $override_team . "] " . $notes;
+            }
             $log_date = $input['log_date'] ?? date('Y-m-d');
             $start_time = $input['start_time'] ?? date('H:i:s');
             $end_time = $input['end_time'] ?? date('H:i:s');
@@ -1161,6 +1177,16 @@ try {
                 $params[] = $currentUser['line'];
             }
 
+            if (!empty($_GET['line'])) {
+                $conditions[] = "loc.production_line = ?";
+                $params[] = $_GET['line'];
+            }
+            if (!empty($_GET['team'])) {
+                $conditions[] = "(u.team_group = ? OR t.notes LIKE ?)";
+                $params[] = $_GET['team'];
+                $params[] = '%[[]TEAM_OVERRIDE: ' . $_GET['team'] . ']%';
+            }
+
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
             $baseFromJoin = "
@@ -1242,6 +1268,16 @@ try {
                     $params[] = $line_filter;
                 }
                 
+                if (!empty($_GET['line'])) {
+                    $conditions[] = "l.production_line = ?";
+                    $params[] = $_GET['line'];
+                }
+                if (!empty($_GET['team'])) {
+                    $conditions[] = "(u.team_group = ? OR t.notes LIKE ?)";
+                    $params[] = $_GET['team'];
+                    $params[] = '%[[]TEAM_OVERRIDE: ' . $_GET['team'] . ']%';
+                }
+                
                 if (!empty($search_terms_array) && is_array($search_terms_array)) {
                     foreach ($search_terms_array as $term) {
                         if (empty($term)) continue;
@@ -1286,6 +1322,8 @@ try {
                         " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
                     JOIN 
                         " . LOCATIONS_TABLE . " l ON t.to_location_id = l.location_id
+                    LEFT JOIN 
+                        " . USERS_TABLE . " u ON t.created_by_user_id = u.id
                     {$whereClause}
                     GROUP BY 
                         {$production_date_col},

@@ -1,5 +1,6 @@
 <?php 
 // MES/page/production/productionUI.php
+require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../components/init.php';
 
 if (!hasPermission('view_production') && !hasPermission('manage_production')) {
@@ -15,6 +16,19 @@ $pageTitle = "Shop Floor & Inventory | MES TOOLBOX";
 $pageIcon = "fas fa-industry";
 $pageHeaderTitle = "Shop Floor & Inventory";
 $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผลิตและคลังสินค้า";
+
+// Fetch Distinct Lines and Teams
+$productionLines = [];
+$teamGroups = [];
+try {
+    $stmt = $pdo->query("SELECT DISTINCT production_line FROM " . LOCATIONS_TABLE . " WHERE production_line IS NOT NULL AND production_line != '' ORDER BY production_line");
+    $productionLines = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    $stmt = $pdo->query("SELECT DISTINCT team_group FROM " . USERS_TABLE . " WHERE team_group IS NOT NULL AND team_group != '' ORDER BY team_group");
+    $teamGroups = $stmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (Throwable $e) {
+    error_log("Error fetching filter options: " . $e->getMessage());
+}
 ?>
 
 <!DOCTYPE html>
@@ -178,15 +192,6 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
                 <div class="collapse mb-3" id="advancedFilters">
                     <div class="card card-body bg-light border-0 p-0 shadow-sm">
                         <div class="row g-2 align-items-start">
-                            <div class="col-12 col-md-auto">
-                                <select class="form-select form-select-sm shadow-sm fw-bold text-primary border-primary" id="filterCountType">
-                                    <option value="">All Types</option>
-                                    <option value="FG">FG (ดี)</option>
-                                    <option value="HOLD">HOLD (รอตรวจสอบ)</option>
-                                    <option value="SCRAP">SCRAP (ของเสีย)</option>
-                                </select>
-                            </div>
-                            
                             <div class="col-12 col-md-auto" id="date-range-filter">
                                 <div class="input-group input-group-sm shadow-sm">
                                     <span class="input-group-text bg-white"><i class="fas fa-calendar-alt text-muted"></i></span>
@@ -194,6 +199,33 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
                                     <span class="input-group-text bg-light text-muted">to</span>
                                     <input type="date" class="form-control fw-bold" id="filterEndDate">
                                 </div>
+                            </div>
+
+                            <div class="col-12 col-md-auto">
+                                <select class="form-select form-select-sm shadow-sm border-secondary" id="filterLine">
+                                    <option value="">All Lines</option>
+                                    <?php foreach ($productionLines as $line): ?>
+                                        <option value="<?php echo htmlspecialchars($line); ?>"><?php echo htmlspecialchars($line); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-12 col-md-auto">
+                                <select class="form-select form-select-sm shadow-sm border-secondary" id="filterTeam">
+                                    <option value="">All Teams</option>
+                                    <?php foreach ($teamGroups as $team): ?>
+                                        <option value="<?php echo htmlspecialchars($team); ?>"><?php echo htmlspecialchars($team); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-12 col-md-auto">
+                                <select class="form-select form-select-sm shadow-sm border-secondary" id="filterCountType">
+                                    <option value="">All Types</option>
+                                    <option value="FG">FG (ดี)</option>
+                                    <option value="HOLD">HOLD (รอตรวจสอบ)</option>
+                                    <option value="SCRAP">SCRAP (ของเสีย)</option>
+                                </select>
                             </div>
                         </div>
                     </div>

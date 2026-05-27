@@ -153,6 +153,25 @@
                         <div class="p-3 bg-white rounded shadow-sm border">
                             <div class="row g-2">
                                 <div class="col-12">
+                                    <?php
+                                        $isAdmin = isset($currentUserForJS['role']) && strtolower($currentUserForJS['role']) === 'admin';
+                                        $hasTeam = !empty($currentUserForJS['team_group']);
+                                        $disableOverride = !$isAdmin ? 'disabled' : '';
+                                    ?>
+                                    <label class="form-label fw-bold small text-muted mb-1">Team (Override)</label>
+                                    <select id="out_override_team" name="override_team" class="form-select form-select-sm bg-light text-secondary" <?php echo $disableOverride; ?>>
+                                        <option value="">-- อิงตามผู้ใช้งาน (<?php echo htmlspecialchars($currentUserForJS['team_group'] ?? 'ไม่มีทีม'); ?>) --</option>
+                                        <?php if(isset($teamGroups) && is_array($teamGroups)): ?>
+                                            <?php foreach ($teamGroups as $team): ?>
+                                                <option value="<?php echo htmlspecialchars($team); ?>"><?php echo htmlspecialchars($team); ?></option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </select>
+                                    <?php if (!$isAdmin && !$hasTeam): ?>
+                                        <div class="alert alert-warning p-1 mt-1 mb-0 small text-center fw-bold"><i class="fas fa-exclamation-triangle"></i> คุณไม่มีทีม กรุณาติดต่อแอดมิน</div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="col-12">
                                     <label class="form-label fw-bold small text-muted mb-1">ล็อต / อ้างอิง</label>
                                     <input type="text" id="out_lot_no" name="lot_no" class="form-control form-control-sm bg-light" placeholder="Optional">
                                 </div>

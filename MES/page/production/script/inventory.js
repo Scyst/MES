@@ -31,6 +31,8 @@ function saveFiltersToLocalStorage() {
         count_type: document.getElementById('filterCountType').value,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
+        line: document.getElementById('filterLine')?.value || '',
+        team: document.getElementById('filterTeam')?.value || '',
     };
     localStorage.setItem('inventoryUIFilters', JSON.stringify(filters));
 }
@@ -47,6 +49,8 @@ function initializeFilters() {
             document.getElementById('filterCountType').value = filters.count_type || '';
             document.getElementById('filterStartDate').value = filters.startDate || dateStr;
             document.getElementById('filterEndDate').value = filters.endDate || dateStr;
+            if (document.getElementById('filterLine')) document.getElementById('filterLine').value = filters.line || '';
+            if (document.getElementById('filterTeam')) document.getElementById('filterTeam').value = filters.team || '';
         } catch(e) {
             document.getElementById("filterStartDate").value = dateStr;
             document.getElementById("filterEndDate").value = dateStr;
@@ -133,10 +137,14 @@ function updateFilterVisibility(activeTabId) {
     const searchEl = document.getElementById('filterSearch');
     const typeEl = document.getElementById('filterCountType');
     const dateRangeEl = document.getElementById('date-range-filter');
+    const lineEl = document.getElementById('filterLine')?.parentElement;
+    const teamEl = document.getElementById('filterTeam')?.parentElement;
 
     searchEl.style.display = 'none';
     typeEl.style.display = 'none';
     dateRangeEl.style.display = 'none';
+    if (lineEl) lineEl.style.display = 'none';
+    if (teamEl) teamEl.style.display = 'none';
     searchEl.placeholder = 'Search...'; 
 
     switch (activeTabId) {
@@ -146,6 +154,8 @@ function updateFilterVisibility(activeTabId) {
         case 'transaction-log-tab':
             searchEl.style.display = 'block';
             dateRangeEl.style.display = 'flex';
+            if (lineEl) lineEl.style.display = 'block';
+            if (teamEl) teamEl.style.display = 'block';
             searchEl.placeholder = 'Search Part No, SAP, Lot, Location...';
             break;
             
@@ -153,11 +163,14 @@ function updateFilterVisibility(activeTabId) {
             searchEl.style.display = 'block';
             typeEl.style.display = 'block';
             dateRangeEl.style.display = 'flex';
+            if (lineEl) lineEl.style.display = 'block';
+            if (teamEl) teamEl.style.display = 'block';
             searchEl.placeholder = 'Search Part No, SAP, Lot, Location...';
             break;
 
         case 'wip-onhand-tab':
             searchEl.style.display = 'block';
+            if (lineEl) lineEl.style.display = 'block';
             searchEl.placeholder = 'Search Part No, SAP, Location...';
             break;
 
@@ -321,6 +334,8 @@ async function fetchProductionVarianceReport(page = 1) {
         'search_terms[]': searchTerms,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
+        line: document.getElementById('filterLine')?.value || '',
+        team: document.getElementById('filterTeam')?.value || '',
     };
     try {
         const result = await sendRequest(INVENTORY_API_URL, 'get_production_variance_report', 'GET', null, params);
@@ -381,6 +396,8 @@ async function fetchWipReportByLot(page = 1) {
         'search_terms[]': searchTerms,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
+        line: document.getElementById('filterLine')?.value || '',
+        team: document.getElementById('filterTeam')?.value || '',
     };
     try {
         const result = await sendRequest(INVENTORY_API_URL, 'get_wip_report_by_lot', 'GET', null, params);
@@ -435,6 +452,8 @@ async function fetchReceiptHistory(page = 1) {
         'search_terms[]': searchTerms,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
+        line: document.getElementById('filterLine')?.value || '',
+        team: document.getElementById('filterTeam')?.value || '',
     };
     try {
         const result = await sendRequest(INVENTORY_API_URL, 'get_receipt_history', 'GET', null, params);
@@ -491,6 +510,8 @@ async function fetchProductionHistory(page = 1) {
         count_type: document.getElementById('filterCountType').value,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
+        line: document.getElementById('filterLine')?.value || '',
+        team: document.getElementById('filterTeam')?.value || '',
     };
     try {
         const result = await sendRequest(INVENTORY_API_URL, 'get_production_history', 'GET', null, params);
@@ -653,6 +674,8 @@ async function fetchAllTransactions(page = 1) {
         'search_terms[]': searchTerms,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
+        line: document.getElementById('filterLine')?.value || '',
+        team: document.getElementById('filterTeam')?.value || '',
     };
     try {
         const result = await sendRequest(INVENTORY_API_URL, 'get_all_transactions', 'GET', null, params);
@@ -1076,6 +1099,8 @@ async function openSummaryModal() {
         count_type: document.getElementById('filterCountType').value,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
+        line: document.getElementById('filterLine')?.value || '',
+        team: document.getElementById('filterTeam')?.value || '',
     };
 
     const result = await sendRequest(INVENTORY_API_URL, 'get_production_summary', 'GET', null, params);
@@ -1247,7 +1272,8 @@ async function handleFormSubmit(event) {
                 log_date: data.log_date,
                 start_time: startTime,
                 end_time: endTime,
-                notes: data.notes
+                notes: data.notes,
+                override_team: data.override_team
             };
             
             const transactions = [];
@@ -1708,6 +1734,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterCountType').addEventListener('change', handleFilterChange);
     document.getElementById('filterStartDate').addEventListener('change', handleFilterChange);
     document.getElementById('filterEndDate').addEventListener('change', handleFilterChange);
+    document.getElementById('filterLine')?.addEventListener('change', handleFilterChange);
+    document.getElementById('filterTeam')?.addEventListener('change', handleFilterChange);
     document.getElementById('entry_from_location_id')?.addEventListener('change', updateAvailableStockDisplay);
     
     document.querySelectorAll('#mainTab .nav-link').forEach(tab => {
