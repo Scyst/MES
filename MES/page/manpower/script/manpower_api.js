@@ -1,10 +1,10 @@
-// page/manpower/script/manpower_api.js
+﻿// page/manpower/script/manpower_api.js
 "use strict";
 
 const API = {
     // แก้ไข: ชี้ไปที่ read_summary เพื่อเอาข้อมูลตัวเลขสรุปมาทำกราฟ
     URL_GET_SUMMARY: 'api/api_daily_operations.php?action=read_summary',
-    URL_SYNC: 'api/sync_from_api_test.php',
+    URL_SYNC: 'api/sync_from_api.php',
 
     async getSummary(dateString, useNewFormula = false) {
         try {
