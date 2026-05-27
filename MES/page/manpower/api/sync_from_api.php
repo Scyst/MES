@@ -1,16 +1,18 @@
-﻿<?php
+<?php
 // MES/page/manpower_test/api/sync_from_api_test.php
 // Version: INGEST ALL (เธฃเธฑเธเธเธเธฑเธเธเธฒเธเธ—เธฑเนเธเธซเธกเธ”เน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธเนเธฅเนเธงเธเธฑเธ”เธเธฅเธธเนเธก / เธเนเธญเธเธเธฑเธเธเธฒเธฃเน€เธเธตเธขเธเธ—เธฑเธเธ”เนเธงเธขเธกเธทเธญ)
 // Target: _TEST Tables
 
 ignore_user_abort(true); 
 set_time_limit(600); 
+error_reporting(0);
+ini_set('display_errors', 0);
 
 header('Content-Type: application/json');
 
 // 1. Auto-Sync Check
 $isAutoSync = false;
-if (isset($_SERVER['HTTP_X_MODE']) && $_SERVER['HTTP_X_MODE'] === 'auto_sync') {
+if ((isset($_SERVER['HTTP_X_MODE']) && $_SERVER['HTTP_X_MODE'] === 'auto_sync') || (isset($_GET['actionBy']) && $_GET['actionBy'] === 'SYSTEM')) {
     $isAutoSync = true;
 }
 

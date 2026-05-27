@@ -4,13 +4,20 @@
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
             
             <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);">
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3 w-100">
                     <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 50px; height: 50px;">
                         <i class="fas fa-sun text-dark fa-lg"></i>
                     </div>
                     <div>
                         <h5 class="modal-title fw-bold mb-0">Morning Brief</h5>
                         <small class="opacity-75">สรุปผลงานวันที่ <span id="briefDateText"></span></small>
+                    </div>
+                    <div class="ms-auto pe-3">
+                        <select id="briefTeamFilter" class="form-select form-select-sm border-0 bg-white bg-opacity-25 text-white fw-bold" style="width: 120px;">
+                            <option value="ALL" class="text-dark">All Teams</option>
+                            <option value="TEAM 1" class="text-dark">TEAM 1</option>
+                            <option value="TEAM 2" class="text-dark">TEAM 2</option>
+                        </select>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>

@@ -471,6 +471,7 @@ function renderReceiptHistoryTable(data) {
             <td class="text-center" data-label="Part No.">${row.part_no}</td>
             <td class="text-center" data-label="Lot. / Ref.">${row.lot_no || ''}</td>
             <td class="text-center" data-label="Quantity">${Math.floor(row.quantity).toLocaleString()}</td>
+            <td class="text-center" data-label="User">${row.created_by || 'N/A'}</td>
             <td class="text-center" data-label="Notes">${row.notes || ''}</td>
         `;
         tbody.appendChild(tr);
@@ -534,6 +535,7 @@ function renderProductionHistoryTable(data) {
             <td class="text-center" data-label="Location">${row.location_name || 'N/A'}</td>
             <td class="text-center" data-label="Quantity">${Math.floor(row.quantity).toLocaleString()}</td>
             <td class="text-center" data-label="Type">${row.count_type}</td>
+            <td class="text-center" data-label="User">${row.created_by || 'N/A'}</td>
             <td class="text-center" data-label="Notes">${row.notes || ''}</td>
         `;
         

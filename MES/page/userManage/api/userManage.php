@@ -1,6 +1,11 @@
 <?php
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
+
+if (isset($_REQUEST['action']) && $_REQUEST['action'] === 'sync_manpower' && isset($_REQUEST['actionBy']) && $_REQUEST['actionBy'] === 'SYSTEM') {
+    define('ALLOW_GUEST_ACCESS', true);
+}
+
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 
@@ -17,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true) ?: $_POST;
 
-if (!hasPermission('manage_users') && !hasPermission('manage_roles')) {
+if (!defined('ALLOW_GUEST_ACCESS') && !hasPermission('manage_users') && !hasPermission('manage_roles')) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Permission Denied.']);
     exit;
@@ -43,11 +48,13 @@ try {
             $syncResult = $stmtSync->fetch(PDO::FETCH_ASSOC);
             $updatedCount = $syncResult['updated_count'] ?? 0;
             $stmtNew = $pdo->query("
-                SELECT emp_id, name_th, line, department_api 
-                FROM " . MANPOWER_EMPLOYEES_TABLE . " 
-                WHERE is_active = 1 
-                  AND emp_id NOT IN (SELECT emp_id FROM " . USERS_TABLE . " WHERE emp_id IS NOT NULL)
-                  AND emp_id NOT IN (SELECT username FROM " . USERS_TABLE . " WHERE username IS NOT NULL)
+                SELECT E.emp_id, E.name_th, E.line, TS.hc_group 
+                FROM " . MANPOWER_EMPLOYEES_TABLE . " E
+                LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS ON E.department_api = TS.department_api
+                WHERE E.is_active = 1 
+                  AND ISNULL(TS.hc_group, '') != 'EXCLUDE'
+                  AND E.emp_id NOT IN (SELECT emp_id FROM " . USERS_TABLE . " WHERE emp_id IS NOT NULL)
+                  AND E.emp_id NOT IN (SELECT username FROM " . USERS_TABLE . " WHERE username IS NOT NULL)
             ");
             $newEmployees = $stmtNew->fetchAll(PDO::FETCH_ASSOC);
 
@@ -61,21 +68,16 @@ try {
                 $username = $empId;
                 $password = substr($empId, -4); 
                 $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                $teamGroup = null;
-                $dept = $emp['department_api'] ?? '';
-                if (strpos($dept, '-') !== false) {
-                    $parts = explode('-', $dept);
-                    $afterDash = trim($parts[1] ?? '');
-                    $subParts = explode(' ', $afterDash);
-                    if (!empty($subParts[0]) && strtoupper($subParts[0]) !== 'UNASSIGNED') {
-                        $teamGroup = strtoupper($subParts[0]);
-                    }
+                $teamGroup = $emp['hc_group'] ?? null;
+                $line = $emp['line'] ?? 'UNASSIGNED';
+                $fullname = $emp['name_th'] ?? $username;
+
+                try {
+                    $stmtAddUser->execute([$username, $hashedPassword, $line, $empId, $fullname, $teamGroup, $actionBy]);
+                    $addedCount++;
+                } catch (Exception $e) {
+                    error_log("Failed to auto-sync user $empId: " . $e->getMessage());
                 }
-                
-                $stmtAddUser->execute([
-                    $username, $hashedPassword, $emp['line'], $empId, $emp['name_th'], $teamGroup, $actionBy
-                ]);
-                $addedCount++;
             }
 
             echo json_encode([

@@ -1,4 +1,4 @@
-// MES/page/dailyLog/script/dailyLog.js
+﻿// MES/page/dailyLog/script/dailyLog.js
 "use strict";
 
 const API_URL = 'api/dailyLogManage.php';

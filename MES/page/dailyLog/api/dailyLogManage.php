@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // MES/page/dailyLog/api/dailyLogManage.php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../../config/config.php';
@@ -92,23 +92,43 @@ try {
                 $actualProdDate = ($currentHour < 8) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d');
                 $yesterday = date('Y-m-d', strtotime('-1 day', strtotime($actualProdDate)));
                 
+                $myTeam = $_SESSION['user']['team_group'] ?? null;
+
                 // --- [1] Manpower Data ---
-                $stmtMp = $pdo->prepare("SELECT 
-                    COUNT(emp_id) as total,
-                    SUM(CASE WHEN status IN ('PRESENT', 'LATE') THEN 1 ELSE 0 END) as present,
-                    SUM(CASE WHEN status IN ('SICK', 'BUSINESS', 'VACATION', 'LEAVE') THEN 1 ELSE 0 END) as leave_count
-                    FROM MANPOWER_DAILY_LOGS WITH (NOLOCK) 
-                    WHERE log_date = ? AND status != 'GHOST'");
-                $stmtMp->execute([$yesterday]);
+                $mpQuery = "SELECT 
+                    COUNT(L.emp_id) as total,
+                    SUM(CASE WHEN L.status IN ('PRESENT', 'LATE') THEN 1 ELSE 0 END) as present,
+                    SUM(CASE WHEN L.status IN ('SICK', 'BUSINESS', 'VACATION', 'LEAVE') THEN 1 ELSE 0 END) as leave_count
+                    FROM MANPOWER_DAILY_LOGS L WITH (NOLOCK) 
+                    LEFT JOIN MANPOWER_EMPLOYEES E WITH (NOLOCK) ON L.emp_id = E.emp_id
+                    LEFT JOIN MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
+                    WHERE L.log_date = ? AND L.status != 'GHOST'";
+                $mpParams = [$yesterday];
+
+                if (!empty($myTeam)) {
+                    $mpQuery .= " AND ISNULL(TS.hc_group, '') = ?";
+                    $mpParams[] = $myTeam;
+                }
+
+                $stmtMp = $pdo->prepare($mpQuery);
+                $stmtMp->execute($mpParams);
                 $mp = $stmtMp->fetch();
 
-                // --- [2] Labor Cost (ใช้ fn_GetManpowerSummary_V2 เพื่อให้ตรงกับหน้า Manpower เป๊ะๆ) ---
-                $stmtCost = $pdo->prepare("SELECT 
+                // --- [2] Labor Cost ---
+                $costQuery = "SELECT 
                     ISNULL(SUM(Normal_Cost + OT_Cost), 0) as total_dlot,
                     ISNULL(SUM(OT_Cost), 0) as total_ot,
                     ISNULL(SUM(CASE WHEN rate_type = 'DAILY' THEN Normal_Cost ELSE 0 END), 0) as daily_dl
-                    FROM dbo.fn_GetManpowerSummary_V2(?)");
-                $stmtCost->execute([$yesterday]);
+                    FROM dbo.fn_GetManpowerSummary_V2(?)";
+                $costParams = [$yesterday];
+
+                if (!empty($myTeam)) {
+                    $costQuery .= " WHERE hc_group = ?";
+                    $costParams[] = $myTeam;
+                }
+
+                $stmtCost = $pdo->prepare($costQuery);
+                $stmtCost->execute($costParams);
                 $cost = $stmtCost->fetch();
 
                 // --- [3] Utilities Cost (ค่าไฟ / ค่าแก๊ส) ---

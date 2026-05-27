@@ -48,9 +48,20 @@ $pageIcon = "fas fa-users-cog";
                 
                 <div class="tab-pane fade show active" id="tab-users" role="tabpanel">
                     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                        <div class="input-group" style="width: 300px;">
-                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                            <input type="text" id="searchUserInput" class="form-control border-start-0 ps-0" placeholder="Search by Name, Emp ID...">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="input-group" style="width: 250px;">
+                                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" id="searchUserInput" class="form-control border-start-0 ps-0" placeholder="Search by Name, ID...">
+                            </div>
+                            <select id="filterRole" class="form-select" style="width: 140px;">
+                                <option value="">All Roles</option>
+                            </select>
+                            <select id="filterLine" class="form-select" style="width: 140px;">
+                                <option value="">All Lines</option>
+                            </select>
+                            <select id="filterTeam" class="form-select" style="width: 150px;">
+                                <option value="">All Teams</option>
+                            </select>
                         </div>
                         <div class="d-flex gap-2">
                             <button class="btn btn-primary shadow-sm" onclick="openModal('addUserModal')">

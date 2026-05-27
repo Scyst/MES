@@ -1,0 +1,119 @@
+[
+    {
+        "id": "group-manpower-sync",
+        "type": "group",
+        "z": "dfa2b53f.1189c8",
+        "name": "Manpower Auto-Sync to Users",
+        "style": {
+            "stroke": "#92d04f",
+            "fill": "#e3f2d9",
+            "fill-opacity": "0.5",
+            "label": true,
+            "color": "#333333"
+        },
+        "nodes": [
+            "inject-daily-sync",
+            "http-external-sync",
+            "http-internal-sync",
+            "debug-sync-result"
+        ],
+        "x": 100,
+        "y": 100,
+        "w": 700,
+        "h": 150
+    },
+    {
+        "id": "inject-daily-sync",
+        "type": "inject",
+        "z": "dfa2b53f.1189c8",
+        "g": "group-manpower-sync",
+        "name": "Daily at 00:00",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "00 00 * * *",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "start",
+        "payloadType": "str",
+        "x": 200,
+        "y": 160,
+        "wires": [
+            [
+                "http-external-sync"
+            ]
+        ]
+    },
+    {
+        "id": "http-external-sync",
+        "type": "http request",
+        "z": "dfa2b53f.1189c8",
+        "g": "group-manpower-sync",
+        "name": "Sync External Manpower API",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/manpower/api/sync_from_api.php",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 420,
+        "y": 160,
+        "wires": [
+            [
+                "http-internal-sync"
+            ]
+        ]
+    },
+    {
+        "id": "http-internal-sync",
+        "type": "http request",
+        "z": "dfa2b53f.1189c8",
+        "g": "group-manpower-sync",
+        "name": "Sync to USERS Table",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/userManage/api/userManage.php?action=sync_manpower&actionBy=SYSTEM",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 640,
+        "y": 160,
+        "wires": [
+            [
+                "debug-sync-result"
+            ]
+        ]
+    },
+    {
+        "id": "debug-sync-result",
+        "type": "debug",
+        "z": "dfa2b53f.1189c8",
+        "g": "group-manpower-sync",
+        "name": "Sync Result Log",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 840,
+        "y": 160,
+        "wires": []
+    }
+]

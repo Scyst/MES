@@ -216,6 +216,7 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
                                         <th class="py-2">Location</th>
                                         <th class="py-2">Quantity</th>
                                         <th class="py-2">Type</th>
+                                        <th class="py-2">User</th>
                                         <th class="py-2">Notes</th>
                                     </tr>
                                 </thead>
@@ -237,7 +238,8 @@ $pageHeaderSubtitle = "ระบบจัดการหน้าไลน์ผ
                                         <th class="py-2">SAP No.</th>
                                         <th class="py-2">Part No.</th>
                                         <th class="py-2">Lot / Ref.</th>
-                                        <th class="py-2 text-end px-3">Quantity</th>
+                                        <th class="py-2">Quantity</th>
+                                        <th class="py-2">User</th>
                                         <th class="py-2">Notes</th>
                                     </tr>
                                 </thead>

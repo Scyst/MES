@@ -46,12 +46,51 @@ async function loadUsers() {
         const result = await sendRequest('read', 'GET');
         if (result.success) {
             allUsers = result.data;
-            renderTable(allUsers);
+            populateFilters(allUsers);
+            applyFilters();
         }
     } catch (e) {
         console.error(e);
         showToast('Failed to load users', '#dc3545');
     }
+}
+
+function populateFilters(users) {
+    const roles = [...new Set(users.map(u => u.role).filter(Boolean))].sort();
+    const lines = [...new Set(users.map(u => u.line).filter(Boolean))].sort();
+    const teams = [...new Set(users.map(u => u.team_group).filter(Boolean))].sort();
+
+    const roleSelect = document.getElementById('filterRole');
+    const lineSelect = document.getElementById('filterLine');
+    const teamSelect = document.getElementById('filterTeam');
+
+    if (roleSelect && roleSelect.options.length <= 1) {
+        roles.forEach(r => roleSelect.add(new Option(r.toUpperCase(), r)));
+    }
+    if (lineSelect && lineSelect.options.length <= 1) {
+        lines.forEach(l => lineSelect.add(new Option(l, l)));
+    }
+    if (teamSelect && teamSelect.options.length <= 1) {
+        teams.forEach(t => teamSelect.add(new Option(t, t)));
+    }
+}
+
+function applyFilters() {
+    const kw = (document.getElementById('searchUserInput')?.value || '').toLowerCase();
+    const fRole = document.getElementById('filterRole')?.value || '';
+    const fLine = document.getElementById('filterLine')?.value || '';
+    const fTeam = document.getElementById('filterTeam')?.value || '';
+
+    const filtered = allUsers.filter(u => {
+        const matchSearch = (u.fullname || '').toLowerCase().includes(kw) || 
+                            (u.username || '').toLowerCase().includes(kw) || 
+                            (u.emp_id || '').toLowerCase().includes(kw);
+        const matchRole = !fRole || u.role === fRole;
+        const matchLine = !fLine || u.line === fLine;
+        const matchTeam = !fTeam || u.team_group === fTeam;
+        return matchSearch && matchRole && matchLine && matchTeam;
+    });
+    renderTable(filtered);
 }
 
 function getRoleBadge(role) {
@@ -158,15 +197,11 @@ async function toggleStatus(id, isActive) {
 
 document.addEventListener('DOMContentLoaded', () => {
     loadUsers();
-    document.getElementById('searchUserInput').addEventListener('input', (e) => {
-        const kw = e.target.value.toLowerCase();
-        const filtered = allUsers.filter(u => 
-            (u.fullname || '').toLowerCase().includes(kw) || 
-            (u.username || '').toLowerCase().includes(kw) || 
-            (u.emp_id || '').toLowerCase().includes(kw)
-        );
-        renderTable(filtered);
-    });
+    
+    document.getElementById('searchUserInput')?.addEventListener('input', applyFilters);
+    document.getElementById('filterRole')?.addEventListener('change', applyFilters);
+    document.getElementById('filterLine')?.addEventListener('change', applyFilters);
+    document.getElementById('filterTeam')?.addEventListener('change', applyFilters);
 
     document.getElementById('addUserForm').addEventListener('submit', async (e) => {
         e.preventDefault();
