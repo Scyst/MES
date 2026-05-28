@@ -1783,7 +1783,7 @@ const Actions = {
                     Swal.fire('❌ Error: ' + json.message);
                 }
             } catch (err) {
-                Swal.fire('❌ Failed to connect API');
+                console.error('Terminate Error:', err); Swal.fire('❌ Error: ' + err.message);
             }
         }
     },
