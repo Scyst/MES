@@ -207,11 +207,11 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-3">
-                <div class="d-flex align-items-center justify-content-between mb-3 bg-body-tertiary p-2 rounded border">
-                    <input type="file" id="mtExcelFile" class="form-control form-control-sm w-50" accept=".xlsx, .xls, .csv" onchange="MtImportCtrl.processExcel()">
-                    <div>
-                        <span class="text-primary fw-bold small me-3" id="mtPreviewCount">พบข้อมูล: 0 รายการ</span>
-                        <button type="button" class="btn btn-outline-success btn-sm fw-bold" onclick="MtImportCtrl.downloadTemplate()">
+                <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 bg-body-tertiary p-2 rounded border gap-2">
+                    <input type="file" id="mtExcelFile" class="form-control form-control-sm" style="flex-grow: 1; width: auto; max-width: 100%;" accept=".xlsx, .xls, .csv" onchange="MtImportCtrl.processExcel()">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <span class="text-primary fw-bold small" id="mtPreviewCount">พบข้อมูล: 0 รายการ</span>
+                        <button type="button" class="btn btn-outline-success btn-sm fw-bold text-nowrap" onclick="MtImportCtrl.downloadTemplate()">
                             <i class="fas fa-download me-1"></i> Template
                         </button>
                     </div>
@@ -245,12 +245,12 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-3">
-                <div class="d-flex align-items-center justify-content-between mb-3 bg-body-tertiary p-2 rounded border">
-                    <div class="d-flex align-items-center w-75">
-                        <input type="file" id="stExcelFile" class="form-control form-control-sm w-50 me-2" accept=".xlsx, .xls, .csv" onchange="MtStockTakeCtrl.processExcel()">
-                        <span class="text-warning fw-bold small" id="stPreviewCount">พบรายการปรับปรุง: 0</span>
+                <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 bg-body-tertiary p-2 rounded border gap-2">
+                    <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                        <input type="file" id="stExcelFile" class="form-control form-control-sm" style="flex-grow: 1; width: auto; max-width: 100%;" accept=".xlsx, .xls, .csv" onchange="MtStockTakeCtrl.processExcel()">
+                        <span class="text-warning fw-bold small text-nowrap" id="stPreviewCount">พบรายการปรับปรุง: 0</span>
                     </div>
-                    <button type="button" class="btn btn-outline-warning btn-sm fw-bold" onclick="MtStockTakeCtrl.exportCountSheet()">
+                    <button type="button" class="btn btn-outline-warning btn-sm fw-bold text-nowrap" onclick="MtStockTakeCtrl.exportCountSheet()">
                         <i class="fas fa-download me-1"></i> Load Template
                     </button>
                 </div>

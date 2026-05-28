@@ -77,12 +77,12 @@ $currentUser = $_SESSION['user'];
                                         <span class="small text-success fw-bold text-uppercase" style="font-size: 0.7rem;">Total Value</span>
                                     </div>
                                     
-                                    <div class="d-none d-lg-flex gap-2 ms-1">
-                                        <div class="btn-group shadow-none">
+                                    <div class="d-flex flex-wrap justify-content-start justify-content-lg-end gap-2 mt-2 mt-lg-0 flex-grow-1 flex-lg-grow-0">
+                                        <div class="btn-group shadow-none flex-fill flex-sm-grow-0">
                                             <button class="btn btn-outline-secondary btn-sm fw-bold px-3" onclick="MtStockTakeCtrl.exportCountSheet()" title="โหลดฟอร์มนับสต๊อก"><i class="fas fa-file-excel text-success me-1"></i> นับสต๊อก</button>
                                             <button class="btn btn-outline-secondary btn-sm fw-bold px-3" onclick="MtStockTakeCtrl.openModal()" title="อัปโหลดผลการนับ"><i class="fas fa-file-import text-warning me-1"></i> อัปเดตยอด</button>
                                         </div>
-                                        <div class="btn-group shadow-none">
+                                        <div class="btn-group shadow-none flex-fill flex-sm-grow-0">
                                             <button class="btn btn-sm btn-success fw-bold px-3" onclick="window.StockManager.openReceiveModal()"><i class="fas fa-arrow-down me-1"></i> Receive</button>
                                             <button class="btn btn-sm btn-dark fw-bold px-3" onclick="window.StockManager.openIssueModal()"><i class="fas fa-arrow-up me-1"></i> Issue</button>
                                         </div>
@@ -133,8 +133,8 @@ $currentUser = $_SESSION['user'];
                                         <input type="text" id="masterSearch" class="form-control border-start-0 ps-0" placeholder="ค้นหา Master Data...">
                                     </div>
                                 </div>
-                                <div class="col-lg-6 d-flex justify-content-lg-end justify-content-start gap-2">
-                                    <div class="btn-group shadow-none">
+                                <div class="col-lg-6 d-flex flex-wrap justify-content-start justify-content-lg-end gap-2 mt-2 mt-lg-0">
+                                    <div class="btn-group shadow-none flex-fill flex-sm-grow-0">
                                         <button class="btn btn-outline-secondary btn-sm fw-bold px-3" onclick="MtMasterCtrl.exportData()" title="Export ข้อมูลทั้งหมด">
                                             <i class="fas fa-file-excel text-success me-1"></i> Export Data
                                         </button>
@@ -142,7 +142,7 @@ $currentUser = $_SESSION['user'];
                                             <i class="fas fa-file-import text-primary me-1"></i> Import
                                         </button>
                                     </div>
-                                    <button class="btn btn-sm btn-primary fw-bold px-3 shadow-none rounded-1" onclick="window.MtMasterCtrl.openModal()">
+                                    <button class="btn btn-sm btn-primary fw-bold px-3 shadow-none rounded-1 flex-fill flex-sm-grow-0" onclick="window.MtMasterCtrl.openModal()">
                                         <i class="fas fa-plus me-1"></i> Add Item
                                     </button>
                                 </div>
