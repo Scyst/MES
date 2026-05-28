@@ -1,4 +1,4 @@
-// page/manpower/script/manpower_ui.js
+﻿// page/manpower/script/manpower_ui.js
 "use strict";
 
 const UI = {
@@ -1774,7 +1774,8 @@ const Actions = {
 
                     await App.loadData();
                     await Actions.fetchDetailData();
-                    if (document.getElementById('empListModal').classList.contains('show')) {
+                    const listModal = document.getElementById('empListModal');
+                    if (listModal && listModal.classList.contains('show')) {
                         Actions.openEmployeeManager();
                     }
                     Swal.fire('✅ แจ้งลาออกและปิดสถานะพนักงานเรียบร้อย');
