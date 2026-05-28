@@ -1,4 +1,4 @@
-﻿// page/manpower/script/manpower_ui.js
+// page/manpower/script/manpower_ui.js
 "use strict";
 
 const UI = {
@@ -1737,7 +1737,7 @@ const Actions = {
             if (json.success) {
                 bootstrap.Modal.getInstance(document.getElementById('empEditModal')).hide();
                 App.loadData();
-                if (document.getElementById('empListModal').classList.contains('show')) {
+                if (document.getElementById('masterSettingsModal') && document.getElementById('masterSettingsModal').classList.contains('show')) {
                     Actions.openEmployeeManager();
                 }
                 Swal.fire('✅ ปิดใช้งานเรียบร้อย (ลบ Plan วันนี้ออกแล้ว)');
@@ -1774,7 +1774,7 @@ const Actions = {
 
                     await App.loadData();
                     await Actions.fetchDetailData();
-                    const listModal = document.getElementById('empListModal');
+                    const listModal = document.getElementById('masterSettingsModal');
                     if (listModal && listModal.classList.contains('show')) {
                         Actions.openEmployeeManager();
                     }
@@ -2979,7 +2979,7 @@ const Actions = {
                 if (editModal) editModal.show();
                 editModal.hide();
                 if (typeof App !== 'undefined') await App.loadData(true);
-                const empListModal = document.getElementById('empListModal');
+                const empListModal = document.getElementById('masterSettingsModal');
                 if (empListModal && empListModal.classList.contains('show')) {
                     this.openEmployeeManager(true);
                 }

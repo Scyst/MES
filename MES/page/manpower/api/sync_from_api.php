@@ -123,8 +123,8 @@ try {
                 // ถ้าเดิมเป็น Active ให้รักษาค่าไว้
                 $finalStatus = 1;
             } else {
-                // ถ้าเดิมเป็น Inactive ให้เชื่อ API
-                $finalStatus = $apiCalculatedActive;
+                // แก้ไข: ถ้าเดิมเป็น Inactive (ถูกสั่งลาออกแล้ว) ให้คงสถานะลาออกไว้ ไม่ดึงกลับมาเป็น Active อัตโนมัติ
+                $finalStatus = 0;
             }
 
             $dbPos = $existingEmployees[$apiEmpId]['position'] ?? '';
