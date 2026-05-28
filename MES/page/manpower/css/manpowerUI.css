@@ -591,3 +591,17 @@ tr.bg-white:hover td {
     font-size: 1.5rem;
     line-height: 1.2;
 }
+
+/* =================================================================== */
+/* FIX: MASTER SETTINGS TABLE CENTERING */
+/* =================================================================== */
+#v-pills-emp .card-body.overflow-auto { 
+    display: block !important; 
+}
+#v-pills-emp table { 
+    margin-top: 0 !important; 
+    margin-bottom: auto !important; 
+}
+#v-pills-team .card-body.overflow-auto { display: block !important; }
+#v-pills-shift .card-body.overflow-auto { display: block !important; }
+#v-pills-map .card-body.overflow-auto { display: block !important; }

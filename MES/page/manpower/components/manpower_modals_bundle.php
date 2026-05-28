@@ -1,4 +1,4 @@
-﻿<?php 
+<?php 
 // MES/page/manpower/components/manpower_modals_bundle.php
 ?>
 
@@ -592,9 +592,9 @@
                                 </div>
                             </div>
                             <div class="card-body p-0">
-                                <div class="table-responsive" style="max-height: calc(100vh - 250px); min-height: 50vh;">
-                                    <table class="table table-hover table-striped align-middle mb-0 bg-white" id="execReportTable">
-                                        <thead class="bg-light text-secondary shadow-sm" style="position: sticky; top: 0; z-index: 1;">
+                                <div class="table-responsive" style="max-height: calc(100vh - 250px); min-height: 50vh; display: block !important;">
+                                    <table class="table table-hover table-striped align-middle mb-0 bg-white w-100" id="execReportTable" style="margin-top: 0 !important; margin-bottom: auto !important;">
+                                        <thead class="bg-light text-secondary shadow-sm" style="position: sticky; top: 0; z-index: 10;">
                                             <tr class="text-center small">
                                                 <th class="text-start ps-3 py-3">Employee</th>
                                                 <th width="10%">Line</th>
