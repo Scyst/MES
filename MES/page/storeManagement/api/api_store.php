@@ -742,7 +742,7 @@ try {
                     ri.item_id,
                     SUM(ri.issued_qty) as total_issued
                 FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
-                JOIN dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) ON r.requisition_id = ri.requisition_id
+                JOIN dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) ON r.id = ri.req_id
                 WHERE r.reservation_number = ? 
                   AND r.destination_location_id = ?
                   AND r.status IN ('COMPLETED', 'PARTIAL')
