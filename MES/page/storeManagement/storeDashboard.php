@@ -334,7 +334,7 @@ $pageIcon = "fas fa-store";
     <!-- Modals -->
     <?php include __DIR__ . '/components/InventoryModal.php'; ?>
 
-    <script src="../../assets/js/common.js"></script>
+
     <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
     <script src="script/storeDashboard.js?v=<?php echo time(); ?>"></script>
 </body>
