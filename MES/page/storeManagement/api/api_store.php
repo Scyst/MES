@@ -678,9 +678,14 @@ try {
             $line = $_GET['line'] ?? '';
             if (empty($line)) throw new Exception("ระบุไลน์การผลิต");
             
-            $locStmt = $pdo->prepare("SELECT TOP 1 location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE production_line = ? AND location_type = 'LINE'");
+            $locStmt = $pdo->prepare("SELECT TOP 1 location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE production_line = ? AND location_type NOT IN ('WIP', 'STORE')");
             $locStmt->execute([$line]);
             $loc_id = $locStmt->fetchColumn();
+
+            if (!$loc_id) {
+                $response = ['success' => true, 'data' => []];
+                break;
+            }
 
             $sql = "SELECT j.job_id, j.job_no, j.target_qty, i.part_no, i.part_description, j.status
                     FROM dbo.PRODUCTION_JOBS j WITH (NOLOCK)
