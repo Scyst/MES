@@ -691,7 +691,7 @@ try {
             $stmt->execute([$loc_id]);
             $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['success' => true, 'data' => $jobs]);
+            $response = ['success' => true, 'data' => $jobs];
             break;
 
         case 'get_plan_fulfillment':
@@ -758,7 +758,7 @@ try {
                 $results[] = $req;
             }
 
-            echo json_encode(['success' => true, 'data' => $results]);
+            $response = ['success' => true, 'data' => $results];
             break;
 
         case 'get_inventory_dashboard':
