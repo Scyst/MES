@@ -57,7 +57,7 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
 
         <div class="d-none d-lg-flex align-items-center text-muted small pe-3 me-1 border-end">
             <span id="realTimeClock" class="me-2" style="font-variant-numeric: tabular-nums;">00:00:00</span>
-            <span><?php echo getThaiDateHeader(); ?></span>
+            <span id="realTimeDate"><?php echo getThaiDateHeader(); ?></span>
         </div>
 
         <?php if (isset($_SESSION['user'])): ?>
@@ -91,12 +91,26 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
 <?php include_once __DIR__ . '/nav_dropdown.php'; ?>
 
 <script>
-    // Script นาฬิกา
+    // Script นาฬิกาและวันที่
+    const thaiMonths = [
+        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+
     function updateRealTimeClock() {
         const now = new Date();
+        
+        // อัปเดตเวลา
         const timeString = now.toLocaleTimeString('th-TH', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const clockEl = document.getElementById('realTimeClock');
         if (clockEl) clockEl.textContent = timeString;
+
+        // อัปเดตวันที่ (เผื่อกรณีเปิดทิ้งไว้ข้ามคืน)
+        const dateString = `${now.getDate()} ${thaiMonths[now.getMonth()]} ${now.getFullYear() + 543}`;
+        const dateEl = document.getElementById('realTimeDate');
+        if (dateEl && dateEl.textContent !== dateString) {
+            dateEl.textContent = dateString;
+        }
     }
     setInterval(updateRealTimeClock, 1000);
     updateRealTimeClock();

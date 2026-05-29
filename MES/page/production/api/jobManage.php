@@ -13,6 +13,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     }
 }
 
+if (!hasPermission('add_production') && !hasPermission('manage_production')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Permission Denied']);
+    exit;
+}
+
 $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
 $currentUser = $_SESSION['user'];
@@ -198,6 +204,16 @@ try {
         case 'close_job':
             $job_id = $input['job_id'];
             $pdo->beginTransaction();
+            
+            $stmt = $pdo->prepare("SELECT status FROM PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ?");
+            $stmt->execute([$job_id]);
+            $status = $stmt->fetchColumn();
+            
+            if (!$status) {
+                $pdo->rollBack();
+                throw new Exception("ไม่พบงานนี้ในระบบ");
+            }
+            
             $pdo->prepare("UPDATE PRODUCTION_JOBS 
                            SET status = 'COMPLETED', 
                                total_running_minutes = ISNULL(total_running_minutes, 0) + 
@@ -205,6 +221,7 @@ try {
                                end_time = GETDATE() 
                            WHERE job_id = ?")->execute([$job_id]);
             $pdo->commit();
+            writeLog($pdo, 'CLOSE_JOB', 'PRODUCTION_JOBS', $job_id, null, null, "Closed job manually");
             echo json_encode(['success' => true, 'message' => "ปิดจ๊อบแล้ว"]);
             break;
 
@@ -220,15 +237,25 @@ try {
 
         case 'delete_job':
             $job_id = $input['job_id'];
-            $stmt = $pdo->prepare("SELECT status FROM PRODUCTION_JOBS WHERE job_id = ?");
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("SELECT status FROM PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ?");
             $stmt->execute([$job_id]);
             $status = $stmt->fetchColumn();
 
+            if (!$status) {
+                $pdo->rollBack();
+                throw new Exception("ไม่พบงานนี้ในระบบ");
+            }
+
             if ($status === 'PENDING') {
                 $pdo->prepare("DELETE FROM PRODUCTION_JOBS WHERE job_id = ?")->execute([$job_id]);
+                $pdo->commit();
+                writeLog($pdo, 'DELETE_JOB', 'PRODUCTION_JOBS', $job_id, null, null, "Deleted pending job");
                 echo json_encode(['success' => true, 'message' => "ลบสำเร็จ"]);
             } else {
                 $pdo->prepare("UPDATE PRODUCTION_JOBS SET status = 'CANCELLED', end_time = GETDATE() WHERE job_id = ?")->execute([$job_id]);
+                $pdo->commit();
+                writeLog($pdo, 'CANCEL_JOB', 'PRODUCTION_JOBS', $job_id, null, null, "Cancelled running/paused job");
                 echo json_encode(['success' => true, 'message' => "ยกเลิกงานแล้ว"]);
             }
             break;
