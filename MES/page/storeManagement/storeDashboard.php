@@ -112,6 +112,9 @@ $pageIcon = "fas fa-store";
                     <button class="mode-tab" id="tab-analytics" onclick="switchDashboardMode('ANALYTICS')">
                         <i class="fas fa-chart-line me-1"></i> วิเคราะห์ (Analytics)
                     </button>
+                    <button class="mode-tab" id="tab-fulfillment" onclick="switchDashboardMode('FULFILLMENT')">
+                        <i class="fas fa-check-double me-1"></i> ตรวจสอบยอดจ่าย (Fulfillment)
+                    </button>
                 </div>
 
                 <div class="d-flex align-items-center gap-2 date-filter-group" id="global-date-filter">
@@ -265,6 +268,49 @@ $pageIcon = "fas fa-store";
                     </div>
                 </div>
 
+                <!-- Fulfillment Layout -->
+                <div class="row g-2 d-none h-100 overflow-auto pb-3 hide-scrollbar" id="fulfillment-layout">
+                    <div class="col-12">
+                        <div class="bg-white border rounded shadow-sm p-3 mb-2">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-4 col-lg-3">
+                                    <label class="form-label small fw-bold text-secondary mb-1">วันที่ (Plan Date)</label>
+                                    <input type="date" id="fulfill_date" class="form-control form-control-sm fw-bold">
+                                </div>
+                                <div class="col-md-4 col-lg-3">
+                                    <label class="form-label small fw-bold text-secondary mb-1">ไลน์การผลิต (Line)</label>
+                                    <select id="fulfill_line" class="form-select form-select-sm fw-bold">
+                                        <option value="">-- เลือกไลน์ --</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2 col-lg-2">
+                                    <button class="btn btn-sm btn-primary w-100 fw-bold" onclick="loadFulfillmentData()">
+                                        <i class="fas fa-search me-1"></i> ตรวจสอบ
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border rounded shadow-sm overflow-hidden">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered mb-0 text-center align-middle" style="font-size: 0.85rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-start">วัตถุดิบ (Material)</th>
+                                            <th>ความต้องการ (Target)</th>
+                                            <th>จ่ายแล้ว (Issued)</th>
+                                            <th style="width: 200px;">สถานะ (Fulfillment)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="fulfillmentListContainer">
+                                        <tr><td colspan="4" class="text-muted py-4">กรุณาเลือกวันที่และไลน์ แล้วกดปุ่มตรวจสอบ</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>
@@ -272,6 +318,10 @@ $pageIcon = "fas fa-store";
     <input type="hidden" id="current_req_id">
     <input type="hidden" id="current_dashboard_mode" value="STOCK"> 
     
+    <!-- Modals -->
+    <?php include __DIR__ . '/components/InventoryModal.php'; ?>
+
+    <script src="../../assets/js/common.js"></script>
     <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
     <script src="script/storeDashboard.js?v=<?php echo time(); ?>"></script>
 </body>

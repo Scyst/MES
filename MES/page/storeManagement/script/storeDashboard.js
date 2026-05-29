@@ -50,6 +50,7 @@ window.handleDashboardImageError = function(imgElement, category) {
 window.triggerGlobalReload = function() {
     const mode = document.getElementById('current_dashboard_mode').value;
     if (mode === 'ANALYTICS') loadAnalytics();
+    else if (mode === 'FULFILLMENT') loadFulfillmentData();
     else loadActiveQueue();
 };
 
@@ -66,11 +67,13 @@ window.switchDashboardMode = function(mode) {
     
     const layoutOrder = document.getElementById('order-layout');
     const layoutAnalytics = document.getElementById('analytics-layout');
+    const layoutFulfill = document.getElementById('fulfillment-layout');
     const btnExport = document.getElementById('btnExportCSV');
     const dp = document.getElementById('global-date-filter');
 
     layoutOrder.classList.add('d-none');
     layoutAnalytics.classList.add('d-none');
+    if(layoutFulfill) layoutFulfill.classList.add('d-none');
     btnExport.classList.add('d-none');
 
     dp.style.opacity = '1'; 
@@ -97,6 +100,29 @@ window.switchDashboardMode = function(mode) {
         layoutAnalytics.classList.remove('d-none');
         btnExport.classList.remove('d-none');
         loadAnalytics();
+    }
+    else if (mode === 'FULFILLMENT') {
+        document.getElementById('tab-fulfillment').classList.add('active');
+        if(layoutFulfill) layoutFulfill.classList.remove('d-none');
+        dp.style.opacity = '0.3'; 
+        dp.style.pointerEvents = 'none';
+        
+        const lineSelect = document.getElementById('fulfill_line');
+        if (lineSelect && lineSelect.options.length <= 1) {
+            fetchAPI('get_master_data', 'GET').then(res => {
+                if (res.success && res.data.locations) {
+                    const lines = [...new Set(res.data.locations.filter(l => l.production_line).map(l => l.production_line))].sort();
+                    lines.forEach(line => {
+                        const opt = document.createElement('option');
+                        opt.value = line; opt.textContent = line;
+                        lineSelect.appendChild(opt);
+                    });
+                }
+            }).catch(e => console.error(e));
+            
+            let d = new Date();
+            document.getElementById('fulfill_date').value = d.toISOString().split('T')[0];
+        }
     }
 };
 
@@ -670,8 +696,84 @@ window.exportToCSV = async function() {
         link.click();
         
     } catch (error) {
+        Swal.fire('Error', error.message, 'error');
     } finally {
         btn.innerHTML = originalHtml;
         btn.disabled = false;
     }
+};
+
+window.loadFulfillmentData = function() {
+    const date = document.getElementById('fulfill_date').value;
+    const line = document.getElementById('fulfill_line').value;
+    const container = document.getElementById('fulfillmentListContainer');
+
+    if (!line) {
+        Swal.fire('แจ้งเตือน', 'กรุณาเลือกไลน์การผลิต', 'warning');
+        return;
+    }
+
+    container.innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>`;
+
+    fetchAPI(`api_store.php?action=get_plan_fulfillment&date=${date}&line=${encodeURIComponent(line)}`, 'GET')
+    .then(res => {
+        if (!res.success) throw new Error(res.message || 'Error loading fulfillment');
+        
+        const data = res.data;
+        if (!data || data.length === 0) {
+            container.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">ไม่พบข้อมูลแผนการผลิตหรือสูตรการผลิตสำหรับไลน์นี้ในวันที่เลือก</td></tr>`;
+            return;
+        }
+
+        let html = '';
+        data.forEach(item => {
+            const pct = item.percent;
+            const pending = item.pending_qty;
+            
+            let statusBadge = '';
+            let bgClass = 'bg-primary';
+            
+            if (pct >= 100) {
+                statusBadge = `<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>ครบแล้ว</span>`;
+                bgClass = 'bg-success';
+            } else if (pct > 0) {
+                statusBadge = `<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>ขาด ${pending}</span>`;
+                bgClass = 'bg-warning';
+            } else {
+                statusBadge = `<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>ขาด ${pending}</span>`;
+                bgClass = 'bg-danger';
+            }
+
+            html += `
+                <tr>
+                    <td class="text-start">
+                        <div class="d-flex align-items-center gap-2">
+                            ${getIconPlaceholder(item.sap_no)}
+                            <div>
+                                <div class="fw-bold text-dark">${item.part_no || '-'}</div>
+                                <div class="small text-muted text-truncate" style="max-width:200px;" title="${item.part_description}">${item.part_description || '-'}</div>
+                                <div class="small text-primary fw-bold">${item.sap_no || '-'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><h5 class="mb-0 fw-bold">${item.target_qty}</h5></td>
+                    <td><h5 class="mb-0 fw-bold text-primary">${item.issued_qty}</h5></td>
+                    <td>
+                        <div class="d-flex flex-column align-items-center gap-1">
+                            ${statusBadge}
+                            <div class="progress w-100 mt-1" style="height: 6px;">
+                                <div class="progress-bar ${bgClass}" role="progressbar" style="width: ${pct}%;"></div>
+                            </div>
+                            <small class="text-muted" style="font-size:0.7rem;">${pct}%</small>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        container.innerHTML = html;
+    })
+    .catch(err => {
+        console.error(err);
+        container.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>เกิดข้อผิดพลาด: ${err.message}</td></tr>`;
+    });
 };

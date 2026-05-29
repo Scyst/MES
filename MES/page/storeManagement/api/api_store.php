@@ -674,6 +674,66 @@ try {
             ];
             break;
 
+        case 'get_plan_fulfillment':
+            $target_date = $_GET['date'] ?? date('Y-m-d');
+            $line = $_GET['line'] ?? '';
+
+            if (empty($line)) {
+                throw new Exception("ระบุไลน์การผลิต (Line) ที่ต้องการดูข้อมูล");
+            }
+
+            $locStmt = $pdo->prepare("SELECT TOP 1 location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE production_line = ? AND location_type = 'WIP'");
+            $locStmt->execute([$line]);
+            $wip_loc_id = $locStmt->fetchColumn() ?: 0;
+
+            $sqlBom = "
+                SELECT 
+                    b.component_item_id as item_id,
+                    i.sap_no,
+                    i.part_no,
+                    i.part_description,
+                    i.image_path,
+                    SUM(b.quantity_required * p.adjusted_planned_quantity) as target_qty
+                FROM dbo.PRODUCTION_PLANS p WITH (NOLOCK)
+                JOIN dbo.PRODUCT_BOM b WITH (NOLOCK) ON p.item_id = b.fg_item_id AND b.bom_status = 'ACTIVE'
+                JOIN dbo.ITEMS i WITH (NOLOCK) ON b.component_item_id = i.item_id
+                WHERE p.plan_date = ? AND p.line = ?
+                GROUP BY b.component_item_id, i.sap_no, i.part_no, i.part_description, i.image_path
+            ";
+            $stmtBom = $pdo->prepare($sqlBom);
+            $stmtBom->execute([$target_date, $line]);
+            $requirements = $stmtBom->fetchAll(PDO::FETCH_ASSOC);
+
+            $sqlIssued = "
+                SELECT 
+                    ri.item_id,
+                    SUM(ri.issued_qty) as total_issued
+                FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
+                JOIN dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) ON r.requisition_id = ri.requisition_id
+                WHERE CAST(r.created_at AS DATE) = ? 
+                  AND r.destination_location_id = ?
+                  AND r.status IN ('COMPLETED', 'PARTIAL')
+                GROUP BY ri.item_id
+            ";
+            $stmtIssued = $pdo->prepare($sqlIssued);
+            $stmtIssued->execute([$target_date, $wip_loc_id]);
+            $issuedData = [];
+            while ($row = $stmtIssued->fetch(PDO::FETCH_ASSOC)) {
+                $issuedData[$row['item_id']] = (float)$row['total_issued'];
+            }
+
+            $results = [];
+            foreach ($requirements as $req) {
+                $req['target_qty'] = (float)$req['target_qty'];
+                $req['issued_qty'] = $issuedData[$req['item_id']] ?? 0.0;
+                $req['pending_qty'] = max(0, $req['target_qty'] - $req['issued_qty']);
+                $req['percent'] = $req['target_qty'] > 0 ? min(100, round(($req['issued_qty'] / $req['target_qty']) * 100)) : 100;
+                $results[] = $req;
+            }
+
+            $response = ['success' => true, 'data' => $results];
+            break;
+
         case 'get_inventory_dashboard':
             $location_id = $_GET['location_id'] ?? 'ALL';
             $material_type = $_GET['material_type'] ?? 'ALL';
