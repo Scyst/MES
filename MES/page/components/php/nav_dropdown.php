@@ -44,6 +44,7 @@
                 <ul class="list-unstyled ms-3 ps-2 border-start py-1">
                     <?php if (in_array($userRole, ['admin', 'creator', 'supervisor'])): ?>
                     <li><a class="dropdown-item-icon py-1" href="../storeManagement/storeDashboard.php"><i class="fas fa-store fa-fw"></i><span>Store Dashboard</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../storeManagement/inventoryDashboard.php"><i class="fas fa-boxes fa-fw"></i><span>Inventory Stock</span></a></li>
                     <?php endif; ?>
                     <li><a class="dropdown-item-icon py-1" href="../storeManagement/warehouse_operations.php"><i class="fas fa-warehouse fa-fw"></i><span>Warehouse Operations</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../storeManagement/rmReceiving.php"><i class="fas fa-inbox fa-fw"></i><span>RM Receiving & Tag</span></a></li>
@@ -175,6 +176,7 @@
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">WAREHOUSE & LOGISTICS</div>
             <?php if (in_array($userRole, ['admin', 'creator', 'supervisor'])): ?>
             <a class="list-group-item list-group-item-action text-dark" href="../storeManagement/storeDashboard.php"><i class="fas fa-store fa-fw me-3"></i> Store Dashboard</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../storeManagement/inventoryDashboard.php"><i class="fas fa-boxes fa-fw me-3"></i> Inventory Stock</a>
             <?php endif; ?>
             <a class="list-group-item list-group-item-action text-dark" href="../storeManagement/warehouse_operations.php"><i class="fas fa-warehouse fa-fw me-3"></i> Warehouse Operations</a>
             <a class="list-group-item list-group-item-action text-dark" href="../storeManagement/rmReceiving.php"><i class="fas fa-inbox fa-fw me-3"></i> RM Receiving & Tag</a>

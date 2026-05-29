@@ -88,6 +88,7 @@ async function loadLocations() {
         if (result.data && result.data.locations) {
             let storeSelected = false;
             let wipSelected = false;
+            let filterStoreSelected = false;
 
             result.data.locations.forEach(loc => {
                 let isReceiveDefault = '';
@@ -101,8 +102,14 @@ async function loadLocations() {
                     isIssueDefault = 'selected';
                     wipSelected = true;
                 }
+                
+                let isFilterDefault = '';
+                if (loc.location_type === 'STORE' && window.location.pathname.includes('inventoryDashboard.php') && !filterStoreSelected) {
+                    isFilterDefault = 'selected';
+                    filterStoreSelected = true;
+                }
 
-                const filterOption = `<option value="${escapeHTML(loc.location_id)}">${escapeHTML(loc.location_name)}</option>`;
+                const filterOption = `<option value="${escapeHTML(loc.location_id)}" ${isFilterDefault}>${escapeHTML(loc.location_name)}</option>`;
                 const receiveOption = `<option value="${escapeHTML(loc.location_id)}" ${isReceiveDefault}>${escapeHTML(loc.location_name)}</option>`;
                 const issueOption = `<option value="${escapeHTML(loc.location_id)}" ${isIssueDefault}>${escapeHTML(loc.location_name)}</option>`;
                 
@@ -110,6 +117,8 @@ async function loadLocations() {
                 if (receiveTraceSelect) receiveTraceSelect.innerHTML += receiveOption;
                 if (issueTraceSelect) issueTraceSelect.innerHTML += issueOption;
             });
+            
+            document.dispatchEvent(new Event('locationsLoaded'));
         }
     } catch (err) {
         console.error("Failed to load master data for locations:", err);

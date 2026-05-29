@@ -23,7 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const approvalModalEl = document.getElementById('approvalModal');
     if (approvalModalEl) approvalModal = new bootstrap.Modal(approvalModalEl);
 
-    loadDashboardData();
+    document.addEventListener('locationsLoaded', () => {
+        loadDashboardData();
+    });
 
     document.getElementById('locationFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
     document.getElementById('materialFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
@@ -75,9 +77,9 @@ async function loadDashboardData() {
         let htmlCards = '';
 
         result.data.forEach((row, index) => {
-            const availableQty = parseFloat(row.available_qty);
-            const pendingQty = parseFloat(row.pending_qty);
-            const totalQty = parseFloat(row.total_qty);
+            const availableQty = parseInt(row.available_qty, 10) || 0;
+            const pendingQty = parseInt(row.pending_qty, 10) || 0;
+            const totalQty = parseInt(row.total_qty, 10) || 0;
             const isOutOfStock = availableQty <= 0;
             const runningNumber = ((currentPage - 1) * rowsPerPage) + index + 1;
             const badgeType = row.material_type === 'RM' ? 'bg-primary' : (row.material_type === 'FG' ? 'bg-success' : 'bg-secondary');
@@ -91,7 +93,7 @@ async function loadDashboardData() {
                     <td class="text-truncate" style="max-width: 250px;" title="${escapeHTML(row.part_description || '-')}">${escapeHTML(row.part_description || '-')}</td>
                     <td class="text-center"><span class="badge ${badgeType}">${escapeHTML(row.material_type)}</span></td>
                     <td class="text-end text-warning fw-bold">${pendingQty.toLocaleString()}</td>
-                    <td class="text-end fw-bold ${isOutOfStock ? 'text-danger' : 'text-success'}">${availableQty.toLocaleString()}</td>
+                    <td class="text-end fw-bold ${isOutOfStock ? 'text-danger' : 'text-success'}" onclick="showItemDetails(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" title="คลิกเพื่อดูพิกัดและแท็กสินค้า" style="cursor: pointer;"><u>${availableQty.toLocaleString()}</u></td>
                     <td class="text-end fw-bold text-dark">${totalQty.toLocaleString()}</td>
                     <td class="text-end text-muted">${parseFloat(row.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                     <td class="text-end text-primary fw-bold">${parseFloat(row.total_value).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
@@ -142,9 +144,9 @@ async function loadDashboardData() {
                                 <div class="text-muted" style="font-size: 0.7rem;">Pending</div>
                                 <div class="fw-bold text-warning">${pendingQty.toLocaleString()}</div>
                             </div>
-                            <div class="col-4 border-end">
+                            <div class="col-4 border-end" onclick="showItemDetails(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" title="คลิกเพื่อดูพิกัดและแท็กสินค้า" style="cursor: pointer;">
                                 <div class="text-muted" style="font-size: 0.7rem;">Available</div>
-                                <div class="fw-bold ${isOutOfStock ? 'text-danger' : 'text-success'} fs-6">${availableQty.toLocaleString()}</div>
+                                <div class="fw-bold ${isOutOfStock ? 'text-danger' : 'text-success'} fs-6"><u>${availableQty.toLocaleString()}</u></div>
                             </div>
                             <div class="col-4">
                                 <div class="text-muted" style="font-size: 0.7rem;">Total</div>
@@ -211,43 +213,70 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
     
     const availTbody = document.getElementById('modalAvailTbody');
     const pendTbody = document.getElementById('modalPendTbody');
+    const tagsTbody = document.getElementById('modalTagsTbody');
     
     availTbody.innerHTML = '<tr><td colspan="2" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i></td></tr>';
     pendTbody.innerHTML = '<tr><td colspan="2" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+    if(tagsTbody) tagsTbody.innerHTML = '<tr><td colspan="2" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i></td></tr>';
     
     detailsModalInstance.show();
 
     try {
-        const res = await fetchAPI(`get_item_details&item_id=${itemId}`, 'GET');
+        const locFilterId = document.getElementById('locationFilter')?.value || 'ALL';
+        const [res, tagRes] = await Promise.all([
+            fetchAPI(`get_item_details&item_id=${itemId}&location_id=${locFilterId}`, 'GET'),
+            fetchAPI(`get_available_tags_for_item&item_code=${encodeURIComponent(itemNo)}&location_id=${locFilterId}`, 'GET').catch(e => ({data: []}))
+        ]);
         
         availTbody.innerHTML = '';
         if (res.available_details && res.available_details.length > 0) {
             res.available_details.forEach(loc => {
-                availTbody.innerHTML += `<tr><td>${escapeHTML(loc.location_name)}</td><td class="text-end fw-bold text-success">${parseFloat(loc.qty).toLocaleString()}</td></tr>`;
+                availTbody.innerHTML += `<tr style="height: 61px;"><td>${escapeHTML(loc.location_name)}</td><td class="text-end fw-bold text-success align-middle">${parseFloat(loc.qty).toLocaleString()}</td></tr>`;
             });
         } else {
-            availTbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">ไม่มีของในคลัง</td></tr>';
+            availTbody.innerHTML = '<tr style="height: 61px;"><td colspan="2" class="text-center text-muted align-middle">ไม่มีของในคลัง</td></tr>';
         }
 
         pendTbody.innerHTML = '';
         if (res.pending_details && res.pending_details.length > 0) {
             res.pending_details.forEach(p => {
                 pendTbody.innerHTML += `
-                    <tr>
+                    <tr style="height: 61px;">
                         <td>
                             ${escapeHTML(p.tracking_no)}
                             <div class="small text-muted">PO: ${escapeHTML(p.po_number || '-')}</div>
                         </td>
-                        <td class="text-end fw-bold text-warning align-middle">${parseFloat(p.qty).toLocaleString()}</td>
+                        <td class="text-end fw-bold text-warning align-middle">${parseInt(p.qty, 10).toLocaleString()}</td>
                     </tr>`;
             });
         } else {
-            pendTbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">ไม่มีของรอรับเข้า</td></tr>';
+            pendTbody.innerHTML = '<tr style="height: 61px;"><td colspan="2" class="text-center text-muted align-middle">ไม่มีของรอรับเข้า</td></tr>';
+        }
+        
+        if (tagsTbody) {
+            tagsTbody.innerHTML = '';
+            if (tagRes.data && tagRes.data.length > 0) {
+                tagRes.data.forEach(t => {
+                    tagsTbody.innerHTML += `<tr style="height: 61px;">
+                        <td>
+                            ${escapeHTML(t.serial_no)}
+                            <div class="small text-muted">Loc: ${escapeHTML(t.location_name || '-')} | Pallet: ${escapeHTML(t.warehouse_no || '-')}</div>
+                        </td>
+                        <td class="text-end fw-bold text-primary align-middle text-nowrap">
+                            ${parseInt(t.current_qty, 10).toLocaleString()}
+                            ${CAN_MANAGE_WH ? `<button class="btn btn-sm btn-outline-danger ms-2 py-0 px-2 shadow-sm border-0" onclick="forceIssueTag('${t.serial_no}')" title="ตัดจ่ายแท็กนี้ออกจากสต็อก (ชดเชยการใช้มือ)"><i class="fas fa-sign-out-alt"></i></button>` : ''}
+                        </td>
+                    </tr>`;
+                });
+            } else {
+                tagsTbody.innerHTML = '<tr style="height: 61px;"><td colspan="2" class="text-center text-muted align-middle">ไม่มีข้อมูลแท็ก</td></tr>';
+            }
         }
         
     } catch (err) {
         availTbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">เกิดข้อผิดพลาด</td></tr>';
         pendTbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">เกิดข้อผิดพลาด</td></tr>';
+        if(tagsTbody) tagsTbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">เกิดข้อผิดพลาด</td></tr>';
     }
 }
 
@@ -695,3 +724,38 @@ async function processTransfer(transferId, status) {
         loadDashboardData();
     }
 }
+
+window.forceIssueTag = async function(serialNo) {
+    const { isConfirmed } = await Swal.fire({
+        title: 'ยืนยันการตัดจ่ายแท็ก?',
+        html: `คุณกำลังจะตัดจ่ายแท็ก <b>${serialNo}</b> ออกจากสต็อก<br><small class="text-danger">การกระทำนี้สำหรับแก้ไขปัญหาแท็กที่ถูกนำไปใช้แล้วแต่ยังไม่ได้ตัดในระบบ (ชดเชยรอยต่อระบบใหม่)</small>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'ยืนยันการตัดจ่าย',
+        cancelButtonText: 'ยกเลิก'
+    });
+
+    if (isConfirmed) {
+        try {
+            Swal.fire({
+                title: 'กำลังดำเนินการ...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const formData = new FormData();
+            formData.append('serial_no', serialNo);
+            
+            const res = await fetchAPI('force_issue_tag', 'POST', formData);
+            if (res && res.success) {
+                Swal.fire('สำเร็จ!', 'ตัดจ่ายแท็กเรียบร้อยแล้ว', 'success');
+                if (detailsModalInstance) detailsModalInstance.hide();
+                loadDashboardData();
+            }
+        } catch (error) {
+            console.error("Force issue error:", error);
+        }
+    }
+};

@@ -191,11 +191,11 @@ window.loadCatalog = async function(isLoadMore = false) {
             catalogGrid.innerHTML = html;
         } else {
             res.data.forEach(item => {
-                const onHand = parseFloat(item.onhand_qty || 0);
+                const onHand = parseInt(item.onhand_qty, 10) || 0;
                 const isOutOfStock = onHand <= 0;
                 const displayDesc = escapeHTML(item.description || '-');
                 const displayCode = escapeHTML(item.item_code);
-                const safeCategory = escapeHTML(item.item_category || 'OTHER');
+                const safeCategory = escapeHTML(item.material_sub_type || 'OTHER');
                 const safeDescForJS = escapeHTML(item.description || 'N/A').replace(/&#39;/g, "\\'"); 
                 
                 const imgHtml = item.image_path 
@@ -204,7 +204,7 @@ window.loadCatalog = async function(isLoadMore = false) {
 
                 const badgeHtml = isOutOfStock 
                     ? `<span class="badge bg-danger stock-badge px-2 py-1"><i class="fas fa-times-circle me-1"></i> สินค้าหมด</span>`
-                    : `<span class="badge bg-success stock-badge px-2 py-1"><i class="fas fa-check-circle me-1"></i> สต๊อก: ${onHand.toLocaleString()}</span>`;
+                    : `<span class="badge bg-success stock-badge px-2 py-1 cursor-pointer" onclick="viewStockTags('${displayCode}', '${safeDescForJS}')" title="คลิกเพื่อดูแท็กสินค้าที่อยู่ในคลัง" style="cursor: pointer;"><i class="fas fa-search me-1"></i> สต๊อก: ${onHand.toLocaleString()}</span>`;
 
                 const editBtnHtml = typeof CAN_MANAGE_IMAGE !== 'undefined' && CAN_MANAGE_IMAGE 
                     ? `<div class="position-absolute top-0 end-0 p-2 z-3 d-flex gap-1">
@@ -218,7 +218,7 @@ window.loadCatalog = async function(isLoadMore = false) {
                 html += `
                 <div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2 col-xxl-2">
                     <div class="product-card" style="${cardOpacity}">
-                        <div class="product-img-wrapper" id="img_wrapper_${displayCode}">
+                        <div class="product-img-wrapper" id="img_wrapper_${displayCode}" onclick="if(event.target.closest('button')) return; viewStockTags('${displayCode}', '${safeDescForJS}')" style="cursor: pointer;" title="คลิกเพื่อดูแท็กสินค้า">
                             ${badgeHtml}${editBtnHtml}${imgHtml}
                         </div>
                         <div class="d-none badge-alt-container p-2 pb-0">${badgeHtml.replace('stock-badge', 'stock-badge-alt')}</div>
@@ -255,16 +255,38 @@ window.loadCatalog = async function(isLoadMore = false) {
 window.updateInputQty = function(itemCode, change) {
     const input = document.getElementById(`input_qty_${itemCode}`);
     if (!input) return;
+    
+    if (cart[itemCode] && cart[itemCode].requested_tags && cart[itemCode].requested_tags.length > 0) {
+        delete cart[itemCode].requested_tags;
+        Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'ยกเลิกการเลือก Tag เนื่องจากปรับจำนวนแมนนวล', showConfirmButton: false, timer: 2000 });
+        renderCartUI();
+    }
+    
     let current = parseInt(input.value) || 1;
     let newVal = current + change;
     if(newVal >= 1) input.value = newVal; 
 };
 
-window.addToCart = function(itemCode, description, onHandQty) {
+window.addToCart = function(itemCode, description, onHandQty, tags = null, tagQty = 0) {
     const input = document.getElementById(`input_qty_${itemCode}`);
-    let inputQty = parseInt(input ? input.value : 1) || 1;
+    
+    let inputQty;
+    let reqTags = [];
+    
+    if (tags && tags.length > 0) {
+        inputQty = tagQty;
+        reqTags = tags;
+        if (input) input.value = inputQty;
+    } else {
+        inputQty = parseInt(input ? input.value : 1) || 1;
+        if (cart[itemCode] && cart[itemCode].requested_tags && cart[itemCode].requested_tags.length > 0) {
+            Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'เปลี่ยนเป็นการระบุจำนวน (ยกเลิก Tag ที่เลือกไว้)', showConfirmButton: false, timer: 2000 });
+        }
+    }
     
     cart[itemCode] = { description: description, qty: inputQty, maxQty: onHandQty };
+    if (reqTags.length > 0) cart[itemCode].requested_tags = reqTags;
+    else if (cart[itemCode].requested_tags) delete cart[itemCode].requested_tags;
     
     const fab = document.querySelector('.cart-fab');
     if (fab) {
@@ -317,6 +339,9 @@ function renderCartUI() {
         let warningHtml = (reqType === 'STOCK' && item.qty > item.maxQty) 
             ? `<div class="small text-danger fw-bold mt-1"><i class="fas fa-exclamation-triangle"></i> สต๊อกมีแค่ ${item.maxQty} ชิ้น (ต้องเปิด K2)</div>` : '';
 
+        let tagsHtml = (item.requested_tags && item.requested_tags.length > 0)
+            ? `<div class="small text-success mt-1"><i class="fas fa-tags"></i> จองแท็ก: ${item.requested_tags.join(', ')}</div>` : '';
+
         html += `
         <div class="card shadow-sm border-0 mb-2">
             <div class="card-body p-2 d-flex justify-content-between align-items-center">
@@ -324,6 +349,7 @@ function renderCartUI() {
                     <div class="fw-bold text-dark text-truncate" style="font-size:0.9rem;" title="${displayDesc}">${displayDesc}</div>
                     <small class="text-primary fw-bold">${displayCode}</small>
                     ${warningHtml}
+                    ${tagsHtml}
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
                     <span class="badge bg-light text-dark border px-2 py-1 fs-6 shadow-sm">x ${item.qty}</span>
@@ -370,7 +396,11 @@ window.submitRequisition = function() {
         confirmButtonText: 'Yes, Submit!'
     }).then(async (result) => {
         if (result.isConfirmed) {
-            const payloadCart = itemCodes.map(code => ({ item_code: code, qty: cart[code].qty }));
+            const payloadCart = itemCodes.map(code => ({ 
+                item_code: code, 
+                qty: cart[code].qty,
+                requested_tags: cart[code].requested_tags ? cart[code].requested_tags : null
+            }));
 
             try {
                 const res = await fetchAPI('submit_requisition', 'POST', { 
@@ -537,7 +567,7 @@ window.viewOrderDetails = async function(reqId) {
 
                 const displayDesc = escapeHTML(item.description);
                 const displayCode = escapeHTML(item.item_code);
-                const safeCategory = escapeHTML(item.item_category || 'OTHER');
+                const safeCategory = escapeHTML(item.material_sub_type || 'OTHER');
 
                 const imgHtml = item.image_path 
                     ? `<img src="../../uploads/items/${item.image_path}" class="item-img-mini" loading="lazy" onerror="handleImageError(this, '${safeCategory}', '${displayCode}')">` 
@@ -597,7 +627,7 @@ window.openEditItemModal = async function(itemCode) {
         const res = await fetchAPI(`get_item_info&item_code=${itemCode}`, 'GET');
         document.getElementById('edit_sap_no').value = res.data.sap_no;
         document.getElementById('edit_description').value = res.data.part_description || '';
-        document.getElementById('edit_material_type').value = res.data.item_category || 'OTHER';
+        document.getElementById('edit_material_type').value = res.data.material_sub_type || 'OTHER';
         document.getElementById('edit_std_price').value = res.data.StandardPrice ? parseFloat(res.data.StandardPrice).toFixed(2) : '0.00';
         editItemModalInst.show();
     } catch (error) {
@@ -615,7 +645,7 @@ window.saveItemConfig = async function() {
         await fetchAPI('update_item_info', 'POST', { 
             item_code: itemCode, 
             description: desc, 
-            item_category: category, 
+            material_sub_type: category, 
             std_price: price 
         });
 
@@ -769,3 +799,79 @@ function getIconPlaceholder(category) {
     else if (cat.includes('PKG')) { icon = 'fa-box-open'; color = '#ffc107'; } 
     return `<div class="ph-mini d-flex align-items-center justify-content-center bg-light border rounded" style="width: 45px; height: 45px;"><i class="fas ${icon}" style="color:${color}; opacity:0.5; font-size: 1.2rem;"></i></div>`;
 }
+
+window.viewStockTags = async function(itemCode, itemDesc) {
+    try {
+        Swal.fire({
+            title: 'กำลังโหลดข้อมูล...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const res = await fetchAPI(`get_available_tags_for_item&item_code=${encodeURIComponent(itemCode)}`, 'GET');
+        const tags = res.data;
+        
+        if (!tags || tags.length === 0) {
+            Swal.fire('ไม่มีข้อมูล', `ไม่พบแท็กสินค้าคงคลังสำหรับ ${itemCode}`, 'info');
+            return;
+        }
+
+        let existingTags = cart[itemCode] ? (cart[itemCode].requested_tags || []) : [];
+
+        let html = `<div class="text-start mb-2 small text-muted">เลือกแท็กสินค้าที่ต้องการเบิก (SAP: ${itemCode}):</div>`;
+        html += `<div class="list-group list-group-flush border rounded overflow-auto" style="max-height: 400px; text-align: left;">`;
+        let total = 0;
+        tags.forEach(t => {
+            const dateStr = t.received_date ? t.received_date.substring(0, 10) : '-';
+            total += parseInt(t.current_qty, 10) || 0;
+            const isChecked = existingTags.includes(t.serial_no) ? 'checked' : '';
+            html += `
+            <label class="list-group-item d-flex justify-content-between align-items-center list-group-item-action cursor-pointer py-1 px-2">
+                <div class="d-flex align-items-center gap-2">
+                    <input class="form-check-input me-1 req-tag-checkbox" type="checkbox" value="${t.serial_no}" data-qty="${t.current_qty}" ${isChecked} style="transform: scale(0.85);">
+                    <div style="font-size: 0.85rem;">
+                        <div class="fw-bold text-dark" style="font-size: 0.9rem;">${t.serial_no}</div>
+                        <small class="text-muted" style="font-size: 0.75rem;">Loc: ${t.location_name || '-'} | In: ${dateStr}</small>
+                    </div>
+                </div>
+                <span class="badge bg-primary rounded-pill" style="font-size: 0.8rem;">${parseInt(t.current_qty, 10).toLocaleString()} ชิ้น</span>
+            </label>`;
+        });
+        html += `</div>`;
+        html += `<div class="mt-2 text-end fw-bold text-success border-top pt-2" style="font-size: 0.9rem;">สต๊อกรวมทั้งหมด: ${total} ชิ้น</div>`;
+
+        const { value: confirmed } = await Swal.fire({
+            title: `<span style="font-size: 1.1rem;">สต๊อก: ${itemDesc}</span>`,
+            html: html,
+            showCancelButton: true,
+            confirmButtonText: 'อัปเดตตะกร้า',
+            cancelButtonText: 'ปิด',
+            width: '500px',
+            preConfirm: () => {
+                const checkboxes = document.querySelectorAll('.req-tag-checkbox:checked');
+                let newSelectedTags = [];
+                let totalQty = 0;
+                checkboxes.forEach(cb => {
+                    newSelectedTags.push(cb.value);
+                    totalQty += parseFloat(cb.dataset.qty);
+                });
+                return { tags: newSelectedTags, totalQty: totalQty };
+            }
+        });
+
+        if (confirmed && confirmed.tags.length > 0) {
+            addToCart(itemCode, itemDesc, total, confirmed.tags, confirmed.totalQty);
+        } else if (confirmed && confirmed.tags.length === 0) {
+            if (cart[itemCode] && cart[itemCode].requested_tags) {
+                cart[itemCode].requested_tags = [];
+                cart[itemCode].qty = 1;
+                const input = document.getElementById(`input_qty_${itemCode}`);
+                if (input) input.value = 1;
+                renderCartUI();
+            }
+        }
+
+    } catch (err) {
+        Swal.fire('Error', 'ไม่สามารถดึงข้อมูลแท็กสินค้าได้', 'error');
+    }
+};

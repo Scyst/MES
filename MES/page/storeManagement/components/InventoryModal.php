@@ -1,8 +1,8 @@
 <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-dark text-white">
-                <h6 class="modal-title fw-bold"><i class="fas fa-search-location me-2"></i> พิกัดวัตถุดิบ (Locations)</h6>
+                <h6 class="modal-title fw-bold"><i class="fas fa-search-location me-2"></i> พิกัดวัตถุดิบ (Locations & Tags)</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0 bg-body-tertiary">
@@ -12,7 +12,7 @@
                 </div>
                 
                 <div class="row g-0">
-                    <div class="col-md-6 border-end bg-white">
+                    <div class="col-md-4 border-end bg-white">
                         <div class="p-2 bg-light border-bottom fw-bold text-success text-center shadow-sm"><i class="fas fa-check-circle me-1"></i> พร้อมใช้งาน (Available)</div>
                         <div class="table-responsive hide-scrollbar m-0" style="max-height: 40vh;">
                             <table class="table table-hover table-striped align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
@@ -21,12 +21,21 @@
                             </table>
                         </div>
                     </div>
-                    <div class="col-md-6 bg-white">
+                    <div class="col-md-4 border-end bg-white">
                         <div class="p-2 bg-light border-bottom fw-bold text-warning text-center shadow-sm"><i class="fas fa-truck me-1"></i> รอรับเข้า (Pending)</div>
                         <div class="table-responsive hide-scrollbar m-0" style="max-height: 40vh;">
                             <table class="table table-hover table-striped align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
                                 <thead class="table-light sticky-top shadow-sm"><tr><th class="px-3">Pallet / CTN</th><th class="text-end px-3">QTY</th></tr></thead>
                                 <tbody id="modalPendTbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-4 bg-white">
+                        <div class="p-2 bg-light border-bottom fw-bold text-primary text-center shadow-sm"><i class="fas fa-tags me-1"></i> แท็กสินค้า (Tags)</div>
+                        <div class="table-responsive hide-scrollbar m-0" style="max-height: 40vh;">
+                            <table class="table table-hover table-striped align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
+                                <thead class="table-light sticky-top shadow-sm"><tr><th class="px-3">Serial No.</th><th class="text-end px-3">QTY</th></tr></thead>
+                                <tbody id="modalTagsTbody"></tbody>
                             </table>
                         </div>
                     </div>

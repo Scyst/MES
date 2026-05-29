@@ -199,13 +199,31 @@ window.openStockOrder = async function(reqId) {
             if (!isEditable && defaultIssueQty < reqQty) issueClass = 'text-warning text-dark';
             if (!isEditable && defaultIssueQty === 0) issueClass = 'text-danger';
             
-            const safeCategory = escapeHTML(item.item_category || 'OTHER');
+            const safeCategory = escapeHTML(item.material_sub_type || 'OTHER');
             const safeDesc = escapeHTML(item.description || '-');
             const safeItemCode = escapeHTML(item.item_code);
 
             const imgHtml = item.image_path 
                 ? `<img src="../../uploads/items/${item.image_path}" class="item-img-small" onerror="handleDashboardImageError(this, '${safeCategory}')">` 
                 : getIconPlaceholder(safeCategory);
+
+            let reqTags = [];
+            if (item.requested_tags) {
+                try { reqTags = JSON.parse(item.requested_tags); } catch(e){}
+            }
+            const initialTagsJson = escapeHTML(JSON.stringify(reqTags));
+
+            let tagBtnHtml = '';
+            let inputId = `qty_input_${item.row_id}`;
+            if (isEditable) {
+                tagBtnHtml = `
+                <div class="ms-2">
+                    <button class="btn btn-sm btn-outline-primary fw-bold" onclick="openSelectTagModal('${item.row_id}', '${safeItemCode}')">
+                        <i class="fas fa-list-check"></i> เลือกแท็ก
+                    </button>
+                    <input type="hidden" class="issue-tags-hidden" data-rowid="${item.row_id}" value="${initialTagsJson}">
+                </div>`;
+            }
 
             itemsHtml += `
             <div class="card border border-light shadow-sm mb-2">
@@ -215,8 +233,9 @@ window.openStockOrder = async function(reqId) {
                         <div class="min-w-0 flex-grow-1">
                             <div class="fw-bold text-dark text-truncate mb-1 small" title="${safeDesc}">${safeDesc}</div>
                             <div class="small text-muted" style="font-size:0.75rem;">
-                                SAP: ${safeItemCode} ${isEditable ? `<span class="mx-1">|</span><span class="${isStockShort ? 'text-danger fw-bold' : 'text-success'}">คลัง: ${onHand}</span>` : ''}
+                                SAP: ${safeItemCode} ${isEditable ? `<span class="mx-1">|</span><span class="${isStockShort ? 'text-danger fw-bold' : 'text-success'}">คลังรวม: ${onHand}</span>` : ''}
                             </div>
+                            ${reqTags.length > 0 ? `<div class="small text-success mt-1 fw-bold" style="font-size: 0.75rem;"><i class="fas fa-tags"></i> ลูกค้าระบุแท็ก: ${reqTags.join(', ')}</div>` : ''}
                         </div>
                     </div>
                     <div class="d-flex align-items-center justify-content-end gap-2 flex-shrink-0 ms-auto mt-2 mt-md-0 w-auto">
@@ -231,13 +250,14 @@ window.openStockOrder = async function(reqId) {
                         <div class="border rounded d-flex flex-column align-items-center justify-content-center ${isEditable ? 'border-success bg-success bg-opacity-10' : 'bg-light'}" style="width: 70px; height: 60px;">
                             <span class="text-muted fw-bold d-block" style="font-size:0.65rem; margin-bottom: 2px; line-height: 1; ${isEditable ? 'color: #198754 !important;' : ''}">จ่ายจริง</span>
                             <div class="d-flex align-items-center justify-content-center w-100" style="height: 26px;">
-                                <input type="number" 
+                                <input type="number" id="${inputId}"
                                     class="text-center fw-bold ${isEditable ? 'text-success' : issueClass} issue-qty-input p-0 m-0 border-0 bg-transparent w-100" 
-                                    data-rowid="${item.row_id}" data-itemid="${item.item_id}" data-itemcode="${safeItemCode}" data-requested="${reqQty}" value="${defaultIssueQty}" min="0" max="${onHand}" ${!isEditable ? 'disabled' : ''} 
+                                    data-rowid="${item.row_id}" data-itemid="${item.item_id}" data-itemcode="${safeItemCode}" data-category="${safeCategory}" data-requested="${reqQty}" value="${defaultIssueQty}" min="0" ${!isEditable ? 'readonly' : ''} 
                                     style="font-size: 1.25rem; line-height: 1; outline: none; box-shadow: none; -moz-appearance: textfield;">
                             </div>
                         </div>
-
+                        
+                        ${tagBtnHtml}
                     </div>
                 </div>
             </div>`;
@@ -288,12 +308,18 @@ window.confirmIssue = async function(reqId) {
     const inputs = document.querySelectorAll('.issue-qty-input');
     for (const input of inputs) {
         const rowId = input.dataset.rowid; const itemId = input.dataset.itemid; const itemCode = input.dataset.itemcode;
+        const category = input.dataset.category;
         const issueQty = parseFloat(input.value); const maxQty = parseFloat(input.getAttribute('max')); 
         const reqQty = parseFloat(input.dataset.requested);
         if (isNaN(issueQty) || issueQty < 0) { hasError = `กรุณากรอกจำนวนให้ถูกต้อง (SAP: ${itemCode})`; break; }
-        if (issueQty > maxQty) { hasError = `สต๊อกมีไม่พอจ่าย! (SAP: ${itemCode} จ่ายได้สูงสุด ${maxQty})`; break; }
-        if (issueQty > reqQty) { hasError = `จำนวนจ่ายจริงห้ามเกินจำนวนที่ขอเบิก! (SAP: ${itemCode} ขอเบิก ${reqQty})`; break; }
-        issueData.push({ row_id: rowId, item_id: itemId, item_code: itemCode, qty_issued: issueQty });
+        
+        let scannedTags = [];
+        const hiddenTags = document.querySelector(`.issue-tags-hidden[data-rowid="${rowId}"]`);
+        if (hiddenTags && hiddenTags.value) {
+            try { scannedTags = JSON.parse(hiddenTags.value); } catch(e){}
+        }
+        
+        issueData.push({ row_id: rowId, item_id: itemId, item_code: itemCode, qty_issued: issueQty, scanned_tags: scannedTags });
     }
     if (hasError) { Swal.fire('ข้อมูลไม่ถูกต้อง', hasError, 'warning'); return; }
     Swal.fire({ title: 'ยืนยันการจ่ายของ?', text: 'ระบบจะทำการหักสต๊อกทันที', icon: 'question', showCancelButton: true, confirmButtonColor: '#198754', confirmButtonText: 'Yes, Confirm!'
@@ -306,6 +332,74 @@ window.confirmIssue = async function(reqId) {
             } catch (error) {}
         }
     });
+};
+
+window.openSelectTagModal = async function(rowId, itemCode) {
+    try {
+        const res = await fetchAPI(`get_available_tags_for_item&item_code=${encodeURIComponent(itemCode)}`, 'GET');
+        const tags = res.data;
+        if (!tags || tags.length === 0) {
+            Swal.fire('ไม่มีสินค้า', `ไม่พบแท็กที่พร้อมจ่ายสำหรับ SAP: ${itemCode}`, 'warning');
+            return;
+        }
+
+        let html = `<div class="text-start mb-2 small text-muted">เลือกแท็กสินค้าที่ต้องการเบิก:</div>`;
+        html += `<div class="list-group list-group-flush border rounded overflow-auto" style="max-height: 300px; text-align: left;">`;
+        tags.forEach(t => {
+            const dateStr = t.received_date ? t.received_date.substring(0, 10) : '-';
+            html += `
+            <label class="list-group-item d-flex justify-content-between align-items-center list-group-item-action cursor-pointer">
+                <div class="d-flex align-items-center gap-2">
+                    <input class="form-check-input me-1 tag-checkbox" type="checkbox" value="${t.serial_no}" data-qty="${t.current_qty}">
+                    <div>
+                        <div class="fw-bold text-dark">${t.serial_no}</div>
+                        <small class="text-muted">Loc: ${t.warehouse_no || '-'} | In: ${dateStr}</small>
+                    </div>
+                </div>
+                <span class="badge bg-primary rounded-pill fs-6">${t.current_qty} ชิ้น</span>
+            </label>`;
+        });
+        html += `</div>`;
+
+        const hiddenInput = document.querySelector(`.issue-tags-hidden[data-rowid="${rowId}"]`);
+        let selectedTags = JSON.parse(hiddenInput.value || '[]');
+
+        const { value: confirmed } = await Swal.fire({
+            title: `เลือกแท็ก (SAP: ${itemCode})`,
+            html: html,
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันการเลือก',
+            cancelButtonText: 'ยกเลิก',
+            didOpen: () => {
+                const checkboxes = document.querySelectorAll('.tag-checkbox');
+                checkboxes.forEach(cb => {
+                    if (selectedTags.includes(cb.value)) cb.checked = true;
+                });
+            },
+            preConfirm: () => {
+                const checkboxes = document.querySelectorAll('.tag-checkbox:checked');
+                let newSelectedTags = [];
+                let totalQty = 0;
+                checkboxes.forEach(cb => {
+                    newSelectedTags.push(cb.value);
+                    totalQty += parseFloat(cb.dataset.qty);
+                });
+                return { tags: newSelectedTags, totalQty: totalQty };
+            }
+        });
+
+        if (confirmed) {
+            hiddenInput.value = JSON.stringify(confirmed.tags);
+            const qtyInput = document.getElementById(`qty_input_${rowId}`);
+            if (qtyInput) qtyInput.value = confirmed.totalQty;
+            
+            if (confirmed.tags.length > 0) {
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `เลือก ${confirmed.tags.length} แท็ก รวม ${confirmed.totalQty} ชิ้น`, showConfirmButton: false, timer: 1500 });
+            }
+        }
+    } catch (err) {
+        Swal.fire('Error', 'ไม่สามารถดึงข้อมูลแท็กสินค้าได้', 'error');
+    }
 };
 
 async function loadK2Summary(isSilent) {
@@ -332,7 +426,7 @@ async function loadK2Summary(isSilent) {
                 const safeDesc = escapeHTML(item.description || '-');
                 const safeDescJS = safeDesc.replace(/&#39;/g, "\\'");
                 const safeItemCode = escapeHTML(item.item_code);
-                const safeCategory = escapeHTML(item.item_category || 'OTHER');
+                const safeCategory = escapeHTML(item.material_sub_type || 'OTHER');
                 const safeReqCount = escapeHTML(item.request_count);
                 const safeTotalQty = escapeHTML(item.total_qty);
                 const safeImgPath = item.image_path ? escapeHTML(item.image_path) : 'null';

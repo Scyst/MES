@@ -88,8 +88,8 @@ try {
             $stmtH->execute([$req_id]);
             $header = $stmtH->fetch(PDO::FETCH_ASSOC);
 
-            $sqlItems = "SELECT ri.id as row_id, ri.item_code, ri.qty_requested, ri.qty_issued,
-                                i.item_id, i.part_description as description, i.image_path, i.item_category,
+            $sqlItems = "SELECT ri.id as row_id, ri.item_code, ri.qty_requested, ri.qty_issued, ri.requested_tags,
+                                i.item_id, i.part_description as description, i.image_path, ISNULL(i.material_sub_type, 'OTHER') as material_sub_type,
                                 ISNULL(inv.quantity, 0) as onhand_qty
                          FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK)
                          JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
@@ -106,15 +106,82 @@ try {
             $response = ['success' => true];
             break;
 
+        case 'get_available_tags_for_item':
+            $item_code = $_REQUEST['item_code'] ?? '';
+            $location_id = $_REQUEST['location_id'] ?? 'ALL';
+            if (!$item_code) throw new Exception("ไม่พบรหัสสินค้า");
+            
+            $cond = "t.item_id = (SELECT TOP 1 item_id FROM dbo.ITEMS WHERE sap_no = ? OR part_no = ?) AND t.status = 'AVAILABLE'";
+            $params = [$item_code, $item_code];
+            
+            if ($location_id !== 'ALL') {
+                $cond .= " AND t.location_id = ?";
+                $params[] = $location_id;
+            }
+            
+            $stmt = $pdo->prepare("
+                SELECT t.serial_no, t.current_qty, t.master_pallet_no, t.received_date, t.warehouse_no, l.location_name
+                FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
+                LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON t.location_id = l.location_id
+                WHERE $cond
+                ORDER BY t.received_date ASC, t.created_at ASC
+            ");
+            $stmt->execute($params);
+            $response = ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
+            break;
+
+        case 'force_issue_tag':
+            requirePermission('manage_warehouse');
+            $serial_no = $_POST['serial_no'] ?? '';
+            $userId = $currentUser['id'];
+            
+            $pdo->beginTransaction();
+            $stmtTag = $pdo->prepare("SELECT item_id, location_id, current_qty, status FROM dbo.RM_SERIAL_TAGS WHERE serial_no = ?");
+            $stmtTag->execute([$serial_no]);
+            $tag = $stmtTag->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$tag) throw new Exception("ไม่พบแท็กนี้");
+            if ($tag['status'] !== 'AVAILABLE') throw new Exception("แท็กนี้ไม่ได้มีสถานะ AVAILABLE");
+            
+            $locId = $tag['location_id'];
+            
+            $remark = " [Manual Force Issue by User $userId]";
+            $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET status = 'WIP', remark = ISNULL(remark, '') + ? WHERE serial_no = ?")
+                ->execute([$remark, $serial_no]);
+                
+            if ($locId) {
+                // Prevent negative inventory by checking current quantity
+                $pdo->prepare("UPDATE dbo.INVENTORY_ONHAND SET quantity = CASE WHEN quantity - ? < 0 THEN 0 ELSE quantity - ? END WHERE parameter_id = ? AND location_id = ?")
+                    ->execute([$tag['current_qty'], $tag['current_qty'], $tag['item_id'], $locId]);
+            }
+            
+            $pdo->commit();
+            $response = ['success' => true, 'message' => 'ตัดจ่ายแท็กสำเร็จ'];
+            break;
+
         case 'confirm_issue':
             $req_id = $_POST['req_id'];
             $req_number = $_POST['req_number'];
             $issuer_id = $currentUser['id'];
             $itemsJsonStr = is_string($_POST['items']) ? $_POST['items'] : json_encode($_POST['items']);
+            
             $stmt = $pdo->prepare("EXEC dbo.sp_Store_ConfirmIssueBatch 
                                     @ReqId = ?, @ReqNumber = ?, @UserId = ?, 
                                     @StoreLocationId = ?, @ItemsJson = ?");
             $stmt->execute([$req_id, $req_number, $issuer_id, $storeLocationId, $itemsJsonStr]);
+            
+            $items = json_decode($itemsJsonStr, true);
+            if (is_array($items)) {
+                foreach ($items as $item) {
+                    if (!empty($item['scanned_tags']) && is_array($item['scanned_tags'])) {
+                        $tags = $item['scanned_tags'];
+                        $placeholders = implode(',', array_fill(0, count($tags), '?'));
+                        $remarkAddition = " [Issued for $req_number]";
+                        $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET status = 'WIP', remark = ISNULL(remark, '') + ? WHERE serial_no IN ($placeholders) AND status = 'AVAILABLE'")
+                            ->execute(array_merge([$remarkAddition], $tags));
+                    }
+                }
+            }
             
             $response = ['success' => true];
             break;
@@ -130,7 +197,7 @@ try {
             $startDate = $_REQUEST['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
             $endDate = $_REQUEST['end_date'] ?? date('Y-m-d');
 
-            $sql = "SELECT ri.item_code, i.part_description as description, i.image_path, i.item_category,
+            $sql = "SELECT ri.item_code, i.part_description as description, i.image_path, ISNULL(i.material_sub_type, 'OTHER') as material_sub_type,
                            SUM(ri.qty_requested) as total_qty, COUNT(k.id) as request_count, MAX(k.k2_reference_no) as k2_ref, MAX(k.updated_at) as last_update
                     FROM dbo.STORE_K2_REQUESTS k WITH (NOLOCK)
                     JOIN dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) ON k.req_item_id = ri.id
@@ -138,7 +205,7 @@ try {
                     JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
                     WHERE k.k2_status = ? 
                       AND r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE))
-                    GROUP BY ri.item_code, i.part_description, i.image_path, i.item_category
+                    GROUP BY ri.item_code, i.part_description, i.image_path, i.material_sub_type
                     ORDER BY total_qty DESC";
             
             $stmt = $pdo->prepare($sql);
@@ -280,7 +347,7 @@ try {
             $stmtTrend->execute([$startDate, $endDate]); 
             $trendData = $stmtTrend->fetchAll(PDO::FETCH_ASSOC);
 
-            $stmtCat = $pdo->prepare("SELECT ISNULL(i.item_category, 'OTHER') as category, SUM(ri.qty_issued) as total_qty FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED' AND ri.qty_issued > 0 GROUP BY i.item_category");
+            $stmtCat = $pdo->prepare("SELECT ISNULL(i.material_sub_type, 'OTHER') as category, SUM(ri.qty_issued) as total_qty FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) JOIN dbo.STORE_REQUISITIONS r WITH (NOLOCK) ON ri.req_id = r.id JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no WHERE r.created_at >= ? AND r.created_at < DATEADD(DAY, 1, CAST(? AS DATE)) AND r.status = 'COMPLETED' AND ri.qty_issued > 0 GROUP BY i.material_sub_type");
             $stmtCat->execute([$startDate, $endDate]); 
             $categoryData = $stmtCat->fetchAll(PDO::FETCH_ASSOC);
 
@@ -377,7 +444,7 @@ try {
             $header = $stmtH->fetch(PDO::FETCH_ASSOC);
             if(!$header) throw new Exception("ไม่พบรายการ หรือไม่มีสิทธิ์เข้าถึง");
 
-            $sqlItems = "SELECT ri.id as row_id, ri.item_code, ri.qty_requested, ri.qty_issued, i.part_description as description, i.image_path, i.item_category,
+            $sqlItems = "SELECT ri.id as row_id, ri.item_code, ri.qty_requested, ri.qty_issued, i.part_description as description, i.image_path, ISNULL(i.material_sub_type, 'OTHER') as material_sub_type,
                                 k.k2_reference_no, k.k2_status, ri.request_type
                          FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK)
                          JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
@@ -404,7 +471,7 @@ try {
 
         case 'get_item_info':
             $item_code = $_REQUEST['item_code'];
-            $stmt = $pdo->prepare("SELECT sap_no, part_description, ISNULL(material_type, 'OTHER') as item_category, StandardPrice FROM dbo.ITEMS WITH (NOLOCK) WHERE sap_no = ?");
+            $stmt = $pdo->prepare("SELECT sap_no, part_description, ISNULL(material_sub_type, 'OTHER') as material_sub_type, StandardPrice FROM dbo.ITEMS WITH (NOLOCK) WHERE sap_no = ?");
             $stmt->execute([$item_code]);
             $data = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($data) $response = ['success' => true, 'data' => $data];
@@ -417,10 +484,10 @@ try {
             }
             $item_code = $_POST['item_code'];
             $desc = $_POST['description'];
-            $category = $_POST['item_category'];
+            $category = $_POST['material_sub_type'];
             $price = (float)($_POST['std_price'] ?? 0);
             
-            $pdo->prepare("UPDATE dbo.ITEMS SET part_description = ?, material_type = ?, StandardPrice = ? WHERE sap_no = ?")
+            $pdo->prepare("UPDATE dbo.ITEMS SET part_description = ?, material_sub_type = ?, StandardPrice = ? WHERE sap_no = ?")
                 ->execute([$desc, $category, $price, $item_code]);
             
             $response = ['success' => true];
@@ -580,9 +647,18 @@ try {
 
         case 'get_item_details':
             $item_id = $_GET['item_id'] ?? 0;
+            $location_id = $_GET['location_id'] ?? 'ALL';
             
-            $stmtAvail = $pdo->prepare("SELECT l.location_name, SUM(o.quantity) as qty FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) JOIN dbo.LOCATIONS l WITH (NOLOCK) ON o.location_id = l.location_id WHERE o.parameter_id = ? AND o.quantity > 0 GROUP BY l.location_name ORDER BY qty DESC");
-            $stmtAvail->execute([$item_id]);
+            $condAvail = "o.parameter_id = ? AND o.quantity > 0";
+            $paramsAvail = [$item_id];
+            
+            if ($location_id !== 'ALL') {
+                $condAvail .= " AND o.location_id = ?";
+                $paramsAvail[] = $location_id;
+            }
+            
+            $stmtAvail = $pdo->prepare("SELECT l.location_name, SUM(o.quantity) as qty FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) JOIN dbo.LOCATIONS l WITH (NOLOCK) ON o.location_id = l.location_id WHERE $condAvail GROUP BY l.location_name ORDER BY qty DESC");
+            $stmtAvail->execute($paramsAvail);
             $available_details = $stmtAvail->fetchAll(PDO::FETCH_ASSOC);
 
             $stmtPend = $pdo->prepare("SELECT ISNULL(master_pallet_no, ctn_number) as tracking_no, MAX(po_number) as po_number, SUM(qty_per_pallet) as qty FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE item_id = ? AND status = 'PENDING' GROUP BY ISNULL(master_pallet_no, ctn_number) ORDER BY qty DESC");
