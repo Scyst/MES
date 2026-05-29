@@ -119,9 +119,6 @@ window.switchDashboardMode = function(mode) {
                     });
                 }
             }).catch(e => console.error(e));
-            
-            let d = new Date();
-            document.getElementById('fulfill_date').value = d.toISOString().split('T')[0];
         }
     }
 };
@@ -703,25 +700,71 @@ window.exportToCSV = async function() {
     }
 };
 
-window.loadFulfillmentData = function() {
-    const date = document.getElementById('fulfill_date').value;
+window.loadActiveJobsForFulfillment = function() {
     const line = document.getElementById('fulfill_line').value;
+    const jobList = document.getElementById('fulfillJobList');
     const container = document.getElementById('fulfillmentListContainer');
+    const jobNameLabel = document.getElementById('fulfillSelectedJobName');
 
     if (!line) {
-        Swal.fire('แจ้งเตือน', 'กรุณาเลือกไลน์การผลิต', 'warning');
+        jobList.innerHTML = `<div class="p-3 text-center text-muted small">กรุณาเลือกไลน์การผลิต</div>`;
+        container.innerHTML = `<tr><td colspan="4" class="text-muted py-4">คลิกเลือกงานจากรายการด้านซ้ายเพื่อดูรายละเอียด</td></tr>`;
+        jobNameLabel.textContent = '-';
         return;
     }
 
+    jobList.innerHTML = `<div class="p-3 text-center"><i class="fas fa-spinner fa-spin text-primary"></i> โหลดข้อมูล...</div>`;
+    
+    fetchAPI(`api_store.php?action=get_active_jobs_for_fulfillment&line=${encodeURIComponent(line)}`, 'GET')
+    .then(res => {
+        if (!res.success) throw new Error(res.message);
+        
+        if (!res.data || res.data.length === 0) {
+            jobList.innerHTML = `<div class="p-3 text-center text-muted small"><i class="fas fa-info-circle mb-2 fa-2x"></i><br>ไม่มีงานที่กำลังผลิตหรือรอผลิตในไลน์นี้</div>`;
+            return;
+        }
+
+        let html = '';
+        res.data.forEach(job => {
+            let statusColor = job.status === 'RUNNING' ? 'success' : (job.status === 'PAUSED' ? 'warning' : 'secondary');
+            let statusIcon = job.status === 'RUNNING' ? 'play-circle' : (job.status === 'PAUSED' ? 'pause-circle' : 'clock');
+            
+            html += `
+                <a href="javascript:void(0)" class="list-group-item list-group-item-action p-2" onclick="loadFulfillmentData(${job.job_id}, '${job.job_no}', ${job.target_qty})">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold text-primary small"><i class="fas fa-clipboard-check me-1"></i>${job.job_no}</span>
+                        <span class="badge bg-${statusColor} text-${statusColor === 'warning' ? 'dark' : 'white'}"><i class="fas fa-${statusIcon} me-1"></i>${job.status}</span>
+                    </div>
+                    <div class="small fw-bold text-dark text-truncate" title="${job.part_description}">${job.part_no}</div>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <small class="text-muted" style="font-size:0.75rem;">เป้า: <span class="fw-bold text-dark">${job.target_qty}</span> ชิ้น</small>
+                        <i class="fas fa-chevron-right text-muted" style="font-size:0.7rem;"></i>
+                    </div>
+                </a>
+            `;
+        });
+        jobList.innerHTML = html;
+        container.innerHTML = `<tr><td colspan="4" class="text-muted py-4"><i class="fas fa-hand-pointer me-1"></i> คลิกเลือกงานจากรายการด้านซ้ายเพื่อดูรายละเอียด</td></tr>`;
+        jobNameLabel.textContent = '-';
+    })
+    .catch(err => {
+        jobList.innerHTML = `<div class="p-3 text-center text-danger small">เกิดข้อผิดพลาด: ${err.message}</div>`;
+    });
+};
+
+window.loadFulfillmentData = function(job_id, job_no, target_qty) {
+    const container = document.getElementById('fulfillmentListContainer');
+    document.getElementById('fulfillSelectedJobName').innerHTML = `Job: <b>${job_no}</b> <span class="badge bg-secondary ms-1">เป้า ${target_qty}</span>`;
+
     container.innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>`;
 
-    fetchAPI(`api_store.php?action=get_plan_fulfillment&date=${date}&line=${encodeURIComponent(line)}`, 'GET')
+    fetchAPI(`api_store.php?action=get_plan_fulfillment&job_id=${job_id}`, 'GET')
     .then(res => {
         if (!res.success) throw new Error(res.message || 'Error loading fulfillment');
         
         const data = res.data;
         if (!data || data.length === 0) {
-            container.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">ไม่พบข้อมูลแผนการผลิตหรือสูตรการผลิตสำหรับไลน์นี้ในวันที่เลือก</td></tr>`;
+            container.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">ไม่พบข้อมูลสูตรการผลิต (BOM) สำหรับชิ้นงานนี้</td></tr>`;
             return;
         }
 

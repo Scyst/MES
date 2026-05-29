@@ -274,38 +274,51 @@ $pageIcon = "fas fa-store";
                         <div class="bg-white border rounded shadow-sm p-3 mb-2">
                             <div class="row g-2 align-items-end">
                                 <div class="col-md-4 col-lg-3">
-                                    <label class="form-label small fw-bold text-secondary mb-1">วันที่ (Plan Date)</label>
-                                    <input type="date" id="fulfill_date" class="form-control form-control-sm fw-bold">
-                                </div>
-                                <div class="col-md-4 col-lg-3">
                                     <label class="form-label small fw-bold text-secondary mb-1">ไลน์การผลิต (Line)</label>
-                                    <select id="fulfill_line" class="form-select form-select-sm fw-bold">
+                                    <select id="fulfill_line" class="form-select form-select-sm fw-bold" onchange="loadActiveJobsForFulfillment()">
                                         <option value="">-- เลือกไลน์ --</option>
                                     </select>
                                 </div>
                                 <div class="col-md-2 col-lg-2">
-                                    <button class="btn btn-sm btn-primary w-100 fw-bold" onclick="loadFulfillmentData()">
-                                        <i class="fas fa-search me-1"></i> ตรวจสอบ
+                                    <button class="btn btn-sm btn-primary w-100 fw-bold" onclick="loadActiveJobsForFulfillment()">
+                                        <i class="fas fa-sync-alt me-1"></i> โหลดข้อมูล
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="bg-white border rounded shadow-sm overflow-hidden">
-                            <div class="table-responsive">
-                                <table class="table table-hover table-bordered mb-0 text-center align-middle" style="font-size: 0.85rem;">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th class="text-start">วัตถุดิบ (Material)</th>
-                                            <th>ความต้องการ (Target)</th>
-                                            <th>จ่ายแล้ว (Issued)</th>
-                                            <th style="width: 200px;">สถานะ (Fulfillment)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="fulfillmentListContainer">
-                                        <tr><td colspan="4" class="text-muted py-4">กรุณาเลือกวันที่และไลน์ แล้วกดปุ่มตรวจสอบ</td></tr>
-                                    </tbody>
-                                </table>
+                        <div class="row g-2">
+                            <div class="col-md-4 col-lg-3">
+                                <div class="bg-white border rounded shadow-sm overflow-hidden h-100 d-flex flex-column">
+                                    <div class="bg-light p-2 border-bottom fw-bold text-dark"><i class="fas fa-clipboard-list me-1"></i> งานที่กำลังรอ/ผลิต</div>
+                                    <div class="list-group list-group-flush overflow-auto flex-grow-1 hide-scrollbar" id="fulfillJobList" style="max-height: 500px;">
+                                        <div class="p-3 text-center text-muted small">กรุณาเลือกไลน์การผลิต</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-8 col-lg-9">
+                                <div class="bg-white border rounded shadow-sm overflow-hidden h-100 d-flex flex-column">
+                                    <div class="bg-light p-2 border-bottom fw-bold text-dark d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-box-open me-1"></i> รายการวัตถุดิบ (BOM)</span>
+                                        <span id="fulfillSelectedJobName" class="text-primary small fw-bold">-</span>
+                                    </div>
+                                    <div class="table-responsive flex-grow-1 hide-scrollbar" style="max-height: 500px;">
+                                        <table class="table table-hover table-bordered mb-0 text-center align-middle" style="font-size: 0.85rem;">
+                                            <thead class="table-light sticky-top" style="z-index: 1;">
+                                                <tr>
+                                                    <th class="text-start">วัตถุดิบ (Material)</th>
+                                                    <th>ความต้องการ (Target)</th>
+                                                    <th>จ่ายแล้ว (Issued)</th>
+                                                    <th style="width: 200px;">สถานะ (Fulfillment)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="fulfillmentListContainer">
+                                                <tr><td colspan="4" class="text-muted py-4">คลิกเลือกงานจากรายการด้านซ้ายเพื่อดูรายละเอียด</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -674,14 +674,42 @@ try {
             ];
             break;
 
-        case 'get_plan_fulfillment':
-            $target_date = $_GET['date'] ?? date('Y-m-d');
+        case 'get_active_jobs_for_fulfillment':
             $line = $_GET['line'] ?? '';
+            if (empty($line)) throw new Exception("ระบุไลน์การผลิต");
+            
+            $locStmt = $pdo->prepare("SELECT TOP 1 location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE production_line = ? AND location_type = 'LINE'");
+            $locStmt->execute([$line]);
+            $loc_id = $locStmt->fetchColumn();
 
-            if (empty($line)) {
-                throw new Exception("ระบุไลน์การผลิต (Line) ที่ต้องการดูข้อมูล");
-            }
+            $sql = "SELECT j.job_id, j.job_no, j.target_qty, i.part_no, i.part_description, j.status
+                    FROM dbo.PRODUCTION_JOBS j WITH (NOLOCK)
+                    JOIN dbo.ITEMS i WITH (NOLOCK) ON j.item_id = i.item_id
+                    WHERE j.status IN ('PENDING', 'RUNNING', 'PAUSED') AND j.location_id = ?
+                    ORDER BY j.queue_order ASC, j.created_at ASC";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$loc_id]);
+            $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+            echo json_encode(['success' => true, 'data' => $jobs]);
+            break;
+
+        case 'get_plan_fulfillment':
+            $job_id = $_GET['job_id'] ?? '';
+            if (empty($job_id)) throw new Exception("ระบุ Job ID");
+
+            $jobStmt = $pdo->prepare("
+                SELECT j.job_no, j.target_qty, j.item_id, l.production_line 
+                FROM dbo.PRODUCTION_JOBS j WITH (NOLOCK)
+                JOIN dbo.LOCATIONS l WITH (NOLOCK) ON j.location_id = l.location_id
+                WHERE j.job_id = ?
+            ");
+            $jobStmt->execute([$job_id]);
+            $job = $jobStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$job) throw new Exception("ไม่พบข้อมูล Job");
+
+            $line = $job['production_line'];
             $locStmt = $pdo->prepare("SELECT TOP 1 location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE production_line = ? AND location_type = 'WIP'");
             $locStmt->execute([$line]);
             $wip_loc_id = $locStmt->fetchColumn() ?: 0;
@@ -693,15 +721,14 @@ try {
                     i.part_no,
                     i.part_description,
                     i.image_path,
-                    SUM(b.quantity_required * p.adjusted_planned_quantity) as target_qty
-                FROM dbo.PRODUCTION_PLANS p WITH (NOLOCK)
-                JOIN dbo.PRODUCT_BOM b WITH (NOLOCK) ON p.item_id = b.fg_item_id AND b.bom_status = 'ACTIVE'
+                    SUM(b.quantity_required * ?) as target_qty
+                FROM dbo.PRODUCT_BOM b WITH (NOLOCK)
                 JOIN dbo.ITEMS i WITH (NOLOCK) ON b.component_item_id = i.item_id
-                WHERE p.plan_date = ? AND p.line = ?
+                WHERE b.fg_item_id = ? AND b.bom_status = 'ACTIVE'
                 GROUP BY b.component_item_id, i.sap_no, i.part_no, i.part_description, i.image_path
             ";
             $stmtBom = $pdo->prepare($sqlBom);
-            $stmtBom->execute([$target_date, $line]);
+            $stmtBom->execute([$job['target_qty'], $job['item_id']]);
             $requirements = $stmtBom->fetchAll(PDO::FETCH_ASSOC);
 
             $sqlIssued = "
@@ -710,13 +737,13 @@ try {
                     SUM(ri.issued_qty) as total_issued
                 FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
                 JOIN dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) ON r.requisition_id = ri.requisition_id
-                WHERE CAST(r.created_at AS DATE) = ? 
+                WHERE r.reservation_number = ? 
                   AND r.destination_location_id = ?
                   AND r.status IN ('COMPLETED', 'PARTIAL')
                 GROUP BY ri.item_id
             ";
             $stmtIssued = $pdo->prepare($sqlIssued);
-            $stmtIssued->execute([$target_date, $wip_loc_id]);
+            $stmtIssued->execute([$job['job_no'], $wip_loc_id]);
             $issuedData = [];
             while ($row = $stmtIssued->fetch(PDO::FETCH_ASSOC)) {
                 $issuedData[$row['item_id']] = (float)$row['total_issued'];
@@ -731,7 +758,7 @@ try {
                 $results[] = $req;
             }
 
-            $response = ['success' => true, 'data' => $results];
+            echo json_encode(['success' => true, 'data' => $results]);
             break;
 
         case 'get_inventory_dashboard':
