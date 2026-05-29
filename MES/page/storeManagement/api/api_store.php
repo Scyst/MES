@@ -739,14 +739,15 @@ try {
 
             $sqlIssued = "
                 SELECT 
-                    ri.item_id,
-                    SUM(ri.issued_qty) as total_issued
+                    i.item_id,
+                    SUM(ri.qty_issued) as total_issued
                 FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
                 JOIN dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) ON r.id = ri.req_id
+                JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
                 WHERE r.reservation_number = ? 
                   AND r.destination_location_id = ?
                   AND r.status IN ('COMPLETED', 'PARTIAL')
-                GROUP BY ri.item_id
+                GROUP BY i.item_id
             ";
             $stmtIssued = $pdo->prepare($sqlIssued);
             $stmtIssued->execute([$job['job_no'], $wip_loc_id]);
