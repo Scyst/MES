@@ -174,6 +174,11 @@ window.openStockOrder = async function(reqId) {
         document.getElementById('disp_requester').innerText = h.requester_name || '-';
         document.getElementById('disp_remark').innerText = h.remark || '-';
         
+        const dispReser = document.getElementById('disp_reser_no');
+        if (dispReser) {
+            dispReser.innerText = h.reservation_number || '-';
+        }
+        
         let headerColor = 'bg-dark', statusText = h.status;
         if (h.status === 'NEW ORDER') headerColor = 'bg-danger';
         else if (h.status === 'PREPARING') headerColor = 'bg-warning text-dark';
@@ -213,17 +218,7 @@ window.openStockOrder = async function(reqId) {
             }
             const initialTagsJson = escapeHTML(JSON.stringify(reqTags));
 
-            let tagBtnHtml = '';
             let inputId = `qty_input_${item.row_id}`;
-            if (isEditable) {
-                tagBtnHtml = `
-                <div class="ms-2">
-                    <button class="btn btn-sm btn-outline-primary fw-bold" onclick="openSelectTagModal('${item.row_id}', '${safeItemCode}')">
-                        <i class="fas fa-list-check"></i> เลือกแท็ก
-                    </button>
-                    <input type="hidden" class="issue-tags-hidden" data-rowid="${item.row_id}" value="${initialTagsJson}">
-                </div>`;
-            }
 
             itemsHtml += `
             <div class="card border border-light shadow-sm mb-2">
@@ -236,6 +231,17 @@ window.openStockOrder = async function(reqId) {
                                 SAP: ${safeItemCode} ${isEditable ? `<span class="mx-1">|</span><span class="${isStockShort ? 'text-danger fw-bold' : 'text-success'}">คลังรวม: ${onHand}</span>` : ''}
                             </div>
                             ${reqTags.length > 0 ? `<div class="small text-success mt-1 fw-bold" style="font-size: 0.75rem;"><i class="fas fa-tags"></i> ลูกค้าระบุแท็ก: ${reqTags.join(', ')}</div>` : ''}
+                            ${isEditable ? `
+                            <div class="mt-1">
+                                <span id="tag_display_${item.row_id}" 
+                                      class="badge bg-secondary cursor-pointer" 
+                                      onclick="openSelectTagModal('${item.row_id}', '${safeItemCode}')"
+                                      style="font-size: 0.75rem;">
+                                      <i class="fas fa-magic"></i> Auto FIFO (ยังไม่ผูก Tag)
+                                </span>
+                                <input type="hidden" class="issue-tags-hidden" data-rowid="${item.row_id}" value="${initialTagsJson}">
+                            </div>
+                            ` : ''}
                         </div>
                     </div>
                     <div class="d-flex align-items-center justify-content-end gap-2 flex-shrink-0 ms-auto mt-2 mt-md-0 w-auto">
@@ -257,7 +263,6 @@ window.openStockOrder = async function(reqId) {
                             </div>
                         </div>
                         
-                        ${tagBtnHtml}
                     </div>
                 </div>
             </div>`;
@@ -304,14 +309,14 @@ window.rejectOrder = function(reqId) {
 };
 
 window.confirmIssue = async function(reqId) {
-    let issueData = []; let hasError = false;
+    let issueData = []; let hasError = false; let hasAutoDeduct = false;
     const inputs = document.querySelectorAll('.issue-qty-input');
     for (const input of inputs) {
         const rowId = input.dataset.rowid; const itemId = input.dataset.itemid; const itemCode = input.dataset.itemcode;
         const category = input.dataset.category;
         const issueQty = parseFloat(input.value); const maxQty = parseFloat(input.getAttribute('max')); 
         const reqQty = parseFloat(input.dataset.requested);
-        if (isNaN(issueQty) || issueQty < 0) { hasError = `กรุณากรอกจำนวนให้ถูกต้อง (SAP: ${itemCode})`; break; }
+        if (isNaN(issueQty) || issueQty <= 0) { hasError = `กรุณากรอกจำนวนให้มากกว่า 0 (SAP: ${itemCode})`; break; }
         
         let scannedTags = [];
         const hiddenTags = document.querySelector(`.issue-tags-hidden[data-rowid="${rowId}"]`);
@@ -319,10 +324,22 @@ window.confirmIssue = async function(reqId) {
             try { scannedTags = JSON.parse(hiddenTags.value); } catch(e){}
         }
         
+        if (scannedTags.length === 0) {
+            hasAutoDeduct = true;
+        }
+        
         issueData.push({ row_id: rowId, item_id: itemId, item_code: itemCode, qty_issued: issueQty, scanned_tags: scannedTags });
     }
     if (hasError) { Swal.fire('ข้อมูลไม่ถูกต้อง', hasError, 'warning'); return; }
-    Swal.fire({ title: 'ยืนยันการจ่ายของ?', text: 'ระบบจะทำการหักสต๊อกทันที', icon: 'question', showCancelButton: true, confirmButtonColor: '#198754', confirmButtonText: 'Yes, Confirm!'
+    
+    let confirmTitle = 'ยืนยันการจ่ายของ?';
+    let confirmText = 'ระบบจะทำการหักสต๊อกทันที';
+    if (hasAutoDeduct) {
+        confirmTitle = 'จ่ายแบบตัดยอดอัตโนมัติ?';
+        confirmText = 'มีบางรายการที่คุณไม่ได้ระบุแท็ก ระบบจะทำการหักยอดจาก "แท็กที่เก่าที่สุด" ให้อัตโนมัติ (Auto-FIFO) คุณแน่ใจหรือไม่?';
+    }
+    
+    Swal.fire({ title: confirmTitle, text: confirmText, icon: 'question', showCancelButton: true, confirmButtonColor: '#198754', confirmButtonText: 'Yes, Confirm!'
     }).then(async (result) => {
         if (result.isConfirmed) {
             try {
@@ -343,20 +360,20 @@ window.openSelectTagModal = async function(rowId, itemCode) {
             return;
         }
 
-        let html = `<div class="text-start mb-2 small text-muted">เลือกแท็กสินค้าที่ต้องการเบิก:</div>`;
-        html += `<div class="list-group list-group-flush border rounded overflow-auto" style="max-height: 300px; text-align: left;">`;
+        let html = `<div class="text-start mb-2 small text-muted">เลือกแท็กสินค้าที่ต้องการเบิก (SAP: ${itemCode}):</div>`;
+        html += `<div class="list-group list-group-flush border rounded overflow-auto" style="max-height: 400px; text-align: left;">`;
         tags.forEach(t => {
             const dateStr = t.received_date ? t.received_date.substring(0, 10) : '-';
             html += `
-            <label class="list-group-item d-flex justify-content-between align-items-center list-group-item-action cursor-pointer">
+            <label class="list-group-item d-flex justify-content-between align-items-center list-group-item-action cursor-pointer py-1 px-2">
                 <div class="d-flex align-items-center gap-2">
-                    <input class="form-check-input me-1 tag-checkbox" type="checkbox" value="${t.serial_no}" data-qty="${t.current_qty}">
-                    <div>
-                        <div class="fw-bold text-dark">${t.serial_no}</div>
-                        <small class="text-muted">Loc: ${t.warehouse_no || '-'} | In: ${dateStr}</small>
+                    <input class="form-check-input me-1 tag-checkbox" type="checkbox" value="${t.serial_no}" data-qty="${t.current_qty}" style="transform: scale(0.85);">
+                    <div style="font-size: 0.85rem;">
+                        <div class="fw-bold text-dark" style="font-size: 0.9rem;">${t.serial_no}</div>
+                        <small class="text-muted" style="font-size: 0.75rem;">Loc: ${t.warehouse_no || '-'} | In: ${dateStr}</small>
                     </div>
                 </div>
-                <span class="badge bg-primary rounded-pill fs-6">${t.current_qty} ชิ้น</span>
+                <span class="badge bg-primary rounded-pill" style="font-size: 0.8rem;">${parseInt(t.current_qty, 10).toLocaleString()} ชิ้น</span>
             </label>`;
         });
         html += `</div>`;
@@ -382,7 +399,7 @@ window.openSelectTagModal = async function(rowId, itemCode) {
                 let totalQty = 0;
                 checkboxes.forEach(cb => {
                     newSelectedTags.push(cb.value);
-                    totalQty += parseFloat(cb.dataset.qty);
+                    totalQty += parseInt(cb.dataset.qty, 10);
                 });
                 return { tags: newSelectedTags, totalQty: totalQty };
             }
@@ -392,6 +409,17 @@ window.openSelectTagModal = async function(rowId, itemCode) {
             hiddenInput.value = JSON.stringify(confirmed.tags);
             const qtyInput = document.getElementById(`qty_input_${rowId}`);
             if (qtyInput) qtyInput.value = confirmed.totalQty;
+            
+            const tagDisplay = document.getElementById(`tag_display_${rowId}`);
+            if (tagDisplay) {
+                if (confirmed.tags.length > 0) {
+                    tagDisplay.className = 'badge bg-primary cursor-pointer';
+                    tagDisplay.innerHTML = `<i class="fas fa-cut"></i> ตัดออกจาก: ${confirmed.tags.join(', ')}`;
+                } else {
+                    tagDisplay.className = 'badge bg-secondary cursor-pointer';
+                    tagDisplay.innerHTML = `<i class="fas fa-magic"></i> Auto FIFO (ยังไม่ผูก Tag)`;
+                }
+            }
             
             if (confirmed.tags.length > 0) {
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `เลือก ${confirmed.tags.length} แท็ก รวม ${confirmed.totalQty} ชิ้น`, showConfirmButton: false, timer: 1500 });

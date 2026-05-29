@@ -1,5 +1,3 @@
-"use strict";
-
 let cart = {}; 
 let historyModal, trackingModal, editItemModalInst; 
 let currentPage = 1;
@@ -10,6 +8,7 @@ let searchTimeout;
 
 document.addEventListener('DOMContentLoaded', () => {
     loadCatalog('ALL'); 
+    loadLocations();
 
     const searchInput = document.getElementById('searchItem');
     if (searchInput) {
@@ -63,6 +62,25 @@ window.toggleImages = function() {
             btn.classList.add('active');
             btn.innerHTML = '<i class="fas fa-image"></i> <span class="d-none d-sm-inline">แสดงรูป</span>';
         }
+    }
+};
+
+window.loadLocations = async function() {
+    try {
+        const res = await fetchAPI('get_master_data', 'GET');
+        const wipLocations = (res.data.locations || []).filter(loc => loc.location_type === 'WIP' || loc.location_type === 'FG');
+        const userLine = res.user_line || '';
+        
+        const destSelect = document.getElementById('reqDestLoc');
+        if (destSelect) {
+            destSelect.innerHTML = '<option value="">-- กรุณาเลือกคลังปลายทาง --</option>';
+            wipLocations.forEach(loc => {
+                const isSelected = loc.production_line === userLine ? 'selected' : '';
+                destSelect.innerHTML += `<option value="${loc.location_id}" ${isSelected}>${escapeHTML(loc.location_name)}</option>`;
+            });
+        }
+    } catch (e) {
+        console.error('Failed to load locations', e);
     }
 };
 
@@ -365,12 +383,28 @@ function renderCartUI() {
 
 window.submitRequisition = function() {
     const remarkEl = document.getElementById('reqRemark');
+    const reserEl = document.getElementById('reqReserNo');
+    const destEl = document.getElementById('reqDestLoc');
     const reqTypeEl = document.querySelector('input[name="reqType"]:checked');
     const remark = remarkEl ? remarkEl.value.trim() : '';
+    const reservation_number = reserEl ? reserEl.value.trim() : '';
+    const destination_location_id = destEl ? destEl.value : '';
     const reqType = reqTypeEl ? reqTypeEl.value : 'STOCK';
     const itemCodes = Object.keys(cart);
     
     if (itemCodes.length === 0) return;
+
+    if (reqType === 'STOCK' && !destination_location_id) {
+        Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกคลังปลายทาง (WIP) ก่อนทำการยืนยันการเบิก', 'warning');
+        if (destEl) destEl.focus();
+        return;
+    }
+
+    if (!reservation_number) {
+        Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาระบุเลขที่ Reservation ก่อนทำการยืนยันการเบิก', 'warning');
+        if (reserEl) reserEl.focus();
+        return;
+    }
 
     if (reqType === 'STOCK') {
         for (let code of itemCodes) {
@@ -406,11 +440,14 @@ window.submitRequisition = function() {
                 const res = await fetchAPI('submit_requisition', 'POST', { 
                     cart: JSON.stringify(payloadCart), 
                     remark: remark, 
+                    reservation_number: reservation_number,
+                    destination_location_id: destination_location_id,
                     request_type: reqType 
                 }, 'btnCheckout');
 
                 cart = {}; 
                 if (remarkEl) remarkEl.value = ''; 
+                if (reserEl) reserEl.value = '';
                 renderCartUI();
                 
                 const offcanvasEl = document.getElementById('cartOffcanvas');

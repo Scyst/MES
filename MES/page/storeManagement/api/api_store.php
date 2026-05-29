@@ -103,6 +103,7 @@ try {
 
         case 'accept_order':
             $pdo->prepare("UPDATE dbo.STORE_REQUISITIONS SET status = 'PREPARING' WHERE id = ?")->execute([$_POST['req_id']]);
+            writeLog($pdo, 'ACCEPT_ORDER', 'STORE_MANAGEMENT', $_POST['req_id'], null, ['status' => 'PREPARING']);
             $response = ['success' => true];
             break;
 
@@ -165,30 +166,134 @@ try {
             $issuer_id = $currentUser['id'];
             $itemsJsonStr = is_string($_POST['items']) ? $_POST['items'] : json_encode($_POST['items']);
             
-            $stmt = $pdo->prepare("EXEC dbo.sp_Store_ConfirmIssueBatch 
-                                    @ReqId = ?, @ReqNumber = ?, @UserId = ?, 
-                                    @StoreLocationId = ?, @ItemsJson = ?");
-            $stmt->execute([$req_id, $req_number, $issuer_id, $storeLocationId, $itemsJsonStr]);
-            
-            $items = json_decode($itemsJsonStr, true);
-            if (is_array($items)) {
+            $pdo->beginTransaction();
+            try {
+                // 1. Race Condition Check
+                $reqStmt = $pdo->prepare("SELECT status FROM dbo.STORE_REQUISITIONS WITH (UPDLOCK, ROWLOCK) WHERE id = ?");
+                $reqStmt->execute([$req_id]);
+                $reqStatus = $reqStmt->fetchColumn();
+                if ($reqStatus !== 'PREPARING' && $reqStatus !== 'WAITING') {
+                    throw new Exception("ใบเบิกนี้ถูกทำรายการไปแล้ว (สถานะปัจจุบัน: $reqStatus)");
+                }
+
+                // 2. Validate payload and negative quantities
+                $items = json_decode($itemsJsonStr, true);
+                if (!is_array($items) || count($items) === 0) {
+                    throw new Exception("ไม่มีรายการที่ต้องจ่าย");
+                }
                 foreach ($items as $item) {
-                    if (!empty($item['scanned_tags']) && is_array($item['scanned_tags'])) {
-                        $tags = $item['scanned_tags'];
-                        $placeholders = implode(',', array_fill(0, count($tags), '?'));
-                        $remarkAddition = " [Issued for $req_number]";
-                        $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET status = 'WIP', remark = ISNULL(remark, '') + ? WHERE serial_no IN ($placeholders) AND status = 'AVAILABLE'")
-                            ->execute(array_merge([$remarkAddition], $tags));
+                    $qty_to_deduct = floatval($item['qty_issued'] ?? 0);
+                    if ($qty_to_deduct <= 0) {
+                        throw new Exception("จำนวนที่เบิกจ่ายต้องมากกว่า 0 (พบค่า $qty_to_deduct สำหรับ Item: " . ($item['item_code'] ?? '') . ")");
                     }
                 }
+
+                // 3. Execute SP to update ONHAND and Requisition
+                $stmt = $pdo->prepare("EXEC dbo.sp_Store_ConfirmIssueBatch 
+                                        @ReqId = ?, @ReqNumber = ?, @UserId = ?, 
+                                        @StoreLocationId = ?, @ItemsJson = ?");
+                $stmt->execute([$req_id, $req_number, $issuer_id, $storeLocationId, $itemsJsonStr]);
+                
+                // Get destination location id
+                $destLocStmt = $pdo->prepare("SELECT destination_location_id FROM dbo.STORE_REQUISITIONS WITH (NOLOCK) WHERE id = ?");
+                $destLocStmt->execute([$req_id]);
+                $destLocId = $destLocStmt->fetchColumn();
+
+                // 4. Handle Tag Deductions
+                foreach ($items as $item) {
+                    $qty_to_deduct = floatval($item['qty_issued']);
+                    $itemCode = $item['item_code'] ?? '';
+                    
+                    // Need to find item_id for cloning tags
+                    $itemIdStmt = $pdo->prepare("SELECT TOP 1 item_id FROM dbo.ITEMS WHERE sap_no = ? OR part_no = ?");
+                    $itemIdStmt->execute([$itemCode, $itemCode]);
+                    $itemId = $itemIdStmt->fetchColumn();
+                    
+                    if (!empty($item['scanned_tags']) && is_array($item['scanned_tags'])) {
+                        // User specifically selected tags
+                        $placeholders = implode(',', array_fill(0, count($item['scanned_tags']), '?'));
+                        $tagStmt = $pdo->prepare("SELECT * FROM dbo.RM_SERIAL_TAGS WHERE serial_no IN ($placeholders) AND status = 'AVAILABLE' AND current_qty > 0 ORDER BY received_date ASC, created_at ASC");
+                        $tagStmt->execute($item['scanned_tags']);
+                        $tagsData = $tagStmt->fetchAll(PDO::FETCH_ASSOC);
+                    } else {
+                        // Auto-FIFO for this item if tags exist
+                        $tagStmt = $pdo->prepare("
+                            SELECT * 
+                            FROM dbo.RM_SERIAL_TAGS 
+                            WHERE item_id = ?
+                              AND status = 'AVAILABLE' AND current_qty > 0
+                            ORDER BY received_date ASC, created_at ASC
+                        ");
+                        $tagStmt->execute([$itemId]);
+                        $tagsData = $tagStmt->fetchAll(PDO::FETCH_ASSOC);
+                    }
+
+                    // Deduct from tags (WIP Transfer Logic)
+                    $total_issued_for_this_item = $qty_to_deduct;
+                    foreach ($tagsData as $t) {
+                        if ($qty_to_deduct <= 0) break;
+
+                        $tagQty = floatval($t['current_qty']);
+                        if ($tagQty <= $qty_to_deduct) {
+                            // Transfer whole tag to WIP
+                            $qty_to_deduct -= $tagQty;
+                            $updateSql = "UPDATE dbo.RM_SERIAL_TAGS SET status = 'WIP', remark = ISNULL(remark, '') + ?";
+                            if ($destLocId) $updateSql .= ", location_id = " . intval($destLocId);
+                            $updateSql .= " WHERE serial_no = ?";
+                            
+                            $pdo->prepare($updateSql)
+                                ->execute([" [Transfer to WIP for $req_number: Full]", $t['serial_no']]);
+                        } else {
+                            // Partial transfer: Deduct from parent tag, create child tag in WIP
+                            $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET current_qty = current_qty - ?, remark = ISNULL(remark, '') + ? WHERE serial_no = ?")
+                                ->execute([$qty_to_deduct, " [Transfer to WIP for $req_number: Partial $qty_to_deduct pcs]", $t['serial_no']]);
+                            
+                            // Clone tag to WIP
+                            $childSerial = $t['serial_no'] . '-W' . rand(100, 999);
+                            $pdo->prepare("
+                                INSERT INTO dbo.RM_SERIAL_TAGS (serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status, po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, location_id, created_at, created_by)
+                                VALUES (?, ?, ?, ?, ?, 'WIP', ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?)
+                            ")->execute([
+                                $childSerial, $t['master_pallet_no'], $t['item_id'], $t['qty_per_pallet'], $qty_to_deduct,
+                                $t['po_number'], $t['warehouse_no'], $t['pallet_no'], $t['ctn_number'], $t['week_no'],
+                                " [Cloned for WIP transfer $req_number]", $destLocId ?: $t['location_id'], $issuer_id
+                            ]);
+                            
+                            $qty_to_deduct = 0;
+                        }
+                    }
+
+                    // Add quantity to WIP Location OnHand (sp_Store_ConfirmIssueBatch already deducted from Store Location)
+                    if ($destLocId && $itemId && $total_issued_for_this_item > 0) {
+                        $pdo->prepare("
+                            MERGE dbo.INVENTORY_ONHAND AS t
+                            USING (SELECT ? as item_id, ? as loc_id) AS s
+                            ON (t.parameter_id = s.item_id AND t.location_id = s.loc_id)
+                            WHEN MATCHED THEN UPDATE SET quantity = quantity + ?
+                            WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity, created_at, created_by)
+                            VALUES (?, ?, ?, GETDATE(), ?);
+                        ")->execute([
+                            $itemId, $destLocId, 
+                            $total_issued_for_this_item, 
+                            $itemId, $destLocId, $total_issued_for_this_item, $issuer_id
+                        ]);
+                    }
+                }
+                
+                writeLog($pdo, 'ISSUE_STOCK', 'STORE_MANAGEMENT', $req_number, null, ['req_id' => $req_id, 'items' => $items]);
+                
+                $pdo->commit();
+                $response = ['success' => true];
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
             }
-            
-            $response = ['success' => true];
             break;
 
         case 'reject_order':
             $reason = $_POST['reason'] ?? 'Rejected by Store';
             $pdo->prepare("UPDATE dbo.STORE_REQUISITIONS SET status = 'REJECTED', remark = ISNULL(remark, '') + ' [Reject: ' + ? + ']' WHERE id = ?")->execute([$reason, $_POST['req_id']]);
+            writeLog($pdo, 'REJECT_ORDER', 'STORE_MANAGEMENT', $_POST['req_id'], null, ['status' => 'REJECTED', 'reason' => $reason]);
             $response = ['success' => true];
             break;
 
@@ -282,6 +387,8 @@ try {
                     $pdo->prepare($sqlComplete)->execute($params);
                 }
             }
+
+            writeLog($pdo, 'SUBMIT_K2_PR', 'STORE_MANAGEMENT', $k2_pr_no, null, ['item_code' => $item_code, 'status' => 'K2_OPENED']);
 
             $pdo->commit();
             $response = ['success' => true, 'message' => 'บันทึกรหัส K2 PR สำเร็จ'];
@@ -414,6 +521,35 @@ try {
             $reqNumber = '';
             $stmt->bindParam(6, $reqNumber, PDO::PARAM_STR | PDO::PARAM_INPUT_OUTPUT, 50);
             $stmt->execute();
+
+            $reservation_number = trim($_POST['reservation_number'] ?? $input['reservation_number'] ?? '');
+            $destination_location_id = $_POST['destination_location_id'] ?? $input['destination_location_id'] ?? null;
+            
+            if (!$destination_location_id) {
+                // Try to find the destination WIP location based on the user's line or department
+                $destLocId = null;
+                $line = $currentUser['line'] ?? $currentUser['department_api'] ?? '';
+                if (!empty($line)) {
+                    $stmtLoc = $pdo->prepare("SELECT TOP 1 location_id FROM dbo.LOCATIONS WHERE production_line = ? AND location_type = 'WIP'");
+                    $stmtLoc->execute([$line]);
+                    $destLocId = $stmtLoc->fetchColumn();
+                }
+
+                // Fallback: If no specific line WIP is found, just find any generic WIP location if we want, or leave it null.
+                if (!$destLocId) {
+                    $stmtLoc = $pdo->query("SELECT TOP 1 location_id FROM dbo.LOCATIONS WHERE location_type = 'WIP' ORDER BY location_id ASC");
+                    $destLocId = $stmtLoc->fetchColumn();
+                }
+                $destination_location_id = $destLocId;
+            }
+
+            // Update Requisition with Reservation and Destination
+            try {
+                $pdo->prepare("UPDATE dbo.STORE_REQUISITIONS SET reservation_number = ?, destination_location_id = ? WHERE req_number = ?")
+                    ->execute([$reservation_number ?: null, $destination_location_id ?: null, $reqNumber]);
+            } catch (Exception $e) {
+                error_log("Failed to update STORE_REQUISITIONS: " . $e->getMessage());
+            }
 
             $response = ['success' => true, 'req_number' => $reqNumber];
             break;
@@ -1577,23 +1713,7 @@ try {
     }
     echo json_encode($response);
 
-} catch (Exception $e) {
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    
-    $errorMessage = $e->getMessage();
-    
-    if (strpos($errorMessage, '[SQL Server]') !== false) {
-        $parts = explode('[SQL Server]', $errorMessage);
-        $cleanError = trim(end($parts));
-        if (strpos($cleanError, 'Violation of') !== false || strpos($cleanError, 'Invalid object') !== false) {
-            $errorMessage = "เกิดข้อผิดพลาดในการประมวลผลฐานข้อมูล (Database Constraint Violation)";
-        } else {
-            $errorMessage = $cleanError;
-        }
-    }
-
-    echo json_encode(['success' => false, 'message' => $errorMessage]);
+} catch (Throwable $e) {
+    handleApiError($e, isset($pdo) ? $pdo : null, $_POST);
 }
 ?>

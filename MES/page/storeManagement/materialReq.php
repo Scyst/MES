@@ -125,7 +125,7 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                                 <i class="fas fa-image"></i> <span class="d-none d-sm-inline">รูปภาพ</span>
                             </button>
                             
-                            <button class="btn btn-sm btn-outline-primary fw-bold px-3" onclick="openHistoryModal()" title="ประวัติการเบิก">
+                            <button class="btn btn-sm btn-outline-primary fw-bold px-3" onclick="openHistoryModal()" title="ประวัติการเบิก" style="border-radius: 6px;">
                                 <i class="fas fa-history"></i> <span class="d-none d-sm-inline ms-1">ประวัติ</span>
                             </button>
                         </div>
@@ -172,6 +172,16 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                         <input type="radio" class="btn-check" name="reqType" id="reqTypeK2" value="K2">
                         <label class="btn btn-outline-warning text-dark fw-bold" for="reqTypeK2"><i class="fas fa-shopping-cart"></i> ขอสั่งซื้อ (K2)</label>
                     </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold text-secondary mb-1">เลขที่ Reservation <span class="text-danger">*</span></label>
+                    <input type="text" id="reqReserNo" class="form-control form-control-sm border-primary" placeholder="กรุณาระบุเลขที่ใบเบิก/Reservation..." required>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold text-secondary mb-1">คลังปลายทาง (WIP) <span class="text-danger">*</span></label>
+                    <select id="reqDestLoc" class="form-select form-select-sm border-primary" required>
+                        <option value="">กำลังโหลด...</option>
+                    </select>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold text-secondary mb-1">หมายเหตุ</label>

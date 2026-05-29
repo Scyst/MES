@@ -162,8 +162,9 @@ $pageIcon = "fas fa-store";
                                     </div>
                                     <div class="card-body p-2 bg-white rounded-bottom small">
                                         <div class="row g-1">
-                                            <div class="col-6 border-end"><small class="text-muted d-block fw-bold">ผู้ขอเบิก</small><span class="fw-bold" id="disp_requester">-</span></div>
-                                            <div class="col-6"><small class="text-muted d-block fw-bold">หมายเหตุ</small><span id="disp_remark">-</span></div>
+                                            <div class="col-4 border-end"><small class="text-muted d-block fw-bold">ผู้ขอเบิก</small><span class="fw-bold" id="disp_requester">-</span></div>
+                                            <div class="col-4 border-end"><small class="text-muted d-block fw-bold">Reser No.</small><span class="fw-bold text-primary" id="disp_reser_no">-</span></div>
+                                            <div class="col-4"><small class="text-muted d-block fw-bold">หมายเหตุ</small><span id="disp_remark">-</span></div>
                                         </div>
                                     </div>
                                 </div>
