@@ -715,7 +715,7 @@ window.loadActiveJobsForFulfillment = function() {
 
     jobList.innerHTML = `<div class="p-3 text-center"><i class="fas fa-spinner fa-spin text-primary"></i> โหลดข้อมูล...</div>`;
     
-    fetchAPI(`api_store.php?action=get_active_jobs_for_fulfillment&line=${encodeURIComponent(line)}`, 'GET')
+    fetchAPI(`get_active_jobs_for_fulfillment&line=${encodeURIComponent(line)}`, 'GET')
     .then(res => {
         if (!res.success) throw new Error(res.message);
         
@@ -758,7 +758,7 @@ window.loadFulfillmentData = function(job_id, job_no, target_qty) {
 
     container.innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>`;
 
-    fetchAPI(`api_store.php?action=get_plan_fulfillment&job_id=${job_id}`, 'GET')
+    fetchAPI(`get_plan_fulfillment&job_id=${job_id}`, 'GET')
     .then(res => {
         if (!res.success) throw new Error(res.message || 'Error loading fulfillment');
         
