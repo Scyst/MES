@@ -213,18 +213,19 @@ $pageIcon = "fas fa-store";
                                         <span class="badge bg-white shadow-sm px-3 py-2 rounded-pill fw-bold text-dark">WAITING</span>
                                     </div>
                                     <div class="card-body p-3 bg-white rounded-bottom small">
-                                        <div class="row g-2 text-center align-items-center">
+                                        <div class="row g-2 text-center">
                                             <div class="col-4 border-end">
-                                                <div id="k2_disp_img" class="mb-1"></div>
-                                                <span class="fw-bold text-primary small">SAP: <span id="k2_disp_sap"></span></span>
+                                                <div id="k2_disp_img" class="d-none"></div>
+                                                <small class="text-muted d-block fw-bold mb-1">รหัสวัสดุ (SAP)</small>
+                                                <span class="fw-bold fs-6 text-primary" id="k2_disp_sap">-</span>
                                             </div>
                                             <div class="col-4 border-end">
-                                                <small class="text-muted d-block fw-bold mb-1">รายละเอียด (Description)</small>
-                                                <div class="fw-bold text-dark text-truncate" id="k2_disp_desc" style="font-size: 0.9rem;">Description</div>
+                                                <small class="text-muted d-block fw-bold mb-1">รายละเอียดวัสดุ</small>
+                                                <div class="fw-bold fs-6 text-dark text-truncate px-2" id="k2_disp_desc">-</div>
                                             </div>
                                             <div class="col-4">
                                                 <small class="text-muted d-block fw-bold mb-1">รวม (ชิ้น)</small>
-                                                <span class="fw-bold text-warning-emphasis fs-5" id="k2_disp_total">0</span>
+                                                <span class="fw-bold fs-6 text-warning-emphasis" id="k2_disp_total">0</span>
                                             </div>
                                         </div>
                                     </div>
