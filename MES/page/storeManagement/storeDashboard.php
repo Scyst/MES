@@ -15,7 +15,7 @@ $pageIcon = "fas fa-store";
     <?php include_once __DIR__ . '/../components/common_head.php'; ?> 
     <?php include_once __DIR__ . '/../components/chart_head.php'; ?>
     <style>
-        :root { --bg-light-gray: #f4f6f9; }
+        :root { --bg-light-gray: #e9ecef; }
         body { background-color: var(--bg-light-gray); overflow: hidden; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -23,25 +23,26 @@ $pageIcon = "fas fa-store";
         /* 🟢 Global Toolbar (Tabs + Date Filter) */
         .global-toolbar {
             position: sticky; top: 0; z-index: 1020;
-            background-color: rgba(255, 255, 255, 0.85);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
             backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--bs-border-color);
+            border-bottom: 1px solid rgba(0,0,0,0.08);
             padding: 0.5rem 1rem;
             display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
         }
 
-        .mode-tab { border: none; background: transparent; color: #6c757d; font-weight: 600; padding: 0.4rem 0.8rem; border-bottom: 3px solid transparent; transition: all 0.15s; white-space: nowrap; font-size: 0.9rem; }
-        .mode-tab:hover { color: var(--bs-primary); }
-        .mode-tab.active { color: var(--bs-primary); border-bottom-color: var(--bs-primary); }
+        .mode-tab { border: none; background: transparent; color: #6c757d; font-weight: 600; padding: 0.4rem 0.8rem; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; font-size: 0.9rem; border-radius: 4px 4px 0 0; }
+        .mode-tab:hover { color: var(--bs-primary); background: rgba(13,110,253,0.03); }
+        .mode-tab.active { color: var(--bs-primary); border-bottom-color: var(--bs-primary); background: rgba(13,110,253,0.06); }
 
         /* Order Cards Styling */
-        .order-card { border: 1px solid var(--bs-border-color); background: #fff; transition: all 0.15s; border-left: 4px solid transparent; cursor: pointer; }
-        .order-card:hover { border-color: var(--bs-primary); background-color: #f8f9fa; }
-        .order-card.active { background-color: #eef6ff; border-color: var(--bs-primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .order-card { border: 1px solid rgba(0,0,0,0.04); background: #fff; transition: all 0.2s cubic-bezier(0.4,0,0.2,1); border-left: 4px solid transparent; cursor: pointer; border-radius: 8px !important; margin-bottom: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .order-card:hover { border-color: rgba(0,0,0,0.08); background-color: #f8faff; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); z-index: 2; position: relative; }
+        .order-card.active { background: linear-gradient(145deg, #f0f7ff, #ffffff); border-color: var(--bs-primary); border-left-color: var(--bs-primary); box-shadow: 0 4px 15px rgba(13,110,253,0.1); }
         .status-new { border-left-color: var(--bs-danger); } 
         .status-prep { border-left-color: var(--bs-warning); } 
-        .status-comp { border-left-color: var(--bs-success); opacity: 0.8; }
-        .status-rej { border-left-color: var(--bs-secondary); opacity: 0.7; }
+        .status-comp { border-left-color: var(--bs-success); opacity: 0.85; }
+        .status-rej { border-left-color: var(--bs-secondary); opacity: 0.75; }
         .item-img-small { width: 45px; height: 45px; object-fit: cover; border: 1px solid var(--bs-border-color); border-radius: 4px; }
         .ph-small { width: 45px; height: 45px; background: #f0f3f8; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
 
@@ -68,21 +69,24 @@ $pageIcon = "fas fa-store";
         }
 
         /* --- Analytics Enhanced Styling --- */
-        .stat-card { border: 1px solid var(--bs-border-color); border-radius: 8px; overflow: hidden; transition: all 0.2s ease; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
+        .stat-card { border: 1px solid rgba(0,0,0,0.04); border-radius: 12px; overflow: hidden; transition: all 0.3s ease; background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); border-color: rgba(0,0,0,0.08); }
         .stat-icon { width: 42px; height: 42px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 0.5rem; }
         .stat-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #6c757d; }
-        .stat-value { font-size: 1.5rem; font-weight: 800; line-height: 1; color: #2c3e50; }
+        .stat-value { font-size: 1.8rem; font-weight: 800; line-height: 1; color: #2c3e50; }
         
         /* Advanced KPI Boxes (Vertical Stack) */
         .adv-kpi-box { 
-            background: #f8f9fa; border: 1px solid var(--bs-border-color); 
-            border-radius: 6px; padding: 0.5rem 0.75rem; 
+            background: linear-gradient(135deg, #f8f9fa, #ffffff); border: 1px solid rgba(0,0,0,0.05); 
+            border-radius: 10px; padding: 0.75rem 1rem; 
             display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
             height: 100%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            transition: all 0.2s;
         }
-        .adv-kpi-label { font-size: 0.7rem; font-weight: bold; color: #6c757d; margin-bottom: 2px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .adv-kpi-val { font-size: 1.1rem; font-weight: 800; line-height: 1.2; }
+        .adv-kpi-box:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .adv-kpi-label { font-size: 0.75rem; font-weight: 700; color: #6c757d; margin-bottom: 4px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+        .adv-kpi-val { font-size: 1.2rem; font-weight: 800; line-height: 1.2; }
 
         .chart-container-card { border: 1px solid var(--bs-border-color); background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .chart-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--bs-border-color); display: flex; justify-content: space-between; align-items: center; }
@@ -148,82 +152,86 @@ $pageIcon = "fas fa-store";
 
             <div class="p-2 p-lg-3 flex-grow-1 d-flex flex-column overflow-hidden">
                 
-                <div class="row g-2 h-100 flex-grow-1" id="order-layout">
+                <div class="row g-2 h-100 flex-grow-1 px-1 px-lg-2" id="order-layout">
                     
                     <div class="col-12 col-lg-4 col-xl-3 d-flex flex-column h-100" id="left-pane">
-                        <div class="bg-white border rounded shadow-sm p-2 mb-2 flex-shrink-0">
+                        <div class="ff-card p-3 mb-2 flex-shrink-0">
                             <label class="form-label small fw-bold text-secondary mb-1">กรองสถานะรายการ</label>
-                            <select id="filter_status" class="form-select form-select-sm fw-bold border-secondary-subtle" onchange="triggerGlobalReload();">
+                            <select id="filter_status" class="form-select form-select-sm fw-bold border-secondary-subtle" style="border-radius: 8px;" onchange="triggerGlobalReload();">
                                 <option value="ACTIVE" class="opt-stock">⚡ คิวงาน (Active)</option>
                                 <option value="ALL" class="opt-stock">📦 ประวัติ (History)</option>
                                 <option value="WAITING" class="opt-k2 d-none">⏳ รอเปิด K2</option>
                                 <option value="K2_OPENED" class="opt-k2 d-none">✅ เปิดแล้ว (History)</option>
                             </select>
                         </div>
-                        <div class="list-group list-group-flush border rounded shadow-sm flex-grow-1 overflow-auto hide-scrollbar bg-white p-1 gap-1" id="orderListContainer"></div>
+                        <div class="ff-card flex-grow-1 overflow-auto hide-scrollbar p-2 d-flex flex-column gap-1" style="background-color: #fcfcfc;" id="orderListContainer"></div>
                     </div>
 
                     <div class="col-12 col-lg-8 col-xl-9 d-none d-lg-flex flex-column h-100" id="right-pane">
-                        <div class="bg-white border rounded shadow-sm flex-grow-1 d-flex flex-column overflow-hidden position-relative">
+                        <div class="ff-card flex-grow-1 d-flex flex-column overflow-hidden position-relative" style="background-color: #f8f9fa;">
                             
                             <div id="empty-state" class="flex-grow-1 d-flex flex-column align-items-center justify-content-center text-muted opacity-50">
-                                <i class="fas fa-inbox fa-4x mb-3"></i>
+                                <i class="fas fa-inbox fa-4x mb-3 text-light-gray opacity-50"></i>
                                 <h5 class="fw-bold">เลือกรายการเพื่อดูรายละเอียด</h5>
                             </div>
 
-                            <div id="form-stock" class="flex-grow-1 d-none flex-column overflow-hidden bg-light">
-                                <div class="card border-0 shadow-sm m-2 flex-shrink-0">
-                                    <div class="card-header bg-dark text-white p-2 d-flex justify-content-between align-items-center border-0 rounded-top" id="header-bg">
+                            <div id="form-stock" class="flex-grow-1 d-none flex-column overflow-hidden bg-transparent">
+                                <div class="card border-0 shadow-sm mx-3 mt-3 mb-2 flex-shrink-0" style="border-radius: 12px; overflow: hidden;">
+                                    <div class="card-header p-3 d-flex justify-content-between align-items-center border-0 rounded-top" style="background: linear-gradient(90deg, #343a40, #495057); color: white;" id="header-bg">
                                         <div class="d-flex align-items-center gap-2">
-                                            <button class="btn btn-sm btn-light d-lg-none" onclick="switchView('list')"><i class="fas fa-arrow-left"></i></button>
-                                            <div><h6 class="mb-0 fw-bold" id="disp_req_no">REQ-XXXX</h6><small class="opacity-75" id="disp_time">--/--/----</small></div>
+                                            <button class="btn btn-sm btn-light d-lg-none shadow-sm rounded-circle" onclick="switchView('list')"><i class="fas fa-arrow-left"></i></button>
+                                            <div><h6 class="mb-0 fw-bold fs-5" id="disp_req_no">REQ-XXXX</h6><small class="text-light opacity-75" id="disp_time">--/--/----</small></div>
                                         </div>
-                                        <span class="badge bg-white text-dark small" id="disp_status">STATUS</span>
+                                        <span class="badge bg-white text-dark shadow-sm px-3 py-2 rounded-pill" id="disp_status">STATUS</span>
                                     </div>
-                                    <div class="card-body p-2 bg-white rounded-bottom small">
-                                        <div class="row g-1">
-                                            <div class="col-4 border-end"><small class="text-muted d-block fw-bold">ผู้ขอเบิก</small><span class="fw-bold" id="disp_requester">-</span></div>
-                                            <div class="col-4 border-end"><small class="text-muted d-block fw-bold">Reser No.</small><span class="fw-bold text-primary" id="disp_reser_no">-</span></div>
-                                            <div class="col-4"><small class="text-muted d-block fw-bold">หมายเหตุ</small><span id="disp_remark">-</span></div>
+                                    <div class="card-body p-3 bg-white rounded-bottom small">
+                                        <div class="row g-2 text-center">
+                                            <div class="col-4 border-end"><small class="text-muted d-block fw-bold mb-1">ผู้ขอเบิก</small><span class="fw-bold fs-6" id="disp_requester">-</span></div>
+                                            <div class="col-4 border-end"><small class="text-muted d-block fw-bold mb-1">Reser No.</small><span class="fw-bold fs-6 text-primary" id="disp_reser_no">-</span></div>
+                                            <div class="col-4"><small class="text-muted d-block fw-bold mb-1">หมายเหตุ</small><span class="fw-bold" id="disp_remark">-</span></div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex-grow-1 overflow-auto hide-scrollbar px-2 pb-2 w-100">
-                                    <small class="fw-bold text-secondary d-block mb-2 ms-1">รายการวัสดุ (Pick List)</small>
-                                    <div id="itemsContainer" class="d-flex flex-column gap-1 mb-2"></div>
-                                    <div id="issuerContainer" class="alert alert-success d-none py-2 px-3 small border-0 shadow-sm"><i class="fas fa-check-circle me-1"></i> จ่ายโดย: <span id="disp_issuer" class="fw-bold"></span> (<span id="disp_issue_time"></span>)</div>
+                                <div class="flex-grow-1 overflow-auto hide-scrollbar px-3 pb-3 w-100">
+                                    <div class="d-flex align-items-center gap-2 mb-3 mt-2">
+                                        <i class="fas fa-tasks text-primary"></i>
+                                        <span class="fw-bold text-dark fs-6">รายการวัสดุ (Pick List)</span>
+                                    </div>
+                                    <div id="itemsContainer" class="d-flex flex-column gap-2 mb-3"></div>
+                                    <div id="issuerContainer" class="alert alert-success d-none py-3 px-4 shadow-sm border-0 rounded-3" style="background: linear-gradient(90deg, #d1e7dd, #e5f2eb); color: #0f5132;"><i class="fas fa-check-circle me-2 fs-5 align-middle"></i> จ่ายโดย: <span id="disp_issuer" class="fw-bold fs-6"></span> <span class="ms-1 opacity-75 small">(<span id="disp_issue_time"></span>)</span></div>
                                 </div>
-                                <div id="action-bar-mobile" class="bg-white border-top p-2 flex-shrink-0 d-flex justify-content-end gap-2 shadow-sm"></div>
+                                <div id="action-bar-mobile" class="bg-white border-top p-3 flex-shrink-0 d-flex justify-content-end gap-2 shadow-sm" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;"></div>
                             </div>
 
-                            <div id="form-k2" class="flex-grow-1 d-none flex-column overflow-hidden bg-light">
-                                <div class="card border-0 shadow-sm m-2 flex-shrink-0 border-top border-warning border-3">
-                                    <div class="card-body p-2 bg-white rounded">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <button class="btn btn-sm btn-light d-lg-none border" onclick="switchView('list')"><i class="fas fa-arrow-left"></i></button>
+                            <div id="form-k2" class="flex-grow-1 d-none flex-column overflow-hidden bg-transparent">
+                                <div class="card border-0 shadow-sm mx-3 mt-3 mb-2 flex-shrink-0 border-top border-warning" style="border-top-width: 4px !important; border-radius: 12px;">
+                                    <div class="card-body p-3 bg-white rounded-bottom">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <button class="btn btn-sm btn-light d-lg-none border rounded-circle shadow-sm" onclick="switchView('list')"><i class="fas fa-arrow-left"></i></button>
                                             <div id="k2_disp_img"></div>
                                             <div class="flex-grow-1 min-w-0">
-                                                <h6 class="fw-bold text-dark mb-0 text-truncate" id="k2_disp_desc">Description</h6>
-                                                <small class="text-primary fw-bold">SAP: <span id="k2_disp_sap"></span></small>
+                                                <h5 class="fw-bold text-dark mb-1 text-truncate" id="k2_disp_desc">Description</h5>
+                                                <div class="text-primary fw-bold bg-primary bg-opacity-10 px-2 py-1 rounded d-inline-block small"><i class="fas fa-barcode me-1"></i> SAP: <span id="k2_disp_sap"></span></div>
                                             </div>
-                                            <div class="text-center bg-warning bg-opacity-10 border border-warning rounded p-1 px-3">
-                                                <small class="text-dark small d-block">รวม</small>
-                                                <span class="fw-bold text-warning-emphasis" id="k2_disp_total">0</span>
+                                            <div class="text-center bg-warning bg-opacity-10 border border-warning rounded-3 p-2 px-4 shadow-sm">
+                                                <small class="text-dark fw-bold d-block mb-1 text-uppercase">รวม (ชิ้น)</small>
+                                                <span class="fw-bold text-warning-emphasis fs-4" id="k2_disp_total">0</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex-grow-1 overflow-auto hide-scrollbar px-2 pb-2 w-100">
-                                    <table class="table table-sm table-hover bg-white rounded shadow-sm border small">
-                                        <thead class="table-light"><tr><th>วันที่</th><th>บิล</th><th>ผู้เบิก</th><th class="text-end">จำนวน</th></tr></thead>
+                                <div class="flex-grow-1 overflow-auto hide-scrollbar px-3 pb-3 w-100">
+                                    <table class="ff-table mb-0 text-center align-middle w-100">
+                                        <thead class="sticky-top" style="background: #f8f9fa; top: -15px;"><tr><th class="text-start ps-3">วันที่</th><th>เลขที่บิล</th><th>ผู้เบิก</th><th class="text-end pe-3">จำนวน (ชิ้น)</th></tr></thead>
                                         <tbody id="k2UsersList"></tbody>
                                     </table>
                                 </div>
-                                <div id="k2-action-bar" class="bg-white border-top p-2 flex-shrink-0 shadow-sm d-none">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text bg-light">K2 PR</span>
-                                        <input type="text" id="input_k2_pr" class="form-control fw-bold" placeholder="เช่น PR-2404-0015">
-                                        <button id="btnSubmitK2" class="btn btn-warning fw-bold px-3" onclick="submitK2Batch()">อัปเดต</button>
+                                <div id="k2-action-bar" class="bg-white border-top p-3 flex-shrink-0 shadow-sm d-none d-flex align-items-center justify-content-between" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+                                    <div class="fw-bold text-muted d-none d-md-block"><i class="fas fa-edit me-1"></i> อัปเดตสถานะ K2 PR</div>
+                                    <div class="input-group input-group-lg w-auto">
+                                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-hashtag"></i></span>
+                                        <input type="text" id="input_k2_pr" class="form-control fw-bold border-start-0" placeholder="เช่น PR-2404-0015" style="box-shadow: none;">
+                                        <button id="btnSubmitK2" class="btn btn-warning fw-bold px-4 text-dark" onclick="submitK2Batch()"><i class="fas fa-save me-1"></i> บันทึก</button>
                                     </div>
                                 </div>
                             </div>
@@ -231,56 +239,77 @@ $pageIcon = "fas fa-store";
                     </div> 
                 </div>
 
-                <div class="row g-2 d-none h-100 overflow-auto pb-3 hide-scrollbar" id="analytics-layout">
+                <div class="row g-3 d-none overflow-auto pb-4 hide-scrollbar px-2" id="analytics-layout">
                     
-                    <div class="col-6 col-lg-3"><div class="stat-card p-2 border-start border-primary border-4"><div class="stat-label">บิลสำเร็จ</div><div class="stat-value" id="stat_total_reqs">0</div></div></div>
-                    <div class="col-6 col-lg-3"><div class="stat-card p-2 border-start border-success border-4"><div class="stat-label">จ่ายออก (ชิ้น)</div><div class="stat-value" id="stat_total_issued">0</div></div></div>
-                    <div class="col-6 col-lg-3"><div class="stat-card p-2 border-start border-warning border-4"><div class="stat-label">รอ K2 (ใบ)</div><div class="stat-value" id="stat_waiting_k2">0</div></div></div>
-                    <div class="col-6 col-lg-3"><div class="stat-card p-2 border-start border-danger border-4"><div class="stat-label">ถูกปฏิเสธ</div><div class="stat-value" id="stat_total_rejects">0</div></div></div>
+                    <div class="col-12"><h5 class="fw-bold text-dark mb-0 ms-1 mt-2">ภาพรวมการเบิกจ่าย</h5></div>
+
+                    <div class="col-6 col-lg-3"><div class="stat-card p-3 border-start border-primary border-4"><div class="stat-label mb-2">บิลสำเร็จ</div><div class="stat-value" id="stat_total_reqs">0</div></div></div>
+                    <div class="col-6 col-lg-3"><div class="stat-card p-3 border-start border-success border-4"><div class="stat-label mb-2">จ่ายออก (ชิ้น)</div><div class="stat-value" id="stat_total_issued">0</div></div></div>
+                    <div class="col-6 col-lg-3"><div class="stat-card p-3 border-start border-warning border-4"><div class="stat-label mb-2">รอ K2 (ใบ)</div><div class="stat-value" id="stat_waiting_k2">0</div></div></div>
+                    <div class="col-6 col-lg-3"><div class="stat-card p-3 border-start border-danger border-4"><div class="stat-label mb-2">ถูกปฏิเสธ</div><div class="stat-value" id="stat_total_rejects">0</div></div></div>
 
                     <div class="col-12">
-                        <div class="row g-2">
+                        <div class="row g-3 mt-1">
                             <div class="col-6 col-md-3 col-xl">
-                                <div class="adv-kpi-box"><div class="adv-kpi-label">SLA (เวลาจัดของ)</div><div class="adv-kpi-val" id="adv_sla">0 นาที</div></div>
+                                <div class="adv-kpi-box"><div class="adv-kpi-label"><i class="fas fa-stopwatch me-1 text-primary"></i> SLA</div><div class="adv-kpi-val text-dark" id="adv_sla">0 นาที</div></div>
                             </div>
                             <div class="col-6 col-md-3 col-xl">
-                                <div class="adv-kpi-box"><div class="adv-kpi-label">Fill Rate</div><div class="adv-kpi-val text-success" id="adv_fill_rate">0%</div></div>
+                                <div class="adv-kpi-box"><div class="adv-kpi-label"><i class="fas fa-boxes me-1 text-success"></i> Fill Rate</div><div class="adv-kpi-val text-success" id="adv_fill_rate">0%</div></div>
                             </div>
                             <div class="col-6 col-md-3 col-xl">
-                                <div class="adv-kpi-box"><div class="adv-kpi-label">IRA (สต็อกตรง)</div><div class="adv-kpi-val text-info" id="adv_ira">0%</div></div>
+                                <div class="adv-kpi-box"><div class="adv-kpi-label"><i class="fas fa-check-circle me-1 text-info"></i> IRA</div><div class="adv-kpi-val text-info" id="adv_ira">0%</div></div>
                             </div>
                             <div class="col-6 col-md-3 col-xl">
-                                <div class="adv-kpi-box" title="Dead Stock 90 วัน"><div class="adv-kpi-label">Dead Stock (90D)</div><div class="adv-kpi-val text-danger" id="adv_dead_stock">฿0</div></div>
-                            </div>
-                            <div class="col-12 col-md-12 col-xl">
-                                <div class="adv-kpi-box"><div class="adv-kpi-label">Turnover Ratio</div><div class="adv-kpi-val text-warning" id="adv_turnover">0.00</div></div>
+                                <div class="adv-kpi-box"><div class="adv-kpi-label"><i class="fas fa-exclamation-triangle me-1 text-danger"></i> Reject Rate</div><div class="adv-kpi-val text-danger" id="adv_reject_rate">0%</div></div>
                             </div>
                         </div>
                     </div>
 
                     <div class="col-12 col-xl-8">
-                        <div class="chart-container-card h-100">
-                            <div class="chart-header"><h6 class="chart-title"><i class="fas fa-chart-line me-2 text-primary"></i>แนวโน้มการเบิกจ่ายรายวัน</h6></div>
-                            <div class="p-2" style="height: 280px;"><canvas id="chartTrend"></canvas></div>
+                        <div class="chart-container-card h-100 shadow-sm border-0 d-flex flex-column">
+                            <div class="ff-header-gradient p-3 d-flex justify-content-between align-items-center">
+                                <h6 class="fw-bold text-dark mb-0"><i class="fas fa-chart-bar text-primary me-2"></i> ปริมาณบิลเบิก (รายวัน)</h6>
+                            </div>
+                            <div class="p-3 flex-grow-1" style="height: 350px;">
+                                <canvas id="chartTrend"></canvas>
+                            </div>
                         </div>
                     </div>
+
                     <div class="col-12 col-xl-4">
-                        <div class="chart-container-card h-100">
-                            <div class="chart-header"><h6 class="chart-title"><i class="fas fa-chart-pie me-2 text-success"></i>สัดส่วนหมวดหมู่</h6></div>
-                            <div class="p-2" style="height: 280px;"><canvas id="chartCategory"></canvas></div>
+                        <div class="chart-container-card h-100 shadow-sm border-0 d-flex flex-column">
+                            <div class="ff-header-gradient p-3 d-flex justify-content-between align-items-center">
+                                <h6 class="fw-bold text-dark mb-0"><i class="fas fa-chart-pie text-success me-2"></i> สัดส่วนวัสดุที่เบิก</h6>
+                            </div>
+                            <div class="p-3 flex-grow-1 d-flex align-items-center justify-content-center" style="height: 350px;">
+                                <canvas id="chartCategory"></canvas>
+                            </div>
                         </div>
                     </div>
 
                     <div class="col-12 col-md-6">
-                        <div class="chart-container-card h-100">
-                            <div class="chart-header"><h6 class="chart-title"><i class="fas fa-award me-2 text-warning"></i>Top 5 วัสดุเบิกสูงสุด</h6></div>
-                            <div class="p-2" style="height: 250px;"><canvas id="chartTopItems"></canvas></div>
+                        <div class="chart-container-card shadow-sm border-0">
+                            <div class="ff-header-gradient p-3">
+                                <h6 class="fw-bold text-dark mb-0"><i class="fas fa-star text-warning me-2"></i> Top 5 วัสดุยอดฮิต</h6>
+                            </div>
+                            <div class="p-0">
+                                <div class="p-3 pt-0" style="height: 250px;">
+                                    <canvas id="chartTopItems"></canvas>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
                     <div class="col-12 col-md-6">
-                        <div class="chart-container-card h-100">
-                            <div class="chart-header"><h6 class="chart-title"><i class="fas fa-user-tag me-2 text-info"></i>Top 5 ผู้เบิกบ่อยสุด</h6></div>
-                            <div class="p-2" style="height: 250px;"><canvas id="chartTopUsers"></canvas></div>
+                        <div class="chart-container-card shadow-sm border-0">
+                            <div class="ff-header-gradient p-3">
+                                <h6 class="fw-bold text-dark mb-0"><i class="fas fa-user-astronaut text-info me-2"></i> Top 5 ผู้เบิก (แผนกผลิต)</h6>
+                            </div>
+                            <div class="p-0">
+                                <div class="p-3 pt-0" style="height: 250px;">
+                                    <canvas id="chartTopUsers"></canvas>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
