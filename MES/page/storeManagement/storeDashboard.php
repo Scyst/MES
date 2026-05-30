@@ -177,12 +177,12 @@ $pageIcon = "fas fa-store";
 
                             <div id="form-stock" class="flex-grow-1 d-none flex-column overflow-hidden bg-transparent">
                                 <div class="card border-0 shadow-sm mx-3 mt-3 mb-2 flex-shrink-0" style="border-radius: 12px; overflow: hidden;">
-                                    <div class="card-header p-3 d-flex justify-content-between align-items-center border-0 rounded-top" style="background: linear-gradient(90deg, #343a40, #495057); color: white;" id="header-bg">
+                                    <div class="card-header p-3 d-flex justify-content-between align-items-center border-0 rounded-top bg-dark text-white" id="header-bg">
                                         <div class="d-flex align-items-center gap-2">
                                             <button class="btn btn-sm btn-light d-lg-none shadow-sm rounded-circle" onclick="switchView('list')"><i class="fas fa-arrow-left"></i></button>
-                                            <div><h6 class="mb-0 fw-bold fs-5" id="disp_req_no">REQ-XXXX</h6><small class="text-light opacity-75" id="disp_time">--/--/----</small></div>
+                                            <div><h6 class="mb-0 fw-bold fs-5" id="disp_req_no">REQ-XXXX</h6><small class="opacity-75" id="disp_time">--/--/----</small></div>
                                         </div>
-                                        <span class="badge bg-white text-dark shadow-sm px-3 py-2 rounded-pill" id="disp_status">STATUS</span>
+                                        <span class="badge bg-white shadow-sm px-3 py-2 rounded-pill fw-bold text-dark" id="disp_status">STATUS</span>
                                     </div>
                                     <div class="card-body p-3 bg-white rounded-bottom small">
                                         <div class="row g-2 text-center">
@@ -205,23 +205,26 @@ $pageIcon = "fas fa-store";
 
                             <div id="form-k2" class="flex-grow-1 d-none flex-column overflow-hidden bg-transparent">
                                 <div class="card border-0 shadow-sm mx-3 mt-3 mb-2 flex-shrink-0" style="border-radius: 12px; overflow: hidden;">
-                                    <div class="card-header p-3 d-flex justify-content-between align-items-center border-0 rounded-top" style="background: linear-gradient(90deg, #fd7e14, #ffc107); color: white;">
+                                    <div class="card-header p-3 d-flex justify-content-between align-items-center border-0 rounded-top bg-dark text-white">
                                         <div class="d-flex align-items-center gap-2">
                                             <button class="btn btn-sm btn-light d-lg-none shadow-sm rounded-circle" onclick="switchView('list')"><i class="fas fa-arrow-left"></i></button>
-                                            <div><h6 class="mb-0 fw-bold fs-5"><i class="fas fa-shopping-cart me-2"></i>รอเปิด K2</h6></div>
+                                            <div><h6 class="mb-0 fw-bold fs-5"><i class="fas fa-shopping-cart me-2"></i>รอเปิด K2</h6><small class="opacity-75">Material Requisition</small></div>
                                         </div>
-                                        <span class="badge bg-white text-dark shadow-sm px-3 py-2 rounded-pill"><i class="fas fa-clock me-1 text-warning"></i> WAITING</span>
+                                        <span class="badge bg-white shadow-sm px-3 py-2 rounded-pill fw-bold text-dark">WAITING</span>
                                     </div>
-                                    <div class="card-body p-3 bg-white rounded-bottom">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <div id="k2_disp_img"></div>
-                                            <div class="flex-grow-1 min-w-0">
-                                                <h5 class="fw-bold text-dark mb-1 text-truncate" id="k2_disp_desc">Description</h5>
-                                                <div class="text-primary fw-bold bg-primary bg-opacity-10 px-2 py-1 rounded d-inline-block small"><i class="fas fa-barcode me-1"></i> SAP: <span id="k2_disp_sap"></span></div>
+                                    <div class="card-body p-3 bg-white rounded-bottom small">
+                                        <div class="row g-2 text-center align-items-center">
+                                            <div class="col-4 border-end">
+                                                <div id="k2_disp_img" class="mb-1"></div>
+                                                <span class="fw-bold text-primary small">SAP: <span id="k2_disp_sap"></span></span>
                                             </div>
-                                            <div class="text-center bg-warning bg-opacity-10 border border-warning rounded-3 p-2 px-4 shadow-sm">
-                                                <small class="text-dark fw-bold d-block mb-1 text-uppercase">รวม (ชิ้น)</small>
-                                                <span class="fw-bold text-warning-emphasis fs-4" id="k2_disp_total">0</span>
+                                            <div class="col-4 border-end">
+                                                <small class="text-muted d-block fw-bold mb-1">รายละเอียด (Description)</small>
+                                                <div class="fw-bold text-dark text-truncate" id="k2_disp_desc" style="font-size: 0.9rem;">Description</div>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted d-block fw-bold mb-1">รวม (ชิ้น)</small>
+                                                <span class="fw-bold text-warning-emphasis fs-5" id="k2_disp_total">0</span>
                                             </div>
                                         </div>
                                     </div>
@@ -245,12 +248,14 @@ $pageIcon = "fas fa-store";
                                         </table>
                                     </div>
                                 </div>
-                                <div id="k2-action-bar" class="bg-white border-top p-3 flex-shrink-0 shadow-sm d-none d-flex align-items-center justify-content-between" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
-                                    <div class="fw-bold text-muted d-none d-md-block"><i class="fas fa-edit me-1"></i> อัปเดตสถานะ K2 PR</div>
-                                    <div class="input-group input-group-lg w-auto">
-                                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-hashtag"></i></span>
-                                        <input type="text" id="input_k2_pr" class="form-control fw-bold border-start-0" placeholder="เช่น PR-2404-0015" style="box-shadow: none;">
-                                        <button id="btnSubmitK2" class="btn btn-warning fw-bold px-4 text-dark" onclick="submitK2Batch()"><i class="fas fa-save me-1"></i> บันทึก</button>
+                                <div id="k2-action-bar" class="bg-white border-top p-3 flex-shrink-0 shadow-sm d-none" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+                                    <div class="d-flex flex-column gap-2 w-100">
+                                        <div class="d-flex gap-2">
+                                            <input type="text" id="input_k2_pr" class="form-control py-2 fw-bold" placeholder="ระบุเลขที่ PR (เช่น PR-2404-0015)" style="background-color: #f8f9fa;">
+                                            <button id="btnSubmitK2" class="btn btn-success fw-bold px-4 py-2 flex-shrink-0" onclick="submitK2Batch()">
+                                                <i class="fas fa-check-double me-1"></i> ยืนยันบันทึก
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
