@@ -123,7 +123,7 @@ $pageIcon = "fas fa-store";
         <main id="main-content" class="d-flex flex-column flex-grow-1 overflow-hidden">
             
             <div class="global-toolbar flex-shrink-0">
-                <div class="d-flex gap-1 overflow-auto hide-scrollbar">
+                <div class="d-flex gap-1 overflow-auto hide-scrollbar w-100 pe-2" style="flex-wrap: nowrap; -webkit-overflow-scrolling: touch;">
                     <button class="mode-tab active" id="tab-stock" onclick="switchDashboardMode('STOCK')">
                         <i class="fas fa-box me-1"></i> คิวจ่าย (Stock)
                     </button>
