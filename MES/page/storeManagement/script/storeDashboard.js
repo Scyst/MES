@@ -168,12 +168,12 @@ async function loadStockOrders(isSilent) {
                 const safeTotalItems = escapeHTML(order.total_items);
 
                 html += `
-                <div class="order-card ${sClass} ${isActive} ${isPulse} w-100 p-2" id="order-card-${order.id}" onclick="openStockOrder(${order.id})">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <span class="fw-bold text-dark mb-0 small">${safeReqNumber}</span><div>${sBadge}</div>
+                <div class="order-card ${sClass} ${isActive} ${isPulse} w-100 p-3 mb-2" id="order-card-${order.id}" onclick="openStockOrder(${order.id})">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="fw-bold text-dark mb-0" style="font-size: 0.95rem;">${safeReqNumber}</span><div>${sBadge}</div>
                     </div>
-                    <div class="small text-muted mb-1 text-truncate" style="font-size:0.75rem;"><i class="fas fa-user me-1 text-primary"></i> ${safeRequester}</div>
-                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.7rem;">
+                    <div class="text-muted mb-2 text-truncate" style="font-size:0.85rem;"><i class="fas fa-user me-1 text-primary"></i> ${safeRequester}</div>
+                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.85rem;">
                         <span><i class="far fa-clock me-1"></i> ${safeReqTime}</span>
                         <span class="fw-bold text-secondary">${safeTotalItems} Items</span>
                     </div>
@@ -493,12 +493,12 @@ async function loadK2Summary(isSilent) {
                             : `<span class="badge bg-success"><i class="fas fa-check"></i> ${safeK2Ref}</span>`;
 
                 html += `
-                <div class="order-card ${isActive} ${isPulse} w-100 p-2" id="k2-card-${safeItemCode}" onclick="openK2Detail('${safeItemCode}', '${safeDescJS}', '${safeCategory}', '${safeImgPath}')">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <div class="pe-2 text-truncate" style="max-width: 70%;"><span class="fw-bold text-dark mb-0 small text-truncate" title="${safeDesc}">${safeDesc}</span></div><div>${badge}</div>
+                <div class="order-card ${isActive} ${isPulse} w-100 p-3 mb-2" id="k2-card-${safeItemCode}" onclick="openK2Detail('${safeItemCode}', '${safeDescJS}', '${safeCategory}', '${safeImgPath}')">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="pe-2 text-truncate" style="max-width: 70%;"><span class="fw-bold text-dark mb-0 text-truncate" style="font-size: 0.95rem;" title="${safeDesc}">${safeDesc}</span></div><div>${badge}</div>
                     </div>
-                    <div class="small text-primary mb-1 fw-bold" style="font-size:0.75rem;">SAP: ${safeItemCode}</div>
-                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.7rem;">
+                    <div class="text-primary mb-2 fw-bold" style="font-size:0.85rem;">SAP: ${safeItemCode}</div>
+                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.85rem;">
                         <span><i class="fas fa-users me-1 text-info"></i> ${safeReqCount} ใบเบิก</span><span class="fw-bold text-warning-emphasis">รวม: ${safeTotalQty}</span>
                     </div>
                 </div>`;

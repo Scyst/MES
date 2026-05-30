@@ -231,11 +231,7 @@ $pageIcon = "fas fa-store";
                                     </div>
                                 </div>
                                 <div class="flex-grow-1 overflow-auto hide-scrollbar px-3 pb-3 w-100">
-                                    <div class="d-flex align-items-center gap-2 mb-3 mt-2">
-                                        <i class="fas fa-list text-warning"></i>
-                                        <span class="fw-bold text-dark fs-6">รายการบิลที่รอเปิด K2</span>
-                                    </div>
-                                    <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                                    <div class="card border-0 shadow-sm mt-3" style="border-radius: 12px; overflow: hidden;">
                                         <table class="table mb-0 text-center align-middle w-100 bg-white">
                                             <thead class="bg-light text-muted" style="border-bottom: 2px solid #e9ecef;">
                                                 <tr>
