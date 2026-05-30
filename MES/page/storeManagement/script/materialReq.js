@@ -423,7 +423,7 @@ window.submitRequisition = function() {
             if (reserEl) reserEl.focus();
             return;
         }
-    }
+        
         for (let code of itemCodes) {
             let item = cart[code];
             if (item.qty > item.maxQty) {
