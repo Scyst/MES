@@ -286,18 +286,17 @@ $pageIcon = "fas fa-store";
                 </div>
 
                 <!-- Fulfillment Layout -->
-                <div class="row d-none h-100 overflow-auto pb-4 hide-scrollbar" id="fulfillment-layout">
+                <div class="row d-none h-100 overflow-auto pb-4 hide-scrollbar" id="fulfillment-layout" style="background-color: #e9ecef; border-radius: 12px; margin: 0; padding-top: 15px;">
                     <div class="col-12 d-flex flex-column h-100 px-3">
                         
-                        <!-- Toolbar (Simplified) -->
-                        <div class="d-flex justify-content-end mb-3 flex-shrink-0">
-                            <div class="d-flex align-items-center gap-1 ff-card px-3 py-1 shadow-sm" style="border-radius: 25px;">
-                                <i class="fas fa-filter text-muted opacity-50 ms-2"></i>
-                                <select id="fulfill_line" class="form-select form-select-sm fw-bold border-0 bg-transparent shadow-none cursor-pointer" style="min-width: 160px; outline: none;" onchange="loadActiveJobsForFulfillment()">
+                        <!-- Toolbar -->
+                        <div class="ff-card p-3 mb-3 flex-shrink-0 d-flex justify-content-end align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-filter text-muted ms-2"></i>
+                                <select id="fulfill_line" class="form-select form-select-sm fw-bold border-secondary-subtle" style="min-width: 200px; border-radius: 6px;" onchange="loadActiveJobsForFulfillment()">
                                     <option value="">🌐 ทุกไลน์การผลิต</option>
                                 </select>
-                                <div class="border-start ms-1 me-2" style="height: 20px;"></div>
-                                <button class="btn btn-sm btn-light border-0 rounded-circle text-primary" style="width:32px; height:32px;" onclick="loadActiveJobsForFulfillment()" title="รีเฟรชข้อมูล">
+                                <button class="btn btn-sm btn-primary px-3 shadow-sm" style="border-radius: 6px;" onclick="loadActiveJobsForFulfillment()" title="รีเฟรชข้อมูล">
                                     <i class="fas fa-sync-alt"></i>
                                 </button>
                             </div>
@@ -307,11 +306,11 @@ $pageIcon = "fas fa-store";
                         <div class="row g-3 flex-grow-1 overflow-hidden">
                             <!-- Left: Job list -->
                             <div class="col-md-4 col-lg-3 d-flex flex-column h-100">
-                                <div class="ff-card h-100 d-flex flex-column" style="background-color: #fcfcfc;">
-                                    <div class="ff-header-gradient p-3 fw-bold text-dark d-flex align-items-center shadow-sm" style="z-index: 2;">
+                                <div class="ff-card h-100 d-flex flex-column shadow-sm" style="background-color: #f8f9fa; border: 1px solid rgba(0,0,0,0.08);">
+                                    <div class="ff-header-gradient p-3 fw-bold text-dark d-flex align-items-center" style="border-bottom: 1px solid rgba(0,0,0,0.08);">
                                         <i class="fas fa-clipboard-list text-primary me-2"></i> คิวงาน (Active Jobs)
                                     </div>
-                                    <div class="p-2 flex-grow-1 overflow-auto hide-scrollbar" id="fulfillJobList" style="max-height: calc(100vh - 200px);">
+                                    <div class="p-2 flex-grow-1 overflow-auto hide-scrollbar" id="fulfillJobList" style="max-height: calc(100vh - 250px);">
                                         <div class="p-4 text-center text-muted">กำลังโหลดข้อมูล...</div>
                                     </div>
                                 </div>
@@ -319,14 +318,14 @@ $pageIcon = "fas fa-store";
 
                             <!-- Right: Table -->
                             <div class="col-md-8 col-lg-9 d-flex flex-column h-100">
-                                <div class="ff-card h-100 d-flex flex-column" style="background-color: #f8f9fa;">
-                                    <div class="ff-header-gradient p-3 d-flex justify-content-between align-items-center shadow-sm" style="z-index: 2;">
+                                <div class="ff-card h-100 d-flex flex-column shadow-sm" style="background-color: #ffffff; border: 1px solid rgba(0,0,0,0.08);">
+                                    <div class="ff-header-gradient p-3 d-flex justify-content-between align-items-center" style="border-bottom: 1px solid rgba(0,0,0,0.08);">
                                         <div class="fw-bold text-dark">
                                             <i class="fas fa-box-open text-primary me-2"></i> รายการวัตถุดิบตามสูตร (BOM Details)
                                         </div>
-                                        <div id="fulfillSelectedJobName" class="badge bg-white text-dark border px-3 py-2 fs-7 shadow-sm rounded-pill">-</div>
+                                        <div id="fulfillSelectedJobName" class="badge bg-light text-dark border px-3 py-2 fs-7 shadow-sm rounded-pill">-</div>
                                     </div>
-                                    <div class="p-3 flex-grow-1 overflow-auto hide-scrollbar" style="max-height: calc(100vh - 200px); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+                                    <div class="p-3 flex-grow-1 overflow-auto hide-scrollbar" style="max-height: calc(100vh - 250px); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; background-color: #f8f9fa;">
                                         <table class="ff-table mb-0 text-center align-middle">
                                             <thead class="sticky-top" style="z-index: 1; top: -15px; background: #f8f9fa;">
                                                 <tr>
