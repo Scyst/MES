@@ -347,6 +347,19 @@ function renderCartUI() {
 
     const reqTypeEl = document.querySelector('input[name="reqType"]:checked');
     const reqType = reqTypeEl ? reqTypeEl.value : 'STOCK';
+    
+    // Toggle Reservation required and Destination location
+    const reserBox = document.getElementById('reqReserNo') ? document.getElementById('reqReserNo').closest('div.mb-2') : null;
+    const destLocBox = document.getElementById('reqDestLoc') ? document.getElementById('reqDestLoc').closest('div.mb-2') : null;
+
+    if (reqType === 'K2') {
+        if(reserBox) reserBox.style.display = 'none';
+        if(destLocBox) destLocBox.style.display = 'none';
+    } else {
+        if(reserBox) reserBox.style.display = 'block';
+        if(destLocBox) destLocBox.style.display = 'block';
+    }
+
     let html = '';
     
     itemCodes.forEach(code => {
@@ -386,10 +399,12 @@ window.submitRequisition = function() {
     const reserEl = document.getElementById('reqReserNo');
     const destEl = document.getElementById('reqDestLoc');
     const reqTypeEl = document.querySelector('input[name="reqType"]:checked');
-    const remark = remarkEl ? remarkEl.value.trim() : '';
-    const reservation_number = reserEl ? reserEl.value.trim() : '';
-    const destination_location_id = destEl ? destEl.value : '';
     const reqType = reqTypeEl ? reqTypeEl.value : 'STOCK';
+    const remark = remarkEl ? remarkEl.value.trim() : '';
+
+    // Toggle required based on reqType
+    const reservation_number = reqType === 'STOCK' && reserEl ? reserEl.value.trim() : '';
+    const destination_location_id = reqType === 'STOCK' && destEl ? destEl.value : null;
     const itemCodes = Object.keys(cart);
     
     if (itemCodes.length === 0) return;

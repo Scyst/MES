@@ -204,10 +204,16 @@ $pageIcon = "fas fa-store";
                             </div>
 
                             <div id="form-k2" class="flex-grow-1 d-none flex-column overflow-hidden bg-transparent">
-                                <div class="card border-0 shadow-sm mx-3 mt-3 mb-2 flex-shrink-0 border-top border-warning" style="border-top-width: 4px !important; border-radius: 12px;">
+                                <div class="card border-0 shadow-sm mx-3 mt-3 mb-2 flex-shrink-0" style="border-radius: 12px; overflow: hidden;">
+                                    <div class="card-header p-3 d-flex justify-content-between align-items-center border-0 rounded-top" style="background: linear-gradient(90deg, #fd7e14, #ffc107); color: white;">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button class="btn btn-sm btn-light d-lg-none shadow-sm rounded-circle" onclick="switchView('list')"><i class="fas fa-arrow-left"></i></button>
+                                            <div><h6 class="mb-0 fw-bold fs-5"><i class="fas fa-shopping-cart me-2"></i>รอเปิด K2</h6></div>
+                                        </div>
+                                        <span class="badge bg-white text-dark shadow-sm px-3 py-2 rounded-pill"><i class="fas fa-clock me-1 text-warning"></i> WAITING</span>
+                                    </div>
                                     <div class="card-body p-3 bg-white rounded-bottom">
                                         <div class="d-flex align-items-center gap-3">
-                                            <button class="btn btn-sm btn-light d-lg-none border rounded-circle shadow-sm" onclick="switchView('list')"><i class="fas fa-arrow-left"></i></button>
                                             <div id="k2_disp_img"></div>
                                             <div class="flex-grow-1 min-w-0">
                                                 <h5 class="fw-bold text-dark mb-1 text-truncate" id="k2_disp_desc">Description</h5>
@@ -241,15 +247,13 @@ $pageIcon = "fas fa-store";
 
                 <div class="row g-3 d-none overflow-auto pb-4 hide-scrollbar px-2" id="analytics-layout">
                     
-                    <div class="col-12"><h5 class="fw-bold text-dark mb-0 ms-1 mt-2">ภาพรวมการเบิกจ่าย</h5></div>
-
-                    <div class="col-6 col-lg-3"><div class="stat-card p-3 border-start border-primary border-4"><div class="stat-label mb-2">บิลสำเร็จ</div><div class="stat-value" id="stat_total_reqs">0</div></div></div>
-                    <div class="col-6 col-lg-3"><div class="stat-card p-3 border-start border-success border-4"><div class="stat-label mb-2">จ่ายออก (ชิ้น)</div><div class="stat-value" id="stat_total_issued">0</div></div></div>
-                    <div class="col-6 col-lg-3"><div class="stat-card p-3 border-start border-warning border-4"><div class="stat-label mb-2">รอ K2 (ใบ)</div><div class="stat-value" id="stat_waiting_k2">0</div></div></div>
-                    <div class="col-6 col-lg-3"><div class="stat-card p-3 border-start border-danger border-4"><div class="stat-label mb-2">ถูกปฏิเสธ</div><div class="stat-value" id="stat_total_rejects">0</div></div></div>
+                    <div class="col-6 col-lg-3 mt-3"><div class="stat-card p-3 border-start border-primary border-4"><div class="stat-label mb-2">บิลสำเร็จ</div><div class="stat-value" id="stat_total_reqs">0</div></div></div>
+                    <div class="col-6 col-lg-3 mt-3"><div class="stat-card p-3 border-start border-success border-4"><div class="stat-label mb-2">จ่ายออก (ชิ้น)</div><div class="stat-value" id="stat_total_issued">0</div></div></div>
+                    <div class="col-6 col-lg-3 mt-3"><div class="stat-card p-3 border-start border-warning border-4"><div class="stat-label mb-2">รอ K2 (ใบ)</div><div class="stat-value" id="stat_waiting_k2">0</div></div></div>
+                    <div class="col-6 col-lg-3 mt-3"><div class="stat-card p-3 border-start border-danger border-4"><div class="stat-label mb-2">ถูกปฏิเสธ</div><div class="stat-value" id="stat_total_rejects">0</div></div></div>
 
                     <div class="col-12">
-                        <div class="row g-3 mt-1">
+                        <div class="row g-3">
                             <div class="col-6 col-md-3 col-xl">
                                 <div class="adv-kpi-box"><div class="adv-kpi-label"><i class="fas fa-stopwatch me-1 text-primary"></i> SLA</div><div class="adv-kpi-val text-dark" id="adv_sla">0 นาที</div></div>
                             </div>
