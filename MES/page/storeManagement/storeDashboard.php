@@ -101,9 +101,9 @@ $pageIcon = "fas fa-store";
         .ff-table tbody td { border: 1px solid rgba(0,0,0,0.04); border-style: solid none; padding: 14px 16px; vertical-align: middle; background: #fff; }
         .ff-table tbody td:first-child { border-left: 1px solid rgba(0,0,0,0.04); border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
         .ff-table tbody td:last-child { border-right: 1px solid rgba(0,0,0,0.04); border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
-        .ff-progress { height: 10px; border-radius: 6px; background: #f1f3f5; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); }
+        .ff-progress { height: 10px; border-radius: 6px; background: #e2e6ea; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); }
         .ff-progress-bar { transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 6px; }
-        .ff-header-gradient { background: linear-gradient(90deg, #f8f9fa, #ffffff); border-bottom: 1px solid rgba(0,0,0,0.04); border-top-left-radius: 12px; border-top-right-radius: 12px; }
+        .ff-header-gradient { background: linear-gradient(90deg, #f1f4f9, #ffffff); border-bottom: 1px solid rgba(0,0,0,0.04); border-top-left-radius: 12px; border-top-right-radius: 12px; }
     </style>
 </head>
 <body class="layout-top-header">
@@ -289,25 +289,16 @@ $pageIcon = "fas fa-store";
                 <div class="row d-none h-100 overflow-auto pb-4 hide-scrollbar" id="fulfillment-layout">
                     <div class="col-12 d-flex flex-column h-100 px-3">
                         
-                        <!-- Toolbar -->
-                        <div class="ff-card p-3 mb-3 flex-shrink-0 d-flex flex-wrap justify-content-between align-items-center gap-3">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width:40px; height:40px;">
-                                    <i class="fas fa-check-double fs-5"></i>
-                                </div>
-                                <div>
-                                    <h5 class="mb-0 fw-bold text-dark">ตรวจสอบยอดเบิกจ่าย</h5>
-                                    <div class="small text-muted">ติดตามความคืบหน้าการจ่ายวัตถุดิบเข้าสู่ไลน์การผลิต</div>
-                                </div>
-                            </div>
-                            
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="form-label small fw-bold text-secondary mb-0 me-1">แสดงผล:</label>
-                                <select id="fulfill_line" class="form-select form-select-sm fw-bold border-secondary-subtle" style="min-width: 150px; border-radius: 20px; padding-left: 15px;" onchange="loadActiveJobsForFulfillment()">
+                        <!-- Toolbar (Simplified) -->
+                        <div class="d-flex justify-content-end mb-3 flex-shrink-0">
+                            <div class="d-flex align-items-center gap-1 ff-card px-3 py-1 shadow-sm" style="border-radius: 25px;">
+                                <i class="fas fa-filter text-muted opacity-50 ms-2"></i>
+                                <select id="fulfill_line" class="form-select form-select-sm fw-bold border-0 bg-transparent shadow-none cursor-pointer" style="min-width: 160px; outline: none;" onchange="loadActiveJobsForFulfillment()">
                                     <option value="">🌐 ทุกไลน์การผลิต</option>
                                 </select>
-                                <button class="btn btn-sm btn-light border shadow-sm rounded-circle p-2" onclick="loadActiveJobsForFulfillment()" title="รีเฟรชข้อมูล">
-                                    <i class="fas fa-sync-alt text-primary"></i>
+                                <div class="border-start ms-1 me-2" style="height: 20px;"></div>
+                                <button class="btn btn-sm btn-light border-0 rounded-circle text-primary" style="width:32px; height:32px;" onclick="loadActiveJobsForFulfillment()" title="รีเฟรชข้อมูล">
+                                    <i class="fas fa-sync-alt"></i>
                                 </button>
                             </div>
                         </div>
@@ -316,11 +307,11 @@ $pageIcon = "fas fa-store";
                         <div class="row g-3 flex-grow-1 overflow-hidden">
                             <!-- Left: Job list -->
                             <div class="col-md-4 col-lg-3 d-flex flex-column h-100">
-                                <div class="ff-card h-100 d-flex flex-column">
-                                    <div class="ff-header-gradient p-3 fw-bold text-dark d-flex align-items-center">
+                                <div class="ff-card h-100 d-flex flex-column" style="background-color: #fcfcfc;">
+                                    <div class="ff-header-gradient p-3 fw-bold text-dark d-flex align-items-center shadow-sm" style="z-index: 2;">
                                         <i class="fas fa-clipboard-list text-primary me-2"></i> คิวงาน (Active Jobs)
                                     </div>
-                                    <div class="p-2 flex-grow-1 overflow-auto hide-scrollbar" id="fulfillJobList" style="max-height: calc(100vh - 250px);">
+                                    <div class="p-2 flex-grow-1 overflow-auto hide-scrollbar" id="fulfillJobList" style="max-height: calc(100vh - 200px);">
                                         <div class="p-4 text-center text-muted">กำลังโหลดข้อมูล...</div>
                                     </div>
                                 </div>
@@ -328,16 +319,16 @@ $pageIcon = "fas fa-store";
 
                             <!-- Right: Table -->
                             <div class="col-md-8 col-lg-9 d-flex flex-column h-100">
-                                <div class="ff-card h-100 d-flex flex-column">
-                                    <div class="ff-header-gradient p-3 d-flex justify-content-between align-items-center">
+                                <div class="ff-card h-100 d-flex flex-column" style="background-color: #f8f9fa;">
+                                    <div class="ff-header-gradient p-3 d-flex justify-content-between align-items-center shadow-sm" style="z-index: 2;">
                                         <div class="fw-bold text-dark">
                                             <i class="fas fa-box-open text-primary me-2"></i> รายการวัตถุดิบตามสูตร (BOM Details)
                                         </div>
-                                        <div id="fulfillSelectedJobName" class="badge bg-light text-dark border px-3 py-2 fs-7 shadow-sm rounded-pill">-</div>
+                                        <div id="fulfillSelectedJobName" class="badge bg-white text-dark border px-3 py-2 fs-7 shadow-sm rounded-pill">-</div>
                                     </div>
-                                    <div class="p-3 flex-grow-1 overflow-auto hide-scrollbar" style="max-height: calc(100vh - 250px); background: #fafbfc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+                                    <div class="p-3 flex-grow-1 overflow-auto hide-scrollbar" style="max-height: calc(100vh - 200px); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
                                         <table class="ff-table mb-0 text-center align-middle">
-                                            <thead class="sticky-top" style="z-index: 1; top: -15px; background: #fafbfc;">
+                                            <thead class="sticky-top" style="z-index: 1; top: -15px; background: #f8f9fa;">
                                                 <tr>
                                                     <th class="text-start ps-3" style="width: 40%;">วัตถุดิบ (Material)</th>
                                                     <th>เป้าหมาย (Target)</th>
