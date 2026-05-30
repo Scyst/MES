@@ -423,11 +423,6 @@ window.submitRequisition = function() {
             if (reserEl) reserEl.focus();
             return;
         }
-        if (!internal_job_no) {
-            Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกเลขที่ Internal Job (MES) ก่อนทำการยืนยันการเบิก', 'warning');
-            if (internalJobEl) internalJobEl.focus();
-            return;
-        }
     }
         for (let code of itemCodes) {
             let item = cart[code];
@@ -943,7 +938,7 @@ window.loadActiveJobs = async function() {
         const selectEl = document.getElementById('reqInternalJob');
         if (!selectEl) return;
         
-        let html = '<option value="">-- เลือก Internal Job --</option>';
+        let html = '<option value="">-- เลือก Internal Job (หากมี) --</option>';
         if (res && res.data && res.data.length > 0) {
             res.data.forEach(job => {
                 html += `<option value="${job.job_no}">[${job.job_no}] ${job.part_no || ''}</option>`;
