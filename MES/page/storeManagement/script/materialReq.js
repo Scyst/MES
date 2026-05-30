@@ -9,7 +9,18 @@ let searchTimeout;
 document.addEventListener('DOMContentLoaded', () => {
     loadCatalog('ALL'); 
     loadLocations();
-    loadActiveJobs();
+
+    const destLocEl = document.getElementById('reqDestLoc');
+    if (destLocEl) {
+        destLocEl.addEventListener('change', function() {
+            if (this.value) {
+                loadActiveJobs(this.value);
+            } else {
+                const selectEl = document.getElementById('reqInternalJob');
+                if (selectEl) selectEl.innerHTML = '<option value="">-- กรุณาเลือกคลังปลายทาง (WIP) ก่อน --</option>';
+            }
+        });
+    }
 
     const searchInput = document.getElementById('searchItem');
     if (searchInput) {
@@ -932,22 +943,30 @@ window.viewStockTags = async function(itemCode, itemDesc) {
     }
 };
 
-window.loadActiveJobs = async function() {
+window.loadActiveJobs = async function(locationId) {
+    const selectEl = document.getElementById('reqInternalJob');
+    if (!selectEl) return;
+    
+    if (!locationId) {
+        selectEl.innerHTML = '<option value="">-- กรุณาเลือกคลังปลายทาง (WIP) ก่อน --</option>';
+        return;
+    }
+
     try {
-        const res = await fetchAPI('get_active_jobs_for_fulfillment', 'GET');
-        const selectEl = document.getElementById('reqInternalJob');
-        if (!selectEl) return;
+        selectEl.innerHTML = '<option value="">กำลังโหลด...</option>';
+        const res = await fetchAPI(`get_active_jobs_for_fulfillment&location_id=${locationId}`, 'GET');
         
         let html = '<option value="">-- เลือก Internal Job (หากมี) --</option>';
         if (res && res.data && res.data.length > 0) {
             res.data.forEach(job => {
                 html += `<option value="${job.job_no}">[${job.job_no}] ${job.part_no || ''}</option>`;
             });
+        } else {
+            html = '<option value="">-- ไม่พบ Job ที่กำลังทำงานในคลังนี้ --</option>';
         }
         selectEl.innerHTML = html;
     } catch (err) {
         console.error('Failed to load active jobs:', err);
-        const selectEl = document.getElementById('reqInternalJob');
-        if (selectEl) selectEl.innerHTML = '<option value="">(ไม่สามารถโหลดข้อมูล Job ได้)</option>';
+        selectEl.innerHTML = '<option value="">(ไม่สามารถโหลดข้อมูล Job ได้)</option>';
     }
 };

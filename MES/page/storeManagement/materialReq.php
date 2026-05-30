@@ -178,15 +178,15 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                     <input type="text" id="reqReserNo" class="form-control form-control-sm border-primary" placeholder="กรุณาระบุเลขที่ใบเบิก/Reservation..." required>
                 </div>
                 <div class="mb-2">
-                    <label class="form-label small fw-bold text-secondary mb-1">เลขที่ Internal Job (MES) <span class="text-muted fw-normal">(ไม่บังคับ)</span></label>
-                    <select id="reqInternalJob" class="form-select form-select-sm border-primary">
+                    <label class="form-label small fw-bold text-secondary mb-1">คลังปลายทาง (WIP) <span class="text-danger">*</span></label>
+                    <select id="reqDestLoc" class="form-select form-select-sm border-primary" required>
                         <option value="">กำลังโหลด...</option>
                     </select>
                 </div>
                 <div class="mb-2">
-                    <label class="form-label small fw-bold text-secondary mb-1">คลังปลายทาง (WIP) <span class="text-danger">*</span></label>
-                    <select id="reqDestLoc" class="form-select form-select-sm border-primary" required>
-                        <option value="">กำลังโหลด...</option>
+                    <label class="form-label small fw-bold text-secondary mb-1">เลขที่ Internal Job (MES) <span class="text-muted fw-normal">(ไม่บังคับ)</span></label>
+                    <select id="reqInternalJob" class="form-select form-select-sm border-primary">
+                        <option value="">-- กรุณาเลือกคลังปลายทาง (WIP) ก่อน --</option>
                     </select>
                 </div>
                 <div class="mb-3">

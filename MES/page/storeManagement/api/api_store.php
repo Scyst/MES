@@ -677,10 +677,15 @@ try {
 
         case 'get_active_jobs_for_fulfillment':
             $line = $_GET['line'] ?? '';
+            $location_id = $_GET['location_id'] ?? '';
             
             $params = [];
             $filterSql = "";
-            if (!empty($line)) {
+            
+            if (!empty($location_id)) {
+                $filterSql = "AND j.location_id = ?";
+                $params[] = $location_id;
+            } elseif (!empty($line)) {
                 $locStmt = $pdo->prepare("SELECT location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE production_line = ?");
                 $locStmt->execute([$line]);
                 $loc_ids = $locStmt->fetchAll(PDO::FETCH_COLUMN);
