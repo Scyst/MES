@@ -147,7 +147,7 @@ $pageHeaderSubtitle = "ระบบติดตามและจัดการ
                                         </div>
                                         <div class="mb-2">
                                             <label class="small">ความเร็วการจำลอง</label>
-                                            <input type="range" id="sim-speed" class="form-range" min="1" max="10" value="3">
+                                            <input type="range" id="sim-speed" class="form-range" min="0" max="100" value="20">
                                         </div>
                                         <div class="d-flex justify-content-between mt-2">
                                             <button class="btn btn-sm btn-outline-info" onclick="toggleIndoorSetupMode()" id="indoor-setup-btn" title="ตั้งค่าพื้นที่อาคาร"><i class="fas fa-cog"></i></button>

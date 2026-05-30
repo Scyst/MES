@@ -118,7 +118,13 @@ window.switchDashboardMode = function(mode) {
                         lineSelect.appendChild(opt);
                     });
                 }
-            }).catch(e => console.error(e));
+                loadActiveJobsForFulfillment();
+            }).catch(e => {
+                console.error(e);
+                loadActiveJobsForFulfillment();
+            });
+        } else {
+            loadActiveJobsForFulfillment();
         }
     }
 };
