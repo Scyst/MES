@@ -227,10 +227,23 @@ $pageIcon = "fas fa-store";
                                     </div>
                                 </div>
                                 <div class="flex-grow-1 overflow-auto hide-scrollbar px-3 pb-3 w-100">
-                                    <table class="ff-table mb-0 text-center align-middle w-100">
-                                        <thead class="sticky-top" style="background: #f8f9fa; top: -15px;"><tr><th class="text-start ps-3">วันที่</th><th>เลขที่บิล</th><th>ผู้เบิก</th><th class="text-end pe-3">จำนวน (ชิ้น)</th></tr></thead>
-                                        <tbody id="k2UsersList"></tbody>
-                                    </table>
+                                    <div class="d-flex align-items-center gap-2 mb-3 mt-2">
+                                        <i class="fas fa-list text-warning"></i>
+                                        <span class="fw-bold text-dark fs-6">รายการบิลที่รอเปิด K2</span>
+                                    </div>
+                                    <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                                        <table class="table mb-0 text-center align-middle w-100 bg-white">
+                                            <thead class="bg-light text-muted" style="border-bottom: 2px solid #e9ecef;">
+                                                <tr>
+                                                    <th class="text-start ps-4 border-0 py-3 fw-bold small text-uppercase">วันที่</th>
+                                                    <th class="border-0 py-3 fw-bold small text-uppercase">เลขที่บิล</th>
+                                                    <th class="border-0 py-3 fw-bold small text-uppercase">ผู้เบิก</th>
+                                                    <th class="text-end pe-4 border-0 py-3 fw-bold small text-uppercase">จำนวน (ชิ้น)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="k2UsersList" style="border-top: none;"></tbody>
+                                        </table>
+                                    </div>
                                 </div>
                                 <div id="k2-action-bar" class="bg-white border-top p-3 flex-shrink-0 shadow-sm d-none d-flex align-items-center justify-content-between" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
                                     <div class="fw-bold text-muted d-none d-md-block"><i class="fas fa-edit me-1"></i> อัปเดตสถานะ K2 PR</div>

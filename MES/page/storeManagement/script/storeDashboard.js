@@ -540,7 +540,13 @@ window.openK2Detail = async function(itemCode, description, category, imgPath) {
         let html = ''; let totalQty = 0;
         res.data.forEach(u => {
             totalQty += parseFloat(u.qty_requested);
-            html += `<tr><td class="text-muted">${escapeHTML(u.req_date)}</td><td class="fw-bold text-dark">${escapeHTML(u.req_number)}</td><td><i class="fas fa-user text-primary me-1"></i>${escapeHTML(u.fullname || 'Unknown')}</td><td class="text-end fw-bold text-warning-emphasis">${parseFloat(u.qty_requested)}</td></tr>`;
+            html += `
+            <tr style="border-bottom: 1px solid #f0f2f5;">
+                <td class="text-muted ps-4 py-3">${escapeHTML(u.req_date)}</td>
+                <td class="fw-bold text-dark py-3">${escapeHTML(u.req_number)}</td>
+                <td class="py-3"><i class="fas fa-user text-primary me-2"></i>${escapeHTML(u.fullname || 'Unknown')}</td>
+                <td class="text-end fw-bold text-warning-emphasis pe-4 py-3 fs-5">${parseFloat(u.qty_requested)}</td>
+            </tr>`;
         });
         document.getElementById('k2UsersList').innerHTML = html;
         document.getElementById('k2_disp_total').innerText = totalQty;
