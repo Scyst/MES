@@ -676,25 +676,30 @@ try {
 
         case 'get_active_jobs_for_fulfillment':
             $line = $_GET['line'] ?? '';
-            if (empty($line)) throw new Exception("ระบุไลน์การผลิต");
             
-            $locStmt = $pdo->prepare("SELECT location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE production_line = ?");
-            $locStmt->execute([$line]);
-            $loc_ids = $locStmt->fetchAll(PDO::FETCH_COLUMN);
+            $params = [];
+            $filterSql = "";
+            if (!empty($line)) {
+                $locStmt = $pdo->prepare("SELECT location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE production_line = ?");
+                $locStmt->execute([$line]);
+                $loc_ids = $locStmt->fetchAll(PDO::FETCH_COLUMN);
 
-            if (empty($loc_ids)) {
-                $response = ['success' => true, 'data' => []];
-                break;
+                if (empty($loc_ids)) {
+                    $response = ['success' => true, 'data' => []];
+                    break;
+                }
+                $inQuery = implode(',', array_fill(0, count($loc_ids), '?'));
+                $filterSql = "AND j.location_id IN ($inQuery)";
+                $params = $loc_ids;
             }
 
-            $inQuery = implode(',', array_fill(0, count($loc_ids), '?'));
             $sql = "SELECT j.job_id, j.job_no, j.target_qty, i.part_no, i.part_description, j.status
                     FROM dbo.PRODUCTION_JOBS j WITH (NOLOCK)
                     JOIN dbo.ITEMS i WITH (NOLOCK) ON j.item_id = i.item_id
-                    WHERE j.status IN ('PENDING', 'RUNNING', 'PAUSED') AND j.location_id IN ($inQuery)
+                    WHERE j.status IN ('PENDING', 'RUNNING', 'PAUSED') $filterSql
                     ORDER BY j.queue_order ASC, j.created_at ASC";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute($loc_ids);
+            $stmt->execute($params);
             $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             $response = ['success' => true, 'data' => $jobs];
