@@ -1,10 +1,7 @@
 <?php
-require_once dirname(__DIR__) . '/../../config/database.php';
-$stmt = $pdo->query("SELECT j.job_id, j.job_no, j.status, j.location_id, l.location_type, l.production_line 
-                     FROM dbo.PRODUCTION_JOBS j 
-                     LEFT JOIN dbo.LOCATIONS l ON j.location_id = l.location_id 
-                     WHERE j.status IN ('PENDING', 'RUNNING', 'PAUSED')");
-$jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-echo "ACTIVE JOBS:\n";
-print_r($jobs);
+require_once __DIR__ . '/../../db.php';
+$stmt = $pdo->query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'PRODUCTION_JOBS'");
+$cols = $stmt->fetchAll(PDO::FETCH_ASSOC);
+echo "COLUMNS:\n";
+print_r($cols);
 ?>

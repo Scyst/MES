@@ -9,6 +9,7 @@ let searchTimeout;
 document.addEventListener('DOMContentLoaded', () => {
     loadCatalog('ALL'); 
     loadLocations();
+    loadActiveJobs();
 
     const searchInput = document.getElementById('searchItem');
     if (searchInput) {
@@ -398,30 +399,36 @@ window.submitRequisition = function() {
     const remarkEl = document.getElementById('reqRemark');
     const reserEl = document.getElementById('reqReserNo');
     const destEl = document.getElementById('reqDestLoc');
+    const internalJobEl = document.getElementById('reqInternalJob');
     const reqTypeEl = document.querySelector('input[name="reqType"]:checked');
     const reqType = reqTypeEl ? reqTypeEl.value : 'STOCK';
     const remark = remarkEl ? remarkEl.value.trim() : '';
 
     // Toggle required based on reqType
     const reservation_number = reqType === 'STOCK' && reserEl ? reserEl.value.trim() : '';
+    const internal_job_no = reqType === 'STOCK' && internalJobEl ? internalJobEl.value.trim() : '';
     const destination_location_id = reqType === 'STOCK' && destEl ? destEl.value : null;
     const itemCodes = Object.keys(cart);
     
     if (itemCodes.length === 0) return;
 
-    if (reqType === 'STOCK' && !destination_location_id) {
-        Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกคลังปลายทาง (WIP) ก่อนทำการยืนยันการเบิก', 'warning');
-        if (destEl) destEl.focus();
-        return;
-    }
-
-    if (!reservation_number) {
-        Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาระบุเลขที่ Reservation ก่อนทำการยืนยันการเบิก', 'warning');
-        if (reserEl) reserEl.focus();
-        return;
-    }
-
     if (reqType === 'STOCK') {
+        if (!destination_location_id) {
+            Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกคลังปลายทาง (WIP) ก่อนทำการยืนยันการเบิก', 'warning');
+            if (destEl) destEl.focus();
+            return;
+        }
+        if (!reservation_number) {
+            Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาระบุเลขที่ Reservation ก่อนทำการยืนยันการเบิก', 'warning');
+            if (reserEl) reserEl.focus();
+            return;
+        }
+        if (!internal_job_no) {
+            Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกเลขที่ Internal Job (MES) ก่อนทำการยืนยันการเบิก', 'warning');
+            if (internalJobEl) internalJobEl.focus();
+            return;
+        }
+    }
         for (let code of itemCodes) {
             let item = cart[code];
             if (item.qty > item.maxQty) {
@@ -456,6 +463,7 @@ window.submitRequisition = function() {
                     cart: JSON.stringify(payloadCart), 
                     remark: remark, 
                     reservation_number: reservation_number,
+                    internal_job_no: internal_job_no,
                     destination_location_id: destination_location_id,
                     request_type: reqType 
                 }, 'btnCheckout');
@@ -463,6 +471,7 @@ window.submitRequisition = function() {
                 cart = {}; 
                 if (remarkEl) remarkEl.value = ''; 
                 if (reserEl) reserEl.value = '';
+                if (internalJobEl) internalJobEl.value = '';
                 renderCartUI();
                 
                 const offcanvasEl = document.getElementById('cartOffcanvas');
@@ -925,5 +934,25 @@ window.viewStockTags = async function(itemCode, itemDesc) {
 
     } catch (err) {
         Swal.fire('Error', 'ไม่สามารถดึงข้อมูลแท็กสินค้าได้', 'error');
+    }
+};
+
+window.loadActiveJobs = async function() {
+    try {
+        const res = await fetchAPI('get_active_jobs_for_fulfillment', 'GET');
+        const selectEl = document.getElementById('reqInternalJob');
+        if (!selectEl) return;
+        
+        let html = '<option value="">-- เลือก Internal Job --</option>';
+        if (res && res.data && res.data.length > 0) {
+            res.data.forEach(job => {
+                html += `<option value="${job.job_no}">[${job.job_no}] ${job.part_no || ''}</option>`;
+            });
+        }
+        selectEl.innerHTML = html;
+    } catch (err) {
+        console.error('Failed to load active jobs:', err);
+        const selectEl = document.getElementById('reqInternalJob');
+        if (selectEl) selectEl.innerHTML = '<option value="">(ไม่สามารถโหลดข้อมูล Job ได้)</option>';
     }
 };

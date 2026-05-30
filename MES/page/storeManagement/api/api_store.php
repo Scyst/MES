@@ -523,6 +523,7 @@ try {
             $stmt->execute();
 
             $reservation_number = trim($_POST['reservation_number'] ?? $input['reservation_number'] ?? '');
+            $internal_job_no = trim($_POST['internal_job_no'] ?? $input['internal_job_no'] ?? '');
             $destination_location_id = $_POST['destination_location_id'] ?? $input['destination_location_id'] ?? null;
             
             if (!$destination_location_id) {
@@ -543,10 +544,10 @@ try {
                 $destination_location_id = $destLocId;
             }
 
-            // Update Requisition with Reservation and Destination
+            // Update Requisition with Reservation, Internal Job, and Destination
             try {
-                $pdo->prepare("UPDATE dbo.STORE_REQUISITIONS SET reservation_number = ?, destination_location_id = ? WHERE req_number = ?")
-                    ->execute([$reservation_number ?: null, $destination_location_id ?: null, $reqNumber]);
+                $pdo->prepare("UPDATE dbo.STORE_REQUISITIONS SET reservation_number = ?, internal_job_no = ?, destination_location_id = ? WHERE req_number = ?")
+                    ->execute([$reservation_number ?: null, $internal_job_no ?: null, $destination_location_id ?: null, $reqNumber]);
             } catch (Exception $e) {
                 error_log("Failed to update STORE_REQUISITIONS: " . $e->getMessage());
             }
@@ -749,13 +750,13 @@ try {
                 FROM dbo.STORE_REQUISITIONS r WITH (NOLOCK)
                 JOIN dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK) ON r.id = ri.req_id
                 JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
-                WHERE r.reservation_number = ? 
+                WHERE (r.internal_job_no = ? OR r.reservation_number = ?)
                   AND r.destination_location_id = ?
                   AND r.status IN ('COMPLETED', 'PARTIAL')
                 GROUP BY i.item_id
             ";
             $stmtIssued = $pdo->prepare($sqlIssued);
-            $stmtIssued->execute([$job['job_no'], $wip_loc_id]);
+            $stmtIssued->execute([$job['job_no'], $job['job_no'], $wip_loc_id]);
             $issuedData = [];
             while ($row = $stmtIssued->fetch(PDO::FETCH_ASSOC)) {
                 $issuedData[$row['item_id']] = (float)$row['total_issued'];
