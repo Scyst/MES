@@ -966,8 +966,19 @@ function resetMapView() {
 // 🎮 ฟีเจอร์เสริม: Simulator Mode (จำลองการวิ่งบนแผนที่)
 // ========================================================
 function toggleSimulatorMode() {
-    isSimulatorMode = !isSimulatorMode;
     const panel = document.getElementById('simulator-controls');
+
+    // ถ้าซ่อน UI อยู่ ให้เปิดขึ้นมาอย่างเดียว ไม่ต้องปิด Simulator
+    if (isSimulatorMode && panel.classList.contains('d-none')) {
+        panel.classList.remove('d-none');
+        drawSimRoute();
+        simMarkers.forEach(m => {
+            if (!map.hasLayer(m)) m.addTo(map);
+        });
+        return;
+    }
+
+    isSimulatorMode = !isSimulatorMode;
 
     if (isSimulatorMode) {
         panel.classList.remove('d-none');
@@ -1084,10 +1095,9 @@ function toggleSimPlaying() {
         }
 
         // Start Interval loop
-        const speedMultiplier = parseInt(document.getElementById('sim-speed').value);
         let simApiTick = 0;
         simInterval = setInterval(() => {
-            processSimStep(code, speedMultiplier, simApiTick);
+            processSimStep(code, simApiTick);
             simApiTick++;
         }, 100); // รันทุกๆ 100ms เพื่อให้ภาพดูลื่นไหล (Smooth)
 
@@ -1106,7 +1116,7 @@ function toggleSimPlaying() {
     }
 }
 
-function processSimStep(code, speed, tick) {
+function processSimStep(code, tick) {
     if (simTargetIndex >= simWaypoints.length) {
         // วิ่งสุดเส้นทางแล้ว ให้วนกลับไปจุดเริ่มต้นใหม่
         simCurrentPosition = { ...simWaypoints[0] };
@@ -1120,9 +1130,11 @@ function processSimStep(code, speed, tick) {
     const dLng = target.lng - simCurrentPosition.lng;
     const dist = Math.sqrt(dLat * dLat + dLng * dLng);
 
-    // สมมติว่าความเร็ว 1 สเกล = 0.00005 องศาต่อวินาที
-    // เนื่องจากเรารันทุก 100ms (10 ครั้ง/วิ) จึงต้องหารระยะทางด้วย 10
-    const stepSize = (0.00005 * speed) / 10;
+    // ดึงค่าความเร็วแบบ Real-time จาก UI (0-100)
+    const speedPercent = parseInt(document.getElementById('sim-speed').value) || 0;
+    // ความเร็ว 0 = 0.00001 (ช้ามาก), 100 = 0.0005 (เร็วสุดของเดิม)
+    const baseSpeed = 0.00001 + ((speedPercent / 100) * 0.00049);
+    const stepSize = baseSpeed / 10; // หาร 10 เพราะรันทุกๆ 100ms (10 ครั้ง/วิ)
 
     if (dist <= stepSize) {
         // ถึงเป้าหมายแล้ว
