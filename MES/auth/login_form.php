@@ -20,6 +20,29 @@ if (isset($_SESSION['user'])) {
     header("Location: " . $redirectTarget);
     exit;
 }
+
+// Function to convert URL path to a readable page name
+function getFriendlyPageName($url) {
+    $path = parse_url($url, PHP_URL_PATH);
+    if (!$path) return $url;
+    
+    $filename = pathinfo($path, PATHINFO_FILENAME);
+    if (!$filename || $filename === 'index' || $filename === '') {
+        $dirs = explode('/', trim($path, '/'));
+        $filename = end($dirs);
+    }
+    
+    // Convert camelCase or snake_case to Title Case
+    $readable = preg_replace('/(?<!^)[A-Z]/', ' $0', $filename);
+    $readable = str_replace(['_', '-'], ' ', $readable);
+    $readable = ucwords(strtolower($readable));
+    
+    // Fixups for common acronyms
+    $readable = str_ireplace('Ui', 'UI', $readable);
+    $readable = str_ireplace('Dashboard', 'Dashboard', $readable); // Ensures correct casing
+    
+    return $readable ? $readable : $url;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -71,10 +94,10 @@ if (isset($_SESSION['user'])) {
             </div>
             
             <?php if ($redirectTarget !== $defaultHome): ?>
-            <div class="card-footer bg-light text-center py-2">
+            <div class="card-footer bg-light text-center py-2" title="<?php echo htmlspecialchars($redirectTarget); ?>">
                 <small class="text-muted">
-                    คุณกำลังจะไปที่: <br>
-                    <span class="text-primary fw-bold text-break"><?php echo htmlspecialchars($redirectTarget); ?></span>
+                    คุณกำลังจะไปที่หน้า: <br>
+                    <span class="text-primary fw-bold text-break"><?php echo htmlspecialchars(getFriendlyPageName($redirectTarget)); ?></span>
                 </small>
             </div>
             <?php endif; ?>
