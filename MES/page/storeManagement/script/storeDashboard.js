@@ -735,17 +735,17 @@ window.loadActiveJobsForFulfillment = function() {
             let statusIcon = job.status === 'RUNNING' ? 'play-circle' : (job.status === 'PAUSED' ? 'pause-circle' : 'clock');
             
             html += `
-                <a href="javascript:void(0)" class="ff-job-item list-group-item list-group-item-action p-3" data-jobid="${job.job_id}" onclick="loadFulfillmentData(${job.job_id}, '${job.job_no}', ${parseInt(job.target_qty)})">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="fw-bold text-dark"><i class="fas fa-clipboard-check text-primary me-2"></i>${job.job_no}</span>
-                        <span class="badge bg-${statusColor} text-${statusColor === 'warning' ? 'dark' : 'white'} shadow-sm px-2 py-1"><i class="fas fa-${statusIcon} me-1"></i>${job.status}</span>
+                <div class="order-card ff-job-item w-100 p-3 mb-2" data-jobid="${job.job_id}" onclick="loadFulfillmentData(${job.job_id}, '${job.job_no}', ${parseInt(job.target_qty)})">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="fw-bold text-dark mb-0" style="font-size: 0.95rem;">${job.job_no}</span>
+                        <div><span class="badge bg-${statusColor} text-${statusColor === 'warning' ? 'dark' : 'white'} shadow-sm"><i class="fas fa-${statusIcon} me-1"></i>${job.status}</span></div>
                     </div>
-                    <div class="fs-7 fw-bold text-secondary text-truncate mb-2" title="${job.part_description}">${job.part_no}</div>
-                    <div class="d-flex justify-content-between align-items-center bg-light rounded p-2 border">
-                        <small class="text-muted fw-bold">เป้าหมาย: <span class="text-dark ms-1 fs-6">${parseInt(job.target_qty)}</span> ชิ้น</small>
-                        <i class="fas fa-arrow-right text-primary opacity-50" style="font-size:0.8rem;"></i>
+                    <div class="text-muted mb-2 text-truncate" style="font-size:0.85rem;"><i class="fas fa-clipboard-list me-1 text-primary"></i> ${job.part_no}</div>
+                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.85rem;">
+                        <span class="fw-bold text-secondary">เป้า: ${parseInt(job.target_qty)} ชิ้น</span>
+                        <i class="fas fa-arrow-right text-primary opacity-50"></i>
                     </div>
-                </a>
+                </div>
             `;
         });
         jobList.innerHTML = html;

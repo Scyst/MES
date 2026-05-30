@@ -334,7 +334,7 @@ $pageIcon = "fas fa-store";
                 </div>
 
                 <!-- Fulfillment Layout -->
-                <div class="row d-none h-100 overflow-auto pb-4 hide-scrollbar" id="fulfillment-layout" style="background-color: #e9ecef; border-radius: 12px; margin: 0; padding-top: 15px;">
+                <div class="row g-2 d-none h-100 flex-grow-1 px-1 px-lg-2 overflow-auto pb-4 hide-scrollbar" id="fulfillment-layout">
                     <div class="col-12 d-flex flex-column h-100 px-3">
                         
                         <!-- Toolbar -->
@@ -351,13 +351,10 @@ $pageIcon = "fas fa-store";
                         </div>
 
                         <!-- Content Area -->
-                        <div class="row g-3 flex-grow-1 overflow-hidden">
+                        <div class="row g-2 flex-grow-1 h-100 overflow-hidden">
                             <!-- Left: Job list -->
                             <div class="col-md-4 col-lg-3 d-flex flex-column h-100">
-                                <div class="ff-card h-100 d-flex flex-column shadow-sm" style="background-color: #f8f9fa; border: 1px solid rgba(0,0,0,0.08);">
-                                    <div class="ff-header-gradient p-3 fw-bold text-dark d-flex align-items-center" style="border-bottom: 1px solid rgba(0,0,0,0.08);">
-                                        <i class="fas fa-clipboard-list text-primary me-2"></i> คิวงาน (Active Jobs)
-                                    </div>
+                                <div class="ff-card h-100 d-flex flex-column shadow-sm bg-transparent border-0">
                                     <div class="p-2 flex-grow-1 overflow-auto hide-scrollbar" id="fulfillJobList" style="max-height: calc(100vh - 250px);">
                                         <div class="p-4 text-center text-muted">กำลังโหลดข้อมูล...</div>
                                     </div>
