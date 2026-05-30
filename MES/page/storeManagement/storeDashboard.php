@@ -87,6 +87,23 @@ $pageIcon = "fas fa-store";
         .chart-container-card { border: 1px solid var(--bs-border-color); background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .chart-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--bs-border-color); display: flex; justify-content: space-between; align-items: center; }
         .chart-title { font-size: 0.9rem; font-weight: 700; color: #495057; margin-bottom: 0; }
+        
+        /* --- Fulfillment Premium Styling --- */
+        .ff-card { border: 1px solid rgba(0,0,0,0.05); border-radius: 12px; background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: all 0.3s ease; }
+        .ff-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.06); }
+        .ff-job-item { border: none; border-bottom: 1px solid rgba(0,0,0,0.03); transition: all 0.2s cubic-bezier(0.4,0,0.2,1); margin-bottom: 4px; border-radius: 8px !important; background: #fff; }
+        .ff-job-item:hover { background: #f8faff; transform: translateX(4px); box-shadow: 0 2px 8px rgba(13,110,253,0.08); }
+        .ff-job-item.active { background: linear-gradient(145deg, #f0f7ff, #ffffff); border-left: 4px solid var(--bs-primary); box-shadow: inset 0 0 0 1px rgba(13, 110, 253, 0.1); }
+        .ff-table { border-collapse: separate; border-spacing: 0 8px; width: 100%; }
+        .ff-table thead th { border: none; text-transform: uppercase; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; color: #87929d; background: transparent; padding: 0 16px 8px 16px; }
+        .ff-table tbody tr { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.02); border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s; }
+        .ff-table tbody tr:hover { transform: scale(1.005); box-shadow: 0 4px 15px rgba(0,0,0,0.06); z-index: 2; position: relative; }
+        .ff-table tbody td { border: 1px solid rgba(0,0,0,0.04); border-style: solid none; padding: 14px 16px; vertical-align: middle; background: #fff; }
+        .ff-table tbody td:first-child { border-left: 1px solid rgba(0,0,0,0.04); border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+        .ff-table tbody td:last-child { border-right: 1px solid rgba(0,0,0,0.04); border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+        .ff-progress { height: 10px; border-radius: 6px; background: #f1f3f5; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); }
+        .ff-progress-bar { transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 6px; }
+        .ff-header-gradient { background: linear-gradient(90deg, #f8f9fa, #ffffff); border-bottom: 1px solid rgba(0,0,0,0.04); border-top-left-radius: 12px; border-top-right-radius: 12px; }
     </style>
 </head>
 <body class="layout-top-header">
@@ -269,52 +286,75 @@ $pageIcon = "fas fa-store";
                 </div>
 
                 <!-- Fulfillment Layout -->
-                <div class="row g-2 d-none h-100 overflow-auto pb-3 hide-scrollbar" id="fulfillment-layout">
-                    <div class="col-12">
-                        <div class="bg-white border rounded shadow-sm p-3 mb-2">
-                            <div class="row g-2 align-items-end">
-                                <div class="col-md-4 col-lg-3">
-                                    <label class="form-label small fw-bold text-secondary mb-1">ไลน์การผลิต (Line)</label>
-                                    <select id="fulfill_line" class="form-select form-select-sm fw-bold" onchange="loadActiveJobsForFulfillment()">
-                                        <option value="">-- เลือกไลน์ --</option>
-                                    </select>
+                <div class="row d-none h-100 overflow-auto pb-4 hide-scrollbar" id="fulfillment-layout">
+                    <div class="col-12 d-flex flex-column h-100 px-3">
+                        
+                        <!-- Toolbar -->
+                        <div class="ff-card p-3 mb-3 flex-shrink-0 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width:40px; height:40px;">
+                                    <i class="fas fa-check-double fs-5"></i>
                                 </div>
-                                <div class="col-md-2 col-lg-2">
-                                    <button class="btn btn-sm btn-primary w-100 fw-bold" onclick="loadActiveJobsForFulfillment()">
-                                        <i class="fas fa-sync-alt me-1"></i> โหลดข้อมูล
-                                    </button>
+                                <div>
+                                    <h5 class="mb-0 fw-bold text-dark">ตรวจสอบยอดเบิกจ่าย</h5>
+                                    <div class="small text-muted">ติดตามความคืบหน้าการจ่ายวัตถุดิบเข้าสู่ไลน์การผลิต</div>
                                 </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center gap-2">
+                                <label class="form-label small fw-bold text-secondary mb-0 me-1">แสดงผล:</label>
+                                <select id="fulfill_line" class="form-select form-select-sm fw-bold border-secondary-subtle" style="min-width: 150px; border-radius: 20px; padding-left: 15px;" onchange="loadActiveJobsForFulfillment()">
+                                    <option value="">🌐 ทุกไลน์การผลิต</option>
+                                </select>
+                                <button class="btn btn-sm btn-light border shadow-sm rounded-circle p-2" onclick="loadActiveJobsForFulfillment()" title="รีเฟรชข้อมูล">
+                                    <i class="fas fa-sync-alt text-primary"></i>
+                                </button>
                             </div>
                         </div>
 
-                        <div class="row g-2">
-                            <div class="col-md-4 col-lg-3">
-                                <div class="bg-white border rounded shadow-sm overflow-hidden h-100 d-flex flex-column">
-                                    <div class="bg-light p-2 border-bottom fw-bold text-dark"><i class="fas fa-clipboard-list me-1"></i> งานที่กำลังรอ/ผลิต</div>
-                                    <div class="list-group list-group-flush overflow-auto flex-grow-1 hide-scrollbar" id="fulfillJobList" style="max-height: 500px;">
-                                        <div class="p-3 text-center text-muted small">กรุณาเลือกไลน์การผลิต</div>
+                        <!-- Content Area -->
+                        <div class="row g-3 flex-grow-1 overflow-hidden">
+                            <!-- Left: Job list -->
+                            <div class="col-md-4 col-lg-3 d-flex flex-column h-100">
+                                <div class="ff-card h-100 d-flex flex-column">
+                                    <div class="ff-header-gradient p-3 fw-bold text-dark d-flex align-items-center">
+                                        <i class="fas fa-clipboard-list text-primary me-2"></i> คิวงาน (Active Jobs)
+                                    </div>
+                                    <div class="p-2 flex-grow-1 overflow-auto hide-scrollbar" id="fulfillJobList" style="max-height: calc(100vh - 250px);">
+                                        <div class="p-4 text-center text-muted">กำลังโหลดข้อมูล...</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="col-md-8 col-lg-9">
-                                <div class="bg-white border rounded shadow-sm overflow-hidden h-100 d-flex flex-column">
-                                    <div class="bg-light p-2 border-bottom fw-bold text-dark d-flex justify-content-between align-items-center">
-                                        <span><i class="fas fa-box-open me-1"></i> รายการวัตถุดิบ (BOM)</span>
-                                        <span id="fulfillSelectedJobName" class="text-primary small fw-bold">-</span>
+                            <!-- Right: Table -->
+                            <div class="col-md-8 col-lg-9 d-flex flex-column h-100">
+                                <div class="ff-card h-100 d-flex flex-column">
+                                    <div class="ff-header-gradient p-3 d-flex justify-content-between align-items-center">
+                                        <div class="fw-bold text-dark">
+                                            <i class="fas fa-box-open text-primary me-2"></i> รายการวัตถุดิบตามสูตร (BOM Details)
+                                        </div>
+                                        <div id="fulfillSelectedJobName" class="badge bg-light text-dark border px-3 py-2 fs-7 shadow-sm rounded-pill">-</div>
                                     </div>
-                                    <div class="table-responsive flex-grow-1 hide-scrollbar" style="max-height: 500px;">
-                                        <table class="table table-hover table-bordered mb-0 text-center align-middle" style="font-size: 0.85rem;">
-                                            <thead class="table-light sticky-top" style="z-index: 1;">
+                                    <div class="p-3 flex-grow-1 overflow-auto hide-scrollbar" style="max-height: calc(100vh - 250px); background: #fafbfc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+                                        <table class="ff-table mb-0 text-center align-middle">
+                                            <thead class="sticky-top" style="z-index: 1; top: -15px; background: #fafbfc;">
                                                 <tr>
-                                                    <th class="text-start">วัตถุดิบ (Material)</th>
-                                                    <th>ความต้องการ (Target)</th>
+                                                    <th class="text-start ps-3" style="width: 40%;">วัตถุดิบ (Material)</th>
+                                                    <th>เป้าหมาย (Target)</th>
                                                     <th>จ่ายแล้ว (Issued)</th>
-                                                    <th style="width: 200px;">สถานะ (Fulfillment)</th>
+                                                    <th style="width: 25%;">สถานะ (Fulfillment)</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="fulfillmentListContainer">
-                                                <tr><td colspan="4" class="text-muted py-4">คลิกเลือกงานจากรายการด้านซ้ายเพื่อดูรายละเอียด</td></tr>
+                                                <tr>
+                                                    <td colspan="4" class="text-center py-5 bg-transparent border-0">
+                                                        <div class="text-muted d-flex flex-column align-items-center">
+                                                            <i class="fas fa-mouse-pointer fs-1 mb-3 text-light-gray opacity-50"></i>
+                                                            <h5>คลิกเลือกงานจากรายการด้านซ้าย</h5>
+                                                            <p class="small">เพื่อดูรายการวัตถุดิบและความคืบหน้าการเบิกจ่าย</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
                                             </tbody>
                                         </table>
                                     </div>

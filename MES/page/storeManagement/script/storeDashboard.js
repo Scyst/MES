@@ -729,15 +729,15 @@ window.loadActiveJobsForFulfillment = function() {
             let statusIcon = job.status === 'RUNNING' ? 'play-circle' : (job.status === 'PAUSED' ? 'pause-circle' : 'clock');
             
             html += `
-                <a href="javascript:void(0)" class="list-group-item list-group-item-action p-2" onclick="loadFulfillmentData(${job.job_id}, '${job.job_no}', ${parseInt(job.target_qty)})">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="fw-bold text-primary small"><i class="fas fa-clipboard-check me-1"></i>${job.job_no}</span>
-                        <span class="badge bg-${statusColor} text-${statusColor === 'warning' ? 'dark' : 'white'}"><i class="fas fa-${statusIcon} me-1"></i>${job.status}</span>
+                <a href="javascript:void(0)" class="ff-job-item list-group-item list-group-item-action p-3" data-jobid="${job.job_id}" onclick="loadFulfillmentData(${job.job_id}, '${job.job_no}', ${parseInt(job.target_qty)})">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold text-dark"><i class="fas fa-clipboard-check text-primary me-2"></i>${job.job_no}</span>
+                        <span class="badge bg-${statusColor} text-${statusColor === 'warning' ? 'dark' : 'white'} shadow-sm px-2 py-1"><i class="fas fa-${statusIcon} me-1"></i>${job.status}</span>
                     </div>
-                    <div class="small fw-bold text-dark text-truncate" title="${job.part_description}">${job.part_no}</div>
-                    <div class="d-flex justify-content-between align-items-center mt-1">
-                        <small class="text-muted" style="font-size:0.75rem;">เป้า: <span class="fw-bold text-dark">${parseInt(job.target_qty)}</span> ชิ้น</small>
-                        <i class="fas fa-chevron-right text-muted" style="font-size:0.7rem;"></i>
+                    <div class="fs-7 fw-bold text-secondary text-truncate mb-2" title="${job.part_description}">${job.part_no}</div>
+                    <div class="d-flex justify-content-between align-items-center bg-light rounded p-2 border">
+                        <small class="text-muted fw-bold">เป้าหมาย: <span class="text-dark ms-1 fs-6">${parseInt(job.target_qty)}</span> ชิ้น</small>
+                        <i class="fas fa-arrow-right text-primary opacity-50" style="font-size:0.8rem;"></i>
                     </div>
                 </a>
             `;
@@ -753,9 +753,14 @@ window.loadActiveJobsForFulfillment = function() {
 
 window.loadFulfillmentData = function(job_id, job_no, target_qty) {
     const container = document.getElementById('fulfillmentListContainer');
-    document.getElementById('fulfillSelectedJobName').innerHTML = `Job: <b>${job_no}</b> <span class="badge bg-secondary ms-1">เป้า ${target_qty}</span>`;
+    const jobItems = document.querySelectorAll('#fulfillJobList .ff-job-item');
+    jobItems.forEach(el => el.classList.remove('active'));
+    const activeItem = document.querySelector(`#fulfillJobList .ff-job-item[data-jobid="${job_id}"]`);
+    if (activeItem) activeItem.classList.add('active');
 
-    container.innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>`;
+    document.getElementById('fulfillSelectedJobName').innerHTML = `Job: <b class="text-primary ms-1">${job_no}</b> <span class="badge bg-secondary ms-2 shadow-sm rounded-pill">เป้า ${target_qty}</span>`;
+
+    container.innerHTML = `<tr><td colspan="4" class="text-center py-5 border-0"><div class="spinner-border text-primary" role="status"></div><div class="mt-2 text-muted fw-bold">กำลังประมวลผลยอดเบิกจ่าย...</div></td></tr>`;
 
     fetchAPI(`get_plan_fulfillment&job_id=${job_id}`, 'GET')
     .then(res => {
@@ -773,40 +778,38 @@ window.loadFulfillmentData = function(job_id, job_no, target_qty) {
             const pending = item.pending_qty;
             
             let statusBadge = '';
-            let bgClass = 'bg-primary';
+            let progressBar = '';
             
             if (pct >= 100) {
-                statusBadge = `<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>ครบแล้ว</span>`;
-                bgClass = 'bg-success';
+                statusBadge = `<span class="badge bg-success shadow-sm px-2 py-1 w-100"><i class="fas fa-check-circle me-1"></i>ครบถ้วน (100%)</span>`;
+                progressBar = `<div class="ff-progress mt-2"><div class="ff-progress-bar bg-success" style="width: 100%"></div></div>`;
             } else if (pct > 0) {
-                statusBadge = `<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>ขาด ${pending}</span>`;
-                bgClass = 'bg-warning';
+                statusBadge = `<span class="badge bg-warning text-dark shadow-sm px-2 py-1 w-100"><i class="fas fa-spinner fa-spin me-1"></i>กำลังจ่าย (${pct}%)</span>`;
+                progressBar = `<div class="ff-progress mt-2"><div class="ff-progress-bar bg-warning" style="width: ${pct}%"></div></div>`;
             } else {
-                statusBadge = `<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>ขาด ${pending}</span>`;
-                bgClass = 'bg-danger';
+                statusBadge = `<span class="badge bg-secondary shadow-sm px-2 py-1 w-100"><i class="fas fa-hourglass-start me-1"></i>รอเบิกจ่าย (0%)</span>`;
+                progressBar = `<div class="ff-progress mt-2"><div class="ff-progress-bar bg-secondary" style="width: 0%"></div></div>`;
             }
 
             html += `
                 <tr>
-                    <td class="text-start">
-                        <div class="d-flex align-items-center gap-2">
+                    <td class="text-start ps-3">
+                        <div class="d-flex align-items-center gap-3">
                             ${getIconPlaceholder(item.sap_no)}
                             <div>
-                                <div class="fw-bold text-dark">${item.part_no || '-'}</div>
-                                <div class="small text-muted text-truncate" style="max-width:200px;" title="${item.part_description}">${item.part_description || '-'}</div>
-                                <div class="small text-primary fw-bold">${item.sap_no || '-'}</div>
+                                <div class="fw-bold text-dark fs-6">${item.sap_no || '-'}</div>
+                                <div class="text-muted small">${item.part_no || '-'}</div>
+                                <div class="text-secondary small text-truncate" style="max-width:220px;" title="${item.part_description}">${item.part_description || '-'}</div>
                             </div>
                         </div>
                     </td>
-                    <td><div class="fs-6 fw-bold">${parseFloat(item.target_qty).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 4})}</div></td>
-                    <td><div class="fs-6 fw-bold text-primary">${parseFloat(item.issued_qty).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 4})}</div></td>
-                    <td>
-                        <div class="d-flex flex-column align-items-center gap-1">
+                    <td><div class="fs-5 fw-bold text-dark">${parseFloat(item.target_qty).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 4})}</div></td>
+                    <td><div class="fs-5 fw-bold text-primary">${parseFloat(item.issued_qty).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 4})}</div></td>
+                    <td class="pe-3">
+                        <div class="d-flex flex-column align-items-stretch gap-1 w-100" style="max-width: 180px; margin: 0 auto;">
                             ${statusBadge}
-                            <div class="progress w-100 mt-1" style="height: 6px;">
-                                <div class="progress-bar ${bgClass}" role="progressbar" style="width: ${pct}%;"></div>
-                            </div>
-                            <small class="text-muted" style="font-size:0.7rem;">${pct}%</small>
+                            ${progressBar}
+                            <small class="text-muted text-center" style="font-size:0.7rem;">ขาด ${pending} ชิ้น</small>
                         </div>
                     </td>
                 </tr>
