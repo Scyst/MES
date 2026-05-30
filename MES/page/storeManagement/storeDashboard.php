@@ -334,65 +334,60 @@ $pageIcon = "fas fa-store";
                 </div>
 
                 <!-- Fulfillment Layout -->
-                <div class="row g-2 d-none h-100 flex-grow-1 px-1 px-lg-2 overflow-auto pb-4 hide-scrollbar" id="fulfillment-layout">
-                    <div class="col-12 d-flex flex-column h-100 px-3">
-                        
-                        <!-- Toolbar -->
-                        <div class="ff-card p-3 mb-3 flex-shrink-0 d-flex justify-content-end align-items-center">
+                <!-- Fulfillment Layout -->
+                <div class="row g-2 d-none h-100 flex-grow-1 px-1 px-lg-2" id="fulfillment-layout">
+                    
+                    <div class="col-12 col-lg-4 col-xl-3 d-flex flex-column h-100">
+                        <div class="ff-card p-3 mb-2 flex-shrink-0">
+                            <label class="form-label small fw-bold text-secondary mb-1">กรองไลน์การผลิต</label>
                             <div class="d-flex align-items-center gap-2">
-                                <i class="fas fa-filter text-muted ms-2"></i>
-                                <select id="fulfill_line" class="form-select form-select-sm fw-bold border-secondary-subtle" style="min-width: 200px; border-radius: 6px;" onchange="loadActiveJobsForFulfillment()">
+                                <select id="fulfill_line" class="form-select form-select-sm fw-bold border-secondary-subtle" style="border-radius: 8px;" onchange="loadActiveJobsForFulfillment()">
                                     <option value="">🌐 ทุกไลน์การผลิต</option>
                                 </select>
-                                <button class="btn btn-sm btn-primary px-3 shadow-sm" style="border-radius: 6px;" onclick="loadActiveJobsForFulfillment()" title="รีเฟรชข้อมูล">
+                                <button class="btn btn-sm btn-primary px-3 shadow-sm" style="border-radius: 8px;" onclick="loadActiveJobsForFulfillment()" title="รีเฟรชข้อมูล">
                                     <i class="fas fa-sync-alt"></i>
                                 </button>
                             </div>
                         </div>
+                        <div class="ff-card flex-grow-1 overflow-auto hide-scrollbar p-2 d-flex flex-column gap-1" style="background-color: #fcfcfc;" id="fulfillJobList">
+                            <div class="p-4 text-center text-muted">กำลังโหลดข้อมูล...</div>
+                        </div>
+                    </div>
 
-                        <!-- Content Area -->
-                        <div class="row g-2 flex-grow-1 h-100 overflow-hidden">
-                            <!-- Left: Job list -->
-                            <div class="col-md-4 col-lg-3 d-flex flex-column h-100">
-                                <div class="ff-card h-100 d-flex flex-column shadow-sm bg-transparent border-0">
-                                    <div class="p-2 flex-grow-1 overflow-auto hide-scrollbar" id="fulfillJobList" style="max-height: calc(100vh - 250px);">
-                                        <div class="p-4 text-center text-muted">กำลังโหลดข้อมูล...</div>
+                    <div class="col-12 col-lg-8 col-xl-9 d-none d-lg-flex flex-column h-100">
+                        <div class="ff-card flex-grow-1 d-flex flex-column overflow-hidden position-relative" style="background-color: #f8f9fa;">
+                            
+                            <div class="card border-0 shadow-sm mx-3 mt-3 mb-2 flex-shrink-0" style="border-radius: 12px; overflow: hidden;">
+                                <div class="card-header p-3 d-flex justify-content-between align-items-center border-0 rounded-top bg-dark text-white">
+                                    <div class="fw-bold fs-5">
+                                        <i class="fas fa-box-open text-primary me-2"></i> รายการวัตถุดิบตามสูตร (BOM Details)
                                     </div>
+                                    <span id="fulfillSelectedJobName" class="badge bg-white text-dark shadow-sm px-3 py-2 rounded-pill fw-bold">-</span>
                                 </div>
                             </div>
-
-                            <!-- Right: Table -->
-                            <div class="col-md-8 col-lg-9 d-flex flex-column h-100">
-                                <div class="ff-card h-100 d-flex flex-column shadow-sm" style="background-color: #ffffff; border: 1px solid rgba(0,0,0,0.08);">
-                                    <div class="ff-header-gradient p-3 d-flex justify-content-between align-items-center" style="border-bottom: 1px solid rgba(0,0,0,0.08);">
-                                        <div class="fw-bold text-dark">
-                                            <i class="fas fa-box-open text-primary me-2"></i> รายการวัตถุดิบตามสูตร (BOM Details)
-                                        </div>
-                                        <div id="fulfillSelectedJobName" class="badge bg-light text-dark border px-3 py-2 fs-7 shadow-sm rounded-pill">-</div>
-                                    </div>
-                                    <div class="p-3 flex-grow-1 overflow-auto hide-scrollbar" style="max-height: calc(100vh - 250px); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; background-color: #f8f9fa;">
-                                        <table class="ff-table mb-0 text-center align-middle">
-                                            <thead class="sticky-top" style="z-index: 1; top: -15px; background: #f8f9fa;">
-                                                <tr>
-                                                    <th class="text-start ps-3" style="width: 40%;">วัตถุดิบ (Material)</th>
-                                                    <th>เป้าหมาย (Target)</th>
-                                                    <th>จ่ายแล้ว (Issued)</th>
-                                                    <th style="width: 25%;">สถานะ (Fulfillment)</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="fulfillmentListContainer">
-                                                <tr>
-                                                    <td colspan="4" class="text-center py-5 bg-transparent border-0">
-                                                        <div class="text-muted d-flex flex-column align-items-center">
-                                                            <i class="fas fa-mouse-pointer fs-1 mb-3 text-light-gray opacity-50"></i>
-                                                            <h5>คลิกเลือกงานจากรายการด้านซ้าย</h5>
-                                                            <p class="small">เพื่อดูรายการวัตถุดิบและความคืบหน้าการเบิกจ่าย</p>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                            <div class="flex-grow-1 overflow-auto hide-scrollbar px-3 pb-3 w-100">
+                                <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                                    <table class="table mb-0 text-center align-middle w-100 bg-white">
+                                        <thead class="bg-light text-muted" style="border-bottom: 2px solid #e9ecef;">
+                                            <tr>
+                                                <th class="text-start ps-3" style="width: 40%;">วัตถุดิบ (Material)</th>
+                                                <th>เป้าหมาย (Target)</th>
+                                                <th>จ่ายแล้ว (Issued)</th>
+                                                <th style="width: 25%;">สถานะ (Fulfillment)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="fulfillmentListContainer">
+                                            <tr>
+                                                <td colspan="4" class="text-center py-5 bg-transparent border-0">
+                                                    <div class="text-muted d-flex flex-column align-items-center">
+                                                        <i class="fas fa-mouse-pointer fs-1 mb-3 text-light-gray opacity-50"></i>
+                                                        <h5>คลิกเลือกงานจากรายการด้านซ้าย</h5>
+                                                        <p class="small">เพื่อดูรายการวัตถุดิบและความคืบหน้าการเบิกจ่าย</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
