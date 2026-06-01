@@ -726,7 +726,6 @@ async function processTransfer(transferId, status) {
 }
 
 window.exportInventoryData = async function() {
-window.exportInventoryData = async function() {
     const locId = document.getElementById('locationFilter')?.value || 'ALL';
     const locSelect = document.getElementById('locationFilter');
     const locName = locSelect ? locSelect.options[locSelect.selectedIndex].text : 'All Locations';
