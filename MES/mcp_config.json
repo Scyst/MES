@@ -15,12 +15,12 @@
         "mcp-mssql-server"
       ],
       "env": {
-        "MSSQL_SERVER": "10.1.1.31",
-        "MSSQL_DATABASE": "IIOT_TOOLBOX",
-        "MSSQL_USER": "TOOLBOX",
-        "MSSQL_PASSWORD": "I1o1@T@#1boX",
-        "MSSQL_ENCRYPT": "false",
-        "MSSQL_TRUST_SERVER_CERTIFICATE": "true"
+        "DB_SERVER": "10.1.1.31",
+        "DB_DATABASE": "IIOT_TOOLBOX",
+        "DB_USER": "TOOLBOX",
+        "DB_PASSWORD": "I1o1@T@#1boX",
+        "DB_ENCRYPT": "false",
+        "DB_TRUST_SERVER_CERTIFICATE": "true"
       }
     },
     "mes-custom-mcp": {

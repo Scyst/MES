@@ -727,20 +727,95 @@ async function processTransfer(transferId, status) {
 
 window.exportInventoryData = async function() {
     const locId = document.getElementById('locationFilter')?.value || 'ALL';
+    const locSelect = document.getElementById('locationFilter');
+    const locName = locSelect ? locSelect.options[locSelect.selectedIndex].text : 'All Locations';
     const matType = document.getElementById('materialFilter')?.value || 'ALL';
     const hideZero = document.getElementById('hideZeroStock')?.checked || false;
-    const searchStr = encodeURIComponent(document.getElementById('filterSearch')?.value.trim() || '');
+    const searchStr = document.getElementById('filterSearch')?.value.trim() || '';
+
+    let optionsHtml = `
+        <div class="text-start mt-3" style="font-size: 0.95rem;">
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="radio" name="exportType" id="expCurrent" value="CURRENT" checked>
+                <label class="form-check-label fw-bold text-primary" for="expCurrent">
+                    1. Export ตามตารางที่เห็นอยู่ตอนนี้
+                    <div class="small text-muted fw-normal mt-1">ใช้เงื่อนไขคลัง, ประเภทสินค้า และคำค้นหาปัจจุบัน</div>
+                </label>
+            </div>
+    `;
+
+    if (locId !== 'ALL') {
+        optionsHtml += `
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="radio" name="exportType" id="expFilter" value="FILTER">
+                <label class="form-check-label fw-bold text-success" for="expFilter">
+                    2. Export คลัง "${escapeHTML(locName)}" ทั้งหมด
+                    <div class="small text-muted fw-normal mt-1">โหลดของทั้งหมดในคลังนี้ (ยกเลิกคำค้นหา)</div>
+                </label>
+            </div>
+        `;
+    }
+
+    optionsHtml += `
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="radio" name="exportType" id="expAll" value="ALL">
+                <label class="form-check-label fw-bold text-danger" for="expAll">
+                    3. Export ทุกคลัง (All Locations)
+                    <div class="small text-muted fw-normal mt-1">โหลดสต็อกรวมของทุกคลัง (ยกเลิกตัวกรองทั้งหมด)</div>
+                </label>
+            </div>
+        </div>
+    `;
+
+    const { value: exportType } = await Swal.fire({
+        title: 'เลือกรูปแบบการ Export',
+        html: optionsHtml,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-file-excel me-1"></i> เริ่ม Export',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#198754',
+        preConfirm: () => {
+            const checked = document.querySelector('input[name="exportType"]:checked');
+            return checked ? checked.value : null;
+        }
+    });
+
+    if (!exportType) return;
+
+    let reqLocId = locId;
+    let reqMatType = matType;
+    let reqHideZero = hideZero;
+    let reqSearchStr = searchStr;
+    let exportLocName = locName;
+
+    if (exportType === 'ALL') {
+        reqLocId = 'ALL';
+        reqMatType = 'ALL';
+        reqHideZero = false;
+        reqSearchStr = '';
+        exportLocName = 'All Locations';
+    } else if (exportType === 'FILTER') {
+        reqLocId = locId;
+        reqMatType = matType;
+        reqHideZero = hideZero;
+        reqSearchStr = '';
+        exportLocName = locName;
+    } else {
+        exportLocName = locName;
+    }
 
     try {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 title: 'กำลังเตรียมข้อมูล Export...',
+                html: 'โปรดรอสักครู่ ระบบกำลังดึงข้อมูลทั้งหมด...',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading()
             });
         }
 
-        const queryParams = `get_inventory_dashboard&location_id=${locId}&material_type=${matType}&hide_zero=${hideZero}&search=${searchStr}&page=1&limit=999999`;
+        const queryParams = `get_inventory_dashboard&location_id=${reqLocId}&material_type=${reqMatType}&hide_zero=${reqHideZero}&search=${encodeURIComponent(reqSearchStr)}&page=1&limit=999999`;
         const result = await fetchAPI(queryParams, 'GET');
 
         if (!result.data || result.data.length === 0) {
@@ -754,6 +829,10 @@ window.exportInventoryData = async function() {
         }
 
         const ws_data = [
+            ["Location:", exportLocName],
+            ["Search Filter:", reqSearchStr ? reqSearchStr : "None"],
+            ["Export Date:", new Date().toLocaleString('th-TH')],
+            [],
             ["Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
         ];
 
@@ -786,8 +865,15 @@ window.exportInventoryData = async function() {
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Inventory_Stock");
         
+        const safeLocName = exportLocName.replace(/[^a-zA-Z0-9_\u0E00-\u0E7F]/g, '_');
         const dateStr = new Date().toISOString().slice(0, 10);
-        XLSX.writeFile(wb, `Inventory_Stock_${dateStr}.xlsx`);
+        let fileName = `Inventory_${safeLocName}_${dateStr}.xlsx`;
+        
+        if (exportType === 'CURRENT' && reqSearchStr) {
+            fileName = `Inventory_Filtered_${dateStr}.xlsx`;
+        }
+
+        XLSX.writeFile(wb, fileName);
 
         if (typeof Swal !== 'undefined') Swal.close();
     } catch (err) {
