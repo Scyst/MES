@@ -181,6 +181,10 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                 <button class="btn btn-sm fw-bold px-3 py-1 rounded shadow transition-btn text-white border-0" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7);" onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();">
                                     <i class="fas fa-qrcode me-1"></i> สแกน
                                 </button>
+                                
+                                <button class="btn btn-sm btn-outline-success fw-bold px-3 py-1 rounded shadow-sm ms-1" onclick="exportInventoryData()">
+                                    <i class="fas fa-file-excel me-1"></i> Export
+                                </button>
 
                                 <div class="dropdown ms-1">
                                     <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm position-relative" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false">

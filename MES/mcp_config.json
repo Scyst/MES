@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "e:/MES/MES/MES"
+      ]
+    },
+    "mssql": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-mssql-server"
+      ],
+      "env": {
+        "MSSQL_SERVER": "10.1.1.31",
+        "MSSQL_DATABASE": "IIOT_TOOLBOX",
+        "MSSQL_USER": "TOOLBOX",
+        "MSSQL_PASSWORD": "I1o1@T@#1boX",
+        "MSSQL_ENCRYPT": "false",
+        "MSSQL_TRUST_SERVER_CERTIFICATE": "true"
+      }
+    },
+    "mes-custom-mcp": {
+      "command": "node",
+      "args": [
+        "e:/MES/MES/MES/mcp_server/index.mjs"
+      ]
+    }
+  }
+}

@@ -725,6 +725,64 @@ async function processTransfer(transferId, status) {
     }
 }
 
+window.exportInventoryData = async function() {
+    const locId = document.getElementById('locationFilter')?.value || 'ALL';
+    const matType = document.getElementById('materialFilter')?.value || 'ALL';
+    const hideZero = document.getElementById('hideZeroStock')?.checked || false;
+    const searchStr = encodeURIComponent(document.getElementById('filterSearch')?.value.trim() || '');
+
+    try {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'กำลังเตรียมข้อมูล Export...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
+        const queryParams = `get_inventory_dashboard&location_id=${locId}&material_type=${matType}&hide_zero=${hideZero}&search=${searchStr}&page=1&limit=999999`;
+        const result = await fetchAPI(queryParams, 'GET');
+
+        if (!result.data || result.data.length === 0) {
+            if (typeof Swal !== 'undefined') Swal.fire('ไม่พบข้อมูล', 'ไม่มีข้อมูลสำหรับ Export ตามเงื่อนไขที่เลือก', 'warning');
+            return;
+        }
+
+        let csvContent = '\uFEFF'; 
+        csvContent += "Item No.,Description,Type,Pending Qty,Available Qty,Total Qty,Cost/Unit,Total Value\n";
+
+        result.data.forEach(row => {
+            const itemNo = `"${(row.item_no || '').replace(/"/g, '""')}"`;
+            const desc = `"${(row.part_description || '').replace(/"/g, '""')}"`;
+            const type = `"${row.material_type || ''}"`;
+            const pending = row.pending_qty || 0;
+            const available = row.available_qty || 0;
+            const total = row.total_qty || 0;
+            const cost = row.unit_price || 0;
+            const value = row.total_value || 0;
+
+            csvContent += `${itemNo},${desc},${type},${pending},${available},${total},${cost},${value}\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const dateStr = new Date().toISOString().slice(0, 10);
+        
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Inventory_Stock_${dateStr}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        if (typeof Swal !== 'undefined') Swal.close();
+    } catch (err) {
+        console.error("Export Error:", err);
+        if (typeof Swal !== 'undefined') Swal.fire('ข้อผิดพลาด', 'ไม่สามารถ Export ข้อมูลได้', 'error');
+    }
+};
+
 window.forceIssueTag = async function(serialNo) {
     const { isConfirmed } = await Swal.fire({
         title: 'ยืนยันการตัดจ่ายแท็ก?',
