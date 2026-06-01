@@ -16,7 +16,7 @@
       ],
       "env": {
         "DB_SERVER": "10.1.1.31",
-        "DB_DATABASE": "IIOT_TOOLBOX",
+        "DB_DATABASE_NAME": "IIOT_TOOLBOX",
         "DB_USER": "TOOLBOX",
         "DB_PASSWORD": "I1o1@T@#1boX",
         "DB_ENCRYPT": "false",

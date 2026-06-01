@@ -726,6 +726,7 @@ async function processTransfer(transferId, status) {
 }
 
 window.exportInventoryData = async function() {
+window.exportInventoryData = async function() {
     const locId = document.getElementById('locationFilter')?.value || 'ALL';
     const locSelect = document.getElementById('locationFilter');
     const locName = locSelect ? locSelect.options[locSelect.selectedIndex].text : 'All Locations';
@@ -760,8 +761,8 @@ window.exportInventoryData = async function() {
             <div class="form-check mb-2">
                 <input class="form-check-input" type="radio" name="exportType" id="expAll" value="ALL">
                 <label class="form-check-label fw-bold text-danger" for="expAll">
-                    3. Export ทุกคลัง (All Locations)
-                    <div class="small text-muted fw-normal mt-1">โหลดสต็อกรวมของทุกคลัง (ยกเลิกตัวกรองทั้งหมด)</div>
+                    3. Export ทุกคลัง (แยกชีท + ผูกสูตรรวม)
+                    <div class="small text-muted fw-normal mt-1">แต่ละคลังจะแยกเป็น 1 ชีท และมีชีท Summary รวมยอดด้วยสูตร</div>
                 </label>
             </div>
         </div>
@@ -783,28 +784,6 @@ window.exportInventoryData = async function() {
 
     if (!exportType) return;
 
-    let reqLocId = locId;
-    let reqMatType = matType;
-    let reqHideZero = hideZero;
-    let reqSearchStr = searchStr;
-    let exportLocName = locName;
-
-    if (exportType === 'ALL') {
-        reqLocId = 'ALL';
-        reqMatType = 'ALL';
-        reqHideZero = false;
-        reqSearchStr = '';
-        exportLocName = 'All Locations';
-    } else if (exportType === 'FILTER') {
-        reqLocId = locId;
-        reqMatType = matType;
-        reqHideZero = hideZero;
-        reqSearchStr = '';
-        exportLocName = locName;
-    } else {
-        exportLocName = locName;
-    }
-
     try {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -815,65 +794,159 @@ window.exportInventoryData = async function() {
             });
         }
 
-        const queryParams = `get_inventory_dashboard&location_id=${reqLocId}&material_type=${reqMatType}&hide_zero=${reqHideZero}&search=${encodeURIComponent(reqSearchStr)}&page=1&limit=999999`;
-        const result = await fetchAPI(queryParams, 'GET');
-
-        if (!result.data || result.data.length === 0) {
-            if (typeof Swal !== 'undefined') Swal.fire('ไม่พบข้อมูล', 'ไม่มีข้อมูลสำหรับ Export ตามเงื่อนไขที่เลือก', 'warning');
-            return;
-        }
-
         if (typeof XLSX === 'undefined') {
-            if (typeof Swal !== 'undefined') Swal.fire('ข้อผิดพลาด', 'ไม่พบไลบรารีสำหรับการออกรายงาน (XLSX)', 'error');
-            return;
+            throw new Error("XLSX library not found");
         }
-
-        const ws_data = [
-            ["Location:", exportLocName],
-            ["Search Filter:", reqSearchStr ? reqSearchStr : "None"],
-            ["Export Date:", new Date().toLocaleString('th-TH')],
-            [],
-            ["Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
-        ];
-
-        result.data.forEach(row => {
-            ws_data.push([
-                row.item_no || '',
-                row.part_description || '',
-                row.material_type || '',
-                parseFloat(row.pending_qty) || 0,
-                parseFloat(row.available_qty) || 0,
-                parseFloat(row.total_qty) || 0,
-                parseFloat(row.unit_price) || 0,
-                parseFloat(row.total_value) || 0
-            ]);
-        });
-
-        const ws = XLSX.utils.aoa_to_sheet(ws_data);
-
-        ws['!cols'] = [
-            { wch: 20 },  // Item No.
-            { wch: 50 },  // Description
-            { wch: 12 },  // Type
-            { wch: 15 },  // Pending Qty
-            { wch: 15 },  // Available Qty
-            { wch: 15 },  // Total Qty
-            { wch: 15 },  // Cost/Unit
-            { wch: 18 }   // Total Value
-        ];
 
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Inventory_Stock");
-        
-        const safeLocName = exportLocName.replace(/[^a-zA-Z0-9_\u0E00-\u0E7F]/g, '_');
         const dateStr = new Date().toISOString().slice(0, 10);
-        let fileName = `Inventory_${safeLocName}_${dateStr}.xlsx`;
-        
-        if (exportType === 'CURRENT' && reqSearchStr) {
-            fileName = `Inventory_Filtered_${dateStr}.xlsx`;
-        }
 
-        XLSX.writeFile(wb, fileName);
+        if (exportType === 'ALL') {
+            // โหมด ALL: ดึงข้อมูลแต่ละคลังแยกกัน และดึงภาพรวมสำหรับ Summary
+            const allLocs = Array.from(document.getElementById('locationFilter').options)
+                .filter(opt => opt.value !== 'ALL')
+                .map(opt => ({ 
+                    id: opt.value, 
+                    name: opt.text.replace(/[^a-zA-Z0-9_\u0E00-\u0E7F ]/g, '').trim().substring(0,30) 
+                }));
+
+            const masterRes = await fetchAPI(`get_inventory_dashboard&location_id=ALL&material_type=${matType}&hide_zero=${hideZero}&search=&page=1&limit=999999`, 'GET');
+            
+            if (!masterRes.data || masterRes.data.length === 0) {
+                Swal.fire('ไม่พบข้อมูล', 'ไม่มีข้อมูลในระบบเลย', 'warning');
+                return;
+            }
+
+            const actualSheets = [];
+
+            // ดึงข้อมูลแต่ละคลัง
+            for (const loc of allLocs) {
+                const locRes = await fetchAPI(`get_inventory_dashboard&location_id=${loc.id}&material_type=${matType}&hide_zero=${hideZero}&search=&page=1&limit=999999`, 'GET');
+                
+                if (locRes.data && locRes.data.length > 0) {
+                    actualSheets.push(loc.name);
+                    
+                    const ws_data = [
+                        ["Location:", loc.name],
+                        ["Export Date:", new Date().toLocaleString('th-TH')],
+                        [],
+                        ["Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
+                    ];
+                    
+                    locRes.data.forEach(row => {
+                        ws_data.push([
+                            row.item_no || '',
+                            row.part_description || '',
+                            row.material_type || '',
+                            parseFloat(row.pending_qty) || 0,
+                            parseFloat(row.available_qty) || 0,
+                            parseFloat(row.total_qty) || 0,
+                            parseFloat(row.unit_price) || 0,
+                            parseFloat(row.total_value) || 0
+                        ]);
+                    });
+                    
+                    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+                    ws['!cols'] = [{wch:20}, {wch:50}, {wch:12}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:18}];
+                    XLSX.utils.book_append_sheet(wb, ws, loc.name);
+                }
+            }
+
+            // สร้างชีท Summary
+            const summary_data = [
+                ["Location:", "Summary (All Locations)"],
+                ["Export Date:", new Date().toLocaleString('th-TH')],
+                [],
+                ["Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
+            ];
+
+            masterRes.data.forEach((row, idx) => {
+                const rIdx = idx + 5; // Data starts at Excel row 5
+                
+                let formulaPending = actualSheets.map(s => `SUMIF('${s}'!A:A, $A${rIdx}, '${s}'!D:D)`).join(' + ');
+                let formulaAvail = actualSheets.map(s => `SUMIF('${s}'!A:A, $A${rIdx}, '${s}'!E:E)`).join(' + ');
+                let formulaTotal = actualSheets.map(s => `SUMIF('${s}'!A:A, $A${rIdx}, '${s}'!F:F)`).join(' + ');
+                
+                if (actualSheets.length === 0) {
+                    formulaPending = "0"; formulaAvail = "0"; formulaTotal = "0";
+                }
+
+                summary_data.push([
+                    row.item_no || '',
+                    row.part_description || '',
+                    row.material_type || '',
+                    { f: formulaPending, v: parseFloat(row.pending_qty) || 0, t: 'n' },
+                    { f: formulaAvail, v: parseFloat(row.available_qty) || 0, t: 'n' },
+                    { f: formulaTotal, v: parseFloat(row.total_qty) || 0, t: 'n' },
+                    parseFloat(row.unit_price) || 0,
+                    { f: `F${rIdx}*G${rIdx}`, v: parseFloat(row.total_value) || 0, t: 'n' }
+                ]);
+            });
+
+            const wsSummary = XLSX.utils.aoa_to_sheet(summary_data);
+            wsSummary['!cols'] = [{wch:20}, {wch:50}, {wch:12}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:18}];
+            XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+            // ย้าย Summary มาไว้ชีทแรกสุด
+            const sheetNames = wb.SheetNames;
+            const sumIndex = sheetNames.indexOf("Summary");
+            if (sumIndex > -1) {
+                sheetNames.splice(sumIndex, 1);
+                sheetNames.unshift("Summary");
+            }
+
+            XLSX.writeFile(wb, `Inventory_All_Locations_${dateStr}.xlsx`);
+
+        } else {
+            // โหมด FILTER / CURRENT: แบบเก่า (ชีทเดียว)
+            let reqLocId = exportType === 'FILTER' ? locId : locId;
+            let reqMatType = exportType === 'FILTER' ? matType : matType;
+            let reqHideZero = exportType === 'FILTER' ? hideZero : hideZero;
+            let reqSearchStr = exportType === 'FILTER' ? '' : searchStr;
+            let exportLocName = exportType === 'FILTER' ? locName : locName;
+
+            const queryParams = `get_inventory_dashboard&location_id=${reqLocId}&material_type=${reqMatType}&hide_zero=${reqHideZero}&search=${encodeURIComponent(reqSearchStr)}&page=1&limit=999999`;
+            const result = await fetchAPI(queryParams, 'GET');
+
+            if (!result.data || result.data.length === 0) {
+                Swal.fire('ไม่พบข้อมูล', 'ไม่มีข้อมูลสำหรับ Export ตามเงื่อนไขที่เลือก', 'warning');
+                return;
+            }
+
+            const ws_data = [
+                ["Location:", exportLocName],
+                ["Search Filter:", reqSearchStr ? reqSearchStr : "None"],
+                ["Export Date:", new Date().toLocaleString('th-TH')],
+                [],
+                ["Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
+            ];
+
+            result.data.forEach(row => {
+                ws_data.push([
+                    row.item_no || '',
+                    row.part_description || '',
+                    row.material_type || '',
+                    parseFloat(row.pending_qty) || 0,
+                    parseFloat(row.available_qty) || 0,
+                    parseFloat(row.total_qty) || 0,
+                    parseFloat(row.unit_price) || 0,
+                    parseFloat(row.total_value) || 0
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            ws['!cols'] = [{ wch: 20 }, { wch: 50 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 18 }];
+
+            const safeLocName = exportLocName.replace(/[^a-zA-Z0-9_\u0E00-\u0E7F]/g, '_').substring(0,30);
+            XLSX.utils.book_append_sheet(wb, ws, safeLocName || "Inventory");
+            
+            let fileName = `Inventory_${safeLocName}_${dateStr}.xlsx`;
+            if (exportType === 'CURRENT' && reqSearchStr) {
+                fileName = `Inventory_Filtered_${dateStr}.xlsx`;
+            }
+
+            XLSX.writeFile(wb, fileName);
+        }
 
         if (typeof Swal !== 'undefined') Swal.close();
     } catch (err) {
