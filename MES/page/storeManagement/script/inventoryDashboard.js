@@ -748,33 +748,46 @@ window.exportInventoryData = async function() {
             return;
         }
 
-        let csvContent = '\uFEFF'; 
-        csvContent += "Item No.,Description,Type,Pending Qty,Available Qty,Total Qty,Cost/Unit,Total Value\n";
+        if (typeof XLSX === 'undefined') {
+            if (typeof Swal !== 'undefined') Swal.fire('ข้อผิดพลาด', 'ไม่พบไลบรารีสำหรับการออกรายงาน (XLSX)', 'error');
+            return;
+        }
+
+        const ws_data = [
+            ["Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
+        ];
 
         result.data.forEach(row => {
-            const itemNo = `"${(row.item_no || '').replace(/"/g, '""')}"`;
-            const desc = `"${(row.part_description || '').replace(/"/g, '""')}"`;
-            const type = `"${row.material_type || ''}"`;
-            const pending = row.pending_qty || 0;
-            const available = row.available_qty || 0;
-            const total = row.total_qty || 0;
-            const cost = row.unit_price || 0;
-            const value = row.total_value || 0;
-
-            csvContent += `${itemNo},${desc},${type},${pending},${available},${total},${cost},${value}\n`;
+            ws_data.push([
+                row.item_no || '',
+                row.part_description || '',
+                row.material_type || '',
+                parseFloat(row.pending_qty) || 0,
+                parseFloat(row.available_qty) || 0,
+                parseFloat(row.total_qty) || 0,
+                parseFloat(row.unit_price) || 0,
+                parseFloat(row.total_value) || 0
+            ]);
         });
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        const dateStr = new Date().toISOString().slice(0, 10);
+        const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+        ws['!cols'] = [
+            { wch: 20 },  // Item No.
+            { wch: 50 },  // Description
+            { wch: 12 },  // Type
+            { wch: 15 },  // Pending Qty
+            { wch: 15 },  // Available Qty
+            { wch: 15 },  // Total Qty
+            { wch: 15 },  // Cost/Unit
+            { wch: 18 }   // Total Value
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Inventory_Stock");
         
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Inventory_Stock_${dateStr}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const dateStr = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(wb, `Inventory_Stock_${dateStr}.xlsx`);
 
         if (typeof Swal !== 'undefined') Swal.close();
     } catch (err) {

@@ -283,6 +283,7 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
         const CAN_MANAGE_WH = <?php echo json_encode(hasPermission('manage_warehouse')); ?>;
         const CAN_MANAGE_RM = <?php echo json_encode(hasPermission('manage_rm_receiving')); ?>;
     </script>
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
     <script src="script/inventoryDashboard.js?v=<?php echo filemtime(__DIR__ . '/script/inventoryDashboard.js'); ?>" defer></script>
 </body>
