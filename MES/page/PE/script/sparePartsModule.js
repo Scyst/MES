@@ -78,15 +78,91 @@ const SparePartsModule = (() => {
         }).join('');
     }
 
-    async function openReceiveModal() {
-        // Redirect to existing system for now
-        PEApp.showToast('Opening Receive form from existing system...', 'info');
-        window.open('../maintenancePE/maintenanceStockUI.php', '_blank');
+    async function loadMasterData() {
+        try {
+            const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_master_data' });
+            
+            const itemSel = document.getElementById('spTxItem');
+            itemSel.innerHTML = '<option value="">-- เลือกอะไหล่ --</option>' + 
+                (res.data.items || []).map(i => `<option value="${i.item_id}">[${i.item_code}] ${i.item_name} (${i.uom})</option>`).join('');
+                
+            const locSel = document.getElementById('spTxLocation');
+            locSel.innerHTML = '<option value="">-- เลือกคลังจัดเก็บ --</option>' + 
+                (res.data.locations || []).map(l => `<option value="${l.location_id}">${l.location_name}</option>`).join('');
+                
+        } catch (e) {
+            console.error('Error loading master data:', e);
+        }
+    }
+    
+    async function loadActiveWorkOrders() {
+        try {
+            const res = await PEApp.apiCall('workOrderAPI.php', { action: 'get_work_orders', status: 'Active' });
+            const woSel = document.getElementById('spTxWoId');
+            woSel.innerHTML = '<option value="">-- ไม่ระบุ --</option>' + 
+                (res.data || []).map(w => `<option value="${w.wo_id}">[${w.wo_number}] ${w.machine_code} - ${w.issue_title}</option>`).join('');
+        } catch (e) {
+            console.error('Error loading WOs:', e);
+        }
     }
 
-    async function openIssueModal() {
-        PEApp.showToast('Opening Issue form from existing system...', 'info');
-        window.open('../maintenancePE/maintenanceStockUI.php', '_blank');
+    async function openModal(type) {
+        document.getElementById('spTxType').value = type;
+        document.getElementById('spTxModalTitle').innerHTML = type === 'RECEIVE' ? '<i class="fas fa-arrow-down pe-text-success"></i> รับอะไหล่เข้าคลัง (Receive)' : '<i class="fas fa-arrow-up pe-text-danger"></i> เบิกอะไหล่ (Issue)';
+        document.getElementById('spTxSaveBtn').innerHTML = type === 'RECEIVE' ? '<i class="fas fa-plus me-1"></i> ยืนยันรับเข้า' : '<i class="fas fa-minus me-1"></i> ยืนยันการเบิก';
+        
+        // Reset form
+        document.getElementById('spTxItem').value = '';
+        document.getElementById('spTxLocation').value = '';
+        document.getElementById('spTxQty').value = '';
+        document.getElementById('spTxNotes').value = '';
+        document.getElementById('spTxWoId').value = '';
+        
+        document.getElementById('spTxWoGroup').style.display = type === 'ISSUE' ? 'block' : 'none';
+        
+        await loadMasterData();
+        if (type === 'ISSUE') await loadActiveWorkOrders();
+        
+        PEApp.showModal('spTxModal');
+    }
+
+    function openReceiveModal() {
+        openModal('RECEIVE');
+    }
+
+    function openIssueModal() {
+        openModal('ISSUE');
+    }
+    
+    async function submitTransaction() {
+        const payload = {
+            action: 'process_transaction',
+            transaction_type: document.getElementById('spTxType').value,
+            item_id: document.getElementById('spTxItem').value,
+            location_id: document.getElementById('spTxLocation').value,
+            quantity: document.getElementById('spTxQty').value,
+            notes: document.getElementById('spTxNotes').value,
+            ref_job_id: document.getElementById('spTxWoId').value || null
+        };
+        
+        if (!payload.item_id || !payload.location_id || !payload.quantity || payload.quantity <= 0) {
+            PEApp.showToast('กรุณากรอกข้อมูลให้ครบถ้วน (Item, Location, Quantity)', 'warning');
+            return;
+        }
+
+        const btn = document.getElementById('spTxSaveBtn');
+        btn.disabled = true;
+        
+        try {
+            await PEApp.apiCall('sparePartsAPI.php', {}, 'POST', payload);
+            PEApp.showToast(`ทำรายการ ${payload.transaction_type} สำเร็จ`, 'success');
+            PEApp.hideModal('spTxModal');
+            loadData();
+        } catch (e) {
+            PEApp.showToast(e.message, 'error');
+        } finally {
+            btn.disabled = false;
+        }
     }
 
     function exportExcel() {
@@ -103,5 +179,5 @@ const SparePartsModule = (() => {
         XLSX.writeFile(wb, `SpareParts_${new Date().toISOString().slice(0, 10)}.xlsx`);
     }
 
-    return { loadData, filterTable, openReceiveModal, openIssueModal, exportExcel };
+    return { loadData, filterTable, openReceiveModal, openIssueModal, submitTransaction, exportExcel };
 })();

@@ -135,12 +135,26 @@
                             <textarea class="pe-form-textarea" id="woFrmAction" rows="2" placeholder="สิ่งที่ทำ..."></textarea>
                         </div>
                     </div>
+                    <div class="col-12" id="woImageAfterGroup" style="display:none;">
+                        <div class="pe-form-group">
+                            <label class="pe-form-label">Attached Image (After) (optional)</label>
+                            <input type="file" class="pe-form-input" id="woFrmImageAfter" accept="image/jpeg, image/png, image/webp">
+                            <div id="woImageAfterPreview" style="margin-top:10px; max-width: 250px; display:none;">
+                                <img src="" alt="Preview After" style="width:100%; border-radius:4px; border:1px solid var(--pe-border); cursor:pointer;" onclick="window.open(this.src, '_blank')">
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer pe-d-flex pe-justify-between">
-                <button type="button" class="pe-btn pe-btn-danger" id="woDeleteBtn" onclick="WorkOrderModule.deleteItem()" style="display:none;">
-                    <i class="fas fa-trash-alt me-1"></i> Delete
-                </button>
+                <div class="pe-d-flex pe-gap-8">
+                    <button type="button" class="pe-btn pe-btn-danger" id="woDeleteBtn" onclick="WorkOrderModule.deleteItem()" style="display:none;">
+                        <i class="fas fa-trash-alt me-1"></i> Delete
+                    </button>
+                    <button type="button" class="pe-btn" id="woPrintBtn" onclick="WorkOrderModule.printPDF()" style="display:none; background-color: var(--pe-primary-light); color: var(--pe-primary); border: 1px solid var(--pe-primary);">
+                        <i class="fas fa-print me-1"></i> Print PDF
+                    </button>
+                </div>
                 <div class="pe-d-flex pe-gap-8">
                     <button type="button" class="pe-btn pe-btn-ghost" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="pe-btn pe-btn-primary" id="woSaveBtn" onclick="WorkOrderModule.save()">

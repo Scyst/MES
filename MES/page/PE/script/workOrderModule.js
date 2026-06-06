@@ -86,6 +86,9 @@ const WorkOrderModule = (() => {
                 <td class="pe-text-sm">${PEApp.escapeHtml(w.assigned_to || '-')}</td>
                 <td class="pe-text-sm pe-text-center">${w.repair_minutes ? w.repair_minutes + ' min' : '-'}</td>
                 <td class="pe-text-center">
+                    <button class="pe-btn pe-btn-ghost pe-btn-sm pe-btn-icon" onclick="event.stopPropagation(); WorkOrderModule.printPDF(${w.wo_id})" title="Print PDF" style="color:var(--pe-primary); margin-right:4px;">
+                        <i class="fas fa-print"></i>
+                    </button>
                     <button class="pe-btn pe-btn-ghost pe-btn-sm pe-btn-icon" onclick="event.stopPropagation(); WorkOrderModule.openModal(${w.wo_id})" title="Edit">
                         <i class="fas fa-pen"></i>
                     </button>
@@ -112,7 +115,12 @@ const WorkOrderModule = (() => {
             if (container) {
                 container.innerHTML = groups[s].map(w => `
                     <div class="pe-kanban-card" onclick="WorkOrderModule.openModal(${w.wo_id})">
-                        <div class="wo-number">${PEApp.escapeHtml(w.wo_number)}</div>
+                        <div class="pe-d-flex pe-justify-between pe-align-center pe-mb-8">
+                            <div class="wo-number" style="margin-bottom:0;">${PEApp.escapeHtml(w.wo_number)}</div>
+                            <button class="pe-btn pe-btn-ghost pe-btn-sm pe-btn-icon" onclick="event.stopPropagation(); WorkOrderModule.printPDF(${w.wo_id})" title="Print PDF" style="color:var(--pe-primary); padding:2px;">
+                                <i class="fas fa-print"></i>
+                            </button>
+                        </div>
                         <div class="pe-d-flex pe-gap-8 pe-mb-0" style="margin-bottom:6px;">
                             ${PEApp.getPriorityBadge(w.priority)}
                         </div>
@@ -163,14 +171,24 @@ const WorkOrderModule = (() => {
         const techFields = ['woTechSection', 'woAssignedToGroup', 'woStartedAtGroup', 'woCompletedAtGroup', 'woStatusGroup', 'woRepairMinGroup', 'woRootCauseGroup', 'woActionGroup'];
         techFields.forEach(id => { document.getElementById(id).style.display = isEdit ? '' : 'none'; });
 
-        // Reset image
+        // Reset images
         const imgInput = document.getElementById('woFrmImage');
         if (imgInput) imgInput.value = '';
         const previewDiv = document.getElementById('woImagePreview');
         if (previewDiv) previewDiv.style.display = 'none';
 
+        const imgAfterInput = document.getElementById('woFrmImageAfter');
+        if (imgAfterInput) imgAfterInput.value = '';
+        const previewAfterDiv = document.getElementById('woImageAfterPreview');
+        if (previewAfterDiv) previewAfterDiv.style.display = 'none';
+
         const deleteBtn = document.getElementById('woDeleteBtn');
+        const printBtn = document.getElementById('woPrintBtn');
         const saveBtn = document.getElementById('woSaveBtn');
+        
+        if (printBtn) {
+            printBtn.style.display = (isEdit && !isDeleted) ? '' : 'none';
+        }
         
         if (isDeleted) {
             document.getElementById('woModalTitle').textContent = 'Restore Work Order';
@@ -209,6 +227,13 @@ const WorkOrderModule = (() => {
                     if (img) {
                         img.src = '../../' + wo.image_path;
                         previewDiv.style.display = 'block';
+                    }
+                }
+                if (wo.photo_after) {
+                    const imgAfter = previewAfterDiv.querySelector('img');
+                    if (imgAfter) {
+                        imgAfter.src = '../../' + wo.photo_after;
+                        previewAfterDiv.style.display = 'block';
                     }
                 }
             }
@@ -250,6 +275,12 @@ const WorkOrderModule = (() => {
                 imagePath = await PEApp.uploadFile(imgInput.files[0], 'WO');
             }
 
+            let photoAfter = null;
+            const imgAfterInput = document.getElementById('woFrmImageAfter');
+            if (imgAfterInput && imgAfterInput.files.length > 0) {
+                photoAfter = await PEApp.uploadFile(imgAfterInput.files[0], 'WO');
+            }
+
             if (editId) {
                 const payload = {
                     action: 'update_wo',
@@ -268,6 +299,7 @@ const WorkOrderModule = (() => {
                     action_taken: document.getElementById('woFrmAction')?.value || ''
                 };
                 if (imagePath) payload.image_path = imagePath;
+                if (photoAfter) payload.photo_after = photoAfter;
                 await PEApp.apiCall('workOrderAPI.php', {}, 'POST', payload);
             } else {
                 const payload = {
@@ -369,7 +401,7 @@ const WorkOrderModule = (() => {
         if (machine) lineInput.value = machine.line || '';
     }
 
-    // Init date defaults
+    // Init date defaults & listeners
     document.addEventListener('DOMContentLoaded', () => {
         const now = new Date();
         const first = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -377,7 +409,32 @@ const WorkOrderModule = (() => {
         const endEl = document.getElementById('woEndDate');
         if (startEl && !startEl.value) startEl.value = first.toISOString().slice(0, 10);
         if (endEl && !endEl.value) endEl.value = now.toISOString().slice(0, 10);
+
+        // Setup image preview listeners
+        document.getElementById('woFrmImage')?.addEventListener('change', function() {
+            const previewDiv = document.getElementById('woImagePreview');
+            const file = this.files[0];
+            if (file && previewDiv) {
+                previewDiv.querySelector('img').src = URL.createObjectURL(file);
+                previewDiv.style.display = 'block';
+            }
+        });
+
+        document.getElementById('woFrmImageAfter')?.addEventListener('change', function() {
+            const previewAfterDiv = document.getElementById('woImageAfterPreview');
+            const file = this.files[0];
+            if (file && previewAfterDiv) {
+                previewAfterDiv.querySelector('img').src = URL.createObjectURL(file);
+                previewAfterDiv.style.display = 'block';
+            }
+        });
     });
 
-    return { loadData, filterTable, setView, openModal, save, deleteItem, restoreItem, exportExcel, onMachineChange };
+    function printPDF(id = null) {
+        const woId = id || document.getElementById('woEditId').value;
+        if (!woId) return;
+        window.open(PE_CONFIG.apiBase + 'generate_wo_pdf.php?wo_id=' + woId, '_blank');
+    }
+
+    return { loadData, filterTable, setView, openModal, save, deleteItem, restoreItem, exportExcel, onMachineChange, printPDF };
 })();

@@ -164,7 +164,7 @@ try {
                 $updatableFields = [
                     'status', 'priority', 'assigned_to', 'wo_type',
                     'issue_title', 'issue_detail', 'root_cause', 'action_taken',
-                    'line', 'image_path'
+                    'line', 'image_path', 'photo_after'
                 ];
 
                 foreach ($updatableFields as $f) {

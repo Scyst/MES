@@ -150,9 +150,10 @@ $pageTitle = "PE Enterprise";
 
 <!-- Modals -->
 <?php
-    include 'components/modals/modal_machine.php';
-    include 'components/modals/modal_workorder.php';
-    include 'components/modals/modal_downtime.php';
+    include __DIR__ . '/components/modals/modal_machine.php';
+    include __DIR__ . '/components/modals/modal_workorder.php';
+    include __DIR__ . '/components/modals/modal_downtime.php';
+    include __DIR__ . '/components/modals/modal_sparepart_tx.php';
 ?>
 
 <!-- Libraries -->
