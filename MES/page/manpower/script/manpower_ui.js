@@ -1,4 +1,4 @@
-// page/manpower/script/manpower_ui.js
+﻿// page/manpower/script/manpower_ui.js
 "use strict";
 
 const UI = {
@@ -2329,6 +2329,52 @@ const Actions = {
     },
 
     _employeeCache: [],
+    async openShiftSwapAudit() {
+        this.openMasterSettingsTab('v-pills-swap-tab');
+        const startDate = document.getElementById('swapAuditStartDate').value || new Date().toISOString().split('T')[0];
+        const endDate = document.getElementById('swapAuditEndDate').value || new Date().toISOString().split('T')[0];
+        const team = document.getElementById('swapAuditHcGroup') ? document.getElementById('swapAuditHcGroup').value : 'ALL';
+        const tbody = document.getElementById('swapAuditBody');
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4"><div class="spinner-border text-warning"></div></td></tr>`;
+
+        try {
+            const res = await fetch(`api/api_daily_operations.php?action=detect_shift_swaps&startDate=${startDate}&endDate=${endDate}&hcGroup=${team}`);
+            const json = await res.json();
+
+            if (json.success && json.data.length > 0) {
+                const statusMap = { 'WAITING': '⏳ รอเข้างาน', 'PRESENT': '✅ มา', 'LATE': '⏰ สาย', 'ABSENT': '❌ ขาด' };
+                const badgeClass = (s) => s === 'PRESENT' ? 'bg-success' : (s === 'LATE' ? 'bg-warning text-dark' : 'bg-danger');
+
+                tbody.innerHTML = json.data.map(row => {
+                    const isDay = row.shift_id == 1;
+                    const shiftHtml = isDay ? `<span class="badge bg-primary shadow-sm">DAY</span>` : `<span class="badge bg-dark shadow-sm">NIGHT</span>`;
+                    const detectMsg = isDay ? 'สแกนเข้าช่วงเย็น (อาจสลับไปกะดึก)' : 'สแกนเข้าเย็นแต่ไม่มีเวลาออก (อาจสลับมากะเช้า)';
+                    const btnLabel = isDay ? '🔁 สลับเป็นกะดึก' : '🔁 สลับเป็นกะเช้า';
+                    const newShiftId = isDay ? 2 : 1;
+                    const newShiftName = isDay ? 'NIGHT' : 'DAY';
+
+                    return `<tr>
+                        <td class="text-center align-middle font-monospace text-primary fw-bold">${row.log_date}</td>
+                        <td class="ps-4 fw-bold text-dark">${row.name_th} <br><small class="text-muted font-monospace">${row.emp_id}</small></td>
+                        <td class="text-center align-middle">${shiftHtml}</td>
+                        <td class="text-center align-middle font-monospace text-primary fw-bold">${row.scan_in || '-'}</td>
+                        <td class="text-center align-middle font-monospace text-secondary">${row.scan_out || '-'}</td>
+                        <td class="text-center align-middle"><span class="badge ${badgeClass(row.status)}">${statusMap[row.status] || row.status}</span></td>
+                        <td class="text-center align-middle small text-danger fw-bold">${detectMsg}</td>
+                        <td class="text-center align-middle pe-4">
+                            <button class="btn btn-sm btn-outline-dark fw-bold shadow-sm" onclick="Actions.quickSwapShift('${row.log_id}', '${row.name_th}', ${newShiftId}, '${newShiftName}'); setTimeout(() => Actions.openShiftSwapAudit(), 1500);">${btnLabel}</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } else {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted"><i class="fas fa-check-circle text-success fs-4 d-block mb-2"></i>ไม่พบข้อมูลการสแกนที่ผิดปกติในช่วงเวลานี้</td></tr>`;
+            }
+        } catch (err) {
+            console.error(err);
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Failed to load audit data.</td></tr>`;
+        }
+    },
+
     async openEmployeeManager(keepFilters = false) {
         let savedState = null;
         if (keepFilters) {
@@ -3865,3 +3911,5 @@ const Actions = {
         }
     }
 };
+
+

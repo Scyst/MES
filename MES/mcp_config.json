@@ -28,6 +28,20 @@
       "args": [
         "e:/MES/MES/MES/mcp_server/index.mjs"
       ]
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ]
     }
   }
 }

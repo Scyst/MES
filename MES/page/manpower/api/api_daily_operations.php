@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // MES/page/manpowerCopy/api/api_daily_operations.php
 
 header('Content-Type: application/json');
@@ -349,6 +349,91 @@ try {
             echo json_encode(['success' => true, 'message' => 'Record deleted successfully']);
             break;
 
+
+        case 'quick_swap_shift':
+            if (!hasPermission('manage_manpower')) throw new Exception("Permission Denied");
+            
+            $logId = $input['log_id'] ?? '';
+            $newShiftId = $input['new_shift_id'] ?? '';
+            $applyFuture = isset($input['apply_future']) && $input['apply_future'] == true;
+            
+            if (empty($logId) || empty($newShiftId)) throw new Exception("Missing param");
+            
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("SELECT L.emp_id, L.log_date, L.scan_in_time, S.start_time FROM dbo.MANPOWER_DAILY_LOGS L CROSS JOIN dbo.MANPOWER_SHIFTS S WHERE L.log_id = ? AND S.shift_id = ?");
+            $stmt->execute([$logId, $newShiftId]);
+            $details = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$details) throw new Exception("Not found");
+            
+            $status = 'WAITING';
+            if ($details['scan_in_time']) {
+                $status = (strtotime(date('H:i:s', strtotime($details['scan_in_time']))) > strtotime($details['start_time'])) ? 'LATE' : 'PRESENT';
+            } else if ($details['log_date'] < date('Y-m-d')) {
+                $status = 'ABSENT';
+            }
+            
+            $pdo->prepare("UPDATE dbo.MANPOWER_DAILY_LOGS SET shift_id = ?, status = ?, updated_at = GETDATE() WHERE log_id = ?")->execute([$newShiftId, $status, $logId]);
+            $msg = "Quick swap to shift $newShiftId";
+            
+            if ($applyFuture) {
+                $pdo->prepare("UPDATE dbo.MANPOWER_EMPLOYEES SET default_shift_id = ?, updated_at = GETDATE() WHERE emp_id = ?")->execute([$newShiftId, $details['emp_id']]);
+                
+                $pdo->prepare("
+                    UPDATE L
+                    SET L.shift_id = ?, 
+                        L.status = CASE WHEN L.scan_in_time IS NULL AND L.log_date >= CAST(GETDATE() AS DATE) THEN 'WAITING'
+                                      WHEN L.scan_in_time IS NULL AND L.log_date < CAST(GETDATE() AS DATE) THEN 'ABSENT'
+                                      WHEN CAST(L.scan_in_time AS TIME) > S.start_time THEN 'LATE'
+                                      ELSE 'PRESENT' END,
+                        L.updated_at = GETDATE()
+                    FROM dbo.MANPOWER_DAILY_LOGS L
+                    JOIN dbo.MANPOWER_SHIFTS S ON S.shift_id = ?
+                    WHERE L.emp_id = ? AND L.log_date >= ? AND L.log_id != ?
+                ")->execute([$newShiftId, $newShiftId, $details['emp_id'], $details['log_date'], $logId]);
+                $msg .= " (and future)";
+            }
+            
+            $pdo->commit();
+            $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?")->execute([$details['log_date'], $applyFuture ? date('Y-m-d', strtotime('+3 days')) : $details['log_date']]);
+            echo json_encode(['success' => true, 'message' => $msg]);
+            break;
+
+        case 'detect_shift_swaps':
+            $startDateStr = $_GET['startDate'] ?? date('Y-m-d');
+            $endDateStr   = $_GET['endDate']   ?? date('Y-m-d');
+            $hcGroup = $_GET['hcGroup'] ?? 'ALL';
+            
+            $teamFilter = "";
+            $params = [$startDateStr, $endDateStr];
+            
+            if ($hcGroup !== 'ALL' && $hcGroup !== 'undefined' && $hcGroup !== 'null') {
+                $teamFilter = " AND E.department_api IN (SELECT department_api FROM dbo.MANPOWER_TEAM_SETTINGS WHERE hc_group = ?) ";
+                $params[] = $hcGroup;
+            }
+            
+            $sql = "
+                SELECT L.log_id, L.log_date, L.emp_id, E.name_th, L.shift_id, S.shift_name,
+                       CONVERT(VARCHAR(5), L.scan_in_time, 108) as scan_in,
+                       CONVERT(VARCHAR(5), L.scan_out_time, 108) as scan_out,
+                       L.status
+                FROM dbo.MANPOWER_DAILY_LOGS L
+                JOIN dbo.MANPOWER_EMPLOYEES E ON L.emp_id = E.emp_id
+                LEFT JOIN dbo.MANPOWER_SHIFTS S ON L.shift_id = S.shift_id
+                WHERE L.log_date BETWEEN ? AND ?
+                  $teamFilter
+                  AND L.scan_in_time IS NOT NULL
+                  AND (
+                      (L.shift_id = 1 AND CAST(L.scan_in_time AS TIME) >= '16:00:00' AND CAST(L.scan_in_time AS TIME) <= '21:00:00')
+                      OR
+                      (L.shift_id = 2 AND CAST(L.scan_in_time AS TIME) >= '17:00:00' AND CAST(L.scan_in_time AS TIME) <= '21:00:00' AND L.scan_out_time IS NULL)
+                  )
+                ORDER BY L.log_date DESC, L.scan_in_time DESC
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
         case 'read_trend':
             $endDateStr   = $_GET['endDate']   ?? date('Y-m-d');
             $startDateStr = $_GET['startDate'] ?? date('Y-m-d', strtotime('-6 days'));
@@ -594,4 +679,6 @@ try {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>
+
+
 

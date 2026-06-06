@@ -61,7 +61,7 @@ $pageTitle = "PE Enterprise";
                     <span class="nav-label">Downtime Tracker</span>
                 </button>
                 <button class="pe-nav-item" data-tab="spareparts" onclick="PEApp.switchTab('spareparts')">
-                    <i class="fas fa-boxes-stacked"></i>
+                    <i class="fas fa-boxes"></i>
                     <span class="nav-label">Spare Parts</span>
                     <span class="nav-badge" id="lowStockBadge" style="display:none;">0</span>
                 </button>

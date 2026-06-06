@@ -39,7 +39,7 @@ try {
             $woSql = "SELECT 
                         COUNT(*) as total_wo,
                         SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed_wo,
-                        ISNULL(AVG(CASE WHEN status = 'Completed' AND repair_minutes IS NOT NULL THEN repair_minutes ELSE NULL END), 0) as avg_repair,
+                        ISNULL(AVG(CASE WHEN status = 'Completed' AND repair_minutes > 0 THEN CAST(repair_minutes AS FLOAT) ELSE NULL END), 0) as avg_repair,
                         ISNULL(SUM(total_cost), 0) as total_cost
                       FROM " . PE_WORK_ORDERS_TABLE . " WITH (NOLOCK)
                       WHERE requested_at >= ? AND requested_at < DATEADD(DAY, 1, CAST(? AS DATE)) $lineCondition";
@@ -68,7 +68,13 @@ try {
             $uptimeHrs = $totalOperatingHrs - $totalDowntimeHrs;
 
             $mtbf = $totalEvents > 0 ? round($uptimeHrs / $totalEvents, 1) : 0;
+            
+            // MTTR: Use Work Order avg repair time if available, otherwise fallback to Downtime avg duration
             $mttr = round($woKpi['avg_repair'] ?? 0, 1);
+            if ($mttr <= 0) {
+                $mttr = round($dtKpi['avg_duration'] ?? 0, 1);
+            }
+
             $availability = $totalOperatingHrs > 0 ? round(($uptimeHrs / $totalOperatingHrs) * 100, 1) : 100;
 
             echo json_encode([

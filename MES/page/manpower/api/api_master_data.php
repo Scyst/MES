@@ -9,6 +9,7 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
 require_once __DIR__ . '/../../../config/config.php';
+require_once __DIR__ . '/../../components/php/logger.php';
 
 // 2. Auth Check
 if (!isset($_SESSION['user'])) {
@@ -214,6 +215,12 @@ try {
                     $pdo->prepare($sqlCleanLog)->execute([$empId]);
                 }
 
+                writeLog($pdo, 'MANPOWER_EDIT', 'MANPOWER_MASTER', $empId, null, [
+                    'name_th' => $name, 'position' => $pos, 'line' => $line, 
+                    'shift_id' => $shift, 'team_group' => $team, 'is_active' => $active, 
+                    'start_date' => $startDate, 'resign_date' => $resignDate
+                ], "Updated employee $empId");
+
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'Updated successfully']);
 
@@ -250,6 +257,8 @@ try {
                     ':emp_id' => $emp_id,
                     ':resign_date' => $resign_date
                 ]);
+
+                writeLog($pdo, 'MANPOWER_EDIT', 'MANPOWER_MASTER', $emp_id, null, ['is_active' => 0, 'resign_date' => $resign_date], "Terminated employee $emp_id with resign date $resign_date");
 
                 $pdo->commit();
 

@@ -74,8 +74,6 @@ try {
         // Image Handling
         $imagePath = null;
         if (!empty($row['photo_before_path'])) {
-            // Path in old system: ../uploads/maintenance/filename.jpg (relative to page/Stop_Cause/)
-            // We want to copy it to uploads/pe_images/
             $oldPath = __DIR__ . '/../../' . str_replace('../', '', $row['photo_before_path']);
             if (file_exists($oldPath)) {
                 $fileInfo = pathinfo($oldPath);
@@ -93,6 +91,25 @@ try {
             }
         }
 
+        $photoAfter = null;
+        if (!empty($row['photo_after_path'])) {
+            $oldPath = __DIR__ . '/../../' . str_replace('../', '', $row['photo_after_path']);
+            if (file_exists($oldPath)) {
+                $fileInfo = pathinfo($oldPath);
+                $newName = 'LEGACY_AFTER_' . $row['id'] . '_' . time() . '.' . ($fileInfo['extension'] ?? 'jpg');
+                $newAbsPath = __DIR__ . '/../../../uploads/pe_images/' . $newName;
+                
+                if (!file_exists(dirname($newAbsPath))) {
+                    mkdir(dirname($newAbsPath), 0777, true);
+                }
+
+                if (copy($oldPath, $newAbsPath)) {
+                    $photoAfter = 'uploads/pe_images/' . $newName;
+                    $results['images_copied']++;
+                }
+            }
+        }
+
         $woType = 'Corrective';
         if (stripos($row['job_type'], 'PM') !== false) $woType = 'Preventive';
 
@@ -100,8 +117,8 @@ try {
 
         $sql = "INSERT INTO " . PE_WORK_ORDERS_TABLE . " 
                 (wo_number, wo_type, machine_name, line, priority, status, requested_by, requested_at, 
-                 issue_title, issue_detail, assigned_to, started_at, completed_at, repair_minutes, action_taken, image_path, legacy_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                 issue_title, issue_detail, assigned_to, started_at, completed_at, repair_minutes, action_taken, image_path, photo_after, legacy_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $ins = $pdo->prepare($sql);
         $ins->execute([
             $woNumber,
@@ -120,9 +137,33 @@ try {
             $row['actual_repair_minutes'] ? (int)$row['actual_repair_minutes'] : null,
             $row['technician_note'],
             $imagePath,
+            $photoAfter,
             $row['id']
         ]);
         $results['wo_migrated']++;
+    }
+
+    // 3. Post-migration: Sync missing AFTER images if PE_WORK_ORDERS was already migrated earlier
+    $stmtSync = $pdo->query("
+        SELECT PE.wo_id, PE.legacy_id, MR.photo_after_path 
+        FROM " . PE_WORK_ORDERS_TABLE . " PE WITH (NOLOCK)
+        INNER JOIN MAINTENANCE_REQUESTS MR WITH (NOLOCK) ON PE.legacy_id = MR.id 
+        WHERE MR.photo_after_path IS NOT NULL AND PE.photo_after IS NULL
+    ");
+    while ($row = $stmtSync->fetch(PDO::FETCH_ASSOC)) {
+        $oldPath = __DIR__ . '/../../' . str_replace('../', '', $row['photo_after_path']);
+        if (file_exists($oldPath)) {
+            $fileInfo = pathinfo($oldPath);
+            $newName = 'LEGACY_AFTER_' . $row['legacy_id'] . '_' . time() . '.' . ($fileInfo['extension'] ?? 'jpg');
+            $newAbsPath = __DIR__ . '/../../../uploads/pe_images/' . $newName;
+            
+            if (copy($oldPath, $newAbsPath)) {
+                $photoAfter = 'uploads/pe_images/' . $newName;
+                $update = $pdo->prepare("UPDATE " . PE_WORK_ORDERS_TABLE . " SET photo_after = ? WHERE wo_id = ?");
+                $update->execute([$photoAfter, $row['wo_id']]);
+                $results['images_copied']++;
+            }
+        }
     }
 
     echo json_encode(['success' => true, 'message' => 'Migration completed', 'results' => $results]);

@@ -1,4 +1,4 @@
-<!-- Master Settings Modal -->
+﻿<!-- Master Settings Modal -->
 <div class="modal fade" id="masterSettingsModal" tabindex="-1" aria-hidden="true" style="z-index: 1055;">
     <div class="modal-dialog modal-fullscreen">
         <div class="modal-content bg-light">
@@ -28,12 +28,54 @@
                         <button class="nav-link text-start py-3 fw-bold rounded-3" id="v-pills-map-tab" data-bs-toggle="pill" data-bs-target="#v-pills-map" type="button" role="tab" onclick="Actions.openMappingManager()">
                             <i class="fas fa-tags me-2"></i> Position Mapping
                         </button>
+                        <button class="nav-link text-start py-3 fw-bold rounded-3 bg-opacity-10 text-warning" id="v-pills-swap-tab" data-bs-toggle="pill" data-bs-target="#v-pills-swap" type="button" role="tab" onclick="Actions.openShiftSwapAudit()">
+                            <i class="fas fa-exchange-alt me-2"></i> Shift Swap Audit
+                        </button>
                     </div>
                 </div>
                 
                 <!-- Content Area -->
                 <div class="tab-content flex-grow-1 p-0 px-lg-4 pb-lg-4 pt-lg-0 overflow-auto" id="v-pills-tabContent" style="background-color: #f8f9fa;">
                     
+                    <!-- Shift Swap Audit Tab -->
+                    <div class="tab-pane fade h-100" id="v-pills-swap" role="tabpanel">
+                        <div class="card border-0 shadow-sm h-100 d-flex flex-column mt-3">
+                            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="m-0 fw-bold text-dark"><i class="fas fa-exchange-alt text-warning me-2"></i>Shift Swap Audit</h5>
+                                    <small class="text-muted">ตรวจสอบการสแกนเข้างานที่อาจมีการสลับกะ (แต่ยังไม่ได้เปลี่ยนในระบบ)</small>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <select id="swapAuditHcGroup" class="form-select form-select-sm" style="width: auto;" onchange="Actions.openShiftSwapAudit()"><option value="TEAM 1" selected>TEAM 1</option><option value="ALL">ALL GROUPS</option></select>
+                                      <span class="text-muted small align-self-center">From</span>
+                                    <input type="date" id="swapAuditStartDate" class="form-control form-control-sm" value="<?php echo date('Y-m-d', strtotime('-3 days')); ?>" onchange="Actions.openShiftSwapAudit()">
+                                    <span class="text-muted small align-self-center">To</span>
+                                    <input type="date" id="swapAuditEndDate" class="form-control form-control-sm" value="<?php echo date('Y-m-d'); ?>" onchange="Actions.openShiftSwapAudit()">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="Actions.openShiftSwapAudit()"><i class="fas fa-sync-alt"></i></button>
+                                </div>
+                            </div>
+                            <div class="card-body p-0 flex-grow-1 overflow-auto bg-white">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="bg-light text-secondary small text-uppercase" style="position: sticky; top: 0; z-index: 1;">
+                                        <tr>
+                                            <th class="ps-4">Employee</th>
+                                            <th class="text-center">Date</th>
+                                            <th class="text-center">System Shift</th>
+                                            <th class="text-center">Scan In</th>
+                                            <th class="text-center">Scan Out</th>
+                                            <th class="text-center">Status</th>
+                                            <th class="text-center">Detection</th>
+                                            <th class="text-center pe-4">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="swapAuditBody">
+                                        <!-- Data populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Staff Manager Tab -->
                     <div class="tab-pane fade show active h-100" id="v-pills-emp" role="tabpanel">
                         <div class="card border-0 shadow-sm h-100 d-flex flex-column">
@@ -228,3 +270,5 @@
         </div>
     </div>
 </div>
+
+
