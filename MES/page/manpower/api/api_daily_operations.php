@@ -376,7 +376,7 @@ try {
             $msg = "Quick swap to shift $newShiftId";
             
             if ($applyFuture) {
-                $pdo->prepare("UPDATE dbo.MANPOWER_EMPLOYEES SET default_shift_id = ?, updated_at = GETDATE() WHERE emp_id = ?")->execute([$newShiftId, $details['emp_id']]);
+                $pdo->prepare("UPDATE dbo.MANPOWER_EMPLOYEES SET default_shift_id = ?, last_sync_at = GETDATE() WHERE emp_id = ?")->execute([$newShiftId, $details['emp_id']]);
                 
                 $pdo->prepare("
                     UPDATE L
@@ -396,6 +396,98 @@ try {
             $pdo->commit();
             $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?")->execute([$details['log_date'], $applyFuture ? date('Y-m-d', strtotime('+3 days')) : $details['log_date']]);
             echo json_encode(['success' => true, 'message' => $msg]);
+            break;
+
+
+        case 'batch_quick_swap_shift':
+            if (!hasPermission('manage_manpower')) throw new Exception("Permission Denied");
+            
+            $logs = $input['logs'] ?? [];
+            $applyFuture = isset($input['apply_future']) && $input['apply_future'] == true;
+            
+            if (empty($logs) || !is_array($logs)) throw new Exception("No logs provided");
+            
+            $pdo->beginTransaction();
+            $successCount = 0;
+            
+            foreach ($logs as $log) {
+                $logId = $log['log_id'] ?? '';
+                $newShiftId = $log['new_shift_id'] ?? '';
+                if (empty($logId) || empty($newShiftId)) continue;
+                
+                $stmt = $pdo->prepare("SELECT L.emp_id, L.log_date, L.scan_in_time, S.start_time FROM dbo.MANPOWER_DAILY_LOGS L CROSS JOIN dbo.MANPOWER_SHIFTS S WHERE L.log_id = ? AND S.shift_id = ?");
+                $stmt->execute([$logId, $newShiftId]);
+                $details = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (!$details) continue;
+                
+                $status = 'WAITING';
+                if ($details['scan_in_time']) {
+                    $status = (strtotime(date('H:i:s', strtotime($details['scan_in_time']))) > strtotime($details['start_time'])) ? 'LATE' : 'PRESENT';
+                } else if ($details['log_date'] < date('Y-m-d')) {
+                    $status = 'ABSENT';
+                }
+                
+                $pdo->prepare("UPDATE dbo.MANPOWER_DAILY_LOGS SET shift_id = ?, status = ?, updated_at = GETDATE() WHERE log_id = ?")->execute([$newShiftId, $status, $logId]);
+                
+                if ($applyFuture) {
+                    $pdo->prepare("UPDATE dbo.MANPOWER_EMPLOYEES SET default_shift_id = ?, last_sync_at = GETDATE() WHERE emp_id = ?")->execute([$newShiftId, $details['emp_id']]);
+                    
+                    $pdo->prepare("
+                        UPDATE L
+                        SET L.shift_id = ?, 
+                            L.status = CASE WHEN L.scan_in_time IS NULL AND L.log_date >= CAST(GETDATE() AS DATE) THEN 'WAITING'
+                                          WHEN L.scan_in_time IS NULL AND L.log_date < CAST(GETDATE() AS DATE) THEN 'ABSENT'
+                                          WHEN CAST(L.scan_in_time AS TIME) > S.start_time THEN 'LATE'
+                                          ELSE 'PRESENT' END,
+                            L.updated_at = GETDATE()
+                        FROM dbo.MANPOWER_DAILY_LOGS L
+                        JOIN dbo.MANPOWER_SHIFTS S ON S.shift_id = ?
+                        WHERE L.emp_id = ? AND L.log_date >= ? AND L.log_id != ?
+                    ")->execute([$newShiftId, $newShiftId, $details['emp_id'], $details['log_date'], $logId]);
+                }
+                
+                $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?")->execute([$details['log_date'], $applyFuture ? date('Y-m-d', strtotime('+3 days')) : $details['log_date']]);
+                $successCount++;
+            }
+            
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => "Batch swapped $successCount shifts successfully"]);
+            break;
+
+        case 'fetch_raw_central_scans':
+            $targetDate = $_GET['date'] ?? date('Y-m-d');
+            $apiStartDate = date('Y-m-d', strtotime('-1 day', strtotime($targetDate)));
+            $apiEndDate   = date('Y-m-d', strtotime('+1 day', strtotime($targetDate)));
+            
+            // To be comprehensive, we can just fetch the requested date directly if they don't have night shift issues,
+            // but the original sync script fetches -1 and +1 days to cover night shifts crossing midnight.
+            // Let's stick to the target date itself and maybe +1 day to see the morning scan of a night shift.
+            $apiEndDate = date('Y-m-d', strtotime('+1 day', strtotime($targetDate)));
+            
+            $apiUrl = "https://oem.sncformer.com/oem-calendar/oem-web-link/api/api.php?router=/man-power-painting&sdate={$targetDate}&edate={$apiEndDate}";
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $apiUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $apiResponse = curl_exec($ch);
+            curl_close($ch);
+            
+            if (!$apiResponse) {
+                echo json_encode(['success' => false, 'message' => 'API Connection Failed']);
+                break;
+            }
+            
+            $rawList = json_decode($apiResponse, true) ?? [];
+            
+            // We want to filter out scans that are completely irrelevant to the target date if needed,
+            // but for a raw audit, showing the exact response payload is fine.
+            // Let's just return it sorted by TIMEINOUT DESC
+            usort($rawList, function($a, $b) {
+                return strtotime($b['TIMEINOUT']) - strtotime($a['TIMEINOUT']);
+            });
+            
+            echo json_encode(['success' => true, 'data' => $rawList]);
             break;
 
         case 'detect_shift_swaps':
@@ -421,11 +513,10 @@ try {
                 LEFT JOIN dbo.MANPOWER_SHIFTS S ON L.shift_id = S.shift_id
                 WHERE L.log_date BETWEEN ? AND ?
                   $teamFilter
-                  AND L.scan_in_time IS NOT NULL
                   AND (
-                      (L.shift_id = 1 AND CAST(L.scan_in_time AS TIME) >= '16:00:00' AND CAST(L.scan_in_time AS TIME) <= '21:00:00')
-                      OR
-                      (L.shift_id = 2 AND CAST(L.scan_in_time AS TIME) >= '17:00:00' AND CAST(L.scan_in_time AS TIME) <= '21:00:00' AND L.scan_out_time IS NULL)
+                      (L.shift_id = 1 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '16:00:00' AND CAST(L.scan_in_time AS TIME) <= '22:00:00')
+                        OR
+                        (L.shift_id = 2 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '05:00:00' AND CAST(L.scan_in_time AS TIME) <= '12:00:00')
                   )
                 ORDER BY L.log_date DESC, L.scan_in_time DESC
             ";
@@ -679,6 +770,9 @@ try {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>
+
+
+
 
 
 

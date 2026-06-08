@@ -68,7 +68,11 @@ $pageTitle = "PE Enterprise";
             </div>
 
             <div class="pe-nav-section">
-                <div class="pe-nav-section-label">Analytics</div>
+                <div class="pe-nav-section-label">Analytics & IIoT</div>
+                <button class="pe-nav-item" data-tab="iiot" onclick="PEApp.switchTab('iiot')">
+                    <i class="fas fa-satellite-dish" style="color: #38bdf8;"></i>
+                    <span class="nav-label">Live IIoT Monitor</span>
+                </button>
                 <button class="pe-nav-item" data-tab="analytics" onclick="PEApp.switchTab('analytics')">
                     <i class="fas fa-chart-line"></i>
                     <span class="nav-label">Dashboard</span>
@@ -144,6 +148,11 @@ $pageTitle = "PE Enterprise";
                 <?php include 'components/tab_analytics.php'; ?>
             </div>
 
+            <!-- IIoT Tab -->
+            <div class="pe-tab-panel" id="panel-iiot">
+                <?php include 'components/tab_iiot.php'; ?>
+            </div>
+
         </div>
     </div>
 </div>
@@ -151,6 +160,7 @@ $pageTitle = "PE Enterprise";
 <!-- Modals -->
 <?php
     include __DIR__ . '/components/modals/modal_machine.php';
+    include __DIR__ . '/components/modals/modal_discovery.php';
     include __DIR__ . '/components/modals/modal_workorder.php';
     include __DIR__ . '/components/modals/modal_downtime.php';
     include __DIR__ . '/components/modals/modal_sparepart_tx.php';
@@ -181,6 +191,7 @@ $pageTitle = "PE Enterprise";
 <script src="script/downtimeModule.js?v=<?php echo filemtime(__DIR__ . '/script/downtimeModule.js'); ?>"></script>
 <script src="script/sparePartsModule.js?v=<?php echo filemtime(__DIR__ . '/script/sparePartsModule.js'); ?>"></script>
 <script src="script/analyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/analyticsModule.js'); ?>"></script>
+<script src="script/iiotModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotModule.js'); ?>"></script>
 
 </body>
 </html>

@@ -16,10 +16,16 @@
                             <input type="text" class="pe-form-input" id="machineFrmCode" placeholder="e.g. PRESS-001" style="text-transform:uppercase;">
                         </div>
                     </div>
-                    <div class="col-md-8">
+                    <div class="col-md-4">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Machine Name <span class="required">*</span></label>
                             <input type="text" class="pe-form-input" id="machineFrmName" placeholder="e.g. Hydraulic Press 200T">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="pe-form-group">
+                            <label class="pe-form-label">MQTT Topic / Node Name</label>
+                            <input type="text" class="pe-form-input" id="machineFrmMqttTopic" placeholder="e.g. DB_HM_1003_4">
                         </div>
                     </div>
                     <div class="col-md-4">

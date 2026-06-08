@@ -60,6 +60,9 @@
     </div>
 
     <?php if ($canManage): ?>
+    <button class="pe-btn pe-btn-secondary" onclick="MachineModule.openDiscoveryModal()" style="margin-right: 8px;">
+        <i class="fas fa-satellite-dish"></i> IIoT Discovery
+    </button>
     <button class="pe-btn pe-btn-primary" onclick="MachineModule.openModal()">
         <i class="fas fa-plus"></i> Add Machine
     </button>

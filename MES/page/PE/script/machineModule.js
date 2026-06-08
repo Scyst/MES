@@ -22,6 +22,7 @@ const MachineModule = (() => {
             // Populate filters
             populateFilters(res.filters || {});
             renderView();
+            startTelemetryPolling();
         } catch (e) {
             PEApp.showToast(e.message, 'error');
         }
@@ -102,16 +103,22 @@ const MachineModule = (() => {
             }
 
             return `
-            <div class="pe-machine-card pe-animate-in" onclick="MachineModule.viewDetail(${m.machine_id})">
+            <div class="pe-machine-card pe-animate-in" onclick="MachineModule.viewDetail(${m.machine_id})" data-machine-code="${PEApp.escapeHtml(m.machine_code)}">
                 ${visualHtml}
                 ${topBadgesHtml}
-                <div class="machine-code">${PEApp.escapeHtml(m.machine_code)}</div>
+                <div class="pe-d-flex pe-align-center pe-justify-between">
+                    <div class="machine-code">${PEApp.escapeHtml(m.machine_code)}</div>
+                    <div class="iiot-status-badge"></div>
+                </div>
                 <div class="machine-name">${PEApp.escapeHtml(m.machine_name)}</div>
                 <div class="machine-meta">
                     <span><i class="fas fa-map-marker-alt"></i> ${PEApp.escapeHtml(m.line || '-')}</span>
                     <span><i class="fas fa-layer-group"></i> ${PEApp.escapeHtml(m.area || '-')}</span>
                     <span><i class="fas fa-cog"></i> ${PEApp.escapeHtml(m.machine_type || '-')}</span>
                     ${m.install_date ? `<span><i class="fas fa-calendar"></i> ${PEApp.formatDate(m.install_date)}</span>` : ''}
+                </div>
+                <div class="machine-telemetry" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--pe-border); display: none; font-size: 12px;">
+                    <!-- Telemetry Data Will Be Injected Here -->
                 </div>
             </div>`;
         }).join('');
@@ -189,7 +196,7 @@ const MachineModule = (() => {
         }
 
         // Clear fields
-        ['machineFrmCode', 'machineFrmName', 'machineFrmLine', 'machineFrmArea',
+        ['machineFrmCode', 'machineFrmName', 'machineFrmMqttTopic', 'machineFrmLine', 'machineFrmArea', 
          'machineFrmManufacturer', 'machineFrmModel', 'machineFrmSerial', 'machineFrmNotes'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
@@ -211,6 +218,7 @@ const MachineModule = (() => {
             if (machine) {
                 document.getElementById('machineFrmCode').value = machine.machine_code || '';
                 document.getElementById('machineFrmName').value = machine.machine_name || '';
+                document.getElementById('machineFrmMqttTopic').value = machine.mqtt_topic || '';
                 document.getElementById('machineFrmLine').value = machine.line || '';
                 document.getElementById('machineFrmArea').value = machine.area || '';
                 document.getElementById('machineFrmType').value = machine.machine_type || '';
@@ -271,6 +279,7 @@ const MachineModule = (() => {
                 machine_id: document.getElementById('machineEditId')?.value || '',
                 machine_code: code,
                 machine_name: name,
+                mqtt_topic: document.getElementById('machineFrmMqttTopic')?.value || '',
                 line: document.getElementById('machineFrmLine')?.value || '',
                 area: document.getElementById('machineFrmArea')?.value || '',
                 machine_type: document.getElementById('machineFrmType')?.value || '',
@@ -352,5 +361,169 @@ const MachineModule = (() => {
         openModal(machineId);
     }
 
-    return { loadData, filterTable, setView, openModal, save, viewDetail, deleteItem, restoreItem };
+    let telemetryInterval = null;
+
+    function startTelemetryPolling() {
+        if (telemetryInterval) clearInterval(telemetryInterval);
+        
+        const fetchTelemetry = async () => {
+            try {
+                const res = await fetch('api/iiotAPI.php?action=get_live_telemetry');
+                const json = await res.json();
+                if (json.success && json.data) {
+                    updateTelemetryUI(json.data);
+                }
+            } catch (e) {
+                console.error('Failed to fetch telemetry', e);
+            }
+        };
+
+        fetchTelemetry(); // initial fetch
+        telemetryInterval = setInterval(fetchTelemetry, 5000); // poll every 5 seconds
+    }
+
+    function updateTelemetryUI(data) {
+        document.querySelectorAll('.pe-machine-card[data-machine-code]').forEach(card => {
+            const mCode = card.getAttribute('data-machine-code');
+            const telemetry = data[mCode];
+            const tContainer = card.querySelector('.machine-telemetry');
+            const sBadge = card.querySelector('.iiot-status-badge');
+
+            if (telemetry) {
+                tContainer.style.display = 'block';
+                
+                // Status Badge
+                let statusHtml = '';
+                if (telemetry.live_status) {
+                    const statusStr = telemetry.live_status.toUpperCase();
+                    if (statusStr === 'RUN' || statusStr === 'RUNNING') {
+                        statusHtml = `<span class="pe-badge pe-status-active" style="padding: 2px 6px; font-size: 10px;"><i class="fas fa-circle pe-me-1" style="font-size: 8px;"></i> RUNNING</span>`;
+                    } else if (statusStr === 'STOP' || statusStr === 'STOPPED') {
+                        statusHtml = `<span class="pe-badge pe-crit-critical" style="padding: 2px 6px; font-size: 10px;"><i class="fas fa-circle pe-me-1" style="font-size: 8px;"></i> STOPPED</span>`;
+                    } else {
+                        statusHtml = `<span class="pe-badge pe-status-inactive" style="padding: 2px 6px; font-size: 10px;">${telemetry.live_status}</span>`;
+                    }
+                }
+                sBadge.innerHTML = statusHtml;
+
+                // Telemetry Content
+                let contentHtml = `<div class="pe-d-flex pe-flex-column pe-gap-2">`;
+                if (telemetry.live_counter !== null && telemetry.live_counter !== "") {
+                    contentHtml += `<div class="pe-d-flex pe-justify-between">
+                        <span class="pe-text-muted"><i class="fas fa-sort-numeric-up-alt"></i> Output:</span>
+                        <span class="pe-fw-bold">${telemetry.live_counter} / ${telemetry.live_total || '-'} pcs</span>
+                    </div>`;
+                }
+                if (telemetry.power_kw !== null && telemetry.power_kw !== "") {
+                    contentHtml += `<div class="pe-d-flex pe-justify-between">
+                        <span class="pe-text-muted"><i class="fas fa-bolt"></i> Power:</span>
+                        <span class="pe-fw-bold" style="color:#d97706;">${parseFloat(telemetry.power_kw).toFixed(2)} kW</span>
+                    </div>`;
+                }
+                if (telemetry.flow_rate !== null && telemetry.flow_rate !== "") {
+                    contentHtml += `<div class="pe-d-flex pe-justify-between">
+                        <span class="pe-text-muted"><i class="fas fa-wind"></i> Flow:</span>
+                        <span class="pe-fw-bold" style="color:#0ea5e9;">${parseFloat(telemetry.flow_rate).toFixed(2)}</span>
+                    </div>`;
+                }
+                contentHtml += `</div>`;
+                
+                tContainer.innerHTML = contentHtml;
+            } else {
+                tContainer.style.display = 'none';
+                sBadge.innerHTML = '';
+            }
+        });
+    }
+
+    // --- IIoT Discovery Features ---
+    let discoveryModalInstance = null;
+    let discoveryRawModalInstance = null;
+
+    function openDiscoveryModal() {
+        if (!discoveryModalInstance) {
+            discoveryModalInstance = new bootstrap.Modal(document.getElementById('discoveryModal'));
+        }
+        discoveryModalInstance.show();
+        loadDiscovery();
+    }
+    
+    function closeDiscoveryModal() {
+        if (discoveryModalInstance) {
+            discoveryModalInstance.hide();
+        }
+    }
+    
+    async function loadDiscovery() {
+        const tb = document.getElementById('discoveryTableBody');
+        tb.innerHTML = '<tr><td colspan="5" class="pe-text-center pe-text-muted">Loading...</td></tr>';
+        try {
+            const res = await PEApp.apiCall('iiotAPI.php', { action: 'get_discovery_topics' });
+            if (res.success && res.data.length > 0) {
+                // store payload data globally for raw view
+                window.discoveryDataRaw = res.data;
+                
+                let html = '';
+                res.data.forEach((row, idx) => {
+                    const isMapped = !!row.machine_code;
+                    const statusHtml = isMapped 
+                        ? `<span class="pe-badge pe-badge-success">MAPPED</span>` 
+                        : `<span class="pe-badge pe-badge-danger">UNMAPPED</span>`;
+                    
+                    const mappedText = isMapped ? row.machine_code : '-';
+                    const mapBtnHtml = !isMapped 
+                        ? `<button class="pe-btn pe-btn-sm pe-btn-primary" onclick="MachineModule.mapTopic('${row.topic_name}')"><i class="fas fa-link"></i> Map</button>`
+                        : '';
+                    
+                    html += `<tr>
+                        <td class="pe-fw-bold">${PEApp.escapeHtml(row.topic_name)}</td>
+                        <td>${statusHtml}</td>
+                        <td>${mappedText}</td>
+                        <td>${row.last_seen}</td>
+                        <td class="pe-text-center">
+                            <button class="pe-btn pe-btn-sm pe-btn-secondary" onclick="MachineModule.showDiscoveryRaw(${idx})" title="View Raw Data"><i class="fas fa-code"></i></button>
+                            ${mapBtnHtml}
+                        </td>
+                    </tr>`;
+                });
+                tb.innerHTML = html;
+            } else {
+                tb.innerHTML = '<tr><td colspan="5" class="pe-text-center pe-text-muted">No telemetry data received yet.</td></tr>';
+            }
+        } catch (e) {
+            tb.innerHTML = '<tr><td colspan="5" class="pe-text-center" style="color:var(--danger);">Failed to load discovery data</td></tr>';
+        }
+    }
+    
+    function showDiscoveryRaw(idx) {
+        const data = window.discoveryDataRaw[idx];
+        if (data && data.payload_obj) {
+            document.getElementById('discoveryRawPre').innerText = JSON.stringify(data.payload_obj, null, 4);
+            if (!discoveryRawModalInstance) {
+                discoveryRawModalInstance = new bootstrap.Modal(document.getElementById('discoveryRawModal'));
+            }
+            discoveryRawModalInstance.show();
+        } else {
+            alert("No JSON payload available for this topic.");
+        }
+    }
+    
+    function closeDiscoveryRawModal() {
+        if (discoveryRawModalInstance) {
+            discoveryRawModalInstance.hide();
+        }
+    }
+    
+    function mapTopic(topicName) {
+        closeDiscoveryModal();
+        openModal();
+        setTimeout(() => {
+            document.getElementById('machineMqttTopic').value = topicName;
+        }, 500);
+    }
+
+    return { 
+        loadData, filterTable, setView, openModal, save, viewDetail, deleteItem, restoreItem, startTelemetryPolling,
+        openDiscoveryModal, closeDiscoveryModal, loadDiscovery, showDiscoveryRaw, closeDiscoveryRawModal, mapTopic
+    };
 })();

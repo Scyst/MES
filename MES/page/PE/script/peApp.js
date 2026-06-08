@@ -7,7 +7,8 @@ const PEApp = (() => {
         workorders:  { title: 'Work Orders',        breadcrumb: 'Work Orders', icon: 'fas fa-clipboard-list',   loader: () => WorkOrderModule.loadData() },
         downtime:    { title: 'Downtime Tracker',   breadcrumb: 'Downtime',    icon: 'fas fa-clock',            loader: () => DowntimeModule.loadData() },
         spareparts:  { title: 'Spare Parts',        breadcrumb: 'Spare Parts', icon: 'fas fa-boxes-stacked',    loader: () => SparePartsModule.loadData() },
-        analytics:   { title: 'Analytics Dashboard', breadcrumb: 'Dashboard',  icon: 'fas fa-chart-line',       loader: () => AnalyticsModule.loadAll() }
+        analytics:   { title: 'Analytics Dashboard', breadcrumb: 'Dashboard',  icon: 'fas fa-chart-line',       loader: () => AnalyticsModule.loadAll() },
+        iiot:        { title: 'Live IIoT Monitor',   breadcrumb: 'Live IIoT',  icon: 'fas fa-satellite-dish',   loader: () => IIoTModule.init() }
     };
     const loadedTabs = new Set();
 

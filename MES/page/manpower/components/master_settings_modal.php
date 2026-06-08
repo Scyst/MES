@@ -1,5 +1,5 @@
-﻿<!-- Master Settings Modal -->
-<div class="modal fade" id="masterSettingsModal" tabindex="-1" aria-hidden="true" style="z-index: 1055;">
+<!-- Master Settings Modal -->
+<div class="modal fade" id="masterSettingsModal"  aria-hidden="true" style="z-index: 1055;">
     <div class="modal-dialog modal-fullscreen">
         <div class="modal-content bg-light">
             <div class="modal-header bg-dark text-white py-3 border-0 shadow-sm">
@@ -31,13 +31,61 @@
                         <button class="nav-link text-start py-3 fw-bold rounded-3 bg-opacity-10 text-warning" id="v-pills-swap-tab" data-bs-toggle="pill" data-bs-target="#v-pills-swap" type="button" role="tab" onclick="Actions.openShiftSwapAudit()">
                             <i class="fas fa-exchange-alt me-2"></i> Shift Swap Audit
                         </button>
+                          <button class="nav-link text-start py-3 fw-bold rounded-3 bg-opacity-10 text-primary" id="v-pills-rawscans-tab" data-bs-toggle="pill" data-bs-target="#v-pills-rawscans" type="button" role="tab" onclick="Actions.openRawScansTab()">
+                              <i class="fas fa-satellite-dish me-2"></i> Central Raw Scans
+                          </button>
                     </div>
                 </div>
                 
                 <!-- Content Area -->
                 <div class="tab-content flex-grow-1 p-0 px-lg-4 pb-lg-4 pt-lg-0 overflow-auto" id="v-pills-tabContent" style="background-color: #f8f9fa;">
                     
-                    <!-- Shift Swap Audit Tab -->
+                    <!-- Central Raw Scans Tab -->
+                      <div class="tab-pane fade h-100" id="v-pills-rawscans" role="tabpanel">
+                          <div class="card border-0 shadow-sm h-100 d-flex flex-column mt-3">
+                              <div class="card-header bg-white border-bottom py-3">
+                                  <div class="d-flex justify-content-between align-items-center mb-3">
+                                      <div>
+                                          <h5 class="m-0 fw-bold text-dark"><i class="fas fa-satellite-dish me-2 text-primary"></i>Central Raw Scans</h5>
+                                          <small class="text-muted">ตรวจสอบประวัติการสแกนหน้าจากเครื่องของส่วนกลางโดยตรง</small>
+                                      </div>
+                                  </div>
+                                  <div class="row g-2 align-items-end">
+                                      <div class="col-md-3">
+                                          <label class="form-label small fw-bold text-secondary mb-1">Target Date</label>
+                                          <input type="date" class="form-control form-control-sm" id="rawScanDate">
+                                      </div>
+                                      <div class="col-md-3">
+                                          <label class="form-label small fw-bold text-secondary mb-1">Search EMP ID / Name</label>
+                                          <input type="text" class="form-control form-control-sm" id="rawScanSearch" placeholder="Search..." onkeyup="Actions.filterRawScans()">
+                                      </div>
+                                      <div class="col-md-6 text-end">
+                                          <button class="btn btn-sm btn-primary shadow-sm px-4" onclick="Actions.fetchRawCentralScans()">
+                                              <i class="fas fa-sync-alt me-2"></i> Fetch Data
+                                          </button>
+                                      </div>
+                                  </div>
+                              </div>
+                              <div class="card-body p-0 flex-grow-1 overflow-auto bg-light" style="max-height: calc(100vh - 300px);">
+                                  <table class="table table-hover align-middle mb-0 bg-white">
+                                      <thead class="bg-light text-secondary small text-uppercase" style="position: sticky; top: 0; z-index: 1;">
+                                          <tr>
+                                              <th class="ps-4">Scan Time</th>
+                                              <th>Emp ID</th>
+                                              <th>Name</th>
+                                              <th>Position</th>
+                                              <th class="pe-4">Department</th>
+                                          </tr>
+                                      </thead>
+                                      <tbody id="rawScansBody">
+                                          <tr><td colspan="5" class="text-center py-5 text-muted"><i class="fas fa-satellite-dish fs-1 mb-3 text-light"></i><br>Select a date and click Fetch Data</td></tr>
+                                      </tbody>
+                                  </table>
+                              </div>
+                          </div>
+                      </div>
+
+                      <!-- Shift Swap Audit Tab -->
                     <div class="tab-pane fade h-100" id="v-pills-swap" role="tabpanel">
                         <div class="card border-0 shadow-sm h-100 d-flex flex-column mt-3">
                             <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
@@ -45,21 +93,23 @@
                                     <h5 class="m-0 fw-bold text-dark"><i class="fas fa-exchange-alt text-warning me-2"></i>Shift Swap Audit</h5>
                                     <small class="text-muted">ตรวจสอบการสแกนเข้างานที่อาจมีการสลับกะ (แต่ยังไม่ได้เปลี่ยนในระบบ)</small>
                                 </div>
-                                <div class="d-flex gap-2">
+                                <div class="d-flex align-items-center gap-2">
                                     <select id="swapAuditHcGroup" class="form-select form-select-sm" style="width: auto;" onchange="Actions.openShiftSwapAudit()"><option value="TEAM 1" selected>TEAM 1</option><option value="ALL">ALL GROUPS</option></select>
                                       <span class="text-muted small align-self-center">From</span>
                                     <input type="date" id="swapAuditStartDate" class="form-control form-control-sm" value="<?php echo date('Y-m-d', strtotime('-3 days')); ?>" onchange="Actions.openShiftSwapAudit()">
                                     <span class="text-muted small align-self-center">To</span>
                                     <input type="date" id="swapAuditEndDate" class="form-control form-control-sm" value="<?php echo date('Y-m-d'); ?>" onchange="Actions.openShiftSwapAudit()">
                                     <button class="btn btn-sm btn-outline-secondary" onclick="Actions.openShiftSwapAudit()"><i class="fas fa-sync-alt"></i></button>
+                                      <button class="btn btn-sm btn-dark text-nowrap" onclick="Actions.batchSwapShift()"><i class="fas fa-layer-group me-1"></i>Batch Swap</button>
                                 </div>
                             </div>
                             <div class="card-body p-0 flex-grow-1 overflow-auto bg-white">
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="bg-light text-secondary small text-uppercase" style="position: sticky; top: 0; z-index: 1;">
                                         <tr>
-                                            <th class="ps-4">Employee</th>
+                                            <th style="width: 40px;" class="text-center ps-4"><input class="form-check-input" type="checkbox" id="swapAuditSelectAll" onchange="document.querySelectorAll('.swap-audit-cb').forEach(cb => cb.checked = this.checked)"></th>
                                             <th class="text-center">Date</th>
+                                            <th>Employee</th>
                                             <th class="text-center">System Shift</th>
                                             <th class="text-center">Scan In</th>
                                             <th class="text-center">Scan Out</th>
@@ -171,7 +221,7 @@
                                     <h5 class="m-0 fw-bold text-dark"><i class="fas fa-users me-2 text-primary"></i>Team Settings (HC Group)</h5>
                                     <small class="text-muted">ตั้งค่าว่ากลุ่มไหนจะถูกนำไปคำนวณในหน้าจอหลัก (Main Manpower)</small>
                                 </div>
-                                <div class="d-flex gap-2">
+                                <div class="d-flex align-items-center gap-2">
                                     <button class="btn btn-sm btn-outline-primary fw-bold shadow-sm" onclick="Actions.addTeamSettingRow()"><i class="fas fa-plus me-1"></i> Add Team</button>
                                     <button class="btn btn-sm btn-primary fw-bold shadow-sm" onclick="Actions.saveTeamSettings()"><i class="fas fa-save me-1"></i> Save Settings</button>
                                 </div>
@@ -228,8 +278,11 @@
                         <div class="card border-0 shadow-sm h-100 d-flex flex-column">
                             <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h5 class="m-0 fw-bold text-dark"><i class="fas fa-tags me-2 text-primary"></i>Position Mapping</h5>
-                                    <small class="text-muted">จับคู่ "คำในตำแหน่ง" ให้เป็น "ประเภทพนักงาน"</small>
+                                    <h5 class="m-0 fw-bold text-dark"><i class="fas fa-tags me-2 text-primary"></i>Position & Salary Mapping</h5>
+                                    <small class="text-muted">ตั้งค่าฐานเงินเดือนและจับคู่ตำแหน่งงานให้เป็นประเทเดียวกัน</small>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-success" onclick="Actions.exportSalarySettings()"><i class="fas fa-file-excel me-2"></i>Export Excel</button>
                                 </div>
                             </div>
                             <div class="card-body p-0 flex-grow-1 overflow-auto bg-white" style="max-height: calc(100vh - 250px);">
@@ -238,6 +291,8 @@
                                         <tr>
                                             <th class="ps-4 py-3">Keyword (คำในตำแหน่ง)</th>
                                             <th>Map to Type</th>
+                                            <th class="text-end">Base Rate (THB) <i id="salaryLockIcon" class="fas fa-lock ms-1 text-danger" style="cursor:pointer;" onclick="Actions.toggleSalaryReveal()" title="Click to unlock"></i></th>
+                                            <th class="text-center">Rate Type</th>
                                             <th class="text-center">Action</th>
                                         </tr>
                                     </thead>
@@ -250,6 +305,16 @@
                                             <td>
                                                 <input class="form-control form-control-sm" list="typeList" id="newMapType" placeholder="เลือกหรือพิมพ์ใหม่...">
                                                 <datalist id="typeList"></datalist>
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm text-end" id="newMapRate" placeholder="0.00" step="0.01">
+                                            </td>
+                                            <td>
+                                                <select class="form-select form-select-sm" id="newMapRateType">
+                                                    <option value="MONTHLY">MONTHLY</option>
+                                                    <option value="DAILY">DAILY</option>
+                                                    <option value="MONTHLY_NO_OT">MONTHLY (NO OT)</option>
+                                                </select>
                                             </td>
                                             <td class="text-center">
                                                 <button class="btn btn-sm btn-primary rounded-circle shadow-sm" onclick="Actions.addMapping()" title="Add">
@@ -270,5 +335,9 @@
         </div>
     </div>
 </div>
+
+
+
+
 
 

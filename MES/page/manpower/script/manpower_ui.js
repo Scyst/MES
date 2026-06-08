@@ -1,4 +1,4 @@
-﻿// page/manpower/script/manpower_ui.js
+// page/manpower/script/manpower_ui.js
 "use strict";
 
 const UI = {
@@ -2329,6 +2329,114 @@ const Actions = {
     },
 
     _employeeCache: [],
+    async batchSwapShift() {
+        const checkboxes = document.querySelectorAll('.swap-audit-cb:checked');
+        if (checkboxes.length === 0) {
+            Swal.fire('Warning', 'Please select at least one record to swap.', 'warning');
+            return;
+        }
+        
+        const logs = Array.from(checkboxes).map(cb => ({
+            log_id: cb.value,
+            new_shift_id: cb.getAttribute('data-new-shift-id')
+        }));
+        
+        const confirmResult = await Swal.fire({
+            title: "Batch Shift Swap",
+            html: `Are you sure you want to change shifts for <b>${logs.length}</b> records?<br><br>
+                <div class='form-check text-start'>
+                    <input class='form-check-input' type='checkbox' id='batchApplyFutureCheckbox' checked>
+                    <label class='form-check-label' for='batchApplyFutureCheckbox'>
+                        Apply these shift changes <b>permanently</b> (Update default shifts and future schedules)
+                    </label>
+                </div>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, change them!',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            preConfirm: () => {
+                return document.getElementById('batchApplyFutureCheckbox').checked;
+            }
+        });
+
+        if (confirmResult.isConfirmed) {
+            const applyFuture = confirmResult.value;
+            try {
+                Swal.fire({ title: 'Processing...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                const res = await fetch('api/api_daily_operations.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'batch_quick_swap_shift',
+                        logs: logs,
+                        apply_future: applyFuture
+                    })
+                });
+                const json = await res.json();
+                if (json.success) {
+                    Swal.fire('Success', json.message || 'Shifts swapped successfully', 'success');
+                    this.openShiftSwapAudit();
+                    if (typeof App !== 'undefined' && App.loadData) App.loadData();
+                    if (typeof Actions !== 'undefined' && Actions.fetchDetailData) Actions.fetchDetailData();
+                } else {
+                    Swal.fire('Error', json.message || 'Failed to swap shifts', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Error', 'An error occurred while swapping shifts', 'error');
+            }
+        }
+    },
+    async quickSwapShift(logId, nameTh, newShiftId, newShiftName) {
+        const confirmResult = await Swal.fire({
+            title: "Confirm Shift Swap",
+            html: `Are you sure you want to change <b class='text-primary'>${nameTh}</b>'s shift to <b class='text-danger'>${newShiftName}</b>?<br><br>
+                <div class='form-check text-start'>
+                    <input class='form-check-input' type='checkbox' id='applyFutureCheckbox' checked>
+                    <label class='form-check-label' for='applyFutureCheckbox'>
+                        Apply this shift change <b>permanently</b> (Update default shift and future schedules)
+                    </label>
+                </div>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, change it!',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            preConfirm: () => {
+                return document.getElementById('applyFutureCheckbox').checked;
+            }
+        });
+
+        if (confirmResult.isConfirmed) {
+            const applyFuture = confirmResult.value;
+            try {
+                const res = await fetch('api/api_daily_operations.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'quick_swap_shift',
+                        log_id: logId,
+                        new_shift_id: newShiftId,
+                        apply_future: applyFuture
+                    })
+                });
+                const json = await res.json();
+                if (json.success) {
+                    Swal.fire('Success', json.message || 'Shift swapped successfully', 'success');
+                    if (typeof App !== 'undefined' && App.loadData) App.loadData();
+                    if (typeof Actions !== 'undefined' && Actions.fetchDetailData) Actions.fetchDetailData();
+                } else {
+                    Swal.fire('Error', json.message || 'Failed to swap shift', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Error', 'An error occurred while swapping shift', 'error');
+            }
+        }
+    },
     async openShiftSwapAudit() {
         this.openMasterSettingsTab('v-pills-swap-tab');
         const startDate = document.getElementById('swapAuditStartDate').value || new Date().toISOString().split('T')[0];
@@ -2348,14 +2456,15 @@ const Actions = {
                 tbody.innerHTML = json.data.map(row => {
                     const isDay = row.shift_id == 1;
                     const shiftHtml = isDay ? `<span class="badge bg-primary shadow-sm">DAY</span>` : `<span class="badge bg-dark shadow-sm">NIGHT</span>`;
-                    const detectMsg = isDay ? 'สแกนเข้าช่วงเย็น (อาจสลับไปกะดึก)' : 'สแกนเข้าเย็นแต่ไม่มีเวลาออก (อาจสลับมากะเช้า)';
+                    const detectMsg = isDay ? 'สแกนเข้าช่วงเย็น (อาจสลับไปกะดึก)' : 'สแกนเข้าช่วงเช้า (อาจสลับมากะเช้า)';
                     const btnLabel = isDay ? '🔁 สลับเป็นกะดึก' : '🔁 สลับเป็นกะเช้า';
                     const newShiftId = isDay ? 2 : 1;
                     const newShiftName = isDay ? 'NIGHT' : 'DAY';
 
                     return `<tr>
+                        <td class="text-center align-middle ps-4"><input class="form-check-input swap-audit-cb" type="checkbox" value="${row.log_id}" data-new-shift-id="${newShiftId}"></td>
                         <td class="text-center align-middle font-monospace text-primary fw-bold">${row.log_date}</td>
-                        <td class="ps-4 fw-bold text-dark">${row.name_th} <br><small class="text-muted font-monospace">${row.emp_id}</small></td>
+                        <td class="fw-bold text-dark">${row.name_th} <br><small class="text-muted font-monospace">${row.emp_id}</small></td>
                         <td class="text-center align-middle">${shiftHtml}</td>
                         <td class="text-center align-middle font-monospace text-primary fw-bold">${row.scan_in || '-'}</td>
                         <td class="text-center align-middle font-monospace text-secondary">${row.scan_out || '-'}</td>
@@ -2373,6 +2482,74 @@ const Actions = {
             console.error(err);
             tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Failed to load audit data.</td></tr>`;
         }
+    },
+
+    _rawScansData: [],
+    
+    openRawScansTab() {
+        this.openMasterSettingsTab('v-pills-rawscans-tab');
+        if (!document.getElementById('rawScanDate').value) {
+            document.getElementById('rawScanDate').value = new Date().toISOString().split('T')[0];
+        }
+    },
+    
+    async fetchRawCentralScans() {
+        const targetDate = document.getElementById('rawScanDate').value;
+        if (!targetDate) return Swal.fire('Warning', 'Please select a date', 'warning');
+        
+        const tbody = document.getElementById('rawScansBody');
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div><br><small class="text-muted mt-2 d-block">Fetching raw data from central API...</small></td></tr>`;
+        
+        try {
+            const res = await fetch(`api/api_daily_operations.php?action=fetch_raw_central_scans&date=${targetDate}`);
+            const json = await res.json();
+            
+            if (json.success) {
+                this._rawScansData = json.data;
+                this.renderRawScans();
+            } else {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Failed to fetch: ${json.message}</td></tr>`;
+            }
+        } catch (err) {
+            console.error(err);
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error connecting to server</td></tr>`;
+        }
+    },
+    
+    filterRawScans() {
+        this.renderRawScans();
+    },
+    
+    renderRawScans() {
+        const tbody = document.getElementById('rawScansBody');
+        const searchTerm = (document.getElementById('rawScanSearch').value || '').toLowerCase();
+        
+        const filtered = this._rawScansData.filter(row => {
+            const empId = (row.EMPID || '').toLowerCase();
+            const name = (row.NAME || '').toLowerCase();
+            return empId.includes(searchTerm) || name.includes(searchTerm);
+        });
+        
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No records found for this date</td></tr>`;
+            return;
+        }
+        
+        tbody.innerHTML = filtered.map(row => {
+            const timeInOut = row.TIMEINOUT ? row.TIMEINOUT.substring(11, 19) : '-';
+            const logDate = row.TIMEINOUT ? row.TIMEINOUT.substring(0, 10) : '-';
+            
+            return `<tr>
+                <td class="ps-4">
+                    <span class="fw-bold text-primary font-monospace">${timeInOut}</span>
+                    <br><small class="text-muted" style="font-size: 0.7rem;">${logDate}</small>
+                </td>
+                <td class="font-monospace fw-bold">${row.EMPID}</td>
+                <td class="fw-bold">${row.NAME}</td>
+                <td class="small">${row.POSITION || '-'}</td>
+                <td class="pe-4"><span class="badge bg-light text-dark border">${row.DEPARTMENT || '-'}</span></td>
+            </tr>`;
+        }).join('');
     },
 
     async openEmployeeManager(keepFilters = false) {
@@ -3402,18 +3579,98 @@ const Actions = {
     renderMappingTable(list) {
         const tbody = document.getElementById('mappingBody'); tbody.innerHTML = '';
         list.forEach((item, index) => {
-            tbody.innerHTML += `<tr><td class="ps-4 fw-bold">${item.keyword}</td><td><span class="badge bg-light text-dark border">${item.category_name}</span></td><td class="text-center"><button class="btn btn-sm text-danger" onclick="Actions.deleteMapping(${index})"><i class="fas fa-trash-alt"></i></button></td></tr>`;
+            const rate = parseFloat(item.hourly_rate || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const rateHtml = this._isSalaryRevealed ? rate : `<span style="filter: blur(4px); user-select: none;">***</span>`;
+            const typeClass = item.rate_type === 'DAILY' ? 'success' : (item.rate_type === 'MONTHLY_NO_OT' ? 'warning' : 'primary');
+            tbody.innerHTML += `<tr>
+                <td class="ps-4 fw-bold">${item.keyword}</td>
+                <td><span class="badge bg-light text-dark border">${item.category_name}</span></td>
+                <td class="text-end font-monospace">${rateHtml}</td>
+                <td class="text-center"><span class="badge bg-${typeClass} bg-opacity-10 text-${typeClass}">${item.rate_type || 'MONTHLY'}</span></td>
+                <td class="text-center">
+                    <button class="btn btn-sm text-primary" onclick="Actions.editMapping(${index})" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm text-danger" onclick="Actions.deleteMapping(${index})" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                </td>
+            </tr>`;
         });
         this._mappingCache = list;
     },
     async addMapping() {
         const key = document.getElementById('newMapKeyword').value.trim();
         const type = document.getElementById('newMapType').value.trim();
+        const rateNode = document.getElementById('newMapRate');
+        const rate = parseFloat(rateNode ? rateNode.value : 0) || 0;
+        const rateTypeNode = document.getElementById('newMapRateType');
+        const rateType = rateTypeNode ? rateTypeNode.value : 'MONTHLY';
         if (!key || !type) return Swal.fire('Required fields missing');
-        this._mappingCache.push({ keyword: key, category_name: type });
+        this._mappingCache.push({ keyword: key, category_name: type, hourly_rate: rate, rate_type: rateType });
         await this.saveMappings();
         this.renderMappingTable(this._mappingCache);
         document.getElementById('newMapKeyword').value = '';
+        if (rateNode) rateNode.value = '';
+    },
+    async toggleSalaryReveal() {
+        if (this._isSalaryRevealed) {
+            this._isSalaryRevealed = false;
+            document.getElementById('salaryLockIcon').className = 'fas fa-lock ms-1 text-danger';
+            this.renderMappingTable(this._mappingCache);
+        } else {
+            const { value: password } = await Swal.fire({
+                title: 'Enter Password',
+                input: 'password',
+                inputPlaceholder: 'Admin password (e.g. admin)',
+                showCancelButton: true,
+                target: document.getElementById('masterSettingsModal') || document.body
+            });
+            if (password === 'admin' || password === '1234') {
+                this._isSalaryRevealed = true;
+                document.getElementById('salaryLockIcon').className = 'fas fa-unlock ms-1 text-success';
+                this.renderMappingTable(this._mappingCache);
+            } else if (password) {
+                Swal.fire('Error', 'Incorrect password', 'error');
+            }
+        }
+    },
+    exportSalarySettings() {
+        if (!this._isSalaryRevealed) return Swal.fire('Locked', 'Please unlock salary view first by clicking the lock icon.', 'warning');
+        if (!this._mappingCache || this._mappingCache.length === 0) {
+            Swal.fire('Warning', 'No data to export', 'warning');
+            return;
+        }
+        
+        const headers = ['Keyword (Position)', 'Map to Type', 'Base Rate (THB)', 'Rate Type'];
+        let csvContent = "data:text/csv;charset=utf-8,﻿" + headers.join(",") + "\n";
+        
+        this._mappingCache.forEach(row => {
+            const rate = parseFloat(row.hourly_rate || 0).toFixed(2);
+            const type = row.rate_type || 'MONTHLY';
+            const r = [
+                `"${row.keyword}"`,
+                `"${row.category_name}"`,
+                rate,
+                `"${type}"`
+            ];
+            csvContent += r.join(",") + "\n";
+        });
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Salary_Settings_Export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);    },
+    editMapping(index) {
+        if (!this._isSalaryRevealed) return Swal.fire('Locked', 'Please unlock salary view first by clicking the lock icon.', 'warning');
+        const item = this._mappingCache[index];
+        document.getElementById('newMapKeyword').value = item.keyword || '';
+        document.getElementById('newMapType').value = item.category_name || '';
+        document.getElementById('newMapRate').value = item.hourly_rate || '';
+        document.getElementById('newMapRateType').value = item.rate_type || 'MONTHLY';
+        
+        this._mappingCache.splice(index, 1);
+        this.renderMappingTable(this._mappingCache);
+        document.getElementById('newMapKeyword').focus();
     },
     async deleteMapping(index) {
         if (!confirm('Delete mapping?')) return;
@@ -3911,5 +4168,8 @@ const Actions = {
         }
     }
 };
+
+
+
 
 

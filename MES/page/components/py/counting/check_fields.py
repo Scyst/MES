@@ -12,7 +12,7 @@ PAYLOAD = {"start": None, "end": None} # ดึงข้อมูลดิบท
 # ==========================================
 # 2. EXECUTION
 # ==========================================
-print(f"🚀 เริ่มต้นการสแกนโครงสร้างข้อมูล (Schema Inspector)...")
+print(f"Start Schema Inspector...")
 print(f"Target: {URL}")
 
 try:
@@ -23,10 +23,10 @@ try:
         result_list = data_json.get("data", {}).get("result", [])
         
         if not result_list:
-            print("❌ ไม่พบข้อมูล (Data is Empty)")
+            print("Data is Empty")
             exit()
             
-        print(f"✅ ดึงข้อมูลสำเร็จ! พบเครื่องจักรจำนวน: {len(result_list)} เครื่อง")
+        print(f"Success! Found {len(result_list)} machines")
         print("="*80)
         
         # -------------------------------------------------------
@@ -58,7 +58,7 @@ try:
             # ไฮไลท์ฟิลด์สำคัญ
             prefix = "  "
             if key in ['status', 'counter', 'work_center']:
-                prefix = "👉"
+                prefix = "->"
                 if key == 'status': found_status = True
             
             # จัดรูปแบบการแสดงผล
@@ -74,17 +74,17 @@ try:
         # สรุปผล
         # -------------------------------------------------------
         if found_status:
-            print("✅ พบฟิลด์ 'status' ในข้อมูลครับ! (สามารถเอามาทำไฟสถานะเขียว/แดงได้)")
+            print("Found 'status' field")
         else:
-            print("❌ ไม่พบฟิลด์ 'status' ในข้อมูลชุดนี้ (อาจจะต้องแจ้ง Dev ฝั่งนู้นให้เพิ่ม)")
+            print("Not found 'status' field")
             
         # (Optional) ปริ้น JSON ตัวเต็ม 1 ตัวเผื่อพี่อยากเห็นรูปแบบ
-        print("\n📄 [RAW JSON SAMPLE - 1 RECORD]")
+        print("\n[RAW JSON SAMPLE - 1 RECORD]")
         print(json.dumps(result_list[0], indent=4, ensure_ascii=False))
 
     else:
-        print(f"❌ Error: HTTP {response.status_code}")
+        print(f"Error: HTTP {response.status_code}")
         print(response.text)
 
 except Exception as e:
-    print(f"❌ Exception: {str(e)}")
+    print(f"Exception: {str(e)}")
