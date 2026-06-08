@@ -1000,7 +1000,7 @@
 .pe-machine-card .machine-image {
     width: 100%;
     height: 150px;
-    object-fit: cover;
+    object-fit: contain;
     border-radius: var(--pe-radius-md);
     margin-bottom: 12px;
     background-color: var(--pe-bg-input);

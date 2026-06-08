@@ -108,7 +108,7 @@
                             <label class="pe-form-label">Machine Image</label>
                             <input type="file" class="pe-form-input" id="machineFrmImage" accept="image/jpeg, image/png, image/webp">
                             <div id="machineImagePreview" style="margin-top:10px; max-width: 200px; display:none;">
-                                <img src="" alt="Preview" style="width:100%; border-radius:4px; border:1px solid var(--pe-border);">
+                                <img src="" alt="Preview" style="width:100%; max-height: 250px; object-fit: contain; border-radius:4px; border:1px solid var(--pe-border);">
                             </div>
                         </div>
                     </div>
