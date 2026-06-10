@@ -1901,9 +1901,33 @@ const Actions = {
             const costVal = parseFloat(row.est_cost || 0);
             const costHtml = costVal > 0 ? `<span class="fw-bold ${costVal > 1000 ? 'text-primary' : 'text-dark'}">${costVal.toLocaleString()}</span>` : '<span class="text-muted">-</span>';
 
+            let inTimeDisplay = row.in_time ? row.in_time.substring(0,5) : '-';
             let outTimeDisplay = row.out_time ? row.out_time.substring(0,5) : '-';
             let trClass = '';
+            let needReviewHtml = '';
             
+            // เพิ่มการแจ้งเตือน "Need Manual Review" ถ้ามีสแกนเข้าแต่ไม่มีออก หรือมีออกแต่ไม่มีเข้า
+            let isStillWorking = false;
+            if (row.in_time && !row.out_time) {
+                // เช็คว่าเค้าเพิ่งสแกนเข้ามาไม่เกิน 16 ชม. หรือเปล่า (อาจจะกำลังทำงานอยู่)
+                let inDate = new Date(`${row.log_date}T${row.in_time}:00`);
+                // ถ้าเป็นกะดึก และเวลา in_time น้อยกว่าเที่ยงวัน แสดงว่าเป็นเช้าของอีกวัน
+                if ((row.shift_id == 2 || row.default_shift_id == 2) && row.in_time < '12:00') {
+                    inDate.setDate(inDate.getDate() + 1);
+                }
+                const diffHours = (new Date() - inDate) / (1000 * 60 * 60);
+                if (diffHours < 16 && diffHours > -24) {
+                    isStillWorking = true;
+                }
+            }
+
+            if (((!row.in_time && row.out_time) || (row.in_time && !row.out_time)) && !isStillWorking) {
+                if (!row.in_time) inTimeDisplay = `<span class="badge bg-warning text-dark shadow-sm border border-warning"><i class="fas fa-question-circle"></i> ลืมรูด</span>`;
+                if (!row.out_time) outTimeDisplay = `<span class="badge bg-warning text-dark shadow-sm border border-warning"><i class="fas fa-question-circle"></i> ลืมรูด</span>`;
+                needReviewHtml = `<br><span class="badge bg-danger mt-1 animate__animated animate__pulse animate__infinite shadow-sm" style="font-size:0.65rem;"><i class="fas fa-exclamation-triangle"></i> Need Manual Review</span>`;
+                trClass = 'table-warning bg-opacity-10';
+            }
+
             if (parseInt(row.is_forgot_out) === 1) {
                 trClass = 'table-danger bg-opacity-10';
                 outTimeDisplay = `<span class="badge bg-danger"><i class="fas fa-exclamation-circle"></i> ลืมรูด</span>`;
@@ -1935,10 +1959,11 @@ const Actions = {
                     <td class="text-center align-middle text-secondary small fw-bold">${row.actual_line || row.line || '-'}</td>
                     <td class="text-center align-middle text-secondary small fw-bold">${row.actual_team || row.team_group || '-'}</td>
                     <td class="text-center align-middle">${shiftDisplay}</td>
-                    <td class="text-center align-middle font-monospace fw-bold text-primary">${row.in_time ? row.in_time.substring(0,5) : '-'}</td>
+                    <td class="text-center align-middle font-monospace fw-bold text-primary">${inTimeDisplay}</td>
                     <td class="text-center align-middle font-monospace fw-bold text-primary">${outTimeDisplay}</td>
                     <td class="text-center align-middle">
                         <span class="badge ${getStatusBadgeClass(row.status)} shadow-sm px-2 py-1" style="font-size: 0.75rem;">${statusMap[row.status] || row.status}</span>
+                        ${needReviewHtml}
                     </td>
                     <td class="align-middle text-muted small text-truncate" style="max-width: 150px;" title="${row.remark || ''}">${row.remark || '-'}</td>
                     <td class="text-end pe-3 align-middle">${costHtml}</td>
