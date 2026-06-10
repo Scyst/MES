@@ -69,13 +69,25 @@ $pageTitle = "PE Enterprise";
 
             <div class="pe-nav-section">
                 <div class="pe-nav-section-label">Analytics & IIoT</div>
+                <button class="pe-nav-item" data-tab="production_overview" onclick="PEApp.switchTab('production_overview')">
+                    <i class="fas fa-layer-group" style="color: #6366f1;"></i>
+                    <span class="nav-label">Production Overview</span>
+                </button>
+                <button class="pe-nav-item" data-tab="machine_timeline" onclick="PEApp.switchTab('machine_timeline')">
+                    <i class="fas fa-stream" style="color: #0ea5e9;"></i>
+                    <span class="nav-label">Machine Timeline</span>
+                </button>
                 <button class="pe-nav-item" data-tab="iiot" onclick="PEApp.switchTab('iiot')">
                     <i class="fas fa-satellite-dish" style="color: #38bdf8;"></i>
                     <span class="nav-label">Live IIoT Monitor</span>
                 </button>
+                <button class="pe-nav-item" data-tab="iiot_oee" onclick="PEApp.switchTab('iiot_oee')">
+                    <i class="fas fa-chart-pie" style="color: #4ade80;"></i>
+                    <span class="nav-label">IIoT OEE Dashboard</span>
+                </button>
                 <button class="pe-nav-item" data-tab="analytics" onclick="PEApp.switchTab('analytics')">
                     <i class="fas fa-chart-line"></i>
-                    <span class="nav-label">Dashboard</span>
+                    <span class="nav-label">Traditional Dashboard</span>
                 </button>
             </div>
 
@@ -152,6 +164,21 @@ $pageTitle = "PE Enterprise";
             <div class="pe-tab-panel" id="panel-iiot">
                 <?php include 'components/tab_iiot.php'; ?>
             </div>
+            
+            <!-- IIoT OEE Tab -->
+            <div class="pe-tab-panel" id="panel-iiot_oee">
+                <?php include 'components/tab_iiot_oee.php'; ?>
+            </div>
+
+            <!-- Production Overview Tab -->
+            <div class="pe-tab-panel" id="panel-production_overview">
+                <?php include 'components/tab_production_overview.php'; ?>
+            </div>
+
+            <!-- Machine Timeline Tab -->
+            <div class="pe-tab-panel" id="panel-machine_timeline">
+                <?php include 'components/tab_machine_timeline.php'; ?>
+            </div>
 
         </div>
     </div>
@@ -192,6 +219,9 @@ $pageTitle = "PE Enterprise";
 <script src="script/sparePartsModule.js?v=<?php echo filemtime(__DIR__ . '/script/sparePartsModule.js'); ?>"></script>
 <script src="script/analyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/analyticsModule.js'); ?>"></script>
 <script src="script/iiotModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotModule.js'); ?>"></script>
+<script src="script/iiotOeeModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotOeeModule.js'); ?>"></script>
+<script src="script/productionOverviewModule.js?v=<?php echo filemtime(__DIR__ . '/script/productionOverviewModule.js'); ?>"></script>
+<script src="script/machineTimelineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineTimelineModule.js'); ?>"></script>
 
 </body>
 </html>

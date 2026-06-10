@@ -52,6 +52,19 @@ const IIoTModule = (function() {
                         <span class="iiot-metric-value flow" id="iiot-flow-${m.machine_code}">-</span>
                     </div>
                 </div>
+
+                <div class="iiot-oee-section mt-3 pt-2" style="border-top: 1px dashed #e2e8f0;">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span style="font-size: 11px; font-weight: 600; color: var(--pe-primary);"><i class="fas fa-chart-pie"></i> Availability</span>
+                        <span style="font-size: 11px; font-weight: 700; color: #1e293b;" id="iiot-avail-text-${m.machine_code}">0.0%</span>
+                    </div>
+                    <div class="progress" style="height: 6px; border-radius: 3px; background-color: #e2e8f0;">
+                        <div class="progress-bar" id="iiot-avail-bar-${m.machine_code}" role="progressbar" style="width: 0%; background-color: #10b981;"></div>
+                    </div>
+                    <div class="text-end mt-1" style="font-size: 10px; color: #64748b;" id="iiot-avail-time-${m.machine_code}">
+                        Online: 0h 0m
+                    </div>
+                </div>
             </div>
         `).join('');
     }
@@ -71,8 +84,59 @@ const IIoTModule = (function() {
             }
         };
 
+        const fetchAvailability = async () => {
+            try {
+                const res = await fetch('api/iiotAPI.php?action=get_availability_stats');
+                const json = await res.json();
+                if (json.success && json.data) {
+                    updateAvailabilityUI(json.data);
+                }
+            } catch (e) {
+                console.error("Availability fetch error", e);
+            }
+        };
+
         fetchTelemetry();
-        pollingInterval = setInterval(fetchTelemetry, 3000); // 3 seconds for dashboard
+        fetchAvailability();
+        
+        // Polling loop
+        let tick = 0;
+        pollingInterval = setInterval(() => {
+            tick++;
+            fetchTelemetry();
+            // Fetch availability every 15 seconds (5 ticks)
+            if (tick % 5 === 0) {
+                fetchAvailability();
+            }
+        }, 3000); // 3 seconds base tick
+    }
+
+    function updateAvailabilityUI(availData) {
+        machinesWithIIoT.forEach(m => {
+            const data = availData[m.machine_code];
+            if (!data) return;
+
+            const textEl = document.getElementById(`iiot-avail-text-${m.machine_code}`);
+            const barEl = document.getElementById(`iiot-avail-bar-${m.machine_code}`);
+            const timeEl = document.getElementById(`iiot-avail-time-${m.machine_code}`);
+
+            if (textEl && barEl && timeEl) {
+                textEl.innerText = `${data.availability_percent}%`;
+                barEl.style.width = `${data.availability_percent}%`;
+                
+                // Set color based on value
+                let color = '#10b981'; // Green
+                if (data.availability_percent < 50) color = '#ef4444'; // Red
+                else if (data.availability_percent < 80) color = '#f59e0b'; // Yellow
+                
+                barEl.style.backgroundColor = color;
+                
+                // Format online time
+                const h = Math.floor(data.total_online_seconds / 3600);
+                const min = Math.floor((data.total_online_seconds % 3600) / 60);
+                timeEl.innerText = `Online: ${h}h ${min}m`;
+            }
+        });
     }
 
     function updateUI(telemetryData) {

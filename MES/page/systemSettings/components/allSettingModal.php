@@ -80,16 +80,19 @@
                                     <label class="form-label fw-bold small text-muted mb-1">Description</label>
                                     <input type="text" class="form-control form-control-sm" id="part_description">
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label fw-bold small text-muted mb-1">Standard UPH (Default)</label>
                                     <input type="number" class="form-control form-control-sm bg-light" id="planned_output" min="0" step="1">
-                                    <div class="form-text" style="font-size: 0.7rem;">กำลังผลิตมาตรฐาน (ใช้เมื่อไม่ระบุ Route)</div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-muted mb-1">Strokes / Part</label>
+                                    <input type="number" class="form-control form-control-sm border-warning" id="strokes_per_part" min="1" step="1" value="1">
+                                </div>
+                                <div class="col-md-3">
                                     <label class="form-label fw-bold small text-muted mb-1">Min Stock</label>
                                     <input type="number" class="form-control form-control-sm" id="min_stock" min="0" step="0.01">
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label fw-bold small text-muted mb-1">Max Stock</label>
                                     <input type="number" class="form-control form-control-sm" id="max_stock" min="0" step="0.01">
                                 </div>

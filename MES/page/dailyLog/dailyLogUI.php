@@ -202,6 +202,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         <?php 
                         $themeQa = 'text-danger bg-danger bg-opacity-10';
                         renderServiceLink('iQMS Dashboard', 'ระบบจัดการคุณภาพ (NCR/CAR)', '<i class="fas fa-shield-alt"></i>', '../QMS/qmsDashboard.php', 'view_qms', $themeQa);
+                        renderServiceLink('Accessories Inspection', 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', '<i class="fas fa-camera"></i>', '../AccessoriesInspection/accessoriesInspectionUI.php', '', $themeQa);
                         renderServiceLink('MT Stock', 'จัดการคลังอะไหล่ซ่อมบำรุง', '<i class="fas fa-tools"></i>', '../maintenancePE/maintenanceStockUI.php', 'view_maintenance', $themeQa);
                         ?>
                     </div>

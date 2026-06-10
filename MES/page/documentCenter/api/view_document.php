@@ -53,6 +53,8 @@ try {
     }
     
     $docId = $_GET['id'] ?? null;
+    $forceDownload = isset($_GET['download']) && $_GET['download'] == 1;
+
     if (!$docId) {
         http_response_code(400); die("Invalid request.");
     }
@@ -84,7 +86,7 @@ try {
 
         $watermarkImagePath = __DIR__ . '/../../components/images/watermark.png';
         if (!file_exists($watermarkImagePath)) {
-             error_log("Watermark image not found at: " . $watermarkImagePath);
+            error_log("Watermark image not found at: " . $watermarkImagePath);
         }
 
         $watermarkUser = "Viewed by: {$currentUser['username']} on " . date('Y-m-d H:i');
@@ -115,12 +117,29 @@ try {
             $pdf->Text($size['width'] - $textWidthIp - $margin, $size['height'] - $margin, $watermarkIp);
         }
 
-        header('Content-Type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $document['file_name'] . '"');
-        $pdf->Output('I', $document['file_name']);
+        // Add cache headers for Safari compatibility
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        header('Pragma: public');
+        
+        if ($forceDownload) {
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename="' . $document['file_name'] . '"');
+            $pdf->Output('D', $document['file_name']);
+        } else {
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: inline; filename="' . $document['file_name'] . '"');
+            $pdf->Output('I', $document['file_name']);
+        }
 
     } else {
-        header('Content-Type: ' . $document['file_type']);
+        // Add cache headers for Safari compatibility
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        header('Pragma: public');
+        if ($forceDownload) {
+            header('Content-Type: application/octet-stream');
+        } else {
+            header('Content-Type: ' . $document['file_type']);
+        }
         header('Content-Disposition: attachment; filename="' . $document['file_name'] . '"');
         header('Content-Length: ' . filesize($filePath));
         readfile($filePath);

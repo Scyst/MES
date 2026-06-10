@@ -65,8 +65,8 @@ try {
         if (strpos($time, '08:') === 0) { $defaultShiftId = $id; break; } 
     }
 
-    // 3. Group Data (เนเธกเนเธกเธต Hard Filter เนเธฅเนเธง)
-    $scansByDate = []; 
+    // 3. Collect scan data & employee info from API
+    $allScansByEmp = []; // All scans per employee (unsorted)
     $empInfoMap = []; 
 
     foreach ($rawList as $row) {
@@ -74,11 +74,17 @@ try {
         $ts = strtotime($row['TIMEINOUT']);
         
         if ($ts && date('Y', $ts) > 2020) {
-            $logDate = date('Y-m-d', $ts);
-            $scansByDate[$empId][$logDate][] = $ts; 
+            $allScansByEmp[$empId][] = $ts;
             if (!isset($empInfoMap[$empId])) $empInfoMap[$empId] = $row;
         }
     }
+
+    // Sort & deduplicate scans per employee
+    foreach ($allScansByEmp as $empId => &$scans) {
+        sort($scans);
+        $scans = array_values(array_unique($scans));
+    }
+    unset($scans);
 
     // 4. Update Master Data (TEST Table)
     $existingEmployees = [];
@@ -99,14 +105,14 @@ try {
 
     foreach ($empInfoMap as $apiEmpId => $info) {
         $deptApi = $info['DEPARTMENT'] ?? '';
-        // --- ๐’ก เธฅเธญเธเธดเธเธเธฑเธ”เธซเธกเธงเธ”เธซเธกเธนเนเนเธซเธกเน ---
+        // --- ๐Ÿ’ก เธฅเธญเธˆเธดเธ เธˆเธฑเธ”เธซเธกเธงเธ”เธซเธกเธนเนˆเนƒเธซเธกเนˆ ---
         $isToolbox = (stripos($deptApi, 'Toolbox') !== false);
         $isTeam1 = (stripos($deptApi, 'Team1') !== false);
         
-        // เธฃเธฑเธเธเธเธฑเธเธเธฒเธเธ—เธธเธเธเธเน€เธเนเธฒเน€เธเนเธ Active เธ—เธฑเนเธเธซเธกเธ” เน€เธเธทเนเธญเนเธซเนเธฃเธฐเธเธเธชเธฃเนเธฒเธ Daily Log (เนเธซเนเธซเธฑเธงเธซเธเนเธฒเธเธฒเธ/HR เธเธฑเธ”เธเธฒเธฃเธเธฃเธญเธเธญเธตเธเธ—เธต)
+        // เธฃเธฑเธšเธžเธ™เธฑเธ เธ‡เธฒเธ™เธ—เธธเธ เธ„เธ™เน€เธ‚เน‰เธฒเน€เธ›เน‡เธ™ Active เธ—เธฑเน‰เธ‡เธซเธกเธ” เน€เธžเธทเนˆเธญเนƒเธซเน‰เธฃเธฐเธšเธšเธชเธฃเน‰เธฒเธ‡ Daily Log (เนƒเธซเน‰เธซเธฑเธงเธซเธ™เน‰เธฒเธ‡เธฒเธ™/HR เธˆเธฑเธ”เธ เธฒเธฃเธ เธฃเธญเธ‡เธญเธตเธ เธ—เธต)
         $apiCalculatedActive = 1;
         
-        // เธเธณเธซเธเธ” Line เน€เธฃเธดเนเธกเธ•เนเธเนเธซเนเน€เธเนเธเนเธเธเธเธ—เธตเนเนเธ”เนเธเธฒเธ API
+        // เธ เธณเธซเธ™เธ” Line เน€เธฃเธดเนˆเธกเธ•เน‰เธ™เนƒเธซเน‰เน€เธ›เน‡เธ™เน เธœเธ™เธ เธ—เธตเนˆเน„เธ”เน‰เธˆเธฒเธ  API
         $defaultLine = $deptApi ? trim($deptApi) : 'OTHER_DEPT';
         if ($isToolbox) {
             $defaultLine = 'TOOLBOX_POOL';
@@ -193,19 +199,95 @@ try {
         (log_date, emp_id, scan_in_time, scan_out_time, status, shift_id, actual_line, actual_team, actual_emp_type, updated_at) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())");
 
-    // Start processing from 1 day before startDate to auto-heal previous day's night shift clock-outs
-    $currTs = strtotime('-1 day', strtotime($startDate)); 
-    
+    // ===================================================================
+    // SESSION-BASED SCAN PAIRING (Shift-Aware Toggle)
+    // Toggle เป็นหลัก + ใช้กะของพนักงานช่วยตัดสินว่า scan เป็น "เข้า" หรือ "ออก"
+    // - ผลัดดึก: scan ตอนเย็น (14:00+) = เข้างาน, scan ตอนเช้า (ก่อน 14:00) = ออกงาน
+    // - ผลัดเช้า: scan ตอนเช้า (03:00-13:59) = เข้างาน, scan ตอนบ่าย-ค่ำ = ออกงาน
+    // ===================================================================
+
+    $MIN_GAP = 2700;    // 45 นาที - ห่างพอจะถือว่าเป็น scan ออก
+    $MAX_GAP = 57600;   // 16 ชม. - ห่างเกินไป = ลืมแสกนออก
+
+    // Step 1: Pair scans into work sessions per employee (shift-aware)
+    $sessionsByEmpDate = []; // [empId][logDate] = ['in' => ts, 'out' => ts|null]
+
+    foreach ($allScansByEmp as $empId => $scans) {
+        // ดึงกะของพนักงานเพื่อช่วยตัดสิน IN/OUT
+        $empShiftId = $existingEmployees[$empId]['default_shift_id'] ?? $defaultShiftId;
+        $empShiftStart = $shiftConfig[$empShiftId] ?? '08:00:00';
+        
+        // ดึงชั่วโมงของกะ โดยไม่สน timezone (แก้ปัญหา 1970-01-01T20:00:00.000Z โดนแปลงเป็น 03:00)
+        $shiftStartHour = 8;
+        if (preg_match('/(?:T| )(\d{2}):/', $empShiftStart, $m)) {
+            $shiftStartHour = (int)$m[1];
+        } else if (preg_match('/^(\d{2}):/', $empShiftStart, $m)) {
+            $shiftStartHour = (int)$m[1];
+        }
+        
+        $isNightShift = ($shiftStartHour >= 15 || $shiftStartHour < 3);
+
+        $currentIn = null;
+
+        foreach ($scans as $ts) {
+            $hour = (int)date('G', $ts);
+            
+            // ตัดสินว่า scan นี้น่าจะเป็น "เข้างาน" หรือไม่ ตามกะ
+            // ผลัดดึก: เข้างานตอนเย็น (14:00+)
+            // ผลัดเช้า: เข้างานตอนเช้า (03:00-13:59)
+            $likelyIn = $isNightShift ? ($hour >= 14 || $hour < 3) : ($hour >= 3 && $hour < 14);
+
+            if ($currentIn === null) {
+                if ($likelyIn) {
+                    // scan อยู่ในช่วง "เข้างาน" ของกะ → เริ่ม session ใหม่
+                    $currentIn = $ts;
+                }
+                // else: scan อยู่ในช่วง "ออกงาน" แต่ไม่มี session เปิด 
+                // → น่าจะเป็น orphan OUT จากกะก่อนหน้า (เช่น ผลัดดึกแสกนออก 05:02) → ข้ามไป
+            } else {
+                $gap = $ts - $currentIn;
+
+                if ($gap > $MAX_GAP) {
+                    // ห่างเกิน 16 ชม. → ลืมแสกนออกของรอบก่อน → ปิด session เก่า (ไม่มี OUT)
+                    $logDate = date('Y-m-d', $currentIn);
+                    if (!isset($sessionsByEmpDate[$empId][$logDate])) {
+                        $sessionsByEmpDate[$empId][$logDate] = ['in' => $currentIn, 'out' => null];
+                    }
+                    
+                    // scan ปัจจุบัน เริ่ม session ใหม่เฉพาะถ้าอยู่ในช่วง "เข้างาน"
+                    $currentIn = $likelyIn ? $ts : null;
+                } else if ($gap > $MIN_GAP) {
+                    // ห่าง 45 นาที - 16 ชม. → scan ออกปกติ → ปิด session
+                    $logDate = date('Y-m-d', $currentIn);
+                    if (!isset($sessionsByEmpDate[$empId][$logDate])) {
+                        $sessionsByEmpDate[$empId][$logDate] = ['in' => $currentIn, 'out' => $ts];
+                    }
+                    $currentIn = null;
+                }
+                // ห่าง ≤ 45 นาที → scan ซ้ำ/เดินผ่าน → ข้าม
+            }
+        }
+
+        // session ค้าง (ยังไม่มี scan ออก)
+        if ($currentIn !== null) {
+            $logDate = date('Y-m-d', $currentIn);
+            if (!isset($sessionsByEmpDate[$empId][$logDate])) {
+                $sessionsByEmpDate[$empId][$logDate] = ['in' => $currentIn, 'out' => null];
+            }
+        }
+    }
+
+    // Step 2: Process daily logs using paired sessions
+    $currTs = strtotime($startDate);
+
     while ($currTs <= strtotime($endDate)) {
         $procDate = date('Y-m-d', $currTs);
-        $nextDate = date('Y-m-d', strtotime('+1 day', $currTs)); 
-        
+
         foreach ($existingEmployees as $empId => $empData) {
-            
-            // เธเนเธฒเธกเธเธเธ—เธตเน Inactive เนเธเน€เธฅเธข (เนเธกเนเธ•เนเธญเธเธชเธฃเนเธฒเธ Log) เนเธ•เนเธ•เนเธญเธเน€เธเธฅเธตเธขเธฃเนเธเธญเธเน€เธเนเธฒเธ—เธดเนเธเธ–เนเธฒเธขเธฑเธเนเธกเน Confirm
+
+            // ข้ามคน Inactive (ไม่ต้องสร้าง Log) แต่ต้องเคลียร์ของเก่าทิ้งถ้ายังไม่ Confirm
             if (isset($empData['is_active']) && $empData['is_active'] == 0) {
                 $ghostLog = $existingLogs[$empId][$procDate] ?? null;
-                
                 if ($ghostLog && $ghostLog['is_verified'] == 0) {
                     $stmtDeleteLog->execute([$ghostLog['log_id']]);
                     $stats['cleaned_ghosts']++;
@@ -214,7 +296,7 @@ try {
             }
 
             $logExist = $existingLogs[$empId][$procDate] ?? null;
-            if ($logExist && $logExist['is_verified'] == 1) continue; 
+            if ($logExist && $logExist['is_verified'] == 1) continue;
 
             $snapLine = $empData['line'];
             $snapTeam = $empData['team_group'];
@@ -222,42 +304,14 @@ try {
 
             $targetShiftId = $logExist['shift_id'] ?? $empData['default_shift_id'] ?? $defaultShiftId;
             $shiftStartTime = $shiftConfig[$targetShiftId] ?? '08:00:00';
-            $isNight = ((int)substr($shiftStartTime, 0, 2) >= 15);
 
-            $windowStart = 0; $windowEnd = 0;
-            if ($isNight) {
-                $windowStart = strtotime("$procDate 14:00:00");
-                $windowEnd   = strtotime("$nextDate 13:00:00");
-            } else {
-                $windowStart = strtotime("$procDate 04:00:00");
-                $windowEnd   = strtotime("$nextDate 03:00:00");
-            }
+            // ดึง session ที่จับคู่แล้วสำหรับพนักงานคนนี้ในวันนี้
+            $session = $sessionsByEmpDate[$empId][$procDate] ?? null;
 
-            $poolScans = array_merge(
-                $scansByDate[$empId][$procDate] ?? [],
-                $scansByDate[$empId][$nextDate] ?? []
-            );
-            sort($poolScans);
+            if ($session) {
+                $finalIn = $session['in'];
+                $finalOut = $session['out'];
 
-            $validScans = [];
-            foreach ($poolScans as $t) {
-                if ($t >= $windowStart && $t <= $windowEnd) {
-                    $validScans[] = $t;
-                }
-            }
-
-            $finalIn = null; $finalOut = null;
-            if (!empty($validScans)) {
-                $finalIn = $validScans[0]; 
-                if (count($validScans) > 1) {
-                    $lastScan = end($validScans);
-                    if (($lastScan - $finalIn) > 2700) { 
-                        $finalOut = $lastScan;
-                    }
-                }
-            }
-
-            if ($finalIn) {
                 $inTimeStr = date('Y-m-d H:i:s', $finalIn);
                 $outTimeStr = $finalOut ? date('Y-m-d H:i:s', $finalOut) : null;
                 $shiftStartTs = strtotime("$procDate $shiftStartTime");
@@ -269,6 +323,7 @@ try {
                     $stmtInsertLog->execute([$procDate, $empId, $inTimeStr, $outTimeStr, $status, $targetShiftId, $snapLine, $snapTeam, $snapType]);
                 }
             } else {
+                // ไม่มี session → กำหนดสถานะตามปฏิทิน
                 if (isset($holidays[$procDate]) || date('w', strtotime($procDate)) == 0) {
                     $targetStatus = 'HOLIDAY';
                 } else {
@@ -276,7 +331,11 @@ try {
                 }
 
                 if ($logExist) {
-                    if ($logExist['status'] !== $targetStatus && in_array($logExist['status'], ['WAITING', 'ABSENT', 'HOLIDAY'])) {
+                    if (in_array($logExist['status'], ['PRESENT', 'LATE']) && $logExist['is_verified'] == 0) {
+                        // Scan was consumed by another day's shift (e.g. night shift clock-out)
+                        // Clear the stale scan times and reset status
+                        $stmtUpdateLog->execute([null, null, $targetStatus, $targetShiftId, $snapLine, $snapTeam, $snapType, $logExist['log_id']]);
+                    } else if ($logExist['status'] !== $targetStatus && in_array($logExist['status'], ['WAITING', 'ABSENT', 'HOLIDAY'])) {
                         $pdo->prepare("UPDATE dbo.MANPOWER_DAILY_LOGS SET status = ?, updated_at = GETDATE() WHERE log_id = ?")->execute([$targetStatus, $logExist['log_id']]);
                     }
                 } else {

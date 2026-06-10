@@ -90,14 +90,14 @@ try {
             $total = (int)$totalStmt->fetchColumn();
 
             $costingCols_CTE = "
-                , i.planned_output, i.material_type, i.material_sub_type, i.CTN, i.net_weight, i.gross_weight, i.cbm, i.invoice_product_type, i.invoice_description
+                , i.planned_output, i.strokes_per_part, i.material_type, i.material_sub_type, i.CTN, i.net_weight, i.gross_weight, i.cbm, i.invoice_product_type, i.invoice_description
                 , i.Cost_RM, i.Cost_PKG, i.Cost_SUB, i.Cost_DL
                 , i.Cost_OH_Machine, i.Cost_OH_Utilities, i.Cost_OH_Indirect, i.Cost_OH_Staff, i.Cost_OH_Accessory, i.Cost_OH_Others
                 , i.Cost_Total, i.StandardPrice, i.StandardGP, i.Price_USD
             ";
             
             $costingCols_Final = "
-                , planned_output, material_type, material_sub_type, CTN, net_weight, gross_weight, cbm, invoice_product_type, invoice_description
+                , planned_output, strokes_per_part, material_type, material_sub_type, CTN, net_weight, gross_weight, cbm, invoice_product_type, invoice_description
                 , Cost_RM, Cost_PKG, Cost_SUB, Cost_DL
                 , Cost_OH_Machine, Cost_OH_Utilities, Cost_OH_Indirect, Cost_OH_Staff, Cost_OH_Accessory, Cost_OH_Others
                 , Cost_Total, StandardPrice, StandardGP, Price_USD
@@ -202,6 +202,7 @@ try {
                 $mat_sub_type = trim($item_details['material_sub_type'] ?? '');
                 
                 $planned_output = (int)($item_details['planned_output'] ?? 0);
+                $strokes_per_part = max(1, (int)($item_details['strokes_per_part'] ?? 1));
                 $min_stock = (float)($item_details['min_stock'] ?? 0);
                 $max_stock = (float)($item_details['max_stock'] ?? 0);
                 $is_active = (int)($item_details['is_active'] ?? 1);
@@ -230,7 +231,7 @@ try {
                 if ($item_id > 0) {
                     $sql = "UPDATE " . ITEMS_TABLE . " SET 
                                 sap_no = ?, part_no = ?, sku = ?, barcode = ?, part_description = ?, material_type = ?, material_sub_type = ?,
-                                min_stock = ?, max_stock = ?, is_tracking = ?, planned_output = ?, is_active = ?,
+                                min_stock = ?, max_stock = ?, is_tracking = ?, planned_output = ?, strokes_per_part = ?, is_active = ?,
                                 CTN = ?, net_weight = ?, gross_weight = ?, cbm = ?, invoice_product_type = ?, invoice_description = ?,
                                 Cost_RM = ?, Cost_PKG = ?, Cost_SUB = ?, Cost_DL = ?,
                                 Cost_OH_Machine = ?, Cost_OH_Utilities = ?, Cost_OH_Indirect = ?, Cost_OH_Staff = ?, Cost_OH_Accessory = ?, Cost_OH_Others = ?,
@@ -239,7 +240,7 @@ try {
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([
                         $sap_no, $part_no, $sku, $barcode, $desc, $mat_type, $mat_sub_type,
-                        $min_stock, $max_stock, $is_tracking, $planned_output, $is_active,
+                        $min_stock, $max_stock, $is_tracking, $planned_output, $strokes_per_part, $is_active,
                         $ctn, $nw, $gw, $cbm, $inv_type, $inv_desc,
                         $c_rm, $c_pkg, $c_sub, $c_dl,
                         $c_ohm, $c_ohu, $c_ohi, $c_ohs, $c_oha, $c_oho,
@@ -250,14 +251,14 @@ try {
                 } else {
                     $sql = "INSERT INTO " . ITEMS_TABLE . " (
                                 sap_no, part_no, sku, barcode, part_description, material_type, material_sub_type, created_at, 
-                                min_stock, max_stock, is_tracking, planned_output, is_active,
+                                min_stock, max_stock, is_tracking, planned_output, strokes_per_part, is_active,
                                 CTN, net_weight, gross_weight, cbm, invoice_product_type, invoice_description,
                                 Cost_RM, Cost_PKG, Cost_SUB, Cost_DL,
                                 Cost_OH_Machine, Cost_OH_Utilities, Cost_OH_Indirect, Cost_OH_Staff, Cost_OH_Accessory, Cost_OH_Others,
                                 StandardPrice, Price_USD
                             ) VALUES (
                                 ?, ?, ?, ?, ?, ?, ?, GETDATE(), 
-                                ?, ?, ?, ?, ?,
+                                ?, ?, ?, ?, ?, ?,
                                 ?, ?, ?, ?, ?, ?,
                                 ?, ?, ?, ?, 
                                 ?, ?, ?, ?, ?, ?, 
@@ -266,7 +267,7 @@ try {
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([
                         $sap_no, $part_no, $sku, $barcode, $desc, $mat_type, $mat_sub_type,
-                        $min_stock, $max_stock, $is_tracking, $planned_output, $is_active,
+                        $min_stock, $max_stock, $is_tracking, $planned_output, $strokes_per_part, $is_active,
                         $ctn, $nw, $gw, $cbm, $inv_type, $inv_desc,
                         $c_rm, $c_pkg, $c_sub, $c_dl,
                         $c_ohm, $c_ohu, $c_ohi, $c_ohs, $c_oha, $c_oho,

@@ -2,3 +2,4 @@ utils/
 config/
 node_modules/
 documents/
+test/

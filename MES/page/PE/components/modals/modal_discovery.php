@@ -20,7 +20,7 @@
                     <table class="pe-table" id="discoveryTable">
                         <thead>
                             <tr>
-                                <th>Topic Name / Identifier</th>
+                                <th>Topic / Identifier</th>
                                 <th>Status</th>
                                 <th>Mapped Machine</th>
                                 <th>Last Seen</th>
@@ -28,7 +28,7 @@
                             </tr>
                         </thead>
                         <tbody id="discoveryTableBody">
-                            <tr><td colspan="5" class="text-center text-muted" style="padding:40px;">Loading discovery data...</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted" style="padding:40px;">Loading discovery data...</td></tr>
                         </tbody>
                     </table>
                 </div>

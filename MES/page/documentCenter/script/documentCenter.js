@@ -359,6 +359,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const viewDocUploadedAt = viewDocModalElement.querySelector('#viewDocUploadedAt');
         
         const viewBtn = viewDocModalElement.querySelector('#viewDocBtn');
+        const downloadBtn = viewDocModalElement.querySelector('#downloadDocBtn');
         const deleteBtn = viewDocModalElement.querySelector('#deleteDocBtn');
 
         if (viewDocFileName) {
@@ -375,7 +376,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const newViewBtn = viewBtn.cloneNode(true); 
         viewBtn.parentNode.replaceChild(newViewBtn, viewBtn);
-        newViewBtn.addEventListener('click', () => window.open(`api/view_document.php?id=${doc.id}`, '_blank'));
+        newViewBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.href = `api/view_document.php?id=${doc.id}`;
+            link.target = '_blank';
+            // Append to body is sometimes required for Safari/Firefox
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        if (downloadBtn) {
+            const newDownloadBtn = downloadBtn.cloneNode(true);
+            downloadBtn.parentNode.replaceChild(newDownloadBtn, downloadBtn);
+            newDownloadBtn.addEventListener('click', () => {
+                // Using location.href forces Safari iOS to prompt for download instead of opening a new tab
+                window.location.href = `api/view_document.php?id=${doc.id}&download=1`;
+            });
+        }
 
         if (deleteBtn) {
             const newDeleteBtn = deleteBtn.cloneNode(true);

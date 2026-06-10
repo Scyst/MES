@@ -408,10 +408,10 @@ const MachineModule = (() => {
 
                 // Telemetry Content
                 let contentHtml = `<div class="pe-d-flex pe-flex-column pe-gap-2">`;
-                if (telemetry.live_counter !== null && telemetry.live_counter !== "") {
+                if (telemetry.net_counter !== null && telemetry.net_counter !== undefined) {
                     contentHtml += `<div class="pe-d-flex pe-justify-between">
                         <span class="pe-text-muted"><i class="fas fa-sort-numeric-up-alt"></i> Output:</span>
-                        <span class="pe-fw-bold">${telemetry.live_counter} / ${telemetry.live_total || '-'} pcs</span>
+                        <span class="pe-fw-bold">${telemetry.net_counter} / ${telemetry.live_total || '-'} pcs</span>
                     </div>`;
                 }
                 if (telemetry.power_kw !== null && telemetry.power_kw !== "") {
@@ -454,7 +454,7 @@ const MachineModule = (() => {
         }
     }
     
-    async function loadDiscovery() {
+        async function loadDiscovery() {
         const tb = document.getElementById('discoveryTableBody');
         tb.innerHTML = '<tr><td colspan="5" class="pe-text-center pe-text-muted">Loading...</td></tr>';
         try {
@@ -474,12 +474,13 @@ const MachineModule = (() => {
                     const mapBtnHtml = !isMapped 
                         ? `<button class="pe-btn pe-btn-sm pe-btn-primary" onclick="MachineModule.mapTopic('${row.topic_name}')"><i class="fas fa-link"></i> Map</button>`
                         : '';
+                        
                     
                     html += `<tr>
                         <td class="pe-fw-bold">${PEApp.escapeHtml(row.topic_name)}</td>
                         <td>${statusHtml}</td>
                         <td>${mappedText}</td>
-                        <td>${row.last_seen}</td>
+                        <td style="font-size:12px;">${row.last_seen}</td>
                         <td class="pe-text-center">
                             <button class="pe-btn pe-btn-sm pe-btn-secondary" onclick="MachineModule.showDiscoveryRaw(${idx})" title="View Raw Data"><i class="fas fa-code"></i></button>
                             ${mapBtnHtml}

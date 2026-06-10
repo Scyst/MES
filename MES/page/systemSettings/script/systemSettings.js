@@ -411,6 +411,7 @@ async function openItemModal(item = null) {
         document.getElementById('part_description').value = item.part_description || '';
         
         setInputValue('planned_output', item.planned_output);
+        setInputValue('strokes_per_part', item.strokes_per_part || 1);
         setInputValue('min_stock', item.min_stock);
         setInputValue('max_stock', item.max_stock);
         document.getElementById('is_active').checked = (item.is_active == 1);
@@ -459,7 +460,7 @@ async function openItemModal(item = null) {
         document.getElementById('sku').value = '';
         document.getElementById('barcode').value = '';
         
-        setInputValue('planned_output', 0); setInputValue('min_stock', 0); setInputValue('max_stock', 0);
+        setInputValue('planned_output', 0); setInputValue('strokes_per_part', 1); setInputValue('min_stock', 0); setInputValue('max_stock', 0);
         setInputValue('CTN', 0); setInputValue('net_weight', 0); setInputValue('gross_weight', 0); setInputValue('cbm', 0);
         
         setInputValue('Cost_RM', 0); setInputValue('Cost_PKG', 0); setInputValue('Cost_SUB', 0); setInputValue('Cost_DL', 0);
@@ -564,6 +565,7 @@ async function handleItemFormSubmit(event) {
             material_sub_type: form.querySelector('#material_sub_type').value,
             part_description: form.querySelector('#part_description').value,
             planned_output: form.querySelector('#planned_output').value,
+            strokes_per_part: form.querySelector('#strokes_per_part').value,
             min_stock: form.querySelector('#min_stock').value,
             max_stock: form.querySelector('#max_stock').value,
             is_active: form.querySelector('#is_active').checked ? 1 : 0,

@@ -61,7 +61,9 @@ const SparePartsModule = (() => {
         }
 
         tbody.innerHTML = filtered.map(r => {
-            const isLow = r.min_stock > 0 && r.onhand_qty <= r.min_stock;
+            const minStock = parseFloat(r.min_stock) || 0;
+            const onHand = parseFloat(r.onhand_qty) || 0;
+            const isLow = minStock > 0 && onHand <= minStock;
             return `
             <tr ${isLow ? 'style="background:var(--pe-danger-light);"' : ''}>
                 <td class="pe-fw-bold">${PEApp.escapeHtml(r.item_code)}</td>
