@@ -358,7 +358,7 @@ try {
     $stats['fixed_historical_holidays'] = $stmtFix->rowCount();
 
     $pdo->commit();
-    echo json_encode(['success' => true, 'message' => 'Test Sync Completed (All Users Ingested)', 'stats' => $stats]);
+    echo json_encode(['success' => true, 'message' => 'Test Sync Completed V3', 'stats' => $stats]);
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
