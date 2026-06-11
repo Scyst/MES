@@ -472,20 +472,16 @@ const UI = {
     getSkeletonRow(colCount = 10) {
         let html = '';
         for (let i = 0; i < 5; i++) {
-            html += `
-                <tr>
-                    <td class="ps-4"><span class="skeleton-box" style="width: 150px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 40px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 80px;"></span></td>
-                </tr>
-            `;
+            let rowHtml = `                <tr>\n`;
+            rowHtml += `                    <td class="ps-4"><span class="skeleton-box" style="width: 150px;"></span></td>\n`;
+            for (let c = 1; c < colCount - 1; c++) {
+                rowHtml += `                    <td><span class="skeleton-box" style="width: 40px;"></span></td>\n`;
+            }
+            if (colCount > 1) {
+                rowHtml += `                    <td><span class="skeleton-box" style="width: 80px;"></span></td>\n`;
+            }
+            rowHtml += `                </tr>\n`;
+            html += rowHtml;
         }
         return html;
     },
@@ -1898,8 +1894,8 @@ const Actions = {
         const rowsHTML = list.map(row => {
             const uid = row.emp_id;
             const logId = row.log_id || '0';
-            const costVal = parseFloat(row.est_cost || 0);
-            const costHtml = costVal > 0 ? `<span class="fw-bold ${costVal > 1000 ? 'text-primary' : 'text-dark'}">${costVal.toLocaleString()}</span>` : '<span class="text-muted">-</span>';
+            const costVal = parseFloat(row.normal_cost || 0) + parseFloat(row.ot_cost || 0);
+            const costHtml = costVal > 0 ? `<span class="fw-bold ${costVal > 1000 ? 'text-primary' : 'text-dark'}">${costVal.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2})}</span>` : '<span class="text-muted">-</span>';
 
             let inTimeDisplay = row.in_time ? row.in_time.substring(0,5) : '-';
             let outTimeDisplay = row.out_time ? row.out_time.substring(0,5) : '-';
@@ -2595,7 +2591,7 @@ const Actions = {
         this.openMasterSettingsTab('v-pills-emp-tab');
 
         if (!keepFilters) {
-            document.getElementById('empListBody').innerHTML = UI.getSkeletonRow(7);
+            document.getElementById('empListBody').innerHTML = UI.getSkeletonRow(8);
         }
         const filterSelect = document.getElementById('empFilterLine');
         if (filterSelect && filterSelect.options.length <= 1 && this._structureCache.lines.length > 0) {
@@ -2645,7 +2641,7 @@ const Actions = {
             }
         } catch (e) {
             console.error(e);
-            document.getElementById('empListBody').innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error loading data</td></tr>`;
+            document.getElementById('empListBody').innerHTML = `<tr><td colspan="8" class="text-center text-danger">Error loading data</td></tr>`;
         }
     },
 
@@ -2772,7 +2768,7 @@ const Actions = {
         document.getElementById('empListCount').innerText = `Showing: ${list.length} of ${totalItems} records`;
 
         if (!list || list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted opacity-50"><i class="fas fa-search fa-3x mb-3"></i><br>ไม่พบข้อมูลพนักงานตามเงื่อนไข</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted opacity-50"><i class="fas fa-search fa-3x mb-3"></i><br>ไม่พบข้อมูลพนักงานตามเงื่อนไข</td></tr>`;
             return;
         }
 

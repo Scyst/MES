@@ -131,7 +131,7 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 table-striped" id="detailModalTable">
                         <tbody id="detailModalBody">
-                            <tr><td colspan="10" class="text-center py-5 text-muted">Loading data...</td></tr>
+                            <tr><td colspan="11" class="text-center py-5 text-muted">Loading data...</td></tr>
                         </tbody>
                     </table>
                 </div>
