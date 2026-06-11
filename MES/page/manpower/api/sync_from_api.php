@@ -218,7 +218,6 @@ try {
             $prevDate = date('Y-m-d', strtotime('-1 day', $ts));
             
             $sid = $existingLogs[$empId][$checkDate]['shift_id'] 
-                ?? $existingLogs[$empId][$prevDate]['shift_id'] 
                 ?? $existingEmployees[$empId]['default_shift_id'] 
                 ?? $defaultShiftId;
                 
