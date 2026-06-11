@@ -211,15 +211,25 @@ try {
 
     foreach ($allScansByEmp as $empId => $scans) {
         $empShiftId = $existingEmployees[$empId]['default_shift_id'] ?? $defaultShiftId;
-        $empShiftStart = $shiftConfig[$empShiftId] ?? '08:00:00';
         
-        $shiftStartHour = 8;
-        if (preg_match('/(?:T| )(\d{2}):/', $empShiftStart, $m)) {
-            $shiftStartHour = (int)$m[1];
-        } else if (preg_match('/^(\d{2}):/', $empShiftStart, $m)) {
-            $shiftStartHour = (int)$m[1];
-        }
-        $isNightShift = ($shiftStartHour >= 15 || $shiftStartHour < 3);
+        $getIsNightShift = function($ts) use ($empId, $existingEmployees, $defaultShiftId, $existingLogs, $shiftConfig) {
+            if (!$ts) return false;
+            $checkDate = date('Y-m-d', $ts);
+            $prevDate = date('Y-m-d', strtotime('-1 day', $ts));
+            
+            $sid = $existingLogs[$empId][$checkDate]['shift_id'] 
+                ?? $existingLogs[$empId][$prevDate]['shift_id'] 
+                ?? $existingEmployees[$empId]['default_shift_id'] 
+                ?? $defaultShiftId;
+                
+            $start = $shiftConfig[$sid] ?? '08:00:00';
+            $sh = 8;
+            if (preg_match('/(?:T| )(\d{2}):/', $start, $m)) $sh = (int)$m[1];
+            else if (preg_match('/^(\d{2}):/', $start, $m)) $sh = (int)$m[1];
+            return ($sh >= 15 || $sh < 3);
+        };
+
+        $empShiftId = $existingEmployees[$empId]['default_shift_id'] ?? $defaultShiftId;
 
         // --- PASS 1: Auto-Pairing by Gap ---
         $pairedSessions = []; // เก็บ session ทั้งหมดของคนนี้ก่อนจัดลงวันที่
@@ -235,9 +245,32 @@ try {
                     // สแกนเบิ้ล ข้าม
                     continue;
                 } else if ($gap <= $MAX_GAP) {
-                    // ระยะห่างเหมาะสม (45 นาที - 16 ชม.) -> จับคู่เป็น IN / OUT ทันที!
-                    $pairedSessions[] = ['in' => $currentIn, 'out' => $ts];
-                    $currentIn = null; // เริ่มหารอบใหม่
+                    $isValidPair = true;
+                    $inHour = (int)date('G', $currentIn);
+                    $outHour = (int)date('G', $ts);
+                    $isNightShift = $getIsNightShift($currentIn);
+                    
+                    if (!$isNightShift) {
+                        // ป้องกัน Shifting Bug กะเช้า: ลืมสแกนเข้าเมื่อวาน (สแกนออก 15:00-18:59) แล้วมาสแกนเข้าวันนี้ (05:00-10:59)
+                        if ($inHour >= 15 && $inHour <= 18 && $outHour >= 5 && $outHour <= 10) {
+                            $isValidPair = false;
+                        }
+                    } else {
+                        // ป้องกัน Shifting Bug กะดึก: ลืมสแกนเข้าเมื่อคืน (สแกนออก 05:00-10:59) แล้วมาสแกนเข้าคืนนี้ (18:00-22:59)
+                        if ($inHour >= 5 && $inHour <= 10 && $outHour >= 18 && $outHour <= 22) {
+                            $isValidPair = false;
+                        }
+                    }
+
+                    if ($isValidPair) {
+                        // ระยะห่างเหมาะสม และไม่ได้จับคู่ข้ามวันแบบผิดปกติ -> จับคู่เป็น IN / OUT ทันที!
+                        $pairedSessions[] = ['in' => $currentIn, 'out' => $ts];
+                        $currentIn = null; // เริ่มหารอบใหม่
+                    } else {
+                        // เป็นการลืมสแกนที่ทำให้เวลาเลื่อน (Shifting Bug) -> แยกเป็นเศษ
+                        $pairedSessions[] = ['in' => $currentIn, 'out' => null];
+                        $currentIn = $ts;
+                    }
                 } else {
                     // ระยะห่างมากเกินไป (เกิน 16 ชม.) แสดงว่า $currentIn คือเศษ (Orphan) ไม่มี OUT
                     // ให้เก็บ $currentIn เป็นรอบที่ไม่มี OUT ไปก่อน แล้วให้รอบใหม่เริ่มที่ $ts
@@ -257,6 +290,9 @@ try {
             $in = $sess['in'];
             $out = $sess['out'];
             
+            $referenceTs = $in !== null ? $in : $out;
+            $isNightShift = $getIsNightShift($referenceTs);
+
             // กรณีเป็น Orphan (มี in แต่ไม่มี out) -> ใช้ Time Context เดาว่าเป็น IN หรือ OUT
             if ($in !== null && $out === null) {
                 $hour = (int)date('G', $in);
