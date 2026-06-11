@@ -1660,11 +1660,11 @@ const Actions = {
 
                 this.renderDetailTable(filteredData);
             } else {
-                document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="10" class="text-center text-danger">${json.message}</td></tr>`;
+                document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="11" class="text-center text-danger">${json.message}</td></tr>`;
             }
         } catch (err) {
             console.error(err);
-            document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="10" class="text-center text-danger">Failed to load data</td></tr>`;
+            document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="11" class="text-center text-danger">Failed to load data</td></tr>`;
         }
     },
 
@@ -1859,7 +1859,7 @@ const Actions = {
             }
         } catch (err) {
             console.error(err);
-            document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="10" class="text-center text-danger">Failed to load history</td></tr>`;
+            document.getElementById('detailModalBody').innerHTML = `<tr><td colspan="11" class="text-center text-danger">Failed to load history</td></tr>`;
         }
     },
 
@@ -1877,7 +1877,7 @@ const Actions = {
         const tbody = document.getElementById('detailModalBody');
 
         if (!list || list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="11" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>`;
             return;
         }
 
