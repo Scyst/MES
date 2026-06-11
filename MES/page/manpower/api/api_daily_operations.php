@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // MES/page/manpowerCopy/api/api_daily_operations.php
 
 header('Content-Type: application/json');
@@ -514,9 +514,17 @@ try {
                 WHERE L.log_date BETWEEN ? AND ?
                   $teamFilter
                   AND (
-                      (L.shift_id = 1 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '16:00:00' AND CAST(L.scan_in_time AS TIME) <= '22:00:00')
-                        OR
-                        (L.shift_id = 2 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '05:00:00' AND CAST(L.scan_in_time AS TIME) <= '12:00:00')
+                      (L.shift_id = 1 AND (
+                          (L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '16:00:00' AND CAST(L.scan_in_time AS TIME) <= '22:00:00')
+                          OR
+                          (L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL AND CAST(L.scan_out_time AS TIME) >= '16:00:00' AND CAST(L.scan_out_time AS TIME) <= '22:00:00')
+                      ))
+                      OR
+                      (L.shift_id = 2 AND (
+                          (L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '05:00:00' AND CAST(L.scan_in_time AS TIME) <= '12:00:00')
+                          OR
+                          (L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL AND CAST(L.scan_out_time AS TIME) >= '05:00:00' AND CAST(L.scan_out_time AS TIME) <= '12:00:00')
+                      ))
                   )
                 ORDER BY L.log_date DESC, L.scan_in_time DESC
             ";

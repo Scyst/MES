@@ -2477,7 +2477,7 @@ const Actions = {
                 tbody.innerHTML = json.data.map(row => {
                     const isDay = row.shift_id == 1;
                     const shiftHtml = isDay ? `<span class="badge bg-primary shadow-sm">DAY</span>` : `<span class="badge bg-dark shadow-sm">NIGHT</span>`;
-                    const detectMsg = isDay ? 'สแกนเข้าช่วงเย็น (อาจสลับไปกะดึก)' : 'สแกนเข้าช่วงเช้า (อาจสลับมากะเช้า)';
+                    const detectMsg = isDay ? 'พบการสแกนช่วงเย็น (อาจสลับกะ/ลืมสแกนเข้า)' : 'พบการสแกนช่วงเช้า (อาจสลับกะ/ลืมสแกนเข้า)';
                     const btnLabel = isDay ? '🔁 สลับเป็นกะดึก' : '🔁 สลับเป็นกะเช้า';
                     const newShiftId = isDay ? 2 : 1;
                     const newShiftName = isDay ? 'NIGHT' : 'DAY';
