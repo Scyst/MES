@@ -17,6 +17,8 @@ let stockCountCurrentPage = 1;
 let transactionLogCurrentPage = 1;
 
 let allItems = [];
+let allLocations = [];
+let allMachines = [];
 let selectedInItem = null;
 let selectedOutItem = null;
 let g_CurrentPCTransferOrder = null;
@@ -33,6 +35,7 @@ function saveFiltersToLocalStorage() {
         endDate: document.getElementById('filterEndDate').value,
         line: document.getElementById('filterLine')?.value || '',
         team: document.getElementById('filterTeam')?.value || '',
+        machine_id: document.getElementById('filterMachine')?.value || '',
     };
     localStorage.setItem('inventoryUIFilters', JSON.stringify(filters));
 }
@@ -51,6 +54,7 @@ function initializeFilters() {
             document.getElementById('filterEndDate').value = filters.endDate || dateStr;
             if (document.getElementById('filterLine')) document.getElementById('filterLine').value = filters.line || '';
             if (document.getElementById('filterTeam')) document.getElementById('filterTeam').value = filters.team || '';
+            if (document.getElementById('filterMachine')) document.getElementById('filterMachine').value = filters.machine_id || '';
         } catch(e) {
             document.getElementById("filterStartDate").value = dateStr;
             document.getElementById("filterEndDate").value = dateStr;
@@ -336,6 +340,7 @@ async function fetchProductionVarianceReport(page = 1) {
         endDate: document.getElementById('filterEndDate').value,
         line: document.getElementById('filterLine')?.value || '',
         team: document.getElementById('filterTeam')?.value || '',
+        machine_id: document.getElementById('filterMachine')?.value || '',
     };
     try {
         const result = await sendRequest(INVENTORY_API_URL, 'get_production_variance_report', 'GET', null, params);
@@ -512,6 +517,7 @@ async function fetchProductionHistory(page = 1) {
         endDate: document.getElementById('filterEndDate').value,
         line: document.getElementById('filterLine')?.value || '',
         team: document.getElementById('filterTeam')?.value || '',
+        machine_id: document.getElementById('filterMachine')?.value || '',
     };
     try {
         const result = await sendRequest(INVENTORY_API_URL, 'get_production_history', 'GET', null, params);
@@ -553,6 +559,7 @@ function renderProductionHistoryTable(data) {
             <td class="text-center" data-label="Part No.">${row.part_no}</td>
             <td class="text-center" data-label="Model">${row.model || ''}</td>
             <td class="text-center" data-label="Lot / Ref.">${row.lot_no || ''}</td>
+            <td class="text-center" data-label="Machine">${row.machine_name || '-'}</td>
             <td class="text-center" data-label="Location">${row.location_name || 'N/A'}</td>
             <td class="text-center" data-label="Quantity">${Math.floor(row.quantity).toLocaleString()}</td>
             <td class="text-center" data-label="Type">${row.count_type}</td>
@@ -733,6 +740,8 @@ async function populateModalDatalists() {
     const result = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
      if (result.success) {
         allItems = result.items;
+        allLocations = result.locations || [];
+        allMachines = result.machines || [];
 
         const inToLocationSelect = document.getElementById('entry_to_location_id');
         const inFromLocationSelect = document.getElementById('entry_from_location_id');
@@ -766,6 +775,56 @@ async function populateModalDatalists() {
             const fromOptionsHtml = `<option value="">-- From Warehouse / External --</option>` + optionsHtml;
             inFromLocationSelect.innerHTML = fromOptionsHtml;
         }
+
+        
+        if (outLocationSelect) {
+            outLocationSelect.addEventListener('change', () => renderMachineDropdown('out_machine_id', 'out_location_id'));
+        }
+        if (editOutLocationSelect) {
+            editOutLocationSelect.addEventListener('change', () => renderMachineDropdown('edit_production_machine_id', 'edit_production_location_id'));
+        }
+
+        renderMachineDropdown('out_machine_id', 'out_location_id');
+        renderMachineDropdown('edit_production_machine_id', 'edit_production_location_id');
+    }
+}
+
+function renderMachineDropdown(machineSelectId, locationSelectId) {
+    const machineSelect = document.getElementById(machineSelectId);
+    const locationSelect = document.getElementById(locationSelectId);
+    if (!machineSelect || !locationSelect || !allMachines || allMachines.length === 0) return;
+
+    const selectedLocationId = locationSelect.value;
+    const selectedLocation = allLocations.find(l => l.location_id == selectedLocationId);
+    const productionLine = selectedLocation ? selectedLocation.production_line : null;
+
+    const sortedMachines = [...allMachines].sort((a, b) => a.machine_name.localeCompare(b.machine_name, undefined, {numeric: true, sensitivity: 'base'}));
+
+    let optionsHtml = '<option value="">-- ไม่ระบุ --</option>';
+
+    if (productionLine) {
+        const lineMachines = sortedMachines.filter(m => m.line === productionLine);
+        const otherMachines = sortedMachines.filter(m => m.line !== productionLine);
+
+        if (lineMachines.length > 0) {
+            optionsHtml += `<optgroup label="เครื่องจักรในไลน์ ${productionLine}">`;
+            optionsHtml += lineMachines.map(m => `<option value="${m.machine_id}">${m.machine_name} (${m.line || 'N/A'})</option>`).join('');
+            optionsHtml += `</optgroup>`;
+        }
+        
+        if (otherMachines.length > 0) {
+            optionsHtml += `<optgroup label="เครื่องจักรอื่นๆ">`;
+            optionsHtml += otherMachines.map(m => `<option value="${m.machine_id}">${m.machine_name} (${m.line || 'N/A'})</option>`).join('');
+            optionsHtml += `</optgroup>`;
+        }
+    } else {
+        optionsHtml += sortedMachines.map(m => `<option value="${m.machine_id}">${m.machine_name} (${m.line || 'N/A'})</option>`).join('');
+    }
+
+    const currentValue = machineSelect.value;
+    machineSelect.innerHTML = optionsHtml;
+    if (currentValue && [...machineSelect.options].some(o => o.value === currentValue)) {
+        machineSelect.value = currentValue;
     }
 }
 
@@ -782,7 +841,12 @@ function openAddPartModal() {
         const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_OUT')); 
         if (lastData) {
             const locationSelect = document.getElementById('out_location_id');
-            if (locationSelect) locationSelect.value = lastData.location_id || '';
+            if (locationSelect) {
+                locationSelect.value = lastData.location_id || '';
+                renderMachineDropdown('out_machine_id', 'out_location_id');
+            }
+            const machineSelect = document.getElementById('out_machine_id');
+            if (machineSelect) machineSelect.value = lastData.machine_id || '';
             searchInput.value = lastData.item_display_text || '';
             document.getElementById('out_item_id').value = lastData.item_id || '';
             if (lastData.item_id) {
@@ -1101,6 +1165,7 @@ async function openSummaryModal() {
         endDate: document.getElementById('filterEndDate').value,
         line: document.getElementById('filterLine')?.value || '',
         team: document.getElementById('filterTeam')?.value || '',
+        machine_id: document.getElementById('filterMachine')?.value || '',
     };
 
     const result = await sendRequest(INVENTORY_API_URL, 'get_production_summary', 'GET', null, params);
@@ -1268,6 +1333,7 @@ async function handleFormSubmit(event) {
             const baseData = {
                 item_id: data.item_id,
                 location_id: locationId, 
+                machine_id: data.machine_id,
                 lot_no: data.lot_no,
                 log_date: data.log_date,
                 start_time: startTime,
@@ -1307,7 +1373,8 @@ async function handleFormSubmit(event) {
                 let lastEntryData = {
                     item_id: baseData.item_id,
                     item_display_text: searchInputValue,
-                    location_id: baseData.location_id
+                    location_id: baseData.location_id,
+                    machine_id: baseData.machine_id
                 };
                 localStorage.setItem('inventoryUILastEntry_OUT', JSON.stringify(lastEntryData));
                 
@@ -1495,6 +1562,8 @@ async function editTransaction(transactionId, type) {
                 document.getElementById('edit_production_transaction_id').value = data.transaction_id;
                 document.getElementById('edit_production_item_display').value = `${data.sap_no} | ${data.part_no}`;
                 document.getElementById('edit_production_location_id').value = data.to_location_id; 
+                renderMachineDropdown('edit_production_machine_id', 'edit_production_location_id');
+                document.getElementById('edit_production_machine_id').value = data.machine_id || '';
                 document.getElementById('edit_production_quantity').value = Math.floor(data.quantity);
                 document.getElementById('edit_production_lot_no').value = data.reference_id;
                 document.getElementById('edit_production_count_type').value = data.transaction_type.replace('PRODUCTION_', '');
@@ -1561,6 +1630,9 @@ async function openHourlyProductionModal() {
         startDate: startDate,
         endDate: endDate,
         'search_terms[]': searchTerms,
+        line: document.getElementById('filterLine')?.value || '',
+        team: document.getElementById('filterTeam')?.value || '',
+        machine_id: document.getElementById('filterMachine')?.value || '',
     };
     const result = await sendRequest(INVENTORY_API_URL, 'get_production_hourly_counts', 'GET', null, params);
 
@@ -1737,6 +1809,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterEndDate').addEventListener('change', handleFilterChange);
     document.getElementById('filterLine')?.addEventListener('change', handleFilterChange);
     document.getElementById('filterTeam')?.addEventListener('change', handleFilterChange);
+    document.getElementById('filterMachine')?.addEventListener('change', handleFilterChange);
     document.getElementById('entry_from_location_id')?.addEventListener('change', updateAvailableStockDisplay);
     
     document.querySelectorAll('#mainTab .nav-link').forEach(tab => {

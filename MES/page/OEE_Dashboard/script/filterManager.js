@@ -57,8 +57,36 @@ async function fetchAndRenderCostSummary() {
         startDate: document.getElementById("startDate")?.value || '', 
         endDate: document.getElementById("endDate")?.value || '', 
         line: document.getElementById("lineFilter")?.value || '', 
-        model: document.getElementById("modelFilter")?.value || '' 
+        model: document.getElementById("modelFilter")?.value || '',
+        machine: document.getElementById("machineFilter")?.value || ''
     });
+    const finCard = document.getElementById('financialSummaryCard');
+    const sfRevCol = document.getElementById('sfRevenueCol');
+    const sfGoodCol = document.getElementById('sfGoodCol');
+    const sfHoldCol = document.getElementById('sfHoldCol');
+    const sfScrapCol = document.getElementById('sfScrapCol');
+
+    const hasMachineFilter = !!document.getElementById("machineFilter")?.value;
+
+    if (finCard) {
+        finCard.style.display = hasMachineFilter ? 'none' : '';
+    }
+
+    if (sfRevCol && sfGoodCol && sfHoldCol && sfScrapCol) {
+        if (hasMachineFilter) {
+            sfRevCol.style.display = 'none';
+            [sfGoodCol, sfHoldCol, sfScrapCol].forEach(col => {
+                col.classList.replace('col-xl-3', 'col-xl-4');
+                col.classList.replace('col-md-6', 'col-md-4'); // optional: make it 3 cols in md
+            });
+        } else {
+            sfRevCol.style.display = '';
+            [sfGoodCol, sfHoldCol, sfScrapCol].forEach(col => {
+                col.classList.replace('col-xl-4', 'col-xl-3');
+                col.classList.replace('col-md-4', 'col-md-6');
+            });
+        }
+    }
 
     try {
         const response = await fetch(`api/oeeDashboardApi.php?${params.toString()}`);
@@ -105,6 +133,39 @@ function populateSelectWithOptions(selectElement, optionsArray, label, selectedV
     });
 }
 
+window.allMachinesData = [];
+
+function updateMachineDropdown(selectedLine) {
+    const machineSelect = document.getElementById("machineFilter");
+    if (!machineSelect) return;
+    
+    // Store current selection to restore if it's still valid
+    const currentVal = machineSelect.value;
+    
+    machineSelect.innerHTML = `<option value="">All Machines</option>`;
+    
+    const filteredMachines = window.allMachinesData.filter(m => {
+        if (!selectedLine || selectedLine === "All") return true;
+        // If the machine has no line assigned, it might be shared, or maybe we only show exact matches
+        // For strict filtering:
+        return m.line === selectedLine;
+    });
+
+    filteredMachines.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m.machine_id;
+        opt.textContent = m.machine_name;
+        machineSelect.appendChild(opt);
+    });
+
+    // Try to restore previous selection if it still exists in the new list
+    if (currentVal && Array.from(machineSelect.options).some(opt => opt.value === currentVal)) {
+        machineSelect.value = currentVal;
+    } else {
+        machineSelect.value = "";
+    }
+}
+
 async function applyFiltersAndInitCharts() {
     try {
         const res = await fetch("api/oeeDashboardApi.php?action=getFilters");
@@ -112,6 +173,10 @@ async function applyFiltersAndInitCharts() {
         if (json.success) {
             populateSelectWithOptions(document.getElementById("lineFilter"), json.data.lines, "Lines", "");
             populateSelectWithOptions(document.getElementById("modelFilter"), json.data.models, "Models", "");
+
+            if (json.data.machines && Array.isArray(json.data.machines)) {
+                window.allMachinesData = json.data.machines;
+            }
 
             const lineSelect = document.getElementById("lineFilter");
             if (lineSelect) {
@@ -122,6 +187,10 @@ async function applyFiltersAndInitCharts() {
                     }
                 }
             }
+            
+            // Populate machines based on the initially selected line
+            updateMachineDropdown(lineSelect ? lineSelect.value : '');
+
         }
     } catch (err) { console.error(err); }
     initWorkingDateUI();
@@ -141,10 +210,11 @@ setInterval(() => {
 
 function handleFilterChange() {
     const params = new URLSearchParams({
-        startDate: document.getElementById("startDate").value,
-        endDate: document.getElementById("endDate").value,
-        line: document.getElementById("lineFilter").value,
-        model: document.getElementById("modelFilter").value
+        startDate: document.getElementById("startDate")?.value || '',
+        endDate: document.getElementById("endDate")?.value || '',
+        line: document.getElementById("lineFilter")?.value || '',
+        model: document.getElementById("modelFilter")?.value || '',
+        machine: document.getElementById("machineFilter")?.value || ''
     });
     window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 
@@ -167,8 +237,11 @@ function startDashboardAutoUpdate() {
 
 window.addEventListener("load", () => {
     applyFiltersAndInitCharts();
-    ["startDate", "endDate", "lineFilter", "modelFilter"].forEach(id => {
-        document.getElementById(id)?.addEventListener("change", () => {
+    ["startDate", "endDate", "lineFilter", "modelFilter", "machineFilter"].forEach(id => {
+        document.getElementById(id)?.addEventListener("change", (e) => {
+            if (id === "lineFilter") {
+                updateMachineDropdown(e.target.value);
+            }
             handleFilterChange();
             startDashboardAutoUpdate(); 
         });

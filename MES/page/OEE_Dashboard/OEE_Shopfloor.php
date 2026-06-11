@@ -137,6 +137,9 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
                         <div class="d-flex align-items-center px-2 border-end filter-item">
                             <select id="modelFilter" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: 120px;"><option value="">All Models</option></select>
                         </div>
+                        <div class="d-flex align-items-center px-2 border-end filter-item">
+                            <select id="machineFilter" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: 120px;"><option value="">All Machines</option></select>
+                        </div>
                         <div class="d-flex align-items-center px-2 date-item">
                             <input type="date" id="startDate" class="form-control form-control-sm border-0 bg-transparent fw-bold" style="width: 135px;">
                             <span class="text-muted mx-1"><i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i></span>
@@ -149,14 +152,14 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
                 </div>
 
                 <div class="row g-3 mb-3">
-                    <div class="col-12 col-md-6 col-xl-3">
+                    <div class="col-12 col-md-6 col-xl-3" id="sfRevenueCol">
                         <div class="chart-card sf-card revenue">
                             <div class="sf-label"><i class="fas fa-file-invoice-dollar text-primary me-2"></i>Revenue</div>
                             <div class="sf-value" id="prodRevenueStd">0.00</div>
                             <div class="sf-unit">THB</div>
                         </div>
                     </div>
-                    <div class="col-12 col-md-6 col-xl-3">
+                    <div class="col-12 col-md-6 col-xl-3" id="sfGoodCol">
                         <div class="chart-card sf-card good">
                             <div class="sf-label"><i class="fas fa-check-circle text-success me-2"></i>Good Output</div>
                             <div class="sf-value" id="sf-good">0</div>
@@ -164,14 +167,14 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
                             <!-- <div class="sf-target">Target: <span id="sf-target-good">--</span> (Phase 2)</div> -->
                         </div>
                     </div>
-                    <div class="col-12 col-md-6 col-xl-3">
+                    <div class="col-12 col-md-6 col-xl-3" id="sfHoldCol">
                         <div class="chart-card sf-card hold">
                             <div class="sf-label"><i class="fas fa-pause-circle text-warning me-2"></i>Hold / Rework</div>
                             <div class="sf-value" id="sf-hold">0</div>
                             <div class="sf-unit">PCS</div>
                         </div>
                     </div>
-                    <div class="col-12 col-md-6 col-xl-3">
+                    <div class="col-12 col-md-6 col-xl-3" id="sfScrapCol">
                         <div class="chart-card sf-card scrap">
                             <div class="sf-label"><i class="fas fa-times-circle text-danger me-2"></i>Scrap / NG</div>
                             <div class="sf-value" id="sf-scrap">0</div>
@@ -306,7 +309,8 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
                 startDate: document.getElementById("startDate")?.value || '', 
                 endDate: document.getElementById("endDate")?.value || '', 
                 line: document.getElementById("lineFilter")?.value || '', 
-                model: document.getElementById("modelFilter")?.value || '' 
+                model: document.getElementById("modelFilter")?.value || '',
+                machine: document.getElementById("machineFilter")?.value || '' 
             });
 
             try {

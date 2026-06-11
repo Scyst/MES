@@ -198,6 +198,14 @@
             </div>
 
             <div class="mb-2 position-relative">
+                <label class="form-label text-primary"><i class="fas fa-cogs me-1"></i> เครื่องจักร (Machine)</label>
+                <select class="form-select border-primary fw-bold" id="out_machine_id" name="machine_id">
+                    <option value="">-- ไม่ระบุ / เลือกระบุ --</option>
+                </select>
+                <div id="out_machine_status" class="mt-1 small fw-bold" style="display: none;"></div>
+            </div>
+
+            <div class="mb-2 position-relative">
                 <label class="form-label">สินค้า FG (SAP No.) <span class="text-danger">*</span></label>
                 <input type="text" class="form-control fw-bold" id="out_item_search" name="item_search" autocomplete="off" placeholder="ค้นหาสินค้า..." required>
                 <input type="hidden" id="out_item_id" name="item_id" required>

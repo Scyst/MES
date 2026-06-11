@@ -35,11 +35,13 @@ $currentUser = $_SESSION['user'];
 try {
     switch ($action) {
         case 'get_initial_data':
-            $locationsStmt = $pdo->query("SELECT location_id, location_name FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
+            $locationsStmt = $pdo->query("SELECT location_id, location_name, production_line FROM " . LOCATIONS_TABLE . " WHERE is_active = 1 ORDER BY location_name");
             $locations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
             $itemsStmt = $pdo->query("SELECT item_id, sap_no, part_no, part_description FROM " . ITEMS_TABLE . " WHERE is_active = 1 ORDER BY sap_no");
             $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'locations' => $locations, 'items' => $items]);
+            $machinesStmt = $pdo->query("SELECT machine_id, machine_name, machine_code, line FROM " . PE_MACHINES_TABLE . " WHERE is_active = 1 ORDER BY machine_name");
+            $machines = $machinesStmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'locations' => $locations, 'items' => $items, 'machines' => $machines]);
             break;
 
         case 'execute_receipt':
@@ -173,6 +175,10 @@ try {
                 $params[] = $_GET['team'];
                 $params[] = '%[[]TEAM_OVERRIDE: ' . $_GET['team'] . ']%';
             }
+            if (!empty($_GET['machine_id'])) {
+                $conditions[] = "t.machine_id = ?";
+                $params[] = $_GET['machine_id'];
+            }
 
             $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
             $baseSql = "
@@ -180,6 +186,7 @@ try {
                 LEFT JOIN " . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
                 LEFT JOIN " . LOCATIONS_TABLE . " loc ON ISNULL(t.to_location_id, t.from_location_id) = loc.location_id
                 LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                LEFT JOIN " . PE_MACHINES_TABLE . " m ON t.machine_id = m.machine_id
                 {$whereClause}
             ";
 
@@ -203,7 +210,8 @@ try {
                     FORMAT(t.start_time, N'HH\:mm\:ss') as start_time,
                     FORMAT(t.end_time, N'HH\:mm\:ss') as end_time,
                     (SELECT location_name FROM " . LOCATIONS_TABLE . " WHERE location_id = t.from_location_id) as source_location,
-                    (SELECT location_name FROM " . LOCATIONS_TABLE . " WHERE location_id = t.to_location_id) as destination_location
+                    (SELECT location_name FROM " . LOCATIONS_TABLE . " WHERE location_id = t.to_location_id) as destination_location,
+                    m.machine_name
                 " . $baseSql . "
                 ORDER BY t.transaction_timestamp DESC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
@@ -583,6 +591,7 @@ try {
             $count_type = strtoupper($input['count_type'] ?? 'FG');
             $lot_no = $input['lot_no'] ?? null;
             $notes = trim($input['notes'] ?? '');
+            $machine_id = !empty($input['machine_id']) ? (int)$input['machine_id'] : null;
             
             $override_team = trim($input['override_team'] ?? '');
             $current_user_team = $currentUser['team_group'] ?? '';
@@ -641,6 +650,11 @@ try {
                 $getTxnStmt = $pdo->prepare("SELECT TOP 1 transaction_id FROM " . TRANSACTIONS_TABLE . " WHERE parameter_id = ? AND transaction_type = ? AND created_by_user_id = ? ORDER BY transaction_id DESC");
                 $getTxnStmt->execute([$fg_item_id, 'PRODUCTION_' . $count_type, $currentUser['id']]);
                 $last_txn_id = $getTxnStmt->fetchColumn();
+
+                if ($last_txn_id && $machine_id) {
+                    $updateMachineStmt = $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET machine_id = ? WHERE transaction_id = ?");
+                    $updateMachineStmt->execute([$machine_id, $last_txn_id]);
+                }
 
                 // Auto-create Scrap Replacement Request if count_type is SCRAP
                 if ($count_type === 'SCRAP') {
@@ -739,6 +753,7 @@ try {
                     $new_location_id = (int)($input['location_id'] ?? 0);
                     $new_lot_no = $input['lot_no'] ?? null;
                     $new_notes = $input['notes'] ?? null;
+                    $new_machine_id = !empty($input['machine_id']) ? (int)$input['machine_id'] : null;
                     if (!empty($old_transaction['notes']) && preg_match('/(\[TEAM_OVERRIDE:\s*[^\]]+\])/', $old_transaction['notes'], $matches)) {
                         if (strpos($new_notes, '[TEAM_OVERRIDE:') === false) {
                             $new_notes = $matches[1] . " " . trim($new_notes);
@@ -767,13 +782,13 @@ try {
                                    (float)($fg['Cost_OH_Staff'] ?? 0) + (float)($fg['Cost_OH_Accessory'] ?? 0) + (float)($fg['Cost_OH_Others'] ?? 0);
 
                     $updateSql = "UPDATE " . TRANSACTIONS_TABLE . " 
-                                  SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_type=?, transaction_timestamp=?, start_time=?, end_time=?,
+                                  SET quantity=?, to_location_id=?, reference_id=?, notes=?, transaction_type=?, transaction_timestamp=?, start_time=?, end_time=?, machine_id=?,
                                       std_price_snapshot=?, std_price_usd_snapshot=?, std_cost_mat_snapshot=?, std_cost_dl_snapshot=?, std_cost_oh_snapshot=?,
                                       std_cost_oh_machine_snapshot=?, std_cost_oh_util_snapshot=?, std_cost_oh_indirect_snapshot=?, std_cost_oh_staff_snapshot=?, std_cost_oh_acc_snapshot=?, std_cost_oh_other_snapshot=?
                                   WHERE transaction_id=?";
                     $updateStmt = $pdo->prepare($updateSql);
                     $updateStmt->execute([
-                        $new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_transaction_type, $new_timestamp, $new_start_time, $new_end_time,
+                        $new_quantity, $new_location_id, $new_lot_no, $new_notes, $new_transaction_type, $new_timestamp, $new_start_time, $new_end_time, $new_machine_id,
                         $fg['StandardPrice'], $fg['Price_USD'], $fg_mat_total, $fg['Cost_DL'], $fg_oh_total,
                         $fg['Cost_OH_Machine'], $fg['Cost_OH_Utilities'], $fg['Cost_OH_Indirect'], $fg['Cost_OH_Staff'], $fg['Cost_OH_Accessory'], $fg['Cost_OH_Others'],
                         $transaction_id
@@ -1250,6 +1265,10 @@ try {
                 $params[] = $_GET['team'];
                 $params[] = '%[[]TEAM_OVERRIDE: ' . $_GET['team'] . ']%';
             }
+            if (!empty($_GET['machine_id'])) {
+                $conditions[] = "t.machine_id = ?";
+                $params[] = $_GET['machine_id'];
+            }
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
 
@@ -1340,6 +1359,10 @@ try {
                     $conditions[] = "(u.team_group = ? OR t.notes LIKE ?)";
                     $params[] = $_GET['team'];
                     $params[] = '%[[]TEAM_OVERRIDE: ' . $_GET['team'] . ']%';
+                }
+                if (!empty($_GET['machine_id'])) {
+                    $conditions[] = "t.machine_id = ?";
+                    $params[] = $_GET['machine_id'];
                 }
                 
                 if (!empty($search_terms_array) && is_array($search_terms_array)) {

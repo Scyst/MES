@@ -125,7 +125,13 @@
                                     <input type="text" id="out_item_search" class="form-control form-control-sm border-primary fw-bold" name="item_search" autocomplete="off" required placeholder="ค้นหา...">
                                     <input type="hidden" id="out_item_id" name="item_id" required>
                                 </div>
-                                <div class="col-12 mt-2">
+                                <div class="col-6 mt-2">
+                                    <label class="form-label fw-bold small text-muted mb-1">เครื่องจักร (Machine)</label>
+                                    <select id="out_machine_id" name="machine_id" class="form-select form-select-sm border-primary fw-bold text-primary">
+                                        <option value="">-- ไม่ระบุ --</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 mt-2">
                                     <label class="form-label fw-bold small text-muted mb-1">ไปยังจุดจัดเก็บ (To) <span class="text-danger">*</span></label>
                                     <select id="out_location_id" name="location_id" class="form-select form-select-sm border-primary fw-bold text-primary"></select>
                                 </div>
@@ -292,7 +298,13 @@
 
                         <div class="p-3 bg-white rounded shadow-sm border mb-3">
                             <div class="row g-2">
-                                <div class="col-12">
+                                <div class="col-6">
+                                    <label class="form-label fw-bold small text-muted mb-1">เครื่องจักร (Machine)</label>
+                                    <select id="edit_production_machine_id" name="machine_id" class="form-select form-select-sm border-warning fw-bold text-dark">
+                                        <option value="">-- ไม่ระบุ --</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
                                     <label class="form-label fw-bold small text-muted mb-1">จุดจัดเก็บ (Location)</label>
                                     <select id="edit_production_location_id" name="location_id" class="form-select form-select-sm border-warning fw-bold text-dark" required></select>
                                 </div>

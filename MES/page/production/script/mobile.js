@@ -5,6 +5,7 @@
 // =================================================================
 let allItems = [];
 let allLocations = [];
+let allMachines = [];
 let selectedItem = null;
 let currentReviewPage = 1;
 let currentReviewType = 'production';
@@ -128,6 +129,7 @@ async function populateInitialData() {
     if (result.success) {
         allItems = result.items || [];
         allLocations = result.locations || [];
+        allMachines = result.machines || [];
         
         const entryType = typeof g_EntryType !== 'undefined' ? g_EntryType : 'receipt';
         const locId = typeof g_LocationId !== 'undefined' ? g_LocationId : 0;
@@ -157,6 +159,12 @@ async function populateInitialData() {
         if (outLocationCustom) {
             const optionsHtml = allLocations.map(loc => `<option value="${loc.location_id}">${loc.location_name}</option>`).join('');
             outLocationCustom.innerHTML = '<option value="">-- เลือกสถานที่ --</option>' + optionsHtml;
+            outLocationCustom.addEventListener('change', () => renderMachineDropdown('out_machine_id', 'out_location_id_custom'));
+        }
+
+        const machineSelect = document.getElementById('out_machine_id');
+        if (machineSelect && allMachines && allMachines.length > 0) {
+            renderMachineDropdown('out_machine_id', 'out_location_id_custom');
         }
 
         if (entryType === 'production') {
@@ -169,6 +177,10 @@ async function populateInitialData() {
                 if (idEl) idEl.value = lastData.item_id;
                 if (locId <= 0 && lastData.location_id && outLocationCustom) {
                     outLocationCustom.value = lastData.location_id;
+                    renderMachineDropdown('out_machine_id', 'out_location_id_custom');
+                }
+                if (machineSelect && lastData.machine_id) {
+                    machineSelect.value = lastData.machine_id;
                 }
                 selectedItem = allItems.find(i => i.item_id == lastData.item_id) || null;
             }
@@ -771,6 +783,7 @@ async function handleFormSubmit(event) {
                 const baseData = {
                     item_id: data.item_id,
                     location_id: locationId, 
+                    machine_id: data.machine_id,
                     lot_no: data.lot_no,
                     log_date: data.log_date,
                     start_time: startTime,
@@ -815,7 +828,8 @@ async function handleFormSubmit(event) {
                     let lastEntryData = {
                         item_id: baseData.item_id,
                         item_display_text: searchInputValue,
-                        location_id: locationId
+                        location_id: locationId,
+                        machine_id: baseData.machine_id
                     };
                     localStorage.setItem('inventoryUILastEntry_OUT', JSON.stringify(lastEntryData));
                     
@@ -1171,3 +1185,42 @@ document.addEventListener('DOMContentLoaded', () => {
         if(overlay) overlay.style.display = 'none';
     });
 });
+
+function renderMachineDropdown(machineSelectId, locationSelectId) {
+    const machineSelect = document.getElementById(machineSelectId);
+    const locationSelect = document.getElementById(locationSelectId);
+    if (!machineSelect || !locationSelect || typeof allMachines === 'undefined' || allMachines.length === 0) return;
+
+    const selectedLocationId = locationSelect.value;
+    const selectedLocation = (typeof allLocations !== 'undefined') ? allLocations.find(l => l.location_id == selectedLocationId) : null;
+    const productionLine = selectedLocation ? selectedLocation.production_line : null;
+
+    const sortedMachines = [...allMachines].sort((a, b) => a.machine_name.localeCompare(b.machine_name, undefined, {numeric: true, sensitivity: 'base'}));
+
+    let optionsHtml = '<option value="">-- ไม่ระบุเครื่องจักร --</option>';
+
+    if (productionLine) {
+        const lineMachines = sortedMachines.filter(m => m.line === productionLine);
+        const otherMachines = sortedMachines.filter(m => m.line !== productionLine);
+
+        if (lineMachines.length > 0) {
+            optionsHtml += `<optgroup label="เครื่องจักรในไลน์ ${productionLine}">`;
+            optionsHtml += lineMachines.map(m => `<option value="${m.machine_id}">${m.machine_name} (${m.line || 'N/A'})</option>`).join('');
+            optionsHtml += `</optgroup>`;
+        }
+        
+        if (otherMachines.length > 0) {
+            optionsHtml += `<optgroup label="เครื่องจักรอื่นๆ">`;
+            optionsHtml += otherMachines.map(m => `<option value="${m.machine_id}">${m.machine_name} (${m.line || 'N/A'})</option>`).join('');
+            optionsHtml += `</optgroup>`;
+        }
+    } else {
+        optionsHtml += sortedMachines.map(m => `<option value="${m.machine_id}">${m.machine_name} (${m.line || 'N/A'})</option>`).join('');
+    }
+
+    const currentValue = machineSelect.value;
+    machineSelect.innerHTML = optionsHtml;
+    if (currentValue && [...machineSelect.options].some(o => o.value === currentValue)) {
+        machineSelect.value = currentValue;
+    }
+}

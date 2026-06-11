@@ -172,6 +172,9 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                         <div class="d-flex align-items-center px-2 border-end filter-item">
                             <select id="modelFilter" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: 120px;"><option value="">All Models</option></select>
                         </div>
+                        <div class="d-flex align-items-center px-2 border-end filter-item">
+                            <select id="machineFilter" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: 120px;"><option value="">All Machines</option></select>
+                        </div>
                         <div class="d-flex align-items-center px-2 date-item">
                             <input type="date" id="startDate" class="form-control form-control-sm border-0 bg-transparent fw-bold" style="width: 135px;">
                             <span class="text-muted mx-1"><i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i></span>
@@ -198,7 +201,7 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                     .text-main { color: #334155; }
                 </style>
 
-                <div class="row g-3 mb-3">
+                <div class="row g-3 mb-3" id="financialSummaryCard">
                     <div class="col-12">
                         <div class="chart-card p-0 border-0 shadow-sm" style="background: #ffffff; border-radius: 12px; overflow: hidden;">
                             <div class="px-3 py-2 d-flex justify-content-between align-items-center border-bottom bg-light bg-opacity-50">

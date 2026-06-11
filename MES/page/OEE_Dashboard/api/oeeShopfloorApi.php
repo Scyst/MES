@@ -6,7 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 header("Access-Control-Allow-Origin: *"); 
 
 session_start();
-$max_requests = 60;
+$max_requests = 1200; // Increased to prevent 429 errors on rapid filter changes
 $window_seconds = 60;
 $current_time = time();
 
@@ -37,6 +37,7 @@ $startDate = $_GET['startDate'] ?? date('Y-m-d');
 $endDate = $_GET['endDate'] ?? date('Y-m-d');
 $line = (!empty($_GET['line']) && $_GET['line'] !== 'All') ? $_GET['line'] : null;
 $model = (!empty($_GET['model']) && $_GET['model'] !== 'All') ? $_GET['model'] : null;
+$machine = (!empty($_GET['machine']) && $_GET['machine'] !== 'All') ? $_GET['machine'] : null;
 
 try {
     switch ($action) {
@@ -45,13 +46,15 @@ try {
             $lines = $pdo->query($lineSql)->fetchAll(PDO::FETCH_COLUMN);
             $modelSql = "SELECT DISTINCT RTRIM(LTRIM(model)) as model FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE model IS NOT NULL AND model != '' ORDER BY model ASC";
             $models = $pdo->query($modelSql)->fetchAll(PDO::FETCH_COLUMN);
-            $response['data'] = ['lines' => $lines, 'models' => $models];
+            $machineSql = "SELECT machine_id, machine_name, ISNULL(line, '') as line FROM dbo.PE_MACHINES WITH (NOLOCK) WHERE status = 'Active' ORDER BY machine_name ASC";
+            $machines = $pdo->query($machineSql)->fetchAll(PDO::FETCH_ASSOC);
+            $response['data'] = ['lines' => $lines, 'models' => $models, 'machines' => $machines];
             $response['success'] = true;
             break;
 
         case 'getPieChart':
-            $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_PIE . " @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?");
-            $stmt->execute([$startDate, $endDate, $line, $model]);
+            $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_PIE . " @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?, @MachineId = ?");
+            $stmt->execute([$startDate, $endDate, $line, $model, $machine]);
             $res = $stmt->fetch(PDO::FETCH_ASSOC);
             $response['data'] = [
                 "quality" => round((float)($res['Quality'] ?? 0), 1),
@@ -81,8 +84,8 @@ try {
                 $targetStartDate = $startDate;
                 $targetEndDate = $endDate;
             }
-            $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_LINE . " @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?");
-            $stmt->execute([$targetStartDate, $targetEndDate, $line, $model]);
+            $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_LINE . " @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?, @MachineId = ?");
+            $stmt->execute([$targetStartDate, $targetEndDate, $line, $model, $machine]);
             $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($records as &$row) {
                 if (isset($row['date'])) $row['date'] = (new DateTime($row['date']))->format('d-m-y');
@@ -92,8 +95,8 @@ try {
             break;
 
         case 'getHourlySparklines':
-            $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_HOURLY . " @TargetDate = ?, @Line = ?, @Model = ?");
-            $stmt->execute([$endDate, $line, $model]);
+            $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_HOURLY . " @TargetDate = ?, @Line = ?, @Model = ?, @MachineId = ?");
+            $stmt->execute([$endDate, $line, $model, $machine]);
             $response['data'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $response['success'] = true;
             break;
@@ -125,6 +128,7 @@ try {
 
             if ($line) { $partCond[] = "l.production_line = ?"; $partParams[] = $line; }
             if ($model) { $partCond[] = "r.model = ?"; $partParams[] = $model; }
+            if ($machine) { $partCond[] = "t.machine_id = ?"; $partParams[] = $machine; }
             $partWhere = "WHERE " . implode(" AND ", $partCond);
 
             $partSql = "SELECT 

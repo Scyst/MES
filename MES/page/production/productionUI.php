@@ -26,6 +26,9 @@ try {
 
     $stmt = $pdo->query("SELECT DISTINCT team_group FROM " . USERS_TABLE . " WHERE team_group IS NOT NULL AND team_group != '' ORDER BY team_group");
     $teamGroups = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    $stmt = $pdo->query("SELECT machine_id, machine_name FROM " . PE_MACHINES_TABLE . " WHERE is_active = 1 ORDER BY LEN(machine_name), machine_name");
+    $machinesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
     error_log("Error fetching filter options: " . $e->getMessage());
 }
@@ -220,6 +223,15 @@ try {
                             </div>
 
                             <div class="col-12 col-md-auto">
+                                <select class="form-select form-select-sm shadow-sm border-secondary" id="filterMachine">
+                                    <option value="">All Machines</option>
+                                    <?php foreach ($machinesList as $machine): ?>
+                                        <option value="<?php echo htmlspecialchars($machine['machine_id']); ?>"><?php echo htmlspecialchars($machine['machine_name']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-12 col-md-auto">
                                 <select class="form-select form-select-sm shadow-sm border-secondary" id="filterCountType">
                                     <option value="">All Types</option>
                                     <option value="FG">FG (ดี)</option>
@@ -245,6 +257,7 @@ try {
                                         <th class="py-2">Part No.</th>
                                         <th class="py-2">Model</th>
                                         <th class="py-2">Lot / Ref.</th>
+                                        <th class="py-2">Machine</th>
                                         <th class="py-2">Location</th>
                                         <th class="py-2">Quantity</th>
                                         <th class="py-2">Type</th>
