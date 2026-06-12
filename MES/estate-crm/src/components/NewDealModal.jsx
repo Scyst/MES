@@ -3,12 +3,31 @@ import React, { useState } from 'react';
 const NewDealModal = ({ isOpen, onClose, onDealCreated }) => {
   const [formData, setFormData] = useState({
     title: '',
-    clientName: '',
+    clientId: '',
     value: '',
     priority: 'low'
   });
+  const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  React.useEffect(() => {
+    if (isOpen) {
+      fetchClients();
+    }
+  }, [isOpen]);
+
+  const fetchClients = async () => {
+    try {
+      const res = await fetch('./api/crm/get_clients.php');
+      const data = await res.json();
+      if (data.status === 'success') {
+        setClients(data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch clients:', err);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -36,7 +55,7 @@ const NewDealModal = ({ isOpen, onClose, onDealCreated }) => {
       if (result.status === 'success') {
         onDealCreated(); // Trigger refresh
         onClose(); // Close modal
-        setFormData({ title: '', clientName: '', priority: 'low' }); // Reset form
+        setFormData({ title: '', clientId: '', value: '', priority: 'low' }); // Reset form
       } else {
         throw new Error(result.message || 'Failed to create deal');
       }
@@ -72,15 +91,18 @@ const NewDealModal = ({ isOpen, onClose, onDealCreated }) => {
           </div>
           <div>
             <label style={labelStyle}>Client Name</label>
-            <input 
-              type="text" 
-              name="clientName" 
-              value={formData.clientName} 
+            <select 
+              name="clientId" 
+              value={formData.clientId} 
               onChange={handleChange} 
               required 
               style={inputStyle}
-              placeholder="e.g. Toyota Tsusho"
-            />
+            >
+              <option value="" disabled>-- Select Client --</option>
+              {clients.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label style={labelStyle}>Deal Value (฿)</label>

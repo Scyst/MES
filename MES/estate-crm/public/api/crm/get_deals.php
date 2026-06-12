@@ -9,9 +9,10 @@ try {
     // Let's do a JOIN to get the deal and aggregate the tasks.
     
     $sql = "SELECT 
-                d.id, d.title, d.clientName, d.value, d.status, d.priority, d.orderIndex, d.createdAt,
+                d.id, d.title, c.name as clientName, d.clientId, d.value, d.status, d.priority, d.orderIndex, d.createdAt,
                 (SELECT COUNT(*) FROM CRM_TASKS t WHERE t.dealId = d.id AND (t.isCompleted = 0 OR t.isCompleted IS NULL)) as taskCount
             FROM CRM_DEALS d
+            LEFT JOIN CRM_CLIENTS c ON d.clientId = c.id
             ORDER BY d.orderIndex ASC";
     
     $stmt = $pdo->prepare($sql);

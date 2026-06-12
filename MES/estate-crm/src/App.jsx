@@ -4,10 +4,12 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import KanbanBoard from './components/KanbanBoard';
+import DocumentManager from './components/DocumentManager';
+import Clients from './components/Clients';
 import NewDealModal from './components/NewDealModal';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('board');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -21,6 +23,10 @@ function App() {
         return <Dashboard />;
       case 'board':
         return <KanbanBoard refreshTrigger={refreshTrigger} onDealUpdated={handleDealCreated} />;
+      case 'clients':
+        return <Clients />;
+      case 'documents':
+        return <DocumentManager />;
       default:
         return (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-secondary)' }}>

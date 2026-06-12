@@ -12,6 +12,11 @@ const DealDetailsModal = ({ isOpen, onClose, deal, onDealUpdated }) => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [loadingTasks, setLoadingTasks] = useState(false);
 
+  const [activities, setActivities] = useState([]);
+  const [newActivityNote, setNewActivityNote] = useState('');
+  const [newActivityType, setNewActivityType] = useState('comment');
+  const [loadingActivities, setLoadingActivities] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
@@ -27,6 +32,7 @@ const DealDetailsModal = ({ isOpen, onClose, deal, onDealUpdated }) => {
       });
       setError('');
       fetchTasks();
+      fetchActivities();
     }
   }, [deal, isOpen]);
 
@@ -43,6 +49,22 @@ const DealDetailsModal = ({ isOpen, onClose, deal, onDealUpdated }) => {
       console.error(err);
     } finally {
       setLoadingTasks(false);
+    }
+  };
+
+  const fetchActivities = async () => {
+    if (!deal) return;
+    setLoadingActivities(true);
+    try {
+      const response = await fetch(`./api/crm/get_activities.php?dealId=${deal.id}`);
+      const result = await response.json();
+      if (result.status === 'success') {
+        setActivities(result.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingActivities(false);
     }
   };
 
@@ -164,9 +186,48 @@ const DealDetailsModal = ({ isOpen, onClose, deal, onDealUpdated }) => {
     }
   };
 
+  // Activity functions
+  const handleAddActivity = async (e) => {
+    e.preventDefault();
+    if (!newActivityNote.trim()) return;
+    
+    try {
+      const response = await fetch('./api/crm/add_activity.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId: deal.id, type: newActivityType, note: newActivityNote.trim() })
+      });
+      const result = await response.json();
+      if (result.status === 'success') {
+        setNewActivityNote('');
+        fetchActivities();
+        onDealUpdated();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteActivity = async (id) => {
+    if (!window.confirm('Delete this log?')) return;
+    try {
+      const response = await fetch('./api/crm/delete_activity.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const result = await response.json();
+      if (result.status === 'success') {
+        fetchActivities();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="modal-overlay" style={overlayStyle}>
-      <div className="modal-content animate-fade-in" style={{...modalStyle, display: 'flex', maxWidth: '800px'}}>
+      <div className="modal-content animate-fade-in" style={{...modalStyle, display: 'flex', maxWidth: '1100px'}}>
         
         {/* LEFT PANEL - Form */}
         <div style={{ flex: 1, paddingRight: '20px', borderRight: '1px solid var(--border-color)' }}>
@@ -244,11 +305,10 @@ const DealDetailsModal = ({ isOpen, onClose, deal, onDealUpdated }) => {
           </form>
         </div>
 
-        {/* RIGHT PANEL - Subtasks */}
-        <div style={{ flex: 1, paddingLeft: '20px', display: 'flex', flexDirection: 'column' }}>
+        {/* MIDDLE PANEL - Subtasks */}
+        <div style={{ flex: 1, padding: '0 20px', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Checklist / Sub-tasks</h3>
-            <button onClick={onClose} style={closeBtnStyle}>&times;</button>
           </div>
           
           <div style={{ flex: 1, overflowY: 'auto', marginBottom: '15px' }}>
@@ -295,6 +355,74 @@ const DealDetailsModal = ({ isOpen, onClose, deal, onDealUpdated }) => {
               onKeyDown={handleAddTask}
               style={{...inputStyle, backgroundColor: '#f1f5f9'}}
             />
+          </div>
+        </div>
+
+        {/* RIGHT PANEL - Activity Logs */}
+        <div style={{ flex: 1.2, paddingLeft: '20px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Activity Logs</h3>
+            <button onClick={onClose} style={closeBtnStyle}>&times;</button>
+          </div>
+
+          <form onSubmit={handleAddActivity} style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+            <textarea 
+              value={newActivityNote}
+              onChange={e => setNewActivityNote(e.target.value)}
+              placeholder="Log a call, meeting, or add a note..."
+              style={{...inputStyle, minHeight: '60px', resize: 'vertical', fontSize: '0.9rem'}}
+              required
+            />
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <select 
+                value={newActivityType}
+                onChange={e => setNewActivityType(e.target.value)}
+                style={{...inputStyle, width: 'auto', padding: '6px 10px', fontSize: '0.85rem'}}
+              >
+                <option value="comment">💬 Comment</option>
+                <option value="call">📞 Call</option>
+                <option value="meeting">🤝 Meeting</option>
+              </select>
+              <button type="submit" className="btn btn-primary" style={{ padding: '6px 15px', fontSize: '0.85rem' }}>
+                Post
+              </button>
+            </div>
+          </form>
+
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px', paddingRight: '5px' }}>
+            {loadingActivities ? (
+              <div style={{ color: 'var(--text-secondary)' }}>Loading logs...</div>
+            ) : activities.length === 0 ? (
+              <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No activity logged yet.</div>
+            ) : (
+              activities.map(log => (
+                <div key={log.id} style={{ display: 'flex', gap: '10px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+                  <div style={{ fontSize: '1.2rem', marginTop: '2px' }}>
+                    {log.type === 'call' ? '📞' : log.type === 'meeting' ? '🤝' : '💬'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-primary)', textTransform: 'capitalize' }}>
+                        {log.type}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        {new Date(log.createdAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px', whiteSpace: 'pre-wrap' }}>
+                      {log.note}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleDeleteActivity(log.id)}
+                    style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '0 4px' }}
+                    title="Delete log"
+                    onMouseOver={e => e.currentTarget.style.color = '#ef4444'}
+                    onMouseOut={e => e.currentTarget.style.color = '#cbd5e1'}
+                  >&times;</button>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

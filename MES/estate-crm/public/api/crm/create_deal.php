@@ -15,20 +15,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 try {
     $input = json_decode(file_get_contents('php://input'), true);
     
-    if (!isset($input['title']) || !isset($input['clientName'])) {
-        throw new Exception("Missing required fields: title, clientName");
+    if (!isset($input['title']) || !isset($input['clientId'])) {
+        throw new Exception("Missing required fields: title, clientId");
     }
 
     $title = $input['title'];
-    $clientName = $input['clientName'];
+    $clientId = $input['clientId'];
     $priority = $input['priority'] ?? 'low';
     $value = isset($input['value']) ? floatval($input['value']) : 0;
     $status = 'lead'; // Default status for new deal
 
-    $sql = "INSERT INTO CRM_DEALS (title, clientName, status, priority, value) VALUES (:title, :clientName, :status, :priority, :value)";
+    // Fetch clientName
+    $clientStmt = $pdo->prepare("SELECT name FROM CRM_CLIENTS WHERE id = :id");
+    $clientStmt->execute([':id' => $clientId]);
+    $clientName = $clientStmt->fetchColumn() ?: '';
+
+    $sql = "INSERT INTO CRM_DEALS (title, clientId, clientName, status, priority, value) VALUES (:title, :clientId, :clientName, :status, :priority, :value)";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
         'title' => $title,
+        'clientId' => $clientId,
         'clientName' => $clientName,
         'status' => $status,
         'priority' => $priority,
