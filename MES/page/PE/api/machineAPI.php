@@ -117,6 +117,7 @@ try {
             $manufacturer = trim($input['manufacturer'] ?? '');
             $model = trim($input['model'] ?? '');
             $serial = trim($input['serial_number'] ?? '');
+            $assetNo = trim($input['asset_no'] ?? '');
             $installDate = !empty($input['install_date']) ? $input['install_date'] : null;
             $status = $input['status'] ?? 'Active';
             $criticality = $input['criticality'] ?? 'Medium';
@@ -135,10 +136,10 @@ try {
                     if ($existing) throw new Exception("Machine Code '$code' already exists");
 
                     $sql = "INSERT INTO " . PE_MACHINES_TABLE . " 
-                            (machine_code, machine_name, mqtt_topic, line, area, machine_type, manufacturer, model, serial_number, install_date, status, criticality, notes, image_path)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                            (machine_code, machine_name, mqtt_topic, line, area, machine_type, manufacturer, model, serial_number, asset_no, install_date, status, criticality, notes, image_path)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     $stmt = $pdo->prepare($sql);
-                    $stmt->execute([$code, $name, $mqttTopic, $line, $area, $type, $manufacturer, $model, $serial, $installDate, $status, $criticality, $notes, $imagePath]);
+                    $stmt->execute([$code, $name, $mqttTopic, $line, $area, $type, $manufacturer, $model, $serial, $assetNo, $installDate, $status, $criticality, $notes, $imagePath]);
                     $newId = $pdo->lastInsertId();
 
                     // Record history
@@ -154,11 +155,11 @@ try {
 
                     $sql = "UPDATE " . PE_MACHINES_TABLE . " SET 
                                 machine_code = ?, machine_name = ?, mqtt_topic = ?, line = ?, area = ?, machine_type = ?,
-                                manufacturer = ?, model = ?, serial_number = ?, install_date = ?,
+                                manufacturer = ?, model = ?, serial_number = ?, asset_no = ?, install_date = ?,
                                 status = ?, criticality = ?, notes = ?, image_path = ISNULL(?, image_path), updated_at = GETDATE()
                             WHERE machine_id = ?";
                     $stmt = $pdo->prepare($sql);
-                    $stmt->execute([$code, $name, $mqttTopic, $line, $area, $type, $manufacturer, $model, $serial, $installDate, $status, $criticality, $notes, $imagePath, $id]);
+                    $stmt->execute([$code, $name, $mqttTopic, $line, $area, $type, $manufacturer, $model, $serial, $assetNo, $installDate, $status, $criticality, $notes, $imagePath, $id]);
 
                     $histSql = "INSERT INTO " . PE_MACHINE_HISTORY_TABLE . " (machine_id, event_type, event_detail, performed_by) VALUES (?, 'Updated', ?, ?)";
                     $pdo->prepare($histSql)->execute([$id, "Machine updated by " . $currentUser['username'], $currentUser['username']]);

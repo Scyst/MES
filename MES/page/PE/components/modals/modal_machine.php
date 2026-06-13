@@ -24,8 +24,8 @@
                     </div>
                     <div class="col-md-4">
                         <div class="pe-form-group">
-                            <label class="pe-form-label">MQTT Topic / Node Name</label>
-                            <input type="text" class="pe-form-input" id="machineFrmMqttTopic" placeholder="e.g. DB_HM_1003_4">
+                            <label class="pe-form-label">Asset No.</label>
+                            <input type="text" class="pe-form-input" id="machineFrmAssetNo" placeholder="e.g. AST-1001">
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -82,6 +82,7 @@
                             <input type="text" class="pe-form-input" id="machineFrmSerial">
                         </div>
                     </div>
+                    <!-- (MQTT was here, removed) -->
                     <div class="col-md-4">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Install Date</label>
@@ -109,12 +110,31 @@
                             </select>
                         </div>
                     </div>
+                    <div class="col-12 mt-4">
+                        <h6 class="text-muted fw-bold mb-3" style="border-bottom: 1px solid var(--pe-border); padding-bottom: 8px;">
+                            <i class="fas fa-network-wired me-2"></i> Integration & Advanced Settings
+                        </h6>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="pe-form-group">
+                            <label class="pe-form-label">MQTT Topic / Node Name</label>
+                            <input type="text" class="pe-form-input" id="machineFrmMqttTopic" placeholder="e.g. DB_HM_1003_4">
+                        </div>
+                    </div>
                     <div class="col-md-12">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Machine Image</label>
-                            <input type="file" class="pe-form-input" id="machineFrmImage" accept="image/jpeg, image/png, image/webp">
-                            <div id="machineImagePreview" style="margin-top:10px; max-width: 200px; display:none;">
-                                <img src="" alt="Preview" style="width:100%; max-height: 250px; object-fit: contain; border-radius:4px; border:1px solid var(--pe-border);">
+                            <div class="pe-image-upload-wrapper" style="border: 2px dashed var(--pe-border); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; position: relative; background: var(--pe-bg-light); transition: all 0.2s;" onclick="document.getElementById('machineFrmImage').click();" ondragover="event.preventDefault(); this.style.borderColor='var(--pe-primary)';" ondragleave="event.preventDefault(); this.style.borderColor='var(--pe-border)';" ondrop="event.preventDefault(); this.style.borderColor='var(--pe-border)'; document.getElementById('machineFrmImage').files = event.dataTransfer.files; document.getElementById('machineFrmImage').dispatchEvent(new Event('change'));">
+                                <input type="file" id="machineFrmImage" accept="image/jpeg, image/png, image/webp" style="display: none;" onchange="if(this.files && this.files[0]) { const r = new FileReader(); r.onload = e => { const img = document.querySelector('#machineImagePreview img'); if(img) img.src = e.target.result; document.getElementById('machineImagePreview').style.display='block'; document.getElementById('machineImagePlaceholder').style.display='none'; }; r.readAsDataURL(this.files[0]); }">
+                                <div id="machineImagePlaceholder">
+                                    <i class="fas fa-cloud-upload-alt fa-3x mb-2" style="color: var(--pe-text-muted);"></i>
+                                    <p class="mb-0 text-muted">Click or drag image to upload</p>
+                                    <small class="text-muted">Supports JPG, PNG, WEBP</small>
+                                </div>
+                                <div id="machineImagePreview" style="display:none; position: relative;">
+                                    <img src="" alt="Preview" style="max-height: 200px; max-width: 100%; object-fit: contain; border-radius: 4px;">
+                                    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2" onclick="event.stopPropagation(); document.getElementById('machineFrmImage').value=''; document.getElementById('machineImagePreview').style.display='none'; document.getElementById('machineImagePlaceholder').style.display='block';"><i class="fas fa-times"></i></button>
+                                </div>
                             </div>
                         </div>
                     </div>

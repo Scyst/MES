@@ -197,7 +197,7 @@ const MachineModule = (() => {
 
         // Clear fields
         ['machineFrmCode', 'machineFrmName', 'machineFrmMqttTopic', 'machineFrmLine', 'machineFrmArea', 
-         'machineFrmManufacturer', 'machineFrmModel', 'machineFrmSerial', 'machineFrmNotes'].forEach(id => {
+         'machineFrmManufacturer', 'machineFrmModel', 'machineFrmSerial', 'machineFrmAssetNo', 'machineFrmNotes'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
@@ -206,11 +206,12 @@ const MachineModule = (() => {
         document.getElementById('machineFrmCriticality').value = 'Medium';
         document.getElementById('machineFrmInstallDate').value = '';
         
-        // Reset Image
         const imgInput = document.getElementById('machineFrmImage');
         if (imgInput) imgInput.value = '';
         const previewDiv = document.getElementById('machineImagePreview');
         if (previewDiv) previewDiv.style.display = 'none';
+        const placeholderDiv = document.getElementById('machineImagePlaceholder');
+        if (placeholderDiv) placeholderDiv.style.display = 'block';
 
         // Load data if editing
         if (editId) {
@@ -225,6 +226,7 @@ const MachineModule = (() => {
                 document.getElementById('machineFrmManufacturer').value = machine.manufacturer || '';
                 document.getElementById('machineFrmModel').value = machine.model || '';
                 document.getElementById('machineFrmSerial').value = machine.serial_number || '';
+                document.getElementById('machineFrmAssetNo').value = machine.asset_no || '';
                 document.getElementById('machineFrmInstallDate').value = machine.install_date ? machine.install_date.substring(0, 10) : '';
                 document.getElementById('machineFrmStatus').value = machine.status || 'Active';
                 document.getElementById('machineFrmCriticality').value = machine.criticality || 'Medium';
@@ -235,6 +237,8 @@ const MachineModule = (() => {
                     if (img) {
                         img.src = '../../' + machine.image_path;
                         previewDiv.style.display = 'block';
+                        const placeholderDiv = document.getElementById('machineImagePlaceholder');
+                        if (placeholderDiv) placeholderDiv.style.display = 'none';
                     }
                 }
             }
@@ -286,6 +290,7 @@ const MachineModule = (() => {
                 manufacturer: document.getElementById('machineFrmManufacturer')?.value || '',
                 model: document.getElementById('machineFrmModel')?.value || '',
                 serial_number: document.getElementById('machineFrmSerial')?.value || '',
+                asset_no: document.getElementById('machineFrmAssetNo')?.value || '',
                 install_date: document.getElementById('machineFrmInstallDate')?.value || '',
                 status: document.getElementById('machineFrmStatus')?.value || 'Active',
                 criticality: document.getElementById('machineFrmCriticality')?.value || 'Medium',
