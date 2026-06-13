@@ -69,10 +69,10 @@ export default function MachineList() {
   };
 
   const getMachineImage = (line) => {
-    if (!line) return '/assets/machine_cnc.png';
+    if (!line) return './assets/machine_cnc.png';
     const lowerLine = line.toLowerCase();
-    if (lowerLine.includes('assembly') || lowerLine.includes('line')) return '/assets/machine_assembly.png';
-    return '/assets/machine_cnc.png';
+    if (lowerLine.includes('assembly') || lowerLine.includes('line')) return './assets/machine_assembly.png';
+    return './assets/machine_cnc.png';
   };
 
   return (

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer utilities {
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 20px);
@@ -15,6 +18,5 @@
 
 body {
   margin: 0;
-  background-color: #111827; /* gray-900 */
-  color: #f3f4f6; /* gray-100 */
+  @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300;
 }

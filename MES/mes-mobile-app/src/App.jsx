@@ -12,6 +12,14 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    // Theme initialization
+    const theme = localStorage.getItem('theme') || 'dark'; // Default to dark
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
     const checkAuth = async () => {
       try {
         const url = (import.meta.env.VITE_API_BASE_URL || './api/v1') + '/auth.php';
