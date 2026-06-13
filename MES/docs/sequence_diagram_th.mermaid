@@ -1,0 +1,43 @@
+sequenceDiagram
+    autonumber
+    actor Op as พนักงานคุมเครื่องจักร
+    participant App as แอปพลิเคชันมือถือ
+    participant PE as ระบบส่วนกลาง (page/PE)
+    participant Legacy as ระบบเก่า (page/production)
+    participant DB as ฐานข้อมูล MES
+    participant ERP as ระบบ SAP ERP
+    participant OEE as แดชบอร์ด OEE
+
+    %% Pre-requisite
+    ERP->>DB: ซิงค์ข้อมูลใบสั่งซื้อและแผนการผลิต
+    Note over DB,ERP: โหลดคิวงานและสินค้าคงคลังเตรียมพร้อม
+
+    %% Execution flow
+    Op->>App: เปิดแอปและเลือกเครื่องจักร
+    App->>PE: ร้องขอสถานะเครื่องจักร (API)
+    PE->>DB: ค้นหาข้อมูลจากตาราง `PE_MACHINES_TABLE`
+    DB-->>PE: ส่งคืนข้อมูลเครื่องจักร
+    PE-->>App: แสดงสถานะเครื่องจักร
+
+    Op->>App: สแกนแท็กสินค้า/วัตถุดิบ (QR Code)
+    App->>PE: ตรวจสอบแท็กและเส้นทางการผลิต
+    PE->>DB: ยืนยันคิวงานและวัตถุดิบ
+    DB-->>PE: ยืนยันข้อมูลถูกต้อง
+    PE-->>App: แสดงรายละเอียดงานพร้อมรับข้อมูล
+
+    %% Production Data Entry
+    Op->>App: บันทึกข้อมูลยอดผลิตและของเสีย (NG)
+    App->>PE: ส่งข้อมูลการผลิตเข้าสู่ระบบ (API)
+    PE->>DB: อัปเดตข้อมูลการผลิตและสถานะเครื่องจักร
+    
+    %% Legacy Sync
+    par การทำงานร่วมกับระบบเก่า (Sync)
+        PE->>Legacy: ซิงค์สถานะกลับไปยังระบบจัดเก็บแบบ Line
+        Legacy->>DB: อัปเดตตารางข้อมูลระบบเก่า
+    end
+
+    %% Analytics & Tagging
+    DB->>OEE: อัปเดตข้อมูลประสิทธิภาพ OEE แบบเรียลไทม์
+    Op->>PE: จบงาน - สั่งพิมพ์แท็กส่งงาน (FG/WIP)
+    PE->>DB: ดึงข้อมูลสำหรับพิมพ์แท็ก
+    PE->>Op: สั่งพิมพ์แท็กผ่าน `label_printer.php`

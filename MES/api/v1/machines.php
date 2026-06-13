@@ -28,7 +28,8 @@ try {
             machine_code,
             line,
             is_active,
-            status
+            status,
+            image_path
         FROM " . PE_MACHINES_TABLE . "
         WHERE is_active = 1
         ORDER BY line, machine_name

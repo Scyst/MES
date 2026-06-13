@@ -20,7 +20,7 @@ try {
     $stmtStop = $pdo->query("SELECT * FROM STOP_CAUSES WITH (NOLOCK)");
     while ($row = $stmtStop->fetch(PDO::FETCH_ASSOC)) {
         // Check if already migrated
-        $check = $pdo->prepare("SELECT downtime_id FROM " . PE_DOWNTIME_LOG_TABLE . " WHERE legacy_id = ?");
+        $check = $pdo->prepare("SELECT downtime_id FROM " . PE_DOWNTIME_LOG_TABLE . " WHERE legacy_sc_id = ?");
         $check->execute([$row['id']]);
         if ($check->fetchColumn()) continue;
 
@@ -30,7 +30,7 @@ try {
         $duration = (int)$row['duration'];
 
         $sql = "INSERT INTO " . PE_DOWNTIME_LOG_TABLE . " 
-                (machine_id, machine_name, line, log_date, start_time, end_time, cause_category, cause_detail, recovered_by, notes, legacy_id)
+                (machine_id, machine_name, line, log_date, start_time, end_time, cause_category, cause_detail, recovered_by, notes, legacy_sc_id)
                 VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $ins = $pdo->prepare($sql);
         $ins->execute([
@@ -62,7 +62,7 @@ try {
 
     $stmtWO = $pdo->query("SELECT * FROM MAINTENANCE_REQUESTS WITH (NOLOCK)");
     while ($row = $stmtWO->fetch(PDO::FETCH_ASSOC)) {
-        $check = $pdo->prepare("SELECT wo_id FROM " . PE_WORK_ORDERS_TABLE . " WHERE legacy_id = ?");
+        $check = $pdo->prepare("SELECT wo_id FROM " . PE_WORK_ORDERS_TABLE . " WHERE legacy_mt_id = ?");
         $check->execute([$row['id']]);
         if ($check->fetchColumn()) continue;
 
@@ -117,7 +117,7 @@ try {
 
         $sql = "INSERT INTO " . PE_WORK_ORDERS_TABLE . " 
                 (wo_number, wo_type, machine_name, line, priority, status, requested_by, requested_at, 
-                 issue_title, issue_detail, assigned_to, started_at, completed_at, repair_minutes, action_taken, image_path, photo_after, legacy_id)
+                 issue_title, issue_detail, assigned_to, started_at, completed_at, repair_minutes, action_taken, photo_before, photo_after, legacy_mt_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $ins = $pdo->prepare($sql);
         $ins->execute([
@@ -145,9 +145,9 @@ try {
 
     // 3. Post-migration: Sync missing AFTER images if PE_WORK_ORDERS was already migrated earlier
     $stmtSync = $pdo->query("
-        SELECT PE.wo_id, PE.legacy_id, MR.photo_after_path 
+        SELECT PE.wo_id, PE.legacy_mt_id AS legacy_id, MR.photo_after_path 
         FROM " . PE_WORK_ORDERS_TABLE . " PE WITH (NOLOCK)
-        INNER JOIN MAINTENANCE_REQUESTS MR WITH (NOLOCK) ON PE.legacy_id = MR.id 
+        INNER JOIN MAINTENANCE_REQUESTS MR WITH (NOLOCK) ON PE.legacy_mt_id = MR.id 
         WHERE MR.photo_after_path IS NOT NULL AND PE.photo_after IS NULL
     ");
     while ($row = $stmtSync->fetch(PDO::FETCH_ASSOC)) {

@@ -1,9 +1,11 @@
 import paho.mqtt.client as mqtt
 import json
 from datetime import datetime
-import pyodbc
 import threading
 import time
+import urllib.request
+import urllib.error
+import os
 
 # --- Configuration ---
 MQTT_BROKER = "10.1.68.100"
@@ -12,23 +14,12 @@ MQTT_TOPIC = "/Counter/B9"
 MQTT_USER = "snc-mqtt"
 MQTT_PASS = "snc-mqtt"
 
-# Database Configuration
-DB_SERVER = "10.1.1.31"
-DB_NAME = "PE_MES"
-DB_USER = "TOOLBOX"  # Use Toolbox user
-DB_PASS = "I1o1@T@#1boX"
-
-# Connection string
-CONN_STR = f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={DB_SERVER};DATABASE={DB_NAME};UID={DB_USER};PWD={DB_PASS}'
-
-def get_db_connection():
-    return pyodbc.connect(CONN_STR)
+# Web API Configuration
+API_BASE_URL = os.environ.get("MES_API_URL", "http://localhost/MES")
+API_URL = f"{API_BASE_URL}/page/PE/api/iiotAPI.php?action=update_telemetry"
 
 def process_payload(payload):
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
         # Ensure payload is a list (if it's a single object, wrap it)
         if isinstance(payload, dict):
             payload = [payload]
@@ -43,47 +34,36 @@ def process_payload(payload):
             total = item.get("total", 0)
             cycle_time = item.get("cycle_time", 0)
             
-            # Safe JSON string for discovery
-            safe_payload = json.dumps(item)
+            # Map Python keys to PHP iiotAPI.php expected keys
+            post_data = {
+                "topic_name": topic_name,
+                "live_status": status,
+                "live_counter": counter,
+                "live_total": total,
+                "cycle_time": cycle_time
+            }
             
-            # 1. Update PE_IIOT_DISCOVERY
-            cursor.execute("""
-                UPDATE PE_IIOT_DISCOVERY
-                SET last_payload = ?, last_seen = GETDATE()
-                WHERE topic_name = ?
-            """, (safe_payload, topic_name))
+            req_data = json.dumps(post_data).encode('utf-8')
+            req = urllib.request.Request(
+                API_URL,
+                data=req_data,
+                headers={'Content-Type': 'application/json'}
+            )
             
-            if cursor.rowcount == 0:
-                cursor.execute("""
-                    INSERT INTO PE_IIOT_DISCOVERY (topic_name, last_payload, last_seen)
-                    VALUES (?, ?, GETDATE())
-                """, (topic_name, safe_payload))
-
-            # 2. Update PE_IIOT_TELEMETRY (Only if mapped in PE_MACHINES)
-            cursor.execute("""
-                DECLARE @RealMC VARCHAR(50);
-                SELECT TOP 1 @RealMC = machine_code FROM PE_MACHINES WHERE mqtt_topic = ? AND is_active = 1;
+            # Call PHP HTTP API using urllib.request standard library
+            try:
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    res_body = response.read().decode('utf-8')
+                    res_json = json.loads(res_body)
+                    if not res_json.get("success"):
+                        print(f"[{datetime.now().strftime('%H:%M:%S')}] ⚠️ API Error: {res_json.get('message')}")
+            except urllib.error.HTTPError as e:
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ HTTP Error {e.code}: {e.read().decode('utf-8', errors='ignore')}")
+            except Exception as e:
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Request Error: {e}")
                 
-                IF @RealMC IS NOT NULL
-                BEGIN
-                    UPDATE PE_IIOT_TELEMETRY 
-                    SET live_status = ?, live_counter = ?, live_total = ?, cycle_time = ?, last_updated = GETDATE()
-                    WHERE machine_code = @RealMC;
-                    
-                    IF @@ROWCOUNT = 0
-                    BEGIN
-                        INSERT INTO PE_IIOT_TELEMETRY (machine_code, live_status, live_counter, live_total, cycle_time, last_updated)
-                        VALUES (@RealMC, ?, ?, ?, ?, GETDATE());
-                    END
-                END
-            """, (topic_name, status, counter, total, cycle_time, status, counter, total, cycle_time))
-
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
     except Exception as e:
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Database Error: {e}")
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Ingestion Error: {e}")
 
 def on_connect(client, userdata, flags, rc, properties=None):
     if rc == 0:

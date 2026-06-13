@@ -1,0 +1,38 @@
+flowchart TD
+    Start((เริ่มต้นการผลิต)) --> SAP[SAP ERP: ซิงค์ข้อมูลใบสั่งซื้อและแผนการผลิต]
+    SAP --> JQ[สร้างคิวงานผลิต<br/>jobQueueUI.php]
+    JQ --> Assign[มอบหมายงานให้เครื่องจักร<br/>page/PE]
+    
+    Assign --> OpLogin[พนักงานล็อกอินเข้าเครื่องจักร<br/>mes-mobile-app]
+    OpLogin --> Scan[สแกนแท็กวัตถุดิบ / สินค้า<br/>HTML5 QR Scanner]
+    
+    Scan --> Valid{แท็กและงานถูกต้องหรือไม่?}
+    Valid -- ไม่ถูกต้อง --> Err[แสดงข้อผิดพลาดบนมือถือ] --> Scan
+    Valid -- ถูกต้อง --> Run[เครื่องจักรกำลังทำงาน / ประมวลผล]
+    
+    Run --> Input[พนักงานกรอกสถานะการผลิต<br/>ยอดดี, ยอดเสีย, ยอดผลิตต่อชั่วโมง]
+    Input --> PE_API[ส่งข้อมูลเข้าระบบหลัก<br/>page/PE]
+    
+    PE_API --> DB_Update[(อัปเดตฐานข้อมูล MES)]
+    PE_API -.->|ซิงค์ข้อมูลเบื้องหลัง| Sync[ซิงค์ข้อมูลกับระบบเก่า<br/>page/production]
+    
+    DB_Update --> CheckDone{จบล็อตการผลิตหรือยัง?}
+    CheckDone -- ยังไม่จบ --> Run
+    CheckDone -- จบแล้ว --> Print[พิมพ์แท็กสินค้าส่งงาน FG / WIP<br/>label_printer.php]
+    
+    Print --> WH[ส่งสินค้าเข้าคลัง / โอนย้าย]
+    WH --> End((สิ้นสุดการผลิต))
+    
+    %% Analytics Data Feed
+    DB_Update -.->|ส่งข้อมูลแสดงผล| OEE[อัปเดตข้อมูลหน้าแดชบอร์ด OEE<br/>OEE_Dashboard.php]
+    
+    %% Styling
+    classDef startend fill:#dcedc8,stroke:#689f38,stroke-width:2px;
+    classDef action fill:#bbdefb,stroke:#1976d2,stroke-width:2px;
+    classDef check fill:#ffe0b2,stroke:#f57c00,stroke-width:2px;
+    classDef db fill:#c8e6c9,stroke:#388e3c,stroke-width:2px;
+
+    class Start,End startend
+    class SAP,JQ,Assign,OpLogin,Scan,Err,Run,Input,PE_API,Sync,Print,WH action
+    class Valid,CheckDone check
+    class DB_Update,OEE db

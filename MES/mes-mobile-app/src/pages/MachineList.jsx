@@ -68,8 +68,12 @@ export default function MachineList() {
     }
   };
 
-  const getMachineImage = (line) => {
-    if (!line) return './assets/machine_cnc.png';
+  const getMachineImage = (machine) => {
+    if (machine.image_path) {
+      return machine.image_path.startsWith('/') ? machine.image_path : `/${machine.image_path}`;
+    }
+    
+    const line = machine.line || '';
     const lowerLine = line.toLowerCase();
     if (lowerLine.includes('assembly') || lowerLine.includes('line')) return './assets/machine_assembly.png';
     return './assets/machine_cnc.png';
@@ -126,8 +130,16 @@ export default function MachineList() {
                 onClick={() => navigate(`/machine/${machine.id}`)}
                 className="w-full bg-white dark:bg-gray-900/50 hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex items-center text-left transition-all active:scale-[0.98] shadow-sm"
               >
-                <div className={`p-2 rounded-xl ${status.bg} border ${status.border} mr-4 shrink-0 overflow-hidden`}>
-                  <img src={getMachineImage(machine.line)} alt="machine" className="w-12 h-12 object-cover rounded-md" />
+                <div className="flex-shrink-0 w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center p-2 mr-4 transition-colors">
+                  <img 
+                    src={getMachineImage(machine)} 
+                    alt={machine.name} 
+                    className="w-full h-full object-cover rounded-lg drop-shadow-md"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = machine.line?.toLowerCase().includes('assembly') ? './assets/machine_assembly.png' : './assets/machine_cnc.png';
+                    }}
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate">{machine.name}</h3>

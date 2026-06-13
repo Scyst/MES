@@ -2,24 +2,26 @@
 require_once __DIR__ . '/page/components/init.php';
 require_once __DIR__ . '/db.php';
 
+$spDirectory = __DIR__ . '/page/PE/sql/stored_procedures/';
 $files = [
-    'alter_sp_CalculateOEE_Dashboard_PieChart.sql',
-    'alter_sp_CalculateOEE_Dashboard_LineChart.sql',
-    'alter_sp_CalculateOEE_Hourly_Trend.sql',
-    'alter_sp_GetDailyProductionSummary.sql'
+    'sp_CalculateOEE_Dashboard_PieChart.sql',
+    'sp_CalculateOEE_Dashboard_LineChart.sql',
+    'sp_CalculateOEE_Hourly_Trend.sql',
+    'sp_GetDailyProductionSummary.sql'
 ];
 
 foreach ($files as $file) {
-    if (file_exists($file)) {
-        $sql = file_get_contents($file);
+    $filePath = $spDirectory . $file;
+    if (file_exists($filePath)) {
+        $sql = file_get_contents($filePath);
         try {
             $pdo->exec($sql);
-            echo "Successfully executed $file\n";
+            echo "Successfully deployed $file\n";
         } catch (PDOException $e) {
-            echo "Error executing $file: " . $e->getMessage() . "\n";
+            echo "Error deploying $file: " . $e->getMessage() . "\n";
         }
     } else {
-        echo "File not found: $file\n";
+        echo "Stored procedure file not found: $filePath\n";
     }
 }
 ?>

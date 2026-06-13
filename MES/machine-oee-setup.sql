@@ -80,6 +80,6 @@ BEGIN
         'Scheduled'
     FROM inserted i
     JOIN PE_MACHINES m ON m.line = i.line
-    WHERE m.active = 1; -- Only create schedule for active machines
+    WHERE m.is_active = 1; -- Only create schedule for active machines
 END
 GO
