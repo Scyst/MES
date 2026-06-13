@@ -284,20 +284,23 @@ function renderJobBoard() {
                     <div class="card job-card shadow-sm h-100 border-0 ${cardHighlight}" style="border-left: 5px solid var(--bs-${borderLeftColor}) !important;">
                         <div class="card-body p-3 d-flex flex-column">
                             
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div class="d-flex align-items-baseline">
-                                    ${dragHandle}
-                                    <span class="fw-bolder text-dark lh-1" style="font-size: 1.3rem;">${job.queue_order}</span>
-                                    <span class="text-muted small fw-medium ms-2">#${job.job_no}</span>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-start">
+                                    <div class="mt-1 me-2">${dragHandle}</div>
+                                    <div class="d-flex flex-column justify-content-center mt-1">
+                                        <span class="fw-bold text-dark lh-1" style="font-size: 1.1rem;">${job.job_no}</span>
+                                    </div>
                                 </div>
                                 ${manageMenu}
                             </div>
-                            
-                            <div class="mb-4 pe-1">
-                                <h5 class="fw-bolder text-primary mb-1 text-truncate" style="font-size: 1.2rem;" title="${job.part_no}">
-                                    ${job.part_no} ${qaIcon}
+
+                            <div class="mb-2 pe-1">
+                                <h5 class="fw-bold text-primary mb-1 text-truncate" style="font-size: 1.1rem;" title="${job.part_no}">
+                                    ${job.part_no} 
+                                    ${job.lot_no ? `<span class="text-secondary fw-normal ms-2" style="font-size: 0.85rem;">| Lot. <span class="text-dark fw-bold">${job.lot_no}</span></span>` : ''}
+                                    ${qaIcon}
                                 </h5>
-                                <div class="small text-secondary text-truncate" title="${job.part_name || '-'}">
+                                <div class="text-secondary text-truncate" style="font-size: 0.85rem;" title="${job.part_name || '-'}">
                                     ${job.part_name || '-'}
                                 </div>
                             </div>
@@ -305,17 +308,19 @@ function renderJobBoard() {
                             <div class="mt-auto"></div>
 
                             <div class="mb-3">
-                                <div class="d-flex justify-content-between align-items-end mb-2">
-                                    <div class="bg-light rounded p-1 px-2 d-flex align-items-center border border-light-subtle">
-                                        <span class="badge ${statusClass} shadow-sm px-2 py-1 me-2" style="font-size: 0.7rem;">
-                                            <i class="fas ${statusIcon} me-1"></i> ${statusText}
-                                        </span>
-                                        <span class="fw-bold ${job.status === 'RUNNING' ? 'text-dark' : 'text-muted'} small mb-0">
-                                            <i class="fas fa-stopwatch text-secondary me-1"></i> ${timerDisplay}
-                                        </span>
-                                    </div>
-                                    <div class="fw-bold text-dark text-end lh-1" style="font-size: 1.15rem;">
-                                        ${processedQty.toLocaleString()} <span class="text-muted small fw-bold">/ ${targetQty.toLocaleString()}</span>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge ${statusClass} shadow-sm px-2 py-1" style="font-size: 0.7rem;">
+                                        <i class="fas ${statusIcon} me-1"></i> ${statusText}
+                                    </span>
+                                    <span class="fw-bold ${job.status === 'RUNNING' ? 'text-dark' : 'text-muted'} small mb-0 text-nowrap bg-light px-2 py-1 rounded border border-light-subtle">
+                                        <i class="fas fa-stopwatch text-secondary me-1"></i> ${timerDisplay}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="text-muted fw-bold" style="font-size: 0.8rem;">Progress</span>
+                                    <div class="text-nowrap text-end">
+                                        <span class="fw-bolder text-dark" style="font-size: 1.2rem;">${processedQty.toLocaleString()}</span>
+                                        <span class="text-muted fw-bold" style="font-size: 0.85rem;">/ ${targetQty.toLocaleString()}</span>
                                     </div>
                                 </div>
                                 <div class="progress" style="height: 6px; background-color: #f0f0f0;">
@@ -451,8 +456,10 @@ function openCreateJobModal() {
     if(form) form.reset();
     const searchInput = document.getElementById('modal_item_search');
     const hiddenInput = document.getElementById('modal_item');
+    const lotInput = document.getElementById('modal_lot_no');
     if(searchInput) searchInput.value = '';
     if(hiddenInput) hiddenInput.value = '';
+    if(lotInput) lotInput.value = '';
     
     const currentLoc = document.getElementById('locationSelect').value;
     if(currentLoc) document.getElementById('modal_location').value = currentLoc;
@@ -464,6 +471,7 @@ async function submitCreateJob() {
     const payload = {
         location_id: document.getElementById('modal_location').value,
         item_id: document.getElementById('modal_item').value,
+        lot_no: document.getElementById('modal_lot_no') ? document.getElementById('modal_lot_no').value.trim() : '',
         target_qty: document.getElementById('modal_target_qty').value
     };
 
@@ -702,9 +710,10 @@ async function openJobHistory() {
                     let locTag = locId === '' ? `<br><span class="badge bg-light text-dark border mt-1">${job.location_name}</span>` : '';
 
                     if(tbody) {
+                        let lotTag = job.lot_no ? `<br><span class="text-muted small fw-normal">Lot: ${job.lot_no}</span>` : '';
                         tbody.insertAdjacentHTML('beforeend', `
                             <tr>
-                                <td class="fw-bold text-dark text-center">${job.job_no}${locTag}</td>
+                                <td class="fw-bold text-dark text-center">${job.job_no}${locTag}${lotTag}</td>
                                 <td>${job.part_no}</td>
                                 <td class="text-end fw-bold text-muted">${parseFloat(job.target_qty).toLocaleString()}</td>
                                 <td class="text-end fw-bold text-success">${parseFloat(job.actual_qty || 0).toLocaleString()}</td>

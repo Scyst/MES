@@ -95,9 +95,10 @@ try {
             $location_id = $input['location_id'];
             $item_id = $input['item_id'];
             $target_qty = $input['target_qty'];
+            $lot_no = isset($input['lot_no']) && trim($input['lot_no']) !== '' ? trim($input['lot_no']) : null;
 
             $pdo->beginTransaction();
-            $prefix = "WK-" . date('ym') . "-";
+            $prefix = "JOB-" . date('ym') . "-";
             $stmt = $pdo->prepare("SELECT TOP 1 job_no FROM PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_no LIKE ? ORDER BY job_no DESC");
             $stmt->execute([$prefix . '%']);
             $lastJob = $stmt->fetchColumn();
@@ -110,9 +111,9 @@ try {
             $qStmt->execute([$location_id]);
             $nextQueue = $qStmt->fetchColumn();
 
-            $sql = "INSERT INTO PRODUCTION_JOBS (job_no, location_id, item_id, target_qty, status, queue_order, created_by, created_at)
-                    VALUES (?, ?, ?, ?, 'PENDING', ?, ?, GETDATE())";
-            $pdo->prepare($sql)->execute([$job_no, $location_id, $item_id, $target_qty, $nextQueue, $currentUser['id']]);
+            $sql = "INSERT INTO PRODUCTION_JOBS (job_no, location_id, item_id, target_qty, status, queue_order, created_by, created_at, lot_no)
+                    VALUES (?, ?, ?, ?, 'PENDING', ?, ?, GETDATE(), ?)";
+            $pdo->prepare($sql)->execute([$job_no, $location_id, $item_id, $target_qty, $nextQueue, $currentUser['id'], $lot_no]);
 
             $pdo->commit();
             writeLog($pdo, 'CREATE_JOB', 'PRODUCTION_JOBS', $job_no, null, $input, "Created job: $job_no");
@@ -168,9 +169,12 @@ try {
             $st = $job['start_time'] ? date('H:i:s', strtotime($job['start_time'])) : date('H:i:s');
             $et = date('H:i:s');
             
-            if ($add_actual > 0) $spProd->execute([$job['item_id'], $job['location_id'], $add_actual, 'FG', $job['job_no'], 'Output', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
-            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $job['location_id'], $add_hold, 'HOLD', $job['job_no'], 'Hold', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
-            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $job['location_id'], $add_scrap, 'SCRAP', $job['job_no'], 'Scrap', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
+            // ใช้ lot_no ถ้ามีการระบุไว้ตอนสร้างงาน ถ้าไม่มีให้ใช้ job_no เป็นค่าอ้างอิงแทน
+            $transactionLot = !empty($job['lot_no']) ? $job['lot_no'] : $job['job_no'];
+            
+            if ($add_actual > 0) $spProd->execute([$job['item_id'], $job['location_id'], $add_actual, 'FG', $transactionLot, 'Output', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
+            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $job['location_id'], $add_hold, 'HOLD', $transactionLot, 'Hold', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
+            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $job['location_id'], $add_scrap, 'SCRAP', $transactionLot, 'Scrap', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
 
             if ($add_hold > 0) {
                 $qaJobNo = $job['job_no'] . '-QA';
@@ -182,8 +186,8 @@ try {
                     $pdo->prepare("UPDATE PRODUCTION_JOBS SET target_qty = target_qty + ? WHERE job_id = ?")->execute([$add_hold, $qaId]);
                 } else {
                     // 🟢 QA Job ยังคงให้ใช้คิวที่ 999 เพื่อให้อยู่ท้ายสุดเสมอ
-                    $pdo->prepare("INSERT INTO PRODUCTION_JOBS (job_no, location_id, item_id, target_qty, status, queue_order, created_by, created_at) VALUES (?, ?, ?, ?, 'PENDING', 999, ?, GETDATE())")
-                        ->execute([$qaJobNo, $job['location_id'], $job['item_id'], $add_hold, $currentUser['id']]);
+                    $pdo->prepare("INSERT INTO PRODUCTION_JOBS (job_no, location_id, item_id, target_qty, status, queue_order, created_by, created_at, lot_no) VALUES (?, ?, ?, ?, 'PENDING', 999, ?, GETDATE(), ?)")
+                        ->execute([$qaJobNo, $job['location_id'], $job['item_id'], $add_hold, $currentUser['id'], $job['lot_no']]);
                 }
             }
 

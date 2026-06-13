@@ -193,6 +193,10 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
                             <ul id="item_autocomplete_list" class="autocomplete-items d-none m-0 p-0"></ul>
                         </div>
                         <div class="mb-3">
+                            <label class="form-label fw-bold small text-secondary">เลขที่ล็อต (Lot No.)</label>
+                            <input type="text" id="modal_lot_no" class="form-control bg-light" placeholder="ระบุเลขที่ล็อต (ถ้ามี)">
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label fw-bold small text-secondary">เป้าหมาย (Target Qty) <span class="text-danger">*</span></label>
                             <input type="number" id="modal_target_qty" class="form-control bg-light" min="1" step="1" required>
                         </div>
@@ -278,7 +282,7 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
                 <table class="table table-hover align-middle mb-0 text-nowrap table-sm bg-white">
                     <thead class="table-light small text-secondary sticky-top" style="z-index: 2;">
                         <tr>
-                            <th class="ps-3 py-2">Job No</th>
+                            <th class="ps-3 py-2">Job No<br><span class="text-muted small fw-normal">Lot No.</span></th>
                             <th class="py-2">Part No</th>
                             <th class="text-end py-2">Target</th>
                             <th class="text-end py-2">FG</th>
