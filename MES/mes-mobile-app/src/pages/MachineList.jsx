@@ -70,7 +70,13 @@ export default function MachineList() {
 
   const getMachineImage = (machine) => {
     if (machine.image_path) {
-      return machine.image_path.startsWith('/') ? machine.image_path : `/${machine.image_path}`;
+      if (machine.image_path.startsWith('http')) return machine.image_path;
+      let path = machine.image_path;
+      if (path.startsWith('/')) path = path.substring(1);
+      if (!path.startsWith('../')) {
+        return `../../${path}`;
+      }
+      return path;
     }
     
     const line = machine.line || '';
