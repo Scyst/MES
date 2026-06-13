@@ -26,6 +26,7 @@ try {
             m.line,
             m.is_active,
             m.status,
+            m.image_path,
             l.location_id
         FROM " . PE_MACHINES_TABLE . " m
         LEFT JOIN " . LOCATIONS_TABLE . " l ON m.line = l.location_name
