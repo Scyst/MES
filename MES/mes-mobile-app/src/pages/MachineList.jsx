@@ -61,41 +61,46 @@ export default function MachineList() {
 
   const getStatusConfig = (status) => {
     switch(status?.toLowerCase()) {
-      case 'running': return { color: 'text-green-400', bg: 'bg-green-400/10', icon: <Play size={16} /> };
-      case 'idle': return { color: 'text-yellow-400', bg: 'bg-yellow-400/10', icon: <Pause size={16} /> };
-      case 'down': return { color: 'text-red-400', bg: 'bg-red-400/10', icon: <AlertTriangle size={16} /> };
-      default: return { color: 'text-gray-400', bg: 'bg-gray-400/10', icon: <Settings size={16} /> };
+      case 'running': return { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-400/10', border: 'border-green-200 dark:border-green-400/20', icon: <Play size={16} /> };
+      case 'idle': return { color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-400/10', border: 'border-yellow-200 dark:border-yellow-400/20', icon: <Pause size={16} /> };
+      case 'down': return { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-400/10', border: 'border-red-200 dark:border-red-400/20', icon: <AlertTriangle size={16} /> };
+      default: return { color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-400/10', border: 'border-gray-200 dark:border-gray-400/20', icon: <Settings size={16} /> };
     }
+  };
+
+  const getMachineImage = (line) => {
+    if (!line) return '/assets/machine_cnc.png';
+    const lowerLine = line.toLowerCase();
+    if (lowerLine.includes('assembly') || lowerLine.includes('line')) return '/assets/machine_assembly.png';
+    return '/assets/machine_cnc.png';
   };
 
   return (
     <div className="space-y-4 h-full flex flex-col">
-      <div className="flex justify-between items-center mb-2">
-        <h2 className="text-2xl font-bold">Select Machine</h2>
-        <button 
-          onClick={fetchMachines}
-          className="p-2 bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors"
-        >
-          <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
-        </button>
-      </div>
-
-      <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide flex-shrink-0">
-        {lines.map(line => (
-          <button 
-            key={line}
-            onClick={() => setFilter(line)}
-            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-              filter === line ? 'bg-blue-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            {line}
-          </button>
-        ))}
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4 sticky top-0 z-10 transition-colors duration-300">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Select Machine</h1>
+        
+        {/* Line Filter */}
+        <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
+          {lines.map(line => (
+            <button
+              key={line}
+              onClick={() => setFilter(line)}
+              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors ${
+                filter === line 
+                  ? 'bg-blue-600 text-white shadow-md' 
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+            >
+              {line}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Machine List Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4 px-4">
         {loading && machines.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-gray-500 col-span-full">
             <RefreshCcw size={32} className="animate-spin mb-4" />
@@ -119,16 +124,16 @@ export default function MachineList() {
               <button
                 key={machine.id}
                 onClick={() => navigate(`/machine/${machine.id}`)}
-                className="w-full bg-gray-900/50 hover:bg-gray-800 border border-gray-800 rounded-2xl p-4 flex items-center text-left transition-all active:scale-[0.98]"
+                className="w-full bg-white dark:bg-gray-900/50 hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex items-center text-left transition-all active:scale-[0.98] shadow-sm"
               >
-                <div className={`p-3 rounded-xl ${status.bg} ${status.color} mr-4`}>
-                  <Settings size={24} />
+                <div className={`p-2 rounded-xl ${status.bg} border ${status.border} mr-4 shrink-0 overflow-hidden`}>
+                  <img src={getMachineImage(machine.line)} alt="machine" className="w-12 h-12 object-cover rounded-md" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-lg">{machine.name}</h3>
-                  <p className="text-gray-500 text-sm">{machine.id} • {machine.line}</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate">{machine.name}</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm truncate">{machine.id} • {machine.line}</p>
                 </div>
-                <div className={`flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium border border-current ${status.color} ${status.bg}`}>
+                <div className={`flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium border ${status.border} ${status.color} ${status.bg} shrink-0 ml-2`}>
                   {status.icon}
                   <span className="capitalize ml-1">{machine.status || 'Unknown'}</span>
                 </div>
