@@ -86,10 +86,10 @@ try {
             $kpi = $kpiStmt->fetch(PDO::FETCH_ASSOC);
 
             // Top cause
+            $topCauseWhere = $where ? "$where AND D.cause_category IS NOT NULL AND D.cause_category != ''" : "WHERE D.cause_category IS NOT NULL AND D.cause_category != ''";
             $topCauseSql = "SELECT TOP 1 D.cause_category, COUNT(*) as cnt
                             FROM " . PE_DOWNTIME_LOG_TABLE . " D WITH (NOLOCK)
-                            $where
-                            AND D.cause_category IS NOT NULL AND D.cause_category != ''
+                            $topCauseWhere
                             GROUP BY D.cause_category ORDER BY cnt DESC";
             $topStmt = $pdo->prepare($topCauseSql);
             $topStmt->execute($params);

@@ -173,7 +173,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('Live Job Queue', 'ระบบจัดการคิวงานหน้าไลน์ (KDS)', '<i class="fas fa-list-ol"></i>', '../production/jobQueueUI.php', 'view_production', $themeProd);
                         renderServiceLink('Scan Barcode', 'ระบบสแกนบาร์โค้ด', '<i class="fas fa-barcode"></i>', '../scanBarcode/scanBarcodeUI.php', 'view_production', $themeProd);
                         renderServiceLink('Tag Printer', 'พิมพ์แท็กส่งงาน (WIP/FG)', '<i class="fas fa-print"></i>', '../production/label_printer.php', 'print_label', $themeProd);
-                        renderServiceLink('Stop Causes', 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../Stop_Cause/Stop_Cause.php', 'view_production', $themeProd);
+                        renderServiceLink('Stop Causes', 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../PE/operator_portal.php', 'view_production', $themeProd);
                         ?>
                     </div>
                 </div>

@@ -47,8 +47,10 @@ try {
                 $params[] = $filter_material;
             }
 
-            if ($currentUser['role'] === 'supervisor') {
-                $supervisor_line = $currentUser['line'];
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                // Admin sees all
+            } else if ($currentUser['role'] === 'supervisor' || !empty($currentUser['line'])) {
+                $user_line = $currentUser['line'];
                 $conditions[] = "
                     i.item_id IN (
                         SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?
@@ -58,8 +60,8 @@ try {
                         WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?)
                     )
                 ";
-                $params[] = $supervisor_line;
-                $params[] = $supervisor_line;
+                $params[] = $user_line;
+                $params[] = $user_line;
             }
 
             if (!empty($filter_model)) {

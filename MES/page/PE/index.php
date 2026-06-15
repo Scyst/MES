@@ -93,9 +93,9 @@ $pageTitle = "PE Enterprise";
 
             <div class="pe-nav-section">
                 <div class="pe-nav-section-label">Quick Links</div>
-                <a class="pe-nav-item" href="../Stop_Cause/Stop_Cause.php">
+                <a class="pe-nav-item" href="operator_portal.php">
                     <i class="fas fa-external-link-alt"></i>
-                    <span class="nav-label">Legacy System</span>
+                    <span class="nav-label">Operator Portal (New)</span>
                 </a>
             </div>
         </nav>

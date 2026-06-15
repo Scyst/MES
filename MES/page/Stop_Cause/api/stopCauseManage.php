@@ -30,7 +30,9 @@ try {
             $startRow = ($page - 1) * $limit;
             $conditions = [];
             $params = [];
-            if ($currentUser['role'] === 'supervisor') {
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                // Admin sees all
+            } else if ($currentUser['role'] === 'supervisor' || !empty($currentUser['line'])) {
                 $conditions[] = "line = ?";
                 $params[] = $currentUser['line'];
             }
@@ -183,7 +185,10 @@ try {
             break;
 
         case 'get_lines':
-            if ($currentUser['role'] === 'supervisor') {
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                $stmt = $pdo->query("SELECT DISTINCT line FROM " . STOP_CAUSES_TABLE . " WHERE line IS NOT NULL ORDER BY line");
+                echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_COLUMN)]);
+            } else if ($currentUser['role'] === 'supervisor' || !empty($currentUser['line'])) {
                 echo json_encode(['success' => true, 'data' => [$currentUser['line']]]);
             } else {
                 $stmt = $pdo->query("SELECT DISTINCT line FROM " . STOP_CAUSES_TABLE . " WHERE line IS NOT NULL ORDER BY line");

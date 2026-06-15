@@ -1221,11 +1221,13 @@ try {
                 $params = array_merge($params, array_fill(0, 4, $searchParam));
             }
 
-            if ($currentUser['role'] === 'supervisor') {
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                // Admin sees all
+            } else if ($currentUser['role'] === 'supervisor') {
                 $conditions[] = "(loc_to.production_line = ? OR t.created_by_user_id = ?)";
                 $params[] = $currentUser['line'] ?? '';
                 $params[] = $currentUser['id'];
-            } elseif ($currentUser['role'] === 'operator') {
+            } else {
                 $conditions[] = "t.created_by_user_id = ?";
                 $params[] = $currentUser['id'];
             }

@@ -29,7 +29,7 @@
                     <li><a class="dropdown-item-icon py-1" href="../production/jobQueueUI.php"><i class="fas fa-list-ol fa-fw"></i><span>Live Job Queue</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../production/label_printer.php"><i class="fas fa-print fa-fw"></i><span>Tag Printer (WIP/FG)</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../scanBarcode/scanBarcodeUI.php"><i class="fas fa-barcode fa-fw"></i><span>Scan Barcode</span></a></li>
-                    <li><a class="dropdown-item-icon py-1" href="../Stop_Cause/Stop_Cause.php"><i class="fas fa-ban fa-fw"></i><span>Stop & Causes</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../PE/operator_portal.php"><i class="fas fa-tools fa-fw"></i><span>แจ้งซ่อม & หยุดไลน์</span></a></li>
                 </ul>
             </div>
         </li>
@@ -172,7 +172,7 @@
             <a class="list-group-item list-group-item-action text-dark" href="../production/mobile_app.php"><i class="fas fa-mobile-alt fa-fw me-3"></i> ลงยอดผลิต (Mobile)</a>
             <a class="list-group-item list-group-item-action text-dark" href="../production/jobQueueUI.php"><i class="fas fa-list-ol fa-fw me-3"></i> Live Job Queue</a>
             <a class="list-group-item list-group-item-action text-dark" href="../scanBarcode/scanBarcodeUI.php"><i class="fas fa-barcode fa-fw me-3"></i> Scan Barcode</a>
-            <a class="list-group-item list-group-item-action text-dark" href="../Stop_Cause/Stop_Cause.php"><i class="fas fa-ban fa-fw me-3"></i> Stop & Causes</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../PE/operator_portal.php"><i class="fas fa-tools fa-fw me-3"></i> แจ้งซ่อม & หยุดไลน์</a>
 
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">WAREHOUSE & LOGISTICS</div>
             <?php if (in_array($userRole, ['admin', 'creator', 'supervisor'])): ?>

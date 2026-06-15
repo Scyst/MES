@@ -69,8 +69,12 @@ try {
                 JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON b.fg_item_id = i.item_id
                 WHERE b.rn = 1 AND i.is_active = 1
             ";
-            if ($currentUser['role'] === 'supervisor') {
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                $sql .= " ORDER BY i.sap_no ASC";
+                $stmt = $pdo->query($sql);
+            } else if ($currentUser['role'] === 'supervisor' || !empty($currentUser['line'])) {
                 $sql .= " AND i.item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?)";
+                $sql .= " ORDER BY i.sap_no ASC";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$currentUser['line']]);
             } else {
@@ -428,8 +432,12 @@ try {
                 JOIN " . ITEMS_TABLE . " fg WITH (NOLOCK) ON b.fg_item_id = fg.item_id
                 JOIN " . ITEMS_TABLE . " c WITH (NOLOCK) ON b.component_item_id = c.item_id
             ";
-            if ($currentUser['role'] === 'supervisor') {
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                $sql .= " ORDER BY fg.sap_no ASC";
+                $stmt = $pdo->query($sql);
+            } else if ($currentUser['role'] === 'supervisor' || !empty($currentUser['line'])) {
                 $sql .= " WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?)";
+                $sql .= " ORDER BY fg.sap_no ASC";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$currentUser['line']]);
             } else {
@@ -640,8 +648,12 @@ try {
                   AND i.material_type != 'RM'
             ";
             
-            if ($currentUser['role'] === 'supervisor') {
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                $sql .= " ORDER BY i.sap_no ASC";
+                $stmt = $pdo->query($sql);
+            } else if ($currentUser['role'] === 'supervisor' || !empty($currentUser['line'])) {
                 $sql .= " AND i.item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?)";
+                $sql .= " ORDER BY i.sap_no ASC";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$currentUser['line']]);
             } else {

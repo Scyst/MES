@@ -134,7 +134,7 @@ try {
                     $machineName,
                     $line,
                     $input['priority'] ?? 'Normal',
-                    $currentUser['username'],
+                    !empty($input['requested_by']) ? $input['requested_by'] : ($currentUser['fullname'] ?? $currentUser['username']),
                     $requestedAt,
                     $title,
                     $input['issue_detail'] ?? '',

@@ -236,8 +236,10 @@ try {
             
             $conditions = []; $base_params = [];
 
-            if ($currentUser['role'] === 'supervisor') {
-                $supervisor_line = $currentUser['line'];
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                // Admin sees all
+            } else if ($currentUser['role'] === 'supervisor' || !empty($currentUser['line'])) {
+                $user_line = $currentUser['line'];
                 $conditions[] = "
                     i.item_id IN (
                         SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?
@@ -247,8 +249,8 @@ try {
                         WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WHERE line = ?)
                     )
                 ";
-                $base_params[] = $supervisor_line;
-                $base_params[] = $supervisor_line;
+                $base_params[] = $user_line;
+                $base_params[] = $user_line;
             }
 
             if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
@@ -336,7 +338,9 @@ try {
             $limit = 50; $startRow = ($page - 1) * $limit;
             $params = []; $date_params = []; $conditions = []; $date_where_clause = '';
 
-            if ($currentUser['role'] === 'supervisor') {
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                // Admin sees all
+            } else if ($currentUser['role'] === 'supervisor' || !empty($currentUser['line'])) {
                 $conditions[] = "l.production_line = ?";
                 $params[] = $currentUser['line'];
             }
@@ -433,7 +437,9 @@ try {
 
             $conditions = ["l.location_type IN ('WIP', 'STORE', 'WAREHOUSE')", "h.quantity <> 0"];
 
-            if ($currentUser['role'] === 'supervisor') {
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                // Admin sees all
+            } else if ($currentUser['role'] === 'supervisor' || !empty($currentUser['line'])) {
                  $conditions[] = "( (l.location_type = 'WIP' AND l.production_line = ?) OR l.location_type IN ('STORE', 'WAREHOUSE') )";
                  $params[] = $currentUser['line'];
             }
@@ -499,7 +505,9 @@ try {
             $params = [];
             $conditions = ["t.reference_id IS NOT NULL", "t.reference_id != ''"];
 
-            if ($currentUser['role'] === 'supervisor') {
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                // Admin sees all
+            } else if ($currentUser['role'] === 'supervisor' || !empty($currentUser['line'])) {
                 $conditions[] = "l.production_line = ?";
                 $params[] = $currentUser['line'];
             }
@@ -1172,10 +1180,14 @@ try {
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
                 $params[] = $_GET['endDate'];
             }
-            
-            if ($currentUser['role'] === 'supervisor') {
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                // Do nothing, can see all
+            } else if ($currentUser['role'] === 'supervisor') {
                 $conditions[] = "loc.production_line = ?";
                 $params[] = $currentUser['line'];
+            } else {
+                $conditions[] = "t.created_by_user_id = ?";
+                $params[] = $currentUser['id'];
             }
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
@@ -1250,10 +1262,14 @@ try {
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
                 $params[] = $_GET['endDate'];
             }
-            
-            if ($currentUser['role'] === 'supervisor') {
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                // Do nothing, can see all
+            } else if ($currentUser['role'] === 'supervisor') {
                 $conditions[] = "loc.production_line = ?";
                 $params[] = $currentUser['line'];
+            } else {
+                $conditions[] = "t.created_by_user_id = ?";
+                $params[] = $currentUser['id'];
             }
 
             if (!empty($_GET['line'])) {
@@ -1345,10 +1361,14 @@ try {
                 $params[] = $target_date;
 
                 $conditions[] = "t.transaction_type LIKE 'PRODUCTION_%'";
-
-                if ($currentUser['role'] === 'supervisor') {
+                if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                    // Do nothing, can see all
+                } else if ($currentUser['role'] === 'supervisor') {
                     $conditions[] = "l.production_line = ?";
                     $params[] = $line_filter;
+                } else {
+                    $conditions[] = "t.created_by_user_id = ?";
+                    $params[] = $currentUser['id'];
                 }
                 
                 if (!empty($_GET['line'])) {
