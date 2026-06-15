@@ -510,7 +510,7 @@ try {
                        L.status,
                        CASE 
                            WHEN L.shift_id = 2 AND L.scan_in_time IS NOT NULL AND L.scan_out_time IS NOT NULL AND L.scan_in_time > L.scan_out_time THEN 'REVERSED'
-                           WHEN L.shift_id = 2 AND L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL AND CAST(L.scan_out_time AS TIME) >= '06:30:00' AND CAST(L.scan_out_time AS TIME) <= '08:30:00' THEN 'ORPHAN_MORNING'
+                           WHEN L.shift_id = 2 AND L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL AND CAST(L.scan_out_time AS TIME) >= '06:30:00' AND CAST(L.scan_out_time AS TIME) <= '08:00:00' THEN 'ORPHAN_MORNING'
                            ELSE 'SCAN_MISMATCH'
                        END as detect_type
                 FROM dbo.MANPOWER_DAILY_LOGS L
@@ -523,7 +523,7 @@ try {
                       OR
                       (L.shift_id = 2 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '05:00:00' AND CAST(L.scan_in_time AS TIME) <= '14:00:00')
                       OR
-                      (L.shift_id = 2 AND L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL AND CAST(L.scan_out_time AS TIME) >= '06:30:00' AND CAST(L.scan_out_time AS TIME) <= '08:30:00')
+                      (L.shift_id = 2 AND L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL AND CAST(L.scan_out_time AS TIME) >= '06:30:00' AND CAST(L.scan_out_time AS TIME) <= '08:00:00')
                       OR
                       (L.shift_id = 2 AND L.scan_in_time IS NOT NULL AND L.scan_out_time IS NOT NULL AND L.scan_in_time > L.scan_out_time)
                   )
