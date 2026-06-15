@@ -2477,7 +2477,18 @@ const Actions = {
                 tbody.innerHTML = json.data.map(row => {
                     const isDay = row.shift_id == 1;
                     const shiftHtml = isDay ? `<span class="badge bg-primary shadow-sm">DAY</span>` : `<span class="badge bg-dark shadow-sm">NIGHT</span>`;
-                    const detectMsg = isDay ? 'พบการสแกนช่วงเย็น (อาจสลับกะ/ลืมสแกนเข้า)' : 'พบการสแกนช่วงเช้า (อาจสลับกะ/ลืมสแกนเข้า)';
+                    
+                    let detectMsg;
+                    if (row.detect_type === 'REVERSED') {
+                        detectMsg = '⚠️ เวลาเข้า-ออกสลับกัน (อาจสลับกะ)';
+                    } else if (row.detect_type === 'ORPHAN_MORNING') {
+                        detectMsg = '🌅 กะดึกมีสแกนช่วงเช้า 07-08 น. (อาจสลับกะมาเช้า)';
+                    } else if (isDay) {
+                        detectMsg = 'พบการสแกนช่วงเย็น (อาจสลับกะ/ลืมสแกนเข้า)';
+                    } else {
+                        detectMsg = 'พบการสแกนช่วงเช้า (อาจสลับกะ/ลืมสแกนเข้า)';
+                    }
+                    
                     const btnLabel = isDay ? '🔁 สลับเป็นกะดึก' : '🔁 สลับเป็นกะเช้า';
                     const newShiftId = isDay ? 2 : 1;
                     const newShiftName = isDay ? 'NIGHT' : 'DAY';
