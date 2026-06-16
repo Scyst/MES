@@ -115,7 +115,7 @@ try {
             foreach ($data as $row) {
                 $base = isset($row['shift_baseline_counter']) ? (int)$row['shift_baseline_counter'] : 0;
                 $live = (int)$row['live_counter'];
-                $row['net_counter'] = max(0, $live - $base);
+                $row['net_counter'] = ($live >= $base) ? ($live - $base) : $live;
                 
                 $mapped[$row['machine_code']] = $row;
             }
@@ -318,7 +318,7 @@ try {
                 
                 $live = $tel ? (int)$tel['live_counter'] : 0;
                 $base = $tel ? (int)$tel['shift_baseline_counter'] : 0;
-                $stats['live_counter'] = max(0, $live - $base);
+                $stats['live_counter'] = ($live >= $base) ? ($live - $base) : $live;
                 
                 // Get planned output and strokes for the current active item on this machine
                 // (Approximation: average planned output for this line)
@@ -339,7 +339,7 @@ try {
                 
                 // Get defects from STOCK_TRANSACTIONS (Hold + Scrap)
                 $defSql = "
-                    SELECT ISNULL(SUM(t.quantity), 0) as defects
+                    SELECT ISNULL(SUM(ABS(t.quantity)), 0) as defects
                     FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
                     LEFT JOIN LOCATIONS l WITH (NOLOCK) ON t.to_location_id = l.location_id
                     LEFT JOIN PE_MACHINES m WITH (NOLOCK) ON l.production_line = m.line
@@ -482,7 +482,7 @@ try {
 
             // 4. Get Defects
             $defSql = "
-                SELECT m.machine_code, ISNULL(SUM(t.quantity), 0) as defects
+                SELECT m.machine_code, ISNULL(SUM(ABS(t.quantity)), 0) as defects
                 FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
                 LEFT JOIN LOCATIONS l WITH (NOLOCK) ON t.to_location_id = l.location_id
                 LEFT JOIN PE_MACHINES m WITH (NOLOCK) ON l.production_line = m.line
@@ -539,7 +539,7 @@ try {
                 // Actual Output
                 $live = (int)$m['live_counter'];
                 $base = (int)$m['shift_baseline_counter'];
-                $net = max(0, $live - $base);
+                $net = ($live >= $base) ? ($live - $base) : $live;
                 
                 $strokes = isset($strokesMap[$line]) ? $strokesMap[$line] : 1;
                 if ($strokes > 1) {

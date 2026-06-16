@@ -64,7 +64,7 @@ export default function MachineList() {
       case 'running': return { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-400/10', border: 'border-green-200 dark:border-green-400/20', icon: <Play size={16} /> };
       case 'idle': return { color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-400/10', border: 'border-yellow-200 dark:border-yellow-400/20', icon: <Pause size={16} /> };
       case 'down': return { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-400/10', border: 'border-red-200 dark:border-red-400/20', icon: <AlertTriangle size={16} /> };
-      default: return { color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-400/10', border: 'border-gray-200 dark:border-gray-400/20', icon: <Settings size={16} /> };
+      default: return { color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-400/10', border: 'border-gray-200 dark:border-slate-700 dark:border-gray-400/20', icon: <Settings size={16} /> };
     }
   };
 
@@ -88,7 +88,7 @@ export default function MachineList() {
   return (
     <div className="space-y-4 h-full flex flex-col">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4 sticky top-0 z-10 transition-colors duration-300">
+      <div className="bg-white dark:bg-slate-800 dark:bg-gray-900 border-b border-gray-200 dark:border-slate-700 dark:border-gray-800 p-4 sticky top-0 z-10 transition-colors duration-300">
         <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Select Machine</h1>
         
         {/* Line Filter */}
@@ -112,7 +112,7 @@ export default function MachineList() {
       {/* Machine List Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4 px-4">
         {loading && machines.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 text-gray-500 col-span-full">
+          <div className="flex flex-col items-center justify-center h-40 text-gray-500 dark:text-slate-400 col-span-full">
             <RefreshCcw size={32} className="animate-spin mb-4" />
             <p>Loading machines...</p>
           </div>
@@ -124,7 +124,7 @@ export default function MachineList() {
             <button onClick={fetchMachines} className="mt-4 px-4 py-2 bg-red-900/40 rounded-full text-sm">Retry</button>
           </div>
         ) : machines.length === 0 ? (
-          <div className="text-center text-gray-500 py-10 col-span-full">
+          <div className="text-center text-gray-500 dark:text-slate-400 py-10 col-span-full">
             <p>No active machines found.</p>
           </div>
         ) : (
@@ -134,7 +134,7 @@ export default function MachineList() {
               <button
                 key={machine.id}
                 onClick={() => navigate(`/production/machine/${machine.id}`)}
-                className="w-full bg-white dark:bg-gray-900/50 hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex items-center text-left transition-all active:scale-[0.98] shadow-sm"
+                className="w-full bg-white dark:bg-slate-800 dark:bg-gray-900/50 hover:bg-gray-50 dark:bg-slate-800/50 dark:hover:bg-gray-800 border border-gray-200 dark:border-slate-700 dark:border-gray-800 rounded-2xl p-4 flex items-center text-left transition-all active:scale-[0.98] shadow-sm"
               >
                 <div className="flex-shrink-0 w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center p-2 mr-4 transition-colors">
                   <img 
@@ -149,7 +149,7 @@ export default function MachineList() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate">{machine.name}</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm truncate">{machine.id} • {machine.line}</p>
+                  <p className="text-gray-500 dark:text-slate-400 dark:text-gray-400 text-sm truncate">{machine.id} • {machine.line}</p>
                 </div>
                 <div className={`flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium border ${status.border} ${status.color} ${status.bg} shrink-0 ml-2`}>
                   {status.icon}

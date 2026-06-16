@@ -3,6 +3,7 @@ import { useEffect, useState, Suspense, lazy } from 'react';
 
 import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login'; // keep Login direct
+import { initTheme } from './utils/theme';
 
 const MaintenanceList = lazy(() => import('./pages/MaintenanceList'));
 const StopCauseList = lazy(() => import('./pages/StopCauseList'));
@@ -32,12 +33,7 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    const theme = localStorage.getItem('theme');
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    initTheme();
 
     const checkAuth = async () => {
       try {

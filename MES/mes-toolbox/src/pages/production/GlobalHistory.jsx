@@ -109,15 +109,15 @@ export default function GlobalHistory() {
           <History className="mr-2 text-blue-600 dark:text-blue-400" />
           Recent Transactions
         </h2>
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Latest 50 logs across all machines</p>
+        <p className="text-gray-500 dark:text-slate-400 dark:text-gray-400 text-sm">Latest 50 logs across all machines</p>
         
         <div className="mt-4 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+            <Search className="h-5 w-5 text-gray-400 dark:text-gray-500 dark:text-slate-400" />
           </div>
           <input
             type="text"
-            className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm transition-colors"
+            className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-slate-800 dark:bg-gray-950 text-gray-900 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm transition-colors"
             placeholder="Search by Machine, Job, or Employee..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -128,12 +128,12 @@ export default function GlobalHistory() {
       {/* Activity Log */}
       <div className="space-y-3">
         {loading ? (
-          <p className="text-center text-gray-500 py-8">Loading history...</p>
+          <p className="text-center text-gray-500 dark:text-slate-400 py-8">Loading history...</p>
         ) : filteredHistory.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">No matching transactions found.</p>
+          <p className="text-center text-gray-500 dark:text-slate-400 py-8">No matching transactions found.</p>
         ) : (
           filteredHistory.map((log) => (
-            <div key={log.transaction_id} className="flex flex-col p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-colors duration-300">
+            <div key={log.transaction_id} className="flex flex-col p-4 bg-white dark:bg-slate-800 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-slate-700 dark:border-gray-800 shadow-sm transition-colors duration-300">
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <p className={`font-bold text-lg ${
@@ -143,11 +143,11 @@ export default function GlobalHistory() {
                   }`}>
                     {log.transaction_type === 'PRODUCTION_FG' ? 'GOOD' : log.transaction_type === 'PRODUCTION_HOLD' ? 'HOLD' : 'SCRAP'}: +{Number(log.quantity)}
                   </p>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mt-1">
+                  <p className="text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-gray-200 mt-1">
                     {log.machine_name || log.location_name || 'Manual Log'}
                   </p>
                   {log.job_no && <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">Job: {log.job_no}</p>}
-                  {getDisplayName(log) && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">By: {getDisplayName(log)}</p>}
+                  {getDisplayName(log) && <p className="text-xs text-gray-500 dark:text-slate-400 dark:text-gray-400 mt-1">By: {getDisplayName(log)}</p>}
                   {log.notes && (
                     <div className="text-xs text-gray-400 dark:text-gray-600 mt-1 italic whitespace-pre-wrap">
                       {log.notes.replace(/\[TEAM_OVERRIDE:\s*[^\]]+\]\s*/g, '')}
@@ -182,16 +182,16 @@ export default function GlobalHistory() {
       {/* Edit Modal */}
       {showEditModal && editTxn && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 w-full max-w-sm border border-gray-200 dark:border-gray-800 shadow-2xl transition-colors duration-300">
+          <div className="bg-white dark:bg-slate-800 dark:bg-gray-900 rounded-3xl p-6 w-full max-w-sm border border-gray-200 dark:border-slate-700 dark:border-gray-800 shadow-2xl transition-colors duration-300">
             <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-white">
               <Edit2 className="mr-2 text-blue-600 dark:text-blue-400" /> Edit Quantity
             </h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-              Editing log for <span className="text-gray-700 dark:text-gray-200 font-bold">{editTxn.machine_name || editTxn.location_name}</span> 
+            <p className="text-gray-500 dark:text-slate-400 dark:text-gray-400 text-sm mb-6">
+              Editing log for <span className="text-gray-700 dark:text-slate-300 dark:text-gray-200 font-bold">{editTxn.machine_name || editTxn.location_name}</span> 
               {editTxn.job_no && ` (Job: ${editTxn.job_no})`}
             </p>
             
-            <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-950 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 mb-6 transition-colors">
+            <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-800/50 dark:bg-gray-950 p-4 rounded-2xl border border-gray-200 dark:border-slate-700 dark:border-gray-800 mb-6 transition-colors">
               <button 
                 onClick={() => setEditQty(prev => Math.max(1, prev - 1))}
                 className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-2xl text-blue-600 dark:text-blue-400 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
@@ -206,7 +206,7 @@ export default function GlobalHistory() {
             <div className="flex space-x-3">
               <button 
                 onClick={() => setShowEditModal(false)}
-                className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl font-bold flex justify-center items-center transition-colors"
+                className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-slate-300 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl font-bold flex justify-center items-center transition-colors"
               >
                 <X className="mr-2" size={20} /> Cancel
               </button>

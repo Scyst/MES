@@ -75,12 +75,12 @@ export default function QRScanner() {
           <QrCode className="mr-2 text-blue-600 dark:text-blue-400" />
           Scan QR Code
         </h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm transition-colors">Point your camera at a Machine ID or Employee Badge</p>
+        <p className="text-gray-500 dark:text-slate-400 dark:text-gray-400 mt-2 text-sm transition-colors">Point your camera at a Machine ID or Employee Badge</p>
       </div>
 
-      <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-800 min-h-[300px] flex items-center justify-center transition-colors duration-300">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-800 dark:bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-slate-700 dark:border-gray-800 min-h-[300px] flex items-center justify-center transition-colors duration-300">
         {!hasCamera && !scanResult && (
-          <p className="text-gray-500 p-4 text-center">Camera not found or permission denied.</p>
+          <p className="text-gray-500 dark:text-slate-400 p-4 text-center">Camera not found or permission denied.</p>
         )}
         
         {!scanResult ? (
@@ -92,14 +92,14 @@ export default function QRScanner() {
             </div>
             <h3 className="text-xl font-bold text-green-600 dark:text-green-400 mb-2">Scan Successful!</h3>
             <p className="text-gray-800 dark:text-gray-300 font-mono text-lg bg-gray-100 dark:bg-gray-950 py-2 rounded-lg transition-colors">{scanResult}</p>
-            <p className="text-gray-500 text-sm mt-4">Redirecting...</p>
+            <p className="text-gray-500 dark:text-slate-400 text-sm mt-4">Redirecting...</p>
           </div>
         )}
       </div>
 
       <button 
         onClick={() => navigate(-1)}
-        className="mt-8 flex items-center justify-center px-6 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors"
+        className="mt-8 flex items-center justify-center px-6 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-slate-300 dark:text-gray-300 rounded-full transition-colors"
       >
         <X className="mr-2" size={20} />
         Cancel Scanning

@@ -36,17 +36,17 @@ export default function MaintenanceForm({ isOpen, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden flex flex-col">
-        <div className="flex justify-between items-center p-4 border-b border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900">New Maintenance Request</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg w-full max-w-md overflow-hidden flex flex-col">
+        <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Maintenance Request</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-slate-300">
             <X size={20} />
           </button>
         </div>
         
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Machine / Line</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Machine / Line</label>
             <input 
               required
               type="text" 
@@ -58,7 +58,7 @@ export default function MaintenanceForm({ isOpen, onClose, onSuccess }) {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Issue Description</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Issue Description</label>
             <textarea 
               required
               rows={4}
@@ -70,7 +70,7 @@ export default function MaintenanceForm({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Priority</label>
             <select 
               className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               value={formData.priority}
@@ -87,7 +87,7 @@ export default function MaintenanceForm({ isOpen, onClose, onSuccess }) {
             <button 
               type="button" 
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 rounded-lg transition-colors"
             >
               Cancel
             </button>

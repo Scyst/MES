@@ -152,6 +152,38 @@
                                     <textarea class="pe-form-textarea" id="woFrmAction" rows="2" placeholder="สิ่งที่ทำ..."></textarea>
                                 </div>
                             </div>
+                            
+                            <!-- Spare Parts Section -->
+                            <div class="col-12" id="woSparePartsGroup" style="display:none;">
+                                <div class="pe-form-group">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="pe-form-label mb-0">Spare Parts Used</label>
+                                        <button type="button" class="pe-btn pe-btn-sm" style="background-color: var(--pe-primary-light); color: var(--pe-primary); border: 1px solid var(--pe-primary);" onclick="WorkOrderModule.openSparePartsModal()">
+                                            <i class="fas fa-plus"></i> เบิกอะไหล่
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--pe-border); border-radius: var(--pe-radius-sm);">
+                                        <table class="pe-table mb-0 pe-text-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Item</th>
+                                                    <th class="pe-text-end">Qty</th>
+                                                    <th class="pe-text-end">Cost</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="woSparePartsTableBody">
+                                                <tr><td colspan="3" class="pe-text-center pe-text-muted">No parts issued</td></tr>
+                                            </tbody>
+                                            <tfoot>
+                                                <tr style="background-color: var(--pe-bg-hover); font-weight: bold;">
+                                                    <td colspan="2" class="pe-text-end">Total Cost</td>
+                                                    <td class="pe-text-end text-danger" id="woSparePartsTotalCost">0.00</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="mt-auto pt-3" id="woImageAfterGroup" style="display:none;">
                             <div class="pe-form-group mb-0">

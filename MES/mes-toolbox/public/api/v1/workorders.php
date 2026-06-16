@@ -1,19 +1,11 @@
 <?php
-// MES/page/PE/api/workOrderAPI.php
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json; charset=utf-8');
-require_once __DIR__ . '/../../db.php';
-require_once __DIR__ . '/../../components/init.php';
+require_once __DIR__ . '/../core/init.php';
 
-
-requirePermission(['view_maintenance', 'view_production', 'view_dashboard']);
-
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'CSRF token validation failed.']);
-        exit;
-    }
-}
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit(0); }
 
 $input = json_decode(file_get_contents("php://input"), true) ?? $_POST;
 $action = $_REQUEST['action'] ?? $input['action'] ?? '';
@@ -195,8 +187,7 @@ try {
                 }
 
                 // Auto-set completed_at and repair_minutes when status = Completed
-                $isCompleted = ($input['status'] ?? '') === 'Completed';
-                if ($isCompleted) {
+                if (($input['status'] ?? '') === 'Completed') {
                     if (empty($input['completed_at'])) {
                         $fields[] = "completed_at = GETDATE()";
                     }
@@ -208,19 +199,6 @@ try {
                 $sql = "UPDATE " . PE_WORK_ORDERS_TABLE . " SET " . implode(", ", $fields) . " WHERE wo_id = ?";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute($params);
-
-                // Auto-close associated Downtime if this WO is completed
-                if ($isCompleted) {
-                    $dtStmt = $pdo->prepare("SELECT downtime_id FROM " . PE_DOWNTIME_LOG_TABLE . " WHERE wo_id = ? AND end_time IS NULL");
-                    $dtStmt->execute([$id]);
-                    $dtRecord = $dtStmt->fetch(PDO::FETCH_ASSOC);
-                    if ($dtRecord) {
-                        $completedAt = !empty($input['completed_at']) ? str_replace('T', ' ', $input['completed_at']) : date('Y-m-d H:i:s');
-                        $pdo->prepare("UPDATE " . PE_DOWNTIME_LOG_TABLE . " SET end_time = ? WHERE downtime_id = ?")
-                            ->execute([$completedAt, $dtRecord['downtime_id']]);
-                        writeLog($pdo, 'END_DOWNTIME', 'PE_DT_API', $dtRecord['downtime_id'], null, null, "Auto-closed via Work Order #$id completion");
-                    }
-                }
 
                 writeLog($pdo, 'UPDATE_WO', 'PE_WO_API', $id, null, null, "Status: " . ($input['status'] ?? 'N/A'));
 

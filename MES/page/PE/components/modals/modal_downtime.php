@@ -56,6 +56,7 @@
                                 <option value="Mechanical">Mechanical</option>
                                 <option value="Electrical">Electrical</option>
                                 <option value="Tooling">Tooling</option>
+                                <option value="Setup">Setup / Changeover</option>
                                 <option value="Quality">Quality</option>
                                 <option value="Material">Material</option>
                                 <option value="Operator">Operator</option>

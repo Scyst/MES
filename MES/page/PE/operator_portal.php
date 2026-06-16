@@ -193,31 +193,44 @@ try {
                         <input type="time" class="form-control" id="dt_start_time" name="start_time" required>
                     </div>
                     <div class="col-6">
-                        <label class="form-label">กลับมาเดิน <span class="text-danger">*</span></label>
-                        <input type="time" class="form-control" id="dt_end_time" name="end_time" required>
+                        <label class="form-label">กลับมาเดิน <small class="text-muted fw-normal" style="font-size:0.75rem;">(เว้นว่างได้)</small></label>
+                        <input type="time" class="form-control" id="dt_end_time" name="end_time">
                     </div>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">สาเหตุการหยุด <span class="text-danger">*</span></label>
                     <select class="form-select bg-light" id="dt_cause_category" name="cause_category" required>
-                        <option value="Machine Breakdown">เครื่องเสีย (Machine Breakdown)</option>
-                        <option value="Material Shortage">รอของ (Material Shortage)</option>
-                        <option value="Setup / Changeover">ตั้งเครื่อง/เปลี่ยนรุ่น (Setup)</option>
-                        <option value="Quality Issue">ปัญหาคุณภาพ (Quality Issue)</option>
+                        <option value="">-- ระบุหมวดหมู่ --</option>
+                        <option value="Mechanical">เครื่องกล (Mechanical)</option>
+                        <option value="Electrical">ไฟฟ้า/คอนโทรล (Electrical)</option>
+                        <option value="Tooling">แม่พิมพ์/อุปกรณ์ (Tooling)</option>
+                        <option value="Setup">ตั้งเครื่อง/เปลี่ยนรุ่น (Setup / Changeover)</option>
+                        <option value="Material">รอของ/วัตถุดิบ (Material Shortage)</option>
+                        <option value="Quality">ปัญหาคุณภาพ (Quality Issue)</option>
+                        <option value="Operator">พนักงาน (Operator)</option>
+                        <option value="Planned">หยุดตามแผน (Planned)</option>
                         <option value="Other">อื่นๆ (Other)</option>
                     </select>
                 </div>
 
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <label class="form-label">รายละเอียด/หมายเหตุ</label>
-                        <input type="text" class="form-control" id="dt_cause_detail" name="cause_detail" placeholder="ระบุสาเหตุการหยุด...">
+                        <label class="form-label">รายละเอียด/หมายเหตุ <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="dt_cause_detail" name="cause_detail" placeholder="ระบุสาเหตุการหยุด..." required>
                     </div>
                     <div class="col-6">
                         <label class="form-label">ผู้แก้ไข (ถ้ามี)</label>
                         <input type="text" class="form-control" id="dt_recovered_by" name="recovered_by" placeholder="ชื่อช่าง/พนักงาน...">
                     </div>
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input border-danger" id="dt_create_wo" name="create_wo" value="1">
+                    <label class="form-check-label text-danger fw-bold" for="dt_create_wo">
+                        สร้างใบแจ้งซ่อม (Work Order) ทันที
+                    </label>
+                    <div class="form-text" style="font-size: 0.75rem;">ติ๊กเลือกถ้าต้องการให้ช่างซ่อมบำรุงเข้ามาแก้ไขอาการนี้</div>
                 </div>
 
                 <button type="submit" class="btn btn-danger btn-app-primary mt-2">
@@ -260,7 +273,7 @@ try {
 
         <!-- Bottom Navigation -->
         <nav class="bottom-nav">
-            <button class="nav-item-btn text-muted" data-href="../dailyLog/dailyLogUI.php" title="กลับหน้าหลัก">
+            <button class="nav-item-btn text-muted" data-href="../dailyLog/dailyLogUI.php" title="กลับหน้าหลัก" data-icon="fa-home">
                 <i class="fas fa-home"></i><span>หน้าหลัก</span>
             </button>
             <button class="nav-item-btn active" data-target="section-request" data-title="แจ้งซ่อมเครื่องจักร" data-icon="fa-tools" data-color="text-primary"> 

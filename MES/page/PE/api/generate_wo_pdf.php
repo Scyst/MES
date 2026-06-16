@@ -50,17 +50,49 @@ if (!empty($wo['photo_after'])) {
     $photoAfterPath = '../../../' . ltrim($cleanPathAfter, '/');
 }
 
-$parts = preg_split('/[\r\n]+/', $wo['parts_used'] ?? '');
+$sqlParts = "SELECT ABS(t.quantity) AS quantity, i.uom, i.item_code, i.item_name, (ABS(t.quantity) * i.unit_price) AS total_cost 
+             FROM MT_TRANSACTIONS t WITH (NOLOCK)
+             JOIN MT_ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+             WHERE t.pe_wo_id = ? AND t.transaction_type = 'ISSUE'";
+$stmtParts = $pdo->prepare($sqlParts);
+$stmtParts->execute([$wo_id]);
+$partsData = $stmtParts->fetchAll(PDO::FETCH_ASSOC);
+
 $hasParts = false;
 $partsHtml = '';
-foreach ($parts as $part) {
-    $part = trim($part);
-    if (!empty($part)) {
-        $hasParts = true;
-        $partsHtml .= '<div class="value">- ' . htmlspecialchars(ltrim($part, '.-• ')) . '</div>';
-    }
+$totalCost = 0;
+
+$partsHtml = '<table class="spare-parts-table">';
+$partsHtml .= '<thead><tr><th>รหัสอะไหล่ (Code)</th><th>ชื่ออะไหล่ (Item Name)</th><th class="text-right">จำนวน (Qty)</th><th class="text-right">ราคารวม (Total Cost)</th></tr></thead>';
+$partsHtml .= '<tbody>';
+
+foreach ($partsData as $p) {
+    $hasParts = true;
+    $cost = floatval($p['total_cost']);
+    $totalCost += $cost;
+    
+    $qty = floatval($p['quantity']);
+    $uom = $p['uom'] ?? 'unit';
+    $name = $p['item_name'] ?? 'Unknown Part';
+    $code = $p['item_code'] ?? '-';
+    
+    $partsHtml .= '<tr>';
+    $partsHtml .= '<td>' . htmlspecialchars($code) . '</td>';
+    $partsHtml .= '<td>' . htmlspecialchars($name) . '</td>';
+    $partsHtml .= '<td class="text-right">' . $qty . ' ' . htmlspecialchars($uom) . '</td>';
+    $partsHtml .= '<td class="text-right">' . number_format($cost, 2) . ' ฿</td>';
+    $partsHtml .= '</tr>';
 }
-if (!$hasParts) $partsHtml = '<div class="value">-</div>';
+
+if (!$hasParts) {
+    $partsHtml .= '<tr><td colspan="4" class="text-center" style="color:#94a3b8;">ไม่มีการเบิกอะไหล่ (No parts issued)</td></tr>';
+}
+
+$partsHtml .= '</tbody>';
+if ($hasParts) {
+    $partsHtml .= '<tfoot><tr class="total-row"><td colspan="3" class="text-right">Total Cost (รวมราคาอะไหล่)</td><td class="text-right text-danger">' . number_format($totalCost, 2) . ' ฿</td></tr></tfoot>';
+}
+$partsHtml .= '</table>';
 
 ?>
 <!DOCTYPE html>
@@ -111,6 +143,10 @@ if (!$hasParts) $partsHtml = '<div class="value">-</div>';
             .page:last-child { page-break-after: auto; }
             
             table { page-break-inside: avoid; }
+            .spare-parts-table { page-break-inside: auto; }
+            .spare-parts-table tr { page-break-inside: avoid; page-break-after: auto; }
+            .spare-parts-table thead { display: table-header-group; }
+            .spare-parts-table tfoot { display: table-footer-group; }
         }
 
         /* --- STYLES --- */
@@ -141,6 +177,14 @@ if (!$hasParts) $partsHtml = '<div class="value">-</div>';
         .photo-content { height: 220px; display: flex; align-items: center; justify-content: center; background-color: #fff; padding: 10px; }
         .photo-content img { max-width: 100%; max-height: 100%; object-fit: contain; }
         .no-image { color: #94a3b8; font-size: 12px; font-style: italic; }
+
+        .spare-parts-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 12px; }
+        .spare-parts-table th, .spare-parts-table td { border: 1px solid #cbd5e1; padding: 6px 8px; }
+        .spare-parts-table th { background-color: #f1f5f9; font-weight: bold; text-align: left; color: #475569; }
+        .spare-parts-table .text-right { text-align: right; }
+        .spare-parts-table .text-center { text-align: center; }
+        .spare-parts-table .total-row td { background-color: #f8fafc; font-weight: bold; }
+        .spare-parts-table .text-danger { color: #b91c1c; }
 
         .signature-table { width: 100%; margin-top: 5px; }
         .signature-table td { width: 50%; text-align: center; }
@@ -282,14 +326,14 @@ if (!$hasParts) $partsHtml = '<div class="value">-</div>';
                 <td>
                     <div class="signature-space"></div>
                     <div class="signature-line">
-                        <div class="signature-name">( <?php echo htmlspecialchars($requested_by_display ?? '-'); ?> )</div>
+                        <div class="signature-name">( <?php echo !empty(trim($requested_by_display ?? '')) ? htmlspecialchars($requested_by_display) : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'; ?> )</div>
                         <div class="signature-title">REQUESTER SIGNATURE</div>
                     </div>
                 </td>
                 <td>
                     <div class="signature-space"></div>
                     <div class="signature-line">
-                        <div class="signature-name">( <?php echo htmlspecialchars($assigned_to_display ?? '-'); ?> )</div>
+                        <div class="signature-name">( <?php echo !empty(trim($assigned_to_display ?? '')) ? htmlspecialchars($assigned_to_display) : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'; ?> )</div>
                         <div class="signature-title">TECHNICIAN SIGNATURE</div>
                     </div>
                 </td>

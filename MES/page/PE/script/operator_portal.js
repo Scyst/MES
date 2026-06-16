@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('dt_start_date').value = todayStr;
     document.getElementById('dt_start_time').value = timeStr;
-    document.getElementById('dt_end_time').value = timeStr;
+    // document.getElementById('dt_end_time').value = timeStr; // Default to empty for ongoing downtime
 
     // Set display for request date
     const reqDisplay = document.getElementById('req_requested_at_display');
@@ -460,6 +460,15 @@ function renderDTHistory(items) {
         const endDate = item.end_time ? item.end_time.substring(0, 16) : '-';
         const duration = item.duration_min ? `${item.duration_min} นาที` : 'กำลังหยุด';
         const badgeColor = item.duration_min ? 'bg-secondary' : 'bg-danger';
+        let endBtnHtml = '';
+        if (!item.end_time) {
+            endBtnHtml = `
+            <div class="mt-2 text-end">
+                <button class="btn btn-sm btn-danger rounded-pill px-3 shadow-sm" onclick="endDowntime(${item.downtime_id})">
+                    <i class="fas fa-power-off"></i> จบการหยุดเครื่อง
+                </button>
+            </div>`;
+        }
 
         html += `
             <div class="history-card status-pending">
@@ -473,8 +482,38 @@ function renderDTHistory(items) {
                 <div class="history-meta mb-1"><i class="fas fa-play"></i> เริ่ม: ${startDate}</div>
                 <div class="history-meta mb-1"><i class="fas fa-stop"></i> จบ: ${endDate}</div>
                 <div class="history-meta"><strong>Note:</strong> ${item.cause_detail || '-'}</div>
+                ${endBtnHtml}
             </div>
         `;
     });
     container.innerHTML = html;
+}
+
+async function endDowntime(id) {
+    if (!confirm('ยืนยันจบการหยุดเครื่องสำหรับรายการนี้? (จะบันทึกเวลาจบเป็นเวลาปัจจุบัน)')) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('action', 'end_downtime');
+        formData.append('downtime_id', id);
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+        if (csrfToken) formData.append('csrf_token', csrfToken);
+        
+        const res = await fetch(API_DOWNTIME, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            alert('บันทึกเวลาจบเรียบร้อย');
+            loadCurrentHistory();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
 }

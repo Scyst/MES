@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, LogOut, Moon, Sun, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toggleTheme, isDarkMode as isDarkModeCheck } from '../../utils/theme';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -14,19 +15,11 @@ export default function Profile() {
     }
     
     // Check current theme
-    const theme = localStorage.getItem('theme') || 'dark';
-    setIsDarkMode(theme === 'dark');
+    setIsDarkMode(isDarkModeCheck());
   }, []);
 
-  const toggleTheme = () => {
-    const newTheme = isDarkMode ? 'light' : 'dark';
-    setIsDarkMode(!isDarkMode);
-    localStorage.setItem('theme', newTheme);
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+  const handleToggleTheme = () => {
+    setIsDarkMode(toggleTheme());
   };
 
   const handleLogout = () => {
@@ -59,7 +52,7 @@ export default function Profile() {
 
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-lg overflow-hidden transition-colors duration-300">
         <div 
-          onClick={toggleTheme}
+          onClick={handleToggleTheme}
           className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
         >
           <div className="flex items-center space-x-3 text-gray-700 dark:text-gray-300">

@@ -48,7 +48,7 @@ export default function MaintenanceList() {
       case 'Pending': return { color: 'text-red-600 bg-red-100', icon: <AlertTriangle size={14} /> };
       case 'In Progress': return { color: 'text-blue-600 bg-blue-100', icon: <Play size={14} /> };
       case 'Completed': return { color: 'text-green-600 bg-green-100', icon: <CheckCircle size={14} /> };
-      default: return { color: 'text-gray-600 bg-gray-100', icon: <Clock size={14} /> };
+      default: return { color: 'text-gray-600 dark:text-slate-300 bg-gray-100 dark:bg-slate-700', icon: <Clock size={14} /> };
     }
   };
 
@@ -56,43 +56,43 @@ export default function MaintenanceList() {
     <div className="h-full flex flex-col space-y-4">
       {/* Dashboard Summary Panel */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-600 flex justify-between items-center">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border-l-4 border-blue-600 flex justify-between items-center">
           <div>
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Requests</p>
+            <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total Requests</p>
             <p className="text-2xl font-bold text-blue-600">{summary.sumTotal || 0}</p>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-600 flex justify-between items-center">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border-l-4 border-green-600 flex justify-between items-center">
           <div>
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Completed</p>
+            <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Completed</p>
             <p className="text-2xl font-bold text-green-600">{summary.sumCompleted || 0}</p>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-500 flex justify-between items-center">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border-l-4 border-yellow-500 flex justify-between items-center">
           <div>
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Pending</p>
+            <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Pending</p>
             <p className="text-2xl font-bold text-yellow-500">{summary.sumPending || 0}</p>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-cyan-500 flex justify-between items-center">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border-l-4 border-cyan-500 flex justify-between items-center">
           <div>
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Avg Repair Time</p>
+            <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Avg Repair Time</p>
             <p className="text-2xl font-bold text-cyan-500">{summary.sumAvgTime || 0} <span className="text-sm">min</span></p>
           </div>
         </div>
       </div>
 
       {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 dark:border-slate-700">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Maintenance Requests</h2>
-          <p className="text-sm text-gray-500">Manage and track machine breakdowns</p>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Maintenance Requests</h2>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Manage and track machine breakdowns</p>
         </div>
         <div className="flex w-full sm:w-auto items-center gap-2">
           <select 
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="flex-1 sm:flex-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            className="flex-1 sm:flex-none border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
           >
             <option value="Active">Active (Pending + In Progress)</option>
             <option value="">All Status</option>
@@ -117,7 +117,7 @@ export default function MaintenanceList() {
           Error: {error}
         </div>
       ) : requests.length === 0 ? (
-        <div className="flex-1 flex flex-col justify-center items-center text-gray-500 bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="flex-1 flex flex-col justify-center items-center text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 dark:border-slate-700">
           <CheckCircle size={48} className="text-gray-300 mb-4" />
           <p className="text-lg font-medium">No maintenance requests found</p>
           <p className="text-sm">Everything is running smoothly.</p>
@@ -127,11 +127,11 @@ export default function MaintenanceList() {
           {requests.map(req => {
             const statusConfig = getStatusConfig(req.status);
             return (
-              <div key={req.job_id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+              <div key={req.job_id} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 dark:border-slate-700 hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{req.job_id}</span>
-                    <h3 className="font-bold text-gray-900 mt-1">{req.machine_name || req.machine_id}</h3>
+                    <span className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">{req.job_id}</span>
+                    <h3 className="font-bold text-gray-900 dark:text-white mt-1">{req.machine_name || req.machine_id}</h3>
                   </div>
                   <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${statusConfig.color}`}>
                     {statusConfig.icon}
@@ -139,17 +139,17 @@ export default function MaintenanceList() {
                   </span>
                 </div>
                 
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2 min-h-[2.5rem]">
+                <p className="text-sm text-gray-600 dark:text-slate-300 mb-4 line-clamp-2 min-h-[2.5rem]">
                   {req.issue_description}
                 </p>
 
-                <div className="flex justify-between items-center text-xs text-gray-500 pt-3 border-t border-gray-100">
+                <div className="flex justify-between items-center text-xs text-gray-500 dark:text-slate-400 pt-3 border-t border-gray-100 dark:border-slate-800 dark:border-slate-700">
                   <div className="flex flex-col">
-                    <span className="font-medium text-gray-700">{req.requester_name || req.request_by}</span>
+                    <span className="font-medium text-gray-700 dark:text-slate-300">{req.requester_name || req.request_by}</span>
                     <span>{new Date(req.request_date).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                   {req.line && (
-                    <span className="bg-gray-100 px-2 py-1 rounded font-medium">
+                    <span className="bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded font-medium">
                       Line: {req.line}
                     </span>
                   )}

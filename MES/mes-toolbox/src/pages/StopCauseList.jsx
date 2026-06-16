@@ -35,10 +35,10 @@ export default function StopCauseList() {
   return (
     <div className="h-full flex flex-col space-y-4">
       {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 dark:border-slate-700">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Stop Causes History</h2>
-          <p className="text-sm text-gray-500">View and analyze machine downtime events</p>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Stop Causes History</h2>
+          <p className="text-sm text-gray-500 dark:text-slate-400">View and analyze machine downtime events</p>
         </div>
         <div className="flex w-full sm:w-auto items-center gap-2">
           <div className="relative flex-1 sm:flex-none">
@@ -46,10 +46,10 @@ export default function StopCauseList() {
             <input 
               type="text" 
               placeholder="Search Machine, Cause..." 
-              className="w-full sm:w-64 border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full sm:w-64 border border-gray-300 dark:border-slate-600 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
-          <button className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-colors">
+          <button className="bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:bg-slate-800/50 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-colors">
             <Download size={16} />
             <span className="hidden sm:inline">Export</span>
           </button>
@@ -61,7 +61,7 @@ export default function StopCauseList() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+      <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 dark:border-slate-700 overflow-hidden flex flex-col">
         {loading ? (
           <div className="flex-1 flex justify-center items-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -71,7 +71,7 @@ export default function StopCauseList() {
             Error: {error}
           </div>
         ) : stops.length === 0 ? (
-          <div className="flex-1 flex flex-col justify-center items-center text-gray-500">
+          <div className="flex-1 flex flex-col justify-center items-center text-gray-500 dark:text-slate-400">
             <History size={48} className="text-gray-300 mb-4" />
             <p className="text-lg font-medium">No stop history found</p>
             <p className="text-sm">Try adjusting your search filters.</p>
@@ -79,7 +79,7 @@ export default function StopCauseList() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
+              <thead className="text-xs text-gray-500 dark:text-slate-400 uppercase bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 dark:border-slate-700">
                 <tr>
                   <th className="px-4 py-3 font-medium">Date</th>
                   <th className="px-4 py-3 font-medium">Start - End</th>
@@ -92,17 +92,17 @@ export default function StopCauseList() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {stops.map(stop => (
-                  <tr key={stop.id || stop.stop_id} className="hover:bg-gray-50/50">
+                  <tr key={stop.id || stop.stop_id} className="hover:bg-gray-50 dark:bg-slate-800/50/50">
                     <td className="px-4 py-3">{stop.date || stop.stop_date}</td>
                     <td className="px-4 py-3">
                       {stop.start_time} - {stop.end_time || 'Running'}
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                       {stop.duration ? `${stop.duration} min` : '-'}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{stop.machine_name || stop.machine_id}</div>
-                      <div className="text-xs text-gray-500">{stop.line}</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{stop.machine_name || stop.machine_id}</div>
+                      <div className="text-xs text-gray-500 dark:text-slate-400">{stop.line}</div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700 border border-red-100">
@@ -110,7 +110,7 @@ export default function StopCauseList() {
                       </span>
                     </td>
                     <td className="px-4 py-3">{stop.recoverer || stop.resolved_by}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-xs truncate" title={stop.note}>{stop.note}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-slate-400 max-w-xs truncate" title={stop.note}>{stop.note}</td>
                   </tr>
                 ))}
               </tbody>

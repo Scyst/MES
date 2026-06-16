@@ -174,7 +174,7 @@ const WorkOrderModule = (() => {
         document.getElementById('woFrmStatus').value = 'Open';
 
         // Show/hide tech section
-        const techFields = ['woTechSection', 'woAssignedToGroup', 'woStartedAtGroup', 'woCompletedAtGroup', 'woStatusGroup', 'woRepairMinGroup', 'woRootCauseGroup', 'woActionGroup', 'woImageAfterGroup'];
+        const techFields = ['woTechSection', 'woAssignedToGroup', 'woStartedAtGroup', 'woCompletedAtGroup', 'woStatusGroup', 'woRepairMinGroup', 'woRootCauseGroup', 'woActionGroup', 'woSparePartsGroup', 'woImageAfterGroup'];
         techFields.forEach(id => { document.getElementById(id).style.display = isEdit ? '' : 'none'; });
 
         // Reset images
@@ -251,6 +251,9 @@ const WorkOrderModule = (() => {
                         if (dropzoneAfter) dropzoneAfter.classList.add('has-image');
                     }
                 }
+                
+                // Load spare parts used
+                loadSpareParts(editId);
             }
         }
 
@@ -574,5 +577,187 @@ const WorkOrderModule = (() => {
         window.open(PE_CONFIG.apiBase + 'generate_wo_pdf.php?wo_id=' + woId, '_blank');
     }
 
-    return { loadData, filterTable, setView, openModal, save, deleteItem, restoreItem, exportExcel, onMachineChange, printPDF };
+    // --- Spare Parts Management ---
+    let availableParts = [];
+
+    async function loadSpareParts(woId) {
+        const tbody = document.getElementById('woSparePartsTableBody');
+        const totalCostEl = document.getElementById('woSparePartsTotalCost');
+        if (!tbody || !totalCostEl) return;
+
+        try {
+            const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_wo_parts', wo_id: woId });
+            const parts = res.data.parts_used || [];
+            
+            if (parts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="pe-text-center pe-text-muted">No parts issued</td></tr>';
+                totalCostEl.textContent = '0.00';
+            } else {
+                tbody.innerHTML = parts.map(p => `
+                    <tr>
+                        <td>${PEApp.escapeHtml(p.item_name)} <div class="pe-text-xs pe-text-muted">${PEApp.escapeHtml(p.item_code)}</div></td>
+                        <td class="pe-text-end">${parseFloat(p.quantity).toLocaleString()} ${PEApp.escapeHtml(p.uom)}</td>
+                        <td class="pe-text-end text-danger d-flex justify-content-end align-items-center gap-2">
+                            ${parseFloat(p.total_cost).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0 m-0" onclick="WorkOrderModule.deleteSparePart(${p.transaction_id})" title="Delete Part">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+                totalCostEl.textContent = parseFloat(res.data.grand_total).toLocaleString('en-US', {minimumFractionDigits: 2});
+            }
+        } catch (e) {
+            console.error('Error loading parts:', e);
+        }
+    }
+
+    async function openSparePartsModal() {
+        const woId = document.getElementById('woEditId')?.value;
+        if (!woId) {
+            PEApp.showToast('กรุณาสร้างและบันทึก Work Order ก่อนเบิกอะไหล่', 'warning');
+            return;
+        }
+
+        try {
+            const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_available_parts' });
+            availableParts = res.data || [];
+            
+            const itemSel = document.getElementById('woIssueItem');
+            itemSel.innerHTML = '<option value="">-- เลือกอะไหล่ --</option>';
+            
+            // Group locations by item to easily populate location dropdown
+            const uniqueItems = [];
+            const itemMap = new Map();
+            availableParts.forEach(p => {
+                if (!itemMap.has(p.item_id)) {
+                    itemMap.set(p.item_id, true);
+                    uniqueItems.push(p);
+                }
+            });
+            
+            uniqueItems.forEach(p => {
+                itemSel.add(new Option(`${p.item_code} - ${p.item_name}`, p.item_id));
+            });
+
+            document.getElementById('woIssueQty').value = '';
+            document.getElementById('woIssueNotes').value = '';
+            document.getElementById('woIssueLocation').innerHTML = '<option value="">-- เลือกคลังจัดเก็บ --</option>';
+            document.getElementById('woIssueMaxQty').textContent = 'ยอดคงเหลือ: 0';
+            document.getElementById('woIssuePrice').value = '';
+            document.getElementById('woIssueItemDesc').textContent = '';
+
+            PEApp.showModal('woIssuePartModal');
+        } catch (e) {
+            PEApp.showToast('ไม่สามารถดึงข้อมูลอะไหล่ได้: ' + e.message, 'error');
+        }
+    }
+
+    function onSparePartChange() {
+        const itemId = document.getElementById('woIssueItem').value;
+        const locSel = document.getElementById('woIssueLocation');
+        const maxQty = document.getElementById('woIssueMaxQty');
+        const priceInput = document.getElementById('woIssuePrice');
+        const descDiv = document.getElementById('woIssueItemDesc');
+        
+        locSel.innerHTML = '<option value="">-- เลือกคลังจัดเก็บ --</option>';
+        
+        if (!itemId) {
+            maxQty.textContent = 'ยอดคงเหลือ: 0';
+            priceInput.value = '';
+            descDiv.textContent = '';
+            return;
+        }
+
+        const parts = availableParts.filter(p => p.item_id == itemId);
+        if (parts.length > 0) {
+            const p = parts[0];
+            descDiv.textContent = `หน่วย: ${p.uom}`;
+            priceInput.value = parseFloat(p.unit_price).toLocaleString('en-US', {minimumFractionDigits: 2});
+            
+            parts.forEach(loc => {
+                locSel.add(new Option(`${loc.location_name} (คงเหลือ: ${parseFloat(loc.onhand_qty)})`, loc.location_id));
+            });
+
+            // Auto select if only one location
+            if (parts.length === 1) {
+                locSel.value = parts[0].location_id;
+                maxQty.textContent = `ยอดคงเหลือ: ${parseFloat(parts[0].onhand_qty)} ${p.uom}`;
+                document.getElementById('woIssueQty').max = parts[0].onhand_qty;
+            }
+
+            locSel.onchange = () => {
+                const selectedLoc = parts.find(x => x.location_id == locSel.value);
+                if (selectedLoc) {
+                    maxQty.textContent = `ยอดคงเหลือ: ${parseFloat(selectedLoc.onhand_qty)} ${p.uom}`;
+                    document.getElementById('woIssueQty').max = selectedLoc.onhand_qty;
+                } else {
+                    maxQty.textContent = `ยอดคงเหลือ: 0`;
+                }
+            };
+        }
+    }
+
+    async function confirmIssuePart() {
+        const woId = document.getElementById('woEditId')?.value;
+        const itemId = document.getElementById('woIssueItem').value;
+        const locationId = document.getElementById('woIssueLocation').value;
+        const qty = parseFloat(document.getElementById('woIssueQty').value);
+        const notes = document.getElementById('woIssueNotes').value;
+
+        if (!woId || !itemId || !locationId || !qty || qty <= 0) {
+            PEApp.showToast('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง', 'warning');
+            return;
+        }
+
+        // Check stock
+        const maxQty = parseFloat(document.getElementById('woIssueQty').max || 0);
+        if (qty > maxQty) {
+            PEApp.showToast(`จำนวนที่เบิก (${qty}) เกินยอดคงเหลือ (${maxQty})`, 'error');
+            return;
+        }
+
+        try {
+            await PEApp.apiCall('sparePartsAPI.php', {}, 'POST', {
+                action: 'issue_parts',
+                wo_id: woId,
+                parts: [{ item_id: itemId, location_id: locationId, quantity: qty }],
+                notes: notes
+            });
+            
+            PEApp.showToast('เบิกอะไหล่เรียบร้อย', 'success');
+            PEApp.hideModal('woIssuePartModal');
+            
+            // Reload table
+            loadSpareParts(woId);
+            loadData(); // Reload main WO list to update cost if needed
+        } catch (e) {
+            PEApp.showToast(e.message, 'error');
+        }
+    }
+
+    async function deleteSparePart(txId) {
+        if (!confirm('ยืนยันที่จะลบรายการเบิกอะไหล่นี้และคืนสต๊อก?')) return;
+
+        const woId = document.getElementById('woEditId')?.value;
+        if (!woId) return;
+
+        try {
+            await PEApp.apiCall('sparePartsAPI.php', {}, 'POST', {
+                action: 'delete_wo_part',
+                wo_id: woId,
+                transaction_id: txId
+            });
+            
+            PEApp.showToast('ลบรายการเบิกเรียบร้อย', 'success');
+            
+            // Reload table
+            loadSpareParts(woId);
+            loadData();
+        } catch (e) {
+            PEApp.showToast(e.message, 'error');
+        }
+    }
+
+    return { loadData, filterTable, setView, openModal, save, deleteItem, restoreItem, exportExcel, onMachineChange, printPDF, openSparePartsModal, onSparePartChange, confirmIssuePart, deleteSparePart };
 })();

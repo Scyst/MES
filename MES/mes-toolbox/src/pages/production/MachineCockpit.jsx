@@ -191,7 +191,7 @@ export default function MachineCockpit({ type = 'machine' }) {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 gap-2">
         <div className="flex items-center space-x-3 min-w-0 flex-1">
-          <button onClick={() => navigate(-1)} className="p-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0 transition-colors">
+          <button onClick={() => navigate(-1)} className="p-2 bg-gray-100 dark:bg-slate-700 dark:bg-gray-800 text-gray-900 dark:text-white rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0 transition-colors">
             <ChevronLeft size={24} />
           </button>
           <div className="min-w-0 flex-1 pr-2">
@@ -217,7 +217,7 @@ export default function MachineCockpit({ type = 'machine' }) {
               </div>
             )})}
           </div>
-          <button onClick={() => setShowTeamModal(true)} className="flex-shrink-0 flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 px-3 py-2 rounded-full text-sm font-medium transition-colors">
+          <button onClick={() => setShowTeamModal(true)} className="flex-shrink-0 flex items-center space-x-2 bg-gray-100 dark:bg-slate-700 dark:bg-gray-800 text-gray-700 dark:text-slate-300 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 px-3 py-2 rounded-full text-sm font-medium transition-colors">
             <UserPlus size={16} />
           </button>
         </div>
@@ -228,12 +228,12 @@ export default function MachineCockpit({ type = 'machine' }) {
         <div className="space-y-6">
           
           {/* Job Selector */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-2xl shadow-lg transition-colors">
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Active Job Order</label>
+          <div className="bg-white dark:bg-slate-800 dark:bg-gray-900 border border-gray-200 dark:border-slate-700 dark:border-gray-800 p-4 rounded-2xl shadow-lg transition-colors">
+            <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 dark:text-gray-400 uppercase tracking-wider mb-2">Active Job Order</label>
             <select 
               value={selectedJob} 
               onChange={(e) => setSelectedJob(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full bg-gray-50 dark:bg-slate-800/50 dark:bg-gray-800 border border-gray-200 dark:border-slate-700 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors"
             >
               <option value="">-- Manual Entry (No Job Linked) --</option>
               {activeJobs.map(job => (
@@ -245,11 +245,11 @@ export default function MachineCockpit({ type = 'machine' }) {
           </div>
 
           {/* Quick Stepper Input */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 rounded-3xl text-center shadow-lg transition-colors">
-            <p className="text-gray-500 dark:text-gray-400 font-bold mb-4 uppercase tracking-wider text-xs">Production Quantity</p>
+          <div className="bg-white dark:bg-slate-800 dark:bg-gray-900 border border-gray-200 dark:border-slate-700 dark:border-gray-800 p-6 rounded-3xl text-center shadow-lg transition-colors">
+            <p className="text-gray-500 dark:text-slate-400 dark:text-gray-400 font-bold mb-4 uppercase tracking-wider text-xs">Production Quantity</p>
             
             <div className="flex items-center justify-center space-x-4 mb-6">
-              <button onClick={() => adjustQty(-1)} className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:bg-gray-200 dark:active:bg-gray-700 transition-colors">-1</button>
+              <button onClick={() => adjustQty(-1)} className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-slate-700 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-slate-300 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:bg-gray-200 dark:active:bg-gray-700 transition-colors">-1</button>
               
               <div className="relative">
                 <input 
@@ -257,17 +257,17 @@ export default function MachineCockpit({ type = 'machine' }) {
                   inputMode="numeric"
                   value={qty}
                   onChange={(e) => setQty(parseInt(e.target.value) || 0)}
-                  className="w-32 bg-gray-50 dark:bg-gray-950 border-2 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-center text-5xl font-black py-4 rounded-3xl focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-32 bg-gray-50 dark:bg-slate-800/50 dark:bg-gray-950 border-2 border-gray-200 dark:border-slate-700 dark:border-gray-800 text-gray-900 dark:text-white text-center text-5xl font-black py-4 rounded-3xl focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
               
-              <button onClick={() => adjustQty(1)} className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:bg-gray-200 dark:active:bg-gray-700 transition-colors">+1</button>
+              <button onClick={() => adjustQty(1)} className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-slate-700 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-slate-300 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:bg-gray-200 dark:active:bg-gray-700 transition-colors">+1</button>
             </div>
 
             <div className="flex justify-center space-x-2">
-              <button onClick={() => adjustQty(10)} className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">+10</button>
-              <button onClick={() => adjustQty(50)} className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">+50</button>
-              <button onClick={() => adjustQty(100)} className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">+100</button>
+              <button onClick={() => adjustQty(10)} className="px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 dark:bg-gray-800 text-gray-700 dark:text-slate-300 dark:text-white text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">+10</button>
+              <button onClick={() => adjustQty(50)} className="px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 dark:bg-gray-800 text-gray-700 dark:text-slate-300 dark:text-white text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">+50</button>
+              <button onClick={() => adjustQty(100)} className="px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 dark:bg-gray-800 text-gray-700 dark:text-slate-300 dark:text-white text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">+100</button>
               <button onClick={() => setQty(0)} className="px-4 py-2 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">Reset</button>
             </div>
           </div>
@@ -277,11 +277,11 @@ export default function MachineCockpit({ type = 'machine' }) {
             <button onClick={() => submitLog('FG')} className="col-span-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 p-4 rounded-2xl font-bold text-lg text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] flex justify-center items-center">
               <CheckCircle2 className="mr-2" /> Log Good Parts (FG)
             </button>
-            <button onClick={() => submitLog('HOLD')} className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-yellow-200 dark:border-yellow-500/30 p-4 rounded-2xl font-bold text-yellow-600 dark:text-yellow-400 flex flex-col items-center justify-center shadow-sm transition-colors">
+            <button onClick={() => submitLog('HOLD')} className="bg-white dark:bg-slate-800 dark:bg-gray-800 hover:bg-gray-50 dark:bg-slate-800/50 dark:hover:bg-gray-700 border border-yellow-200 dark:border-yellow-500/30 p-4 rounded-2xl font-bold text-yellow-600 dark:text-yellow-400 flex flex-col items-center justify-center shadow-sm transition-colors">
               <Clock className="mb-2" />
               <span className="text-sm">Log Hold Parts</span>
             </button>
-            <button onClick={() => submitLog('SCRAP')} className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-red-200 dark:border-red-500/30 p-4 rounded-2xl font-bold text-red-600 dark:text-red-400 flex flex-col items-center justify-center shadow-sm transition-colors">
+            <button onClick={() => submitLog('SCRAP')} className="bg-white dark:bg-slate-800 dark:bg-gray-800 hover:bg-gray-50 dark:bg-slate-800/50 dark:hover:bg-gray-700 border border-red-200 dark:border-red-500/30 p-4 rounded-2xl font-bold text-red-600 dark:text-red-400 flex flex-col items-center justify-center shadow-sm transition-colors">
               <AlertOctagon className="mb-2" />
               <span className="text-sm">Log Scrap</span>
             </button>
@@ -289,20 +289,20 @@ export default function MachineCockpit({ type = 'machine' }) {
         </div>
 
         {/* Right Column: History */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 flex flex-col h-full max-h-[600px] shadow-lg transition-colors">
+        <div className="bg-white dark:bg-slate-800 dark:bg-gray-900 border border-gray-200 dark:border-slate-700 dark:border-gray-800 rounded-3xl p-6 flex flex-col h-full max-h-[600px] shadow-lg transition-colors">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold text-gray-900 dark:text-gray-300">Today's Log History</h3>
-            <button onClick={fetchHistory} className="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
+            <button onClick={fetchHistory} className="text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white transition-colors">
               <RefreshCcw size={18} className={loadingHistory ? "animate-spin" : ""} />
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-hide">
             {history.length === 0 && !loadingHistory ? (
-              <div className="text-center text-gray-500 mt-10">No logs for today yet.</div>
+              <div className="text-center text-gray-500 dark:text-slate-400 mt-10">No logs for today yet.</div>
             ) : (
               history.map((log) => (
-                <div key={log.transaction_id} className="flex flex-col p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700/50 transition-colors">
+                <div key={log.transaction_id} className="flex flex-col p-3 bg-gray-50 dark:bg-slate-800/50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-slate-700 dark:border-gray-700/50 transition-colors">
                   <div className="flex justify-between items-start mb-1">
                     <div>
                       <p className={`font-bold text-lg ${
@@ -313,7 +313,7 @@ export default function MachineCockpit({ type = 'machine' }) {
                         {log.transaction_type === 'PRODUCTION_FG' ? 'GOOD' : log.transaction_type === 'PRODUCTION_HOLD' ? 'HOLD' : 'SCRAP'}: +{Number(log.quantity)}
                       </p>
                       {log.job_no && <p className="text-xs font-bold text-blue-600 dark:text-blue-300">Job: {log.job_no}</p>}
-                      <p className="text-xs text-gray-500">{new Date(log.transaction_timestamp).toLocaleTimeString()}</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">{new Date(log.transaction_timestamp).toLocaleTimeString()}</p>
                     </div>
                     <div className="flex space-x-1">
                       <button 
@@ -342,7 +342,7 @@ export default function MachineCockpit({ type = 'machine' }) {
       {/* Team Modal */}
       {showTeamModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl w-full max-w-md p-6 shadow-2xl transition-colors">
+          <div className="bg-white dark:bg-slate-800 dark:bg-gray-900 border border-gray-200 dark:border-slate-700 dark:border-gray-800 rounded-3xl w-full max-w-md p-6 shadow-2xl transition-colors">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">Select Operators</h3>
               <button onClick={() => setShowTeamModal(false)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"><X size={24} /></button>
@@ -355,7 +355,7 @@ export default function MachineCockpit({ type = 'machine' }) {
                 placeholder="Search name or ID..."
                 value={teamSearch}
                 onChange={(e) => setTeamSearch(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-gray-50 dark:bg-slate-800/50 dark:bg-gray-800 border border-gray-200 dark:border-slate-700 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
 
@@ -372,11 +372,11 @@ export default function MachineCockpit({ type = 'machine' }) {
                     key={member.id}
                     onClick={() => toggleTeamMember(member)}
                     className={`w-full flex items-center justify-between p-3 rounded-xl border transition-colors ${
-                      isActive ? 'bg-blue-100 dark:bg-blue-600/20 border-blue-500 text-blue-800 dark:text-blue-100' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      isActive ? 'bg-blue-100 dark:bg-blue-600/20 border-blue-500 text-blue-800 dark:text-blue-100' : 'bg-gray-50 dark:bg-slate-800/50 dark:bg-gray-800 border-gray-200 dark:border-slate-700 dark:border-gray-700 text-gray-700 dark:text-slate-300 dark:text-gray-300 hover:bg-gray-100 dark:bg-slate-700 dark:hover:bg-gray-700'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${isActive ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-white'}`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${isActive ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-slate-300 dark:text-white'}`}>
                         {member.name.substring(0, 2).toUpperCase()}
                       </div>
                       <div className="text-left">
@@ -399,20 +399,20 @@ export default function MachineCockpit({ type = 'machine' }) {
       {/* Edit Modal */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl w-full max-w-xs p-6 shadow-2xl text-center transition-colors">
+          <div className="bg-white dark:bg-slate-800 dark:bg-gray-900 border border-gray-200 dark:border-slate-700 dark:border-gray-800 rounded-3xl w-full max-w-xs p-6 shadow-2xl text-center transition-colors">
             <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Edit Quantity</h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Enter correct quantity. Original: {editTxn ? Number(editTxn.quantity) : 0}</p>
+            <p className="text-gray-500 dark:text-slate-400 dark:text-gray-400 text-sm mb-6">Enter correct quantity. Original: {editTxn ? Number(editTxn.quantity) : 0}</p>
             
             <input 
               type="number" 
               inputMode="numeric"
               value={editQty}
               onChange={(e) => setEditQty(parseInt(e.target.value) || 0)}
-              className="w-full bg-gray-50 dark:bg-gray-950 border-2 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-center text-4xl font-black py-4 rounded-2xl focus:outline-none focus:border-blue-500 mb-6 transition-colors"
+              className="w-full bg-gray-50 dark:bg-slate-800/50 dark:bg-gray-950 border-2 border-gray-200 dark:border-slate-700 dark:border-gray-800 text-gray-900 dark:text-white text-center text-4xl font-black py-4 rounded-2xl focus:outline-none focus:border-blue-500 mb-6 transition-colors"
             />
             
             <div className="flex space-x-3">
-              <button onClick={() => setShowEditModal(false)} className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">Cancel</button>
+              <button onClick={() => setShowEditModal(false)} className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-slate-700 dark:bg-gray-800 text-gray-700 dark:text-slate-300 dark:text-gray-300 font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">Cancel</button>
               <button onClick={submitEdit} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 transition-colors">Save</button>
             </div>
           </div>

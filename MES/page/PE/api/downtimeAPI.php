@@ -115,18 +115,21 @@ try {
             $causeCategory = $input['cause_category'] ?? '';
             $causeDetail = trim($input['cause_detail'] ?? '');
 
-            if (empty($logDate) || empty($startTime) || empty($endTime) || empty($causeCategory) || empty($causeDetail)) {
-                throw new Exception("กรุณากรอกข้อมูลให้ครบถ้วน (Date, Start, End, Cause Category, Cause Detail)");
+            if (empty($logDate) || empty($startTime) || empty($causeCategory) || empty($causeDetail)) {
+                throw new Exception("กรุณากรอกข้อมูลให้ครบถ้วน (Date, Start, Cause Category, Cause Detail)");
             }
 
             $startDt = $logDate . ' ' . $startTime;
-            $endDt = $logDate . ' ' . $endTime;
+            $endDt = null;
 
-            // Handle overnight
-            $startTs = strtotime($startDt);
-            $endTs = strtotime($endDt);
-            if ($endTs < $startTs) {
-                $endDt = date('Y-m-d', strtotime($logDate . ' +1 day')) . ' ' . $endTime;
+            if (!empty($endTime)) {
+                $endDt = $logDate . ' ' . $endTime;
+                // Handle overnight
+                $startTs = strtotime($startDt);
+                $endTs = strtotime($endDt);
+                if ($endTs < $startTs) {
+                    $endDt = date('Y-m-d', strtotime($logDate . ' +1 day')) . ' ' . $endTime;
+                }
             }
 
             // Get machine info
@@ -195,9 +198,12 @@ try {
             $endTime = $input['end_time'] ?? '';
 
             $startDt = $logDate . ' ' . $startTime;
-            $endDt = $logDate . ' ' . $endTime;
-            if (strtotime($endDt) < strtotime($startDt)) {
-                $endDt = date('Y-m-d', strtotime($logDate . ' +1 day')) . ' ' . $endTime;
+            $endDt = null;
+            if (!empty($endTime)) {
+                $endDt = $logDate . ' ' . $endTime;
+                if (strtotime($endDt) < strtotime($startDt)) {
+                    $endDt = date('Y-m-d', strtotime($logDate . ' +1 day')) . ' ' . $endTime;
+                }
             }
 
             $sql = "UPDATE " . PE_DOWNTIME_LOG_TABLE . " SET 
@@ -226,6 +232,26 @@ try {
             $pdo->prepare("DELETE FROM " . PE_DOWNTIME_LOG_TABLE . " WHERE downtime_id = ?")->execute([$id]);
             writeLog($pdo, 'DELETE_DOWNTIME', 'PE_DT_API', $id, null, null, "Deleted by " . $currentUser['username']);
             echo json_encode(['success' => true, 'message' => 'Downtime deleted']);
+            break;
+
+        case 'end_downtime':
+            $id = $input['downtime_id'] ?? null;
+            $endTime = $input['end_time'] ?? date('H:i'); // default to current time
+            if (!$id) throw new Exception("Downtime ID is required");
+
+            $stmt = $pdo->prepare("SELECT log_date, start_time FROM " . PE_DOWNTIME_LOG_TABLE . " WHERE downtime_id = ?");
+            $stmt->execute([$id]);
+            $dt = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$dt) throw new Exception("Downtime record not found");
+
+            $endDt = $dt['log_date'] . ' ' . $endTime;
+            if (strtotime($endDt) < strtotime($dt['start_time'])) {
+                $endDt = date('Y-m-d', strtotime($dt['log_date'] . ' +1 day')) . ' ' . $endTime;
+            }
+
+            $pdo->prepare("UPDATE " . PE_DOWNTIME_LOG_TABLE . " SET end_time = ? WHERE downtime_id = ?")->execute([$endDt, $id]);
+            writeLog($pdo, 'END_DOWNTIME', 'PE_DT_API', $id, null, null, "Ended at $endDt by " . $currentUser['username']);
+            echo json_encode(['success' => true, 'message' => 'Downtime ended successfully']);
             break;
 
         default:

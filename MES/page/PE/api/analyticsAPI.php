@@ -26,9 +26,9 @@ try {
         case 'get_kpi_overview':
             // Total downtime
             $dtSql = "SELECT 
-                        ISNULL(SUM(duration_min), 0) as total_downtime_min,
+                        ISNULL(SUM(ISNULL(duration_min, DATEDIFF(MINUTE, start_time, GETDATE()))), 0) as total_downtime_min,
                         COUNT(*) as total_events,
-                        ISNULL(AVG(CAST(duration_min AS FLOAT)), 0) as avg_duration
+                        ISNULL(AVG(CAST(ISNULL(duration_min, DATEDIFF(MINUTE, start_time, GETDATE())) AS FLOAT)), 0) as avg_duration
                       FROM " . PE_DOWNTIME_LOG_TABLE . " WITH (NOLOCK)
                       WHERE log_date >= ? AND log_date <= ? $lineCondition";
             $dtStmt = $pdo->prepare($dtSql);
@@ -93,7 +93,9 @@ try {
             break;
 
         case 'get_downtime_trend':
-            $sql = "SELECT log_date, SUM(duration_min) as total_min, COUNT(*) as event_count
+            $sql = "SELECT log_date, 
+                           SUM(ISNULL(duration_min, DATEDIFF(MINUTE, start_time, GETDATE()))) as total_min, 
+                           COUNT(*) as event_count
                     FROM " . PE_DOWNTIME_LOG_TABLE . " WITH (NOLOCK)
                     WHERE log_date >= ? AND log_date <= ? $lineCondition
                     GROUP BY log_date ORDER BY log_date ASC";
@@ -103,7 +105,9 @@ try {
             break;
 
         case 'get_downtime_pareto':
-            $sql = "SELECT cause_category, SUM(duration_min) as total_min, COUNT(*) as event_count
+            $sql = "SELECT cause_category, 
+                           SUM(ISNULL(duration_min, DATEDIFF(MINUTE, start_time, GETDATE()))) as total_min, 
+                           COUNT(*) as event_count
                     FROM " . PE_DOWNTIME_LOG_TABLE . " WITH (NOLOCK)
                     WHERE log_date >= ? AND log_date <= ? $lineCondition
                     AND cause_category IS NOT NULL AND cause_category != ''
@@ -117,8 +121,8 @@ try {
             $sql = "SELECT TOP 10 
                         D.machine_name, D.line,
                         COUNT(*) as event_count, 
-                        SUM(D.duration_min) as total_min,
-                        AVG(CAST(D.duration_min AS FLOAT)) as avg_min
+                        SUM(ISNULL(D.duration_min, DATEDIFF(MINUTE, D.start_time, GETDATE()))) as total_min,
+                        AVG(CAST(ISNULL(D.duration_min, DATEDIFF(MINUTE, D.start_time, GETDATE())) AS FLOAT)) as avg_min
                     FROM " . PE_DOWNTIME_LOG_TABLE . " D WITH (NOLOCK)
                     WHERE D.log_date >= ? AND D.log_date <= ? $lineCondition
                     AND D.machine_name IS NOT NULL AND D.machine_name != ''
