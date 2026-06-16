@@ -247,25 +247,37 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
     </div>
 
     <div class="modal fade" id="jobLogsModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
-                <div class="modal-header bg-white border-bottom pb-2">
-                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-history me-2 text-info"></i>ประวัติการลงยอด</h5>
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; background-color: #f8f9fa;">
+                <div class="modal-header bg-white border-bottom-0 pb-3 pt-3 px-4 shadow-sm" style="z-index: 10;">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
+                            <i class="fas fa-history fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bolder text-dark mb-0" style="letter-spacing: -0.5px;">ประวัติการลงยอด</h5>
+                            <div class="text-muted small mt-1">ข้อมูลการบันทึกยอดทั้งหมดของ <span id="jobLogsJobNo" class="badge bg-light text-secondary border fw-bold px-2 py-1" style="font-size: 0.85rem;"></span> <span id="jobLogsPartInfo" class="ms-1"></span></div>
+                        </div>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-0">
-                    <div class="m-0" style="max-height: 50vh; overflow-y: auto;">
-                        <table class="table table-hover align-middle mb-0 text-nowrap table-sm">
-                            <thead class="table-light text-secondary small sticky-top" style="z-index: 2;">
-                                <tr>
-                                    <th class="ps-4 py-2">เวลา (Time)</th>
-                                    <th class="py-2">ประเภท</th>
-                                    <th class="text-end py-2">จำนวน</th>
-                                    <th class="text-center pe-4 py-2" width="120">จัดการ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="jobLogsTableBody"></tbody>
-                        </table>
+                <div class="modal-body p-4 bg-light">
+                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                        <div class="table-responsive m-0 h-100">
+                            <table class="table table-hover align-middle mb-0 text-nowrap">
+                                <thead class="table-light text-secondary small sticky-top shadow-sm" style="z-index: 2;">
+                                    <tr>
+                                        <th class="ps-4 py-3 fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">เวลา (Time)</th>
+                                        <th class="py-3 fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">ประเภท</th>
+                                        <th class="text-end py-3 fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">จำนวน</th>
+                                        <th class="py-3 ps-4 fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">ผู้ลงยอด</th>
+                                        <th class="py-3 fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">หมายเหตุ</th>
+                                        <th class="text-center pe-4 py-3 fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;" width="110">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="jobLogsTableBody" class="bg-white"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

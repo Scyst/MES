@@ -269,7 +269,7 @@ function renderJobBoard() {
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                             <li><h6 class="dropdown-header">จัดการคิวงาน</h6></li>
                             <li><a class="dropdown-item fw-bold text-dark" href="#" onclick="editJob(${job.job_id}, ${job.target_qty})"><i class="fas fa-pen text-primary me-2"></i>แก้ไขเป้าหมาย</a></li>
-                            ${(job.status === 'RUNNING' || job.status === 'PAUSED') ? `<li><a class="dropdown-item fw-bold text-dark" href="#" onclick="viewJobLogs('${job.job_no}', ${job.job_id})"><i class="fas fa-history text-info me-2"></i>ประวัติลงยอด</a></li>` : ''}
+                            ${(job.status === 'RUNNING' || job.status === 'PAUSED') ? `<li><a class="dropdown-item fw-bold text-dark" href="#" onclick="viewJobLogs('${job.job_no}', ${job.job_id}, '${job.part_no || ''}', '${(job.part_name || '').replace(/'/g, "\\'")}')"><i class="fas fa-history text-info me-2"></i>ประวัติการลงยอด</a></li>` : ''}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item fw-bold text-danger" href="#" onclick="deleteJob(${job.job_id}, '${job.job_no}', '${job.status}')"><i class="fas fa-trash-alt me-2"></i>${job.status === 'PENDING' ? 'ลบจ๊อบทิ้ง' : 'บังคับยกเลิกจ๊อบ'}</a></li>
                         </ul>
@@ -741,7 +741,18 @@ async function openJobHistory() {
     }
 }
 
-async function viewJobLogs(jobNo, jobId) {
+async function viewJobLogs(jobNo, jobId, partNo = '', partName = '') {
+    document.getElementById('jobLogsJobNo').textContent = jobNo;
+    
+    const partInfoEl = document.getElementById('jobLogsPartInfo');
+    if(partInfoEl) {
+        if(partNo || partName) {
+            partInfoEl.innerHTML = `<span class="badge bg-primary text-white ms-2 px-2 py-1" style="font-size: 0.8rem;">${partNo}</span> <span class="text-secondary ms-1 fw-bold" style="font-size: 0.85rem;">${partName}</span>`;
+        } else {
+            partInfoEl.innerHTML = '';
+        }
+    }
+
     const res = await fetch(`${JOB_API_URL}?action=get_job_logs&job_no=${jobNo}`).then(r => r.json());
     const tbody = document.getElementById('jobLogsTableBody');
     if(!tbody) return;
@@ -755,24 +766,31 @@ async function viewJobLogs(jobNo, jobId) {
             if(log.txn_type === 'HOLD') badgeColor = 'warning text-dark';
             if(log.txn_type === 'SCRAP') badgeColor = 'danger';
 
+            let notesHtml = log.notes ? `<span class="text-muted" style="font-size: 0.85rem; white-space: normal; display: block; line-height: 1.4;">${log.notes}</span>` : '<span class="text-black-50 small">-</span>';
+            let creatorHtml = log.creator_name ? `<span class="text-dark fw-bold" style="font-size: 0.85rem;"><i class="fas fa-user-circle me-1 text-secondary"></i>${log.creator_name}</span>` : '<span class="text-black-50 small">-</span>';
+
             tbody.insertAdjacentHTML('beforeend', `
-                <tr>
-                    <td class="p-2 align-middle text-muted">${timeStr}</td>
-                    <td class="p-2 align-middle"><span class="badge bg-${badgeColor}">${log.txn_type}</span></td>
-                    <td class="p-2 align-middle text-end fw-bold">${parseFloat(log.qty).toLocaleString()}</td>
-                    <td class="p-2 align-middle text-center">
-                        <button class="btn btn-sm btn-outline-primary" onclick="editTxn(${log.txn_id}, '${log.txn_type}', ${log.qty}, ${jobId})" title="แก้ไขยอดนี้">
-                            <i class="fas fa-pencil-alt"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteTxn(${log.txn_id}, ${jobId})" title="ลบรายการนี้">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                <tr style="transition: all 0.2s;">
+                    <td class="p-3 align-middle text-muted ps-4" style="font-size: 0.9rem; font-family: 'Inter', sans-serif;">${timeStr}</td>
+                    <td class="p-3 align-middle"><span class="badge bg-${badgeColor} bg-opacity-10 text-${badgeColor === 'warning text-dark' ? 'warning' : badgeColor} border border-${badgeColor === 'warning text-dark' ? 'warning' : badgeColor} px-3 py-2 rounded-pill" style="font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px;">${log.txn_type}</span></td>
+                    <td class="p-3 align-middle text-end fw-bolder text-dark" style="font-size: 1.15rem; font-family: 'Inter', sans-serif;">${parseFloat(log.qty).toLocaleString()}</td>
+                    <td class="p-3 align-middle ps-4">${creatorHtml}</td>
+                    <td class="p-3 align-middle" style="max-width: 250px;">${notesHtml}</td>
+                    <td class="p-3 align-middle text-center pe-4">
+                        <div class="d-flex justify-content-center gap-2">
+                            <button class="btn btn-sm btn-light border rounded-circle text-primary shadow-sm d-flex align-items-center justify-content-center" style="width:34px;height:34px; transition: all 0.2s;" onmouseover="this.classList.add('bg-primary', 'text-white')" onmouseout="this.classList.remove('bg-primary', 'text-white')" onclick="editTxn(${log.txn_id}, '${log.txn_type}', ${log.qty}, ${jobId})" title="แก้ไขยอดนี้">
+                                <i class="fas fa-pencil-alt" style="font-size: 0.8rem;"></i>
+                            </button>
+                            <button class="btn btn-sm btn-light border rounded-circle text-danger shadow-sm d-flex align-items-center justify-content-center" style="width:34px;height:34px; transition: all 0.2s;" onmouseover="this.classList.add('bg-danger', 'text-white')" onmouseout="this.classList.remove('bg-danger', 'text-white')" onclick="deleteTxn(${log.txn_id}, ${jobId})" title="ลบรายการนี้">
+                                <i class="fas fa-trash" style="font-size: 0.8rem;"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `);
         });
     } else {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">ยังไม่มีรายการบันทึก</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted"><i class="fas fa-inbox fs-2 mb-3 text-light"></i><br><span style="font-size: 0.9rem;">ยังไม่มีประวัติการลงยอดสำหรับ Job นี้</span></td></tr>`;
     }
     const modalEl = document.getElementById('jobLogsModal');
     if(modalEl) new bootstrap.Modal(modalEl).show();

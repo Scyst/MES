@@ -172,9 +172,9 @@ try {
             // ใช้ lot_no ถ้ามีการระบุไว้ตอนสร้างงาน ถ้าไม่มีให้ใช้ job_no เป็นค่าอ้างอิงแทน
             $transactionLot = !empty($job['lot_no']) ? $job['lot_no'] : $job['job_no'];
             
-            if ($add_actual > 0) $spProd->execute([$job['item_id'], $job['location_id'], $add_actual, 'FG', $transactionLot, 'Output', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
-            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $job['location_id'], $add_hold, 'HOLD', $transactionLot, 'Hold', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
-            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $job['location_id'], $add_scrap, 'SCRAP', $transactionLot, 'Scrap', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
+            if ($add_actual > 0) $spProd->execute([$job['item_id'], $job['location_id'], $add_actual, 'FG', $transactionLot, 'Output [Job: ' . $job['job_no'] . ']', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
+            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $job['location_id'], $add_hold, 'HOLD', $transactionLot, 'Hold [Job: ' . $job['job_no'] . ']', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
+            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $job['location_id'], $add_scrap, 'SCRAP', $transactionLot, 'Scrap [Job: ' . $job['job_no'] . ']', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
 
             if ($add_hold > 0) {
                 $qaJobNo = $job['job_no'] . '-QA';
@@ -266,13 +266,31 @@ try {
 
         case 'get_job_logs':
             $job_no = $_GET['job_no'];
-            $sql = "SELECT transaction_id as txn_id, FORMAT(transaction_timestamp, 'HH:mm:ss') as txn_time, 
-                           REPLACE(transaction_type, 'PRODUCTION_', '') as txn_type, quantity as qty 
-                    FROM " . TRANSACTIONS_TABLE . " 
-                    WHERE reference_id = ? AND transaction_type LIKE 'PRODUCTION_%' 
-                    ORDER BY transaction_id DESC";
+            
+            // Get lot_no, start_time, end_time, and item_id for this job to accurately filter past transactions
+            $jobStmt = $pdo->prepare("SELECT lot_no, ISNULL(start_time, created_at) as baseline_time, ISNULL(end_time, '2099-12-31 23:59:59') as end_time, item_id FROM PRODUCTION_JOBS WHERE job_no = ?");
+            $jobStmt->execute([$job_no]);
+            $jobData = $jobStmt->fetch(PDO::FETCH_ASSOC);
+            $lot_no = $jobData ? $jobData['lot_no'] : null;
+            $baseline_time = ($jobData && $jobData['baseline_time']) ? $jobData['baseline_time'] : '2000-01-01 00:00:00';
+            $end_time = ($jobData && $jobData['end_time']) ? $jobData['end_time'] : '2099-12-31 23:59:59';
+            $item_id = $jobData ? $jobData['item_id'] : null;
+
+            $sql = "SELECT t.transaction_id as txn_id, FORMAT(t.transaction_timestamp, 'HH:mm:ss') as txn_time, 
+                           REPLACE(t.transaction_type, 'PRODUCTION_', '') as txn_type, t.quantity as qty,
+                           u.fullname as creator_name, t.notes
+                    FROM " . TRANSACTIONS_TABLE . " t
+                    LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
+                    WHERE t.transaction_type LIKE 'PRODUCTION_%' 
+                      AND (
+                           t.reference_id = ? 
+                           OR (t.reference_id = ? AND (CHARINDEX(?, t.notes) > 0 OR (CHARINDEX('[Job:', t.notes) = 0 AND t.transaction_timestamp >= CAST(? AS DATETIME) AND t.transaction_timestamp <= CAST(? AS DATETIME) AND t.parameter_id = ?)))
+                      )
+                    ORDER BY t.transaction_timestamp DESC, t.transaction_id DESC";
+            
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$job_no]);
+            $stmt->execute([$job_no, $lot_no ?: $job_no, "[Job: $job_no]", $baseline_time, $end_time, $item_id]);
+            
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
