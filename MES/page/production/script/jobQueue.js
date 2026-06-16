@@ -554,6 +554,7 @@ function openRecordModal(jobId, jobNo) {
     document.getElementById('input_actual_qty').value = '';
     document.getElementById('input_hold_qty').value = '';
     document.getElementById('input_scrap_qty').value = '';
+    if (document.getElementById('input_scrap_reason')) document.getElementById('input_scrap_reason').value = '';
 
     const holdInputContainer = document.getElementById('hold_container');
     if (jobNo.includes('-QA')) {
@@ -570,7 +571,8 @@ async function submitRecordOutput() {
         job_id: document.getElementById('record_job_id').value,
         actual_qty: document.getElementById('input_actual_qty').value || 0,
         hold_qty: document.getElementById('input_hold_qty').value || 0,
-        scrap_qty: document.getElementById('input_scrap_qty').value || 0
+        scrap_qty: document.getElementById('input_scrap_qty').value || 0,
+        scrap_reason: document.getElementById('input_scrap_reason') ? document.getElementById('input_scrap_reason').value : ''
     };
 
     if (payload.actual_qty <= 0 && payload.hold_qty <= 0 && payload.scrap_qty <= 0) {

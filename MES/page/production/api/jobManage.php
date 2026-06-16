@@ -154,6 +154,7 @@ try {
             $add_actual = (float)($input['actual_qty'] ?? 0);
             $add_hold = (float)($input['hold_qty'] ?? 0);
             $add_scrap = (float)($input['scrap_qty'] ?? 0);
+            $scrap_reason = isset($input['scrap_reason']) ? trim($input['scrap_reason']) : '';
 
             $pdo->beginTransaction();
             $stmt = $pdo->prepare("SELECT * FROM PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ? AND status IN ('RUNNING', 'PAUSED')");
@@ -174,7 +175,10 @@ try {
             
             if ($add_actual > 0) $spProd->execute([$job['item_id'], $job['location_id'], $add_actual, 'FG', $transactionLot, 'Output [Job: ' . $job['job_no'] . ']', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
             if ($add_hold > 0)   $spProd->execute([$job['item_id'], $job['location_id'], $add_hold, 'HOLD', $transactionLot, 'Hold [Job: ' . $job['job_no'] . ']', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
-            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $job['location_id'], $add_scrap, 'SCRAP', $transactionLot, 'Scrap [Job: ' . $job['job_no'] . ']', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
+            if ($add_scrap > 0) {
+                $scrapNote = $scrap_reason !== '' ? "Scrap ({$scrap_reason}) [Job: " . $job['job_no'] . "]" : 'Scrap [Job: ' . $job['job_no'] . ']';
+                $spProd->execute([$job['item_id'], $job['location_id'], $add_scrap, 'SCRAP', $transactionLot, $scrapNote, $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
+            }
 
             if ($add_hold > 0) {
                 $qaJobNo = $job['job_no'] . '-QA';

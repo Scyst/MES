@@ -235,7 +235,8 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
 
                     <div class="mb-3 p-3 rounded-3" style="background-color: #fcf0f0; border: 1px solid #f5c6cb;">
                         <label class="form-label fw-bold text-danger mb-1"><i class="fas fa-times-circle me-1"></i> ยอดของเสีย (Scrap)</label>
-                        <input type="number" id="input_scrap_qty" class="form-control form-control-lg text-center fw-bold text-danger border-danger" min="0" step="any" placeholder="0">
+                        <input type="number" id="input_scrap_qty" class="form-control form-control-lg text-center fw-bold text-danger border-danger mb-2" min="0" step="any" placeholder="0">
+                        <input type="text" id="input_scrap_reason" class="form-control form-control-sm text-center text-danger border-danger bg-white" placeholder="ระบุสาเหตุของเสีย (ถ้ามี)">
                     </div>
                 </div>
                 <div class="modal-footer bg-white border-top-0 pt-0 justify-content-center">
