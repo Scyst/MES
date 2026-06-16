@@ -271,8 +271,8 @@ try {
         case 'get_job_logs':
             $job_no = $_GET['job_no'];
             
-            // Get lot_no, start_time, end_time, and item_id for this job to accurately filter past transactions
-            $jobStmt = $pdo->prepare("SELECT lot_no, ISNULL(start_time, created_at) as baseline_time, ISNULL(end_time, '2099-12-31 23:59:59') as end_time, item_id FROM PRODUCTION_JOBS WHERE job_no = ?");
+            // Get lot_no, created_at, end_time, and item_id for this job to accurately filter past transactions
+            $jobStmt = $pdo->prepare("SELECT lot_no, created_at as baseline_time, ISNULL(end_time, '2099-12-31 23:59:59') as end_time, item_id FROM PRODUCTION_JOBS WHERE job_no = ?");
             $jobStmt->execute([$job_no]);
             $jobData = $jobStmt->fetch(PDO::FETCH_ASSOC);
             $lot_no = $jobData ? $jobData['lot_no'] : null;
