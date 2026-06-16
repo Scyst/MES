@@ -268,7 +268,7 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
                             <table class="table table-hover align-middle mb-0 text-nowrap">
                                 <thead class="table-light text-secondary small sticky-top shadow-sm" style="z-index: 2;">
                                     <tr>
-                                        <th class="ps-4 py-3 fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">เวลา (Time)</th>
+                                        <th class="ps-4 py-3 fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">วัน-เวลา (Date-Time)</th>
                                         <th class="py-3 fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">ประเภท</th>
                                         <th class="text-end py-3 fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">จำนวน</th>
                                         <th class="py-3 ps-4 fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">ผู้ลงยอด</th>

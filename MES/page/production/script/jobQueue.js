@@ -762,7 +762,7 @@ async function viewJobLogs(jobNo, jobId, partNo = '', partName = '') {
     
     if (res.success && res.data && res.data.length > 0) {
         res.data.forEach(log => {
-            const timeStr = log.txn_time.substring(0, 5); 
+            const timeStr = log.txn_time; 
             let badgeColor = 'secondary';
             if(log.txn_type === 'FG') badgeColor = 'success';
             if(log.txn_type === 'HOLD') badgeColor = 'warning text-dark';

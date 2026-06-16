@@ -254,6 +254,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                 </div>
                 <?php endif; ?>
 
+                <?php if ($userRole === 'admin'): ?>
                 <div class="service-group mt-4">
                     <div class="service-group-title fw-bold text-success border-bottom pb-1 mb-3">✨ NEW SYSTEM PROTOTYPE ✨</div>
                     <div class="service-grid">
@@ -263,6 +264,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         ?>
                     </div>
                 </div>
+                <?php endif; ?>
                 </div>
         </div>
     </div>

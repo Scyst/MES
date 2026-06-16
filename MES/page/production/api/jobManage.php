@@ -280,7 +280,7 @@ try {
             $end_time = ($jobData && $jobData['end_time']) ? $jobData['end_time'] : '2099-12-31 23:59:59';
             $item_id = $jobData ? $jobData['item_id'] : null;
 
-            $sql = "SELECT t.transaction_id as txn_id, FORMAT(t.transaction_timestamp, 'HH:mm:ss') as txn_time, 
+            $sql = "SELECT t.transaction_id as txn_id, FORMAT(t.transaction_timestamp, 'dd/MM HH:mm') as txn_time, 
                            REPLACE(t.transaction_type, 'PRODUCTION_', '') as txn_type, t.quantity as qty,
                            u.fullname as creator_name, t.notes
                     FROM " . TRANSACTIONS_TABLE . " t
