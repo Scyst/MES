@@ -286,7 +286,7 @@ const WorkOrderModule = (() => {
         try {
             let imagePath = null;
             if (croppedImageBlob) {
-                const file = new File([croppedImageBlob], "image_before.jpg", { type: "image/jpeg" });
+                const file = new File([croppedImageBlob], "image_before.webp", { type: "image/webp" });
                 imagePath = await PEApp.uploadFile(file, 'WO');
             } else {
                 const imgInput = document.getElementById('woFrmImage');
@@ -297,7 +297,7 @@ const WorkOrderModule = (() => {
 
             let photoAfter = null;
             if (croppedImageAfterBlob) {
-                const file = new File([croppedImageAfterBlob], "image_after.jpg", { type: "image/jpeg" });
+                const file = new File([croppedImageAfterBlob], "image_after.webp", { type: "image/webp" });
                 photoAfter = await PEApp.uploadFile(file, 'WO');
             } else {
                 const imgAfterInput = document.getElementById('woFrmImageAfter');
