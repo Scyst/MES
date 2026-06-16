@@ -768,7 +768,10 @@ async function viewJobLogs(jobNo, jobId, partNo = '', partName = '') {
             if(log.txn_type === 'HOLD') badgeColor = 'warning text-dark';
             if(log.txn_type === 'SCRAP') badgeColor = 'danger';
 
-            let notesHtml = log.notes ? `<span class="text-muted" style="font-size: 0.85rem; white-space: normal; display: block; line-height: 1.4;">${log.notes}</span>` : '<span class="text-black-50 small">-</span>';
+            let cleanNotes = log.notes ? log.notes.replace(/\[Job:.*?\]/g, '').trim() : '';
+            if (cleanNotes === '') cleanNotes = '-';
+            
+            let notesHtml = cleanNotes !== '-' ? `<span class="text-muted" style="font-size: 0.85rem; white-space: normal; display: block; line-height: 1.4;">${cleanNotes}</span>` : '<span class="text-black-50 small">-</span>';
             let creatorHtml = log.creator_name ? `<span class="text-dark fw-bold" style="font-size: 0.85rem;"><i class="fas fa-user-circle me-1 text-secondary"></i>${log.creator_name}</span>` : '<span class="text-black-50 small">-</span>';
 
             tbody.insertAdjacentHTML('beforeend', `

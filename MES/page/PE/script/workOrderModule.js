@@ -4,6 +4,12 @@ const WorkOrderModule = (() => {
     let machineList = [];
     let currentView = 'table';
 
+    // Cropper State
+    let cropper = null;
+    let currentCropTarget = null; // 'before' or 'after'
+    let croppedImageBlob = null;
+    let croppedImageAfterBlob = null;
+
     async function loadData() {
         try {
             const status = document.getElementById('woFilterStatus')?.value || '';
@@ -168,7 +174,7 @@ const WorkOrderModule = (() => {
         document.getElementById('woFrmStatus').value = 'Open';
 
         // Show/hide tech section
-        const techFields = ['woTechSection', 'woAssignedToGroup', 'woStartedAtGroup', 'woCompletedAtGroup', 'woStatusGroup', 'woRepairMinGroup', 'woRootCauseGroup', 'woActionGroup'];
+        const techFields = ['woTechSection', 'woAssignedToGroup', 'woStartedAtGroup', 'woCompletedAtGroup', 'woStatusGroup', 'woRepairMinGroup', 'woRootCauseGroup', 'woActionGroup', 'woImageAfterGroup'];
         techFields.forEach(id => { document.getElementById(id).style.display = isEdit ? '' : 'none'; });
 
         // Reset images
@@ -176,11 +182,18 @@ const WorkOrderModule = (() => {
         if (imgInput) imgInput.value = '';
         const previewDiv = document.getElementById('woImagePreview');
         if (previewDiv) previewDiv.style.display = 'none';
+        const dropzoneBefore = document.getElementById('woDropzoneBefore');
+        if (dropzoneBefore) dropzoneBefore.classList.remove('has-image');
 
         const imgAfterInput = document.getElementById('woFrmImageAfter');
         if (imgAfterInput) imgAfterInput.value = '';
         const previewAfterDiv = document.getElementById('woImageAfterPreview');
         if (previewAfterDiv) previewAfterDiv.style.display = 'none';
+        const dropzoneAfter = document.getElementById('woDropzoneAfter');
+        if (dropzoneAfter) dropzoneAfter.classList.remove('has-image');
+
+        croppedImageBlob = null;
+        croppedImageAfterBlob = null;
 
         const deleteBtn = document.getElementById('woDeleteBtn');
         const printBtn = document.getElementById('woPrintBtn');
@@ -226,14 +239,16 @@ const WorkOrderModule = (() => {
                     const img = previewDiv.querySelector('img');
                     if (img) {
                         img.src = '../../' + wo.image_path;
-                        previewDiv.style.display = 'block';
+                        previewDiv.style.display = 'flex';
+                        if (dropzoneBefore) dropzoneBefore.classList.add('has-image');
                     }
                 }
                 if (wo.photo_after) {
                     const imgAfter = previewAfterDiv.querySelector('img');
                     if (imgAfter) {
                         imgAfter.src = '../../' + wo.photo_after;
-                        previewAfterDiv.style.display = 'block';
+                        previewAfterDiv.style.display = 'flex';
+                        if (dropzoneAfter) dropzoneAfter.classList.add('has-image');
                     }
                 }
             }
@@ -270,15 +285,25 @@ const WorkOrderModule = (() => {
 
         try {
             let imagePath = null;
-            const imgInput = document.getElementById('woFrmImage');
-            if (imgInput && imgInput.files.length > 0) {
-                imagePath = await PEApp.uploadFile(imgInput.files[0], 'WO');
+            if (croppedImageBlob) {
+                const file = new File([croppedImageBlob], "image_before.jpg", { type: "image/jpeg" });
+                imagePath = await PEApp.uploadFile(file, 'WO');
+            } else {
+                const imgInput = document.getElementById('woFrmImage');
+                if (imgInput && imgInput.files.length > 0) {
+                    imagePath = await PEApp.uploadFile(imgInput.files[0], 'WO');
+                }
             }
 
             let photoAfter = null;
-            const imgAfterInput = document.getElementById('woFrmImageAfter');
-            if (imgAfterInput && imgAfterInput.files.length > 0) {
-                photoAfter = await PEApp.uploadFile(imgAfterInput.files[0], 'WO');
+            if (croppedImageAfterBlob) {
+                const file = new File([croppedImageAfterBlob], "image_after.jpg", { type: "image/jpeg" });
+                photoAfter = await PEApp.uploadFile(file, 'WO');
+            } else {
+                const imgAfterInput = document.getElementById('woFrmImageAfter');
+                if (imgAfterInput && imgAfterInput.files.length > 0) {
+                    photoAfter = await PEApp.uploadFile(imgAfterInput.files[0], 'WO');
+                }
             }
 
             if (editId) {
@@ -325,6 +350,119 @@ const WorkOrderModule = (() => {
             btn.disabled = false;
         }
     }
+
+    function initCropper() {
+        const modal = document.getElementById('cropImageModal');
+        if (!modal) return;
+        let cropModal = null;
+        try {
+            cropModal = new bootstrap.Modal(modal);
+        } catch(e) {}
+        if (!cropModal) return;
+
+        const imageToCrop = document.getElementById('imageToCrop');
+
+        function openCropper(file, target) {
+            currentCropTarget = target;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imageToCrop.src = e.target.result;
+                cropModal.show();
+                modal.addEventListener('shown.bs.modal', function onShown() {
+                    modal.removeEventListener('shown.bs.modal', onShown);
+                    if (cropper) cropper.destroy();
+                    cropper = new Cropper(imageToCrop, {
+                        aspectRatio: 4 / 3,
+                        viewMode: 1,
+                        autoCropArea: 1,
+                        responsive: true
+                    });
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function setupDropzone(dropzoneId, inputId, target) {
+            const dropzone = document.getElementById(dropzoneId);
+            const input = document.getElementById(inputId);
+            if (!dropzone || !input) return;
+
+            dropzone.addEventListener('click', () => input.click());
+
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('dragover');
+            });
+
+            dropzone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    // Update the input files to match the dropped file for consistency
+                    input.files = e.dataTransfer.files;
+                    openCropper(e.dataTransfer.files[0], target);
+                }
+            });
+
+            input.addEventListener('change', function(e) {
+                if (this.files && this.files.length > 0) {
+                    openCropper(this.files[0], target);
+                }
+            });
+        }
+
+        setupDropzone('woDropzoneBefore', 'woFrmImage', 'before');
+        setupDropzone('woDropzoneAfter', 'woFrmImageAfter', 'after');
+
+        document.getElementById('btnRotateLeft')?.addEventListener('click', () => { if (cropper) cropper.rotate(-90); });
+        document.getElementById('btnRotateRight')?.addEventListener('click', () => { if (cropper) cropper.rotate(90); });
+        
+        document.getElementById('btnCancelCrop')?.addEventListener('click', () => {
+            cropModal.hide();
+            if (cropper) { cropper.destroy(); cropper = null; }
+            if (currentCropTarget === 'before') {
+                document.getElementById('woFrmImage').value = '';
+                if (!croppedImageBlob) {
+                    document.getElementById('woDropzoneBefore').classList.remove('has-image');
+                    document.getElementById('woImagePreview').style.display = 'none';
+                }
+            } else {
+                document.getElementById('woFrmImageAfter').value = '';
+                if (!croppedImageAfterBlob) {
+                    document.getElementById('woDropzoneAfter').classList.remove('has-image');
+                    document.getElementById('woImageAfterPreview').style.display = 'none';
+                }
+            }
+        });
+
+        document.getElementById('btnConfirmCrop')?.addEventListener('click', () => {
+            if (!cropper) return;
+            const canvas = cropper.getCroppedCanvas({ maxWidth: 1920, maxHeight: 1920 });
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                if (currentCropTarget === 'before') {
+                    croppedImageBlob = blob;
+                    document.getElementById('woImagePreview').querySelector('img').src = url;
+                    document.getElementById('woImagePreview').style.display = 'flex';
+                    document.getElementById('woDropzoneBefore').classList.add('has-image');
+                } else {
+                    croppedImageAfterBlob = blob;
+                    document.getElementById('woImageAfterPreview').querySelector('img').src = url;
+                    document.getElementById('woImageAfterPreview').style.display = 'flex';
+                    document.getElementById('woDropzoneAfter').classList.add('has-image');
+                }
+                cropModal.hide();
+                if (cropper) { cropper.destroy(); cropper = null; }
+            }, 'image/webp', 0.85);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', initCropper);
 
     async function deleteItem() {
         const editId = document.getElementById('woEditId')?.value;

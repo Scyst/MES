@@ -24,8 +24,9 @@ $pageTitle = "PE Enterprise";
     <link rel="stylesheet" href="../../utils/libs/bootstrap.min.css">
     <link rel="stylesheet" href="../../utils/libs/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="../../utils/libs/flatpickr.min.css">
+    <link rel="stylesheet" href="../../utils/libs/cropper.min.css">
     <link rel="stylesheet" href="../components/css/fonts.css?v=<?php echo filemtime(__DIR__ . '/../components/css/fonts.css'); ?>">
-    <link rel="stylesheet" href="css/pe-enterprise.css?v=<?php echo filemtime(__DIR__ . '/css/pe-enterprise.css'); ?>">
+    <link rel="stylesheet" href="css/pe-enterprise.css?v=<?php echo time(); ?>">
 </head>
 
 <body>
@@ -193,8 +194,33 @@ $pageTitle = "PE Enterprise";
     include __DIR__ . '/components/modals/modal_sparepart_tx.php';
 ?>
 
+<!-- Cropper Modal -->
+<div class="modal fade" id="cropImageModal" tabindex="-1" aria-labelledby="cropImageModalLabel" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-fullscreen-sm-down modal-dialog-centered">
+    <div class="modal-content">
+        <div class="modal-header">
+        <h5 class="modal-title" id="cropImageModalLabel"><i class="fas fa-crop-alt"></i> จัดการรูปภาพ</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btnCancelCrop"></button>
+        </div>
+        <div class="modal-body p-2 text-center" style="background-color: #000; overflow: hidden; max-height: 70vh;">
+        <div style="max-height: 100%; max-width: 100%;">
+            <img id="imageToCrop" src="" alt="Picture to crop" style="max-width: 100%; display: block;">
+        </div>
+        </div>
+        <div class="modal-footer d-flex justify-content-between bg-light">
+        <div>
+            <button type="button" class="btn btn-secondary me-1" id="btnRotateLeft" title="หมุนซ้าย"><i class="fas fa-undo"></i></button>
+            <button type="button" class="btn btn-secondary" id="btnRotateRight" title="หมุนขวา"><i class="fas fa-redo"></i></button>
+        </div>
+        <button type="button" class="btn btn-primary" id="btnConfirmCrop"><i class="fas fa-check"></i> ยืนยันรูปภาพ</button>
+        </div>
+    </div>
+    </div>
+</div>
+
 <!-- Libraries -->
 <script src="../../utils/libs/xlsx.full.min.js"></script>
+<script src="../../utils/libs/cropper.min.js"></script>
 <?php include_once '../components/chart_head.php'; ?>
 
 <!-- App Scripts -->
@@ -214,7 +240,7 @@ $pageTitle = "PE Enterprise";
 
 <script src="script/peApp.js?v=<?php echo filemtime(__DIR__ . '/script/peApp.js'); ?>"></script>
 <script src="script/machineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineModule.js'); ?>"></script>
-<script src="script/workOrderModule.js?v=<?php echo filemtime(__DIR__ . '/script/workOrderModule.js'); ?>"></script>
+<script src="script/workOrderModule.js?v=<?php echo time(); ?>"></script>
 <script src="script/downtimeModule.js?v=<?php echo filemtime(__DIR__ . '/script/downtimeModule.js'); ?>"></script>
 <script src="script/sparePartsModule.js?v=<?php echo filemtime(__DIR__ . '/script/sparePartsModule.js'); ?>"></script>
 <script src="script/analyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/analyticsModule.js'); ?>"></script>
