@@ -156,7 +156,7 @@ async function loadStockOrders(isSilent) {
             const currentReqId = document.getElementById('current_req_id').value;
             res.data.forEach(order => {
                 let sClass = '', sBadge = '', isPulse = '';
-                if (order.status === 'NEW ORDER') { sClass = 'status-new'; sBadge = '<span class="badge bg-danger">NEW</span>'; isPulse = 'pulse-alert'; }
+                if (order.status === 'NEW ORDER') { sClass = 'status-new'; sBadge = '<span class="badge bg-primary">NEW</span>'; isPulse = 'pulse-alert'; }
                 else if (order.status === 'PREPARING') { sClass = 'status-prep'; sBadge = '<span class="badge bg-warning text-dark">PREPARING</span>'; }
                 else if (order.status === 'COMPLETED') { sClass = 'status-comp'; sBadge = '<span class="badge bg-success">COMPLETED</span>'; }
                 else { sClass = 'status-rej'; sBadge = '<span class="badge bg-secondary">REJECTED</span>'; }
@@ -203,13 +203,13 @@ window.openStockOrder = async function(reqId) {
         document.getElementById('disp_requester').innerText = h.requester_name || '-';
         document.getElementById('disp_remark').innerText = h.remark || '-';
         
-        const dispReser = document.getElementById('disp_reser_no');
-        if (dispReser) {
-            dispReser.innerText = h.reservation_number || '-';
+        const dispInternalJob = document.getElementById('disp_internal_job');
+        if (dispInternalJob) {
+            dispInternalJob.innerText = h.internal_job_no || '-';
         }
         
         let headerColor = 'bg-dark', statusText = h.status;
-        if (h.status === 'NEW ORDER') headerColor = 'bg-danger';
+        if (h.status === 'NEW ORDER') headerColor = 'bg-primary';
         else if (h.status === 'PREPARING') headerColor = 'bg-warning text-dark';
         else if (h.status === 'COMPLETED') headerColor = 'bg-success';
         
@@ -306,13 +306,24 @@ window.openStockOrder = async function(reqId) {
         const actionBar = document.getElementById('action-bar-mobile');
         let btnHtml = '';
         if (h.status === 'NEW ORDER') {
-            btnHtml = `<button id="btnRejectOrder" class="btn btn-sm btn-outline-danger fw-bold px-3" onclick="rejectOrder(${reqId})"><i class="fas fa-times me-1"></i> Reject</button>
-                       <button id="btnAcceptOrder" class="btn btn-sm btn-warning text-dark fw-bold px-4" onclick="acceptOrder(${reqId})"><i class="fas fa-hand-paper me-1"></i> รับออเดอร์</button>`;
+            btnHtml = `
+                <button id="btnRejectOrder" class="btn btn-outline-danger fw-bold px-4 rounded-pill" onclick="rejectOrder(${reqId})"><i class="fas fa-times me-1"></i> ปฏิเสธ</button>
+                <button id="btnAcceptOrder" class="btn btn-warning text-dark fw-bold px-5 rounded-pill shadow-sm" onclick="acceptOrder(${reqId})"><i class="fas fa-hand-paper me-1"></i> รับออเดอร์</button>
+            `;
             actionBar.classList.remove('d-none'); actionBar.innerHTML = btnHtml;
         } else if (h.status === 'PREPARING') {
-            btnHtml = `<button id="btnConfirmIssue" class="btn btn-success fw-bold px-4 w-100 w-md-auto" onclick="confirmIssue(${reqId})"><i class="fas fa-check-double me-1"></i> ยืนยันจ่ายของ</button>`;
+            btnHtml = `
+                <button id="btnRejectOrder" class="btn btn-outline-danger fw-bold px-4 rounded-pill" onclick="rejectOrder(${reqId})"><i class="fas fa-times me-1"></i> ปฏิเสธ</button>
+                <button id="btnConfirmIssue" class="btn btn-success fw-bold px-5 rounded-pill shadow-sm" onclick="confirmIssue(${reqId})"><i class="fas fa-check-double me-1"></i> ยืนยันจ่ายของ</button>
+            `;
             actionBar.classList.remove('d-none'); actionBar.innerHTML = btnHtml;
-        } else { actionBar.classList.add('d-none'); }
+            document.getElementById('globalScannerContainer').classList.remove('d-none');
+            setTimeout(() => { const gsi = document.getElementById('globalScannerInput'); if(gsi) gsi.focus(); }, 500);
+        } else { 
+            actionBar.classList.add('d-none'); 
+            document.getElementById('globalScannerContainer').classList.add('d-none');
+        }
+        if (h.status !== 'PREPARING') document.getElementById('globalScannerContainer').classList.add('d-none');
         switchView('form-stock');
     } catch (error) { document.getElementById('loadingOverlay').style.display = 'none'; }
 };
@@ -390,7 +401,19 @@ window.openSelectTagModal = async function(rowId, itemCode) {
         }
 
         let html = `<div class="text-start mb-2 small text-muted">เลือกแท็กสินค้าที่ต้องการเบิก (SAP: ${itemCode}):</div>`;
-        html += `<div class="list-group list-group-flush border rounded overflow-auto" style="max-height: 400px; text-align: left;">`;
+        html += `<div class="mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-outline-primary shadow-sm rounded d-flex align-items-center justify-content-center" style="width:38px; height:38px; padding:0; flex-shrink:0;" onclick="openOrderCameraScanner('modalScannerInput')" title="สแกนด้วยกล้อง">
+                    <i class="fas fa-camera"></i>
+                </button>
+                <div class="input-group shadow-sm flex-grow-1" style="border-radius:8px; overflow:hidden;">
+                    <span class="input-group-text bg-light border-0"><i class="fas fa-barcode text-primary"></i></span>
+                    <input type="text" id="modalScannerInput" class="form-control border-0 fw-bold" placeholder="สแกน QR Code/Barcode ที่นี่..." autocomplete="off">
+                </div>
+            </div>
+            <div id="modalScannerFeedback" class="small mt-1 text-end" style="min-height: 18px;"></div>
+        </div>`;
+        html += `<div class="list-group list-group-flush border rounded overflow-auto" style="max-height: 300px; text-align: left;">`;
         tags.forEach(t => {
             const dateStr = t.received_date ? t.received_date.substring(0, 10) : '-';
             html += `
@@ -421,6 +444,36 @@ window.openSelectTagModal = async function(rowId, itemCode) {
                 checkboxes.forEach(cb => {
                     if (selectedTags.includes(cb.value)) cb.checked = true;
                 });
+                
+                const scannerInput = document.getElementById('modalScannerInput');
+                if (scannerInput) {
+                    setTimeout(() => scannerInput.focus(), 500);
+                    scannerInput.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const scannedVal = this.value.trim().toUpperCase();
+                            if (!scannedVal) return;
+                            
+                            let foundCb = null;
+                            document.querySelectorAll('.tag-checkbox').forEach(cb => {
+                                if (cb.value.toUpperCase() === scannedVal) foundCb = cb;
+                            });
+                            
+                            const feedback = document.getElementById('modalScannerFeedback');
+                            if (foundCb) {
+                                if (!foundCb.checked) {
+                                    foundCb.checked = true;
+                                    feedback.innerHTML = `<span class="text-success fw-bold"><i class="fas fa-check-circle"></i> ติ๊กเลือกแท็ก ${scannedVal} สำเร็จ</span>`;
+                                } else {
+                                    feedback.innerHTML = `<span class="text-warning fw-bold"><i class="fas fa-exclamation-triangle"></i> แท็ก ${scannedVal} ถูกเลือกไว้แล้ว</span>`;
+                                }
+                            } else {
+                                feedback.innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-times-circle"></i> ไม่พบแท็ก ${scannedVal} ในลิสต์</span>`;
+                            }
+                            this.value = '';
+                        }
+                    });
+                }
             },
             preConfirm: () => {
                 const checkboxes = document.querySelectorAll('.tag-checkbox:checked');
@@ -828,3 +881,154 @@ window.loadFulfillmentData = function(job_id, job_no, target_qty) {
         container.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>เกิดข้อผิดพลาด: ${err.message}</td></tr>`;
     });
 };
+
+// --- Global Scanner Setup ---
+document.addEventListener('DOMContentLoaded', () => {
+    const globalScanner = document.getElementById('globalScannerInput');
+    if (globalScanner) {
+        globalScanner.addEventListener('keypress', async function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const scannedVal = this.value.trim().toUpperCase();
+                this.value = '';
+                if (!scannedVal) return;
+                
+                try {
+                    // Call API to get tag info
+                    const res = await fetchAPI(`trace_tag&serial_no=${encodeURIComponent(scannedVal)}`, 'GET');
+                    const tagInfo = res.data || res; // depending on how trace_tag returns data
+                    
+                    if (!tagInfo || !tagInfo.item_no) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `ไม่พบข้อมูลแท็ก: ${scannedVal}`, showConfirmButton: false, timer: 2500 });
+                        return;
+                    }
+                    
+                    const itemCode = tagInfo.item_no;
+                    const qty = parseInt(tagInfo.current_qty || 0, 10);
+                    
+                    // Find the input field for this itemCode in the current active picklist
+                    const targetInput = document.querySelector(`.issue-qty-input[data-itemcode="${itemCode}"]`);
+                    
+                    if (!targetInput) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: `แท็ก ${scannedVal} (SAP: ${itemCode}) ไม่ได้อยู่ในบิลนี้!`, showConfirmButton: false, timer: 3000 });
+                        return;
+                    }
+                    
+                    const rowId = targetInput.dataset.rowid;
+                    const hiddenInput = document.querySelector(`.issue-tags-hidden[data-rowid="${rowId}"]`);
+                    let selectedTags = JSON.parse(hiddenInput.value || '[]');
+                    
+                    if (selectedTags.includes(tagInfo.serial_no)) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: `แท็ก ${tagInfo.serial_no} ถูกสแกนไปแล้ว!`, showConfirmButton: false, timer: 2000 });
+                        return;
+                    }
+                    
+                    // Add tag and update quantity
+                    selectedTags.push(tagInfo.serial_no);
+                    hiddenInput.value = JSON.stringify(selectedTags);
+                    
+                    let currentInputVal = parseInt(targetInput.value || '0', 10);
+                    targetInput.value = currentInputVal + qty;
+                    
+                    // Update Tag Badge UI
+                    const tagDisplay = document.getElementById(`tag_display_${rowId}`);
+                    if (tagDisplay) {
+                        tagDisplay.className = 'badge bg-primary cursor-pointer';
+                        tagDisplay.innerHTML = `<i class="fas fa-cut"></i> ตัดออกจาก: ${selectedTags.join(', ')}`;
+                    }
+                    
+                    // Highlight the row briefly to show success
+                    const rowItem = targetInput.closest('.ff-job-item');
+                    if (rowItem) {
+                        rowItem.classList.add('pulse-alert');
+                        setTimeout(() => rowItem.classList.remove('pulse-alert'), 1500);
+                    }
+                    
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `เพิ่มแท็ก ${tagInfo.serial_no} (${qty} ชิ้น) สำเร็จ!`, showConfirmButton: false, timer: 2000 });
+                    
+                } catch (err) {
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `Error: ไม่สามารถตรวจสอบแท็กได้`, showConfirmButton: false, timer: 2500 });
+                }
+            }
+        });
+    }
+});
+
+// --- Camera Scanner Logic ---
+let html5QrCodeOrder = null;
+let currentCameraTargetId = 'globalScannerInput';
+
+window.openOrderCameraScanner = function(targetId = 'globalScannerInput') {
+    currentCameraTargetId = targetId;
+    const modalEl = document.getElementById('orderCameraModal');
+    if (!modalEl) return;
+    
+    // Temporarily hide the SweetAlert modal if the target is modalScannerInput
+    if (targetId === 'modalScannerInput') {
+        const swalContainer = document.querySelector('.swal2-container');
+        if (swalContainer) swalContainer.style.display = 'none';
+    }
+    
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+    
+    modalEl.addEventListener('shown.bs.modal', startOrderCamera, { once: true });
+    modalEl.addEventListener('hidden.bs.modal', stopOrderCamera, { once: true });
+};
+
+function startOrderCamera() {
+    const qrContainer = document.getElementById("order-qr-reader");
+    if (!qrContainer) return;
+
+    if (html5QrCodeOrder) {
+        html5QrCodeOrder.clear();
+        html5QrCodeOrder = null;
+    }
+
+    const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [
+        Html5QrcodeSupportedFormats.QR_CODE, 
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.EAN_13
+    ] : undefined;
+    
+    html5QrCodeOrder = new Html5Qrcode("order-qr-reader", { verbose: false, formatsToSupport: formats });
+
+    html5QrCodeOrder.start(
+        { facingMode: "environment" },
+        { fps: 10 },
+        (decodedText) => {
+            stopOrderCamera();
+            const modalEl = document.getElementById('orderCameraModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if(modal) modal.hide();
+            
+            const scanInput = document.getElementById(currentCameraTargetId);
+            if (scanInput) {
+                scanInput.value = decodedText.trim();
+                const enterEvent = new KeyboardEvent('keypress', { key: 'Enter' });
+                scanInput.dispatchEvent(enterEvent);
+            }
+        }
+    ).catch(err => {
+        console.warn("Camera start failed:", err);
+        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'ไม่สามารถเปิดกล้องได้', showConfirmButton: false, timer: 3000 });
+    });
+}
+
+function stopOrderCamera() {
+    if (html5QrCodeOrder && html5QrCodeOrder.isScanning) {
+        html5QrCodeOrder.stop().catch(err => console.log("Stop camera error:", err));
+    }
+    
+    // Restore the SweetAlert modal if we were scanning from the modal
+    if (currentCameraTargetId === 'modalScannerInput') {
+        const swalContainer = document.querySelector('.swal2-container');
+        if (swalContainer) swalContainer.style.display = 'flex';
+        // Refocus the input
+        setTimeout(() => {
+            const scanInput = document.getElementById('modalScannerInput');
+            if (scanInput) scanInput.focus();
+        }, 300);
+    }
+}
