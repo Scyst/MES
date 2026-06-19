@@ -233,10 +233,17 @@ try {
         // --- PASS 1: Auto-Pairing by Gap ---
         $pairedSessions = []; // เก็บ session ทั้งหมดของคนนี้ก่อนจัดลงวันที่
         $currentIn = null;
+        $lastOutTime = null; // เก็บเวลา OUT ล่าสุดที่จับคู่สำเร็จ เพื่อตรวจจับสแกนซ้ำ
 
         foreach ($scans as $ts) {
             if ($currentIn === null) {
+                // ก่อนตั้ง currentIn ตรวจสอบก่อนว่าสแกนนี้ใกล้กับ OUT ที่เพิ่งจับคู่สำเร็จหรือไม่
+                // ถ้าใกล้ = สแกนซ้ำตอนออกงาน → ข้ามไป
+                if ($lastOutTime !== null && ($ts - $lastOutTime) < $MIN_GAP) {
+                    continue; // สแกนซ้ำตอนออกงาน ข้าม
+                }
                 $currentIn = $ts;
+                $lastOutTime = null; // reset เมื่อเริ่มรอบใหม่จริง
             } else {
                 $gap = $ts - $currentIn;
 
@@ -266,6 +273,7 @@ try {
                     if ($isValidPair) {
                         // ระยะห่างเหมาะสม และไม่ได้จับคู่ข้ามวันแบบผิดปกติ -> จับคู่เป็น IN / OUT ทันที!
                         $pairedSessions[] = ['in' => $currentIn, 'out' => $ts];
+                        $lastOutTime = $ts; // จำเวลา OUT ไว้เพื่อตรวจจับสแกนซ้ำ
                         $currentIn = null; // เริ่มหารอบใหม่
                     } else {
                         // เป็นการลืมสแกนที่ทำให้เวลาเลื่อน (Shifting Bug) -> แยกเป็นเศษ
