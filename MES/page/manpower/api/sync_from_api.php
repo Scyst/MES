@@ -200,163 +200,97 @@ try {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())");
 
     // ===================================================================
-    // SMART GAP-BASED + TIME CONTEXT SCAN PAIRING (2-Pass)
+    // SHIFT WINDOW SCAN PAIRING (First IN, Last OUT per Shift Window)
     // ===================================================================
+    // วิธีมาตรฐานอุตสาหกรรม: กำหนดหน้าต่างเวลา (Shift Window) สำหรับแต่ละกะ
+    // แล้วเลือก "สแกนแรก" ใน IN Window เป็นเวลาเข้างาน
+    // และ "สแกนสุดท้าย" ใน OUT Window เป็นเวลาออกงาน
+    //
+    // ข้อดี:
+    // - สแกนกี่ครั้งก็ได้ ไม่มีปัญหาสแกนซ้ำ (double-scan)
+    // - ทำ OT แล้วสแกนออกหลายรอบก็ถูกต้อง (เอาตัวสุดท้าย)
+    // - ไม่ต้องใช้ anti-swap rules หรือ MIN_GAP/MAX_GAP
+    //
+    // Shift Windows:
+    // กะเช้า (Day):  IN = 05:00-12:59 วันนั้น,  OUT = 13:00-23:59 วันนั้น
+    // กะดึก (Night): IN = 17:00-23:59 วันนั้น,  OUT = 00:00-12:59 วันถัดไป
 
-    $MIN_GAP = 2700;    // 45 นาที (สแกนซ้ำ/เดินผ่าน)
-    $MAX_GAP = 57600;   // 16 ชม. (ระยะเวลาสูงสุดในการทำงานต่อเนื่อง เช่น กะ 8 + OT 8)
-
-    // Step 1: Pair scans into work sessions per employee
     $sessionsByEmpDate = []; // [empId][logDate] = ['in' => ts|null, 'out' => ts|null]
 
+    $syncStartTs = strtotime($startDate);
+    $syncEndTs   = strtotime($endDate);
+
     foreach ($allScansByEmp as $empId => $scans) {
-        $empShiftId = $existingEmployees[$empId]['default_shift_id'] ?? $defaultShiftId;
-        
-        $getIsNightShift = function($ts) use ($empId, $existingEmployees, $defaultShiftId, $existingLogs, $shiftConfig) {
-            if (!$ts) return false;
-            $checkDate = date('Y-m-d', $ts);
-            $prevDate = date('Y-m-d', strtotime('-1 day', $ts));
-            
-            $sid = $existingLogs[$empId][$checkDate]['shift_id'] 
+        if (empty($scans)) continue;
+
+        // วนแต่ละวันในช่วง sync
+        $currDateTs = $syncStartTs;
+        while ($currDateTs <= $syncEndTs) {
+            $dateStr = date('Y-m-d', $currDateTs);
+
+            // หา shift_id สำหรับคนนี้วันนี้ (จาก log ที่มีอยู่ หรือ default)
+            $sid = $existingLogs[$empId][$dateStr]['shift_id'] 
                 ?? $existingEmployees[$empId]['default_shift_id'] 
                 ?? $defaultShiftId;
-                
-            $start = $shiftConfig[$sid] ?? '08:00:00';
+
+            // ตรวจสอบว่าเป็นกะดึกหรือไม่
+            $startTime = $shiftConfig[$sid] ?? '08:00:00';
             $sh = 8;
-            if (preg_match('/(?:T| )(\d{2}):/', $start, $m)) $sh = (int)$m[1];
-            else if (preg_match('/^(\d{2}):/', $start, $m)) $sh = (int)$m[1];
-            return ($sh >= 15 || $sh < 3);
-        };
+            if (preg_match('/(?:T| )(\d{2}):/', $startTime, $m)) $sh = (int)$m[1];
+            else if (preg_match('/^(\d{2}):/', $startTime, $m)) $sh = (int)$m[1];
+            $isNight = ($sh >= 15 || $sh < 3);
 
-        $empShiftId = $existingEmployees[$empId]['default_shift_id'] ?? $defaultShiftId;
-
-        // --- PASS 1: Auto-Pairing by Gap ---
-        $pairedSessions = []; // เก็บ session ทั้งหมดของคนนี้ก่อนจัดลงวันที่
-        $currentIn = null;
-        $lastOutTime = null; // เก็บเวลา OUT ล่าสุดที่จับคู่สำเร็จ เพื่อตรวจจับสแกนซ้ำ
-
-        foreach ($scans as $ts) {
-            if ($currentIn === null) {
-                // ก่อนตั้ง currentIn ตรวจสอบก่อนว่าสแกนนี้ใกล้กับ OUT ที่เพิ่งจับคู่สำเร็จหรือไม่
-                // ถ้าใกล้ = สแกนซ้ำตอนออกงาน → ข้ามไป
-                if ($lastOutTime !== null && ($ts - $lastOutTime) < $MIN_GAP) {
-                    continue; // สแกนซ้ำตอนออกงาน ข้าม
-                }
-                $currentIn = $ts;
-                $lastOutTime = null; // reset เมื่อเริ่มรอบใหม่จริง
+            // กำหนด Shift Windows
+            if (!$isNight) {
+                // กะเช้า (Day Shift)
+                $inWinStart  = strtotime("$dateStr 05:00:00");
+                $inWinEnd    = strtotime("$dateStr 12:59:59");
+                $outWinStart = strtotime("$dateStr 13:00:00");
+                $outWinEnd   = strtotime("$dateStr 23:59:59");
             } else {
-                $gap = $ts - $currentIn;
+                // กะดึก (Night Shift)
+                $inWinStart  = strtotime("$dateStr 17:00:00");
+                $inWinEnd    = strtotime("$dateStr 23:59:59");
+                $nextDate    = date('Y-m-d', strtotime('+1 day', $currDateTs));
+                $outWinStart = strtotime("$nextDate 00:00:00");
+                $outWinEnd   = strtotime("$nextDate 12:59:59");
+            }
 
-                if ($gap < $MIN_GAP) {
-                    // สแกนเบิ้ล ข้าม
-                    continue;
-                } else if ($gap <= $MAX_GAP) {
-                    $isValidPair = true;
-                    $inHour = (int)date('G', $currentIn);
-                    $outHour = (int)date('G', $ts);
-                    $isNightShift = $getIsNightShift($currentIn);
-                    
-                    if (!$isNightShift) {
-                        // ป้องกัน Shifting Bug กะเช้า: สแกนเข้าช่วงเย็น-ค่ำ (15:00-22:59) แล้วสแกนออกช่วงเช้า (05:00-10:59)
-                        // = ข้ามคืนผิดปกติ (อาจสลับกะ/ลืมสแกน)
-                        if ($inHour >= 15 && $inHour <= 22 && $outHour >= 5 && $outHour <= 10) {
-                            $isValidPair = false;
-                        }
-                    } else {
-                        // ป้องกัน Shifting Bug กะดึก: สแกนเข้าช่วงเช้า (05:00-10:59) แล้วสแกนออกช่วงเย็น-ค่ำ (15:00-22:59)
-                        // = ข้ามวันผิดปกติ (อาจสลับกะ/ลืมสแกน)
-                        if ($inHour >= 5 && $inHour <= 10 && $outHour >= 15 && $outHour <= 22) {
-                            $isValidPair = false;
-                        }
-                    }
+            // หาสแกนแรกใน IN Window (First IN)
+            $scanIn = null;
+            foreach ($scans as $ts) {
+                if ($ts > $inWinEnd) break; // scans เรียงแล้ว เลยหน้าต่างแล้วหยุดได้
+                if ($ts >= $inWinStart) {
+                    $scanIn = $ts;
+                    break; // ตัวแรกสุด
+                }
+            }
 
-                    if ($isValidPair) {
-                        // ระยะห่างเหมาะสม และไม่ได้จับคู่ข้ามวันแบบผิดปกติ -> จับคู่เป็น IN / OUT ทันที!
-                        $pairedSessions[] = ['in' => $currentIn, 'out' => $ts];
-                        $lastOutTime = $ts; // จำเวลา OUT ไว้เพื่อตรวจจับสแกนซ้ำ
-                        $currentIn = null; // เริ่มหารอบใหม่
-                    } else {
-                        // เป็นการลืมสแกนที่ทำให้เวลาเลื่อน (Shifting Bug) -> แยกเป็นเศษ
-                        $pairedSessions[] = ['in' => $currentIn, 'out' => null];
-                        $currentIn = $ts;
-                    }
+            // หาสแกนสุดท้ายใน OUT Window (Last OUT)
+            $scanOut = null;
+            foreach ($scans as $ts) {
+                if ($ts > $outWinEnd) break; // เลยหน้าต่างแล้วหยุดได้
+                if ($ts >= $outWinStart) {
+                    $scanOut = $ts; // อัปเดตเรื่อยๆ ตัวสุดท้ายชนะ
+                }
+            }
+
+            // บันทึกถ้ามีข้อมูลอย่างน้อย 1 scan
+            if ($scanIn !== null || $scanOut !== null) {
+                if (!isset($sessionsByEmpDate[$empId][$dateStr])) {
+                    $sessionsByEmpDate[$empId][$dateStr] = ['in' => $scanIn, 'out' => $scanOut];
                 } else {
-                    // ระยะห่างมากเกินไป (เกิน 16 ชม.) แสดงว่า $currentIn คือเศษ (Orphan) ไม่มี OUT
-                    // ให้เก็บ $currentIn เป็นรอบที่ไม่มี OUT ไปก่อน แล้วให้รอบใหม่เริ่มที่ $ts
-                    $pairedSessions[] = ['in' => $currentIn, 'out' => null];
-                    $currentIn = $ts;
-                }
-            }
-        }
-        
-        // ถ้ามี $currentIn ค้างอยู่ท้ายสุด ไม่มีคู่ ก็เอามาเป็น Orphan
-        if ($currentIn !== null) {
-            $pairedSessions[] = ['in' => $currentIn, 'out' => null];
-        }
-
-        // --- PASS 2: Orphan Classification & Date Mapping ---
-        foreach ($pairedSessions as $sess) {
-            $in = $sess['in'];
-            $out = $sess['out'];
-            
-            $referenceTs = $in !== null ? $in : $out;
-            $isNightShift = $getIsNightShift($referenceTs);
-
-            // กรณีเป็น Orphan (มี in แต่ไม่มี out) -> ใช้ Time Context เดาว่าเป็น IN หรือ OUT
-            if ($in !== null && $out === null) {
-                $hour = (int)date('G', $in);
-                $minute = (int)date('i', $in);
-                
-                if (!$isNightShift) {
-                    // กะเช้า (Day Shift)
-                    // ถ้าแสกนหลัง 12:30 น. (ช่วงบ่ายถึงดึก) หรือสแกนเช้ามืด (00:00 - 04:59) ถือว่าเป็นเวลา OUT (ทำโอทีลากยาวแล้วลืมสแกนเข้า หรือสแกนออกตอนเช้า)
-                    if ($hour > 12 || ($hour == 12 && $minute >= 30) || $hour < 5) {
-                        // ถือว่าเป็นเวลา OUT (คนลืมสแกนเข้า)
-                        $out = $in;
-                        $in = null;
+                    // เติมเต็มข้อมูลที่ขาด (กรณีหลาย shift window ครอบคลุมวันเดียวกัน)
+                    if ($sessionsByEmpDate[$empId][$dateStr]['in'] === null && $scanIn !== null) {
+                        $sessionsByEmpDate[$empId][$dateStr]['in'] = $scanIn;
                     }
-                    // ถ้าก่อน 13:00 ให้คงเป็น IN ตามเดิม
-                } else {
-                    // กะดึก (Night Shift)
-                    if ($hour < 12) {
-                        // สแกนก่อน 12:00 น. (เที่ยงวัน) -> ถือว่าเป็นเวลา OUT ของเมื่อคืน
-                        $out = $in;
-                        $in = null;
+                    if ($sessionsByEmpDate[$empId][$dateStr]['out'] === null && $scanOut !== null) {
+                        $sessionsByEmpDate[$empId][$dateStr]['out'] = $scanOut;
                     }
-                    // ถ้า 12:00 ขึ้นไป ให้คงเป็น IN ตามเดิม
                 }
             }
-            
-            // การระบุ Log Date ของ Session นี้ (ใช้วันที่ของสแกนเข้าเป็นหลัก หรือสแกนออกในกรณีที่เป็น Orphan OUT)
-            $referenceTs = $in !== null ? $in : $out;
-            $logDate = date('Y-m-d', $referenceTs);
-            
-            // กรณีเป็น OUT ของกะดึก แต่มาตอนเช้า (เช่น สแกนออก 05:00) 
-            // ตัว $logDate จะเป็นของวันนี้ แต่ความจริงเป็นกะของ "เมื่อวาน"
-            // เราต้องปรับ Date กลับไปให้ถูกต้อง
-            if ($in === null && $out !== null) {
-                $outHour = (int)date('G', $out);
-                // กะดึก หรือกรณีใดๆ ที่สแกนออกตอนเช้า (00:00 - 11:59) ถือว่าเป็นของกะเมื่อวาน
-                if ($outHour < 12) {
-                    $logDate = date('Y-m-d', strtotime('-1 day', $referenceTs));
-                }
-            } else if ($in !== null && $out !== null) {
-                // ถ้ามีทั้ง IN และ OUT ให้ยึดวันที่ของ IN
-                $logDate = date('Y-m-d', $in);
-            }
-            
-            // ป้องกันการทับซ้อน (ถ้าเกิดวันนั้นมีหลาย session จะใช้อันแรกสุด หรือรวมกัน)
-            if (!isset($sessionsByEmpDate[$empId][$logDate])) {
-                $sessionsByEmpDate[$empId][$logDate] = ['in' => $in, 'out' => $out];
-            } else {
-                // ถ้ามีของวันนี้อยู่แล้ว พยายามเติมเต็ม
-                if ($sessionsByEmpDate[$empId][$logDate]['in'] === null && $in !== null) {
-                    $sessionsByEmpDate[$empId][$logDate]['in'] = $in;
-                }
-                if ($sessionsByEmpDate[$empId][$logDate]['out'] === null && $out !== null) {
-                    $sessionsByEmpDate[$empId][$logDate]['out'] = $out;
-                }
-            }
+
+            $currDateTs = strtotime('+1 day', $currDateTs);
         }
     }
 
