@@ -2479,14 +2479,14 @@ const Actions = {
                     const shiftHtml = isDay ? `<span class="badge bg-primary shadow-sm">DAY</span>` : `<span class="badge bg-dark shadow-sm">NIGHT</span>`;
                     
                     let detectMsg;
-                    if (row.detect_type === 'REVERSED') {
-                        detectMsg = '⚠️ เวลาเข้า-ออกสลับกัน (อาจสลับกะ)';
-                    } else if (row.detect_type === 'ORPHAN_MORNING') {
-                        detectMsg = '🌅 กะดึกมีสแกนช่วงเช้า 07-08 น. (อาจสลับกะมาเช้า)';
-                    } else if (isDay) {
-                        detectMsg = 'พบการสแกนช่วงเย็น (อาจสลับกะ/ลืมสแกนเข้า)';
+                    if (row.detect_type === 'DAY_BUT_NIGHT_SCAN') {
+                        detectMsg = '🌙 กะเช้าแต่สแกนเข้าช่วงบ่าย-ค่ำ (น่าจะเป็นกะดึก)';
+                    } else if (row.detect_type === 'NIGHT_BUT_DAY_SCAN') {
+                        detectMsg = '☀️ กะดึกแต่สแกนเข้าช่วงเช้า (น่าจะเป็นกะเช้า)';
+                    } else if (row.detect_type === 'ORPHAN_OUT') {
+                        detectMsg = '❓ มีเฉพาะเวลาออก ไม่มีเวลาเข้า (ลืมสแกนเข้างาน)';
                     } else {
-                        detectMsg = 'พบการสแกนช่วงเช้า (อาจสลับกะ/ลืมสแกนเข้า)';
+                        detectMsg = '⚠️ เวลาสแกนผิดปกติ';
                     }
                     
                     const btnLabel = isDay ? '🔁 สลับเป็นกะดึก' : '🔁 สลับเป็นกะเช้า';

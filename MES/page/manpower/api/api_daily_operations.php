@@ -509,8 +509,9 @@ try {
                        CONVERT(VARCHAR(5), L.scan_out_time, 108) as scan_out,
                        L.status,
                        CASE 
-                           WHEN L.shift_id = 2 AND L.scan_in_time IS NOT NULL AND L.scan_out_time IS NOT NULL AND L.scan_in_time > L.scan_out_time THEN 'REVERSED'
-                           WHEN L.shift_id = 2 AND L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL AND CAST(L.scan_out_time AS TIME) >= '06:30:00' AND CAST(L.scan_out_time AS TIME) <= '08:00:00' THEN 'ORPHAN_MORNING'
+                           WHEN L.shift_id = 1 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '13:00:00' THEN 'DAY_BUT_NIGHT_SCAN'
+                           WHEN L.shift_id = 2 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) < '13:00:00' THEN 'NIGHT_BUT_DAY_SCAN'
+                           WHEN L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL THEN 'ORPHAN_OUT'
                            ELSE 'SCAN_MISMATCH'
                        END as detect_type
                 FROM dbo.MANPOWER_DAILY_LOGS L
@@ -519,13 +520,11 @@ try {
                 WHERE L.log_date BETWEEN ? AND ?
                   $teamFilter
                   AND (
-                      (L.shift_id = 1 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '16:00:00' AND CAST(L.scan_in_time AS TIME) <= '22:00:00')
+                      (L.shift_id = 1 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '13:00:00')
                       OR
-                      (L.shift_id = 2 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '05:00:00' AND CAST(L.scan_in_time AS TIME) <= '14:00:00')
+                      (L.shift_id = 2 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) < '13:00:00')
                       OR
-                      (L.shift_id = 2 AND L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL AND CAST(L.scan_out_time AS TIME) >= '06:30:00' AND CAST(L.scan_out_time AS TIME) <= '08:00:00')
-                      OR
-                      (L.shift_id = 2 AND L.scan_in_time IS NOT NULL AND L.scan_out_time IS NOT NULL AND L.scan_in_time > L.scan_out_time)
+                      (L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL AND L.status IN ('PRESENT','LATE'))
                   )
                 ORDER BY L.log_date DESC, L.scan_in_time DESC
             ";
