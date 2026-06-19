@@ -329,10 +329,16 @@ try {
                 $finalIn = $session['in'];
                 $finalOut = $session['out'];
 
-                $inTimeStr = date('Y-m-d H:i:s', $finalIn);
+                $inTimeStr = $finalIn ? date('Y-m-d H:i:s', $finalIn) : null;
                 $outTimeStr = $finalOut ? date('Y-m-d H:i:s', $finalOut) : null;
                 $shiftStartTs = strtotime("$procDate $shiftStartTime");
-                $status = ($finalIn > $shiftStartTs) ? 'LATE' : 'PRESENT';
+
+                if ($finalIn !== null) {
+                    $status = ($finalIn > $shiftStartTs) ? 'LATE' : 'PRESENT';
+                } else {
+                    // มี scan_out แต่ไม่มี scan_in (ลืมสแกนเข้า)
+                    $status = 'PRESENT';
+                }
 
                 if ($logExist) {
                     $stmtUpdateLog->execute([$inTimeStr, $outTimeStr, $status, $targetShiftId, $snapLine, $snapTeam, $snapType, $logExist['log_id']]);
@@ -349,8 +355,8 @@ try {
 
                 if ($logExist) {
                     if (in_array($logExist['status'], ['PRESENT', 'LATE']) && $logExist['is_verified'] == 0) {
-                        // Scan was consumed by another day's shift (e.g. night shift clock-out)
-                        // Clear the stale scan times and reset status
+                        // ไม่มี session ในวันนี้ แต่เคยมี status PRESENT/LATE → ข้อมูลเก่าที่ไม่ถูกต้อง
+                        // เคลียร์เวลาสแกนแล้ว reset status
                         $stmtUpdateLog->execute([null, null, $targetStatus, $targetShiftId, $snapLine, $snapTeam, $snapType, $logExist['log_id']]);
                     } else if ($logExist['status'] !== $targetStatus && in_array($logExist['status'], ['WAITING', 'ABSENT', 'HOLIDAY'])) {
                         $pdo->prepare("UPDATE dbo.MANPOWER_DAILY_LOGS SET status = ?, updated_at = GETDATE() WHERE log_id = ?")->execute([$targetStatus, $logExist['log_id']]);
