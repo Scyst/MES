@@ -213,7 +213,7 @@ try {
     //
     // Shift Windows:
     // กะเช้า (Day):  IN = 05:00-12:59 วันนั้น,  OUT = 13:00-23:59 วันนั้น
-    // กะดึก (Night): IN = 17:00-23:59 วันนั้น,  OUT = 00:00-12:59 วันถัดไป
+    // กะดึก (Night): IN = 14:00-23:59 วันนั้น,  OUT = 00:00-12:59 วันถัดไป
 
     $sessionsByEmpDate = []; // [empId][logDate] = ['in' => ts|null, 'out' => ts|null]
 
@@ -249,7 +249,7 @@ try {
                 $outWinEnd   = strtotime("$dateStr 23:59:59");
             } else {
                 // กะดึก (Night Shift)
-                $inWinStart  = strtotime("$dateStr 17:00:00");
+                $inWinStart  = strtotime("$dateStr 14:00:00");
                 $inWinEnd    = strtotime("$dateStr 23:59:59");
                 $nextDate    = date('Y-m-d', strtotime('+1 day', $currDateTs));
                 $outWinStart = strtotime("$nextDate 00:00:00");
