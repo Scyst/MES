@@ -21,7 +21,7 @@ if (empty($action)) {
 }
 
 // Centralized CSRF check for all write actions.
-$writeActions = ['upload', 'update', 'delete'];
+$writeActions = ['upload', 'update', 'delete', 'revise', 'create_folder'];
 if (in_array($action, $writeActions)) {
     $csrfTokenHeader = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfTokenHeader)) {
@@ -38,7 +38,7 @@ try {
 
     switch ($action) {
         //==================================
-        //  GET DOCUMENTS
+        //  GET DOCUMENTS & FOLDERS
         //==================================
         case 'get_documents':
             if (!hasRole(['admin', 'creator', 'supervisor', 'operator', 'qc'])) {
@@ -51,35 +51,89 @@ try {
             $limit = 30;
             $offset = ($page - 1) * $limit;
             $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
-            $categoryFilter = isset($_GET['category']) ? trim($_GET['category']) : '';
+            $folderPath = isset($_GET['folderPath']) ? trim($_GET['folderPath']) : '';
 
-            $whereClauses = [];
+            // 1. Get explicit folders (only if not searching, or if search term matches)
+            $explicitFolders = [];
+            if (empty($searchTerm)) {
+                $sqlFolders = "SELECT d.id, d.file_name, d.category, CONVERT(VARCHAR, d.created_at, 126) AS created_at, u.username AS uploaded_by 
+                               FROM dbo.{$documentsTable} d 
+                               LEFT JOIN dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id 
+                               WHERE d.file_type = 'folder' AND d.category = ?";
+                $stmtFolders = $pdo->prepare($sqlFolders);
+                $stmtFolders->execute([$folderPath]);
+                $explicitFolders = $stmtFolders->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            // 2. Get implicit folders from document categories (only if not searching)
+            $implicitFolders = [];
+            if (empty($searchTerm)) {
+                $likeSearch = $folderPath === '' ? '%' : $folderPath . '/%';
+                $sqlCategories = "SELECT DISTINCT category FROM dbo.{$documentsTable} WHERE category LIKE ? AND (file_type != 'folder' OR file_type IS NULL)";
+                $stmtCat = $pdo->prepare($sqlCategories);
+                $stmtCat->execute([$likeSearch]);
+                $categories = $stmtCat->fetchAll(PDO::FETCH_COLUMN, 0);
+
+                foreach ($categories as $cat) {
+                    if ($cat === $folderPath) continue;
+                    $remainingPath = $folderPath === '' ? $cat : substr($cat, strlen($folderPath) + 1);
+                    $parts = explode('/', $remainingPath);
+                    $directChild = $parts[0];
+                    if (!empty($directChild)) {
+                        $implicitFolders[$directChild] = true;
+                    }
+                }
+            }
+
+            $foldersToReturn = [];
+            $existingExplicitFolderNames = [];
+            foreach ($explicitFolders as $f) {
+                $f['is_folder'] = true;
+                $foldersToReturn[] = $f;
+                $existingExplicitFolderNames[$f['file_name']] = true;
+            }
+            
+            foreach ($implicitFolders as $folderName => $val) {
+                if (!isset($existingExplicitFolderNames[$folderName])) {
+                    $foldersToReturn[] = [
+                        'id' => null,
+                        'file_name' => $folderName,
+                        'category' => $folderPath,
+                        'created_at' => null,
+                        'uploaded_by' => 'System',
+                        'is_folder' => true
+                    ];
+                }
+            }
+            
+            usort($foldersToReturn, function($a, $b) {
+                return strcasecmp($a['file_name'], $b['file_name']);
+            });
+
+            // 3. Get Documents
+            $whereClauses = ["(d.file_type != 'folder' OR d.file_type IS NULL)"];
             $params = [];
+
+            if (!empty($searchTerm)) {
+                // If searching, ignore folderPath and search globally
+                $whereClauses[] = "(d.file_name LIKE ? OR d.file_description LIKE ? OR u.username LIKE ?)";
+                $searchValue = "%{$searchTerm}%";
+                array_push($params, $searchValue, $searchValue, $searchValue);
+            } else {
+                $whereClauses[] = "d.category = ?";
+                $params[] = $folderPath;
+            }
 
             if (!hasRole(['admin', 'creator'])) {
                 $whereClauses[] = "d.file_name LIKE '%.pdf'";
             }
 
-            if (!empty($searchTerm)) {
-                $whereClauses[] = "(d.file_name LIKE ? OR d.file_description LIKE ? OR d.category LIKE ? OR u.username LIKE ?)";
-                $searchValue = "%{$searchTerm}%";
-                array_push($params, $searchValue, $searchValue, $searchValue, $searchValue);
-            }
-
-            if (!empty($categoryFilter)) {
-                $whereClauses[] = "d.category LIKE ?";
-                $params[] = $categoryFilter . '%';
-            }
-
-            $finalWhereClause = '';
-            if (!empty($whereClauses)) {
-                $finalWhereClause = 'WHERE ' . implode(' AND ', $whereClauses);
-            }
+            $finalWhereClause = 'WHERE ' . implode(' AND ', $whereClauses);
             
-            $sql = "
-                SELECT d.id, d.file_name, d.file_description, d.category,
-                       CONVERT(VARCHAR, d.created_at, 126) AS created_at, 
-                       u.username AS uploaded_by
+            $sqlDocs = "
+                SELECT d.id, d.file_name, d.file_description, d.category, d.file_size,
+                      CONVERT(VARCHAR, d.created_at, 126) AS created_at, 
+                      u.username AS uploaded_by
                 FROM dbo.{$documentsTable} d
                 LEFT JOIN dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id
                 {$finalWhereClause}
@@ -87,17 +141,22 @@ try {
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
             ";
             
-            $stmt = $pdo->prepare($sql);
-            
+            $stmtDocs = $pdo->prepare($sqlDocs);
             $paramIndex = 1;
             foreach ($params as $param) {
-                $stmt->bindValue($paramIndex++, $param);
+                $stmtDocs->bindValue($paramIndex++, $param);
             }
-            $stmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
-            $stmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
-            
-            $stmt->execute();
-            $documents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmtDocs->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
+            $stmtDocs->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
+            $stmtDocs->execute();
+            $documentsToReturn = $stmtDocs->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($documentsToReturn as &$doc) {
+                $doc['is_folder'] = false;
+            }
+
+            // Combine: Folders first, then documents
+            $data = array_merge($foldersToReturn, $documentsToReturn);
 
             $countSql = "SELECT COUNT(*) FROM dbo.{$documentsTable} d LEFT JOIN dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id {$finalWhereClause}";
             $countStmt = $pdo->prepare($countSql);
@@ -106,19 +165,31 @@ try {
 
             echo json_encode([
                 'success' => true,
-                'data' => $documents,
+                'data' => $data,
                 'pagination' => [ 'currentPage' => $page, 'totalPages' => ceil($totalRecords / $limit), 'totalRecords' => (int)$totalRecords ]
             ]);
             break;
 
         //==================================
-        //  GET CATEGORIES
+        //  CREATE FOLDER
         //==================================
-        case 'get_categories':
-            $sql = "SELECT DISTINCT category FROM dbo.{$documentsTable} WHERE category IS NOT NULL AND category != '' ORDER BY category ASC";
-            $stmt = $pdo->query($sql);
-            $categories = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
-            echo json_encode(['success' => true, 'data' => $categories]);
+        case 'create_folder':
+            if (!hasRole(['admin', 'creator'])) {
+                throw new Exception('Permission denied.', 403);
+            }
+            $inputData = json_decode(file_get_contents('php://input'), true);
+            $folderName = trim($inputData['folder_name'] ?? '');
+            $parentPath = trim($inputData['parent_path'] ?? '');
+            
+            if (empty($folderName)) {
+                throw new Exception('Folder name is required.', 400);
+            }
+            
+            $sql = "INSERT INTO dbo.{$documentsTable} (file_name, file_type, category, uploaded_by_user_id) VALUES (?, 'folder', ?, ?)";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$folderName, $parentPath, $_SESSION['user']['id']]);
+            
+            echo json_encode(['success' => true, 'message' => 'Folder created successfully.']);
             break;
 
         //==================================
@@ -155,7 +226,7 @@ try {
                 exit;
             }
             try {
-                $uploadDir = __DIR__ . '/../../../documents/';
+                $uploadDir = __DIR__ . '/../../../uploads/documentCenter/';
                 $originalFileName = basename($file['name']);
                 $fileExtension = pathinfo($originalFileName, PATHINFO_EXTENSION);
                 $safeFileName = preg_replace("/[^A-Za-z0-9\\._-]/", '', pathinfo($originalFileName, PATHINFO_FILENAME));
@@ -167,6 +238,81 @@ try {
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute([ $originalFileName, $_POST['file_description'] ?? null, $newFileName, $file['type'], $file['size'], $_POST['category'] ?? null, $_SESSION['user']['id'] ]);
                     echo json_encode(['success' => true, 'message' => 'File uploaded successfully.']);
+                } else {
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'error' => 'Failed to move uploaded file. Check folder permissions.']);
+                }
+            } catch (PDOException $e) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+            }
+            exit;
+
+        //==================================
+        //  REVISE DOCUMENT
+        //==================================
+        case 'revise':
+            if (!hasRole(['admin', 'creator'])) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Permission Denied. You do not have rights to revise documents.']);
+                exit;
+            }
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                http_response_code(405);
+                echo json_encode(['error' => 'Method Not Allowed']);
+                exit;
+            }
+            $documentId = $_POST['document_id'] ?? null;
+            if (!$documentId) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Document ID is required.']);
+                exit;
+            }
+            if (!isset($_FILES['doc_file']) || $_FILES['doc_file']['error'] !== UPLOAD_ERR_OK) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'No file uploaded or an upload error occurred.']);
+                exit;
+            }
+            $file = $_FILES['doc_file'];
+            $maxFileSize = 20 * 1024 * 1024;
+            $allowedMimeTypes = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','image/jpeg','image/png'];
+
+            if ($file['size'] > $maxFileSize) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'File is too large. Maximum size is 20MB.']);
+                exit;
+            }
+            if (!in_array($file['type'], $allowedMimeTypes)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Invalid file type. Supported formats: PDF, Word, Excel, JPG, PNG.']);
+                exit;
+            }
+            try {
+                // Get old file info to delete it
+                $stmt = $pdo->prepare("SELECT file_path FROM dbo.{$documentsTable} WHERE id = ?");
+                $stmt->execute([$documentId]);
+                $oldFile = $stmt->fetchColumn();
+
+                $uploadDir = __DIR__ . '/../../../uploads/documentCenter/';
+                $originalFileName = basename($file['name']);
+                $fileExtension = pathinfo($originalFileName, PATHINFO_EXTENSION);
+                $safeFileName = preg_replace("/[^A-Za-z0-9\\._-]/", '', pathinfo($originalFileName, PATHINFO_FILENAME));
+                $newFileName = $safeFileName . '_rev_' . uniqid() . '.' . $fileExtension;
+                $destination = $uploadDir . $newFileName;
+
+                if (move_uploaded_file($file['tmp_name'], $destination)) {
+                    if ($oldFile) {
+                        $oldFullPath = $uploadDir . $oldFile;
+                        if (file_exists($oldFullPath)) {
+                            unlink($oldFullPath);
+                        }
+                    }
+
+                    $sql = "UPDATE dbo.{$documentsTable} SET file_name = ?, file_path = ?, file_type = ?, file_size = ? WHERE id = ?";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([$originalFileName, $newFileName, $file['type'], $file['size'], $documentId]);
+                    
+                    echo json_encode(['success' => true, 'message' => 'Document revised successfully.']);
                 } else {
                     http_response_code(500);
                     echo json_encode(['success' => false, 'error' => 'Failed to move uploaded file. Check folder permissions.']);
@@ -235,7 +381,7 @@ try {
 
             foreach ($filesToDelete as $filePath) {
                 if ($filePath) {
-                    $fullPath = __DIR__ . '/../../../documents/' . $filePath;
+                    $fullPath = __DIR__ . '/../../../uploads/documentCenter/' . $filePath;
                     if (file_exists($fullPath)) {
                         unlink($fullPath);
                     }

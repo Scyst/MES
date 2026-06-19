@@ -21,19 +21,78 @@ $pageIcon = "fas fa-folder-open";
 <html lang="en">
 <head>
     <?php include_once '../components/common_head.php'; ?>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* ปรับแต่ง Dropdown หมวดหมู่ให้สวยงามขึ้น */
+        :root {
+            --primary-color: #4F46E5;
+            --primary-hover: #4338CA;
+            --bg-color: #F8FAFC;
+            --surface-color: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --border-color: #CBD5E1;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        body.layout-top-header {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+        }
+        .card-modern {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .btn-indigo {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        .btn-indigo:hover {
+            background-color: var(--primary-hover);
+            color: white;
+        }
+        /* Table Styles */
+        .table-modern {
+            border-collapse: collapse;
+        }
+        .table-modern thead th {
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 700;
+            border-bottom: 2px solid #94A3B8 !important;
+            background-color: #F1F5F9;
+            padding: 12px 10px;
+        }
+        .table-modern tbody tr {
+            border-bottom: 1px solid #CBD5E1;
+            transition: background 0.2s;
+        }
+        .table-modern tbody tr:hover {
+            background-color: #F1F5F9;
+        }
+        .table-modern tbody td {
+            padding: 12px 10px;
+            vertical-align: middle;
+            border: none;
+        }
+        
+        /* Category Dropdown */
         .category-picker-dropdown .dropdown-menu {
             min-width: 280px;
             max-height: 400px;
             overflow-y: auto;
             border-radius: 8px;
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         .category-item { transition: all 0.2s; border-radius: 4px; margin: 0 4px; }
-        .category-item:hover { background-color: #f8f9fa; }
-        .category-item.active { background-color: #e8f0fe; color: #0d6efd; font-weight: 600; }
-        .folder-arrow { font-size: 0.8rem; color: #adb5bd; }
+        .category-item:hover { background-color: #F1F5F9; }
+        .category-item.active { background-color: #EEF2FF; color: var(--primary-color); font-weight: 600; }
+        .folder-arrow { font-size: 0.8rem; color: var(--text-secondary); }
     </style>
 </head>
 
@@ -45,76 +104,67 @@ $pageIcon = "fas fa-folder-open";
         <div id="main-content">
             <?php include_once('../components/php/spinner.php'); ?>
 
-            <div class="content-wrapper">
+            <div class="content-wrapper p-3">
                 
-                <div class="card shadow-sm border-0 mb-3 flex-shrink-0">
-                    <div class="card-body p-2 bg-body-tertiary rounded">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="card-modern mb-3 flex-shrink-0">
+                    <div class="card-body p-3 d-flex flex-wrap align-items-center gap-3">
                             
-                            <div class="d-flex align-items-center gap-2 flex-grow-1">
-                                
-                                <div class="dropdown category-picker-dropdown shadow-sm">
-                                    <button class="btn btn-light border-secondary-subtle dropdown-toggle d-flex align-items-center justify-content-between" type="button" id="categoryDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="min-width: 200px;">
-                                        <span><i class="fas fa-folder text-warning me-2"></i> <span id="currentCategoryText">All Documents</span></span>
-                                    </button>
-                                    <ul class="dropdown-menu" aria-labelledby="categoryDropdown" id="categoryPickerMenu">
-                                        <li class="dropdown-header d-none px-3 py-2 bg-light border-bottom mb-2" id="categoryPickerBreadcrumbs">
-                                            <button type="button" class="btn btn-sm btn-light border text-secondary btn-back-category me-2"><i class="fas fa-arrow-left"></i></button>
-                                            <span class="breadcrumb-text fw-bold text-dark"></span>
-                                        </li>
-                                        <li><a class="dropdown-item category-item active py-2" href="#" data-category=""><i class="fas fa-inbox text-secondary me-2"></i> All Documents</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <div id="categoryPickerList">
-                                            <li class="p-3 text-center text-muted small"><i class="fas fa-spinner fa-spin me-2"></i>Loading categories...</li>
-                                        </div>
-                                    </ul>
+                            <!-- Left side: Search and Breadcrumbs -->
+                            <div class="d-flex align-items-center gap-3 flex-grow-1">
+                                <!-- Search Box -->
+                                <div class="position-relative" style="width: 250px;">
+                                    <span class="position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" id="docSearchInput" class="form-control bg-white ps-5" placeholder="Search..." style="border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                                 </div>
-
-                                <div class="input-group input-group-sm" style="max-width: 350px;">
-                                    <span class="input-group-text bg-body border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
-                                    <input type="search" id="docSearchInput" class="form-control border-secondary-subtle ps-2" placeholder="ค้นหาชื่อไฟล์, รายละเอียด..." autocomplete="off">
+                                
+                                <!-- Breadcrumbs -->
+                                <div class="d-flex align-items-center gap-2" id="breadcrumbContainer" style="font-size: 1.1rem;">
+                                    <!-- Populated by JS -->
+                                    <span style="cursor: pointer; color: var(--text-primary); font-weight: 600;" onclick="navigateToFolder('')">All Files</span>
                                 </div>
                             </div>
 
-                            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                            <!-- Right side: Buttons -->
+                            <div class="d-flex align-items-center gap-3 flex-wrap justify-content-end">
                                 <?php if ($canManage): ?>
-                                    <button id="btnDeleteSelected" class="btn btn-danger btn-sm shadow-sm" style="display: none;">
-                                        <i class="fas fa-trash-alt me-1"></i> ลบที่เลือก (<span id="selectedCount">0</span>)
+                                    <button id="newFolderBtn" class="btn btn-light border fw-medium px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#newFolderModal" style="padding: 8px 16px; border-radius: 6px; color: var(--primary-color);">
+                                        📁 + New Folder
                                     </button>
 
-                                    <button id="uploadDocBtn" class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#uploadDocModal">
-                                        <i class="fas fa-upload me-1"></i> อัปโหลดเอกสาร
+                                    <button id="uploadDocBtn" class="btn btn-indigo px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#uploadDocModal" style="padding: 8px 16px; border-radius: 6px; font-weight: 500;">
+                                        📄 + Upload File
                                     </button>
                                 <?php endif; ?>
                             </div>
 
                         </div>
                     </div>
-                </div>
 
-                <div class="card shadow-sm border-0 d-flex flex-column flex-grow-1" style="min-height: 0;">
+                <div class="card-modern d-flex flex-column flex-grow-1" style="min-height: 0; padding: 1rem;">
                     <div class="table-responsive flex-grow-1" style="overflow-y: auto;">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light text-secondary" style="position: sticky; top: 0; z-index: 10;">
+                        <table class="table-modern w-100 text-start align-middle mb-0">
+                            <thead style="position: sticky; top: 0; z-index: 10;">
                                 <tr>
+
+                                    <th style="width: 35%;">File Name</th>
+                                    <th style="width: 20%;">Description</th>
+                                    <th style="width: 15%;">Category</th>
+                                    <th style="width: 10%;">Size</th>
+                                    <th style="width: 10%;">Uploaded By</th>
                                     <?php if ($canManage): ?>
-                                    <th style="width: 50px; text-align: center;">
-                                        <input type="checkbox" class="form-check-input" id="selectAllCheckbox">
-                                    </th>
+                                    <th style="width: 10%; text-align: right;">Actions</th>
                                     <?php endif; ?>
-                                    <th style="width: 40%;">File Name</th>
-                                    <th style="width: 25%;">Description</th>
-                                    <th style="width: 20%;">Category</th>
-                                    <th style="width: 15%;">Uploaded By</th>
                                 </tr>
                             </thead>
                             <tbody id="documentTableBody">
-                                <tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>
+                                <tr><td colspan="7" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>
                             </tbody>
                         </table>
                     </div>
                     
-                    <div class="card-footer bg-white border-top py-2 d-flex justify-content-center">
+                    <div class="bg-white border-top py-3 mt-3 d-flex justify-content-center">
                         <nav id="fixedPagination" class="mb-0">
                             <ul class="pagination pagination-sm justify-content-center mb-0" id="paginationControls"></ul>
                         </nav>
@@ -129,6 +179,9 @@ $pageIcon = "fas fa-folder-open";
                 if ($canManage) {
                     include('components/uploadDocModal.php');
                     include('components/deleteConfirmationModal.php');
+                    include('components/moveDocModal.php');
+                    include('components/reviseDocModal.php');
+                    include('components/newFolderModal.php');
                 }
                 include('components/viewDocModal.php');
             ?>

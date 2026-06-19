@@ -75,7 +75,7 @@ try {
     $logStmt = $pdo->prepare("INSERT INTO dbo.{$documentLogsTable} (document_id, user_id, ip_address) VALUES (?, ?, ?)");
     $logStmt->execute([$docId, $currentUser['id'], $ipAddress]);
 
-    $filePath = __DIR__ . '/../../../documents/' . $document['file_path'];
+    $filePath = __DIR__ . '/../../../uploads/documentCenter/' . $document['file_path'];
     if (!file_exists($filePath)) {
         http_response_code(404); die("File not found on server.");
     }

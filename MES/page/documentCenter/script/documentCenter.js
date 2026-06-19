@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const API_ENDPOINT = 'api/documentCenterAPI.php';
     let currentPage = 1;
     let currentSearchTerm = '';
-    let currentCategory = ''; 
+    let currentFolderPath = ''; 
     let debounceTimer;
     let currentDocumentCache = [];
 
@@ -39,16 +39,47 @@ document.addEventListener('DOMContentLoaded', function () {
     const uploadDocForm = document.getElementById('uploadDocForm');
     const viewDocModal = viewDocModalElement ? new bootstrap.Modal(viewDocModalElement) : null;
     
-    // --- Category Picker Elements ---
-    const categoryPickerMenu = document.getElementById('categoryPickerMenu');
-    const categoryPickerList = document.getElementById('categoryPickerList');
-    const categoryPickerDropdownBtn = document.getElementById('categoryDropdown');
-    const currentCategoryText = document.getElementById('currentCategoryText');
-    const categoryPickerBreadcrumbs = document.getElementById('categoryPickerBreadcrumbs');
-    const breadcrumbTextSpan = categoryPickerBreadcrumbs ? categoryPickerBreadcrumbs.querySelector('.breadcrumb-text') : null;
+    // --- Move & Revise Modal Elements ---
+    const moveDocModalElement = document.getElementById('moveDocModal');
+    const moveDocModal = moveDocModalElement ? new bootstrap.Modal(moveDocModalElement) : null;
+    const moveDocForm = document.getElementById('moveDocForm');
+    const moveDocName = document.getElementById('moveDocName');
+    const moveDocId = document.getElementById('moveDocId');
+    const moveDocCategory = document.getElementById('moveDocCategory');
 
-    let allCategoriesTree = { name: 'Root', children: {}, path: '' };
-    let currentDrilldownPath = '';
+    const reviseDocModalElement = document.getElementById('reviseDocModal');
+    const reviseDocModal = reviseDocModalElement ? new bootstrap.Modal(reviseDocModalElement) : null;
+    const reviseDocForm = document.getElementById('reviseDocForm');
+    const reviseDocName = document.getElementById('reviseDocName');
+    const reviseDocId = document.getElementById('reviseDocId');
+    const reviseDocFile = document.getElementById('reviseDocFile');
+    
+    // --- Folder Navigation Elements ---
+    const breadcrumbContainer = document.getElementById('breadcrumbContainer');
+
+    window.navigateToFolder = function(path) {
+        currentFolderPath = path;
+        currentPage = 1;
+        if(searchInput) searchInput.value = '';
+        currentSearchTerm = '';
+        fetchDocuments(currentPage, currentSearchTerm, currentFolderPath);
+    };
+
+    function updateBreadcrumbs() {
+        if (!breadcrumbContainer) return;
+        let html = `<span style="cursor: pointer; color: ${currentFolderPath === '' ? 'var(--text-primary)' : 'var(--primary-color)'}; font-weight: ${currentFolderPath === '' ? '600' : '400'};" onclick="navigateToFolder('')">All Files</span>`;
+        if (currentFolderPath !== '') {
+            const parts = currentFolderPath.split('/');
+            let currentPath = '';
+            parts.forEach((part, index) => {
+                currentPath += (index === 0 ? part : '/' + part);
+                const isLast = index === parts.length - 1;
+                html += ` <span style="color: #94a3b8; margin: 0 8px;">/</span> `;
+                html += `<span style="cursor: ${isLast ? 'default' : 'pointer'}; color: ${isLast ? 'var(--text-primary)' : 'var(--primary-color)'}; font-weight: ${isLast ? '600' : '400'};" ${isLast ? '' : `onclick="navigateToFolder('${escapeHTML(currentPath)}')" `}>${escapeHTML(part)}</span>`;
+            });
+        }
+        breadcrumbContainer.innerHTML = html;
+    }
 
     // =================================================================
     // SECTION 2: CORE HELPER FUNCTION
@@ -96,115 +127,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // =================================================================
     // SECTION 3: DATA FETCHING & UI RENDERING
     // =================================================================
-    async function fetchCategoriesAndBuildTree() {
-        try {
-            const result = await apiRequest('get_categories', {}, 'GET');
-            allCategoriesTree = buildCategoryTree(result.data || []);
-            renderDrilldownCategories(currentDrilldownPath);
-        } catch (error) {
-            if (categoryPickerList) categoryPickerList.innerHTML = '<li class="p-3 text-center text-danger">Failed to load categories.</li>';
-        }
-    }
-
-    function buildCategoryTree(paths) {
-        const tree = { name: 'Root', children: {}, path: '' };
-        paths.forEach(path => {
-            let currentLevel = tree;
-            path.split('/').forEach((part, index, arr) => {
-                if (!currentLevel.children[part]) {
-                    const currentPath = arr.slice(0, index + 1).join('/');
-                    currentLevel.children[part] = { name: part, children: {}, path: currentPath };
-                }
-                currentLevel = currentLevel.children[part];
-            });
-        });
-        return tree;
-    }
-
-    function renderDrilldownCategories(parentPath = '') {
-        if (!categoryPickerList) return;
-        let currentNode = allCategoriesTree;
-        if (parentPath) {
-            const pathParts = parentPath.split('/');
-            for (const part of pathParts) {
-                if (currentNode && currentNode.children[part]) {
-                    currentNode = currentNode.children[part];
-                } else {
-                    currentNode = null;
-                    break;
-                }
-            }
-        }
-        
-        // Clear only the dynamic part
-        const dynamicListContainer = document.getElementById('categoryPickerList');
-        if(dynamicListContainer) dynamicListContainer.innerHTML = '';
-
-        if (!currentNode || Object.keys(currentNode.children).length === 0) {
-            if (parentPath) { // Only show 'no sub-categories' if we are not at the root
-                const li = document.createElement('li');
-                li.className = 'p-3 text-center text-muted';
-                li.textContent = 'No sub-categories.';
-                if(dynamicListContainer) dynamicListContainer.appendChild(li);
-            }
-        } else {
-            Object.values(currentNode.children).sort((a, b) => a.name.localeCompare(b.name)).forEach(childNode => {
-                const hasChildren = Object.keys(childNode.children).length > 0;
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <a class="dropdown-item category-item" href="#" 
-                       data-category="${escapeHTML(childNode.path)}" 
-                       data-has-children="${hasChildren ? 'true' : 'false'}">
-                        <i class="fas ${hasChildren ? 'fa-folder' : 'fa-file-alt'} me-2"></i> 
-                        ${escapeHTML(childNode.name)}
-                        ${hasChildren ? '<i class="fas fa-chevron-right folder-arrow ms-auto"></i>' : ''}
-                    </a>`;
-                if(dynamicListContainer) dynamicListContainer.appendChild(li);
-            });
-        }
-        updateCategoryPickerDisplay();
-    }
-
-    function updateCategoryPickerDisplay() {
-        if (currentCategoryText) {
-            let displayPath = 'All Documents';
-            if (currentCategory) {
-                let parts = currentCategory.split('/');
-                displayPath = parts[parts.length - 1]; // Show the last part of the path
-            }
-            currentCategoryText.textContent = displayPath;
-        }
-        
-        // Update active state in dropdown
-        document.querySelectorAll('#categoryPickerMenu .category-item').forEach(item => {
-            if (item.dataset.category === currentCategory) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
-            }
-        });
-        
-        if (categoryPickerBreadcrumbs && breadcrumbTextSpan) {
-            if (currentDrilldownPath) {
-                categoryPickerBreadcrumbs.classList.remove('d-none');
-                const pathParts = currentDrilldownPath.split('/');
-                breadcrumbTextSpan.textContent = pathParts[pathParts.length - 1];
-            } else {
-                categoryPickerBreadcrumbs.classList.add('d-none');
-            }
-        }
-    }
-
-    async function fetchDocuments(page = 1, search = '', category = '') {
-        documentTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>`;
+    async function fetchDocuments(page = 1, search = '', folderPath = '') {
+        documentTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>`;
         
         try {
-            const result = await apiRequest('get_documents', { page, search, category }, 'GET');
+            const result = await apiRequest('get_documents', { page, search, folderPath }, 'GET');
             currentDocumentCache = result.data || [];
             renderTable(currentDocumentCache);
+            updateBreadcrumbs();
             setupPagination(result.pagination);
         } catch (error) {
-            documentTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-5"><i class="fas fa-exclamation-triangle fa-2x mb-3 opacity-50"></i><br>Failed to load documents.</td></tr>`;
+            documentTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-5"><i class="fas fa-exclamation-triangle fa-2x mb-3 opacity-50"></i><br>Failed to load documents.</td></tr>`;
         }
     }
     
@@ -222,67 +155,83 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function formatBytes(bytes, decimals = 2) {
+        if (!+bytes) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+    }
+
     function renderTable(documents) {
         documentTableBody.innerHTML = '';
         if (!documents || documents.length === 0) {
-            documentTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-5">
-                <i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>ไม่พบข้อมูลเอกสารที่ค้นหา
+            documentTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-5" style="padding: 40px 20px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">📁</div>
+                <div>This folder is empty</div>
             </td></tr>`;
             return;
         }
         documents.forEach(doc => {
             const tr = document.createElement('tr');
             tr.dataset.docId = doc.id;
-            tr.style.cursor = 'pointer'; // ให้รู้ว่ากดดูได้
-    
-            tr.innerHTML = `
-                ${canManage ? `
-                <td class="checkbox-cell text-center">
-                    <input class="form-check-input row-checkbox" type="checkbox" data-doc-id="${doc.id}">
-                </td>` : ''}
-                <td class="fw-bold text-dark"><i class="fas ${getFileIconClass(doc.file_name)} fa-lg me-2"></i> ${escapeHTML(doc.file_name)}</td>
-                <td class="text-secondary small">${escapeHTML(doc.file_description) || '-'}</td>
-                <td class="category-path-cell small"></td>
-                <td>
-                    <span class="badge bg-light text-dark border"><i class="fas fa-user-circle me-1"></i> ${escapeHTML(doc.uploaded_by) || 'N/A'}</span>
-                </td>`;
-            
-            const categoryPathTd = tr.querySelector('.category-path-cell');
-            if (doc.category) {
-                const pathParts = doc.category.split('/');
-                pathParts.forEach((part, index) => {
-                    if (index > 0) {
-                        categoryPathTd.append(' / ');
-                    }
-                    const categoryLink = document.createElement('a');
-                    const fullPath = pathParts.slice(0, index + 1).join('/');
-                    categoryLink.href = "#";
-                    categoryLink.textContent = escapeHTML(part);
-                    categoryLink.dataset.category = fullPath;
-                    categoryLink.classList.add('table-category-link', 'text-decoration-none', 'fw-bold', 'text-primary');
-                    categoryPathTd.appendChild(categoryLink);
-                });
+            tr.style.cursor = 'pointer'; 
+
+            if (doc.is_folder) {
+                // FOLDER ROW
+                tr.innerHTML = `
+                    <td class="fw-bold" style="padding: 12px 10px; color: var(--text-primary);" onclick="navigateToFolder('${doc.category ? doc.category + '/' + doc.file_name : doc.file_name}')">
+                        <span style="color: #F59E0B; margin-right: 8px; font-size: 1.2rem;">📁</span>
+                        ${escapeHTML(doc.file_name)}
+                    </td>
+                    <td class="text-secondary small">-</td>
+                    <td class="text-secondary small">-</td>
+                    <td class="text-secondary small fw-medium">-</td>
+                    <td>
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 5px;">
+                            <div style="width: 24px; height: 24px; border-radius: 50%; background-color: #CBD5E1; display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-user" style="font-size: 0.6rem;"></i></div>
+                            ${escapeHTML(doc.uploaded_by) || 'N/A'}
+                        </span>
+                    </td>
+                    ${canManage ? `
+                    <td class="action-cell text-end">
+                        ${doc.id ? `
+                        <button class="btn btn-sm btn-move-doc" data-doc-id="${doc.id}" title="Move Folder" style="color: #3B82F6; border: none; background: transparent; padding: 4px 8px; font-size: 1.2rem;">➡️</button>
+                        <button class="btn btn-sm btn-delete-doc" data-doc-id="${doc.id}" title="Delete Folder" style="color: #ef4444; border: none; background: transparent; padding: 4px 8px; font-size: 1.2rem;">&times;</button>
+                        ` : ''}
+                    </td>` : ''}`;
             } else {
-                categoryPathTd.innerHTML = '-';
+                // DOCUMENT ROW
+                tr.innerHTML = `
+                    <td class="fw-bold" style="color: var(--text-primary);">
+                        <i class="fas ${getFileIconClass(doc.file_name)} fa-lg me-2" style="color: var(--primary-color);"></i> 
+                        <a href="api/view_document.php?id=${doc.id}" target="_blank" style="color: var(--primary-color); text-decoration: none;">${escapeHTML(doc.file_name)}</a>
+                    </td>
+                    <td class="text-secondary small">${escapeHTML(doc.file_description) || '-'}</td>
+                    <td class="category-path-cell small">
+                        <span style="padding: 2px 8px; background-color: #e2e8f0; color: #475569; border-radius: 4px; font-size: 0.75rem; text-transform: uppercase; font-weight: 500;">
+                            ${escapeHTML(doc.category || '-')}
+                        </span>
+                    </td>
+                    <td class="text-secondary small fw-medium">${formatBytes(doc.file_size)}</td>
+                    <td>
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 5px;">
+                            <div style="width: 24px; height: 24px; border-radius: 50%; background-color: #CBD5E1; display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-user" style="font-size: 0.6rem;"></i></div>
+                            ${escapeHTML(doc.uploaded_by) || 'N/A'}
+                        </span>
+                    </td>
+                    ${canManage ? `
+                    <td class="action-cell text-end">
+                        <button class="btn btn-sm btn-revise-doc" data-doc-id="${doc.id}" title="Revise Document" style="color: #10B981; border: none; background: transparent; padding: 4px 8px; font-size: 1.1rem;">🔄</button>
+                        <button class="btn btn-sm btn-move-doc" data-doc-id="${doc.id}" title="Move Document" style="color: #3B82F6; border: none; background: transparent; padding: 4px 8px; font-size: 1.1rem;">➡️</button>
+                        <button class="btn btn-sm btn-delete-doc" data-doc-id="${doc.id}" title="Delete Document" style="color: #ef4444; border: none; background: transparent; padding: 4px 8px; font-size: 1.2rem;">&times;</button>
+                    </td>` : ''}`;
             }
-    
             documentTableBody.appendChild(tr);
         });
-    
-        documentTableBody.querySelectorAll('.table-category-link').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const categoryToFilter = this.dataset.category;
-                currentCategory = categoryToFilter;
-                currentPage = 1;
-                fetchDocuments(currentPage, currentSearchTerm, currentCategory);
-                currentDrilldownPath = categoryToFilter;
-                updateCategoryPickerDisplay();
-            });
-        });
         
-        updateSelectionUI();
+        updateSelectionUI(); 
     }
 
     function setupPagination(paginationData) {
@@ -293,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         renderPagination('paginationControls', paginationData.totalRecords, paginationData.currentPage, 30, (page) => {
             currentPage = page;
-            fetchDocuments(page, currentSearchTerm, currentCategory);
+            fetchDocuments(page, currentSearchTerm, currentFolderPath);
         });
     }
 
@@ -324,7 +273,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData();
             formData.append('doc_file', file);
             formData.append('file_description', description);
-            formData.append('category', category);
+            formData.append('category', currentFolderPath);
 
             try {
                 await apiRequest('upload', formData, 'POST');
@@ -343,8 +292,7 @@ document.addEventListener('DOMContentLoaded', function () {
             showToast(`${filesToUpload.length} file(s) uploaded successfully!`, 'var(--bs-success)');
         }
         
-        fetchDocuments(1, '', currentCategory);
-        fetchCategoriesAndBuildTree(); 
+        fetchDocuments(1, '', currentFolderPath);
     }
 
     function openDetailModal(docId) {
@@ -433,6 +381,70 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function openMoveModal(docId) {
+        const doc = currentDocumentCache.find(d => d.id == docId);
+        if (!doc || !moveDocModalElement) return;
+        if (moveDocId) moveDocId.value = doc.id;
+        if (moveDocName) moveDocName.textContent = doc.file_name;
+        if (moveDocCategory) moveDocCategory.value = doc.category || '';
+        if (moveDocModal) moveDocModal.show();
+    }
+
+    async function handleMoveSubmit(event) {
+        event.preventDefault();
+        const docId = moveDocId.value;
+        const currentDoc = currentDocumentCache.find(d => d.id == docId);
+        const body = {
+            document_id: docId,
+            category: moveDocCategory.value,
+            description: currentDoc ? currentDoc.file_description : ''
+        };
+
+        if(moveDocModal) moveDocModal.hide();
+        showSpinner();
+        try {
+            const result = await apiRequest('update', body, 'POST');
+            showToast('Document moved successfully.', 'var(--bs-success)');
+            fetchDocuments(currentPage, currentSearchTerm, currentCategory);
+            fetchCategoriesAndBuildTree();
+        } catch (error) {
+            // Error toast handled in apiRequest
+        } finally {
+            hideSpinner();
+        }
+    }
+
+    function openReviseModal(docId) {
+        const doc = currentDocumentCache.find(d => d.id == docId);
+        if (!doc || !reviseDocModalElement) return;
+        if (reviseDocId) reviseDocId.value = doc.id;
+        if (reviseDocName) reviseDocName.textContent = doc.file_name;
+        if (reviseDocFile) reviseDocFile.value = '';
+        if (reviseDocModal) reviseDocModal.show();
+    }
+
+    async function handleReviseSubmit(event) {
+        event.preventDefault();
+        const files = reviseDocFile.files;
+        if (files.length === 0) return;
+        
+        const formData = new FormData();
+        formData.append('document_id', reviseDocId.value);
+        formData.append('doc_file', files[0]);
+        
+        if (reviseDocModal) reviseDocModal.hide();
+        showSpinner();
+        try {
+            const result = await apiRequest('revise', formData, 'POST');
+            showToast('Document revised successfully.', 'var(--bs-success)');
+            fetchDocuments(currentPage, currentSearchTerm, currentCategory);
+        } catch (error) {
+            // Error toast handled
+        } finally {
+            hideSpinner();
+        }
+    }
+
     function updateSelectionUI() {
         if (!btnDeleteSelected) return;
         if (selectedDocumentIds.size > 0) {
@@ -452,69 +464,35 @@ document.addEventListener('DOMContentLoaded', function () {
     // SECTION 5: INITIALIZATION & EVENT LISTENERS
     // =================================================================
     function initialize() {
-        // ### START: ส่วนที่แก้ไข ###
         
-        // 1. Search Box Event Listener
-        searchInput.addEventListener('input', () => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                currentSearchTerm = searchInput.value;
-                currentPage = 1;
-                fetchDocuments(currentPage, currentSearchTerm, currentCategory);
-            }, 300); // Debounce time of 300ms
-        });
-
-        // 2. Category Filter & Drilldown Event Listener
-        if (categoryPickerMenu) {
-            categoryPickerMenu.addEventListener('click', (e) => {
-                const item = e.target.closest('.category-item');
-                const backBtn = e.target.closest('.btn-back-category');
-
-                // Stop dropdown from closing automatically on item click
-                e.stopPropagation();
-
-                if (item) {
-                    e.preventDefault();
-                    const category = item.dataset.category;
-                    const hasChildren = item.dataset.hasChildren === 'true';
-
-                    if (hasChildren) {
-                        currentDrilldownPath = category; // Go deeper
-                        renderDrilldownCategories(currentDrilldownPath);
-                    } else {
-                        // This is a final selection (leaf node or "All Documents")
-                        currentCategory = category;
-                        currentPage = 1;
-                        fetchDocuments(currentPage, currentSearchTerm, currentCategory);
-                        updateCategoryPickerDisplay();
-                        // Manually hide the dropdown on final selection
-                        bootstrap.Dropdown.getInstance(categoryPickerDropdownBtn).hide();
-                    }
-                } else if (backBtn) {
-                    e.preventDefault();
-                    if (currentDrilldownPath) {
-                        const pathParts = currentDrilldownPath.split('/');
-                        pathParts.pop();
-                        currentDrilldownPath = pathParts.join('/');
-                        renderDrilldownCategories(currentDrilldownPath);
-                    }
-                }
-            });
-
-            // Reset drilldown path when dropdown is hidden
-            categoryPickerDropdownBtn.addEventListener('hide.bs.dropdown', () => {
-                // If a category is selected, the drilldown should match it
-                if (currentCategory) {
-                    const pathParts = currentCategory.split('/');
-                    pathParts.pop();
-                    currentDrilldownPath = pathParts.join('/');
-                } else {
-                    currentDrilldownPath = '';
+        const newFolderForm = document.getElementById('newFolderForm');
+        if (newFolderForm) {
+            newFolderForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const folderName = document.getElementById('newFolderName').value;
+                try {
+                    const result = await apiRequest('create_folder', { folder_name: folderName, parent_path: currentFolderPath }, 'POST');
+                    showToast(result.message, 'var(--bs-success)');
+                    document.getElementById('newFolderName').value = '';
+                    const newFolderModal = bootstrap.Modal.getInstance(document.getElementById('newFolderModal'));
+                    if (newFolderModal) newFolderModal.hide();
+                    fetchDocuments(currentPage, currentSearchTerm, currentFolderPath);
+                } catch(error) {
                 }
             });
         }
-
-        // ### END: ส่วนที่แก้ไข ###
+        
+        // 1. Search Box Event Listener
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    currentSearchTerm = searchInput.value;
+                    currentPage = 1;
+                    fetchDocuments(currentPage, currentSearchTerm, currentFolderPath);
+                }, 300);
+            });
+        }
 
         documentTableBody.addEventListener('change', (event) => {
             if (event.target.classList.contains('row-checkbox')) {
@@ -607,11 +585,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
         documentTableBody.addEventListener('click', (event) => {
             const target = event.target;
-            if (target.closest('.checkbox-cell') || target.closest('.table-category-link')) {
-                return; 
+            
+            if (target.closest('.btn-delete-doc')) {
+                event.stopPropagation();
+                const docId = target.closest('.btn-delete-doc').dataset.docId;
+                currentDeletingDocId = docId;
+                deleteMessageParagraph.textContent = `Are you sure you want to delete this item? This action cannot be undone.`;
+                deleteType = 'single';
+                deleteConfirmationModal.show();
+                return;
             }
+            if (target.closest('.btn-revise-doc')) {
+                event.stopPropagation();
+                const docId = target.closest('.btn-revise-doc').dataset.docId;
+                openReviseModal(docId);
+                return;
+            }
+            if (target.closest('.btn-move-doc')) {
+                event.stopPropagation();
+                const docId = target.closest('.btn-move-doc').dataset.docId;
+                openMoveModal(docId);
+                return;
+            }
+            
             const row = event.target.closest('tr');
-            if (row && row.dataset.docId) {
+            if (row && row.dataset.docId && !target.closest('.action-cell')) {
                 openDetailModal(row.dataset.docId);
             }
         });
@@ -639,6 +637,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const localEditDocForm = document.getElementById('editDocForm');
         if (localEditDocForm) {
             localEditDocForm.addEventListener('submit', handleEditSubmit);
+        }
+        
+        if (moveDocForm) {
+            moveDocForm.addEventListener('submit', handleMoveSubmit);
+        }
+
+        if (reviseDocForm) {
+            reviseDocForm.addEventListener('submit', handleReviseSubmit);
         }
         
         const dropZone = document.getElementById('drop-zone');
@@ -682,8 +688,7 @@ document.addEventListener('DOMContentLoaded', function () {
             handleFileSelection(folderInput);
         });
         
-        fetchDocuments();
-        fetchCategoriesAndBuildTree();
+        fetchDocuments(1, '', currentFolderPath);
     }
 
     function escapeHTML(str) {
