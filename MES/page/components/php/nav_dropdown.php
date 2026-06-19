@@ -67,6 +67,7 @@
                 <ul class="list-unstyled ms-3 ps-2 border-start py-1">
                     <li><a class="dropdown-item-icon py-1" href="../QMS/qmsDashboard.php"><i class="fas fa-check-circle fa-fw"></i><span>iQMS (Quality)</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../AccessoriesInspection/accessoriesInspectionUI.php"><i class="fas fa-camera fa-fw"></i><span>Accessories Inspection</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../PE/index.php"><i class="fas fa-wrench fa-fw"></i><span>PE Maintenance</span></a></li>
                     <?php if (in_array($userRole, ['admin', 'creator'])): ?>
                     <li><a class="dropdown-item-icon py-1" href="../maintenancePE/maintenanceStockUI.php"><i class="fas fa-tools fa-fw"></i><span>Maintenance Stock</span></a></li>
                     <?php endif; ?>
@@ -190,6 +191,7 @@
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">QUALITY & MAINTENANCE</div>
             <a class="list-group-item list-group-item-action text-dark" href="../QMS/qmsDashboard.php"><i class="fas fa-check-circle fa-fw me-3"></i> iQMS (Quality)</a>
             <a class="list-group-item list-group-item-action text-dark" href="../AccessoriesInspection/accessoriesInspectionUI.php"><i class="fas fa-camera fa-fw me-3"></i> Accessories Inspection</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../PE/index.php"><i class="fas fa-wrench fa-fw me-3"></i> PE Maintenance</a>
             <?php if (in_array($userRole, ['admin', 'creator'])): ?>
             <a class="list-group-item list-group-item-action text-dark" href="../maintenancePE/maintenanceStockUI.php"><i class="fas fa-tools fa-fw me-3"></i> Maintenance Stock</a>
             <?php endif; ?>
