@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('locationFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
+    document.getElementById('categoryFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
     document.getElementById('materialFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
     document.getElementById('hideZeroStock')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
     document.getElementById('filterSearch')?.addEventListener('input', () => {
@@ -45,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadDashboardData() {
     const locId = document.getElementById('locationFilter')?.value || 'ALL';
     const matType = document.getElementById('materialFilter')?.value || 'ALL';
+    const category = document.getElementById('categoryFilter')?.value || 'ALL';
     const hideZero = document.getElementById('hideZeroStock')?.checked || false;
     const searchStr = encodeURIComponent(document.getElementById('filterSearch')?.value.trim() || '');
 
@@ -55,14 +57,14 @@ async function loadDashboardData() {
     if (cardContainer) cardContainer.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><br>กำลังโหลดข้อมูล...</div>';
 
     try {
-        const queryParams = `get_inventory_dashboard&location_id=${locId}&material_type=${matType}&hide_zero=${hideZero}&search=${searchStr}&page=${currentPage}&limit=${rowsPerPage}`;
+        const queryParams = `get_inventory_dashboard&location_id=${locId}&material_type=${matType}&category=${category}&hide_zero=${hideZero}&search=${searchStr}&page=${currentPage}&limit=${rowsPerPage}`;
         const result = await fetchAPI(queryParams, 'GET');
 
         if (result.kpi) {
-            document.getElementById('totalSkus').innerText = result.kpi.total_skus.toLocaleString();
-            document.getElementById('outOfStock').innerText = result.kpi.out_of_stock.toLocaleString();
-            document.getElementById('totalPending').innerText = parseFloat(result.kpi.total_pending_qty).toLocaleString();
-            document.getElementById('totalValue').innerText = parseFloat(result.kpi.total_value).toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('totalSkus').innerText = parseInt(result.kpi.total_skus || 0, 10).toLocaleString();
+            document.getElementById('outOfStock').innerText = parseInt(result.kpi.out_of_stock || 0, 10).toLocaleString();
+            document.getElementById('totalPending').innerText = parseFloat(result.kpi.total_pending_qty || 0).toLocaleString();
+            document.getElementById('totalValue').innerText = parseFloat(result.kpi.total_value || 0).toLocaleString(undefined, {minimumFractionDigits: 2});
         }
 
         if (!result.data || result.data.length === 0) {

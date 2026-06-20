@@ -12,7 +12,7 @@ export default function MainLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-200 overflow-hidden font-sans">
+    <div className="flex h-screen bg-transparent transition-colors duration-200 overflow-hidden font-sans">
       {/* Sidebar Component */}
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
 

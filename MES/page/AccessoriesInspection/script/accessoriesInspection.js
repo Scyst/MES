@@ -102,19 +102,27 @@ function updateStatus(s) {
         s.camera_connected ? 'none' : 'flex';
 
     {
-        const lb = document.getElementById('labelsBadge');
-        if (_required.length === 0) {
+        const lb         = document.getElementById('labelsBadge');
+        const lastFound  = s.last_detected_classes ?? [];
+        if (_required.length === 0 || !s.armed) {
             lb.textContent = '';
-        } else if (s.all_found) {
-            lb.innerHTML = `<span style="color:#00e676;font-weight:bold">✓&nbsp;${_required.length}/${_required.length}</span>`;
+        } else if (lastFound.length > 0 && s.io_state !== 'detecting') {
+            // persist ALL FOUND in header after job done (mirrors detectedStatus)
+            lb.innerHTML = `<span style="color:#00e676;font-weight:bold">✓&nbsp;${lastFound.length}/${_required.length}</span>`;
         } else {
-            lb.innerHTML = _required.map(c =>
-                _effConf.has(c)
-                    ? `<span style="color:#00e676">✓${escHtml(c)}</span>`
-                    : _labels.includes(c)
-                        ? `<span style="color:#f1c40f">●${escHtml(c)}</span>`
-                        : `<span style="color:#555">○${escHtml(c)}</span>`
-            ).join('&thinsp;');
+            const nFound = _required.filter(c => _effConf.has(c)).length;
+            const allOk  = nFound === _required.length && _required.length > 0;
+            if (allOk) {
+                lb.innerHTML = `<span style="color:#00e676;font-weight:bold">✓&nbsp;${_required.length}/${_required.length}</span>`;
+            } else {
+                lb.innerHTML = _required.map(c =>
+                    _effConf.has(c)
+                        ? `<span style="color:#00e676">✓${escHtml(c)}</span>`
+                        : _labels.includes(c)
+                            ? `<span style="color:#f1c40f">●${escHtml(c)}</span>`
+                            : `<span style="color:#555">○${escHtml(c)}</span>`
+                ).join('&thinsp;');
+            }
         }
     }
 
@@ -157,18 +165,32 @@ function updateStatus(s) {
     ioMod.className   = s.io_connected  ? 'conn-badge conn-on' : 'conn-badge conn-off';
 
     {
-        const det = document.getElementById('detectedStatus');
-        if (_required.length === 0) {
+        const det       = document.getElementById('detectedStatus');
+        const lastFound = s.last_detected_classes ?? [];
+        if (_required.length === 0 || !s.armed) {
             det.textContent = 'Detection: ' + (s.detection_enabled ? 'ON' : 'OFF');
             det.className   = 'small text-secondary mb-1';
             det.style.color = '';
+        } else if (lastFound.length > 0 && s.io_state !== 'detecting') {
+            // persist ALL FOUND after job done until next job
+            det.innerHTML = '<div class="cls-all-found">ALL FOUND</div>'
+                + lastFound.map(c =>
+                    `<div class="cls-item cls-ok">● ${escHtml(c)}</div>`
+                ).join('');
+            det.className   = 'cls-status-list mb-1';
+            det.style.color = '';
         } else {
-            det.innerHTML = _required.map(c =>
+            const nFound = _required.filter(c => _effConf.has(c)).length;
+            const allOk  = nFound === _required.length && _required.length > 0;
+            const title  = allOk
+                ? '<div class="cls-all-found">ALL FOUND</div>'
+                : `<div class="cls-item cls-missing fw-bold">${nFound} / ${_required.length}</div>`;
+            det.innerHTML = title + _required.map(c =>
                 _effConf.has(c)
-                    ? `<div class="cls-item cls-ok">✓ ${escHtml(c)}</div>`
+                    ? `<div class="cls-item cls-ok">● ${escHtml(c)}</div>`
                     : _labels.includes(c)
                         ? `<div class="cls-item cls-detecting">● ${escHtml(c)}</div>`
-                        : `<div class="cls-item cls-missing">○ ${escHtml(c)}</div>`
+                        : `<div class="cls-item cls-missing">● ${escHtml(c)}</div>`
             ).join('');
             det.className   = 'cls-status-list mb-1';
             det.style.color = '';
@@ -276,8 +298,59 @@ function syncControls(s) {
     const newVal = Math.round(s.conf_threshold * 100);
     if (document.activeElement !== slider && Math.abs(parseInt(slider.value) - newVal) > 1) {
         slider.value = newVal;
-        document.getElementById('confVal').textContent = s.conf_threshold.toFixed(2);
+        const confInp = document.getElementById('confInput');
+        if (confInp && document.activeElement !== confInp) confInp.value = s.conf_threshold.toFixed(2);
     }
+
+    // Sync exposure controls
+    const chkExpAuto = document.getElementById('chkExpAuto');
+    if (chkExpAuto && document.activeElement !== chkExpAuto) {
+        const expAuto = s.exposure_auto ?? true;
+        chkExpAuto.checked = expAuto;
+        const expSlider = document.getElementById('expSlider');
+        const expRow    = document.getElementById('expTimeRow');
+        const expInp  = document.getElementById('expInput');
+        const expBtnM = document.getElementById('expMinus');
+        const expBtnP = document.getElementById('expPlus');
+        if (expSlider) expSlider.disabled = expAuto;
+        if (expRow)    expRow.style.opacity = expAuto ? '0.45' : '1';
+        if (expInp)  expInp.disabled  = expAuto;
+        if (expBtnM) expBtnM.disabled = expAuto;
+        if (expBtnP) expBtnP.disabled = expAuto;
+        if (expSlider && !expAuto && document.activeElement !== expSlider) {
+            const expVal = s.exposure_time ?? 43000;
+            expSlider.value = expVal;
+            if (expInp && document.activeElement !== expInp) expInp.value = expVal;
+        }
+    }
+    const chkGainAuto = document.getElementById('chkGainAuto');
+    if (chkGainAuto && document.activeElement !== chkGainAuto) {
+        const gainAuto = s.gain_auto ?? true;
+        chkGainAuto.checked = gainAuto;
+        const gainSlider = document.getElementById('gainSlider');
+        const gainRow    = document.getElementById('gainRow');
+        const gainInp  = document.getElementById('gainInput');
+        const gainBtnM = document.getElementById('gainMinus');
+        const gainBtnP = document.getElementById('gainPlus');
+        if (gainSlider) gainSlider.disabled = gainAuto;
+        if (gainRow)    gainRow.style.opacity = gainAuto ? '0.45' : '1';
+        if (gainInp)  gainInp.disabled  = gainAuto;
+        if (gainBtnM) gainBtnM.disabled = gainAuto;
+        if (gainBtnP) gainBtnP.disabled = gainAuto;
+        if (gainSlider && !gainAuto && document.activeElement !== gainSlider) {
+            const gv = Math.round((s.gain_value ?? 1.0) * 10);
+            gainSlider.value = gv;
+            if (gainInp && document.activeElement !== gainInp) gainInp.value = (gv / 10).toFixed(1);
+        }
+    }
+
+    // Sync SETTINGS section
+    const inpAlarm = document.getElementById('inpAlarmTimeout');
+    if (inpAlarm && document.activeElement !== inpAlarm)
+        inpAlarm.value = s.alarm_timeout_sec ?? 30;
+    const inpOkClear = document.getElementById('inpOkClear');
+    if (inpOkClear && document.activeElement !== inpOkClear)
+        inpOkClear.value = s.ok_clear_sec ?? 30;
 
     const ms   = document.getElementById('modelLoadStatus');
     const msel = document.getElementById('modelSelect');
@@ -295,53 +368,149 @@ function syncControls(s) {
 }
 
 
-async function pollLogs() {
-    const date   = document.getElementById('logDateFilter')?.value ?? '';
-    const params = { limit: 50 };
-    if (date) params.date = date;
-
-    try {
-        const result = await sendRequest('api/inspectionAPI.php', 'get_logs', 'GET', null, params);
-        if (result.success && Array.isArray(result.data)) {
-            renderLogs(result.data);
-        } else {
-            document.getElementById('logBody').innerHTML =
-                `<tr><td colspan="4" class="text-center text-danger py-2">
-                    โหลด log ไม่สำเร็จ: ${escHtml(result?.message ?? 'unknown error')}
-                </td></tr>`;
-        }
-    } catch (_) {
-        document.getElementById('logBody').innerHTML =
-            '<tr><td colspan="4" class="text-center text-danger py-2">ไม่สามารถติดต่อ API ได้</td></tr>';
+// ── Production date — ก่อน 08:00 ถือเป็นของเมื่อวาน (กะดึกยังไม่จบ) ───────────
+// (เงื่อนไขเดียวกับหน้า scanBarcode)
+function _productionDateStr() {
+    const now = new Date();
+    if (now.getHours() < 8) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - 1);
+        return d.toLocaleDateString('en-CA');
     }
+    return now.toLocaleDateString('en-CA');
 }
 
-function clearDateFilter() {
-    const date   = document.getElementById('logDateFilter').value;
-    const params = { limit: 9999 };
-    if (date) params.date = date;
-    sendRequest('api/inspectionAPI.php', 'get_logs', 'GET', null, params)
-        .then(result => {
-            if (result.success && Array.isArray(result.data)) renderLogs(result.data);
-        });
+function _addDays(dateStr, n) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return d.toLocaleDateString('en-CA');
+}
+
+async function _fetchHistoryByDate(date) {
+    const url = _camUrl('/api/history') + '&limit=5000&date=' + encodeURIComponent(date);
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    return (json.ok && Array.isArray(json.rows)) ? json.rows : [];
+}
+
+// ช่วงเวลาแต่ละกะ — ตรงกับ scanManage.php เป๊ะ:
+//   กะเช้า  = D 08:00 → D 20:00
+//   กะดึก   = D 20:00 → D+1 08:00   (ข้ามเที่ยงคืน)
+//   ทุกกะ   = D 08:00 → D+1 08:00
+async function pollLogs() {
+    const date  = document.getElementById('logDateFilter')?.value || _productionDateStr();
+    const shift = document.getElementById('logShiftFilter')?.value || 'all';
+
+    const nextDate   = _addDays(date, 1);
+    const rangeStart = (shift === 'night') ? `${date} 20:00:00` : `${date} 08:00:00`;
+    const rangeEnd   = (shift === 'day')   ? `${date} 20:00:00` : `${nextDate} 08:00:00`;
+
+    try {
+        // ดึง calendar date D เสมอ + D+1 เมื่อช่วงข้ามเที่ยงคืน (กะดึก / ทุกกะ)
+        const tasks = [ _fetchHistoryByDate(date) ];
+        if (shift !== 'day') tasks.push(_fetchHistoryByDate(nextDate));
+        const all = (await Promise.all(tasks)).flat();
+
+        // กรองให้อยู่ในช่วง [rangeStart, rangeEnd) แล้วเรียงใหม่→เก่า
+        const rows = all
+            .filter(r => r.timestamp && r.timestamp >= rangeStart && r.timestamp < rangeEnd)
+            .sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+
+        renderLogs(rows);
+    } catch (_) {
+        document.getElementById('logBody').innerHTML =
+            '<tr><td colspan="5" class="empty-state">ไม่สามารถติดต่อ API ได้</td></tr>';
+        const summary = document.getElementById('logSummary');
+        if (summary) summary.style.display = 'none';
+    }
 }
 
 function renderLogs(rows) {
-    const tbody = document.getElementById('logBody');
+    const tbody   = document.getElementById('logBody');
+    const summary = document.getElementById('logSummary');
+
     if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-secondary py-2">ไม่มีข้อมูล</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">ไม่มีข้อมูล</td></tr>';
+        if (summary) summary.style.display = 'none';
         return;
     }
+
+    // ── Pre-compute per-hour OK/ALARM counts ────────────────────────────────
+    const hourOK    = {};
+    const hourAlarm = {};
+    rows.forEach(r => {
+        if (!r.timestamp) return;
+        const hKey = r.timestamp.slice(0, 13);
+        if (r.result === 'ok') hourOK[hKey]    = (hourOK[hKey]    || 0) + 1;
+        else                   hourAlarm[hKey] = (hourAlarm[hKey] || 0) + 1;
+    });
+
+    // ── Total summary bar ───────────────────────────────────────────────────
+    if (summary) {
+        const totalOK    = rows.filter(r => r.result === 'ok').length;
+        const totalAlarm = rows.length - totalOK;
+        document.getElementById('sumTotal').textContent = rows.length;
+        document.getElementById('sumOK').textContent    = totalOK;
+        document.getElementById('sumAlarm').textContent = totalAlarm;
+        summary.style.display = 'flex';
+    }
+
+    // ── Render rows with hour dividers (กรองกะแล้วจาก dropdown) ──────────────
+    let prevHourKey = null;
+    let hourIndex   = -1;
+
     tbody.innerHTML = rows.map(r => {
-        const badgeCls = r.RESULT === 'ok' ? 'result-ok' : 'result-alarm';
-        const text     = r.RESULT === 'ok' ? 'OK' : 'ALARM';
-        return `<tr>
-            <td>${escHtml(r.TIMESTAMP)}</td>
-            <td class="log-model">${escHtml(r.MODEL)}</td>
-            <td><span class="result-badge ${badgeCls}">${text}</span></td>
-            <td>${(parseFloat(r.ELAPSED_S) || 0).toFixed(2)}s</td>
+        const badgeCls = r.result === 'ok' ? 'result-ok' : 'result-alarm';
+        const text     = r.result === 'ok' ? 'OK' : 'ALARM';
+        const ts       = r.timestamp || '';
+        const timeFmt  = ts
+            ? `${ts.slice(8,10)}/${ts.slice(5,7)}/${ts.slice(0,4)} ${ts.slice(11,19)}`
+            : '-';
+        const imgCell  = r.image
+            ? `<td class="col-img"><span class="log-img-link"
+                 onclick="showImgModal('${escHtml(r.image)}')">img</span></td>`
+            : '<td class="col-img"></td>';
+
+        let hourDiv = '';
+        if (ts) {
+            const hourKey = ts.slice(0, 13);
+            if (hourKey !== prevHourKey) {
+                prevHourKey = hourKey;
+                hourIndex++;
+                const hh     = ts.slice(11, 13);
+                const nextHH = String((Number(hh) + 1) % 24).padStart(2, '0');
+                const ok     = hourOK[hourKey]    || 0;
+                const alarm  = hourAlarm[hourKey] || 0;
+                hourDiv = `<tr class="hour-divider">
+                    <td colspan="5">
+                        <div class="hour-divider-inner">
+                            <span>${hh}.00 - ${nextHH}.00</span>
+                            <div class="hour-badges">
+                                <span class="hour-type-badge ok-badge">OK = ${ok}</span>
+                                <span class="hour-type-badge alarm-badge">ALARM = ${alarm}</span>
+                            </div>
+                        </div>
+                    </td>
+                </tr>`;
+            }
+        }
+
+        return hourDiv + `<tr class="hour-band-${hourIndex % 4}">
+            <td class="col-ts">${timeFmt}</td>
+            <td class="col-model log-model">${escHtml(r.model)}</td>
+            <td class="col-result"><span class="result-badge ${badgeCls}">${text}</span></td>
+            <td class="col-elapsed">${(parseFloat(r.elapsed_s) || 0).toFixed(2)}s</td>
+            ${imgCell}
         </tr>`;
     }).join('');
+}
+
+function showImgModal(imgName) {
+    const url = _camUrl('/images/' + encodeURIComponent(imgName));
+    document.getElementById('imgModalImg').src        = url;
+    document.getElementById('imgModalTitle').textContent = imgName;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('imgModal')).show();
 }
 
 
@@ -413,6 +582,125 @@ async function applySettings() {
             signal:  AbortSignal.timeout(5000),
         });
     } catch (_) {}
+}
+
+
+// ── Slider sync helpers ──────────────────────────────────────────────────────
+function onConfSlider(v) {
+    const inp = document.getElementById('confInput');
+    if (inp) inp.value = (parseInt(v) / 100).toFixed(2);
+    applySettings();
+}
+function onConfInput(v) {
+    const val = Math.max(0.05, Math.min(0.95, parseFloat(v) || 0.25));
+    document.getElementById('confInput').value = val.toFixed(2);
+    document.getElementById('confSlider').value = Math.round(val * 100);
+    applySettings();
+}
+function stepConf(dir) {
+    const inp = document.getElementById('confInput');
+    onConfInput(parseFloat(inp.value) + dir * 0.01);
+}
+
+function onExpSlider(v) {
+    const inp = document.getElementById('expInput');
+    if (inp) inp.value = v;
+}
+function onExpInput(v) {
+    const val = Math.max(100, Math.min(200000, parseInt(v) || 43000));
+    document.getElementById('expInput').value = val;
+    document.getElementById('expSlider').value = val;
+}
+function stepExp(dir) {
+    const inp = document.getElementById('expInput');
+    onExpInput(parseInt(inp.value) + dir * 1000);
+}
+
+function onGainSlider(v) {
+    const inp = document.getElementById('gainInput');
+    if (inp) inp.value = (parseInt(v) / 10).toFixed(1);
+}
+function onGainInput(v) {
+    const r = Math.round(Math.max(1.0, Math.min(16.0, parseFloat(v) || 1.0)) * 10) / 10;
+    document.getElementById('gainInput').value = r.toFixed(1);
+    document.getElementById('gainSlider').value = Math.round(r * 10);
+}
+function stepGain(dir) {
+    const inp = document.getElementById('gainInput');
+    onGainInput(parseFloat(inp.value) + dir * 0.1);
+}
+
+function onExpAutoChange(el) {
+    const dis  = el.checked;
+    const row  = document.getElementById('expTimeRow');
+    const s    = document.getElementById('expSlider');
+    const inp  = document.getElementById('expInput');
+    const btnM = document.getElementById('expMinus');
+    const btnP = document.getElementById('expPlus');
+    if (row)  row.style.opacity = dis ? '0.45' : '1';
+    if (s)    s.disabled        = dis;
+    if (inp)  inp.disabled      = dis;
+    if (btnM) btnM.disabled     = dis;
+    if (btnP) btnP.disabled     = dis;
+}
+
+function onGainAutoChange(el) {
+    const dis  = el.checked;
+    const row  = document.getElementById('gainRow');
+    const s    = document.getElementById('gainSlider');
+    const inp  = document.getElementById('gainInput');
+    const btnM = document.getElementById('gainMinus');
+    const btnP = document.getElementById('gainPlus');
+    if (row)  row.style.opacity = dis ? '0.45' : '1';
+    if (s)    s.disabled        = dis;
+    if (inp)  inp.disabled      = dis;
+    if (btnM) btnM.disabled     = dis;
+    if (btnP) btnP.disabled     = dis;
+}
+
+async function applyExposure() {
+    const data = {
+        exposure_auto: document.getElementById('chkExpAuto').checked,
+        exposure_time: parseInt(document.getElementById('expSlider').value),
+        gain_auto:     document.getElementById('chkGainAuto').checked,
+        gain_value:    parseInt(document.getElementById('gainSlider').value) / 10,
+    };
+    try {
+        await fetch(_camUrl('/api/settings'), {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(data),
+            signal:  AbortSignal.timeout(5000),
+        });
+        showToast('ตั้งค่าแสงแล้ว', 'var(--mes-color-success, #198754)');
+    } catch (_) {
+        showToast('ไม่สามารถตั้งค่าได้', 'var(--bs-danger)');
+    }
+}
+
+
+// ── Settings section handlers ─────────────────────────────────────────────────
+async function applyRawSettings(data) {
+    try {
+        await fetch(_camUrl('/api/settings'), {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(data),
+            signal:  AbortSignal.timeout(5000),
+        });
+    } catch (_) {}
+}
+
+function onAlarmTimeoutChanged(v) {
+    const val = Math.max(0, Math.min(300, parseInt(v) || 0));
+    document.getElementById('inpAlarmTimeout').value = val;
+    applyRawSettings({ alarm_timeout_sec: val });
+}
+
+function onOkClearChanged(v) {
+    const val = Math.max(0, Math.min(300, parseInt(v) || 0));
+    document.getElementById('inpOkClear').value = val;
+    applyRawSettings({ ok_clear_sec: val });
 }
 
 
@@ -489,9 +777,8 @@ function reconnectCamera() {
 }
 
 
-// default date filter to today — en-CA locale produces YYYY-MM-DD format
-document.getElementById('logDateFilter').value =
-    new Date().toLocaleDateString('en-CA');
+// default date filter to production date (ก่อน 08:00 = เมื่อวาน) — เหมือน scanBarcode
+document.getElementById('logDateFilter').value = _productionDateStr();
 
 // Adaptive polling — fast when active, slow when idle to reduce proxy load
 let _pollTimer = null;

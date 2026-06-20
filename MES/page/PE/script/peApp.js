@@ -56,7 +56,7 @@ const PEApp = (() => {
         const sidebar = document.getElementById('peSidebar');
         const overlay = document.getElementById('sidebarOverlay');
         const icon = document.getElementById('sidebarToggleIcon');
-        const isMobile = window.innerWidth <= 768;
+        const isMobile = window.innerWidth <= 991;
 
         if (isMobile) {
             if (forceOpen === true) {
@@ -100,6 +100,11 @@ const PEApp = (() => {
         const res = await fetch(url, options);
         const json = await res.json();
         if (!json.success) {
+            if (json.message === 'CSRF token validation failed.' || json.message?.includes('CSRF')) {
+                showToast('เซสชันมีปัญหาหรือหมดอายุ ระบบกำลังรีเฟรชหน้าจอ...', 'warning');
+                setTimeout(() => window.location.reload(), 1500);
+                return new Promise(() => {}); // prevent further execution
+            }
             throw new Error(json.message || 'API Error');
         }
         return json;
@@ -117,6 +122,11 @@ const PEApp = (() => {
         });
         const json = await res.json();
         if (!json.success) {
+            if (json.message === 'CSRF token validation failed.' || json.message?.includes('CSRF')) {
+                showToast('เซสชันมีปัญหาหรือหมดอายุ ระบบกำลังรีเฟรชหน้าจอ...', 'warning');
+                setTimeout(() => window.location.reload(), 1500);
+                return new Promise(() => {});
+            }
             throw new Error(json.message || 'Upload Error');
         }
         return json.path;

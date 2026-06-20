@@ -9,13 +9,13 @@
             <div class="modal-body">
                 <div class="row g-3">
                     <div class="col-12">
-                        <div class="pe-form-group">
-                            <label class="pe-form-label">เลือกอะไหล่ <span class="required">*</span></label>
-                            <select class="pe-form-input" id="woIssueItem" onchange="WorkOrderModule.onSparePartChange()" required>
-                                <option value="">-- เลือกอะไหล่ --</option>
-                            </select>
-                            <div class="pe-text-xs mt-1 text-muted" id="woIssueItemDesc"></div>
-                        </div>
+                          <div class="mb-3">
+                              <label class="pe-form-label">อะไหล่ (Item) <span class="pe-text-danger">*</span></label>
+                              <input type="text" class="pe-form-input" id="woIssueItemInput" list="woIssueItemList" placeholder="-- พิมพ์เพื่อค้นหาอะไหล่ --" oninput="WorkOrderModule.onSparePartChange()" required>
+                              <datalist id="woIssueItemList"></datalist>
+                              <input type="hidden" id="woIssueItem" required>
+                              <div class="pe-text-xs mt-1 text-muted" id="woIssueItemDesc"></div>
+                          </div>
                     </div>
                     <div class="col-12">
                         <div class="pe-form-group">

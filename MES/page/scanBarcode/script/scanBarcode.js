@@ -298,6 +298,20 @@ function processBarcodeInput(val) {
         document.getElementById('barcodeInput').value = val;
     }
 
+    // ===== Auto-detect Production Type จาก marker ในบาร์โค้ด =====
+    // ชุดบาร์โค้ด "งานเสีย" (1 อันต่อรุ่น) จะมี marker นำหน้ารหัสสินค้าเดิม:
+    //   *H*<รหัสสินค้า> → HOLD, *S*<รหัสสินค้า> → SCRAP
+    // ไม่มี marker (label ตัวงานปกติ) → FG เสมอ
+    // หลังตรวจ marker แล้วจะตัดทิ้ง เหลือเฉพาะรหัสสินค้าจริงไป lookup ตามเดิม
+    const markerMatch = val.match(/^\*([HS])\*(.+)$/i);
+    if (markerMatch) {
+        selectProductionType(markerMatch[1].toUpperCase() === 'H' ? 'HOLD' : 'SCRAP');
+        val = markerMatch[2].trim();
+        document.getElementById('barcodeInput').value = val;
+    } else {
+        selectProductionType('FG');
+    }
+
     const lotDom   = document.getElementById('lotRefInput').value.trim();
     const lotRef   = lotDom || cachedLotRef;
     const location = document.getElementById('locationSelect').value;
@@ -462,6 +476,9 @@ async function saveScan() {
             currentSap   = '';
             document.getElementById('barcodeInput').value = '';
             document.getElementById('barcodeStatus').classList.remove('show');
+
+            // เด้ง Production Type กลับเป็น FG ทันทีหลังเซฟ (กันสับสนทางสายตา)
+            selectProductionType('FG');
 
             const saveOk = document.getElementById('barcodeSaveOk');
             saveOk.textContent = json.message || 'บันทึกสำเร็จ';

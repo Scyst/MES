@@ -185,11 +185,16 @@ try {
                 throw new Exception('Folder name is required.', 400);
             }
             
-            $sql = "INSERT INTO dbo.{$documentsTable} (file_name, file_type, category, uploaded_by_user_id) VALUES (?, 'folder', ?, ?)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$folderName, $parentPath, $_SESSION['user']['id']]);
-            
-            echo json_encode(['success' => true, 'message' => 'Folder created successfully.']);
+            try {
+                $sql = "INSERT INTO dbo.{$documentsTable} (file_name, file_type, category, uploaded_by_user_id, file_path, file_size) VALUES (?, 'folder', ?, ?, '', 0)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$folderName, $parentPath, $_SESSION['user']['id']]);
+                
+                echo json_encode(['success' => true, 'message' => 'Folder created successfully.']);
+            } catch (PDOException $e) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+            }
             break;
 
         //==================================

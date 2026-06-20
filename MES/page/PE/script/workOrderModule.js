@@ -623,8 +623,10 @@ const WorkOrderModule = (() => {
             const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_available_parts' });
             availableParts = res.data || [];
             
-            const itemSel = document.getElementById('woIssueItem');
-            itemSel.innerHTML = '<option value="">-- เลือกอะไหล่ --</option>';
+            document.getElementById('woIssueItemInput').value = '';
+            document.getElementById('woIssueItem').value = '';
+            const datalist = document.getElementById('woIssueItemList');
+            datalist.innerHTML = '';
             
             // Group locations by item to easily populate location dropdown
             const uniqueItems = [];
@@ -636,8 +638,11 @@ const WorkOrderModule = (() => {
                 }
             });
             
+            window.woTextToIdMap = new Map();
             uniqueItems.forEach(p => {
-                itemSel.add(new Option(`${p.item_code} - ${p.item_name}`, p.item_id));
+                const text = `[${p.item_code}] ${p.item_name}`;
+                window.woTextToIdMap.set(text, p.item_id);
+                datalist.innerHTML += `<option value="${text}"></option>`;
             });
 
             document.getElementById('woIssueQty').value = '';
@@ -654,7 +659,10 @@ const WorkOrderModule = (() => {
     }
 
     function onSparePartChange() {
-        const itemId = document.getElementById('woIssueItem').value;
+        const textValue = document.getElementById('woIssueItemInput').value;
+        const itemId = window.woTextToIdMap?.get(textValue) || '';
+        document.getElementById('woIssueItem').value = itemId;
+
         const locSel = document.getElementById('woIssueLocation');
         const maxQty = document.getElementById('woIssueMaxQty');
         const priceInput = document.getElementById('woIssuePrice');

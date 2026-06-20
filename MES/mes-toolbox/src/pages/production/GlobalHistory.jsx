@@ -101,15 +101,15 @@ export default function GlobalHistory() {
   });
 
   return (
-    <div className="space-y-6 pb-24 max-w-4xl mx-auto px-4 mt-6">
+    <div className="space-y-6 pb-24 max-w-7xl mx-auto px-4 mt-6">
       
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 border border-blue-200 dark:border-gray-700 p-6 rounded-3xl shadow-xl transition-colors duration-300">
+      <div className="factory-card p-6">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center">
           <History className="mr-2 text-blue-600 dark:text-blue-400" />
           Recent Transactions
         </h2>
-        <p className="text-gray-500 dark:text-slate-400 dark:text-gray-400 text-sm">Latest 50 logs across all machines</p>
+        <p className="text-slate-600 dark:text-slate-400 text-sm">Latest 50 logs across all machines</p>
         
         <div className="mt-4 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -133,7 +133,7 @@ export default function GlobalHistory() {
           <p className="text-center text-gray-500 dark:text-slate-400 py-8">No matching transactions found.</p>
         ) : (
           filteredHistory.map((log) => (
-            <div key={log.transaction_id} className="flex flex-col p-4 bg-white dark:bg-slate-800 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-slate-700 dark:border-gray-800 shadow-sm transition-colors duration-300">
+            <div key={log.transaction_id} className="factory-card p-4 flex flex-col">
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <p className={`font-bold text-lg ${
@@ -147,7 +147,7 @@ export default function GlobalHistory() {
                     {log.machine_name || log.location_name || 'Manual Log'}
                   </p>
                   {log.job_no && <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">Job: {log.job_no}</p>}
-                  {getDisplayName(log) && <p className="text-xs text-gray-500 dark:text-slate-400 dark:text-gray-400 mt-1">By: {getDisplayName(log)}</p>}
+                  {getDisplayName(log) && <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">By: {getDisplayName(log)}</p>}
                   {log.notes && (
                     <div className="text-xs text-gray-400 dark:text-gray-600 mt-1 italic whitespace-pre-wrap">
                       {log.notes.replace(/\[TEAM_OVERRIDE:\s*[^\]]+\]\s*/g, '')}
@@ -181,8 +181,8 @@ export default function GlobalHistory() {
 
       {/* Edit Modal */}
       {showEditModal && editTxn && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 dark:bg-gray-900 rounded-3xl p-6 w-full max-w-sm border border-gray-200 dark:border-slate-700 dark:border-gray-800 shadow-2xl transition-colors duration-300">
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+          <div className="factory-card p-6 w-full max-w-sm shadow-2xl">
             <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-white">
               <Edit2 className="mr-2 text-blue-600 dark:text-blue-400" /> Edit Quantity
             </h3>

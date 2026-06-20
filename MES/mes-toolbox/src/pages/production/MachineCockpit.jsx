@@ -187,7 +187,7 @@ export default function MachineCockpit({ type = 'machine' }) {
   const headerTitle = type === 'machine' ? (machineData?.name || `Machine ${id}`) : (locationData?.name || `Line ${id}`);
 
   return (
-    <div className="space-y-6 pb-20 max-w-4xl mx-auto">
+    <div className="space-y-6 pb-20 max-w-7xl mx-auto px-4 lg:px-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 gap-2">
         <div className="flex items-center space-x-3 min-w-0 flex-1">

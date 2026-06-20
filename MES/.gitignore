@@ -1,5 +1,12 @@
 utils/
-config/
 node_modules/
 documents/
 test/
+
+# Sensitive files - NEVER push these
+.env
+.env.*
+*.env
+
+# Teaching Materials
+architecture_explanation.html

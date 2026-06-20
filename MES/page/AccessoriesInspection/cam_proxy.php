@@ -7,6 +7,9 @@
  *
  * CONFIGURE: แก้ที่ cam_config.php (ไม่ต้องแตะไฟล์นี้)
  */
+// Capture any stray output from auth/framework before we send our own response
+ob_start();
+
 require_once __DIR__ . '/cam_config.php';
 require_once __DIR__ . '/../../auth/check_auth.php';
 define('UPSTREAM', CAM_UPSTREAM);
@@ -16,9 +19,19 @@ if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
 
 // รับ path จาก ?p= parameter (ทำงานได้ทุก nginx/apache โดยไม่ต้องแก้ config)
 $path   = '/' . ltrim($_GET['p'] ?? '/', '/');
-$params = array_intersect_key($_GET, array_flip(['t']));   // whitelist: only cache-buster
+
+// whitelist: only allow /stream, /api/*, /images/* — block arbitrary upstream access
+if (!preg_match('#^/(stream|api|images)(/|$)#', $path)) {
+    http_response_code(403);
+    echo json_encode(['ok' => false, 'error' => 'forbidden path']);
+    exit;
+}
+
+$params = array_intersect_key($_GET, array_flip(['t', 'date', 'limit']));   // whitelist: cache-buster + log filter
 $qs_fwd = http_build_query($params);
-$url    = UPSTREAM . $path . ($qs_fwd ? '?' . $qs_fwd : '');
+// $path may already contain a query string (e.g. /api/history?date=...&limit=...)
+// so append cache-buster with & if ? already present, otherwise with ?
+$url    = UPSTREAM . $path . ($qs_fwd ? (strpos($path, '?') !== false ? '&' : '?') . $qs_fwd : '');
 
 // ── MJPEG stream proxy (cURL — ไม่พึ่ง allow_url_fopen) ─────────────────────
 if ($path === '/stream' || strpos($path, '/stream') === 0) {
@@ -76,13 +89,30 @@ if ($method === 'POST') {
     curl_setopt($ch, CURLOPT_POSTFIELDS, $post_body);
 }
 
-$resp = curl_exec($ch);
-$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$err  = curl_error($ch);
+$resp     = curl_exec($ch);
+$code     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$ctype    = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+$err      = curl_error($ch);
 curl_close($ch);
 
+// Discard any stray output buffered by auth/framework includes
+if (ob_get_level()) ob_end_clean();
+
 http_response_code($code ?: 502);
-header('Content-Type: application/json');
-echo ($resp !== false && $resp !== '')
-    ? $resp
-    : json_encode(['ok' => false, 'error' => $err ?: 'upstream unreachable']);
+
+if (strpos($path, '/images/') === 0) {
+    $body = $resp;
+    header('Content-Type: ' . ($ctype ?: 'image/jpeg'));
+    header('Cache-Control: max-age=86400, private');
+} else {
+    $body = ($resp !== false && $resp !== '')
+        ? $resp
+        : json_encode(['ok' => false, 'error' => $err ?: 'upstream unreachable']);
+    header('Content-Type: application/json');
+}
+
+// Content-Length tells the browser exactly how many bytes to read —
+// shutdown-function hooks that append noise are ignored by the client.
+header('Content-Length: ' . strlen($body));
+echo $body;
+exit;

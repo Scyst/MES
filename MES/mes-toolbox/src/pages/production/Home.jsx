@@ -49,7 +49,7 @@ export default function Home() {
     : "Today's Live Production Status";
 
   return (
-    <div className="space-y-6 pb-24 max-w-4xl mx-auto px-4 mt-6">
+    <div className="space-y-6 pb-24 max-w-7xl mx-auto px-4 mt-6">
       
       {/* Welcome Header */}
       <div className="flex justify-between items-center bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-900 dark:to-indigo-900 p-6 rounded-3xl shadow-2xl relative overflow-hidden transition-colors duration-300">

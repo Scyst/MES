@@ -29,7 +29,7 @@
                     <li><a class="dropdown-item-icon py-1" href="../production/jobQueueUI.php"><i class="fas fa-list-ol fa-fw"></i><span>Live Job Queue</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../production/label_printer.php"><i class="fas fa-print fa-fw"></i><span>Tag Printer (WIP/FG)</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../scanBarcode/scanBarcodeUI.php"><i class="fas fa-barcode fa-fw"></i><span>Scan Barcode</span></a></li>
-                    <li><a class="dropdown-item-icon py-1" href="../PE/operator_portal.php"><i class="fas fa-tools fa-fw"></i><span>แจ้งซ่อม & หยุดไลน์</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../PE/peRequest.php"><i class="fas fa-tools fa-fw"></i><span>แจ้งซ่อม & หยุดไลน์</span></a></li>
                 </ul>
             </div>
         </li>
@@ -67,7 +67,7 @@
                 <ul class="list-unstyled ms-3 ps-2 border-start py-1">
                     <li><a class="dropdown-item-icon py-1" href="../QMS/qmsDashboard.php"><i class="fas fa-check-circle fa-fw"></i><span>iQMS (Quality)</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../AccessoriesInspection/accessoriesInspectionUI.php"><i class="fas fa-camera fa-fw"></i><span>Accessories Inspection</span></a></li>
-                    <li><a class="dropdown-item-icon py-1" href="../PE/index.php"><i class="fas fa-wrench fa-fw"></i><span>PE Maintenance</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../PE/peDashboard.php"><i class="fas fa-cogs fa-fw"></i><span>PE Enterprise Dashboard</span></a></li>
                     <?php if (in_array($userRole, ['admin', 'creator'])): ?>
                     <li><a class="dropdown-item-icon py-1" href="../maintenancePE/maintenanceStockUI.php"><i class="fas fa-tools fa-fw"></i><span>Maintenance Stock</span></a></li>
                     <?php endif; ?>
@@ -173,7 +173,7 @@
             <a class="list-group-item list-group-item-action text-dark" href="../production/mobile_app.php"><i class="fas fa-mobile-alt fa-fw me-3"></i> ลงยอดผลิต (Mobile)</a>
             <a class="list-group-item list-group-item-action text-dark" href="../production/jobQueueUI.php"><i class="fas fa-list-ol fa-fw me-3"></i> Live Job Queue</a>
             <a class="list-group-item list-group-item-action text-dark" href="../scanBarcode/scanBarcodeUI.php"><i class="fas fa-barcode fa-fw me-3"></i> Scan Barcode</a>
-            <a class="list-group-item list-group-item-action text-dark" href="../PE/operator_portal.php"><i class="fas fa-tools fa-fw me-3"></i> แจ้งซ่อม & หยุดไลน์</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../PE/peRequest.php"><i class="fas fa-tools fa-fw me-3"></i> แจ้งซ่อม & หยุดไลน์</a>
 
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">WAREHOUSE & LOGISTICS</div>
             <?php if (in_array($userRole, ['admin', 'creator', 'supervisor'])): ?>
@@ -191,7 +191,7 @@
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">QUALITY & MAINTENANCE</div>
             <a class="list-group-item list-group-item-action text-dark" href="../QMS/qmsDashboard.php"><i class="fas fa-check-circle fa-fw me-3"></i> iQMS (Quality)</a>
             <a class="list-group-item list-group-item-action text-dark" href="../AccessoriesInspection/accessoriesInspectionUI.php"><i class="fas fa-camera fa-fw me-3"></i> Accessories Inspection</a>
-            <a class="list-group-item list-group-item-action text-dark" href="../PE/index.php"><i class="fas fa-wrench fa-fw me-3"></i> PE Maintenance</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../PE/peDashboard.php"><i class="fas fa-cogs fa-fw me-3"></i> PE Enterprise Dashboard</a>
             <?php if (in_array($userRole, ['admin', 'creator'])): ?>
             <a class="list-group-item list-group-item-action text-dark" href="../maintenancePE/maintenanceStockUI.php"><i class="fas fa-tools fa-fw me-3"></i> Maintenance Stock</a>
             <?php endif; ?>

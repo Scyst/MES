@@ -1467,9 +1467,18 @@
     .pe-filter-date,
     .pe-view-toggle,
     .pe-btn,
-    .pe-filter-spacer {
+    .pe-filter-spacer,
+    .pe-filter-bar .d-flex {
         grid-column: 1 / -1;
         width: 100%;
+    }
+    
+    .pe-filter-bar .d-flex {
+        flex-direction: column;
+    }
+    
+    .pe-topbar-actions > span {
+        display: none !important;
     }
     
     .pe-filter-date {
@@ -1508,6 +1517,10 @@
 
     .pe-table {
         font-size: 12px;
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .pe-card-footer {

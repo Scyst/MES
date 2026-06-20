@@ -117,8 +117,8 @@ try {
 
         $sql = "INSERT INTO " . PE_WORK_ORDERS_TABLE . " 
                 (wo_number, wo_type, machine_name, line, priority, status, requested_by, requested_at, 
-                 issue_title, issue_detail, assigned_to, started_at, completed_at, repair_minutes, action_taken, photo_before, photo_after, legacy_mt_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                 issue_title, issue_detail, assigned_to, started_at, completed_at, repair_minutes, action_taken, image_path, photo_after, legacy_mt_id, parts_used)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $ins = $pdo->prepare($sql);
         $ins->execute([
             $woNumber,
@@ -135,10 +135,11 @@ try {
             $startedAt,
             $completedAt,
             $row['actual_repair_minutes'] ? (int)$row['actual_repair_minutes'] : null,
-            $row['technician_note'],
+            $row['technician_note'] . ($row['spare_parts_list'] ? "\n\n[Legacy Spare Parts]: " . $row['spare_parts_list'] : ''),
             $imagePath,
             $photoAfter,
-            $row['id']
+            $row['id'],
+            $row['spare_parts_list']
         ]);
         $results['wo_migrated']++;
     }

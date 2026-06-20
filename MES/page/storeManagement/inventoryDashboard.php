@@ -146,7 +146,7 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                     
                                 </div>
                                 
-                                <div class="d-flex align-items-center gap-2 w-100 w-md-auto flex-nowrap" style="flex: 1 1 200px; max-width: 350px;">
+                                <div class="d-flex align-items-center gap-2 w-100 w-md-auto flex-nowrap" style="flex: 1 1 250px; max-width: 450px;">
                                     
                                     <div class="input-group input-group-sm shadow-sm flex-grow-1">
                                         <span class="input-group-text bg-white border-secondary-subtle text-secondary px-2"><i class="fas fa-map-marker-alt"></i></span>
@@ -154,10 +154,18 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                             <option value="ALL">All Locations</option>
                                         </select>
                                     </div>
+
+                                    <div class="input-group input-group-sm shadow-sm flex-shrink-0" style="width: 130px;">
+                                        <select id="categoryFilter" class="form-select border-secondary-subtle fw-bold text-dark px-1">
+                                            <option value="ALL" selected>All Categories</option>
+                                            <option value="PALLET">พาเลทไม้ (Pallet)</option>
+                                            <option value="PAINT">สี (Paint)</option>
+                                        </select>
+                                    </div>
                                     
-                                    <div class="input-group input-group-sm shadow-sm flex-shrink-0" style="width: 120px;">
+                                    <div class="input-group input-group-sm shadow-sm flex-shrink-0" style="width: 100px;">
                                         <select id="materialFilter" class="form-select border-secondary-subtle fw-bold text-dark px-1">
-                                            <option value="ALL" selected>All</option>
+                                            <option value="ALL" selected>All Type</option>
                                             <option value="RM">RM</option>
                                             <option value="SEMI">SEMI</option>
                                             <option value="FG">FG</option>

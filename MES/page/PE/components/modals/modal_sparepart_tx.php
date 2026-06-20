@@ -10,12 +10,12 @@
                 <input type="hidden" id="spTxType" value="RECEIVE">
                 <div class="row g-3">
                     <div class="col-12">
-                        <div class="pe-form-group">
-                            <label class="pe-form-label">Item (อะไหล่) <span class="required">*</span></label>
-                            <select class="pe-form-input" id="spTxItem" required>
-                                <option value="">-- เลือกอะไหล่ --</option>
-                            </select>
-                        </div>
+                          <div class="mb-3">
+                              <label class="pe-form-label">อะไหล่ (Item) <span class="pe-text-danger">*</span></label>
+                              <input type="text" class="pe-form-input" id="spTxItemInput" list="spTxItemList" placeholder="-- พิมพ์เพื่อค้นหาอะไหล่ --" oninput="SparePartsModule.onItemInput()" required>
+                              <datalist id="spTxItemList"></datalist>
+                              <input type="hidden" id="spTxItem" required>
+                          </div>
                     </div>
                     <div class="col-md-6">
                         <div class="pe-form-group">

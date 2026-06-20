@@ -93,7 +93,7 @@ function closeModal(modalId) {
 }
 
 const materialSubTypes = {
-    'RM': [{val: 'STEEL', text: 'STEEL (เหล็ก)'}, {val: 'PLASTIC', text: 'PLASTIC (พลาสติก)'}, {val: 'CHEMICAL', text: 'CHEMICAL (เคมีภัณฑ์)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
+    'RM': [{val: 'STEEL', text: 'STEEL (เหล็ก)'}, {val: 'PLASTIC', text: 'PLASTIC (พลาสติก)'}, {val: 'CHEMICAL', text: 'CHEMICAL (เคมีภัณฑ์)'}, {val: 'PAINT', text: 'PAINT (สี)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
     'PKG': [{val: 'BOX', text: 'BOX (กล่องกระดาษ)'}, {val: 'PALLET', text: 'PALLET (พาเลท)'}, {val: 'LABEL', text: 'LABEL (สติ๊กเกอร์/ฉลาก)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
     'CON': [{val: 'ACC', text: 'ACC (Accessory/อุปกรณ์ประกอบ)'}, {val: '5S', text: '5S (อุปกรณ์ 5ส.)'}, {val: 'PROD', text: 'PROD (สิ้นเปลืองไลน์ผลิต)'}, {val: 'OFFICE', text: 'OFFICE (เครื่องเขียน)'}, {val: 'PPE', text: 'PPE (อุปกรณ์เซฟตี้)'}],
     'SP': [{val: 'MECHANICAL', text: 'MECHANICAL (อะไหล่เครื่องกล)'}, {val: 'ELECTRICAL', text: 'ELECTRICAL (อะไหล่ไฟฟ้า)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
@@ -679,6 +679,7 @@ async function exportItemsMaster() {
                 ["RM", "STEEL", "เหล็ก"],
                 ["RM", "PLASTIC", "พลาสติก"],
                 ["RM", "CHEMICAL", "เคมีภัณฑ์"],
+                ["RM", "PAINT", "สี"],
                 ["RM", "OTHER", "อื่นๆ"],
                 ["PKG", "BOX", "กล่องกระดาษ"],
                 ["PKG", "PALLET", "พาเลท"],

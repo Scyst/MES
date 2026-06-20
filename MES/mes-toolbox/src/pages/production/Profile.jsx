@@ -29,7 +29,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto px-4 mt-6">
+    <div className="space-y-6 max-w-7xl mx-auto px-4 mt-6">
       <div className="flex justify-between items-center bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-900 dark:to-indigo-900 p-6 rounded-3xl shadow-2xl transition-colors duration-300">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">Profile & Settings</h1>

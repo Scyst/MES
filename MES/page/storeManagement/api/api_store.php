@@ -29,7 +29,7 @@ try {
         'bulk_receive_tags', 'manual_add_rm', 'process_transfer_request', 'bulk_process_transfer_request',
         'submit_cycle_count', 'approve_cycle_count', 'create_transfer_request',
         'submit_requisition', 'accept_order', 'confirm_issue', 'reject_order', 'submit_k2_pr', 
-        'upload_image', 'update_item_info'
+        'upload_image', 'update_item_info', 'cancel_my_order'
     ];
     
     if (in_array($action, $writeActions) && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -65,7 +65,7 @@ try {
             $params = [$startDate, $endDate];
             
             if ($status === 'ACTIVE') {
-                $sql .= " AND r.status IN ('NEW ORDER', 'PREPARING') ";
+                $sql .= " AND r.status IN ('NEW ORDER', 'PREPARING', 'PARTIAL') ";
             } elseif ($status !== 'ALL') {
                 $sql .= " AND r.status = ? ";
                 $params[] = $status;
@@ -90,13 +90,12 @@ try {
 
             $sqlItems = "SELECT ri.id as row_id, ri.item_code, ri.qty_requested, ri.qty_issued, ri.requested_tags,
                                 i.item_id, i.part_description as description, i.image_path, ISNULL(i.material_sub_type, 'OTHER') as material_sub_type,
-                                ISNULL(inv.quantity, 0) as onhand_qty
+                                ISNULL((SELECT SUM(quantity) FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = i.item_id AND location_id IN (SELECT location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE location_type = 'STORE')), 0) as onhand_qty
                          FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK)
                          JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
-                         LEFT JOIN dbo.INVENTORY_ONHAND inv WITH (NOLOCK) ON i.item_id = inv.parameter_id AND inv.location_id = ?
                          WHERE ri.req_id = ? AND ri.request_type = 'STOCK'";
             $stmtI = $pdo->prepare($sqlItems);
-            $stmtI->execute([$storeLocationId, $req_id]);
+            $stmtI->execute([$req_id]);
             
             $response = ['success' => true, 'header' => $header, 'items' => $stmtI->fetchAll(PDO::FETCH_ASSOC)];
             break;
@@ -109,13 +108,15 @@ try {
 
         case 'get_available_tags_for_item':
             $item_code = $_REQUEST['item_code'] ?? '';
-            $location_id = $_REQUEST['location_id'] ?? 'ALL';
+            $location_id = $_REQUEST['location_id'] ?? 'STORE';
             if (!$item_code) throw new Exception("ไม่พบรหัสสินค้า");
             
             $cond = "t.item_id = (SELECT TOP 1 item_id FROM dbo.ITEMS WHERE sap_no = ? OR part_no = ?) AND t.status = 'AVAILABLE'";
             $params = [$item_code, $item_code];
             
-            if ($location_id !== 'ALL') {
+            if ($location_id === 'STORE') {
+                $cond .= " AND t.location_id IN (SELECT location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE location_type = 'STORE')";
+            } elseif ($location_id !== 'ALL') {
                 $cond .= " AND t.location_id = ?";
                 $params[] = $location_id;
             }
@@ -172,7 +173,7 @@ try {
                 $reqStmt = $pdo->prepare("SELECT status FROM dbo.STORE_REQUISITIONS WITH (UPDLOCK, ROWLOCK) WHERE id = ?");
                 $reqStmt->execute([$req_id]);
                 $reqStatus = $reqStmt->fetchColumn();
-                if ($reqStatus !== 'PREPARING' && $reqStatus !== 'WAITING') {
+                if ($reqStatus !== 'PREPARING' && $reqStatus !== 'WAITING' && $reqStatus !== 'PARTIAL') {
                     throw new Exception("ใบเบิกนี้ถูกทำรายการไปแล้ว (สถานะปัจจุบัน: $reqStatus)");
                 }
 
@@ -188,18 +189,14 @@ try {
                     }
                 }
 
-                // 3. Execute SP to update ONHAND and Requisition
-                $stmt = $pdo->prepare("EXEC dbo.sp_Store_ConfirmIssueBatch 
-                                        @ReqId = ?, @ReqNumber = ?, @UserId = ?, 
-                                        @StoreLocationId = ?, @ItemsJson = ?");
-                $stmt->execute([$req_id, $req_number, $issuer_id, $storeLocationId, $itemsJsonStr]);
-                
                 // Get destination location id
                 $destLocStmt = $pdo->prepare("SELECT destination_location_id FROM dbo.STORE_REQUISITIONS WITH (NOLOCK) WHERE id = ?");
                 $destLocStmt->execute([$req_id]);
                 $destLocId = $destLocStmt->fetchColumn();
 
-                // 4. Handle Tag Deductions
+                $tagDeductions = []; // Stores deductions per exact location
+
+                // 3. Handle Tag Deductions FIRST
                 foreach ($items as $item) {
                     $qty_to_deduct = floatval($item['qty_issued']);
                     $itemCode = $item['item_code'] ?? '';
@@ -222,6 +219,7 @@ try {
                             FROM dbo.RM_SERIAL_TAGS 
                             WHERE item_id = ?
                               AND status = 'AVAILABLE' AND current_qty > 0
+                              AND location_id IN (SELECT location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE location_type = 'STORE')
                             ORDER BY received_date ASC, created_at ASC
                         ");
                         $tagStmt->execute([$itemId]);
@@ -234,6 +232,20 @@ try {
                         if ($qty_to_deduct <= 0) break;
 
                         $tagQty = floatval($t['current_qty']);
+                        $deducted_from_this_tag = min($tagQty, $qty_to_deduct);
+
+                        // Accumulate location deductions
+                        $locId = $t['location_id'];
+                        $key = $itemId . '_' . $locId;
+                        if (!isset($tagDeductions[$key])) {
+                            $tagDeductions[$key] = [
+                                'item_id' => $itemId,
+                                'location_id' => $locId,
+                                'qty_deducted' => 0
+                            ];
+                        }
+                        $tagDeductions[$key]['qty_deducted'] += $deducted_from_this_tag;
+
                         if ($tagQty <= $qty_to_deduct) {
                             // Transfer whole tag to WIP
                             $qty_to_deduct -= $tagQty;
@@ -251,34 +263,41 @@ try {
                             // Clone tag to WIP
                             $childSerial = $t['serial_no'] . '-W' . rand(100, 999);
                             $pdo->prepare("
-                                INSERT INTO dbo.RM_SERIAL_TAGS (serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status, po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, location_id, created_at, created_by)
-                                VALUES (?, ?, ?, ?, ?, 'WIP', ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?)
+                                INSERT INTO dbo.RM_SERIAL_TAGS (serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status, po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, location_id, created_at, created_by, received_date)
+                                VALUES (?, ?, ?, ?, ?, 'WIP', ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?, ?)
                             ")->execute([
                                 $childSerial, $t['master_pallet_no'], $t['item_id'], $t['qty_per_pallet'], $qty_to_deduct,
                                 $t['po_number'], $t['warehouse_no'], $t['pallet_no'], $t['ctn_number'], $t['week_no'],
-                                " [Cloned for WIP transfer $req_number]", $destLocId ?: $t['location_id'], $issuer_id
+                                " [Cloned for WIP transfer $req_number]", $destLocId ?: $t['location_id'], $issuer_id, $t['received_date']
                             ]);
                             
                             $qty_to_deduct = 0;
                         }
                     }
 
-                    // Add quantity to WIP Location OnHand (sp_Store_ConfirmIssueBatch already deducted from Store Location)
+                    // Add quantity to WIP Location OnHand
                     if ($destLocId && $itemId && $total_issued_for_this_item > 0) {
                         $pdo->prepare("
                             MERGE dbo.INVENTORY_ONHAND AS t
                             USING (SELECT ? as item_id, ? as loc_id) AS s
                             ON (t.parameter_id = s.item_id AND t.location_id = s.loc_id)
-                            WHEN MATCHED THEN UPDATE SET quantity = quantity + ?
-                            WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity, created_at, created_by)
-                            VALUES (?, ?, ?, GETDATE(), ?);
+                            WHEN MATCHED THEN UPDATE SET quantity = quantity + ?, last_updated = GETDATE()
+                            WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity, last_updated)
+                            VALUES (?, ?, ?, GETDATE());
                         ")->execute([
                             $itemId, $destLocId, 
                             $total_issued_for_this_item, 
-                            $itemId, $destLocId, $total_issued_for_this_item, $issuer_id
+                            $itemId, $destLocId, $total_issued_for_this_item
                         ]);
                     }
                 }
+
+                // 4. Execute SP to update ONHAND and Requisition based on actual source locations
+                $tagDeductionsJsonStr = json_encode(array_values($tagDeductions));
+                $stmt = $pdo->prepare("EXEC dbo.sp_Store_ConfirmIssueBatch 
+                                        @ReqId = ?, @ReqNumber = ?, @UserId = ?, 
+                                        @ItemsJson = ?, @TagDeductionsJson = ?");
+                $stmt->execute([$req_id, $req_number, $issuer_id, $itemsJsonStr, $tagDeductionsJsonStr]);
                 
                 writeLog($pdo, 'ISSUE_STOCK', 'STORE_MANAGEMENT', $req_number, null, ['req_id' => $req_id, 'items' => $items]);
                 
@@ -294,6 +313,27 @@ try {
             $reason = $_POST['reason'] ?? 'Rejected by Store';
             $pdo->prepare("UPDATE dbo.STORE_REQUISITIONS SET status = 'REJECTED', remark = ISNULL(remark, '') + ' [Reject: ' + ? + ']' WHERE id = ?")->execute([$reason, $_POST['req_id']]);
             writeLog($pdo, 'REJECT_ORDER', 'STORE_MANAGEMENT', $_POST['req_id'], null, ['status' => 'REJECTED', 'reason' => $reason]);
+            $response = ['success' => true];
+            break;
+
+        case 'cancel_my_order':
+            $req_id = $_POST['req_id'] ?? 0;
+            
+            $stmt = $pdo->prepare("SELECT requester_id, status FROM dbo.STORE_REQUISITIONS WITH (NOLOCK) WHERE id = ?");
+            $stmt->execute([$req_id]);
+            $req = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$req) throw new Exception("ไม่พบข้อมูลบิล");
+            if ($req['status'] !== 'NEW ORDER') throw new Exception("ไม่สามารถยกเลิกได้ เนื่องจากสโตร์ได้รับออเดอร์ไปแล้ว");
+            
+            if ($req['requester_id'] != $currentUser['id'] && !in_array($currentUser['role'], ['admin', 'creator'])) {
+                throw new Exception("ไม่มีสิทธิ์ยกเลิกบิลของผู้อื่น");
+            }
+            
+            $reason = "ยกเลิกโดยผู้เบิก";
+            $pdo->prepare("UPDATE dbo.STORE_REQUISITIONS SET status = 'REJECTED', remark = ISNULL(remark, '') + ' [Reject: ' + ? + ']' WHERE id = ?")->execute([$reason, $req_id]);
+            writeLog($pdo, 'CANCEL_ORDER', 'STORE_MANAGEMENT', $req_id, null, ['status' => 'REJECTED', 'reason' => $reason]);
+            
             $response = ['success' => true];
             break;
 
@@ -509,6 +549,22 @@ try {
             if (empty($cartJsonStr) || $cartJsonStr === '[]') {
                 throw new Exception("ไม่มีรายการสินค้า");
             }
+
+            // --- Anti-Spam / Duplicate Submission Prevention ---
+            // Prevent the same user from submitting another requisition within 5 seconds
+            $stmtSpam = $pdo->prepare("
+                SELECT TOP 1 req_number 
+                FROM dbo.STORE_REQUISITIONS WITH (NOLOCK)
+                WHERE requester_id = ? 
+                  AND created_at > DATEADD(SECOND, -5, GETDATE())
+            ");
+            $stmtSpam->execute([$userId]);
+            $recentReq = $stmtSpam->fetchColumn();
+            
+            if ($recentReq) {
+                throw new Exception("คุณส่งคำขอเร็วเกินไป (ระบบป้องกันข้อมูลซ้ำซ้อน) กรุณารอสักครู่แล้วลองใหม่ครับ");
+            }
+            // ---------------------------------------------------
 
             $stmt = $pdo->prepare("{CALL dbo.sp_Store_SubmitRequisition(?, ?, ?, ?, ?, ?)}");
             
@@ -803,6 +859,13 @@ try {
                 $params[] = strtoupper($material_type);
             }
 
+            $category = $_GET['category'] ?? 'ALL';
+            if ($category === 'PALLET') {
+                $conditions[] = "i.material_sub_type = 'PALLET'";
+            } else if ($category === 'PAINT') {
+                $conditions[] = "i.material_sub_type = 'PAINT'";
+            }
+
             if ($hide_zero === 'true') {
                 $conditions[] = "(ISNULL(Onhand.available_qty, 0) <> 0 OR ISNULL(Pending.pending_qty, 0) > 0)";
             }
@@ -814,11 +877,11 @@ try {
 
             $countSql = "
                 SELECT 
-                    COUNT(*) as total_skus,
-                    SUM(CASE WHEN ISNULL(Onhand.available_qty, 0) <= 0 THEN 1 ELSE 0 END) as out_of_stock,
-                    SUM(ISNULL(Onhand.available_qty, 0)) as toolbar_total_pcs,
-                    SUM(ISNULL(Pending.pending_qty, 0)) as total_pending_qty,
-                    SUM(ISNULL(Onhand.available_qty, 0) * ISNULL(i.StandardPrice, 0)) as total_value
+                    ISNULL(COUNT(*), 0) as total_skus,
+                    ISNULL(SUM(CASE WHEN ISNULL(Onhand.available_qty, 0) <= 0 THEN 1 ELSE 0 END), 0) as out_of_stock,
+                    ISNULL(SUM(ISNULL(Onhand.available_qty, 0)), 0) as toolbar_total_pcs,
+                    ISNULL(SUM(ISNULL(Pending.pending_qty, 0)), 0) as total_pending_qty,
+                    ISNULL(SUM(ISNULL(Onhand.available_qty, 0) * ISNULL(i.StandardPrice, 0)), 0) as total_value
                 FROM dbo.ITEMS i WITH (NOLOCK)
                 OUTER APPLY (
                     SELECT SUM(o.quantity) AS available_qty 
@@ -1025,9 +1088,7 @@ try {
             $offset = ($page - 1) * $limit;
             $conditions = [
                 "t.status = 'PENDING'",
-                "t.transfer_uuid NOT LIKE '%-[0-9][0-9][0-9]'",
-                "t.transfer_uuid NOT LIKE '%-[0-9][0-9][0-9][0-9]'",
-                "t.transfer_uuid NOT LIKE '%-[0-9][0-9][0-9][0-9][0-9]'"
+                "(t.transfer_uuid LIKE 'TRF-%' OR t.transfer_uuid LIKE 'REQ-%')"
             ];
             $params = [];
 
@@ -1205,9 +1266,7 @@ try {
             $offset = ($page - 1) * $limit;
             $conditions = [
                 "1=1",
-                "t.transfer_uuid NOT LIKE '%-[0-9][0-9][0-9]'",
-                "t.transfer_uuid NOT LIKE '%-[0-9][0-9][0-9][0-9]'",
-                "t.transfer_uuid NOT LIKE '%-[0-9][0-9][0-9][0-9][0-9]'"
+                "t.transfer_uuid LIKE 'REQ-%'"
             ];
             $params = [];
 
@@ -1490,7 +1549,7 @@ try {
 
             $pdo->beginTransaction();
             $prefix = 'MPL-' . date('ym') . '-';
-            $stmtLast = $pdo->query("SELECT TOP 1 master_pallet_no FROM dbo.RM_SERIAL_TAGS WITH (UPDLOCK) WHERE master_pallet_no LIKE '$prefix%' ORDER BY master_pallet_no DESC");
+            $stmtLast = $pdo->query("SELECT TOP 1 master_pallet_no FROM dbo.RM_SERIAL_TAGS WITH (UPDLOCK) WHERE master_pallet_no LIKE '" . $prefix . "[0-9][0-9][0-9][0-9]' ORDER BY master_pallet_no DESC");
             $lastNo = $stmtLast->fetchColumn();
             $nextSeq = $lastNo ? ((int)substr($lastNo, -4)) + 1 : 1;
             $newMasterPalletNo = $prefix . str_pad($nextSeq, 4, '0', STR_PAD_LEFT);

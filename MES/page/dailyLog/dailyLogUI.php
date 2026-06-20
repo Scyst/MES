@@ -175,7 +175,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('Live Job Queue', 'ระบบจัดการคิวงานหน้าไลน์ (KDS)', '<i class="fas fa-list-ol"></i>', '../production/jobQueueUI.php', 'view_production', $themeProd);
                         renderServiceLink('Scan Barcode', 'ระบบสแกนบาร์โค้ด', '<i class="fas fa-barcode"></i>', '../scanBarcode/scanBarcodeUI.php', 'view_production', $themeProd);
                         renderServiceLink('Tag Printer', 'พิมพ์แท็กส่งงาน (WIP/FG)', '<i class="fas fa-print"></i>', '../production/label_printer.php', 'print_label', $themeProd);
-                        renderServiceLink('Stop Causes', 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../PE/operator_portal.php', 'view_production', $themeProd);
+                        renderServiceLink('Stop Causes', 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../PE/peRequest.php', 'view_production', $themeProd);
                         ?>
                     </div>
                 </div>
@@ -205,7 +205,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         $themeQa = 'text-danger bg-danger bg-opacity-10';
                         renderServiceLink('iQMS Dashboard', 'ระบบจัดการคุณภาพ (NCR/CAR)', '<i class="fas fa-shield-alt"></i>', '../QMS/qmsDashboard.php', 'view_qms', $themeQa);
                         renderServiceLink('Accessories Inspection', 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', '<i class="fas fa-camera"></i>', '../AccessoriesInspection/accessoriesInspectionUI.php', '', $themeQa);
-                        renderServiceLink('PE Maintenance', 'ระบบจัดการใบแจ้งซ่อม (WO)', '<i class="fas fa-wrench"></i>', '../PE/index.php', 'view_maintenance', $themeQa);
+                        renderServiceLink('PE Enterprise', 'ศูนย์กลางจัดการเครื่องจักรและซ่อมบำรุง', '<i class="fas fa-cogs"></i>', '../PE/peDashboard.php', 'view_maintenance', $themeQa);
                         renderServiceLink('MT Stock', 'จัดการคลังอะไหล่ซ่อมบำรุง', '<i class="fas fa-tools"></i>', '../maintenancePE/maintenanceStockUI.php', 'view_maintenance', $themeQa);
                         ?>
                     </div>

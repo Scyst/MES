@@ -373,7 +373,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const result = await apiRequest('update', body, 'POST');
             showToast(result.message, 'var(--bs-success)');
-            fetchDocuments(currentPage, currentSearchTerm, currentCategory);
+            fetchDocuments(currentPage, currentSearchTerm, currentFolderPath);
         } catch (error) {
             // Toast is shown inside apiRequest
         } finally {
@@ -405,8 +405,8 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const result = await apiRequest('update', body, 'POST');
             showToast('Document moved successfully.', 'var(--bs-success)');
-            fetchDocuments(currentPage, currentSearchTerm, currentCategory);
-            fetchCategoriesAndBuildTree();
+            fetchDocuments(currentPage, currentSearchTerm, currentFolderPath);
+
         } catch (error) {
             // Error toast handled in apiRequest
         } finally {
@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const result = await apiRequest('revise', formData, 'POST');
             showToast('Document revised successfully.', 'var(--bs-success)');
-            fetchDocuments(currentPage, currentSearchTerm, currentCategory);
+            fetchDocuments(currentPage, currentSearchTerm, currentFolderPath);
         } catch (error) {
             // Error toast handled
         } finally {
@@ -560,7 +560,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if(docCountOnPage === idsToDelete.length && currentPage > 1){
                         currentPage--;
                     }
-                    fetchDocuments(currentPage, currentSearchTerm, currentCategory);
+                    fetchDocuments(currentPage, currentSearchTerm, currentFolderPath);
                 } catch(error) {
                     // Error toast is already shown by apiRequest
                 } finally {
@@ -610,7 +610,15 @@ document.addEventListener('DOMContentLoaded', function () {
             
             const row = event.target.closest('tr');
             if (row && row.dataset.docId && !target.closest('.action-cell')) {
-                openDetailModal(row.dataset.docId);
+                const docId = row.dataset.docId;
+                const doc = currentDocumentCache.find(d => String(d.id) === String(docId));
+                
+                if (doc && doc.is_folder) {
+                    const targetPath = doc.category ? doc.category + '/' + doc.file_name : doc.file_name;
+                    window.navigateToFolder(targetPath);
+                } else if (doc) {
+                    openDetailModal(docId);
+                }
             }
         });
 

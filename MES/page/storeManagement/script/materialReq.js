@@ -101,6 +101,7 @@ const subCategories = {
         { id: 'STEEL', name: 'เหล็ก' },
         { id: 'PLASTIC', name: 'พลาสติก' },
         { id: 'CHEMICAL', name: 'เคมีภัณฑ์' },
+        { id: 'PAINT', name: 'สี' },
         { id: 'OTHER', name: 'อื่นๆ' }
     ],
     'PKG': [

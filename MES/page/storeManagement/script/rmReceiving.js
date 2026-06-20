@@ -698,20 +698,26 @@ window.groupToMasterPallet = async function() {
         text: `คุณต้องการนำ Tag ทั้ง ${serials.length} รายการนี้ มัดรวมเป็นพาเลทเดียวกันใช่หรือไม่?`,
         icon: 'question',
         showCancelButton: true, confirmButtonColor: '#0d6efd', cancelButtonColor: '#6c757d',
-        confirmButtonText: 'ใช่, จัดกลุ่มและพิมพ์ใบหน้า', cancelButtonText: 'ยกเลิก'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            const formData = new FormData();
-            formData.append('serials', JSON.stringify(serials));
-            
-            Swal.fire({ title: 'กำลังประมวลผล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-            const res = await fetchAPI('group_master_pallet', 'POST', formData);
-            
-            if(res) {
-                if(typeof renderMasterPalletTag === 'function') renderMasterPalletTag(res.data);
-                loadHistory();
-                Swal.fire({ title: 'สำเร็จ!', text: 'จัดกลุ่มพาเลทเรียบร้อย', icon: 'success', timer: 1500, showConfirmButton: false });
+        confirmButtonText: 'ใช่, จัดกลุ่มและพิมพ์ใบหน้า', cancelButtonText: 'ยกเลิก',
+        showLoaderOnConfirm: true,
+        preConfirm: async () => {
+            try {
+                const formData = new FormData();
+                formData.append('serials', JSON.stringify(serials));
+                const res = await fetchAPI('group_master_pallet', 'POST', formData);
+                if (!res) { Swal.showValidationMessage('เกิดข้อผิดพลาด'); return false; }
+                return res;
+            } catch (error) {
+                Swal.showValidationMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                return false;
             }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            if(typeof renderMasterPalletTag === 'function') renderMasterPalletTag(result.value.data);
+            loadHistory();
+            Swal.fire({ title: 'สำเร็จ!', text: 'จัดกลุ่มพาเลทเรียบร้อย', icon: 'success', timer: 1500, showConfirmButton: false });
         }
     });
 };
@@ -755,16 +761,25 @@ window.deleteTag = function(serialNo) {
         title: 'ยืนยันการลบข้อมูล?',
         text: `คุณต้องการลบ Tag: ${escapeHTML(serialNo)} ใช่หรือไม่?`,
         icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d',
-        confirmButtonText: 'ใช่, ลบทิ้งเลย!', cancelButtonText: 'ยกเลิก'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            const formData = new FormData();
-            formData.append('serial_no', serialNo);
-            const res = await fetchAPI('delete_tag', 'POST', formData);
-            if(res) {
-                Swal.fire('ลบสำเร็จ!', 'ข้อมูลถูกลบออกจากระบบแล้ว', 'success');
-                loadHistory();
+        confirmButtonText: 'ใช่, ลบทิ้งเลย!', cancelButtonText: 'ยกเลิก',
+        showLoaderOnConfirm: true,
+        preConfirm: async () => {
+            try {
+                const formData = new FormData();
+                formData.append('serial_no', serialNo);
+                const res = await fetchAPI('delete_tag', 'POST', formData);
+                if (!res) { Swal.showValidationMessage('เกิดข้อผิดพลาด'); return false; }
+                return res;
+            } catch (error) {
+                Swal.showValidationMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                return false;
             }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            Swal.fire('ลบสำเร็จ!', 'ข้อมูลถูกลบออกจากระบบแล้ว', 'success');
+            loadHistory();
         }
     });
 };
@@ -783,18 +798,27 @@ window.deleteSelectedTags = function() {
     Swal.fire({
         title: 'ยืนยันการลบหลายรายการ?', text: `คุณกำลังจะลบ Tag จำนวน ${serials.length} รายการ?`,
         icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d',
-        confirmButtonText: 'ใช่, ลบทั้งหมดเลย!', cancelButtonText: 'ยกเลิก'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            const formData = new FormData();
-            formData.append('serials', JSON.stringify(serials)); 
-            const res = await fetchAPI('delete_bulk_tags', 'POST', formData);
-            if(res) {
-                Swal.fire('ลบสำเร็จ!', `ข้อมูล ${serials.length} รายการถูกลบแล้ว`, 'success');
-                document.getElementById('selectAllCheckbox').checked = false;
-                updateBatchPrintBtn();
-                loadHistory();
+        confirmButtonText: 'ใช่, ลบทั้งหมดเลย!', cancelButtonText: 'ยกเลิก',
+        showLoaderOnConfirm: true,
+        preConfirm: async () => {
+            try {
+                const formData = new FormData();
+                formData.append('serials', JSON.stringify(serials)); 
+                const res = await fetchAPI('delete_bulk_tags', 'POST', formData);
+                if (!res) { Swal.showValidationMessage('เกิดข้อผิดพลาด'); return false; }
+                return res;
+            } catch (error) {
+                Swal.showValidationMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                return false;
             }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            Swal.fire('ลบสำเร็จ!', `ข้อมูล ${serials.length} รายการถูกลบแล้ว`, 'success');
+            document.getElementById('selectAllCheckbox').checked = false;
+            updateBatchPrintBtn();
+            loadHistory();
         }
     });
 };
@@ -821,30 +845,31 @@ window.editTag = function(encodedRow) {
             </div>
         `,
         focusConfirm: false, showCancelButton: true, confirmButtonText: '<i class="fas fa-save"></i> บันทึก', cancelButtonText: 'ยกเลิก',
-        preConfirm: () => ({
-            po: document.getElementById('swal-edit-po').value.trim(),
-            inv: document.getElementById('swal-edit-inv').value.trim(),
-            pallet: document.getElementById('swal-edit-pallet').value.trim(),
-            ctn: document.getElementById('swal-edit-ctn').value.trim(),
-            week: document.getElementById('swal-edit-week').value.trim(),
-            remark: document.getElementById('swal-edit-remark').value.trim()
-        })
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            const formData = new FormData();
-            formData.append('serial_no', row.serial_no);
-            formData.append('po_number', result.value.po);
-            formData.append('warehouse_no', result.value.inv);
-            formData.append('pallet_no', result.value.pallet);
-            formData.append('ctn_number', result.value.ctn);
-            formData.append('week_no', result.value.week);
-            formData.append('remark', result.value.remark);
-            
-            const res = await fetchAPI('edit_tag', 'POST', formData);
-            if(res) {
-                Swal.fire({ title: 'บันทึกสำเร็จ!', icon: 'success', timer: 1500, showConfirmButton: false });
-                loadHistory();
+        showLoaderOnConfirm: true,
+        preConfirm: async () => {
+            try {
+                const formData = new FormData();
+                formData.append('serial_no', row.serial_no);
+                formData.append('po_number', document.getElementById('swal-edit-po').value.trim());
+                formData.append('warehouse_no', document.getElementById('swal-edit-inv').value.trim());
+                formData.append('pallet_no', document.getElementById('swal-edit-pallet').value.trim());
+                formData.append('ctn_number', document.getElementById('swal-edit-ctn').value.trim());
+                formData.append('week_no', document.getElementById('swal-edit-week').value.trim());
+                formData.append('remark', document.getElementById('swal-edit-remark').value.trim());
+                
+                const res = await fetchAPI('edit_tag', 'POST', formData);
+                if (!res) { Swal.showValidationMessage('เกิดข้อผิดพลาด'); return false; }
+                return res;
+            } catch (error) {
+                Swal.showValidationMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                return false;
             }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            Swal.fire({ title: 'บันทึกสำเร็จ!', icon: 'success', timer: 1500, showConfirmButton: false });
+            loadHistory();
         }
     });
 };

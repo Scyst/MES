@@ -84,8 +84,8 @@ const AnalyticsModule = (() => {
                 const dt = new Date(d.log_date);
                 return dt.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' });
             });
-            const values = data.map(d => d.total_min || 0);
-            const events = data.map(d => d.event_count || 0);
+            const values = data.map(d => Number(d.total_min) || 0);
+            const events = data.map(d => Number(d.event_count) || 0);
 
             const ctx = document.getElementById('chartDowntimeTrend');
             if (!ctx) return;
@@ -126,7 +126,10 @@ const AnalyticsModule = (() => {
                     responsive: true,
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { labels: { font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' } } },
+                    plugins: { 
+                        datalabels: { display: false },
+                        legend: { labels: { font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' } } 
+                    },
                     scales: {
                         y: { beginAtZero: true, title: { display: true, text: 'Minutes', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
                         y1: { beginAtZero: true, position: 'right', title: { display: true, text: 'Events', font: { size: 11 } }, grid: { display: false } },
@@ -144,7 +147,7 @@ const AnalyticsModule = (() => {
             const data = res.data || [];
 
             const labels = data.map(d => d.cause_category || 'N/A');
-            const values = data.map(d => d.total_min || 0);
+            const values = data.map(d => Number(d.total_min) || 0);
             const total = values.reduce((s, v) => s + v, 0);
 
             // Cumulative %
@@ -188,7 +191,10 @@ const AnalyticsModule = (() => {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { labels: { font: { size: 11 }, usePointStyle: true } } },
+                    plugins: { 
+                        datalabels: { display: false },
+                        legend: { labels: { font: { size: 11 }, usePointStyle: true } } 
+                    },
                     scales: {
                         y: { beginAtZero: true, title: { display: true, text: 'Minutes', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
                         y1: { beginAtZero: true, max: 100, position: 'right', title: { display: true, text: '%', font: { size: 11 } }, grid: { display: false } },
@@ -213,7 +219,7 @@ const AnalyticsModule = (() => {
                 return;
             }
 
-            const maxMin = Math.max(...data.map(d => d.total_min || 0), 1);
+            const maxMin = Math.max(...data.map(d => Number(d.total_min) || 0), 1);
             tbody.innerHTML = data.map((d, i) => {
                 const pct = Math.round(((d.total_min || 0) / maxMin) * 100);
                 return `
@@ -222,8 +228,8 @@ const AnalyticsModule = (() => {
                     <td class="pe-fw-bold">${PEApp.escapeHtml(d.machine_name || '-')}</td>
                     <td>${PEApp.escapeHtml(d.line || '-')}</td>
                     <td class="pe-text-center">${d.event_count || 0}</td>
-                    <td class="pe-text-end pe-fw-bold" style="color:var(--pe-danger);">${PEApp.formatNumber(d.total_min)}</td>
-                    <td class="pe-text-end">${Math.round(d.avg_min || 0)}</td>
+                    <td class="pe-text-end pe-fw-bold" style="color:var(--pe-danger);">${PEApp.formatNumber(Number(d.total_min) || 0)}</td>
+                    <td class="pe-text-end">${Math.round(Number(d.avg_min) || 0)}</td>
                     <td>
                         <div style="background:var(--pe-border-light);border-radius:4px;height:8px;overflow:hidden;">
                             <div style="background:linear-gradient(90deg,var(--pe-danger),var(--pe-warning));width:${pct}%;height:100%;border-radius:4px;transition:width 0.6s ease;"></div>
@@ -241,7 +247,7 @@ const AnalyticsModule = (() => {
             const data = res.data || [];
 
             const labels = data.map(d => d.status);
-            const values = data.map(d => d.count);
+            const values = data.map(d => Number(d.count) || 0);
             const colorMap = {
                 'Open': '#3b82f6', 'Assigned': '#8b5cf6', 'In Progress': '#f59e0b',
                 'Completed': '#10b981', 'Cancelled': '#94a3b8'
@@ -262,6 +268,7 @@ const AnalyticsModule = (() => {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
+                        datalabels: { display: false },
                         legend: { position: 'bottom', labels: { font: { size: 11 }, usePointStyle: true, pointStyle: 'circle', padding: 12 } }
                     }
                 }

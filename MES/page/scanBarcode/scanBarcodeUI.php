@@ -1,6 +1,12 @@
 <?php
-// Version 1.5.3
+// Version 1.5.4
 require_once __DIR__ . '/../../auth/check_auth.php';
+
+// กันเบราว์เซอร์/WebView บนแฮนด์เฮลด์เก็บหน้า HTML เก่าค้าง (stale cache)
+// ทำให้โหลดหน้าใหม่ทุกครั้ง — JS/CSS ที่ฝัง ?v=filemtime จะสดตามอัตโนมัติ
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 $pageTitle          = 'Barcode Scanner';
 $pageIcon           = 'fas fa-barcode';

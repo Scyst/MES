@@ -26,7 +26,7 @@ try {
                     FROM dbo.MT_ITEMS i WITH (NOLOCK)
                     LEFT JOIN dbo.MT_INVENTORY_ONHAND o WITH (NOLOCK) ON i.item_id = o.item_id
                     LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON o.location_id = l.location_id
-                    WHERE i.is_active = 1 AND ISNULL(o.quantity, 0) > 0 
+                    WHERE i.is_active = 1
                     ORDER BY i.item_code ASC";
             $data = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 

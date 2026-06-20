@@ -89,7 +89,7 @@ export default function Dashboard() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {statCards.map((stat, idx) => (
-          <div key={idx} className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+          <div key={idx} className="glass-card p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{stat.title}</p>
@@ -107,7 +107,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         
         {/* System Status Panel */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6">
+        <div className="glass-card p-6">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">System Status</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50">
@@ -137,26 +137,32 @@ export default function Dashboard() {
         </div>
 
         {/* Welcome Panel */}
-        <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl shadow-md p-6 text-white relative overflow-hidden">
-          <div className="relative z-10 h-full flex flex-col justify-between">
+        <div className="glass-card relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-cyan-500/20 opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div className="relative z-10 p-6 h-full flex flex-col justify-between">
             <div>
-              <h2 className="text-2xl font-bold mb-2">Welcome to MES Toolbox</h2>
-              <p className="text-indigo-100 max-w-sm">
+              <h2 className="text-2xl font-bold mb-2 text-gradient">Welcome to MES Toolbox</h2>
+              <p className="text-slate-600 dark:text-indigo-100 max-w-sm">
                 Your centralized command center for manufacturing execution, machine status, and maintenance.
               </p>
             </div>
-            <div className="mt-8 flex items-center gap-4">
-              <div className="flex items-center gap-2 text-indigo-100 text-sm font-medium">
-                <CheckCircle size={16} /> All systems operational
+            <div className="mt-8 flex items-center justify-between gap-4">
+              <div className="flex gap-4">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-indigo-100 text-sm font-medium">
+                  <CheckCircle size={16} className="text-emerald-500" /> All systems operational
+                </div>
+                <div className="flex items-center gap-2 text-slate-600 dark:text-indigo-100 text-sm font-medium">
+                  <Clock size={16} className="text-indigo-500" /> Data synced live
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-indigo-100 text-sm font-medium">
-                <Clock size={16} /> Data synced live
-              </div>
+              <button className="btn-glow text-sm py-2 px-4 shrink-0">
+                Start Operations
+              </button>
             </div>
           </div>
           {/* Decorative shapes */}
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-900/20 rounded-full blur-3xl"></div>
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-cyan-500/20 rounded-full blur-3xl"></div>
         </div>
 
       </div>

@@ -8,7 +8,7 @@ $pageHeaderSubtitle = "ระบบเบิกวัตถุดิบและ
 $pageIcon = "fas fa-shopping-cart";
 
 $userRole = $_SESSION['user']['role'] ?? '';
-$canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
+$canManageImage = in_array($userRole, ['admin', 'creator', 'store', 'supervisor']);
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -172,10 +172,6 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store']);
                         <input type="radio" class="btn-check" name="reqType" id="reqTypeK2" value="K2">
                         <label class="btn btn-outline-warning text-dark fw-bold" for="reqTypeK2"><i class="fas fa-shopping-cart"></i> ขอสั่งซื้อ (K2)</label>
                     </div>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label small fw-bold text-secondary mb-1">เลขที่ Reservation (SAP) <span class="text-danger">*</span></label>
-                    <input type="text" id="reqReserNo" class="form-control form-control-sm border-primary" placeholder="กรุณาระบุเลขที่ใบเบิก/Reservation..." required>
                 </div>
                 <div class="mb-2">
                     <label class="form-label small fw-bold text-secondary mb-1">คลังปลายทาง (WIP) <span class="text-danger">*</span></label>

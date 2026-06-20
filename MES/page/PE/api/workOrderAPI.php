@@ -43,9 +43,9 @@ try {
             $conditions = [$isDeleted ? "W.is_active = 0" : "W.is_active = 1"];
             $params = [];
 
-            if (!empty($_GET['status']) && !$isDeleted) {
+            if (!empty($_GET['status']) && $_GET['status'] !== 'All' && !$isDeleted) {
                 if ($_GET['status'] === 'Active') {
-                    $conditions[] = "W.status IN ('Open', 'Assigned', 'In Progress')";
+                    $conditions[] = "W.status IN ('Open', 'Pending', 'Assigned', 'In Progress')";
                 } else {
                     $conditions[] = "W.status = ?";
                     $params[] = $_GET['status'];

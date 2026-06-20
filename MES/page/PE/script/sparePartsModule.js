@@ -84,9 +84,14 @@ const SparePartsModule = (() => {
         try {
             const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_master_data' });
             
-            const itemSel = document.getElementById('spTxItem');
-            itemSel.innerHTML = '<option value="">-- เลือกอะไหล่ --</option>' + 
-                (res.data.items || []).map(i => `<option value="${i.item_id}">[${i.item_code}] ${i.item_name} (${i.uom})</option>`).join('');
+            const datalist = document.getElementById('spTxItemList');
+            datalist.innerHTML = '';
+            window.spTextToIdMap = new Map();
+            (res.data.items || []).forEach(i => {
+                const text = `[${i.item_code}] ${i.item_name} (${i.uom})`;
+                window.spTextToIdMap.set(text, i.item_id);
+                datalist.innerHTML += `<option value="${text}"></option>`;
+            });
                 
             const locSel = document.getElementById('spTxLocation');
             locSel.innerHTML = '<option value="">-- เลือกคลังจัดเก็บ --</option>' + 
@@ -114,6 +119,7 @@ const SparePartsModule = (() => {
         document.getElementById('spTxSaveBtn').innerHTML = type === 'RECEIVE' ? '<i class="fas fa-plus me-1"></i> ยืนยันรับเข้า' : '<i class="fas fa-minus me-1"></i> ยืนยันการเบิก';
         
         // Reset form
+        document.getElementById('spTxItemInput').value = '';
         document.getElementById('spTxItem').value = '';
         document.getElementById('spTxLocation').value = '';
         document.getElementById('spTxQty').value = '';
@@ -126,6 +132,12 @@ const SparePartsModule = (() => {
         if (type === 'ISSUE') await loadActiveWorkOrders();
         
         PEApp.showModal('spTxModal');
+    }
+
+    function onItemInput() {
+        const text = document.getElementById('spTxItemInput').value;
+        const itemId = window.spTextToIdMap?.get(text) || '';
+        document.getElementById('spTxItem').value = itemId;
     }
 
     function openReceiveModal() {
@@ -181,5 +193,5 @@ const SparePartsModule = (() => {
         XLSX.writeFile(wb, `SpareParts_${new Date().toISOString().slice(0, 10)}.xlsx`);
     }
 
-    return { loadData, filterTable, openReceiveModal, openIssueModal, submitTransaction, exportExcel };
+    return { loadData, filterTable, openReceiveModal, openIssueModal, submitTransaction, exportExcel, onItemInput };
 })();
