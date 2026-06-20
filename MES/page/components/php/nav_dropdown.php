@@ -228,7 +228,7 @@
             <a class="list-group-item list-group-item-action text-warning-emphasis fw-bold bg-warning bg-opacity-10 border-bottom border-warning border-opacity-50" href="../salesCopy/salesDashboard.php"><i class="fas fa-shipping-fast fa-fw me-3"></i> Sales (Test)</a>
             <?php endif; ?>
             <div class="p-3 mt-4 border-top">
-                <a class="btn btn-outline-danger w-100 logout-action" href="../../auth/logout.php">
+                <a class="btn btn-outline-danger w-100 logout-action" href="<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/auth/logout.php">
                     <i class="fas fa-sign-out-alt me-2"></i> ออกจากระบบ
                 </a>
             </div>

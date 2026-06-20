@@ -77,7 +77,7 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item text-danger fw-bold logout-action rounded py-2 mt-1 d-flex align-items-center" href="../../auth/logout.php">
+                    <a class="dropdown-item text-danger fw-bold logout-action rounded py-2 mt-1 d-flex align-items-center" href="<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/auth/logout.php">
                         <i class="fas fa-sign-out-alt fa-fw me-3"></i> ออกจากระบบ
                     </a>
                 </li>

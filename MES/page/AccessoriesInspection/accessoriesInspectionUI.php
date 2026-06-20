@@ -376,7 +376,7 @@ $products = [
 </div>
 
 <script>const CAMERA_HOST = '<?= CAMERA_HOST ?>';</script>
-<script src="../components/js/sendRequest.js?v=<?php echo filemtime(__DIR__ . '/../components/js/sendRequest.js'); ?>"></script>
+
 <script src="script/accessoriesInspection.js?v=<?php echo filemtime(__DIR__ . '/script/accessoriesInspection.js'); ?>"></script>
 </body>
 </html>

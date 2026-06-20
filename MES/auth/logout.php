@@ -13,6 +13,13 @@ if (isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER'])) {
 }
 
 // 2. ล้างข้อมูล Session
+if (isset($_SESSION['user'])) {
+    try {
+        require_once __DIR__ . '/../page/db.php';
+        $logStmt = $pdo->prepare("INSERT INTO dbo.SYSTEM_LOGS (username, role, action, module, ref_id, ip_address, user_agent, created_at) VALUES (?, ?, 'LOGOUT', 'AUTH', ?, ?, ?, GETDATE())");
+        $logStmt->execute([$_SESSION['user']['username'], $_SESSION['user']['role'], $_SESSION['user']['id'], $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN', $_SERVER['HTTP_USER_AGENT'] ?? 'UNKNOWN']);
+    } catch (Exception $e) {}
+}
 $_SESSION = array();
 
 // 3. ลบ Cookie

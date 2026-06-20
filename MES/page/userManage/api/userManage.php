@@ -8,6 +8,7 @@ if (isset($_REQUEST['action']) && $_REQUEST['action'] === 'sync_manpower' && iss
 
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../../auth/check_auth.php';
+require_once __DIR__ . '/../../components/php/logger.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -79,6 +80,8 @@ try {
                     error_log("Failed to auto-sync user $empId: " . $e->getMessage());
                 }
             }
+
+            writeLog($pdo, 'SYNC_MANPOWER', 'USER_MANAGE', 'SYSTEM', null, ['added' => $addedCount, 'updated' => $updatedCount], "Manual manpower sync by $actionBy");
 
             echo json_encode([
                 'success' => true, 
@@ -248,8 +251,7 @@ try {
             }
             
             $actionWord = $isGranted ? 'GRANTED' : 'REVOKED';
-            $pdo->prepare("INSERT INTO dbo.USER_LOGS (action_by, action_type, target_user, detail, created_at) VALUES (?, 'UPDATE_ROLE', ?, ?, GETDATE())")
-                ->execute([$actionBy, $roleCode, "$actionWord permission '$permCode'"]);
+            writeLog($pdo, 'UPDATE_ROLE', 'USER_MANAGE', $roleCode, null, ["permission" => $permCode, "action" => $actionWord], "Permission $actionWord");
 
             echo json_encode(['success' => true, 'message' => "Permission $actionWord successfully."]);
             break;

@@ -138,10 +138,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         confirmButtonText: 'ตกลง',
                         allowOutsideClick: false
                     }).then(() => {
-                        window.location.href = '../../auth/logout.php';
+                        window.location.href = '/MES/MES/auth/logout.php';
                     });
                 } else {
-                    window.location.href = '../../auth/logout.php';
+                    window.location.href = '/MES/MES/auth/logout.php';
                 }
                 return Promise.reject('Unauthorized 401');
             }

@@ -14,45 +14,6 @@ function escapeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
-async function sendRequest(endpoint, action, method, body = null, params = null) {
-    try {
-        let url = `${endpoint}?action=${action}`;
-        if (params) {
-            url += `&${new URLSearchParams(params).toString()}`;
-        }
-
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        const options = {
-            method: method,
-            headers: {}
-        };
-
-        if (method.toUpperCase() !== 'GET' && csrfToken) {
-            options.headers['X-CSRF-TOKEN'] = csrfToken;
-        }
-
-        if (body) {
-            options.headers['Content-Type'] = 'application/json';
-            options.body = JSON.stringify(body);
-        }
-
-        const response = await fetch(url, options);
-        const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error(result.message || 'HTTP error occurred');
-        }
-        return result;
-    } catch (error) {
-        console.error(`Request for action '${action}' failed:`, error);
-        if (typeof showToast === 'function') {
-            showToast(error.message || 'An unexpected error occurred.', 'var(--bs-danger)');
-        } else {
-            alert(error.message || 'An unexpected error occurred.');
-        }
-        return { success: false, message: error.message };
-    }
-}
 
 function setupAjaxAutocomplete() {
     const searchInput = document.getElementById('item_search');

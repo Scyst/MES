@@ -17,7 +17,7 @@ if (!defined('ALLOW_GUEST_ACCESS') && !isset($_SESSION['user'])) {
         exit;
     } else {
         $current_url = $_SERVER['REQUEST_URI'];
-        $loginUrl = defined('BASE_URL') ? BASE_URL . '/auth/login_form.php' : '../../auth/login_form.php'; 
+        $loginUrl = defined('BASE_URL') ? BASE_URL . '/auth/login_form.php' : '/MES/auth/login_form.php'; 
         header("Location: " . $loginUrl . "?redirect=" . urlencode($current_url));
         exit;
     }

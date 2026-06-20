@@ -3,7 +3,7 @@
 const API_URL = 'api/userManage.php';
 let allUsers = [];
 
-async function sendRequest(action, method, body = null) {
+async function sendUserRequest(action, method, body = null) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const options = { method, headers: {} };
 
@@ -43,7 +43,7 @@ function setBtnLoading(btn, isLoading) {
 
 async function loadUsers() {
     try {
-        const result = await sendRequest('read', 'GET');
+        const result = await sendUserRequest('read', 'GET');
         if (result.success) {
             allUsers = result.data;
             populateFilters(allUsers);
@@ -185,6 +185,16 @@ function openEdit(user) {
     document.getElementById('edit_team').value = user.team_group || '';
     document.getElementById('edit_line').value = user.line || '';
     document.getElementById('edit_password').value = '';
+    
+    const editLineWrapper = document.getElementById('editUserLineWrapper');
+    if (editLineWrapper) {
+        if (user.role === 'supervisor') {
+            editLineWrapper.classList.remove('d-none');
+        } else {
+            editLineWrapper.classList.add('d-none');
+        }
+    }
+    
     openModal('editUserModal');
 }
 
@@ -192,7 +202,7 @@ async function toggleStatus(id, isActive) {
     const act = isActive ? 'disable' : 'enable';
     if (!confirm(`Are you sure you want to ${act} this user?`)) return;
     try {
-        const res = await sendRequest('toggle_status', 'POST', { id });
+        const res = await sendUserRequest('toggle_status', 'POST', { id });
         showToast(res.message, res.success ? '#198754' : '#dc3545');
         if (res.success) loadUsers();
     } catch (e) {
@@ -202,6 +212,22 @@ async function toggleStatus(id, isActive) {
 
 document.addEventListener('DOMContentLoaded', () => {
     loadUsers();
+    
+    function handleRoleChange(roleSelectId, lineWrapperId) {
+        const roleSelect = document.getElementById(roleSelectId);
+        const lineWrapper = document.getElementById(lineWrapperId);
+        if (roleSelect && lineWrapper) {
+            roleSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'supervisor') {
+                    lineWrapper.classList.remove('d-none');
+                } else {
+                    lineWrapper.classList.add('d-none');
+                }
+            });
+        }
+    }
+    handleRoleChange('add_role', 'addUserLineWrapper');
+    handleRoleChange('edit_role', 'editUserLineWrapper');
     
     document.getElementById('searchUserInput')?.addEventListener('input', applyFilters);
     document.getElementById('filterRole')?.addEventListener('change', applyFilters);
@@ -214,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setBtnLoading(btn, true);
         try {
             const data = Object.fromEntries(new FormData(e.target));
-            const res = await sendRequest('create', 'POST', data);
+            const res = await sendUserRequest('create', 'POST', data);
             showToast(res.message, res.success ? '#198754' : '#dc3545');
             if(res.success) {
                 bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
@@ -230,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setBtnLoading(btn, true);
         try {
             const data = Object.fromEntries(new FormData(e.target));
-            const res = await sendRequest('update', 'POST', data);
+            const res = await sendUserRequest('update', 'POST', data);
             showToast(res.message, res.success ? '#ffc107' : '#dc3545');
             if(res.success) {
                 bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
@@ -244,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = e.currentTarget;
         setBtnLoading(btn, true);
         try {
-            const res = await sendRequest('sync_manpower', 'POST');
+            const res = await sendUserRequest('sync_manpower', 'POST');
             showToast(res.message, res.success ? '#0d6efd' : '#dc3545');
             if(res.success) loadUsers();
         } catch(err) {
@@ -259,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cleanId.length < 4) return;
 
         try {
-            const res = await sendRequest('get_emp_info', 'GET', null, { emp_id: cleanId });
+            const res = await sendUserRequest(`get_emp_info&emp_id=${cleanId}`, 'GET');
             if (res.success && res.data) {
                 document.getElementById(prefix + 'fullname').value = res.data.name_th || '';
                 document.getElementById(prefix + 'line').value = res.data.line || '';
@@ -301,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!thead || !tbody) return;
 
         try {
-            const res = await sendRequest('get_permission_matrix', 'GET');
+            const res = await sendUserRequest('get_permission_matrix', 'GET');
             if (res.success) {
                 renderMatrixTable(res.data);
                 isMatrixLoaded = true;
@@ -379,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 this.disabled = true;
                 try {
-                    const res = await sendRequest('toggle_permission', 'POST', {
+                    const res = await sendUserRequest('toggle_permission', 'POST', {
                         role_code: roleCode,
                         perm_code: permCode,
                         is_granted: isGranted

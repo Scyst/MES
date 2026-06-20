@@ -136,7 +136,7 @@ function getFriendlyPageName($url) {
                 
                 if (result.success) {
                     // ✅ SUCCESS: เปลี่ยนหน้าไปตามตัวแปร PHP $redirectTarget
-                    window.location.href = '<?php echo $redirectTarget; ?>';
+                    window.location.href = <?php echo json_encode($redirectTarget); ?>;
                 } else {
                     throw new Error(result.message || 'Login failed');
                 }

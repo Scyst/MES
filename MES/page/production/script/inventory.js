@@ -81,61 +81,6 @@ function handleFilterChange() {
     }
 }
 
-async function sendRequest(endpoint, action, method, body = null, params = null) {
-    try {
-        let url = `${endpoint}?action=${action}`;
-        if (params) {
-            const encodeParam = (key, value) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-            const paramStrings = Object.entries(params).flatMap(([key, value]) => {
-                if (Array.isArray(value)) {
-                    return value.map(item => encodeParam(key, item));
-                } else {
-                    return [encodeParam(key, value)];
-                }
-            });
-            if (paramStrings.length > 0) url += `&${paramStrings.join('&')}`;
-        }
-
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        const options = { method, headers: {} };
-        
-        if (method.toUpperCase() !== 'GET' && csrfToken) {
-            options.headers['X-CSRF-TOKEN'] = csrfToken;
-        }
-        if (body) {
-            options.headers['Content-Type'] = 'application/json;charset=UTF-8';
-            options.body = JSON.stringify(body);
-        }
-        
-        const response = await fetch(url, options);
-        
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-            const textResponse = await response.text();
-            console.error("Non-JSON Response from Server:", textResponse);
-            throw new Error("ระบบเครือข่ายขัดข้อง หรือเซิร์ฟเวอร์ไม่ได้ตอบกลับเป็น JSON");
-        }
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error(result.message || `HTTP Error: ${response.status}`);
-        }
-        
-        return result;
-        
-    } catch (error) {
-        console.error(`Request for action '${action}' failed:`, error);
-        
-        if (typeof showToast === 'function') {
-            showToast(error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'var(--bs-danger)');
-        } else if (typeof alert === 'function') {
-            alert(error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
-        }
-        
-        return { success: false, message: error.message };
-    }
-}
 
 function updateFilterVisibility(activeTabId) {
     const searchEl = document.getElementById('filterSearch');

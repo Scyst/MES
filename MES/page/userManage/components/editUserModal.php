@@ -42,7 +42,7 @@
                             <label class="form-label">Team / Group</label>
                             <input type="text" name="team_group" id="edit_team" class="form-control text-uppercase">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6" id="editUserLineWrapper">
                             <label class="form-label">Line / Area</label>
                             <input type="text" name="line" id="edit_line" class="form-control text-uppercase">
                         </div>

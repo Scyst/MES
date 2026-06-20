@@ -26,7 +26,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Role <span class="text-danger">*</span></label>
-                            <select class="form-select" name="role" required>
+                            <select class="form-select" name="role" id="add_role" required>
                                 <option value="">Select...</option>
                                 <option value="admin" <?= (!hasRole('creator')) ? 'disabled' : '' ?>>Admin</option>
                                 <option value="manager">Manager</option>
@@ -41,7 +41,7 @@
                             <label class="form-label">Team / Group</label>
                             <input type="text" name="team_group" id="add_team" class="form-control text-uppercase" placeholder="e.g. A, B">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6 d-none" id="addUserLineWrapper">
                             <label class="form-label">Line / Area</label>
                             <input type="text" name="line" id="add_line" class="form-control text-uppercase" placeholder="e.g. PRESS, ALL">
                         </div>

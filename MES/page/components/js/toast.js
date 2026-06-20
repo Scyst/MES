@@ -5,9 +5,19 @@
  */
 function showToast(message, color = '#28a745') {
   //-- ค้นหา Element ของ Toast --
-  const toast = document.getElementById('toast');
-  //-- หากไม่พบ Element ให้จบการทำงานทันที --
-  if (!toast) return;
+  let toast = document.getElementById('toast');
+  //-- หากไม่พบ Element ให้สร้างใหม่และเพิ่มเข้าใน body ทันที --
+  if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'toast';
+      Object.assign(toast.style, {
+          position: 'fixed', bottom: '20px', right: '20px', padding: '15px 25px', 
+          borderRadius: '8px', color: 'white', opacity: '0', 
+          transform: 'translateY(20px)', transition: 'all 0.3s ease', zIndex: '9999', 
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+      });
+      document.body.appendChild(toast);
+  }
 
   //-- กำหนดข้อความและสี พร้อมทำให้ Toast แสดงขึ้นมา --
   toast.textContent = message;
