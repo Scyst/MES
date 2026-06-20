@@ -35,7 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
 function getIconPlaceholder(category) {
     let icon = 'fa-box'; let color = '#6c757d'; 
     const cat = category ? category.toUpperCase() : '';
-    if (cat.includes('RM')) { icon = 'fa-cubes'; color = '#0d6efd'; } 
+    if (cat.includes('PALLET')) { icon = 'fa-pallet'; color = '#8B4513'; }
+    else if (cat.includes('PAINT') || cat.includes('CHEMICAL')) { icon = 'fa-fill-drip'; color = '#e83e8c'; }
+    else if (cat.includes('RM')) { icon = 'fa-cubes'; color = '#0d6efd'; } 
     else if (cat.includes('CON')) { icon = 'fa-pump-soap'; color = '#198754'; } 
     else if (cat.includes('SP')) { icon = 'fa-cogs'; color = '#dc3545'; } 
     else if (cat.includes('PKG')) { icon = 'fa-box-open'; color = '#ffc107'; } 
@@ -158,6 +160,7 @@ async function loadStockOrders(isSilent) {
                 let sClass = '', sBadge = '', isPulse = '';
                 if (order.status === 'NEW ORDER') { sClass = 'status-new'; sBadge = '<span class="badge bg-primary">NEW</span>'; isPulse = 'pulse-alert'; }
                 else if (order.status === 'PREPARING') { sClass = 'status-prep'; sBadge = '<span class="badge bg-warning text-dark">PREPARING</span>'; }
+                else if (order.status === 'PARTIAL') { sClass = 'status-prep'; sBadge = '<span class="badge bg-info text-dark">PARTIAL</span>'; }
                 else if (order.status === 'COMPLETED') { sClass = 'status-comp'; sBadge = '<span class="badge bg-success">COMPLETED</span>'; }
                 else { sClass = 'status-rej'; sBadge = '<span class="badge bg-secondary">REJECTED</span>'; }
                 const isActive = (currentReqId == order.id) ? 'active' : '';
@@ -211,27 +214,33 @@ window.openStockOrder = async function(reqId) {
         let headerColor = 'bg-dark', statusText = h.status;
         if (h.status === 'NEW ORDER') headerColor = 'bg-primary';
         else if (h.status === 'PREPARING') headerColor = 'bg-warning text-dark';
+        else if (h.status === 'PARTIAL') headerColor = 'bg-info text-dark';
         else if (h.status === 'COMPLETED') headerColor = 'bg-success';
         
         const headerBg = document.getElementById('header-bg');
         headerBg.classList.remove('bg-dark', 'bg-danger', 'bg-warning', 'bg-success', 'text-dark', 'text-white');
         headerBg.classList.add(...headerColor.split(' '));
-        if(h.status !== 'PREPARING') headerBg.classList.add('text-white');
+        if(h.status !== 'PREPARING' && h.status !== 'PARTIAL') headerBg.classList.add('text-white');
         
         const dispStatus = document.getElementById('disp_status');
         dispStatus.innerText = statusText;
         dispStatus.classList.remove('text-dark', 'text-white', 'text-primary');
-        dispStatus.classList.add(h.status === 'PREPARING' ? 'text-dark' : 'text-primary');
+        dispStatus.classList.add((h.status === 'PREPARING' || h.status === 'PARTIAL') ? 'text-dark' : 'text-primary');
 
-        let itemsHtml = ''; const isEditable = (h.status === 'PREPARING'); 
+        let itemsHtml = ''; const isEditable = (h.status === 'PREPARING' || h.status === 'PARTIAL'); 
 
         currentItems.forEach(item => {
             const reqQty = parseFloat(item.qty_requested); const onHand = parseFloat(item.onhand_qty);
-            const isStockShort = onHand < reqQty; 
-            const defaultIssueQty = item.qty_issued !== null ? parseFloat(item.qty_issued) : Math.min(reqQty, onHand);
+            const previouslyIssued = parseFloat(item.qty_issued || 0);
+            const remainingReqQty = Math.max(0, reqQty - previouslyIssued);
+            const isStockShort = onHand < remainingReqQty; 
+            const isItemEditable = isEditable && remainingReqQty > 0;
+            const defaultIssueQty = Math.max(0, Math.min(remainingReqQty, onHand));
+            
             let issueClass = 'text-success';
-            if (!isEditable && defaultIssueQty < reqQty) issueClass = 'text-warning text-dark';
-            if (!isEditable && defaultIssueQty === 0) issueClass = 'text-danger';
+            if (!isItemEditable && previouslyIssued < reqQty) issueClass = 'text-warning text-dark';
+            if (!isItemEditable && previouslyIssued === 0) issueClass = 'text-danger';
+            if (!isItemEditable && previouslyIssued >= reqQty) issueClass = 'text-success';
             
             const safeCategory = escapeHTML(item.material_sub_type || 'OTHER');
             const safeDesc = escapeHTML(item.description || '-');
@@ -249,18 +258,26 @@ window.openStockOrder = async function(reqId) {
 
             let inputId = `qty_input_${item.row_id}`;
 
+            const checkboxHtml = isItemEditable ? `
+                <div class="form-check me-2 mb-2 mb-md-0 d-flex align-items-center">
+                    <input class="form-check-input issue-item-checkbox" type="checkbox" data-rowid="${item.row_id}" checked style="transform: scale(1.3); cursor: pointer;" onchange="document.getElementById('issue_row_${item.row_id}').style.backgroundColor = this.checked ? '#d1e7dd' : '';">
+                </div>
+            ` : '';
+
             itemsHtml += `
-            <div class="card border border-light shadow-sm mb-2">
+            <div id="issue_row_${item.row_id}" class="card border border-light shadow-sm mb-2" style="transition: background-color 0.2s ease-in-out; ${isItemEditable ? 'background-color: #d1e7dd;' : ''}">
                 <div class="card-body p-2 d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2">
+                    ${checkboxHtml}
                     <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0 w-100">
                         <div class="flex-shrink-0">${imgHtml}</div>
                         <div class="min-w-0 flex-grow-1">
                             <div class="fw-bold text-dark text-truncate mb-1 small" title="${safeDesc}">${safeDesc}</div>
                             <div class="small text-muted" style="font-size:0.75rem;">
-                                SAP: ${safeItemCode} ${isEditable ? `<span class="mx-1">|</span><span class="${isStockShort ? 'text-danger fw-bold' : 'text-success'}">คลังรวม: ${onHand}</span>` : ''}
+                                SAP: ${safeItemCode} ${isItemEditable ? `<span class="mx-1">|</span><span class="${isStockShort ? 'text-danger fw-bold' : 'text-success'}">คลังรวม: ${onHand}</span>` : ''}
                             </div>
                             ${reqTags.length > 0 ? `<div class="small text-success mt-1 fw-bold" style="font-size: 0.75rem;"><i class="fas fa-tags"></i> ลูกค้าระบุแท็ก: ${reqTags.join(', ')}</div>` : ''}
-                            ${isEditable ? `
+                            ${previouslyIssued > 0 ? `<div class="small text-primary mt-1 fw-bold" style="font-size: 0.75rem;"><i class="fas fa-check"></i> จ่ายไปแล้ว: ${previouslyIssued}</div>` : ''}
+                            ${isItemEditable ? `
                             <div class="mt-1">
                                 <span id="tag_display_${item.row_id}" 
                                       class="badge bg-secondary cursor-pointer" 
@@ -282,12 +299,12 @@ window.openStockOrder = async function(reqId) {
                             </div>
                         </div>
                         
-                        <div class="border rounded d-flex flex-column align-items-center justify-content-center ${isEditable ? 'border-success bg-success bg-opacity-10' : 'bg-light'}" style="width: 70px; height: 60px;">
-                            <span class="text-muted fw-bold d-block" style="font-size:0.65rem; margin-bottom: 2px; line-height: 1; ${isEditable ? 'color: #198754 !important;' : ''}">จ่ายจริง</span>
+                        <div class="border rounded d-flex flex-column align-items-center justify-content-center ${isItemEditable ? 'border-success bg-success bg-opacity-10' : 'bg-light'}" style="width: 70px; height: 60px;">
+                            <span class="text-muted fw-bold d-block" style="font-size:0.65rem; margin-bottom: 2px; line-height: 1; ${isItemEditable ? 'color: #198754 !important;' : ''}">${isItemEditable ? 'รอบนี้' : 'จ่ายรวม'}</span>
                             <div class="d-flex align-items-center justify-content-center w-100" style="height: 26px;">
                                 <input type="number" id="${inputId}"
-                                    class="text-center fw-bold ${isEditable ? 'text-success' : issueClass} issue-qty-input p-0 m-0 border-0 bg-transparent w-100" 
-                                    data-rowid="${item.row_id}" data-itemid="${item.item_id}" data-itemcode="${safeItemCode}" data-category="${safeCategory}" data-requested="${reqQty}" value="${defaultIssueQty}" min="0" ${!isEditable ? 'readonly' : ''} 
+                                    class="text-center fw-bold ${isItemEditable ? 'text-success' : issueClass} issue-qty-input p-0 m-0 border-0 bg-transparent w-100" 
+                                    data-rowid="${item.row_id}" data-itemid="${item.item_id}" data-itemcode="${safeItemCode}" data-category="${safeCategory}" data-requested="${reqQty}" value="${isItemEditable ? defaultIssueQty : previouslyIssued}" min="0" max="${remainingReqQty}" ${!isItemEditable ? 'readonly' : ''} 
                                     style="font-size: 1.25rem; line-height: 1; outline: none; box-shadow: none; -moz-appearance: textfield;">
                             </div>
                         </div>
@@ -298,7 +315,7 @@ window.openStockOrder = async function(reqId) {
         });
         document.getElementById('itemsContainer').innerHTML = itemsHtml;
         const issuerContainer = document.getElementById('issuerContainer');
-        if (h.status === 'COMPLETED' && h.issuer_name) {
+        if ((h.status === 'COMPLETED' || h.status === 'PARTIAL') && h.issuer_name) {
             document.getElementById('disp_issuer').innerText = h.issuer_name; document.getElementById('disp_issue_time').innerText = h.issue_time; 
             issuerContainer.classList.remove('d-none');
         } else { issuerContainer.classList.add('d-none'); }
@@ -311,11 +328,11 @@ window.openStockOrder = async function(reqId) {
                 <button id="btnAcceptOrder" class="btn btn-warning text-dark fw-bold px-5 rounded-pill shadow-sm" onclick="acceptOrder(${reqId})"><i class="fas fa-hand-paper me-1"></i> รับออเดอร์</button>
             `;
             actionBar.classList.remove('d-none'); actionBar.innerHTML = btnHtml;
-        } else if (h.status === 'PREPARING') {
+        } else if (h.status === 'PREPARING' || h.status === 'PARTIAL') {
             btnHtml = `
-                <button id="btnRejectOrder" class="btn btn-outline-danger fw-bold px-4 rounded-pill" onclick="rejectOrder(${reqId})"><i class="fas fa-times me-1"></i> ปฏิเสธ</button>
-                <button id="btnConfirmIssue" class="btn btn-success fw-bold px-5 rounded-pill shadow-sm" onclick="confirmIssue(${reqId})"><i class="fas fa-check-double me-1"></i> ยืนยันจ่ายของ</button>
-            `;
+                  <button id="btnRejectOrder" class="btn btn-outline-danger fw-bold px-3 rounded-pill" onclick="rejectOrder(${reqId})"><i class="fas fa-times me-1"></i> ปฏิเสธ</button>
+                  <button id="btnConfirmIssueSelected" class="btn btn-success fw-bold px-3 rounded-pill shadow-sm" onclick="confirmIssue(${reqId}, 'selected')"><i class="fas fa-check-circle me-1"></i> ยืนยันการจ่ายของ</button>
+              `;
             actionBar.classList.remove('d-none'); actionBar.innerHTML = btnHtml;
             document.getElementById('globalScannerContainer').classList.remove('d-none');
             setTimeout(() => { const gsi = document.getElementById('globalScannerInput'); if(gsi) gsi.focus(); }, 500);
@@ -323,7 +340,7 @@ window.openStockOrder = async function(reqId) {
             actionBar.classList.add('d-none'); 
             document.getElementById('globalScannerContainer').classList.add('d-none');
         }
-        if (h.status !== 'PREPARING') document.getElementById('globalScannerContainer').classList.add('d-none');
+        if (h.status !== 'PREPARING' && h.status !== 'PARTIAL') document.getElementById('globalScannerContainer').classList.add('d-none');
         switchView('form-stock');
     } catch (error) { document.getElementById('loadingOverlay').style.display = 'none'; }
 };
@@ -337,25 +354,41 @@ window.acceptOrder = async function(reqId) {
 };
 
 window.rejectOrder = function(reqId) {
-    Swal.fire({ title: 'ปฏิเสธคำขอเบิก?', input: 'text', inputPlaceholder: 'ระบุเหตุผล...', icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'ยืนยัน Reject'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
+    Swal.fire({ title: 'ปฏิเสธคำขอเบิก?', input: 'text', inputPlaceholder: 'ระบุเหตุผล...', icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'ยืนยัน Reject', showLoaderOnConfirm: true,
+        preConfirm: async (reason) => {
             try {
-                await fetchAPI('reject_order', 'POST', { req_id: reqId, reason: result.value }, 'btnRejectOrder');
-                Swal.fire('Rejected', 'ยกเลิกออเดอร์เรียบร้อย', 'success').then(() => { loadActiveQueue(true); switchView('list'); }); 
-            } catch (error) {}
+                const res = await fetchAPI('reject_order', 'POST', { req_id: reqId, reason: reason }, 'btnRejectOrder');
+                if (!res) { Swal.showValidationMessage('เกิดข้อผิดพลาด'); return false; }
+                return res;
+            } catch (error) {
+                Swal.showValidationMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                return false;
+            }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            Swal.fire('Rejected', 'ยกเลิกออเดอร์เรียบร้อย', 'success').then(() => { loadActiveQueue(true); switchView('list'); }); 
         }
     });
 };
 
-window.confirmIssue = async function(reqId) {
-    let issueData = []; let hasError = false; let hasAutoDeduct = false;
-    const inputs = document.querySelectorAll('.issue-qty-input');
+window.confirmIssue = async function(reqId, mode = 'all') {
+    let issueData = []; let hasError = false; let hasAutoDeduct = false; let selectedCount = 0;
+    const inputs = document.querySelectorAll('.issue-qty-input:not([readonly])');
     for (const input of inputs) {
-        const rowId = input.dataset.rowid; const itemId = input.dataset.itemid; const itemCode = input.dataset.itemcode;
+        const rowId = input.dataset.rowid; 
+        if (mode === 'selected') {
+            const cb = document.querySelector(`.issue-item-checkbox[data-rowid="${rowId}"]`);
+            if (!cb || !cb.checked) continue;
+        }
+        
+        selectedCount++;
+        const itemId = input.dataset.itemid; const itemCode = input.dataset.itemcode;
         const category = input.dataset.category;
-        const issueQty = parseFloat(input.value); const maxQty = parseFloat(input.getAttribute('max')); 
+        const issueQty = parseFloat(input.value); 
         const reqQty = parseFloat(input.dataset.requested);
+        
         if (isNaN(issueQty) || issueQty <= 0) { hasError = `กรุณากรอกจำนวนให้มากกว่า 0 (SAP: ${itemCode})`; break; }
         
         let scannedTags = [];
@@ -370,28 +403,74 @@ window.confirmIssue = async function(reqId) {
         
         issueData.push({ row_id: rowId, item_id: itemId, item_code: itemCode, qty_issued: issueQty, scanned_tags: scannedTags });
     }
-    if (hasError) { Swal.fire('ข้อมูลไม่ถูกต้อง', hasError, 'warning'); return; }
     
+    if (hasError) { Swal.fire('ข้อมูลไม่ถูกต้อง', hasError, 'warning'); return; }
+    if (selectedCount === 0) { Swal.fire('ไม่ได้เลือกรายการ', 'กรุณาเลือกอย่างน้อย 1 รายการเพื่อจ่ายของ', 'warning'); return; }
+    if (issueData.length === 0) { Swal.fire('ไม่มีข้อมูล', 'ไม่พบรายการที่สามารถจ่ายได้', 'warning'); return; }
     let confirmTitle = 'ยืนยันการจ่ายของ?';
-    let confirmText = 'ระบบจะทำการหักสต๊อกทันที';
+    
+    let summaryHtml = `<div class="text-start mb-2" style="max-height: 250px; overflow-y: auto;">
+        <p class="mb-2 text-muted fw-bold" style="font-size: 0.85rem;"><i class="fas fa-list-check"></i> สรุปรายการที่กำลังจะจ่าย:</p>
+        <ul class="list-group list-group-flush mb-0 border rounded">`;
+
+    issueData.forEach(item => {
+        const inputEl = document.querySelector(`.issue-qty-input[data-rowid="${item.row_id}"]`);
+        let desc = '-';
+        if (inputEl) {
+            const descEl = inputEl.closest('.card-body')?.querySelector('.fw-bold.text-dark');
+            if (descEl) desc = descEl.innerText;
+        }
+        
+        summaryHtml += `
+            <li class="list-group-item d-flex justify-content-between align-items-center p-2" style="font-size: 0.85rem;">
+                <div class="text-truncate pe-2" style="max-width: 75%; text-align: left;" title="${desc}">
+                    <b class="text-primary">${item.item_code}</b><br>
+                    <span class="text-muted" style="font-size: 0.75rem;">${desc}</span>
+                </div>
+                <span class="badge bg-success rounded-pill px-2 py-1" style="font-size: 0.85rem; box-shadow: 0 2px 4px rgba(25,135,84,0.2);">${item.qty_issued}</span>
+            </li>
+        `;
+    });
+    summaryHtml += `</ul></div>`;
+
     if (hasAutoDeduct) {
-        confirmTitle = 'จ่ายแบบตัดยอดอัตโนมัติ?';
-        confirmText = 'มีบางรายการที่คุณไม่ได้ระบุแท็ก ระบบจะทำการหักยอดจาก "แท็กที่เก่าที่สุด" ให้อัตโนมัติ (Auto-FIFO) คุณแน่ใจหรือไม่?';
+        summaryHtml += `<div class="alert alert-warning py-2 px-3 mt-3 mb-0 text-start" style="font-size: 0.8rem; border-left: 4px solid #ffc107;">
+            <i class="fas fa-exclamation-triangle"></i> มีบางรายการที่คุณไม่ได้ระบุแท็ก ระบบจะทำการหักยอดจาก <b>แท็กที่เก่าที่สุด</b> ให้อัตโนมัติ (Auto-FIFO)
+        </div>`;
     }
     
-    Swal.fire({ title: confirmTitle, text: confirmText, icon: 'question', showCancelButton: true, confirmButtonColor: '#198754', confirmButtonText: 'Yes, Confirm!'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
+    Swal.fire({ 
+        title: confirmTitle, 
+        html: summaryHtml, 
+        icon: 'question', 
+        showCancelButton: true, 
+        confirmButtonColor: '#198754', 
+        confirmButtonText: 'ยืนยันจ่ายของ!', 
+        cancelButtonText: 'กลับไปแก้ไข',
+        showLoaderOnConfirm: true,
+        customClass: { popup: 'rounded-4 shadow-lg' },
+        preConfirm: async () => {
             try {
                 const reqNumber = document.getElementById('disp_req_no').innerText;
-                await fetchAPI('confirm_issue', 'POST', { req_id: reqId, req_number: reqNumber, items: JSON.stringify(issueData) }, 'btnConfirmIssue');
-                Swal.fire('Success', 'จ่ายของและตัดสต๊อกสำเร็จ!', 'success').then(() => { loadActiveQueue(true); switchView('list'); }); 
-            } catch (error) {}
+                const btnId = mode === 'selected' ? 'btnConfirmIssueSelected' : 'btnConfirmIssueAll';
+                const res = await fetchAPI('confirm_issue', 'POST', { req_id: reqId, req_number: reqNumber, items: JSON.stringify(issueData) }, btnId);
+                if (!res) { Swal.showValidationMessage('เกิดข้อผิดพลาด'); return false; }
+                return res;
+            } catch (error) {
+                Swal.showValidationMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                return false;
+            }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            Swal.fire('Success', 'จ่ายของและตัดสต๊อกสำเร็จ!', 'success').then(() => { loadActiveQueue(true); switchView('list'); }); 
         }
     });
 };
 
 window.openSelectTagModal = async function(rowId, itemCode) {
+    let tagHtml5QrCode = null;
     try {
         const res = await fetchAPI(`get_available_tags_for_item&item_code=${encodeURIComponent(itemCode)}`, 'GET');
         const tags = res.data;
@@ -399,11 +478,10 @@ window.openSelectTagModal = async function(rowId, itemCode) {
             Swal.fire('ไม่มีสินค้า', `ไม่พบแท็กที่พร้อมจ่ายสำหรับ SAP: ${itemCode}`, 'warning');
             return;
         }
-
         let html = `<div class="text-start mb-2 small text-muted">เลือกแท็กสินค้าที่ต้องการเบิก (SAP: ${itemCode}):</div>`;
         html += `<div class="mb-3">
             <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-outline-primary shadow-sm rounded d-flex align-items-center justify-content-center" style="width:38px; height:38px; padding:0; flex-shrink:0;" onclick="openOrderCameraScanner('modalScannerInput')" title="สแกนด้วยกล้อง">
+                <button class="btn btn-outline-primary shadow-sm rounded d-flex align-items-center justify-content-center" type="button" id="btnToggleTagCamera" style="width:38px; height:38px; padding:0; flex-shrink:0;" title="สแกนด้วยกล้อง">
                     <i class="fas fa-camera"></i>
                 </button>
                 <div class="input-group shadow-sm flex-grow-1" style="border-radius:8px; overflow:hidden;">
@@ -411,6 +489,7 @@ window.openSelectTagModal = async function(rowId, itemCode) {
                     <input type="text" id="modalScannerInput" class="form-control border-0 fw-bold" placeholder="สแกน QR Code/Barcode ที่นี่..." autocomplete="off">
                 </div>
             </div>
+            <div id="tag-camera-reader" style="width: 100%; display: none;" class="mt-2 border rounded overflow-hidden"></div>
             <div id="modalScannerFeedback" class="small mt-1 text-end" style="min-height: 18px;"></div>
         </div>`;
         html += `<div class="list-group list-group-flush border rounded overflow-auto" style="max-height: 300px; text-align: left;">`;
@@ -432,6 +511,8 @@ window.openSelectTagModal = async function(rowId, itemCode) {
 
         const hiddenInput = document.querySelector(`.issue-tags-hidden[data-rowid="${rowId}"]`);
         let selectedTags = JSON.parse(hiddenInput.value || '[]');
+        
+        let tagHtml5QrCode = null;
 
         const { value: confirmed } = await Swal.fire({
             title: `เลือกแท็ก (SAP: ${itemCode})`,
@@ -445,31 +526,72 @@ window.openSelectTagModal = async function(rowId, itemCode) {
                     if (selectedTags.includes(cb.value)) cb.checked = true;
                 });
                 
+                function processScannedTag(scannedVal) {
+                    if (!scannedVal) return;
+                    
+                    let foundCb = null;
+                    document.querySelectorAll('.tag-checkbox').forEach(cb => {
+                        if (cb.value.toUpperCase() === scannedVal) foundCb = cb;
+                    });
+                    
+                    const feedback = document.getElementById('modalScannerFeedback');
+                    if (foundCb) {
+                        if (!foundCb.checked) {
+                            foundCb.checked = true;
+                            feedback.innerHTML = `<span class="text-success fw-bold"><i class="fas fa-check-circle"></i> ติ๊กเลือกแท็ก ${scannedVal} สำเร็จ</span>`;
+                        } else {
+                            feedback.innerHTML = `<span class="text-warning fw-bold"><i class="fas fa-exclamation-triangle"></i> แท็ก ${scannedVal} ถูกเลือกไว้แล้ว</span>`;
+                        }
+                    } else {
+                        feedback.innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-times-circle"></i> ไม่พบแท็ก ${scannedVal} ในลิสต์</span>`;
+                    }
+                }
+
+                const btnToggleCamera = document.getElementById('btnToggleTagCamera');
+                const readerDiv = document.getElementById('tag-camera-reader');
+                if (btnToggleCamera && typeof Html5Qrcode !== 'undefined') {
+                    btnToggleCamera.addEventListener('click', async () => {
+                        if (tagHtml5QrCode && tagHtml5QrCode.isScanning) {
+                            await tagHtml5QrCode.stop().catch(e => console.error(e));
+                            tagHtml5QrCode.clear();
+                            tagHtml5QrCode = null;
+                            readerDiv.style.display = 'none';
+                            btnToggleCamera.innerHTML = '<i class="fas fa-camera"></i> สแกนกล้อง';
+                            btnToggleCamera.classList.replace('btn-danger', 'btn-outline-primary');
+                        } else {
+                            readerDiv.style.display = 'block';
+                            btnToggleCamera.innerHTML = '<i class="fas fa-stop"></i> ปิดกล้อง';
+                            btnToggleCamera.classList.replace('btn-outline-primary', 'btn-danger');
+                            
+                            tagHtml5QrCode = new Html5Qrcode("tag-camera-reader", { verbose: false });
+                            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                            
+                            try {
+                                await tagHtml5QrCode.start(
+                                    { facingMode: "environment" },
+                                    config,
+                                    (decodedText) => {
+                                        processScannedTag(decodedText.trim().toUpperCase());
+                                    },
+                                    (errorMessage) => {}
+                                );
+                            } catch (err) {
+                                document.getElementById('modalScannerFeedback').innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> ไม่สามารถเปิดกล้องได้: ${err}</span>`;
+                                readerDiv.style.display = 'none';
+                                btnToggleCamera.innerHTML = '<i class="fas fa-camera"></i> สแกนกล้อง';
+                                btnToggleCamera.classList.replace('btn-danger', 'btn-outline-primary');
+                            }
+                        }
+                    });
+                }
+                
                 const scannerInput = document.getElementById('modalScannerInput');
                 if (scannerInput) {
                     setTimeout(() => scannerInput.focus(), 500);
                     scannerInput.addEventListener('keypress', function(e) {
                         if (e.key === 'Enter') {
                             e.preventDefault();
-                            const scannedVal = this.value.trim().toUpperCase();
-                            if (!scannedVal) return;
-                            
-                            let foundCb = null;
-                            document.querySelectorAll('.tag-checkbox').forEach(cb => {
-                                if (cb.value.toUpperCase() === scannedVal) foundCb = cb;
-                            });
-                            
-                            const feedback = document.getElementById('modalScannerFeedback');
-                            if (foundCb) {
-                                if (!foundCb.checked) {
-                                    foundCb.checked = true;
-                                    feedback.innerHTML = `<span class="text-success fw-bold"><i class="fas fa-check-circle"></i> ติ๊กเลือกแท็ก ${scannedVal} สำเร็จ</span>`;
-                                } else {
-                                    feedback.innerHTML = `<span class="text-warning fw-bold"><i class="fas fa-exclamation-triangle"></i> แท็ก ${scannedVal} ถูกเลือกไว้แล้ว</span>`;
-                                }
-                            } else {
-                                feedback.innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-times-circle"></i> ไม่พบแท็ก ${scannedVal} ในลิสต์</span>`;
-                            }
+                            processScannedTag(this.value.trim().toUpperCase());
                             this.value = '';
                         }
                     });
@@ -486,6 +608,11 @@ window.openSelectTagModal = async function(rowId, itemCode) {
                 return { tags: newSelectedTags, totalQty: totalQty };
             }
         });
+
+        if (tagHtml5QrCode && tagHtml5QrCode.isScanning) {
+            tagHtml5QrCode.stop().catch(e => console.error(e));
+            tagHtml5QrCode.clear();
+        }
 
         if (confirmed) {
             hiddenInput.value = JSON.stringify(confirmed.tags);
@@ -617,13 +744,21 @@ window.submitK2Batch = function() {
     if (!prNumber) { Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกเลขที่ K2 PR เพื่อใช้อ้างอิง', 'warning'); return; }
     Swal.fire({
         title: 'ยืนยันการเปิด K2?', text: `สร้างใบขอซื้อในระบบด้วยเลข: ${prNumber} ใช่หรือไม่?`,
-        icon: 'question', showCancelButton: true, confirmButtonColor: '#ffc107', confirmButtonText: 'อัปเดตเลย!'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
+        icon: 'question', showCancelButton: true, confirmButtonColor: '#ffc107', confirmButtonText: 'อัปเดตเลย!', showLoaderOnConfirm: true,
+        preConfirm: async () => {
             try {
-                await fetchAPI('submit_k2_pr', 'POST', { item_code: itemCode, k2_pr_no: prNumber }, 'btnSubmitK2');
-                Swal.fire('Success', 'อัปเดตสถานะสำเร็จ', 'success').then(() => { loadActiveQueue(true); switchView('list'); });
-            } catch (error) {}
+                const res = await fetchAPI('submit_k2_pr', 'POST', { item_code: itemCode, k2_pr_no: prNumber }, 'btnSubmitK2');
+                if (!res) { Swal.showValidationMessage('เกิดข้อผิดพลาด'); return false; }
+                return res;
+            } catch (error) {
+                Swal.showValidationMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                return false;
+            }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            Swal.fire('Success', 'อัปเดตสถานะสำเร็จ', 'success').then(() => { loadActiveQueue(true); switchView('list'); });
         }
     });
 };
