@@ -236,11 +236,23 @@ try {
         case 'edit_job':
             $job_id = $input['job_id'];
             $target_qty = $input['target_qty'];
-            $sql = "UPDATE PRODUCTION_JOBS SET target_qty = ? WHERE job_id = ? AND status IN ('PENDING', 'RUNNING')";
+            
+            $check = $pdo->prepare("SELECT status FROM PRODUCTION_JOBS WHERE job_id = ?");
+            $check->execute([$job_id]);
+            $status = $check->fetchColumn();
+            
+            if (!$status) {
+                throw new Exception("ไม่พบงานนี้ในระบบ");
+            }
+            if (!in_array($status, ['PENDING', 'RUNNING', 'PAUSED'])) {
+                throw new Exception("ไม่สามารถแก้ไขเป้าหมายได้ (สถานะ: $status)");
+            }
+
+            $sql = "UPDATE PRODUCTION_JOBS SET target_qty = ? WHERE job_id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$target_qty, $job_id]);
-            if ($stmt->rowCount() > 0) { echo json_encode(['success' => true, 'message' => "อัปเดตสำเร็จ"]);
-            } else { throw new Exception("ไม่สามารถแก้ไขได้"); }
+            
+            echo json_encode(['success' => true, 'message' => "อัปเดตสำเร็จ"]);
             break;
 
         case 'delete_job':
