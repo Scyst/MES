@@ -21,7 +21,7 @@
                     <div class="col-md-6">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Line</label>
-                            <input class="pe-form-input" id="dtFrmLine" placeholder="Auto-fill from machine" readonly style="background:var(--pe-bg-hover);">
+                            <input list="woLineList" class="pe-form-input" id="dtFrmLine" placeholder="Auto-fill from machine or select">
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -68,7 +68,7 @@
                     <div class="col-md-6">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Recovered By</label>
-                            <input type="text" class="pe-form-input" id="dtFrmRecoveredBy" placeholder="ชื่อผู้แก้ไข">
+                            <input list="woTechList" class="pe-form-input" id="dtFrmRecoveredBy" placeholder="ชื่อผู้แก้ไข">
                         </div>
                     </div>
                     <div class="col-12">

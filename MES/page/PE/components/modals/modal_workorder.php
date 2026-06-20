@@ -107,7 +107,8 @@
                             <div class="col-md-6" id="woAssignedToGroup" style="display:none;">
                                 <div class="pe-form-group">
                                     <label class="pe-form-label">Assigned To</label>
-                                    <input type="text" class="pe-form-input" id="woFrmAssignedTo" placeholder="ชื่อช่าง">
+                                    <input list="woTechList" class="pe-form-input" id="woFrmAssignedTo" placeholder="ชื่อช่าง">
+                                    <datalist id="woTechList"></datalist>
                                 </div>
                             </div>
                             <div class="col-md-6" id="woStatusGroup" style="display:none;">

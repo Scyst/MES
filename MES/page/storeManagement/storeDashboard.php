@@ -343,7 +343,7 @@ $pageIcon = "fas fa-store";
                             <div class="ff-header-gradient p-3 d-flex justify-content-between align-items-center">
                                 <h6 class="fw-bold text-dark mb-0"><i class="fas fa-chart-bar text-primary me-2"></i> ปริมาณบิลเบิก (รายวัน)</h6>
                             </div>
-                            <div class="p-3 flex-grow-1" style="height: 350px;">
+                            <div class="p-3 flex-grow-1 position-relative w-100" style="min-height: 350px;">
                                 <canvas id="chartTrend"></canvas>
                             </div>
                         </div>
@@ -354,19 +354,19 @@ $pageIcon = "fas fa-store";
                             <div class="ff-header-gradient p-3 d-flex justify-content-between align-items-center">
                                 <h6 class="fw-bold text-dark mb-0"><i class="fas fa-chart-pie text-success me-2"></i> สัดส่วนวัสดุที่เบิก</h6>
                             </div>
-                            <div class="p-3 flex-grow-1 d-flex align-items-center justify-content-center" style="height: 350px;">
+                            <div class="p-3 flex-grow-1 d-flex align-items-center justify-content-center position-relative w-100" style="min-height: 350px;">
                                 <canvas id="chartCategory"></canvas>
                             </div>
                         </div>
                     </div>
 
                     <div class="col-12 col-md-6">
-                        <div class="chart-container-card shadow-sm border-0">
+                        <div class="chart-container-card shadow-sm border-0 h-100 d-flex flex-column">
                             <div class="ff-header-gradient p-3">
                                 <h6 class="fw-bold text-dark mb-0"><i class="fas fa-star text-warning me-2"></i> Top 5 วัสดุยอดฮิต</h6>
                             </div>
-                            <div class="p-0">
-                                <div class="p-3 pt-0" style="height: 250px;">
+                            <div class="p-0 flex-grow-1 d-flex flex-column">
+                                <div class="p-3 pt-0 flex-grow-1 position-relative w-100" style="min-height: 250px;">
                                     <canvas id="chartTopItems"></canvas>
                                 </div>
                             </div>
@@ -374,12 +374,12 @@ $pageIcon = "fas fa-store";
                     </div>
 
                     <div class="col-12 col-md-6">
-                        <div class="chart-container-card shadow-sm border-0">
+                        <div class="chart-container-card shadow-sm border-0 h-100 d-flex flex-column">
                             <div class="ff-header-gradient p-3">
                                 <h6 class="fw-bold text-dark mb-0"><i class="fas fa-user-astronaut text-info me-2"></i> Top 5 ผู้เบิก (แผนกผลิต)</h6>
                             </div>
-                            <div class="p-0">
-                                <div class="p-3 pt-0" style="height: 250px;">
+                            <div class="p-0 flex-grow-1 d-flex flex-column">
+                                <div class="p-3 pt-0 flex-grow-1 position-relative w-100" style="min-height: 250px;">
                                     <canvas id="chartTopUsers"></canvas>
                                 </div>
                             </div>

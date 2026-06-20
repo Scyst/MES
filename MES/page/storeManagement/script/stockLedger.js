@@ -72,10 +72,25 @@ async function loadLedgerData() {
             const qty = parseFloat(row.quantity);
             const timeStr = escapeHTML(row.transaction_timestamp.substring(0, 16));
             
+            let displayQty = qty;
+            
+            // If it's a transfer and we are filtering by location
+            if (row.transaction_type === 'INTERNAL_TRANSFER' && locId !== 'ALL') {
+                if (row.from_location_id == locId) {
+                    displayQty = -Math.abs(qty); // Outgoing
+                } else if (row.to_location_id == locId) {
+                    displayQty = Math.abs(qty); // Incoming
+                }
+            } else if (row.transaction_type === 'INTERNAL_TRANSFER') {
+                // If not filtering by location, it's a generic transfer log. It will show as IN by default since it's positive.
+                // We can let it be positive.
+                displayQty = qty;
+            }
+
             let inQty = '-';
             let outQty = '-';
-            if (qty > 0) inQty = `<span class="text-in">+${qty.toLocaleString()}</span>`;
-            if (qty < 0) outQty = `<span class="text-out">${qty.toLocaleString()}</span>`;
+            if (displayQty > 0) inQty = `<span class="text-in">+${displayQty.toLocaleString()}</span>`;
+            if (displayQty < 0) outQty = `<span class="text-out">${displayQty.toLocaleString()}</span>`;
 
             let locDisplay = '-';
             if (row.from_loc && row.to_loc) {

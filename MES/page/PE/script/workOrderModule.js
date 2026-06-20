@@ -271,6 +271,20 @@ const WorkOrderModule = (() => {
             machineList.forEach(m => {
                 sel.add(new Option(`${m.machine_code} — ${m.machine_name}`, m.machine_id, false, m.machine_id == currentVal));
             });
+
+            // Populate Datalists
+            if (res.lines && res.lines.length > 0) {
+                const lineList = document.getElementById('woLineList');
+                if (lineList) {
+                    lineList.innerHTML = res.lines.map(l => `<option value="${PEApp.escapeHtml(l)}"></option>`).join('');
+                }
+            }
+            if (res.technicians && res.technicians.length > 0) {
+                const techList = document.getElementById('woTechList');
+                if (techList) {
+                    techList.innerHTML = res.technicians.map(t => `<option value="${PEApp.escapeHtml(t)}"></option>`).join('');
+                }
+            }
         } catch (e) { /* silent */ }
     }
 

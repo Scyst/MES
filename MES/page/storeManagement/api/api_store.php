@@ -155,6 +155,16 @@ try {
                 // Prevent negative inventory by checking current quantity
                 $pdo->prepare("UPDATE dbo.INVENTORY_ONHAND SET quantity = CASE WHEN quantity - ? < 0 THEN 0 ELSE quantity - ? END WHERE parameter_id = ? AND location_id = ?")
                     ->execute([$tag['current_qty'], $tag['current_qty'], $tag['item_id'], $locId]);
+
+                // Insert into STOCK_TRANSACTIONS
+                $pdo->prepare("
+                    INSERT INTO dbo.STOCK_TRANSACTIONS (
+                        parameter_id, quantity, transaction_type, from_location_id, created_by_user_id, 
+                        notes, reference_id, transaction_timestamp
+                    ) VALUES (?, ?, 'ISSUE_STORE', ?, ?, 'Manual Force Issue', ?, GETDATE())
+                ")->execute([
+                    $tag['item_id'], -abs($tag['current_qty']), $locId, $userId, $serial_no
+                ]);
             }
             
             $pdo->commit();
@@ -288,6 +298,16 @@ try {
                             $itemId, $destLocId, 
                             $total_issued_for_this_item, 
                             $itemId, $destLocId, $total_issued_for_this_item
+                        ]);
+
+                        // Record RECEIVE_WIP transaction for the destination location
+                        $pdo->prepare("
+                            INSERT INTO dbo.STOCK_TRANSACTIONS (
+                                parameter_id, quantity, transaction_type, to_location_id, created_by_user_id, 
+                                notes, reference_id, transaction_timestamp
+                            ) VALUES (?, ?, 'RECEIVE_WIP', ?, ?, 'Received via Store Requisition', ?, GETDATE())
+                        ")->execute([
+                            $itemId, $total_issued_for_this_item, $destLocId, $issuer_id, $req_number
                         ]);
                     }
                 }
@@ -1024,6 +1044,7 @@ try {
 
             $sql = "SELECT t.transaction_id, t.transaction_timestamp, t.transaction_type, t.quantity, t.reference_id, t.notes,
                            ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description,
+                           t.from_location_id, t.to_location_id,
                            loc_from.location_name AS from_loc, loc_to.location_name AS to_loc,
                            ISNULL(e.name_th, u.username) AS actor_name
                     FROM dbo.STOCK_TRANSACTIONS t WITH (NOLOCK)

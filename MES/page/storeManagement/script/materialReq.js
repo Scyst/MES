@@ -361,15 +361,12 @@ function renderCartUI() {
     const reqTypeEl = document.querySelector('input[name="reqType"]:checked');
     const reqType = reqTypeEl ? reqTypeEl.value : 'STOCK';
     
-    // Toggle Reservation required and Destination location
-    const reserBox = document.getElementById('reqReserNo') ? document.getElementById('reqReserNo').closest('div.mb-2') : null;
+    // Toggle Destination location
     const destLocBox = document.getElementById('reqDestLoc') ? document.getElementById('reqDestLoc').closest('div.mb-2') : null;
 
     if (reqType === 'K2') {
-        if(reserBox) reserBox.style.display = 'none';
         if(destLocBox) destLocBox.style.display = 'none';
     } else {
-        if(reserBox) reserBox.style.display = 'block';
         if(destLocBox) destLocBox.style.display = 'block';
     }
 
@@ -409,7 +406,6 @@ function renderCartUI() {
 
 window.submitRequisition = function() {
     const remarkEl = document.getElementById('reqRemark');
-    const reserEl = document.getElementById('reqReserNo');
     const destEl = document.getElementById('reqDestLoc');
     const internalJobEl = document.getElementById('reqInternalJob');
     const reqTypeEl = document.querySelector('input[name="reqType"]:checked');
@@ -417,7 +413,6 @@ window.submitRequisition = function() {
     const remark = remarkEl ? remarkEl.value.trim() : '';
 
     // Toggle required based on reqType
-    const reservation_number = reqType === 'STOCK' && reserEl ? reserEl.value.trim() : '';
     const internal_job_no = reqType === 'STOCK' && internalJobEl ? internalJobEl.value.trim() : '';
     const destination_location_id = reqType === 'STOCK' && destEl ? destEl.value : null;
     const itemCodes = Object.keys(cart);
@@ -428,11 +423,6 @@ window.submitRequisition = function() {
         if (!destination_location_id) {
             Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกคลังปลายทาง (WIP) ก่อนทำการยืนยันการเบิก', 'warning');
             if (destEl) destEl.focus();
-            return;
-        }
-        if (!reservation_number) {
-            Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาระบุเลขที่ Reservation ก่อนทำการยืนยันการเบิก', 'warning');
-            if (reserEl) reserEl.focus();
             return;
         }
         
@@ -469,7 +459,7 @@ window.submitRequisition = function() {
                 const res = await fetchAPI('submit_requisition', 'POST', { 
                     cart: JSON.stringify(payloadCart), 
                     remark: remark, 
-                    reservation_number: reservation_number,
+                    reservation_number: '',
                     internal_job_no: internal_job_no,
                     destination_location_id: destination_location_id,
                     request_type: reqType 
@@ -477,7 +467,6 @@ window.submitRequisition = function() {
 
                 cart = {}; 
                 if (remarkEl) remarkEl.value = ''; 
-                if (reserEl) reserEl.value = '';
                 if (internalJobEl) internalJobEl.value = '';
                 renderCartUI();
                 

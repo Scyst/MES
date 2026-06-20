@@ -275,7 +275,29 @@ try {
         case 'get_machines_list':
             $sql = "SELECT machine_id, machine_code, machine_name, line FROM " . PE_MACHINES_TABLE . " WITH (NOLOCK) WHERE is_active = 1 AND status != 'Inactive' ORDER BY machine_code";
             $data = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'data' => $data]);
+
+            // Fetch unique technicians from MANPOWER_EMPLOYEES (priority to MT/PE line)
+            $techSql = "
+                SELECT name_th AS tech_name 
+                FROM " . MANPOWER_EMPLOYEES_TABLE . " WITH (NOLOCK) 
+                WHERE is_active = 1 AND name_th IS NOT NULL AND name_th != ''
+                ORDER BY 
+                    CASE 
+                        WHEN line = 'MT/PE' THEN 1 
+                        WHEN line LIKE '%ENGINEER%' THEN 2
+                        WHEN line LIKE '%Retrofit%' THEN 3
+                        WHEN line LIKE '%Toolbox%' THEN 4
+                        ELSE 5 
+                    END,
+                    name_th
+            ";
+            $technicians = $pdo->query($techSql)->fetchAll(PDO::FETCH_COLUMN);
+
+            // Fetch unique lines
+            $lineSql = "SELECT DISTINCT line FROM " . PE_MACHINES_TABLE . " WITH (NOLOCK) WHERE is_active = 1 AND line IS NOT NULL AND line != '' ORDER BY line";
+            $lines = $pdo->query($lineSql)->fetchAll(PDO::FETCH_COLUMN);
+
+            echo json_encode(['success' => true, 'data' => $data, 'technicians' => $technicians, 'lines' => $lines]);
             break;
 
         default:

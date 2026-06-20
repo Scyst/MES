@@ -812,11 +812,16 @@ window.loadAnalytics = async function() {
         document.getElementById('stat_waiting_k2').innerText = res.summary.waiting_k2;
         document.getElementById('stat_total_rejects').innerText = res.summary.total_rejects;
 
-        document.getElementById('adv_sla').innerText = parseFloat(res.summary.avg_sla_minutes || 0).toFixed(0) + ' นาที';
-        document.getElementById('adv_fill_rate').innerText = parseFloat(res.summary.fill_rate_percent || 0).toFixed(1) + '%';
-        document.getElementById('adv_ira').innerText = parseFloat(res.summary.ira_percent || 100).toFixed(1) + '%';
-        document.getElementById('adv_dead_stock').innerText = '฿' + parseFloat(res.summary.dead_stock_value || 0).toLocaleString();
-        document.getElementById('adv_turnover').innerText = parseFloat(res.summary.turnover_ratio || 0).toFixed(2);
+        if(document.getElementById('adv_sla')) document.getElementById('adv_sla').innerText = parseFloat(res.summary.avg_sla_minutes || 0).toFixed(0) + ' นาที';
+        if(document.getElementById('adv_fill_rate')) document.getElementById('adv_fill_rate').innerText = parseFloat(res.summary.fill_rate_percent || 0).toFixed(1) + '%';
+        if(document.getElementById('adv_ira')) document.getElementById('adv_ira').innerText = parseFloat(res.summary.ira_percent || 100).toFixed(1) + '%';
+        if(document.getElementById('adv_reject_rate')) {
+            let reqs = Number(res.summary.total_reqs) || 0;
+            let rejs = Number(res.summary.total_rejects) || 0;
+            document.getElementById('adv_reject_rate').innerText = (reqs > 0 ? ((rejs / reqs) * 100).toFixed(1) : '0.0') + '%';
+        }
+        if(document.getElementById('adv_dead_stock')) document.getElementById('adv_dead_stock').innerText = '฿' + parseFloat(res.summary.dead_stock_value || 0).toLocaleString();
+        if(document.getElementById('adv_turnover')) document.getElementById('adv_turnover').innerText = parseFloat(res.summary.turnover_ratio || 0).toFixed(2);
         
         if(chartTrendInst) chartTrendInst.destroy();
         chartTrendInst = new Chart(document.getElementById('chartTrend').getContext('2d'), {
@@ -824,12 +829,12 @@ window.loadAnalytics = async function() {
             data: {
                 labels: res.trendData.map(d => d.req_date),
                 datasets: [{ 
-                    label: 'จำนวนบิลเบิกสำเร็จ', data: res.trendData.map(d => d.req_count), 
+                    label: 'จำนวนบิลเบิกสำเร็จ', data: res.trendData.map(d => Number(d.req_count) || 0), 
                     borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.15)', borderWidth: 2.5, 
                     pointBackgroundColor: '#ffffff', pointBorderColor: '#0d6efd', pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6, fill: true, tension: 0.3 
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { display: false } }, interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } } } }
         });
 
         if(chartCatInst) chartCatInst.destroy();
@@ -837,9 +842,9 @@ window.loadAnalytics = async function() {
             type: 'doughnut',
             data: {
                 labels: res.categoryData.map(c => c.category),
-                datasets: [{ data: res.categoryData.map(c => c.total_qty), backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d', '#0dcaf0'], borderWidth: 2, borderColor: '#ffffff' }]
+                datasets: [{ data: res.categoryData.map(c => Number(c.total_qty) || 0), backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d', '#0dcaf0'], borderWidth: 2, borderColor: '#ffffff' }]
             },
-            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right' } } }
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { datalabels: { display: false }, legend: { position: 'right' } } }
         });
 
         if(chartItemsInst) chartItemsInst.destroy();
@@ -847,9 +852,9 @@ window.loadAnalytics = async function() {
             type: 'bar',
             data: {
                 labels: res.topItems.map(i => (i.part_description || '').substring(0, 25) + '...'),
-                datasets: [{ label: 'จำนวนชิ้นที่จ่าย', data: res.topItems.map(i => i.total_qty), backgroundColor: 'rgba(255, 193, 7, 0.85)', borderColor: '#ffc107', borderWidth: 1, borderRadius: 4 }]
+                datasets: [{ label: 'จำนวนชิ้นที่จ่าย', data: res.topItems.map(i => Number(i.total_qty) || 0), backgroundColor: 'rgba(255, 193, 7, 0.85)', borderColor: '#ffc107', borderWidth: 1, borderRadius: 4 }]
             },
-            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true }, y: { grid: { display: false } } } }
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { display: false } }, scales: { x: { beginAtZero: true }, y: { grid: { display: false } } } }
         });
 
         if(chartUsersInst) chartUsersInst.destroy();
@@ -857,12 +862,21 @@ window.loadAnalytics = async function() {
             type: 'pie',
             data: {
                 labels: res.topUsers.map(u => u.fullname.split(' ')[0]),
-                datasets: [{ data: res.topUsers.map(u => u.req_count), backgroundColor: ['#0dcaf0', '#6610f2', '#d63384', '#fd7e14', '#20c997'], borderWidth: 2, borderColor: '#ffffff' }]
+                datasets: [{ data: res.topUsers.map(u => Number(u.req_count) || 0), backgroundColor: ['#0dcaf0', '#6610f2', '#d63384', '#fd7e14', '#20c997'], borderWidth: 2, borderColor: '#ffffff' }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'right' } } }
         });
 
-    } catch (error) { document.getElementById('loadingOverlay').style.display = 'none'; }
+    } catch (error) { 
+        document.getElementById('loadingOverlay').style.display = 'none'; 
+        console.error('Analytics Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Analytics Load Error',
+            text: error.message,
+            footer: '<pre style="text-align:left; font-size:10px;">' + error.stack + '</pre>'
+        });
+    }
 };
 
 window.exportToCSV = async function() {
