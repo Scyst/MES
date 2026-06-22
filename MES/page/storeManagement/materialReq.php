@@ -276,15 +276,40 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store', 'supervisor'
                             <div class="col-6">
                                 <label class="form-label fw-bold small text-muted mb-1">Type</label>
                                 <select class="form-select form-select-sm" id="edit_material_type">
-                                    <option value="FG">FG</option>
-                                    <option value="SEMI">SEMI</option>
-                                    <option value="WIP">WIP</option>
-                                    <option value="RM">RM</option>
-                                    <option value="PKG">PKG</option>
-                                    <option value="CON">CON</option>
-                                    <option value="SP">SP</option>
-                                    <option value="TOOL">TOOL</option>
-                                    <option value="OTHER">OTHER</option>
+                                    <optgroup label="RM">
+                                        <option value="STEEL">เหล็ก</option>
+                                        <option value="PLASTIC">พลาสติก</option>
+                                        <option value="CHEMICAL">เคมีภัณฑ์</option>
+                                        <option value="PAINT">สี</option>
+                                        <option value="BOLT & NUT">BOLT & NUT</option>
+                                        <option value="RIVET">RIVET</option>
+                                    </optgroup>
+                                    <optgroup label="PKG">
+                                        <option value="BOX">กล่องกระดาษ</option>
+                                        <option value="PALLET">พาเลท</option>
+                                        <option value="LABEL">ฉลาก/สติ๊กเกอร์</option>
+                                        <option value="KEY">KEY</option>
+                                        <option value="BBS">BBS</option>
+                                        <option value="HANDLE">HANDLE</option>
+                                        <option value="PLASTIC BAG">PLASTIC BAG</option>
+                                    </optgroup>
+                                    <optgroup label="CON">
+                                        <option value="ACC">อุปกรณ์ประกอบ</option>
+                                        <option value="5S">อุปกรณ์ 5ส.</option>
+                                        <option value="PROD">ของใช้ในไลน์ผลิต</option>
+                                        <option value="OFFICE">ของใช้ออฟฟิศ</option>
+                                        <option value="PPE">อุปกรณ์เซฟตี้</option>
+                                    </optgroup>
+                                    <optgroup label="SP & TOOL">
+                                        <option value="MECHANICAL">อะไหล่เครื่องกล</option>
+                                        <option value="ELECTRICAL">อะไหล่ไฟฟ้า</option>
+                                        <option value="HANDTOOL">เครื่องมือช่าง</option>
+                                        <option value="MACHINE">เครื่องจักร</option>
+                                    </optgroup>
+                                    <optgroup label="OTHER">
+                                        <option value="STANDARD">STANDARD</option>
+                                        <option value="OTHER">OTHER</option>
+                                    </optgroup>
                                 </select>
                             </div>
                             <div class="col-6">

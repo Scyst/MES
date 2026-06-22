@@ -884,6 +884,8 @@ try {
                 $conditions[] = "i.material_sub_type = 'PALLET'";
             } else if ($category === 'PAINT') {
                 $conditions[] = "i.material_sub_type = 'PAINT'";
+            } else if ($category === 'BOX') {
+                $conditions[] = "i.material_sub_type = 'BOX'";
             }
 
             if ($hide_zero === 'true') {

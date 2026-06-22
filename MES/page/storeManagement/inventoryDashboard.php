@@ -160,6 +160,7 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                             <option value="ALL" selected>All Categories</option>
                                             <option value="PALLET">พาเลทไม้ (Pallet)</option>
                                             <option value="PAINT">สี (Paint)</option>
+                                            <option value="BOX">กล่องกระดาษ (Box)</option>
                                         </select>
                                     </div>
                                     

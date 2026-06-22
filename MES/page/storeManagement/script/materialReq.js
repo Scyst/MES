@@ -102,12 +102,18 @@ const subCategories = {
         { id: 'PLASTIC', name: 'พลาสติก' },
         { id: 'CHEMICAL', name: 'เคมีภัณฑ์' },
         { id: 'PAINT', name: 'สี' },
+        { id: 'BOLT & NUT', name: 'BOLT & NUT' },
+        { id: 'RIVET', name: 'RIVET' },
         { id: 'OTHER', name: 'อื่นๆ' }
     ],
     'PKG': [
         { id: 'BOX', name: 'กล่องกระดาษ' },
         { id: 'PALLET', name: 'พาเลท' },
-        { id: 'LABEL', name: 'สติ๊กเกอร์/ฉลาก' },
+        { id: 'LABEL', name: 'ฉลาก/สติ๊กเกอร์' },
+        { id: 'KEY', name: 'KEY' },
+        { id: 'BBS', name: 'BBS' },
+        { id: 'HANDLE', name: 'HANDLE' },
+        { id: 'PLASTIC BAG', name: 'PLASTIC BAG' },
         { id: 'OTHER', name: 'อื่นๆ' }
     ],
     'CON': [
