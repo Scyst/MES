@@ -857,6 +857,7 @@ try {
 
         case 'get_inventory_dashboard':
             $location_id = $_GET['location_id'] ?? 'ALL';
+            $location_type = $_GET['location_type'] ?? 'ALL';
             $material_type = $_GET['material_type'] ?? 'ALL';
             $hide_zero = $_GET['hide_zero'] ?? 'false';
             $page = max(1, (int)($_GET['page'] ?? 1));
@@ -880,19 +881,21 @@ try {
             }
 
             $category = $_GET['category'] ?? 'ALL';
-            if ($category === 'PALLET') {
-                $conditions[] = "i.material_sub_type = 'PALLET'";
-            } else if ($category === 'PAINT') {
-                $conditions[] = "i.material_sub_type = 'PAINT'";
-            } else if ($category === 'BOX') {
-                $conditions[] = "i.material_sub_type = 'BOX'";
+            if ($category !== 'ALL' && $category !== '') {
+                $conditions[] = "i.material_sub_type = ?";
+                $params[] = $category;
             }
 
             if ($hide_zero === 'true') {
                 $conditions[] = "(ISNULL(Onhand.available_qty, 0) <> 0 OR ISNULL(Pending.pending_qty, 0) > 0)";
             }
 
-            $locFilter = ($location_id !== 'ALL' && $location_id !== '') ? "AND o.location_id = " . (int)$location_id : "";
+            $locFilter = "";
+            if ($location_id !== 'ALL' && $location_id !== '') {
+                $locFilter = "AND o.location_id = " . (int)$location_id;
+            } else if ($location_type !== 'ALL' && $location_type !== '') {
+                $locFilter = "AND EXISTS (SELECT 1 FROM dbo.LOCATIONS loc WITH (NOLOCK) WHERE loc.location_id = o.location_id AND loc.location_type = " . $pdo->quote($location_type) . ")";
+            }
             
             $whereClause = implode(" AND ", $conditions);
             $whereSQL = !empty($whereClause) ? "WHERE " . $whereClause : "";
@@ -931,6 +934,7 @@ try {
             $sql = "
                 SELECT 
                     i.item_id,
+                    i.sap_no,
                     ISNULL(i.part_no, i.sap_no) AS item_no,
                     i.part_description,
                     ISNULL(i.material_type, 'UNKNOWN') AS material_type,
@@ -999,7 +1003,10 @@ try {
             $endDate = $_GET['end_date'] ?? date('Y-m-d');
             $search = $_GET['search'] ?? '';
             $locationId = $_GET['location_id'] ?? 'ALL';
+            $locationType = $_GET['location_type'] ?? 'ALL';
             $typeFilter = $_GET['type_filter'] ?? 'ALL';
+            $materialType = $_GET['material_type'] ?? 'ALL';
+            $category = $_GET['category'] ?? 'ALL';
             $page = max(1, (int)($_GET['page'] ?? 1));
             $limit = max(10, (int)($_GET['limit'] ?? 100));
             $offset = ($page - 1) * $limit;
@@ -1012,6 +1019,14 @@ try {
                 $conditions[] = "(t.from_location_id = ? OR t.to_location_id = ?)";
                 $params[] = $locationId;
                 $params[] = $locationId;
+            } else if ($locationType !== 'ALL') {
+                $conditions[] = "(
+                    EXISTS (SELECT 1 FROM dbo.LOCATIONS loc WITH (NOLOCK) WHERE loc.location_id = t.from_location_id AND loc.location_type = ?)
+                    OR 
+                    EXISTS (SELECT 1 FROM dbo.LOCATIONS loc WITH (NOLOCK) WHERE loc.location_id = t.to_location_id AND loc.location_type = ?)
+                )";
+                $params[] = $locationType;
+                $params[] = $locationType;
             }
 
             if ($typeFilter !== 'ALL') {
@@ -1024,6 +1039,17 @@ try {
                     $params[] = $typeFilter;
                 }
             }
+
+            if ($materialType !== 'ALL') {
+                $conditions[] = "i.material_type = ?";
+                $params[] = $materialType;
+            }
+
+            if ($category !== 'ALL' && $category !== '') {
+                $conditions[] = "i.material_sub_type = ?";
+                $params[] = $category;
+            }
+
 
             if (!empty($search)) {
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR t.notes LIKE ?)";
@@ -1045,7 +1071,7 @@ try {
             $kpi = $kpiStmt->fetch(PDO::FETCH_ASSOC);
 
             $sql = "SELECT t.transaction_id, t.transaction_timestamp, t.transaction_type, t.quantity, t.reference_id, t.notes,
-                           ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description,
+                           i.sap_no, ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description,
                            t.from_location_id, t.to_location_id,
                            loc_from.location_name AS from_loc, loc_to.location_name AS to_loc,
                            ISNULL(e.name_th, u.username) AS actor_name

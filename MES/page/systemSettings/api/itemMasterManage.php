@@ -37,6 +37,7 @@ try {
             $filter_model = $_GET['filter_model'] ?? '';
 
             $filter_material = $_GET['filter_material'] ?? ''; 
+            $filter_sub_material = $_GET['filter_sub_material'] ?? '';
 
             $params = [];
             $fromClause = "FROM " . ITEMS_TABLE . " i WITH (NOLOCK)";
@@ -45,6 +46,11 @@ try {
             if (!empty($filter_material)) {
                 $conditions[] = "i.material_type = ?";
                 $params[] = $filter_material;
+            }
+
+            if (!empty($filter_sub_material)) {
+                $conditions[] = "i.material_sub_type = ?";
+                $params[] = $filter_sub_material;
             }
 
             if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {

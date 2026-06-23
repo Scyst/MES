@@ -92,48 +92,18 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
                             
                             <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
                                 
-                                <div class="input-group input-group-sm shadow-sm" style="flex: 1 1 200px; max-width: 350px;">
+                            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                                <div class="input-group input-group-sm shadow-sm flex-grow-1" style="min-width: 200px; max-width: 500px;">
                                     <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
-                                    <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Item No., Lot, Ref...">
+                                    <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Part No, SAP No, Ref No หรือ Notes...">
+                                    <button class="btn btn-outline-secondary border-secondary-subtle" type="button" onclick="loadLedgerData()" title="Refresh Data">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
                                 </div>
-                                
-                                <div class="input-group input-group-sm shadow-sm" style="width: auto; flex: 1 1 250px; max-width: 350px;">
-                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-calendar-alt me-1"></i> วันที่:</span>
-                                    <input type="date" id="filterStartDate" class="form-control border-secondary-subtle px-1" value="<?php echo date('Y-m-d', strtotime('-7 days')); ?>">
-                                    <span class="input-group-text bg-white border-secondary-subtle border-start-0 border-end-0 px-1">-</span>
-                                    <input type="date" id="filterEndDate" class="form-control border-secondary-subtle px-1" value="<?php echo date('Y-m-d'); ?>">
-                                </div>
-
-                                <div class="input-group input-group-sm shadow-sm" style="width: auto; flex: 1 1 140px; max-width: 180px;">
-                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-map-marker-alt"></i></span>
-                                    <select id="locationFilter" class="form-select border-secondary-subtle fw-bold text-primary">
-                                        <option value="ALL">All Locations</option>
-                                    </select>
-                                </div>
-
-                                <div class="input-group input-group-sm shadow-sm" style="width: auto; flex: 1 1 140px; max-width: 180px;">
-                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary small"><i class="fas fa-filter"></i></span>
-                                    <select id="typeFilter" class="form-select border-secondary-subtle fw-bold text-dark">
-                                        <option value="ALL" selected>All Types</option>
-                                        <option value="RECEIPT">RECEIPT (รับเข้า)</option>
-                                        <option value="INTERNAL_TRANSFER">TRANSFER (โอนย้าย)</option>
-                                        <option value="CONSUMPTION">CONSUMPTION (เบิกจ่าย)</option>
-                                        <option value="ADJUSTMENT">ADJUSTMENT (ปรับยอด)</option>
-                                    </select>
-                                </div>
-
-                                <div class="input-group input-group-sm shadow-sm d-none d-md-flex" style="width: 75px;">
-                                    <select id="rowsPerPage" class="form-select border-secondary-subtle px-2" onchange="changeRowsPerPage()">
-                                        <option value="50">50</option>
-                                        <option value="100" selected>100</option>
-                                        <option value="500">500</option>
-                                    </select>
-                                </div>
-                                
-                                <button class="btn btn-outline-secondary btn-sm shadow-sm flex-shrink-0" onclick="loadLedgerData()" title="Refresh Data" style="width: 32px; height: 32px;">
-                                    <i class="fas fa-sync-alt"></i>
+                                <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-3 d-flex align-items-center justify-content-center flex-shrink-0" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
+                                    <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
                                 </button>
-                                
+                            </div>
                             </div>
 
                             <div id="actionWrapper" class="d-none d-md-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end">
@@ -171,6 +141,7 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
                                 <tr class="text-secondary small text-uppercase align-middle">
                                     <th class="text-center" style="width: 50px;">#</th>
                                     <th style="min-width: 140px;">วันที่-เวลา</th>
+                                    <th style="min-width: 100px;">SAP No.</th>
                                     <th style="min-width: 220px;">Part No. / Description</th>
                                     <th style="min-width: 150px;">Location</th>
                                     <th class="text-center" style="min-width: 100px;">Type</th>
@@ -201,6 +172,81 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
 
         </div>
     </div>
+
+<!-- Filter Modal -->
+<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-bottom-0 py-2">
+                <h5 class="modal-title fs-6 fw-bold text-dark"><i class="fas fa-filter text-primary me-2"></i> Advanced Filters</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary"><i class="fas fa-calendar-alt me-1"></i> Date Range</label>
+                    <div class="input-group input-group-sm">
+                        <input type="date" id="filterStartDate" class="form-control border-secondary-subtle" value="<?php echo date('Y-m-d', strtotime('-7 days')); ?>">
+                        <span class="input-group-text bg-light border-secondary-subtle">-</span>
+                        <input type="date" id="filterEndDate" class="form-control border-secondary-subtle" value="<?php echo date('Y-m-d'); ?>">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary"><i class="fas fa-layer-group me-1"></i> Location Type</label>
+                    <select id="locationTypeFilter" class="form-select form-select-sm border-secondary-subtle fw-bold text-primary">
+                        <option value="ALL">All Types</option>
+                        <option value="STORE" selected>STORE (คลังทั่วไป)</option>
+                        <option value="RM">RM (Raw Material)</option>
+                        <option value="SEMI">SEMI (Semi-Finished)</option>
+                        <option value="FG">FG (Finished Goods)</option>
+                        <option value="MAINTENANCE">MAINTENANCE (คลังอะไหล่ซ่อมบำรุง)</option>
+                        <option value="TOOL">TOOL (ห้องเก็บเครื่องมือ)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary"><i class="fas fa-map-marker-alt me-1"></i> Location</label>
+                    <select id="locationFilter" class="form-select form-select-sm border-secondary-subtle fw-bold text-primary">
+                        <option value="ALL">All Locations</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary"><i class="fas fa-exchange-alt me-1"></i> Transaction Type</label>
+                    <select id="typeFilter" class="form-select form-select-sm border-secondary-subtle fw-bold text-dark">
+                        <option value="ALL" selected>All Types</option>
+                        <option value="RECEIPT">RECEIPT (รับเข้า)</option>
+                        <option value="INTERNAL_TRANSFER">TRANSFER (โอนย้าย)</option>
+                        <option value="CONSUMPTION">CONSUMPTION (เบิกจ่าย)</option>
+                        <option value="ADJUSTMENT">ADJUSTMENT (ปรับยอด)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary"><i class="fas fa-boxes me-1"></i> Material Type</label>
+                    <select id="materialTypeFilter" class="form-select form-select-sm border-secondary-subtle fw-bold text-dark">
+                        <option value="ALL" selected>All Material</option>
+                        <option value="FG">FG (Finished Good)</option>
+                        <option value="SEMI">SEMI (Semi-Finished)</option>
+                        <option value="WIP">WIP (Work in Process)</option>
+                        <option value="RM">RM (Raw Material)</option>
+                        <option value="PKG">PKG (Packaging)</option>
+                        <option value="CON">CON (Consumable)</option>
+                        <option value="SP">SP (Spare Part)</option>
+                        <option value="TOOL">TOOL (Tools)</option>
+                        <option value="OTHER">OTHER (อื่นๆ)</option>
+                    </select>
+                </div>
+                <div class="mb-0" id="categoryFilterWrapper">
+                    <label class="form-label fw-bold small text-secondary"><i class="fas fa-sitemap me-1"></i> Sub-type</label>
+                    <select id="categoryFilter" class="form-select form-select-sm border-secondary-subtle fw-bold text-dark">
+                        <option value="ALL" selected>All Sub-types</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 py-2 bg-light">
+                <button type="button" class="btn btn-sm btn-secondary fw-bold" onclick="resetLedgerFilters()">Reset</button>
+                <button type="button" class="btn btn-sm btn-primary fw-bold px-4" data-bs-dismiss="modal" onclick="loadLedgerData()">Apply Filters</button>
+            </div>
+        </div>
+    </div>
+</div>
 
     <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
     <script src="script/stockLedger.js?v=<?php echo time(); ?>" defer></script>

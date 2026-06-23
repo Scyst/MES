@@ -123,66 +123,23 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                         <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 w-100">
                             
                             <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-                                
-                                <div class="d-flex align-items-center gap-1 w-100 w-md-auto flex-nowrap" style="flex: 1 1 250px; max-width: 450px;">
-                                    
+                                <div class="d-flex align-items-center gap-1 w-100 w-md-auto flex-nowrap" style="flex: 1 1 250px; max-width: 500px;">
                                     <div class="input-group input-group-sm shadow-sm flex-grow-1">
                                         <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
                                         <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Item No. หรือชื่อ...">
+                                        <button class="btn btn-outline-secondary border-secondary-subtle" type="button" onclick="loadDashboardData()" title="Refresh Data">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
                                     </div>
-                                    
-                                    <button class="btn btn-outline-secondary btn-sm shadow-sm flex-shrink-0" onclick="loadDashboardData()" title="Refresh Data" style="width: 32px; height: 32px; padding: 0;">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
                                     
                                     <button class="btn btn-outline-primary btn-sm shadow-sm flex-shrink-0 d-md-none" id="btnToggleCards" onclick="toggleMobileCards()" title="ซ่อน/แสดงยอดรวม" style="width: 32px; height: 32px; padding: 0;">
-                                        <i class="fas fa-eye-slash"></i>
+                                        <i class="fas fa-chart-pie"></i>
                                     </button>
 
-                                    <input type="checkbox" class="btn-check" id="hideZeroStock" autocomplete="off" onchange="loadDashboardData()">
-                                    <label class="btn btn-outline-secondary btn-sm shadow-sm fw-bold d-flex align-items-center justify-content-center px-2 flex-shrink-0" for="hideZeroStock" title="ซ่อนยอด 0" style="height: 32px;">
-                                        <i class="fas fa-eye-slash"></i> <small class="d-none d-sm-inline ms-1">ซ่อน 0</small>
-                                    </label>
-                                    
+                                    <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center flex-shrink-0" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
+                                        <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
+                                    </button>
                                 </div>
-                                
-                                <div class="d-flex align-items-center gap-2 w-100 w-md-auto flex-nowrap" style="flex: 1 1 250px; max-width: 450px;">
-                                    
-                                    <div class="input-group input-group-sm shadow-sm flex-grow-1">
-                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary px-2"><i class="fas fa-map-marker-alt"></i></span>
-                                        <select id="locationFilter" class="form-select border-secondary-subtle fw-bold text-dark px-1">
-                                            <option value="ALL">All Locations</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="input-group input-group-sm shadow-sm flex-shrink-0" style="width: 130px;">
-                                        <select id="categoryFilter" class="form-select border-secondary-subtle fw-bold text-dark px-1">
-                                            <option value="ALL" selected>All Categories</option>
-                                            <option value="PALLET">พาเลทไม้ (Pallet)</option>
-                                            <option value="PAINT">สี (Paint)</option>
-                                            <option value="BOX">กล่องกระดาษ (Box)</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="input-group input-group-sm shadow-sm flex-shrink-0" style="width: 100px;">
-                                        <select id="materialFilter" class="form-select border-secondary-subtle fw-bold text-dark px-1">
-                                            <option value="ALL" selected>All Type</option>
-                                            <option value="RM">RM</option>
-                                            <option value="SEMI">SEMI</option>
-                                            <option value="FG">FG</option>
-                                        </select>
-                                    </div>
-                                    
-                                </div>
-
-                                <div class="input-group input-group-sm shadow-sm d-none d-md-flex flex-shrink-0" style="width: 70px;">
-                                    <select id="rowsPerPage" class="form-select border-secondary-subtle px-1" onchange="changeRowsPerPage()">
-                                        <option value="50">50</option>
-                                        <option value="100" selected>100</option>
-                                        <option value="500">500</option>
-                                    </select>
-                                </div>
-                                
                             </div>
 
                             <div id="actionWrapper" class="d-none d-md-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end mt-2 mt-lg-0">
@@ -240,7 +197,8 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                             <thead class="table-light sticky-top shadow-sm">
                                 <tr class="text-secondary small text-uppercase align-middle">
                                     <th class="text-center" style="width: 50px;">#</th>
-                                    <th style="min-width: 150px;">Part No.</th>
+                                    <th style="min-width: 120px;">Item No.</th>
+                                    <th style="min-width: 100px;">SAP No.</th>
                                     <th style="min-width: 250px;">Description</th>
                                     <th class="text-center">Type</th>
                                     <th class="text-end">รอรับเข้า (Pending)</th>
@@ -286,6 +244,67 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
 
     <?php include_once __DIR__ . '/components/InventoryModal.php'; ?>
     <?php include_once __DIR__ . '/components/storeScanner.php'; ?>
+
+<!-- Filter Modal -->
+<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-bottom-0 py-2">
+                <h5 class="modal-title fs-6 fw-bold text-dark"><i class="fas fa-filter text-primary me-2"></i> Advanced Filters</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary"><i class="fas fa-layer-group me-1"></i> Location Type</label>
+                    <select id="locationTypeFilter" class="form-select form-select-sm border-secondary-subtle fw-bold text-dark">
+                        <option value="ALL">All Types</option>
+                        <option value="STORE" selected>STORE (คลังทั่วไป)</option>
+                        <option value="RM">RM (Raw Material)</option>
+                        <option value="SEMI">SEMI (Semi-Finished)</option>
+                        <option value="FG">FG (Finished Goods)</option>
+                        <option value="MAINTENANCE">MAINTENANCE (คลังอะไหล่ซ่อมบำรุง)</option>
+                        <option value="TOOL">TOOL (ห้องเก็บเครื่องมือ)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary"><i class="fas fa-map-marker-alt me-1"></i> Location</label>
+                    <select id="locationFilter" class="form-select form-select-sm border-secondary-subtle fw-bold text-dark">
+                        <option value="ALL">All Locations</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary"><i class="fas fa-boxes me-1"></i> Material Type</label>
+                    <select id="materialFilter" class="form-select form-select-sm border-secondary-subtle fw-bold text-dark">
+                        <option value="ALL" selected>All Type</option>
+                        <option value="FG">FG (Finished Good)</option>
+                        <option value="SEMI">SEMI (Semi-Finished)</option>
+                        <option value="WIP">WIP (Work in Process)</option>
+                        <option value="RM">RM (Raw Material)</option>
+                        <option value="PKG">PKG (Packaging)</option>
+                        <option value="CON">CON (Consumable)</option>
+                        <option value="SP">SP (Spare Part)</option>
+                        <option value="TOOL">TOOL (Tools)</option>
+                        <option value="OTHER">OTHER (อื่นๆ)</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="categoryFilterWrapper">
+                    <label class="form-label fw-bold small text-secondary"><i class="fas fa-sitemap me-1"></i> Sub-type</label>
+                    <select id="categoryFilter" class="form-select form-select-sm border-secondary-subtle fw-bold text-dark">
+                        <option value="ALL" selected>All Sub-types</option>
+                    </select>
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="hideZeroStock" onchange="loadDashboardData()">
+                    <label class="form-check-label fw-bold small text-dark" for="hideZeroStock">ซ่อนยอด 0 (Hide Zero Stock)</label>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 py-2 bg-light">
+                <button type="button" class="btn btn-sm btn-secondary fw-bold" onclick="resetFilters()">Reset</button>
+                <button type="button" class="btn btn-sm btn-primary fw-bold px-4" data-bs-dismiss="modal" onclick="loadDashboardData()">Apply Filters</button>
+            </div>
+        </div>
+    </div>
+</div>
 
     <script>
         const currentUser = <?php echo json_encode($_SESSION['user'] ?? null); ?>;

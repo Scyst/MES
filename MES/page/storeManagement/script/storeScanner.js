@@ -10,6 +10,12 @@ let cropModalInstance;
 document.addEventListener('DOMContentLoaded', () => {
     loadLocations();
     
+    document.getElementById('locationTypeFilter')?.addEventListener('change', () => {
+        if (typeof updateLocationFilterDropdown === 'function') {
+            updateLocationFilterDropdown();
+        }
+    });
+    
     const traceModalEl = document.getElementById('traceModal');
     if (traceModalEl) {
         traceModalInstance = new bootstrap.Modal(traceModalEl);
@@ -74,55 +80,69 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+window.allStoreLocationsList = [];
+
 async function loadLocations() {
     try {
         const result = await fetchAPI('get_master_data', 'GET');
-        const filterSelect = document.getElementById('locationFilter');
-        const receiveTraceSelect = document.getElementById('receiveLocationTrace'); 
-        const issueTraceSelect = document.getElementById('issueLocationTrace');     
-        
-        if (filterSelect) filterSelect.innerHTML = '<option value="ALL">All Locations</option>';
-        if (receiveTraceSelect) receiveTraceSelect.innerHTML = '';
-        if (issueTraceSelect) issueTraceSelect.innerHTML = '';
-        
         if (result.data && result.data.locations) {
-            let storeSelected = false;
-            let wipSelected = false;
-            let filterStoreSelected = false;
-
-            result.data.locations.forEach(loc => {
-                let isReceiveDefault = '';
-                if (loc.location_type === 'STORE' && !storeSelected) {
-                    isReceiveDefault = 'selected';
-                    storeSelected = true; 
-                }
-
-                let isIssueDefault = '';
-                if (loc.location_type === 'WIP' && !wipSelected) {
-                    isIssueDefault = 'selected';
-                    wipSelected = true;
-                }
-                
-                let isFilterDefault = '';
-                if (loc.location_type === 'STORE' && window.location.pathname.includes('inventoryDashboard.php') && !filterStoreSelected) {
-                    isFilterDefault = 'selected';
-                    filterStoreSelected = true;
-                }
-
-                const filterOption = `<option value="${escapeHTML(loc.location_id)}" ${isFilterDefault}>${escapeHTML(loc.location_name)}</option>`;
-                const receiveOption = `<option value="${escapeHTML(loc.location_id)}" ${isReceiveDefault}>${escapeHTML(loc.location_name)}</option>`;
-                const issueOption = `<option value="${escapeHTML(loc.location_id)}" ${isIssueDefault}>${escapeHTML(loc.location_name)}</option>`;
-                
-                if (filterSelect) filterSelect.innerHTML += filterOption;
-                if (receiveTraceSelect) receiveTraceSelect.innerHTML += receiveOption;
-                if (issueTraceSelect) issueTraceSelect.innerHTML += issueOption;
-            });
-            
-            document.dispatchEvent(new Event('locationsLoaded'));
+            window.allStoreLocationsList = result.data.locations;
+            updateLocationFilterDropdown();
         }
     } catch (err) {
         console.error("Failed to load master data for locations:", err);
     }
+}
+
+window.updateLocationFilterDropdown = function() {
+    const filterSelect = document.getElementById('locationFilter');
+    const typeSelect = document.getElementById('locationTypeFilter');
+    const selectedType = typeSelect ? typeSelect.value : 'STORE'; // Default for inventoryDashboard is usually STORE, but we read from the dropdown
+    
+    const receiveTraceSelect = document.getElementById('receiveLocationTrace'); 
+    const issueTraceSelect = document.getElementById('issueLocationTrace');     
+    
+    if (filterSelect) filterSelect.innerHTML = '<option value="ALL">All Locations</option>';
+    if (receiveTraceSelect) receiveTraceSelect.innerHTML = '';
+    if (issueTraceSelect) issueTraceSelect.innerHTML = '';
+    
+    let storeSelected = false;
+    let wipSelected = false;
+    let filterStoreSelected = false;
+
+    window.allStoreLocationsList.forEach(loc => {
+        let isReceiveDefault = '';
+        if (loc.location_type === 'STORE' && !storeSelected) {
+            isReceiveDefault = 'selected';
+            storeSelected = true; 
+        }
+
+        let isIssueDefault = '';
+        if (loc.location_type === 'WIP' && !wipSelected) {
+            isIssueDefault = 'selected';
+            wipSelected = true;
+        }
+        
+        let isFilterDefault = '';
+        if (loc.location_type === 'STORE' && window.location.pathname.includes('inventoryDashboard.php') && !filterStoreSelected) {
+            isFilterDefault = 'selected';
+            filterStoreSelected = true;
+        }
+
+        const filterOption = `<option value="${escapeHTML(loc.location_id)}" ${isFilterDefault}>${escapeHTML(loc.location_name)}</option>`;
+        const receiveOption = `<option value="${escapeHTML(loc.location_id)}" ${isReceiveDefault}>${escapeHTML(loc.location_name)}</option>`;
+        const issueOption = `<option value="${escapeHTML(loc.location_id)}" ${isIssueDefault}>${escapeHTML(loc.location_name)}</option>`;
+        
+        if (filterSelect) {
+            if (!typeSelect || typeSelect.value === 'ALL' || loc.location_type === typeSelect.value) {
+                filterSelect.innerHTML += filterOption;
+            }
+        }
+        if (receiveTraceSelect) receiveTraceSelect.innerHTML += receiveOption;
+        if (issueTraceSelect) issueTraceSelect.innerHTML += issueOption;
+    });
+    
+    document.dispatchEvent(new Event('locationsLoaded'));
 }
 
 async function handleTraceFileScan(file) {

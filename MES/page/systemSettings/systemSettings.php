@@ -89,6 +89,10 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                 <option value="OTHER">OTHER (อื่นๆ)</option>
                             </select>
 
+                            <select id="materialSubTypeFilter" class="form-select form-select-sm w-auto shadow-sm fw-bold text-info border-info">
+                                <option value="">-- ทุกกลุ่มย่อย (All Sub) --</option>
+                            </select>
+
                             <select id="modelFilterValue" class="form-select form-select-sm w-auto shadow-sm d-none">
                                 <option value="">-- All Models --</option>
                             </select>

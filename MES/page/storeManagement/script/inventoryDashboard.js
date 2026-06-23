@@ -10,7 +10,67 @@ let cycleCountModal;
 let approvalModal;
 let ccHistoryModal;
 
+const materialSubTypes = {
+    'RM': [{val: 'STEEL', text: 'STEEL (เหล็ก)'}, {val: 'PLASTIC', text: 'PLASTIC (พลาสติก)'}, {val: 'CHEMICAL', text: 'CHEMICAL (เคมีภัณฑ์)'}, {val: 'PAINT', text: 'PAINT (สี)'}, {val: 'BOLT & NUT', text: 'BOLT & NUT'}, {val: 'RIVET', text: 'RIVET'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
+    'PKG': [{val: 'BOX', text: 'BOX (กล่องกระดาษ)'}, {val: 'PALLET', text: 'PALLET (พาเลท)'}, {val: 'LABEL', text: 'LABEL (สติ๊กเกอร์/ฉลาก)'}, {val: 'KEY', text: 'KEY'}, {val: 'BBS', text: 'BBS'}, {val: 'HANDLE', text: 'HANDLE'}, {val: 'PLASTIC BAG', text: 'PLASTIC BAG'}, {val: 'FOAM', text: 'FOAM'}, {val: 'PVC LINER', text: 'PVC LINER'}, {val: 'TRIUM', text: 'TRIUM'}, {val: 'GASSTUT', text: 'GASSTUT'}, {val: 'CASTER', text: 'CASTER (ล้อ)'}, {val: 'PLASTIC SLIDE LOCK', text: 'PLASTIC SLIDE LOCK'}, {val: 'PEARL COTTON', text: 'PEARL COTTON'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
+    'CON': [{val: 'ACC', text: 'ACC (Accessory/อุปกรณ์ประกอบ)'}, {val: '5S', text: '5S (อุปกรณ์ 5ส.)'}, {val: 'PROD', text: 'PROD (สิ้นเปลืองไลน์ผลิต)'}, {val: 'OFFICE', text: 'OFFICE (เครื่องเขียน)'}, {val: 'PPE', text: 'PPE (อุปกรณ์เซฟตี้)'}],
+    'SP': [{val: 'MECHANICAL', text: 'MECHANICAL (อะไหล่เครื่องกล)'}, {val: 'ELECTRICAL', text: 'ELECTRICAL (อะไหล่ไฟฟ้า)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
+    'TOOL': [{val: 'HANDTOOL', text: 'HANDTOOL (เครื่องมือช่าง)'}, {val: 'MACHINE', text: 'MACHINE (เครื่องจักร)'}],
+    'FG': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
+    'SEMI': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
+    'WIP': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
+    'OTHER': [{val: 'OTHER', text: 'OTHER (อื่นๆ)'}]
+};
+
+function resetFilters() {
+    const typeSelect = document.getElementById('locationTypeFilter');
+    if (typeSelect) typeSelect.value = 'STORE';
+    if (typeof updateLocationFilterDropdown === 'function') updateLocationFilterDropdown();
+    
+    const locSelect = document.getElementById('locationFilter');
+    if (locSelect) locSelect.value = 'ALL';
+    
+    document.getElementById('materialFilter').value = 'ALL';
+    const subTypeSelect = document.getElementById('categoryFilter');
+    subTypeSelect.value = 'ALL';
+    document.getElementById('hideZeroStock').checked = false;
+    updateFilterSubTypeOptions('ALL');
+    loadDashboardData();
+}
+
+function updateFilterSubTypeOptions(selectedType) {
+    const subTypeSelect = document.getElementById('categoryFilter');
+    const wrapper = document.getElementById('categoryFilterWrapper') || subTypeSelect;
+    if (!subTypeSelect) return;
+    
+    wrapper.classList.remove('d-none');
+    subTypeSelect.innerHTML = '<option value="ALL">All Sub-types</option>';
+    
+    if (!selectedType || selectedType === 'ALL') {
+        const addedVals = new Set();
+        Object.values(materialSubTypes).forEach(subArray => {
+            subArray.forEach(sub => {
+                if (!addedVals.has(sub.val)) {
+                    addedVals.add(sub.val);
+                    const opt = document.createElement('option');
+                    opt.value = sub.val;
+                    opt.textContent = sub.text;
+                    subTypeSelect.appendChild(opt);
+                }
+            });
+        });
+    } else if (materialSubTypes[selectedType]) {
+        materialSubTypes[selectedType].forEach(sub => {
+            const opt = document.createElement('option');
+            opt.value = sub.val;
+            opt.textContent = sub.text;
+            subTypeSelect.appendChild(opt);
+        });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    updateFilterSubTypeOptions('ALL');
     const detailsModalEl = document.getElementById('detailsModal');
     if (detailsModalEl) detailsModalInstance = new bootstrap.Modal(detailsModalEl);
 
@@ -27,9 +87,20 @@ document.addEventListener('DOMContentLoaded', () => {
         loadDashboardData();
     });
 
+    document.getElementById('locationTypeFilter')?.addEventListener('change', () => { 
+        if (typeof updateLocationFilterDropdown === 'function') {
+            updateLocationFilterDropdown();
+        }
+        currentPage = 1; 
+        loadDashboardData(); 
+    });
     document.getElementById('locationFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
     document.getElementById('categoryFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
-    document.getElementById('materialFilter')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
+    document.getElementById('materialFilter')?.addEventListener('change', (e) => { 
+        updateFilterSubTypeOptions(e.target.value);
+        currentPage = 1; 
+        loadDashboardData(); 
+    });
     document.getElementById('hideZeroStock')?.addEventListener('change', () => { currentPage = 1; loadDashboardData(); });
     document.getElementById('filterSearch')?.addEventListener('input', () => {
         clearTimeout(searchTimer);
@@ -45,6 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadDashboardData() {
     const locId = document.getElementById('locationFilter')?.value || 'ALL';
+    const locType = document.getElementById('locationTypeFilter')?.value || 'ALL';
     const matType = document.getElementById('materialFilter')?.value || 'ALL';
     const category = document.getElementById('categoryFilter')?.value || 'ALL';
     const hideZero = document.getElementById('hideZeroStock')?.checked || false;
@@ -57,7 +129,7 @@ async function loadDashboardData() {
     if (cardContainer) cardContainer.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><br>กำลังโหลดข้อมูล...</div>';
 
     try {
-        const queryParams = `get_inventory_dashboard&location_id=${locId}&material_type=${matType}&category=${category}&hide_zero=${hideZero}&search=${searchStr}&page=${currentPage}&limit=${rowsPerPage}`;
+        const queryParams = `get_inventory_dashboard&location_id=${locId}&location_type=${locType}&material_type=${matType}&category=${category}&hide_zero=${hideZero}&search=${searchStr}&page=${currentPage}&limit=${rowsPerPage}`;
         const result = await fetchAPI(queryParams, 'GET');
 
         if (result.kpi) {
@@ -92,6 +164,7 @@ async function loadDashboardData() {
                 <tr class="${rowClass}">
                     <td class="text-center text-muted">${runningNumber}</td>
                     <td class="fw-bold text-primary">${escapeHTML(row.item_no)}</td>
+                    <td class="text-muted">${escapeHTML(row.sap_no || '-')}</td>
                     <td class="text-truncate" style="max-width: 250px;" title="${escapeHTML(row.part_description || '-')}">${escapeHTML(row.part_description || '-')}</td>
                     <td class="text-center"><span class="badge ${badgeType}">${escapeHTML(row.material_type)}</span></td>
                     <td class="text-end text-warning fw-bold">${pendingQty.toLocaleString()}</td>
@@ -811,7 +884,10 @@ window.exportInventoryData = async function() {
                     name: opt.text.replace(/[^a-zA-Z0-9_\u0E00-\u0E7F ]/g, '').trim().substring(0,30) 
                 }));
 
-            const masterRes = await fetchAPI(`get_inventory_dashboard&location_id=ALL&material_type=${matType}&hide_zero=${hideZero}&search=&page=1&limit=999999`, 'GET');
+            const locType = document.getElementById('locationTypeFilter')?.value || 'ALL';
+            const category = document.getElementById('categoryFilter')?.value || 'ALL';
+
+            const masterRes = await fetchAPI(`get_inventory_dashboard&location_id=ALL&location_type=${locType}&material_type=${matType}&category=${category}&hide_zero=${hideZero}&search=&page=1&limit=999999`, 'GET');
             
             if (!masterRes.data || masterRes.data.length === 0) {
                 Swal.fire('ไม่พบข้อมูล', 'ไม่มีข้อมูลในระบบเลย', 'warning');
@@ -822,7 +898,7 @@ window.exportInventoryData = async function() {
 
             // ดึงข้อมูลแต่ละคลัง
             for (const loc of allLocs) {
-                const locRes = await fetchAPI(`get_inventory_dashboard&location_id=${loc.id}&material_type=${matType}&hide_zero=${hideZero}&search=&page=1&limit=999999`, 'GET');
+                const locRes = await fetchAPI(`get_inventory_dashboard&location_id=${loc.id}&location_type=${locType}&material_type=${matType}&category=${category}&hide_zero=${hideZero}&search=&page=1&limit=999999`, 'GET');
                 
                 if (locRes.data && locRes.data.length > 0) {
                     actualSheets.push(loc.name);
@@ -905,8 +981,11 @@ window.exportInventoryData = async function() {
             let reqHideZero = exportType === 'FILTER' ? hideZero : hideZero;
             let reqSearchStr = exportType === 'FILTER' ? '' : searchStr;
             let exportLocName = exportType === 'FILTER' ? locName : locName;
+            
+            const locType = document.getElementById('locationTypeFilter')?.value || 'ALL';
+            const category = document.getElementById('categoryFilter')?.value || 'ALL';
 
-            const queryParams = `get_inventory_dashboard&location_id=${reqLocId}&material_type=${reqMatType}&hide_zero=${reqHideZero}&search=${encodeURIComponent(reqSearchStr)}&page=1&limit=999999`;
+            const queryParams = `get_inventory_dashboard&location_id=${reqLocId}&location_type=${locType}&material_type=${reqMatType}&category=${category}&hide_zero=${reqHideZero}&search=${encodeURIComponent(reqSearchStr)}&page=1&limit=999999`;
             const result = await fetchAPI(queryParams, 'GET');
 
             if (!result.data || result.data.length === 0) {
