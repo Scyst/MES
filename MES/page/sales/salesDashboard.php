@@ -200,8 +200,9 @@ $pageHelpId = "helpModal";
                                     </button>
                                 </div>
 
-                                <button class="btn btn-warning btn-sm shadow-sm text-dark ms-2 me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="runRMForecast()" title="ประเมินวัตถุดิบสำหรับ PO ทั้งหมดที่ยังไม่เสร็จ (RM Forecast)">
-                                    <i class="fas fa-boxes"></i>
+                                <button id="btnRMForecast" class="btn btn-warning btn-sm shadow-sm text-dark ms-2 me-2 d-flex align-items-center justify-content-center position-relative" style="width: 32px; height: 32px;" onclick="runRMForecast()" title="ประเมินวัตถุดิบสำหรับ PO ทั้งหมดที่ยังไม่เสร็จ (RM Forecast)">
+                                    <i class="fas fa-boxes" id="iconRMForecast"></i>
+                                    <div id="spinnerRMForecast" class="spinner-border spinner-border-sm text-dark d-none position-absolute" role="status" style="width: 1rem; height: 1rem;"></div>
                                 </button>
 
                                 <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" onclick="openCreateModal()">
@@ -369,21 +370,34 @@ $pageHelpId = "helpModal";
 
     <!-- RM Forecast Modal -->
     <div class="modal fade" id="rmForecastModal" tabindex="-1">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-warning bg-opacity-10 border-bottom border-warning">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-exclamation-triangle text-danger me-2"></i> สรุปวัตถุดิบที่ขาด (RM Shortage Summary)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center w-100">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-warning bg-opacity-10 text-warning rounded d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                            <i class="fas fa-boxes fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0">RM Shortage Summary</h5>
+                            <div class="text-muted small">สรุปรายการวัตถุดิบที่ต้องจัดเตรียมเพิ่ม</div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <button type="button" class="btn btn-outline-success btn-sm me-3 fw-bold d-flex align-items-center px-3 py-2" onclick="exportRMForecast()" title="Export to Excel">
+                            <i class="fas fa-file-excel me-2"></i> Export CSV
+                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
                 </div>
-                <div class="modal-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle mb-0 text-nowrap">
-                            <thead class="bg-light sticky-top">
+                <div class="modal-body p-4 bg-light">
+                    <div class="table-responsive rounded shadow-sm border bg-white" style="max-height: 60vh;">
+                        <table class="table table-hover table-borderless align-middle mb-0" id="rmForecastTable">
+                            <thead class="bg-light sticky-top" style="z-index: 1;">
                                 <tr>
-                                    <th>SAP No.</th>
-                                    <th>Description</th>
-                                    <th class="text-end text-primary">ยอดคงเหลือใน Store (pcs)</th>
-                                    <th class="text-end text-danger">จำนวนที่ขาด (pcs)</th>
+                                    <th class="text-secondary fw-bold py-3 ps-4 border-bottom">SAP No.</th>
+                                    <th class="text-secondary fw-bold py-3 border-bottom">Description</th>
+                                    <th class="text-end text-secondary fw-bold py-3 border-bottom">Available in Store (pcs)</th>
+                                    <th class="text-end text-secondary fw-bold py-3 pe-4 border-bottom">Shortage Qty (pcs)</th>
                                 </tr>
                             </thead>
                             <tbody id="rmForecastTableBody">
@@ -394,7 +408,7 @@ $pageHelpId = "helpModal";
                 </div>
                 <div class="modal-footer bg-body-tertiary border-0 justify-content-between">
                     <div class="text-muted small">* คำนวณจากยอดคงเหลือใน Store หักลบด้วยปริมาณที่ต้องใช้ตามแผนผลิต (เรียงตามลำดับ PO ด้านหลังบ้าน)</div>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+                    <button type="button" class="btn btn-secondary fw-bold shadow-sm" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>

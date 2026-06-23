@@ -272,6 +272,7 @@ function renderTable(searchTerm) {
         // FORECAST BADGE (Sleek Design)
         let forecastIcon = '';
         let rowLeftBorder = '';
+        let poColBg = stickyClass; // Default to bg-white
         
         if (rmForecastData && rmForecastData[item.id]) {
             const fData = rmForecastData[item.id];
@@ -279,6 +280,7 @@ function renderTable(searchTerm) {
                 let missingList = fData.shortages.filter(s => s.shortage > 0 || s.is_missing_bom).map(s => s.is_missing_bom ? `No BOM found` : `${s.sap_no} (ขาด ${s.shortage.toLocaleString()})`).join('<br>');
                 forecastIcon = `<i class="fas fa-exclamation-circle text-danger ms-2" title="${missingList}" data-bs-toggle="tooltip" data-bs-html="true" style="cursor:help; font-size: 1.1em;"></i>`;
                 rowLeftBorder = 'box-shadow: inset 4px 0 0 #dc3545;'; // Red left border
+                poColBg = 'bg-danger bg-opacity-10'; // Light red background for PO column
             } else if (fData.status === 'READY') {
                 forecastIcon = `<i class="fas fa-check-circle text-success ms-2 opacity-50" title="RM Ready" data-bs-toggle="tooltip"></i>`;
                 rowLeftBorder = 'box-shadow: inset 4px 0 0 #198754;'; // Green left border
@@ -309,7 +311,7 @@ function renderTable(searchTerm) {
             <td class="text-center drag-handle sticky-col-left-1 ${stickyClass}" style="cursor: ${isManualSortMode ? 'move' : 'not-allowed'}; color: ${isManualSortMode ? '#6c757d' : '#dee2e6'}; ${rowLeftBorder}">
                 <i class="fas fa-grip-vertical"></i>
             </td>
-            <td class="sticky-col-left-2 fw-bold ${stickyClass} text-start ps-3">${poHtml}</td>
+            <td class="sticky-col-left-2 fw-bold ${poColBg} text-start ps-3">${poHtml}</td>
             <td class="sticky-col-left-3 text-center ${stickyClass}">
                 <div class="form-check form-switch d-flex justify-content-center">
                     <input class="form-check-input" type="checkbox" style="cursor: pointer;" ${isConf ? 'checked' : ''} onchange="toggleCheck(${item.id}, 'confirm', this.checked)">
@@ -629,6 +631,14 @@ async function submitCreateOrder() {
 
 // --- RM Forecast ---
 async function runRMForecast(showModal = true) {
+    const btnIcon = document.getElementById('iconRMForecast');
+    const btnSpinner = document.getElementById('spinnerRMForecast');
+    
+    if (btnIcon && btnSpinner) {
+        btnIcon.classList.add('d-none');
+        btnSpinner.classList.remove('d-none');
+    }
+    
     if (showModal) showSpinner();
     try {
         const startDate = document.getElementById('filterStartDate')?.value || '';
@@ -650,10 +660,10 @@ async function runRMForecast(showModal = true) {
                 json.summary.forEach(item => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td class="fw-bold text-danger">${item.sap_no}</td>
-                        <td>${item.part_description}</td>
+                        <td class="fw-bold text-danger ps-4">${item.sap_no}</td>
+                        <td class="text-dark">${item.part_description}</td>
                         <td class="text-end fw-bold text-primary">${(item.available_in_store || 0).toLocaleString()}</td>
-                        <td class="text-end fw-bold text-danger">${item.total_shortage.toLocaleString()}</td>
+                        <td class="text-end fw-bold text-danger pe-4">${item.total_shortage.toLocaleString()}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -681,7 +691,44 @@ async function runRMForecast(showModal = true) {
         if (showModal) alert('Failed to connect to forecast API');
     } finally {
         if (showModal) hideSpinner();
+        
+        if (btnIcon && btnSpinner) {
+            btnIcon.classList.remove('d-none');
+            btnSpinner.classList.add('d-none');
+        }
     }
+}
+
+function exportRMForecast() {
+    const tbody = document.getElementById('rmForecastTableBody');
+    if (!rmForecastData || !tbody || tbody.innerHTML.trim() === '') {
+        alert("ไม่มีข้อมูลที่จะ Export");
+        return;
+    }
+    
+    // Create CSV
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM for UTF-8
+    csvContent += "SAP No.,Description,Available in Store,Shortage Qty\n";
+    
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(row => {
+        const cols = row.querySelectorAll('td');
+        if (cols.length === 4) {
+            const sap = cols[0].innerText.replace(/"/g, '""');
+            const desc = cols[1].innerText.replace(/"/g, '""');
+            const avail = cols[2].innerText.replace(/,/g, '');
+            const short = cols[3].innerText.replace(/,/g, '');
+            csvContent += `"${sap}","${desc}",${avail},${short}\n`;
+        }
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `RM_Shortage_Summary_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 async function deleteOrder(id, poNum) {

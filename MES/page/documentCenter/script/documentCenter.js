@@ -175,13 +175,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         documents.forEach(doc => {
             const tr = document.createElement('tr');
-            tr.dataset.docId = doc.id;
+            tr.dataset.docId = doc.id || '';
+            if (doc.is_folder) {
+                tr.dataset.isFolder = 'true';
+                tr.dataset.folderPath = doc.category ? doc.category + '/' + doc.file_name : doc.file_name;
+            }
             tr.style.cursor = 'pointer'; 
 
             if (doc.is_folder) {
                 // FOLDER ROW
                 tr.innerHTML = `
-                    <td class="fw-bold" style="padding: 12px 10px; color: var(--text-primary);" onclick="navigateToFolder('${doc.category ? doc.category + '/' + doc.file_name : doc.file_name}')">
+                    <td class="fw-bold" style="padding: 12px 10px; color: var(--text-primary);">
                         <span style="color: #F59E0B; margin-right: 8px; font-size: 1.2rem;">📁</span>
                         ${escapeHTML(doc.file_name)}
                     </td>
@@ -609,15 +613,11 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             
             const row = event.target.closest('tr');
-            if (row && row.dataset.docId && !target.closest('.action-cell')) {
-                const docId = row.dataset.docId;
-                const doc = currentDocumentCache.find(d => String(d.id) === String(docId));
-                
-                if (doc && doc.is_folder) {
-                    const targetPath = doc.category ? doc.category + '/' + doc.file_name : doc.file_name;
-                    window.navigateToFolder(targetPath);
-                } else if (doc) {
-                    openDetailModal(docId);
+            if (row && !target.closest('.action-cell')) {
+                if (row.dataset.isFolder === 'true') {
+                    window.navigateToFolder(row.dataset.folderPath);
+                } else if (row.dataset.docId) {
+                    openDetailModal(row.dataset.docId);
                 }
             }
         });
