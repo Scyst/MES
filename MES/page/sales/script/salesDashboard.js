@@ -14,6 +14,10 @@ let filteredData = [];
 let sortableInstance = null;
 let isManualSortMode = true;
 
+// RM Forecast globals
+let rmForecastData = null;
+let rmForecastModal = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Init Modals
     const modalEl = document.getElementById('importResultModal');
@@ -21,6 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const createEl = document.getElementById('createOrderModal');
     if (createEl) createOrderModal = new bootstrap.Modal(createEl);
+
+    const rmEl = document.getElementById('rmForecastModal');
+    if (rmEl) rmForecastModal = new bootstrap.Modal(rmEl);
 
     const startDateInput = document.getElementById('filterStartDate');
     const endDateInput = document.getElementById('filterEndDate');
@@ -141,6 +148,9 @@ async function loadData() {
             currentPage = 1;
             updateSortUI();
             renderTable(document.getElementById('universalSearch').value);
+            
+            // Auto-run forecast silently without opening modal
+            runRMForecast(false);
         }
     } catch (err) { console.error(err); showToast('Error loading data', '#dc3545'); } finally { hideSpinner(); }
 }
@@ -259,9 +269,25 @@ function renderTable(searchTerm) {
         const isDelay = loadDateObj && loadDateObj < todayDate && !isLoad;
         const stickyClass = 'bg-white';
         
+        // FORECAST BADGE (Sleek Design)
+        let forecastIcon = '';
+        let rowLeftBorder = '';
+        
+        if (rmForecastData && rmForecastData[item.id]) {
+            const fData = rmForecastData[item.id];
+            if (fData.status === 'SHORTAGE') {
+                let missingList = fData.shortages.filter(s => s.shortage > 0 || s.is_missing_bom).map(s => s.is_missing_bom ? `No BOM found` : `${s.sap_no} (ขาด ${s.shortage.toLocaleString()})`).join('<br>');
+                forecastIcon = `<i class="fas fa-exclamation-circle text-danger ms-2" title="${missingList}" data-bs-toggle="tooltip" data-bs-html="true" style="cursor:help; font-size: 1.1em;"></i>`;
+                rowLeftBorder = 'box-shadow: inset 4px 0 0 #dc3545;'; // Red left border
+            } else if (fData.status === 'READY') {
+                forecastIcon = `<i class="fas fa-check-circle text-success ms-2 opacity-50" title="RM Ready" data-bs-toggle="tooltip"></i>`;
+                rowLeftBorder = 'box-shadow: inset 4px 0 0 #198754;'; // Green left border
+            }
+        }
+        
         let poContent = isDelay 
-            ? `<div class="d-flex align-items-center text-danger" title="Late Delivery"><i class="fas fa-exclamation-triangle me-2 blink"></i><span>${item.po_number}</span></div>`
-            : `<span class="text-primary font-monospace">${item.po_number}</span>`;
+            ? `<div class="d-flex align-items-center text-danger" title="Late Delivery"><i class="fas fa-exclamation-triangle me-2 blink"></i><span class="text-truncate" style="max-width:120px;">${item.po_number}</span>${forecastIcon}</div>`
+            : `<div class="d-flex align-items-center"><span class="text-primary font-monospace text-truncate" style="max-width:120px;">${item.po_number}</span>${forecastIcon}</div>`;
 
         const poHtml = `
             <div class="d-flex justify-content-between align-items-center w-100 group-action">
@@ -280,7 +306,7 @@ function renderTable(searchTerm) {
         const priceTHB = (parseFloat(item.price || 0) * currentExchangeRate).toFixed(2);
 
         return `<tr data-id="${item.id}">
-            <td class="text-center drag-handle sticky-col-left-1 ${stickyClass}" style="cursor: ${isManualSortMode ? 'move' : 'not-allowed'}; color: ${isManualSortMode ? '#6c757d' : '#dee2e6'};">
+            <td class="text-center drag-handle sticky-col-left-1 ${stickyClass}" style="cursor: ${isManualSortMode ? 'move' : 'not-allowed'}; color: ${isManualSortMode ? '#6c757d' : '#dee2e6'}; ${rowLeftBorder}">
                 <i class="fas fa-grip-vertical"></i>
             </td>
             <td class="sticky-col-left-2 fw-bold ${stickyClass} text-start ps-3">${poHtml}</td>
@@ -598,6 +624,63 @@ async function submitCreateOrder() {
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'Create (บันทึก)';
         }
+    }
+}
+
+// --- RM Forecast ---
+async function runRMForecast(showModal = true) {
+    if (showModal) showSpinner();
+    try {
+        const startDate = document.getElementById('filterStartDate')?.value || '';
+        const endDate = document.getElementById('filterEndDate')?.value || '';
+        const dateType = document.getElementById('filterDateType')?.value || 'loading_date';
+
+        const res = await fetch(`api/forecast_rm.php?start_date=${startDate}&end_date=${endDate}&date_type=${dateType}`);
+        const json = await res.json();
+        
+        if (json.success) {
+            rmForecastData = json.data;
+            
+            const tbody = document.getElementById('rmForecastTableBody');
+            tbody.innerHTML = '';
+            
+            if (json.summary && json.summary.length > 0) {
+                json.summary.sort((a,b) => b.total_shortage - a.total_shortage);
+                
+                json.summary.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="fw-bold text-danger">${item.sap_no}</td>
+                        <td>${item.part_description}</td>
+                        <td class="text-end fw-bold text-primary">${(item.available_in_store || 0).toLocaleString()}</td>
+                        <td class="text-end fw-bold text-danger">${item.total_shortage.toLocaleString()}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                if(showModal && rmForecastModal) rmForecastModal.show();
+            } else {
+                if (showModal) showToast('✅ วัตถุดิบเพียงพอสำหรับทุก PO ที่ยังไม่เสร็จ', '#198754');
+            }
+            
+            renderTable(document.getElementById('universalSearch').value);
+            
+            // Re-init tooltips for newly added badges
+            setTimeout(() => {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }, 500);
+
+        } else {
+            if (showModal) alert('Error running forecast: ' + json.message);
+        }
+    } catch (err) {
+        console.error(err);
+        if (showModal) alert('Failed to connect to forecast API');
+    } finally {
+        if (showModal) hideSpinner();
     }
 }
 

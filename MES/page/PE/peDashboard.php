@@ -98,6 +98,10 @@ $pageTitle = "PE Enterprise";
                     <i class="fas fa-external-link-alt"></i>
                     <span class="nav-label">PE Request Portal</span>
                 </a>
+                <a class="pe-nav-item" href="../dailyLog/dailyLogUI.php" style="color: var(--pe-danger);">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="nav-label">Exit to Main System</span>
+                </a>
             </div>
         </nav>
 

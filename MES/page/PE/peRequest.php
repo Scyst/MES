@@ -48,7 +48,7 @@ try {
         <!-- Header -->
         <header class="app-header">
             <h1 class="app-title" id="appHeaderTitle"><i class="fas fa-tools text-primary"></i> แจ้งซ่อมเครื่องจักร</h1> 
-            <button class="btn btn-light btn-sm rounded-circle shadow-sm" type="button" onclick="window.location.href='../PE/index.php'" title="Back to Main">
+            <button class="btn btn-light btn-sm rounded-circle shadow-sm" type="button" onclick="window.location.href='../dailyLog/dailyLogUI.php'" title="Back to Main">
                 <i class="fas fa-times"></i>
             </button>
         </header>

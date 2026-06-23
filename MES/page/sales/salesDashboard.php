@@ -200,6 +200,10 @@ $pageHelpId = "helpModal";
                                     </button>
                                 </div>
 
+                                <button class="btn btn-warning btn-sm shadow-sm text-dark ms-2 me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="runRMForecast()" title="ประเมินวัตถุดิบสำหรับ PO ทั้งหมดที่ยังไม่เสร็จ (RM Forecast)">
+                                    <i class="fas fa-boxes"></i>
+                                </button>
+
                                 <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" onclick="openCreateModal()">
                                     <i class="fas fa-plus me-1"></i> New
                                 </button>
@@ -358,6 +362,39 @@ $pageHelpId = "helpModal";
                             <i class="fas fa-save me-1"></i> ยืนยันบันทึก (Confirm & Save)
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RM Forecast Modal -->
+    <div class="modal fade" id="rmForecastModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-warning bg-opacity-10 border-bottom border-warning">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-exclamation-triangle text-danger me-2"></i> สรุปวัตถุดิบที่ขาด (RM Shortage Summary)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle mb-0 text-nowrap">
+                            <thead class="bg-light sticky-top">
+                                <tr>
+                                    <th>SAP No.</th>
+                                    <th>Description</th>
+                                    <th class="text-end text-primary">ยอดคงเหลือใน Store (pcs)</th>
+                                    <th class="text-end text-danger">จำนวนที่ขาด (pcs)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rmForecastTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-body-tertiary border-0 justify-content-between">
+                    <div class="text-muted small">* คำนวณจากยอดคงเหลือใน Store หักลบด้วยปริมาณที่ต้องใช้ตามแผนผลิต (เรียงตามลำดับ PO ด้านหลังบ้าน)</div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
                 </div>
             </div>
         </div>

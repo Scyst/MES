@@ -114,6 +114,13 @@ const subCategories = {
         { id: 'BBS', name: 'BBS' },
         { id: 'HANDLE', name: 'HANDLE' },
         { id: 'PLASTIC BAG', name: 'PLASTIC BAG' },
+        { id: 'FOAM', name: 'FOAM' },
+        { id: 'PVC LINER', name: 'PVC LINER' },
+        { id: 'TRIUM', name: 'TRIUM' },
+        { id: 'GASSTUT', name: 'GASSTUT' },
+        { id: 'CASTER', name: 'CASTER (ล้อ)' },
+        { id: 'PLASTIC SLIDE LOCK', name: 'PLASTIC SLIDE LOCK' },
+        { id: 'PEARL COTTON', name: 'PEARL COTTON' },
         { id: 'OTHER', name: 'อื่นๆ' }
     ],
     'CON': [
