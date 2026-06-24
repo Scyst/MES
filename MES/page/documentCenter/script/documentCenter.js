@@ -745,6 +745,7 @@ window.open3DViewer = function(docId, fileName) {
         const container = document.getElementById('viewer3d-container');
         
         if (!viewer3DInstance) {
+            OV.SetExternalLibLocation('https://cdn.jsdelivr.net/npm/online-3d-viewer@0.14.0/libs');
             OV.Init3DViewerElements();
             viewer3DInstance = new OV.EmbeddedViewer(container, {
                 camera : new OV.Camera (new OV.Coord3D (0, 0, 5), new OV.Coord3D (0, 0, 0), new OV.Coord3D (0, 1, 0)),
