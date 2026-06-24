@@ -737,7 +737,6 @@ window.open3DViewer = function(docId, fileName) {
     }
     
     document.getElementById('view3DModalTitle').textContent = fileName;
-    document.getElementById('viewer3d-loading').style.display = 'flex';
     viewer3DModal.show();
 
     // Small delay to let modal layout calculate dimensions before initializing viewer
@@ -766,23 +765,11 @@ window.open3DViewer = function(docId, fileName) {
             })
             .then(blob => {
                 const file = new File([blob], fileName);
-                viewer3DInstance.LoadModelFromFileList([file], {
-                    onLoadStart: () => {
-                        document.getElementById('viewer3d-loading').style.display = 'flex';
-                    },
-                    onLoadCompleted: () => {
-                        document.getElementById('viewer3d-loading').style.display = 'none';
-                    },
-                    onLoadError: () => {
-                        document.getElementById('viewer3d-loading').style.display = 'none';
-                        alert('Error loading 3D model. It might be an unsupported or corrupted file.');
-                    }
-                });
+                viewer3DInstance.LoadModelFromFileList([file]);
             })
             .catch(error => {
-                document.getElementById('viewer3d-loading').style.display = 'none';
                 console.error(error);
-                alert('Failed to download the 3D model from the server.');
+                alert('Failed to download or load the 3D model from the server.');
             });
     }, 300);
 };
