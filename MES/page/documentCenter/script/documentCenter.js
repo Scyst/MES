@@ -747,7 +747,6 @@ window.open3DViewer = function(docId, fileName) {
             OV.SetExternalLibLocation('https://cdn.jsdelivr.net/npm/online-3d-viewer@0.14.0/libs');
             OV.Init3DViewerElements();
             viewer3DInstance = new OV.EmbeddedViewer(container, {
-                camera : new OV.Camera (new OV.Coord3D (0, 0, 5), new OV.Coord3D (0, 0, 0), new OV.Coord3D (0, 1, 0)),
                 backgroundColor : new OV.RGBAColor (248, 250, 252, 255), // Match #f8fafc bg
                 defaultColor : new OV.RGBColor (200, 200, 200),
                 edgeSettings : new OV.EdgeSettings (true, new OV.RGBColor (0, 0, 0), 1)
