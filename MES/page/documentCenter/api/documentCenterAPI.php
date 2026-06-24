@@ -218,22 +218,22 @@ try {
             }
             $file = $_FILES['doc_file'];
             $maxFileSize = 20 * 1024 * 1024;
-            $allowedMimeTypes = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','image/jpeg','image/png'];
+            $originalFileName = basename($file['name']);
+            $fileExtension = strtolower(pathinfo($originalFileName, PATHINFO_EXTENSION));
+            $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'rar', '7z', 'txt', 'step', 'stp', 'igs', 'iges', 'stl', 'obj', 'gltf', 'glb'];
 
             if ($file['size'] > $maxFileSize) {
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => 'File is too large. Maximum size is 20MB.']);
                 exit;
             }
-            if (!in_array($file['type'], $allowedMimeTypes)) {
+            if (!in_array($fileExtension, $allowedExtensions)) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Invalid file type. Supported formats: PDF, Word, Excel, JPG, PNG.']);
+                echo json_encode(['success' => false, 'error' => 'Invalid file type. Please check supported formats.']);
                 exit;
             }
             try {
                 $uploadDir = __DIR__ . '/../../../uploads/documentCenter/';
-                $originalFileName = basename($file['name']);
-                $fileExtension = pathinfo($originalFileName, PATHINFO_EXTENSION);
                 $safeFileName = preg_replace("/[^A-Za-z0-9\\._-]/", '', pathinfo($originalFileName, PATHINFO_FILENAME));
                 $newFileName = $safeFileName . '_' . uniqid() . '.' . $fileExtension;
                 $destination = $uploadDir . $newFileName;
@@ -280,16 +280,18 @@ try {
             }
             $file = $_FILES['doc_file'];
             $maxFileSize = 20 * 1024 * 1024;
-            $allowedMimeTypes = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','image/jpeg','image/png'];
+            $originalFileName = basename($file['name']);
+            $fileExtension = strtolower(pathinfo($originalFileName, PATHINFO_EXTENSION));
+            $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'rar', '7z', 'txt', 'step', 'stp', 'igs', 'iges', 'stl', 'obj', 'gltf', 'glb'];
 
             if ($file['size'] > $maxFileSize) {
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => 'File is too large. Maximum size is 20MB.']);
                 exit;
             }
-            if (!in_array($file['type'], $allowedMimeTypes)) {
+            if (!in_array($fileExtension, $allowedExtensions)) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Invalid file type. Supported formats: PDF, Word, Excel, JPG, PNG.']);
+                echo json_encode(['success' => false, 'error' => 'Invalid file type. Please check supported formats.']);
                 exit;
             }
             try {
@@ -299,8 +301,6 @@ try {
                 $oldFile = $stmt->fetchColumn();
 
                 $uploadDir = __DIR__ . '/../../../uploads/documentCenter/';
-                $originalFileName = basename($file['name']);
-                $fileExtension = pathinfo($originalFileName, PATHINFO_EXTENSION);
                 $safeFileName = preg_replace("/[^A-Za-z0-9\\._-]/", '', pathinfo($originalFileName, PATHINFO_FILENAME));
                 $newFileName = $safeFileName . '_rev_' . uniqid() . '.' . $fileExtension;
                 $destination = $uploadDir . $newFileName;
