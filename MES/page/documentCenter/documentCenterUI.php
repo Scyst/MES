@@ -197,6 +197,7 @@ $pageIcon = "fas fa-folder-open";
         const currentUser = <?php echo json_encode($currentUser); ?>;
     </script>
 
+    <script src="https://cdn.jsdelivr.net/npm/online-3d-viewer@0.14.0/build/engine/o3dv.min.js"></script>
     <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
     <script src="script/documentCenter.js?v=<?php echo filemtime('script/documentCenter.js'); ?>"></script>
     
