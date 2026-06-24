@@ -756,8 +756,21 @@ window.open3DViewer = function(docId, fileName) {
             viewer3DInstance.Clear();
         }
 
-        const modelUrl = `api/view_document.php?id=${docId}&download=1&filename=${encodeURIComponent(fileName)}`;
-        viewer3DInstance.LoadModelFromUrlList([modelUrl]);
+        const modelUrl = `api/view_document.php?id=${docId}&download=1`; 
+        
+        fetch(modelUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.blob();
+            })
+            .then(blob => {
+                const file = new File([blob], fileName);
+                viewer3DInstance.LoadModelFromFileList([file]);
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Failed to download or load the 3D model from the server.');
+            });
     }, 300);
 };
 
