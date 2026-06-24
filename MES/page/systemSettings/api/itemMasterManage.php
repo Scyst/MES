@@ -437,7 +437,7 @@ try {
                 $raw_sub_type = strtoupper(trim($getValue(['material_sub_type', 'Sub Type', 'Group', 'Material Sub Type'], 'material_sub_type', '')));
                 $validSubTypes = [
                     'RM' => ['STEEL', 'PLASTIC', 'CHEMICAL', 'PAINT', 'OTHER'],
-                    'PKG' => ['BOX', 'PALLET', 'LABEL', 'OTHER'],
+                    'PKG' => ['BOX', 'PALLET', 'LABEL', 'MANUAL', 'OTHER'],
                     'CON' => ['ACC', '5S', 'PROD', 'OFFICE', 'PPE'],
                     'SP' => ['MECHANICAL', 'ELECTRICAL', 'OTHER'],
                     'TOOL' => ['HANDTOOL', 'MACHINE'],

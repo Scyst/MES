@@ -384,26 +384,94 @@ $pageHelpId = "helpModal";
                     </div>
                     <div class="d-flex align-items-center">
                         <button type="button" class="btn btn-outline-success btn-sm me-3 fw-bold d-flex align-items-center px-3 py-2" onclick="exportRMForecast()" title="Export to Excel">
-                            <i class="fas fa-file-excel me-2"></i> Export CSV
+                            <i class="fas fa-file-excel me-2"></i> Export Excel
                         </button>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                 </div>
                 <div class="modal-body p-4 bg-light">
-                    <div class="table-responsive rounded shadow-sm border bg-white" style="max-height: 60vh;">
-                        <table class="table table-hover table-borderless align-middle mb-0" id="rmForecastTable">
-                            <thead class="bg-light sticky-top" style="z-index: 1;">
-                                <tr>
-                                    <th class="text-secondary fw-bold py-3 ps-4 border-bottom">SAP No.</th>
-                                    <th class="text-secondary fw-bold py-3 border-bottom">Description</th>
-                                    <th class="text-end text-secondary fw-bold py-3 border-bottom">Available in Store (pcs)</th>
-                                    <th class="text-end text-secondary fw-bold py-3 pe-4 border-bottom">Shortage Qty (pcs)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="rmForecastTableBody">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
+                    <!-- Nav tabs -->
+                    <ul class="nav nav-tabs mb-3 border-bottom-0 gap-2" id="rmForecastTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold border-0 rounded-top text-dark" id="tab-summary" data-bs-toggle="tab" data-bs-target="#pane-summary" type="button" role="tab" style="background-color: #fff; box-shadow: 0 -2px 5px rgba(0,0,0,0.05);"><i class="fas fa-boxes me-1 text-warning"></i> RM Shortage Summary</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold border-0 rounded-top text-danger" id="tab-affected" data-bs-toggle="tab" data-bs-target="#pane-affected" type="button" role="tab" style="background-color: #fff; box-shadow: 0 -2px 5px rgba(0,0,0,0.05); opacity: 0.8;"><i class="fas fa-exclamation-triangle me-1"></i> Affected POs</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold border-0 rounded-top text-success" id="tab-ready" data-bs-toggle="tab" data-bs-target="#pane-ready" type="button" role="tab" style="background-color: #fff; box-shadow: 0 -2px 5px rgba(0,0,0,0.05); opacity: 0.8;"><i class="fas fa-check-circle me-1"></i> Ready</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold border-0 rounded-top text-secondary" id="tab-nobom" data-bs-toggle="tab" data-bs-target="#pane-nobom" type="button" role="tab" style="background-color: #fff; box-shadow: 0 -2px 5px rgba(0,0,0,0.05); opacity: 0.8;"><i class="fas fa-question-circle me-1"></i> Missing BOM</button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab panes -->
+                    <div class="tab-content" id="rmForecastTabsContent">
+                        <!-- Pane 1: Summary -->
+                        <div class="tab-pane fade show active" id="pane-summary" role="tabpanel">
+                            <div class="table-responsive rounded shadow-sm border bg-white" style="max-height: 50vh;">
+                                <table class="table table-hover table-borderless align-middle mb-0" id="rmForecastTable">
+                                    <thead class="bg-light sticky-top" style="z-index: 1;">
+                                        <tr>
+                                            <th class="text-secondary fw-bold py-3 ps-4 border-bottom">SAP No.</th>
+                                            <th class="text-secondary fw-bold py-3 border-bottom">Description</th>
+                                            <th class="text-end text-secondary fw-bold py-3 border-bottom">Available in Store (pcs)</th>
+                                            <th class="text-end text-secondary fw-bold py-3 pe-4 border-bottom">Shortage Qty (pcs)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rmForecastTableBody">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Pane 2: Affected POs -->
+                        <div class="tab-pane fade" id="pane-affected" role="tabpanel">
+                            <div class="table-responsive rounded shadow-sm border bg-white" style="max-height: 50vh;">
+                                <table class="table table-hover table-borderless align-middle mb-0">
+                                    <thead class="bg-light sticky-top" style="z-index: 1;">
+                                        <tr>
+                                            <th class="text-secondary fw-bold py-3 ps-4 border-bottom" style="width: 20%;">PO Number</th>
+                                            <th class="text-secondary fw-bold py-3 border-bottom">Missing Materials</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rmAffectedTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Pane 3: Ready to Produce -->
+                        <div class="tab-pane fade" id="pane-ready" role="tabpanel">
+                            <div class="table-responsive rounded shadow-sm border bg-white" style="max-height: 50vh;">
+                                <table class="table table-hover table-borderless align-middle mb-0">
+                                    <thead class="bg-light sticky-top" style="z-index: 1;">
+                                        <tr>
+                                            <th class="text-secondary fw-bold py-3 ps-4 border-bottom" style="width: 20%;">PO Number</th>
+                                            <th class="text-secondary fw-bold py-3 border-bottom">SKU / Description</th>
+                                            <th class="text-secondary fw-bold py-3 border-bottom" style="width: 20%;">Load Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rmReadyTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Pane 4: Missing BOM -->
+                        <div class="tab-pane fade" id="pane-nobom" role="tabpanel">
+                            <div class="table-responsive rounded shadow-sm border bg-white" style="max-height: 50vh;">
+                                <table class="table table-hover table-borderless align-middle mb-0">
+                                    <thead class="bg-light sticky-top" style="z-index: 1;">
+                                        <tr>
+                                            <th class="text-secondary fw-bold py-3 ps-4 border-bottom" style="width: 20%;">PO Number</th>
+                                            <th class="text-secondary fw-bold py-3 border-bottom">SKU / Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rmNoBomTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-body-tertiary border-0 justify-content-between">

@@ -3,42 +3,124 @@
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-dark text-white">
                 <h6 class="modal-title fw-bold"><i class="fas fa-search-location me-2"></i> พิกัดวัตถุดิบ (Locations & Tags)</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-0 bg-body-tertiary">
-                <div class="p-3 bg-white border-bottom shadow-sm z-1 position-relative">
-                    <h5 class="fw-bold text-primary mb-0" id="modalItemNo">-</h5>
-                    <div class="text-muted small" id="modalItemDesc">-</div>
+            
+            <div class="modal-body p-0 bg-light">
+                <div class="bg-white p-3 border-bottom shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="fw-bold text-primary mb-1" id="modalItemNo">-</h5>
+                            <div class="text-muted small" id="modalItemDesc">-</div>
+                        </div>
+                        <div id="modalItemTotalQty" class="text-end">
+                            <!-- Total Qty will be injected via JS -->
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="row g-0">
-                    <div class="col-md-4 border-end bg-white">
-                        <div class="p-2 bg-light border-bottom fw-bold text-success text-center shadow-sm"><i class="fas fa-check-circle me-1"></i> พร้อมใช้งาน (Available)</div>
-                        <div class="table-responsive hide-scrollbar m-0" style="max-height: 40vh;">
-                            <table class="table table-hover table-striped align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
-                                <thead class="table-light sticky-top shadow-sm"><tr><th class="px-3">Location</th><th class="text-end px-3">QTY</th></tr></thead>
-                                <tbody id="modalAvailTbody"></tbody>
-                            </table>
+                <ul class="nav nav-tabs px-3 pt-2 bg-white border-bottom-0" id="detailsTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold text-secondary" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true"><i class="fas fa-info-circle me-1"></i> ภาพรวม (Overview)</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold text-secondary" id="tags-tab" data-bs-toggle="tab" data-bs-target="#tags" type="button" role="tab" aria-controls="tags" aria-selected="false"><i class="fas fa-tags me-1"></i> แท็กและพาเลท</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold text-secondary" id="pending-po-tab" data-bs-toggle="tab" data-bs-target="#pending-po" type="button" role="tab" aria-controls="pending-po" aria-selected="false"><i class="fas fa-file-invoice-dollar me-1"></i> รายการ PO ขาด</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold text-secondary" id="ledger-tab" data-bs-toggle="tab" data-bs-target="#ledger" type="button" role="tab" aria-controls="ledger" aria-selected="false"><i class="fas fa-book me-1"></i> ประวัติ</button>
+                    </li>
+                </ul>
+
+                <style>
+                    #detailsTab .nav-link { border: none; border-bottom: 3px solid transparent; border-radius: 0; padding: 0.75rem 1.25rem; }
+                    #detailsTab .nav-link.active { border-bottom-color: #0d6efd; color: #0d6efd !important; background-color: transparent; }
+                    #detailsTab .nav-link:hover:not(.active) { border-bottom-color: #dee2e6; }
+                </style>
+
+                <div class="tab-content bg-light p-3" id="detailsTabContent" style="min-height: 45vh;">
+                    <!-- Tab 1: Overview -->
+                    <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+                        <div id="mismatchWarningContainer" class="d-none mb-3">
+                            <!-- Mismatch Alert will be injected here via JS -->
+                        </div>
+                        
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white fw-bold text-secondary border-bottom-0 pt-3 pb-0">
+                                <i class="fas fa-map-marker-alt me-2 text-primary"></i> สัดส่วนสต็อกตามคลัง
+                            </div>
+                            <div class="card-body">
+                                <div id="overviewLocationsList">
+                                    <!-- List of locations and quantities will go here -->
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-4 border-end bg-white">
-                        <div class="p-2 bg-light border-bottom fw-bold text-warning text-center shadow-sm"><i class="fas fa-truck me-1"></i> รอรับเข้า (Pending)</div>
-                        <div class="table-responsive hide-scrollbar m-0" style="max-height: 40vh;">
-                            <table class="table table-hover table-striped align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
-                                <thead class="table-light sticky-top shadow-sm"><tr><th class="px-3">Pallet / CTN</th><th class="text-end px-3">QTY</th></tr></thead>
-                                <tbody id="modalPendTbody"></tbody>
-                            </table>
+
+                    <!-- Tab 2: Tags & Pallets -->
+                    <div class="tab-pane fade" id="tags" role="tabpanel" aria-labelledby="tags-tab">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-header bg-success bg-opacity-10 text-success fw-bold text-center border-0 py-2"><i class="fas fa-check-circle me-1"></i> พร้อมใช้งาน (Available)</div>
+                                    <div class="card-body p-0 table-responsive hide-scrollbar" style="max-height: 45vh;">
+                                        <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
+                                            <thead class="table-light sticky-top"><tr><th class="px-3 border-bottom-0">Location</th><th class="text-end px-3 border-bottom-0">QTY</th></tr></thead>
+                                            <tbody id="modalAvailTbody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-header bg-warning bg-opacity-10 text-warning fw-bold text-center border-0 py-2"><i class="fas fa-truck me-1"></i> รอรับเข้า (Pending)</div>
+                                    <div class="card-body p-0 table-responsive hide-scrollbar" style="max-height: 45vh;">
+                                        <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
+                                            <thead class="table-light sticky-top"><tr><th class="px-3 border-bottom-0">Pallet / CTN</th><th class="text-end px-3 border-bottom-0">QTY</th></tr></thead>
+                                            <tbody id="modalPendTbody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-header bg-primary bg-opacity-10 text-primary fw-bold text-center border-0 py-2"><i class="fas fa-tags me-1"></i> แท็กสินค้า (Tags)</div>
+                                    <div class="card-body p-0 table-responsive hide-scrollbar" style="max-height: 45vh;">
+                                        <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
+                                            <thead class="table-light sticky-top"><tr><th class="px-3 border-bottom-0">Serial No.</th><th class="text-end px-3 border-bottom-0">QTY</th></tr></thead>
+                                            <tbody id="modalTagsTbody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-4 bg-white">
-                        <div class="p-2 bg-light border-bottom fw-bold text-primary text-center shadow-sm"><i class="fas fa-tags me-1"></i> แท็กสินค้า (Tags)</div>
-                        <div class="table-responsive hide-scrollbar m-0" style="max-height: 40vh;">
-                            <table class="table table-hover table-striped align-middle mb-0 text-nowrap" style="font-size: 0.9rem;">
-                                <thead class="table-light sticky-top shadow-sm"><tr><th class="px-3">Serial No.</th><th class="text-end px-3">QTY</th></tr></thead>
-                                <tbody id="modalTagsTbody"></tbody>
-                            </table>
+
+                    <!-- Tab 3: Pending POs -->
+                    <div class="tab-pane fade" id="pending-po" role="tabpanel" aria-labelledby="pending-po-tab">
+                        <div class="card border-0 shadow-sm" style="min-height: 300px;">
+                            <div class="card-body p-5 text-center d-flex flex-column justify-content-center align-items-center">
+                                <i class="fas fa-hard-hat fa-3x text-warning opacity-75 mb-3"></i>
+                                <h5 class="fw-bold text-secondary mb-2">กำลังพัฒนา (Under Construction)</h5>
+                                <p class="text-muted small">ส่วนแสดงรายการ Purchase Orders (PO) ที่ค้างรับสำหรับสินค้านี้กำลังอยู่ระหว่างการพัฒนา</p>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Tab 4: Ledger -->
+                    <div class="tab-pane fade" id="ledger" role="tabpanel" aria-labelledby="ledger-tab">
+                        <div class="card border-0 shadow-sm" style="min-height: 300px;">
+                            <div class="card-body p-5 text-center d-flex flex-column justify-content-center align-items-center">
+                                <i class="fas fa-hard-hat fa-3x text-info opacity-75 mb-3"></i>
+                                <h5 class="fw-bold text-secondary mb-2">กำลังพัฒนา (Under Construction)</h5>
+                                <p class="text-muted small">ส่วนแสดงประวัติการทำรายการเข้า-ออก (Stock Ledger) กำลังอยู่ระหว่างการพัฒนา</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
                 </div>
             </div>
             <div class="modal-footer bg-white border-top">

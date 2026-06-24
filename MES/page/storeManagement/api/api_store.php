@@ -152,9 +152,9 @@ try {
                 ->execute([$remark, $serial_no]);
                 
             if ($locId) {
-                // Prevent negative inventory by checking current quantity
-                $pdo->prepare("UPDATE dbo.INVENTORY_ONHAND SET quantity = CASE WHEN quantity - ? < 0 THEN 0 ELSE quantity - ? END WHERE parameter_id = ? AND location_id = ?")
-                    ->execute([$tag['current_qty'], $tag['current_qty'], $tag['item_id'], $locId]);
+                // Deduct inventory (allowing negative to highlight discrepancies) and update timestamp
+                $pdo->prepare("UPDATE dbo.INVENTORY_ONHAND SET quantity = quantity - ?, last_updated = GETDATE() WHERE parameter_id = ? AND location_id = ?")
+                    ->execute([$tag['current_qty'], $tag['item_id'], $locId]);
 
                 // Insert into STOCK_TRANSACTIONS
                 $pdo->prepare("
@@ -276,7 +276,7 @@ try {
                                 INSERT INTO dbo.RM_SERIAL_TAGS (serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status, po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, location_id, created_at, created_by, received_date)
                                 VALUES (?, ?, ?, ?, ?, 'WIP', ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?, ?)
                             ")->execute([
-                                $childSerial, $t['master_pallet_no'], $t['item_id'], $t['qty_per_pallet'], $qty_to_deduct,
+                                $childSerial, $t['master_pallet_no'], $t['item_id'], $qty_to_deduct, $qty_to_deduct,
                                 $t['po_number'], $t['warehouse_no'], $t['pallet_no'], $t['ctn_number'], $t['week_no'],
                                 " [Cloned for WIP transfer $req_number]", $destLocId ?: $t['location_id'], $issuer_id, $t['received_date']
                             ]);
@@ -860,6 +860,7 @@ try {
             $location_type = $_GET['location_type'] ?? 'ALL';
             $material_type = $_GET['material_type'] ?? 'ALL';
             $hide_zero = $_GET['hide_zero'] ?? 'false';
+            $sortOption = $_GET['sort'] ?? 'DEFAULT';
             $page = max(1, (int)($_GET['page'] ?? 1));
             $limit = max(10, (int)($_GET['limit'] ?? 100));
             $offset = ($page - 1) * $limit;
@@ -931,6 +932,15 @@ try {
 
             $offsetInt = (int)$offset;
             $limitInt = (int)$limit;
+            $orderBySQL = "ORDER BY available_qty ASC, total_value DESC"; // DEFAULT
+            if ($sortOption === 'ZERO_LAST') {
+                $orderBySQL = "ORDER BY CASE WHEN ISNULL(Onhand.available_qty, 0) <= 0 THEN 1 ELSE 0 END ASC, available_qty ASC, total_value DESC";
+            } else if ($sortOption === 'QTY_DESC') {
+                $orderBySQL = "ORDER BY available_qty DESC, total_value DESC";
+            } else if ($sortOption === 'ITEM_ASC') {
+                $orderBySQL = "ORDER BY item_no ASC";
+            }
+
             $sql = "
                 SELECT 
                     i.item_id,
@@ -955,7 +965,7 @@ try {
                     WHERE p.item_id = i.item_id AND p.status = 'PENDING'
                 ) Pending
                 $whereSQL
-                ORDER BY available_qty ASC, total_value DESC
+                $orderBySQL
                 OFFSET $offsetInt ROWS FETCH NEXT $limitInt ROWS ONLY
             ";
             
@@ -979,7 +989,7 @@ try {
             $item_id = $_GET['item_id'] ?? 0;
             $location_id = $_GET['location_id'] ?? 'ALL';
             
-            $condAvail = "o.parameter_id = ? AND o.quantity > 0";
+            $condAvail = "o.parameter_id = ? AND o.quantity != 0";
             $paramsAvail = [$item_id];
             
             if ($location_id !== 'ALL') {
@@ -987,7 +997,7 @@ try {
                 $paramsAvail[] = $location_id;
             }
             
-            $stmtAvail = $pdo->prepare("SELECT l.location_name, SUM(o.quantity) as qty FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) JOIN dbo.LOCATIONS l WITH (NOLOCK) ON o.location_id = l.location_id WHERE $condAvail GROUP BY l.location_name ORDER BY qty DESC");
+            $stmtAvail = $pdo->prepare("SELECT l.location_id, l.location_name, SUM(o.quantity) as qty FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) JOIN dbo.LOCATIONS l WITH (NOLOCK) ON o.location_id = l.location_id WHERE $condAvail GROUP BY l.location_id, l.location_name ORDER BY qty DESC");
             $stmtAvail->execute($paramsAvail);
             $available_details = $stmtAvail->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1920,6 +1930,50 @@ try {
 
             $pdo->commit();
             $response = ['success' => true, 'message' => "ยืนยันรับเข้าสต็อกสำเร็จจำนวน $successCount พาเลท/กล่อง"];
+            break;
+
+        case 'sync_store_stock_with_tags':
+            $item_id = $_POST['item_id'] ?? 0;
+            if (!$item_id) {
+                echo json_encode(['success' => false, 'message' => 'Missing item_id']);
+                exit;
+            }
+
+            // 1. Get total tags qty in Store (1008)
+            $stmtTags = $pdo->prepare("SELECT ISNULL(SUM(current_qty), 0) as tags_qty FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE item_id = ? AND location_id = 1008 AND status = 'AVAILABLE'");
+            $stmtTags->execute([$item_id]);
+            $tags_qty = (float)$stmtTags->fetchColumn();
+
+            // 2. Get current stock qty in Store (1008)
+            $stmtStock = $pdo->prepare("SELECT ISNULL(SUM(quantity), 0) as stock_qty FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = ? AND location_id = 1008");
+            $stmtStock->execute([$item_id]);
+            $stock_qty = (float)$stmtStock->fetchColumn();
+
+            $variance = $tags_qty - $stock_qty;
+
+            if ($variance == 0) {
+                echo json_encode(['success' => true, 'message' => 'Stock is already in sync with tags.']);
+                exit;
+            }
+
+            try {
+                $pdo->beginTransaction();
+
+                // 3. Insert transaction log
+                $stmtTx = $pdo->prepare("INSERT INTO dbo.STOCK_TRANSACTIONS (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, transaction_timestamp) VALUES (?, ?, 'ADJUSTMENT', NULL, 1008, ?, 'Synced Store Stock with Physical Tags (Legacy Bug Fix)', GETDATE())");
+                $stmtTx->execute([$item_id, $variance, $_SESSION['user_id'] ?? 1]);
+
+                // 4. Update Onhand Balance
+                $stmtSp = $pdo->prepare("EXEC dbo.sp_UpdateOnhandBalance @item_id = ?, @location_id = 1008, @quantity_to_change = ?");
+                $stmtSp->execute([$item_id, $variance]);
+
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'Stock synced successfully.', 'adjusted_qty' => $variance]);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                error_log("Error syncing stock: " . $e->getMessage());
+                echo json_encode(['success' => false, 'message' => 'Failed to sync stock: ' . $e->getMessage()]);
+            }
             break;
 
         default:

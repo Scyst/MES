@@ -12,7 +12,7 @@ let ccHistoryModal;
 
 const materialSubTypes = {
     'RM': [{val: 'STEEL', text: 'STEEL (เหล็ก)'}, {val: 'PLASTIC', text: 'PLASTIC (พลาสติก)'}, {val: 'CHEMICAL', text: 'CHEMICAL (เคมีภัณฑ์)'}, {val: 'PAINT', text: 'PAINT (สี)'}, {val: 'BOLT & NUT', text: 'BOLT & NUT'}, {val: 'RIVET', text: 'RIVET'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
-    'PKG': [{val: 'BOX', text: 'BOX (กล่องกระดาษ)'}, {val: 'PALLET', text: 'PALLET (พาเลท)'}, {val: 'LABEL', text: 'LABEL (สติ๊กเกอร์/ฉลาก)'}, {val: 'KEY', text: 'KEY'}, {val: 'BBS', text: 'BBS'}, {val: 'HANDLE', text: 'HANDLE'}, {val: 'PLASTIC BAG', text: 'PLASTIC BAG'}, {val: 'FOAM', text: 'FOAM'}, {val: 'PVC LINER', text: 'PVC LINER'}, {val: 'TRIUM', text: 'TRIUM'}, {val: 'GASSTUT', text: 'GASSTUT'}, {val: 'CASTER', text: 'CASTER (ล้อ)'}, {val: 'PLASTIC SLIDE LOCK', text: 'PLASTIC SLIDE LOCK'}, {val: 'PEARL COTTON', text: 'PEARL COTTON'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
+    'PKG': [{val: 'BOX', text: 'BOX (กล่องกระดาษ)'}, {val: 'PALLET', text: 'PALLET (พาเลท)'}, {val: 'LABEL', text: 'LABEL (สติ๊กเกอร์/ฉลาก)'}, {val: 'KEY', text: 'KEY'}, {val: 'BBS', text: 'BBS'}, {val: 'HANDLE', text: 'HANDLE'}, {val: 'PLASTIC BAG', text: 'PLASTIC BAG'}, {val: 'FOAM', text: 'FOAM'}, {val: 'PVC LINER', text: 'PVC LINER'}, {val: 'TRIUM', text: 'TRIUM'}, {val: 'GASSTUT', text: 'GASSTUT'}, {val: 'CASTER', text: 'CASTER (ล้อ)'}, {val: 'PLASTIC SLIDE LOCK', text: 'PLASTIC SLIDE LOCK'}, {val: 'PEARL COTTON', text: 'PEARL COTTON'}, {val: 'MANUAL', text: 'MANUAL (คู่มือ)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
     'CON': [{val: 'ACC', text: 'ACC (Accessory/อุปกรณ์ประกอบ)'}, {val: '5S', text: '5S (อุปกรณ์ 5ส.)'}, {val: 'PROD', text: 'PROD (สิ้นเปลืองไลน์ผลิต)'}, {val: 'OFFICE', text: 'OFFICE (เครื่องเขียน)'}, {val: 'PPE', text: 'PPE (อุปกรณ์เซฟตี้)'}],
     'SP': [{val: 'MECHANICAL', text: 'MECHANICAL (อะไหล่เครื่องกล)'}, {val: 'ELECTRICAL', text: 'ELECTRICAL (อะไหล่ไฟฟ้า)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
     'TOOL': [{val: 'HANDTOOL', text: 'HANDTOOL (เครื่องมือช่าง)'}, {val: 'MACHINE', text: 'MACHINE (เครื่องจักร)'}],
@@ -21,6 +21,14 @@ const materialSubTypes = {
     'WIP': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
     'OTHER': [{val: 'OTHER', text: 'OTHER (อื่นๆ)'}]
 };
+
+function setSort(sortValue, element) {
+    document.getElementById('sortFilter').value = sortValue;
+    const dropdownMenu = element.closest('.dropdown-menu');
+    dropdownMenu.querySelectorAll('.dropdown-item').forEach(item => item.classList.remove('active'));
+    element.classList.add('active');
+    loadDashboardData();
+}
 
 function resetFilters() {
     const typeSelect = document.getElementById('locationTypeFilter');
@@ -121,15 +129,16 @@ async function loadDashboardData() {
     const category = document.getElementById('categoryFilter')?.value || 'ALL';
     const hideZero = document.getElementById('hideZeroStock')?.checked || false;
     const searchStr = encodeURIComponent(document.getElementById('filterSearch')?.value.trim() || '');
+    const sortVal = document.getElementById('sortFilter')?.value || 'DEFAULT';
 
     const tbody = document.getElementById('dashboardTbody');
     const cardContainer = document.getElementById('dashboardCardContainer');
     
-    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i><br>กำลังโหลดข้อมูล...</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i><br>กำลังโหลดข้อมูล...</td></tr>';
     if (cardContainer) cardContainer.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><br>กำลังโหลดข้อมูล...</div>';
 
     try {
-        const queryParams = `get_inventory_dashboard&location_id=${locId}&location_type=${locType}&material_type=${matType}&category=${category}&hide_zero=${hideZero}&search=${searchStr}&page=${currentPage}&limit=${rowsPerPage}`;
+        const queryParams = `get_inventory_dashboard&location_id=${locId}&location_type=${locType}&material_type=${matType}&category=${category}&hide_zero=${hideZero}&sort=${sortVal}&search=${searchStr}&page=${currentPage}&limit=${rowsPerPage}`;
         const result = await fetchAPI(queryParams, 'GET');
 
         if (result.kpi) {
@@ -140,7 +149,7 @@ async function loadDashboardData() {
         }
 
         if (!result.data || result.data.length === 0) {
-            if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">ไม่พบข้อมูลสินค้าคงคลัง</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">ไม่พบข้อมูลสินค้าคงคลัง</td></tr>';
             if (cardContainer) cardContainer.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-box-open fa-3x mb-3 text-secondary opacity-50"></i><br>ไม่พบข้อมูลในระบบ</div>';
             document.getElementById('paginationControls').innerHTML = '';
             document.getElementById('paginationInfo').innerText = 'แสดง 0 ถึง 0 จาก 0 รายการ';
@@ -243,7 +252,7 @@ async function loadDashboardData() {
 
     } catch (err) {
         console.error("Dashboard Load Error:", err);
-        if (tbody) tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle"></i> โหลดข้อมูลล้มเหลว</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle"></i> โหลดข้อมูลล้มเหลว</td></tr>`;
         if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>โหลดข้อมูลล้มเหลว</div>`;
     }
 }
@@ -303,13 +312,44 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
             fetchAPI(`get_available_tags_for_item&item_code=${encodeURIComponent(itemNo)}&location_id=${locFilterId}`, 'GET').catch(e => ({data: []}))
         ]);
         
+        let totalSystemStock = 0;
+        let storeSystemStock = 0;
+        let storeTagsStock = 0;
+        
         availTbody.innerHTML = '';
+        const overviewList = document.getElementById('overviewLocationsList');
+        if(overviewList) overviewList.innerHTML = '';
+        
         if (res.available_details && res.available_details.length > 0) {
             res.available_details.forEach(loc => {
-                availTbody.innerHTML += `<tr style="height: 61px;"><td>${escapeHTML(loc.location_name)}</td><td class="text-end fw-bold text-success align-middle">${parseFloat(loc.qty).toLocaleString()}</td></tr>`;
+                const qty = parseFloat(loc.qty);
+                totalSystemStock += qty;
+                if (loc.location_id == 1008 || (loc.location_name && loc.location_name.toUpperCase().includes('STORE'))) {
+                    storeSystemStock += qty;
+                }
+                
+                availTbody.innerHTML += `<tr style="height: 61px;"><td>${escapeHTML(loc.location_name)}</td><td class="text-end fw-bold ${qty < 0 ? 'text-danger' : 'text-success'} align-middle">${qty.toLocaleString()}</td></tr>`;
+                
+                if (overviewList) {
+                    overviewList.innerHTML += `
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                            <span class="text-dark fw-bold"><i class="fas fa-map-marker-alt text-primary me-2"></i> ${escapeHTML(loc.location_name)}</span>
+                            <span class="badge ${qty < 0 ? 'bg-danger' : 'bg-success'} rounded-pill fs-6">${qty.toLocaleString()}</span>
+                        </div>
+                    `;
+                }
             });
         } else {
             availTbody.innerHTML = '<tr style="height: 61px;"><td colspan="2" class="text-center text-muted align-middle">ไม่มีของในคลัง</td></tr>';
+            if (overviewList) overviewList.innerHTML = '<div class="text-center text-muted py-3">ไม่มีสต็อกในระบบ</div>';
+        }
+
+        const totalQtyEl = document.getElementById('modalItemTotalQty');
+        if (totalQtyEl) {
+            totalQtyEl.innerHTML = `
+                <div class="text-muted small">ยอดรวมทั้งโรงงาน</div>
+                <h4 class="fw-bold ${totalSystemStock < 0 ? 'text-danger' : 'text-success'} mb-0">${totalSystemStock.toLocaleString()}</h4>
+            `;
         }
 
         pendTbody.innerHTML = '';
@@ -332,13 +372,18 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
             tagsTbody.innerHTML = '';
             if (tagRes.data && tagRes.data.length > 0) {
                 tagRes.data.forEach(t => {
+                    const qty = parseInt(t.current_qty, 10);
+                    if (t.location_id == 1008 || (t.location_name && t.location_name.toUpperCase().includes('STORE'))) {
+                        storeTagsStock += qty;
+                    }
+                    
                     tagsTbody.innerHTML += `<tr style="height: 61px;">
                         <td>
                             ${escapeHTML(t.serial_no)}
                             <div class="small text-muted">Loc: ${escapeHTML(t.location_name || '-')} | Pallet: ${escapeHTML(t.warehouse_no || '-')}</div>
                         </td>
                         <td class="text-end fw-bold text-primary align-middle text-nowrap">
-                            ${parseInt(t.current_qty, 10).toLocaleString()}
+                            ${qty.toLocaleString()}
                             ${CAN_MANAGE_WH ? `<button class="btn btn-sm btn-outline-danger ms-2 py-0 px-2 shadow-sm border-0" onclick="forceIssueTag('${t.serial_no}')" title="ตัดจ่ายแท็กนี้ออกจากสต็อก (ชดเชยการใช้มือ)"><i class="fas fa-sign-out-alt"></i></button>` : ''}
                         </td>
                     </tr>`;
@@ -348,10 +393,68 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
             }
         }
         
+        const mismatchWarning = document.getElementById('mismatchWarningContainer');
+        if (mismatchWarning) {
+            if (storeSystemStock !== storeTagsStock) {
+                mismatchWarning.classList.remove('d-none');
+                mismatchWarning.innerHTML = `
+                    <div class="alert alert-danger shadow-sm border-0 d-flex flex-wrap align-items-center justify-content-between p-3 rounded">
+                        <div class="mb-2 mb-md-0">
+                            <h6 class="fw-bold mb-1 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> สต็อกคลัง Store ไม่ตรงกับยอดแท็กจริง!</h6>
+                            <div class="small text-dark">
+                                ยอดในระบบ (Store 1008): <strong class="fs-6">${storeSystemStock.toLocaleString()}</strong> 
+                                <span class="mx-2 text-muted">|</span> 
+                                ยอดแท็กจริงทั้งหมด: <strong class="fs-6 text-success">${storeTagsStock.toLocaleString()}</strong>
+                            </div>
+                        </div>
+                        <button class="btn btn-warning fw-bold shadow-sm flex-shrink-0" onclick="syncStoreStockWithTags(${itemId})">
+                            <i class="fas fa-sync-alt me-1"></i> ปรับสต็อกให้ตรงกับแท็ก
+                        </button>
+                    </div>
+                `;
+            } else {
+                mismatchWarning.classList.add('d-none');
+            }
+        }
+        
     } catch (err) {
+        console.error(err);
         availTbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">เกิดข้อผิดพลาด</td></tr>';
         pendTbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">เกิดข้อผิดพลาด</td></tr>';
         if(tagsTbody) tagsTbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">เกิดข้อผิดพลาด</td></tr>';
+    }
+}
+
+async function syncStoreStockWithTags(itemId) {
+    const result = await Swal.fire({
+        title: 'ยืนยันปรับยอดสต็อก?',
+        html: `ระบบจะปรับยอดสต็อกของ <b>Store (1008)</b> ให้ตรงกับจำนวนแท็กที่พร้อมใช้งานจริง<br><br><small class="text-danger">*แนะนำให้ทำเฉพาะรายการที่เกิดบั๊ก Data Import ย้อนหลังเท่านั้น</small>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#198754',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'ยืนยันปรับยอด',
+        cancelButtonText: 'ยกเลิก'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            Swal.fire({ title: 'กำลังปรับยอดสต็อก...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            
+            const formData = new FormData();
+            formData.append('item_id', itemId);
+            const res = await fetchAPI('sync_store_stock_with_tags', 'POST', formData);
+            
+            if (res.success) {
+                await Swal.fire('สำเร็จ', res.message, 'success');
+                if (detailsModalInstance) detailsModalInstance.hide();
+                loadDashboardData();
+            } else {
+                Swal.fire('ข้อผิดพลาด', res.message || 'ไม่สามารถปรับยอดได้', 'error');
+            }
+        } catch (err) {
+            Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์', 'error');
+        }
     }
 }
 
@@ -887,7 +990,8 @@ window.exportInventoryData = async function() {
             const locType = document.getElementById('locationTypeFilter')?.value || 'ALL';
             const category = document.getElementById('categoryFilter')?.value || 'ALL';
 
-            const masterRes = await fetchAPI(`get_inventory_dashboard&location_id=ALL&location_type=${locType}&material_type=${matType}&category=${category}&hide_zero=${hideZero}&search=&page=1&limit=999999`, 'GET');
+            const sortVal = document.getElementById('sortFilter')?.value || 'DEFAULT';
+            const masterRes = await fetchAPI(`get_inventory_dashboard&location_id=ALL&location_type=${locType}&material_type=${matType}&category=${category}&hide_zero=${hideZero}&sort=${sortVal}&search=&page=1&limit=999999`, 'GET');
             
             if (!masterRes.data || masterRes.data.length === 0) {
                 Swal.fire('ไม่พบข้อมูล', 'ไม่มีข้อมูลในระบบเลย', 'warning');
@@ -898,7 +1002,8 @@ window.exportInventoryData = async function() {
 
             // ดึงข้อมูลแต่ละคลัง
             for (const loc of allLocs) {
-                const locRes = await fetchAPI(`get_inventory_dashboard&location_id=${loc.id}&location_type=${locType}&material_type=${matType}&category=${category}&hide_zero=${hideZero}&search=&page=1&limit=999999`, 'GET');
+                const sortVal = document.getElementById('sortFilter')?.value || 'DEFAULT';
+                const locRes = await fetchAPI(`get_inventory_dashboard&location_id=${loc.id}&location_type=${locType}&material_type=${matType}&category=${category}&hide_zero=${hideZero}&sort=${sortVal}&search=&page=1&limit=999999`, 'GET');
                 
                 if (locRes.data && locRes.data.length > 0) {
                     actualSheets.push(loc.name);
@@ -985,7 +1090,8 @@ window.exportInventoryData = async function() {
             const locType = document.getElementById('locationTypeFilter')?.value || 'ALL';
             const category = document.getElementById('categoryFilter')?.value || 'ALL';
 
-            const queryParams = `get_inventory_dashboard&location_id=${reqLocId}&location_type=${locType}&material_type=${reqMatType}&category=${category}&hide_zero=${reqHideZero}&search=${encodeURIComponent(reqSearchStr)}&page=1&limit=999999`;
+            const sortVal = document.getElementById('sortFilter')?.value || 'DEFAULT';
+            const queryParams = `get_inventory_dashboard&location_id=${reqLocId}&location_type=${locType}&material_type=${reqMatType}&category=${category}&hide_zero=${reqHideZero}&sort=${sortVal}&search=${encodeURIComponent(reqSearchStr)}&page=1&limit=999999`;
             const result = await fetchAPI(queryParams, 'GET');
 
             if (!result.data || result.data.length === 0) {

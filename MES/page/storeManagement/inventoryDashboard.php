@@ -123,13 +123,26 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                         <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 w-100">
                             
                             <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-                                <div class="d-flex align-items-center gap-1 w-100 w-md-auto flex-nowrap" style="flex: 1 1 250px; max-width: 500px;">
+                                <div class="d-flex align-items-center gap-1 w-100 w-md-auto flex-nowrap" style="flex: 1 1 250px; max-width: 650px;">
                                     <div class="input-group input-group-sm shadow-sm flex-grow-1">
                                         <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
                                         <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Item No. หรือชื่อ...">
                                         <button class="btn btn-outline-secondary border-secondary-subtle" type="button" onclick="loadDashboardData()" title="Refresh Data">
                                             <i class="fas fa-sync-alt"></i>
                                         </button>
+                                    </div>
+                                    
+                                    <div class="dropdown flex-shrink-0">
+                                        <button class="btn btn-outline-secondary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="height: 32px;" title="การเรียงลำดับ">
+                                            <i class="fas fa-sort-amount-down"></i> <small class="d-none d-sm-inline ms-1">Sort</small>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.85rem;">
+                                            <li><button class="dropdown-item active" type="button" onclick="setSort('ZERO_LAST', this)"><i class="fas fa-box-open me-2 text-primary"></i>มีของขึ้นก่อน (0 ไว้ท้าย)</button></li>
+                                            <li><button class="dropdown-item" type="button" onclick="setSort('DEFAULT', this)"><i class="fas fa-sort-numeric-down me-2 text-secondary"></i>ติดลบ/0 ขึ้นก่อน</button></li>
+                                            <li><button class="dropdown-item" type="button" onclick="setSort('QTY_DESC', this)"><i class="fas fa-sort-amount-down me-2 text-secondary"></i>ยอดมาก ขึ้นก่อน</button></li>
+                                            <li><button class="dropdown-item" type="button" onclick="setSort('ITEM_ASC', this)"><i class="fas fa-sort-alpha-down me-2 text-secondary"></i>Item A-Z</button></li>
+                                        </ul>
+                                        <input type="hidden" id="sortFilter" value="ZERO_LAST">
                                     </div>
                                     
                                     <button class="btn btn-outline-primary btn-sm shadow-sm flex-shrink-0 d-md-none" id="btnToggleCards" onclick="toggleMobileCards()" title="ซ่อน/แสดงยอดรวม" style="width: 32px; height: 32px; padding: 0;">
@@ -210,7 +223,7 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                 </tr>
                             </thead>
                             <tbody id="dashboardTbody">
-                                <tr><td colspan="10" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังโหลดข้อมูล...</td></tr>
+                                <tr><td colspan="11" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังโหลดข้อมูล...</td></tr>
                             </tbody>
                         </table>
                     </div>

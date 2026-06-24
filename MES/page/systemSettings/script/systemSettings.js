@@ -94,7 +94,7 @@ function closeModal(modalId) {
 
 const materialSubTypes = {
     'RM': [{val: 'STEEL', text: 'STEEL (เหล็ก)'}, {val: 'PLASTIC', text: 'PLASTIC (พลาสติก)'}, {val: 'CHEMICAL', text: 'CHEMICAL (เคมีภัณฑ์)'}, {val: 'PAINT', text: 'PAINT (สี)'}, {val: 'BOLT & NUT', text: 'BOLT & NUT'}, {val: 'RIVET', text: 'RIVET'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
-    'PKG': [{val: 'BOX', text: 'BOX (กล่องกระดาษ)'}, {val: 'PALLET', text: 'PALLET (พาเลท)'}, {val: 'LABEL', text: 'LABEL (สติ๊กเกอร์/ฉลาก)'}, {val: 'KEY', text: 'KEY'}, {val: 'BBS', text: 'BBS'}, {val: 'HANDLE', text: 'HANDLE'}, {val: 'PLASTIC BAG', text: 'PLASTIC BAG'}, {val: 'FOAM', text: 'FOAM'}, {val: 'PVC LINER', text: 'PVC LINER'}, {val: 'TRIUM', text: 'TRIUM'}, {val: 'GASSTUT', text: 'GASSTUT'}, {val: 'CASTER', text: 'CASTER (ล้อ)'}, {val: 'PLASTIC SLIDE LOCK', text: 'PLASTIC SLIDE LOCK'}, {val: 'PEARL COTTON', text: 'PEARL COTTON'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
+    'PKG': [{val: 'BOX', text: 'BOX (กล่องกระดาษ)'}, {val: 'PALLET', text: 'PALLET (พาเลท)'}, {val: 'LABEL', text: 'LABEL (สติ๊กเกอร์/ฉลาก)'}, {val: 'KEY', text: 'KEY'}, {val: 'BBS', text: 'BBS'}, {val: 'HANDLE', text: 'HANDLE'}, {val: 'PLASTIC BAG', text: 'PLASTIC BAG'}, {val: 'FOAM', text: 'FOAM'}, {val: 'PVC LINER', text: 'PVC LINER'}, {val: 'TRIUM', text: 'TRIUM'}, {val: 'GASSTUT', text: 'GASSTUT'}, {val: 'CASTER', text: 'CASTER (ล้อ)'}, {val: 'PLASTIC SLIDE LOCK', text: 'PLASTIC SLIDE LOCK'}, {val: 'PEARL COTTON', text: 'PEARL COTTON'}, {val: 'MANUAL', text: 'MANUAL (คู่มือ)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
     'CON': [{val: 'ACC', text: 'ACC (Accessory/อุปกรณ์ประกอบ)'}, {val: '5S', text: '5S (อุปกรณ์ 5ส.)'}, {val: 'PROD', text: 'PROD (สิ้นเปลืองไลน์ผลิต)'}, {val: 'OFFICE', text: 'OFFICE (เครื่องเขียน)'}, {val: 'PPE', text: 'PPE (อุปกรณ์เซฟตี้)'}],
     'SP': [{val: 'MECHANICAL', text: 'MECHANICAL (อะไหล่เครื่องกล)'}, {val: 'ELECTRICAL', text: 'ELECTRICAL (อะไหล่ไฟฟ้า)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
     'TOOL': [{val: 'HANDTOOL', text: 'HANDTOOL (เครื่องมือช่าง)'}, {val: 'MACHINE', text: 'MACHINE (เครื่องจักร)'}],
@@ -127,7 +127,7 @@ function updateFilterSubTypeOptions(selectedType) {
     subTypeSelect.classList.remove('d-none');
     subTypeSelect.innerHTML = '<option value="">-- ทุกกลุ่มย่อย (All Sub) --</option>';
     
-    if (!selectedType || selectedType === '') {
+    if (!selectedType || selectedType === '' || selectedType === 'ALL') {
         const addedVals = new Set();
         Object.values(materialSubTypes).forEach(subArray => {
             subArray.forEach(sub => {
@@ -717,6 +717,7 @@ async function exportItemsMaster() {
                 ["PKG", "BOX", "กล่องกระดาษ"],
                 ["PKG", "PALLET", "พาเลท"],
                 ["PKG", "LABEL", "สติ๊กเกอร์/ฉลาก"],
+                ["PKG", "MANUAL", "คู่มือ"],
                 ["PKG", "OTHER", "อื่นๆ"],
                 ["CON", "ACC", "Accessory/อุปกรณ์ประกอบ"],
                 ["CON", "5S", "อุปกรณ์ 5ส."],
@@ -759,7 +760,7 @@ function showMaterialDict() {
                 <tbody>
                     <tr><td class="fw-bold text-primary">FG : 40</td><td>STANDARD</td></tr>
                     <tr><td class="fw-bold text-success">RM : 30</td><td>STEEL, PLASTIC, CHEMICAL, OTHER</td></tr>
-                    <tr><td class="fw-bold text-info">PKG : 20</td><td>BOX, PALLET, LABEL, OTHER</td></tr>
+                    <tr><td class="fw-bold text-info">PKG : 20</td><td>BOX, PALLET, LABEL, MANUAL, OTHER</td></tr>
                     <tr><td class="fw-bold text-danger">CON : 70</td><td>ACC, 5S, PROD, OFFICE, PPE</td></tr>
                     <tr><td class="fw-bold text-dark">SP</td><td>MECHANICAL, ELECTRICAL, OTHER</td></tr>
                     <tr><td class="fw-bold text-primary">TOOL</td><td>HANDTOOL, MACHINE</td></tr>

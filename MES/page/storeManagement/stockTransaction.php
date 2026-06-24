@@ -153,7 +153,7 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
                                 </tr>
                             </thead>
                             <tbody id="ledgerTbody">
-                                <tr><td colspan="10" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังโหลดข้อมูล...</td></tr>
+                                <tr><td colspan="11" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังโหลดข้อมูล...</td></tr>
                             </tbody>
                         </table>
                     </div>

@@ -270,6 +270,7 @@ function renderJobBoard() {
                             <li><h6 class="dropdown-header">จัดการคิวงาน</h6></li>
                             <li><a class="dropdown-item fw-bold text-dark" href="#" onclick="editJob(${job.job_id}, ${job.target_qty})"><i class="fas fa-pen text-primary me-2"></i>แก้ไขเป้าหมาย</a></li>
                             ${(job.status === 'RUNNING' || job.status === 'PAUSED') ? `<li><a class="dropdown-item fw-bold text-dark" href="#" onclick="viewJobLogs('${job.job_no}', ${job.job_id}, '${job.part_no || ''}', '${(job.part_name || '').replace(/'/g, "\\'")}')"><i class="fas fa-history text-info me-2"></i>ประวัติการลงยอด</a></li>` : ''}
+                            ${(job.status === 'COMPLETED' || job.status === 'CANCELLED') ? `<li><a class="dropdown-item fw-bold text-success" href="#" onclick="reopenJob(${job.job_id}, '${job.job_no}')"><i class="fas fa-redo text-success me-2"></i>เปิดงานอีกครั้ง</a></li>` : ''}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item fw-bold text-danger" href="#" onclick="deleteJob(${job.job_id}, '${job.job_no}', '${job.status}')"><i class="fas fa-trash-alt me-2"></i>${job.status === 'PENDING' ? 'ลบจ๊อบทิ้ง' : 'บังคับยกเลิกจ๊อบ'}</a></li>
                         </ul>

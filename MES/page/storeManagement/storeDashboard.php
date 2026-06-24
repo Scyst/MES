@@ -183,7 +183,7 @@ $pageIcon = "fas fa-store";
                         <input type="date" id="global_end" class="form-control fw-bold text-primary" onchange="triggerGlobalReload()">
                     </div>
                     <button class="btn btn-primary px-3" onclick="triggerGlobalReload()" title="โหลดข้อมูลใหม่"><i class="fas fa-sync-alt"></i></button>
-                    <button id="btnExportCSV" class="btn btn-success px-3 fw-bold d-none" onclick="exportToCSV()"><i class="fas fa-file-excel me-1"></i> Export</button>
+                    <button id="btnExportData" class="btn btn-success px-3 fw-bold d-none" onclick="exportToExcel()"><i class="fas fa-file-excel me-1"></i> Export</button>
                 </div>
             </div>
 
@@ -476,6 +476,7 @@ $pageIcon = "fas fa-store";
 
     <!-- Scripts -->
     <script src="../../utils/libs/html5-qrcode.min.js"></script>
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
     <script src="script/storeDashboard.js?v=<?php echo filemtime(__DIR__ . '/script/storeDashboard.js'); ?>" defer></script>
 </body>

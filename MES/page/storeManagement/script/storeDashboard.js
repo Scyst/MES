@@ -70,7 +70,7 @@ window.switchDashboardMode = function(mode) {
     const layoutOrder = document.getElementById('order-layout');
     const layoutAnalytics = document.getElementById('analytics-layout');
     const layoutFulfill = document.getElementById('fulfillment-layout');
-    const btnExport = document.getElementById('btnExportCSV');
+    const btnExport = document.getElementById('btnExportData');
     const dp = document.getElementById('global-date-filter');
 
     layoutOrder.classList.add('d-none');
@@ -879,8 +879,8 @@ window.loadAnalytics = async function() {
     }
 };
 
-window.exportToCSV = async function() {
-    const btn = document.getElementById('btnExportCSV');
+window.exportToExcel = async function() {
+    const btn = document.getElementById('btnExportData');
     const start = document.getElementById('global_start').value;
     const end = document.getElementById('global_end').value;
 
@@ -896,15 +896,45 @@ window.exportToCSV = async function() {
             return; 
         }
 
-        let csvContent = "\uFEFFวันที่เบิก,เลขที่บิล,ผู้เบิก,รหัส SAP,ชื่อวัสดุ,จำนวนขอเบิก,จำนวนจ่ายจริง,ประเภทคำขอ,สถานะ\n";
+        const ws_data = [
+            ["วันที่เบิก", "เลขที่บิล", "ผู้เบิก", "รหัส SAP", "ชื่อวัสดุ", "จำนวนขอเบิก", "จำนวนจ่ายจริง", "ประเภทคำขอ", "สถานะ"]
+        ];
+
         res.exportData.forEach(r => {
-            csvContent += `${r.date_req},${r.req_number},${r.requester},${r.sap_no},${(r.part_description || '-').replace(/,/g, " ")},${r.qty_requested},${r.qty_issued || 0},${r.request_type},${r.status}\n`;
+            ws_data.push([
+                r.date_req || '',
+                r.req_number || '',
+                r.requester || '',
+                r.sap_no || '',
+                r.part_description || '',
+                r.qty_requested || 0,
+                r.qty_issued || 0,
+                r.request_type || '',
+                r.status || ''
+            ]);
         });
         
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }));
-        link.download = `Store_Export_${start}_to_${end}.csv`;
-        link.click();
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(ws_data);
+        
+        // Auto-width for columns
+        const colWidths = [
+            { wch: 15 }, // วันที่เบิก
+            { wch: 20 }, // เลขที่บิล
+            { wch: 15 }, // ผู้เบิก
+            { wch: 15 }, // รหัส SAP
+            { wch: 40 }, // ชื่อวัสดุ
+            { wch: 15 }, // จำนวนขอเบิก
+            { wch: 15 }, // จำนวนจ่ายจริง
+            { wch: 15 }, // ประเภทคำขอ
+            { wch: 15 }  // สถานะ
+        ];
+        ws['!cols'] = colWidths;
+
+        XLSX.utils.book_append_sheet(wb, ws, "Analytics");
+        
+        const fileName = `Store_Export_${start}_to_${end}.xlsx`;
+        XLSX.writeFile(wb, fileName);
         
     } catch (error) {
         Swal.fire('Error', error.message, 'error');

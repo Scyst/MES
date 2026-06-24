@@ -668,6 +668,69 @@ async function runRMForecast(showModal = true) {
                     tbody.appendChild(tr);
                 });
                 
+                // Populate Tab 2, 3, 4
+                const tbodyAffected = document.getElementById('rmAffectedTableBody');
+                const tbodyReady = document.getElementById('rmReadyTableBody');
+                const tbodyNoBom = document.getElementById('rmNoBomTableBody');
+                if (tbodyAffected) tbodyAffected.innerHTML = '';
+                if (tbodyReady) tbodyReady.innerHTML = '';
+                if (tbodyNoBom) tbodyNoBom.innerHTML = '';
+
+                let countAffected = 0, countReady = 0, countNoBom = 0;
+
+                allData.forEach(item => {
+                    const fData = rmForecastData[item.id];
+                    if (!fData) return;
+
+                    if (fData.status === 'SHORTAGE') {
+                        const isNoBom = fData.shortages.some(s => s.is_missing_bom);
+                        if (isNoBom) {
+                            countNoBom++;
+                            if(tbodyNoBom) tbodyNoBom.innerHTML += `
+                                <tr>
+                                    <td class="fw-bold ps-4 text-secondary">${item.po_number}</td>
+                                    <td>${item.sku} - ${item.description || ''}</td>
+                                </tr>
+                            `;
+                        } else {
+                            countAffected++;
+                            const missingListHTML = fData.shortages.filter(s => s.shortage > 0).map(s => `<span class="badge bg-danger me-1 mb-1 shadow-sm px-2 py-1"><i class="fas fa-exclamation-circle me-1"></i>${s.sap_no} (ขาด ${s.shortage.toLocaleString()})</span>`).join(' ');
+                            if(tbodyAffected) tbodyAffected.innerHTML += `
+                                <tr>
+                                    <td class="fw-bold ps-4 text-danger">${item.po_number}</td>
+                                    <td>${missingListHTML}</td>
+                                </tr>
+                            `;
+                        }
+                    } else if (fData.status === 'READY') {
+                        countReady++;
+                        const dStr = item.loading_date ? new Date(item.loading_date).toLocaleDateString('th-TH') : '-';
+                        if(tbodyReady) tbodyReady.innerHTML += `
+                            <tr>
+                                <td class="fw-bold ps-4 text-success">${item.po_number}</td>
+                                <td>${item.sku} - ${item.description || ''}</td>
+                                <td>${dStr}</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                // Update tab labels with counts
+                const tabA = document.getElementById('tab-affected');
+                const tabR = document.getElementById('tab-ready');
+                const tabN = document.getElementById('tab-nobom');
+                if (tabA) tabA.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> Affected POs <span class="badge bg-danger ms-1 rounded-pill">${countAffected}</span>`;
+                if (tabR) tabR.innerHTML = `<i class="fas fa-check-circle me-1"></i> Ready <span class="badge bg-success ms-1 rounded-pill">${countReady}</span>`;
+                if (tabN) tabN.innerHTML = `<i class="fas fa-question-circle me-1"></i> Missing BOM <span class="badge bg-secondary ms-1 rounded-pill">${countNoBom}</span>`;
+
+                // Add visual click effect for tabs
+                document.querySelectorAll('#rmForecastTabs .nav-link').forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        document.querySelectorAll('#rmForecastTabs .nav-link').forEach(t => t.style.opacity = '0.8');
+                        e.currentTarget.style.opacity = '1';
+                    });
+                });
+
                 if(showModal && rmForecastModal) rmForecastModal.show();
             } else {
                 if (showModal) showToast('✅ วัตถุดิบเพียงพอสำหรับทุก PO ที่ยังไม่เสร็จ', '#198754');
@@ -706,29 +769,42 @@ function exportRMForecast() {
         return;
     }
     
-    // Create CSV
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM for UTF-8
-    csvContent += "SAP No.,Description,Available in Store,Shortage Qty\n";
+    if (typeof XLSX === 'undefined') {
+        alert("ไม่พบไลบรารีสำหรับ Export Excel");
+        return;
+    }
+
+    const data = [
+        ["SAP No.", "Description", "Available in Store", "Shortage Qty"]
+    ];
     
     const rows = tbody.querySelectorAll('tr');
     rows.forEach(row => {
         const cols = row.querySelectorAll('td');
         if (cols.length === 4) {
-            const sap = cols[0].innerText.replace(/"/g, '""');
-            const desc = cols[1].innerText.replace(/"/g, '""');
-            const avail = cols[2].innerText.replace(/,/g, '');
-            const short = cols[3].innerText.replace(/,/g, '');
-            csvContent += `"${sap}","${desc}",${avail},${short}\n`;
+            const sap = cols[0].innerText.trim();
+            const desc = cols[1].innerText.trim();
+            const avail = parseFloat(cols[2].innerText.replace(/,/g, '')) || 0;
+            const short = parseFloat(cols[3].innerText.replace(/,/g, '')) || 0;
+            data.push([sap, desc, avail, short]);
         }
     });
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `RM_Shortage_Summary_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    
+    // Set column widths
+    ws['!cols'] = [
+        { wch: 15 }, // SAP No
+        { wch: 40 }, // Description
+        { wch: 20 }, // Available
+        { wch: 20 }  // Shortage
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "RM Shortage");
+    
+    const fileName = `RM_Shortage_Summary_${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(wb, fileName);
 }
 
 async function deleteOrder(id, poNum) {

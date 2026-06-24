@@ -280,6 +280,32 @@ try {
             }
             break;
 
+        case 'reopen_job':
+            if (!hasPermission('manage_production')) {
+                throw new Exception("ไม่มีสิทธิ์เปิดงานใหม่ (ต้องการสิทธิ์ระดับผู้จัดการ/แอดมิน)");
+            }
+            $job_id = $input['job_id'];
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("SELECT status FROM PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ?");
+            $stmt->execute([$job_id]);
+            $status = $stmt->fetchColumn();
+
+            if (!$status) {
+                $pdo->rollBack();
+                throw new Exception("ไม่พบงานนี้ในระบบ");
+            }
+
+            if (in_array($status, ['COMPLETED', 'CANCELLED'])) {
+                $pdo->prepare("UPDATE PRODUCTION_JOBS SET status = 'PAUSED', end_time = NULL WHERE job_id = ?")->execute([$job_id]);
+                $pdo->commit();
+                writeLog($pdo, 'REOPEN_JOB', 'PRODUCTION_JOBS', $job_id, null, null, "Reopened completed/cancelled job");
+                echo json_encode(['success' => true, 'message' => "เปิดงานใหม่อีกครั้งแล้ว"]);
+            } else {
+                $pdo->rollBack();
+                throw new Exception("ไม่สามารถเปิดงานนี้ได้ (สถานะปัจจุบัน: $status)");
+            }
+            break;
+
         case 'get_job_logs':
             $job_no = $_GET['job_no'];
             
