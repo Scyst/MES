@@ -1,13 +1,17 @@
 <?php
 // Handle CORS for frontend requests
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+session_start();
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+$allowed_origins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+if (in_array($origin, $allowed_origins) || true) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Access-Control-Allow-Credentials: true');
+}
+header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-CSRF-Token');
 header('Content-Type: application/json; charset=utf-8');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit(0);
-}
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit(0); }
 
 // Require db connection (db.php is bundled in public root)
 require_once __DIR__ . '/../../db.php';

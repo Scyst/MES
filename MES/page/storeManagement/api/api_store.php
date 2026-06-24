@@ -1088,7 +1088,7 @@ try {
                     FROM dbo.STOCK_TRANSACTIONS t WITH (NOLOCK)
                     LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
                     LEFT JOIN dbo.LOCATIONS loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
-                    LEFT JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                    JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
                     LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
                     LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
                     WHERE $whereClause
@@ -1323,6 +1323,10 @@ try {
             $page = max(1, (int)($_GET['page'] ?? 1));
             $limit = max(10, (int)($_GET['limit'] ?? 100));
             $offset = ($page - 1) * $limit;
+            
+            $filterLine = $_GET['line'] ?? '';
+            $filterTeam = $_GET['team'] ?? '';
+
             $conditions = [
                 "1=1",
                 "t.transfer_uuid LIKE 'REQ-%'"
@@ -1332,6 +1336,15 @@ try {
             if ($status !== 'ALL') { $conditions[] = "t.status = ?"; $params[] = $status; }
             if (!empty($startDate)) { $conditions[] = "t.created_at >= ?"; $params[] = $startDate . ' 00:00:00'; }
             if (!empty($endDate)) { $conditions[] = "t.created_at <= ?"; $params[] = $endDate . ' 23:59:59'; }
+            
+            if (!empty($filterLine)) {
+                $conditions[] = "loc_to.production_line = ?";
+                $params[] = $filterLine;
+            }
+            if (!empty($filterTeam)) {
+                $conditions[] = "u.team_group = ?";
+                $params[] = $filterTeam;
+            }
 
             if (!empty($search)) {
                 $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.transfer_uuid LIKE ? OR e.name_th LIKE ?)";
@@ -1355,6 +1368,7 @@ try {
             $kpiSql = "SELECT COUNT(t.transfer_id) as total_count, ISNULL(SUM(t.quantity), 0) as total_qty, ISNULL(SUM(t.quantity * ISNULL(i.Cost_Total, 0)), 0) as total_cost
                        FROM dbo.STOCK_TRANSFER_ORDERS t WITH (NOLOCK)
                        JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                       JOIN dbo.LOCATIONS loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
                        JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
                        LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
                        LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
@@ -1384,6 +1398,8 @@ try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            
 
             $response = [
                 'success' => true, 'data' => $data, 'kpi' => $kpi,
@@ -1979,10 +1995,190 @@ try {
         default:
             http_response_code(400);
             throw new Exception("Invalid API Action Request: " . htmlspecialchars($action));
-    }
-    echo json_encode($response);
+            break;
+
+        case 'get_scrap_dashboard':
+            $status = $_GET['status'] ?? 'ALL';
+            $search = $_GET['search'] ?? '';
+            $startDate = $_GET['start_date'] ?? '';
+            $endDate = $_GET['end_date'] ?? '';
+            $filterLine = $_GET['line'] ?? '';
+            $filterTeam = $_GET['team'] ?? '';
+
+            $conditions = [
+                "1=1",
+                "t.transfer_uuid LIKE 'REQ-%'"
+            ];
+            $params = [];
+
+            if ($status !== 'ALL') { $conditions[] = "t.status = ?"; $params[] = $status; }
+            if (!empty($startDate)) { $conditions[] = "t.created_at >= ?"; $params[] = $startDate . ' 00:00:00'; }
+            if (!empty($endDate)) { $conditions[] = "t.created_at <= ?"; $params[] = $endDate . ' 23:59:59'; }
+            
+            if (!empty($filterLine)) {
+                $conditions[] = "loc_to.production_line = ?";
+                $params[] = $filterLine;
+            }
+            if (!empty($filterTeam)) {
+                $conditions[] = "u.team_group = ?";
+                $params[] = $filterTeam;
+            }
+
+            if (!empty($search)) {
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.transfer_uuid LIKE ? OR e.name_th LIKE ?)";
+                $searchParam = "%$search%";
+                $params = array_merge($params, array_fill(0, 4, $searchParam));
+            }
+
+            if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "(loc_to.production_line = ? OR t.created_by_user_id = ?)";
+                $params[] = $currentUser['line'] ?? '';
+                $params[] = $currentUser['id'];
+            } else if ($currentUser['role'] !== 'admin' && $currentUser['role'] !== 'creator') {
+                $conditions[] = "t.created_by_user_id = ?";
+                $params[] = $currentUser['id'];
+            }
+
+            $whereClause = "WHERE " . implode(' AND ', $conditions);
+
+            // 0. Summary KPIs
+            $summarySql = "SELECT 
+                COUNT(DISTINCT t.transfer_uuid) as total_tickets,
+                ISNULL(SUM(t.quantity), 0) as total_pcs,
+                ISNULL(SUM(t.quantity * ISNULL(i.Cost_Total, 0)), 0) as total_cost
+                FROM dbo.STOCK_TRANSFER_ORDERS t WITH (NOLOCK)
+                JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                JOIN dbo.LOCATIONS loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
+                JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                $whereClause";
+            $stmt = $pdo->prepare($summarySql);
+            $stmt->execute($params);
+            $summaryData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // 1. Trend Data (Last 30 Days or based on filter)
+            $trendSql = "SELECT CAST(t.created_at AS DATE) as date, ISNULL(SUM(t.quantity * ISNULL(i.Cost_Total, 0)), 0) as total_cost
+                         FROM dbo.STOCK_TRANSFER_ORDERS t WITH (NOLOCK)
+                         JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                         JOIN dbo.LOCATIONS loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
+                         JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                         LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                         LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                         $whereClause
+                         GROUP BY CAST(t.created_at AS DATE)
+                         ORDER BY date ASC";
+            $stmt = $pdo->prepare($trendSql);
+            $stmt->execute($params);
+            $trendData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 2. Cost by Line
+            $lineSql = "SELECT ISNULL(loc_to.production_line, 'N/A') as line, ISNULL(SUM(t.quantity * ISNULL(i.Cost_Total, 0)), 0) as total_cost
+                        FROM dbo.STOCK_TRANSFER_ORDERS t WITH (NOLOCK)
+                        JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                        JOIN dbo.LOCATIONS loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
+                        JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                        LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                        LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                        $whereClause
+                        GROUP BY loc_to.production_line
+                        ORDER BY total_cost DESC";
+            $stmt = $pdo->prepare($lineSql);
+            $stmt->execute($params);
+            $lineData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. Cost by Team
+            $teamSql = "SELECT ISNULL(u.team_group, 'N/A') as team, ISNULL(SUM(t.quantity * ISNULL(i.Cost_Total, 0)), 0) as total_cost
+                        FROM dbo.STOCK_TRANSFER_ORDERS t WITH (NOLOCK)
+                        JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                        JOIN dbo.LOCATIONS loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
+                        JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                        LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                        LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                        $whereClause
+                        GROUP BY u.team_group
+                        ORDER BY total_cost DESC";
+            $stmt = $pdo->prepare($teamSql);
+            $stmt->execute($params);
+            $teamData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 4. Top 5 Parts
+            $topSql = "SELECT TOP 5 ISNULL(i.part_no, i.sap_no) as part_no, ISNULL(SUM(t.quantity * ISNULL(i.Cost_Total, 0)), 0) as total_cost
+                       FROM dbo.STOCK_TRANSFER_ORDERS t WITH (NOLOCK)
+                       JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                       JOIN dbo.LOCATIONS loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
+                       JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                       LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                       LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                       $whereClause
+                       GROUP BY ISNULL(i.part_no, i.sap_no)
+                       ORDER BY total_cost DESC";
+            $stmt = $pdo->prepare($topSql);
+            $stmt->execute($params);
+            $topPartsData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 5. Top Defect Reasons
+            $reasonSql = "SELECT TOP 10 
+                REPLACE(ISNULL(t.notes, 'N/A'), 'Replacement: [SNC] ', '') as reason, 
+                ISNULL(SUM(t.quantity * ISNULL(i.Cost_Total, 0)), 0) as total_cost
+                FROM dbo.STOCK_TRANSFER_ORDERS t WITH (NOLOCK)
+                JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                JOIN dbo.LOCATIONS loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
+                JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                $whereClause
+                GROUP BY REPLACE(ISNULL(t.notes, 'N/A'), 'Replacement: [SNC] ', '')
+                ORDER BY total_cost DESC";
+            $stmt = $pdo->prepare($reasonSql);
+            $stmt->execute($params);
+            $reasonData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 6. Top Requesters
+            $requesterSql = "SELECT TOP 5 
+                ISNULL(e.name_th, u.username) as requester, 
+                ISNULL(SUM(t.quantity * ISNULL(i.Cost_Total, 0)), 0) as total_cost
+                FROM dbo.STOCK_TRANSFER_ORDERS t WITH (NOLOCK)
+                JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                JOIN dbo.LOCATIONS loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
+                JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                $whereClause
+                GROUP BY ISNULL(e.name_th, u.username)
+                ORDER BY total_cost DESC";
+            $stmt = $pdo->prepare($requesterSql);
+            $stmt->execute($params);
+            $requesterData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Top Line for KPI
+            $topLine = (!empty($lineData)) ? $lineData[0]['line'] : 'N/A';
+
+            $response = [
+                'success' => true,
+                'summary' => [
+                    'total_tickets' => $summaryData['total_tickets'] ?? 0,
+                    'total_pcs' => $summaryData['total_pcs'] ?? 0,
+                    'total_cost' => $summaryData['total_cost'] ?? 0,
+                    'top_line' => $topLine
+                ],
+                'trend' => $trendData,
+                'line' => $lineData,
+                'team' => $teamData,
+                'top_parts' => $topPartsData,
+                'reasons' => $reasonData,
+                'requesters' => $requesterData
+            ];
+            break;
+}
+echo json_encode($response);
 
 } catch (Throwable $e) {
     handleApiError($e, isset($pdo) ? $pdo : null, $_POST);
 }
 ?>
+
+
+
+
+

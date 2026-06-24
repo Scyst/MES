@@ -687,6 +687,32 @@ async function deleteJob(jobId, jobNo, status) {
     }
 }
 
+async function reopenJob(jobId, jobNo) {
+    const confirm = await Swal.fire({
+        title: 'ยืนยันการเปิดงานอีกครั้ง?',
+        text: `ดึงจ๊อบ ${jobNo} กลับมาทำต่อ สถานะจะเปลี่ยนเป็น "พักงาน"`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        confirmButtonText: 'เปิดงานอีกครั้ง'
+    });
+    
+    if (confirm.isConfirmed) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const res = await fetch(`${JOB_API_URL}?action=reopen_job`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body: JSON.stringify({ job_id: jobId })
+        }).then(r => r.json());
+        
+        if (res.success) {
+            if(typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
+            fetchJobs(true);
+            openJobHistory();
+        } else Swal.fire('Error', res.message, 'error');
+    }
+}
+
 async function openJobHistory() {
     const locId = document.getElementById('locationSelect').value;
     

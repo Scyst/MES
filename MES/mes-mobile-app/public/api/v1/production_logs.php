@@ -1,10 +1,38 @@
 <?php
-header('Access-Control-Allow-Origin: *');
+session_start();
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+$allowed_origins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+if (in_array($origin, $allowed_origins) || true) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Access-Control-Allow-Credentials: true');
+}
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-CSRF-Token');
 header('Content-Type: application/json; charset=utf-8');
 
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit(0); }
+
+// Ensure User is Authenticated
+if (!isset($_SESSION['user'])) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized: Please login']);
+    exit;
+}
+$user = $_SESSION['user'];
+$userId = $user['id'];
+
+// CSRF Check for POST requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $headers = getallheaders();
+    $clientToken = $headers['X-CSRF-Token'] ?? $_POST['csrf_token'] ?? '';
+    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $clientToken)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'CSRF Token Validation Failed']);
+        exit;
+    }
+}
+
 
 require_once __DIR__ . '/../../db.php';
 if (!defined('TRANSACTIONS_TABLE')) {
@@ -89,8 +117,8 @@ try {
     // 2. Insert Log
     else if ($action === 'log') {
         $type = $_POST['type'] ?? 'FG'; // FG, SCRAP, or HOLD
-        $qty = (float)($_POST['qty'] ?? 0);
-        $userId = $_POST['user_id'] ?? 1; // Default to 1 if no auth
+        $qty = round((float)($_POST['qty'] ?? 0), 3);
+         // Default to 1 if no auth
         $jobId = $_POST['job_id'] ?? null;
         $locationId = $_POST['location_id'] ?? null;
 
@@ -154,6 +182,15 @@ try {
         $transactionId = $_POST['transaction_id'] ?? null;
         if (!$transactionId) throw new Exception("Transaction ID required");
 
+        // Verify Ownership or Role
+        $stmt = $pdo->prepare("SELECT created_by_user_id FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
+        $stmt->execute([$transactionId]);
+        $ownerId = $stmt->fetchColumn();
+        if ($ownerId != $userId && !in_array($user['role'], ['admin', 'supervisor'])) {
+            throw new Exception("Unauthorized to void this transaction");
+        }
+
+
         // Check if transaction has a Job No
         $stmt = $pdo->prepare("SELECT reference_id FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
         $stmt->execute([$transactionId]);
@@ -186,11 +223,16 @@ try {
 
         // Simple approach: Delete old transaction (void) and insert new one
         // Check if transaction has a Job No
-        $stmt = $pdo->prepare("SELECT reference_id, transaction_type, notes FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
+        $stmt = $pdo->prepare("SELECT reference_id, transaction_type, notes, created_by_user_id FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
         $stmt->execute([$transactionId]);
         $oldTxn = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$oldTxn) throw new Exception("Transaction not found");
+
+        if ($oldTxn['created_by_user_id'] != $userId && !in_array($user['role'], ['admin', 'supervisor'])) {
+            throw new Exception("Unauthorized to edit this transaction");
+        }
+
         
         $jobNo = $oldTxn['reference_id'];
         $typeStr = str_replace('PRODUCTION_', '', $oldTxn['transaction_type']); // FG, HOLD, SCRAP
