@@ -302,7 +302,8 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
                             <th class="text-end py-2">Hold</th>
                             <th class="text-end py-2">Scrap</th>
                             <th class="text-center py-2">Status</th>
-                            <th class="text-center pe-3 py-2">Time</th>
+                            <th class="text-center py-2">Time</th>
+                            <th class="text-center pe-3 py-2" width="60">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody id="historyTableBody"></tbody>

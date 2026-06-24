@@ -704,13 +704,14 @@ async function openJobHistory() {
             );
 
             if (historyJobs.length === 0) {
-                if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">ยังไม่มีประวัติการผลิต</td></tr>';
+                if(tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">ยังไม่มีประวัติการผลิต</td></tr>';
             } else {
                 historyJobs.forEach(job => {
                     let badgeClass = job.status === 'COMPLETED' ? 'bg-primary' : 'bg-danger';
                     let startTime = job.start_time ? new Date(job.start_time).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}) : '-';
                     let endTime = job.end_time ? new Date(job.end_time).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}) : '-';
                     let locTag = locId === '' ? `<br><span class="badge bg-light text-dark border mt-1">${job.location_name}</span>` : '';
+                    let actionBtn = (typeof canManage !== 'undefined' && canManage) ? `<button class="btn btn-sm btn-outline-success border-0" onclick="reopenJob(${job.job_id}, '${job.job_no}')" title="เปิดงานอีกครั้ง"><i class="fas fa-redo"></i></button>` : '-';
 
                     if(tbody) {
                         let lotTag = job.lot_no ? `<br><span class="text-muted small fw-normal">Lot: ${job.lot_no}</span>` : '';
@@ -724,13 +725,14 @@ async function openJobHistory() {
                                 <td class="text-end fw-bold text-danger">${parseFloat(job.scrap_qty || 0).toLocaleString()}</td>
                                 <td class="text-center"><span class="badge ${badgeClass}">${job.status}</span></td>
                                 <td class="text-center text-muted small">${startTime} - ${endTime}</td>
+                                <td class="text-center">${actionBtn}</td>
                             </tr>
                         `);
                     }
                 });
             }
         } else {
-            if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">ไม่พบข้อมูลประวัติ</td></tr>';
+            if(tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">ไม่พบข้อมูลประวัติ</td></tr>';
         }
 
         const offcanvasEl = document.getElementById('historyOffcanvas');
