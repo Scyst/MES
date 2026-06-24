@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData();
             formData.append('doc_file', file);
             formData.append('file_description', description);
-            formData.append('category', currentFolderPath);
+            formData.append('category', category.trim() !== '' ? category : currentFolderPath);
 
             try {
                 await apiRequest('upload', formData, 'POST');
