@@ -7,7 +7,7 @@ if (!hasRole(['admin', 'creator', 'supervisor', 'operator', 'qc'])) {
     exit;
 }
 
-$canManage = hasRole(['admin', 'creator']);
+$canManage = hasRole(['admin', 'creator', 'qc']);
 $currentUser = $_SESSION['user'];
 
 // กำหนดตัวแปรสำหรับ top_header.php

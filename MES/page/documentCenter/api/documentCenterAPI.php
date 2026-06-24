@@ -124,7 +124,7 @@ try {
                 $params[] = $folderPath;
             }
 
-            if (!hasRole(['admin', 'creator'])) {
+            if (!hasRole(['admin', 'creator', 'qc'])) {
                 $whereClauses[] = "d.file_name LIKE '%.pdf'";
             }
 
@@ -174,7 +174,7 @@ try {
         //  CREATE FOLDER
         //==================================
         case 'create_folder':
-            if (!hasRole(['admin', 'creator'])) {
+            if (!hasRole(['admin', 'creator', 'qc'])) {
                 throw new Exception('Permission denied.', 403);
             }
             $inputData = json_decode(file_get_contents('php://input'), true);
@@ -201,7 +201,7 @@ try {
         //  UPLOAD DOCUMENT
         //==================================
         case 'upload':
-            if (!hasRole(['admin', 'creator'])) {
+            if (!hasRole(['admin', 'creator', 'qc'])) {
                 http_response_code(403);
                 echo json_encode(['error' => 'Permission Denied. You do not have rights to upload documents.']);
                 exit;
@@ -257,7 +257,7 @@ try {
         //  REVISE DOCUMENT
         //==================================
         case 'revise':
-            if (!hasRole(['admin', 'creator'])) {
+            if (!hasRole(['admin', 'creator', 'qc'])) {
                 http_response_code(403);
                 echo json_encode(['error' => 'Permission Denied. You do not have rights to revise documents.']);
                 exit;
@@ -332,7 +332,7 @@ try {
         //  UPDATE DOCUMENT
         //==================================
         case 'update':
-            if (!hasRole(['admin', 'creator'])) {
+            if (!hasRole(['admin', 'creator', 'qc'])) {
                 throw new Exception('Permission denied.', 403);
             }
             $inputData = json_decode(file_get_contents('php://input'), true);
@@ -351,7 +351,7 @@ try {
         //  DELETE DOCUMENTS
         //==================================
         case 'delete':
-            if (!hasRole(['admin', 'creator'])) {
+            if (!hasRole(['admin', 'creator', 'qc'])) {
                 throw new Exception('Permission Denied.', 403);
             }
             $inputData = json_decode(file_get_contents('php://input'), true);
