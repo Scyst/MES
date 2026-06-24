@@ -94,8 +94,6 @@ $pageIcon = "fas fa-folder-open";
         .category-item.active { background-color: #EEF2FF; color: var(--primary-color); font-weight: 600; }
         .folder-arrow { font-size: 0.8rem; color: var(--text-secondary); }
     </style>
-    <!-- Online 3D Viewer Library -->
-    <script src="https://cdn.jsdelivr.net/npm/online-3d-viewer@0.8.18/build/engine/o3dv.min.js"></script>
 </head>
 
 <body class="layout-top-header">
