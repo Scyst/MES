@@ -151,6 +151,7 @@ document.addEventListener('DOMContentLoaded', function () {
             case 'png': case 'jpg': case 'jpeg': case 'gif': return 'fa-file-image text-info';
             case 'zip': case 'rar': case '7z': return 'fa-file-archive text-warning';
             case 'txt': return 'fa-file-alt text-muted';
+            case 'step': case 'stp': case 'igs': case 'iges': case 'stl': case 'obj': case 'gltf': case 'glb': return 'fa-cube text-info';
             default: return 'fa-file-alt text-secondary';
         }
     }
@@ -207,10 +208,20 @@ document.addEventListener('DOMContentLoaded', function () {
                     </td>` : ''}`;
             } else {
                 // DOCUMENT ROW
+                const ext = doc.file_name.split('.').pop().toLowerCase();
+                const is3D = ['step', 'stp', 'igs', 'iges', 'stl', 'obj', 'gltf', 'glb'].includes(ext);
+                
+                let linkHtml = '';
+                if (is3D) {
+                    linkHtml = `<a href="javascript:void(0)" onclick="window.open3DViewer(${doc.id}, '${escapeHTML(doc.file_name)}')" style="color: var(--primary-color); text-decoration: none;">${escapeHTML(doc.file_name)}</a>`;
+                } else {
+                    linkHtml = `<a href="api/view_document.php?id=${doc.id}" target="_blank" style="color: var(--primary-color); text-decoration: none;">${escapeHTML(doc.file_name)}</a>`;
+                }
+
                 tr.innerHTML = `
                     <td class="fw-bold" style="color: var(--text-primary);">
                         <i class="fas ${getFileIconClass(doc.file_name)} fa-lg me-2" style="color: var(--primary-color);"></i> 
-                        <a href="api/view_document.php?id=${doc.id}" target="_blank" style="color: var(--primary-color); text-decoration: none;">${escapeHTML(doc.file_name)}</a>
+                        ${linkHtml}
                     </td>
                     <td class="text-secondary small">${escapeHTML(doc.file_description) || '-'}</td>
                     <td class="category-path-cell small">
@@ -329,13 +340,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const newViewBtn = viewBtn.cloneNode(true); 
         viewBtn.parentNode.replaceChild(newViewBtn, viewBtn);
         newViewBtn.addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.href = `api/view_document.php?id=${doc.id}`;
-            link.target = '_blank';
-            // Append to body is sometimes required for Safari/Firefox
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const ext = doc.file_name.split('.').pop().toLowerCase();
+            const is3D = ['step', 'stp', 'igs', 'iges', 'stl', 'obj', 'gltf', 'glb'].includes(ext);
+            if (is3D) {
+                if (viewDocModal) viewDocModal.hide();
+                window.open3DViewer(doc.id, doc.file_name);
+            } else {
+                const link = document.createElement('a');
+                link.href = `api/view_document.php?id=${doc.id}`;
+                link.target = '_blank';
+                // Append to body is sometimes required for Safari/Firefox
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
         });
 
         if (downloadBtn) {
@@ -706,3 +724,64 @@ document.addEventListener('DOMContentLoaded', function () {
 
     initialize();
 });
+
+// -----------------------------------------
+// 3D VIEWER GLOBALS
+// -----------------------------------------
+let viewer3DInstance = null;
+let viewer3DModal = null;
+
+window.open3DViewer = function(docId, fileName) {
+    if (!viewer3DModal) {
+        viewer3DModal = new bootstrap.Modal(document.getElementById('view3DModal'));
+    }
+    
+    document.getElementById('view3DModalTitle').textContent = fileName;
+    document.getElementById('viewer3d-loading').style.display = 'flex';
+    viewer3DModal.show();
+
+    // Small delay to let modal layout calculate dimensions before initializing viewer
+    setTimeout(() => {
+        const container = document.getElementById('viewer3d-container');
+        
+        if (!viewer3DInstance) {
+            OV.Init3DViewerElements();
+            viewer3DInstance = new OV.EmbeddedViewer(container, {
+                camera : new OV.Camera (new OV.Coord3D (0, 0, 5), new OV.Coord3D (0, 0, 0), new OV.Coord3D (0, 1, 0)),
+                backgroundColor : new OV.RGBAColor (248, 250, 252, 255), // Match #f8fafc bg
+                defaultColor : new OV.RGBColor (200, 200, 200),
+                edgeSettings : new OV.EdgeSettings (true, new OV.RGBColor (0, 0, 0), 1)
+            });
+        } else {
+            viewer3DInstance.Clear();
+        }
+
+        const modelUrl = `api/view_document.php?id=${docId}&download=1`; // Use download=1 to force file stream if needed, or just normal URL
+        
+        // Load the model
+        viewer3DInstance.LoadModelFromUrlList([modelUrl], {
+            onLoadStart: () => {
+                document.getElementById('viewer3d-loading').style.display = 'flex';
+            },
+            onLoadProgress: (progress) => {
+                // Not highly reliable in o3dv without worker but we can leave it
+            },
+            onLoadCompleted: () => {
+                document.getElementById('viewer3d-loading').style.display = 'none';
+            },
+            onLoadError: () => {
+                document.getElementById('viewer3d-loading').style.display = 'none';
+                alert('Error loading 3D model. It might be an unsupported or corrupted file.');
+            }
+        });
+    }, 300);
+};
+
+window.close3DViewer = function() {
+    if (viewer3DModal) {
+        viewer3DModal.hide();
+    }
+    if (viewer3DInstance) {
+        viewer3DInstance.Clear();
+    }
+};
