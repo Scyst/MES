@@ -756,24 +756,33 @@ window.open3DViewer = function(docId, fileName) {
             viewer3DInstance.Clear();
         }
 
-        const modelUrl = `api/view_document.php?id=${docId}&download=1`; // Use download=1 to force file stream if needed, or just normal URL
+        const modelUrl = `api/view_document.php?id=${docId}&download=1`; 
         
-        // Load the model
-        viewer3DInstance.LoadModelFromUrlList([modelUrl], {
-            onLoadStart: () => {
-                document.getElementById('viewer3d-loading').style.display = 'flex';
-            },
-            onLoadProgress: (progress) => {
-                // Not highly reliable in o3dv without worker but we can leave it
-            },
-            onLoadCompleted: () => {
+        fetch(modelUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.blob();
+            })
+            .then(blob => {
+                const file = new File([blob], fileName);
+                viewer3DInstance.LoadModelFromFileList([file], {
+                    onLoadStart: () => {
+                        document.getElementById('viewer3d-loading').style.display = 'flex';
+                    },
+                    onLoadCompleted: () => {
+                        document.getElementById('viewer3d-loading').style.display = 'none';
+                    },
+                    onLoadError: () => {
+                        document.getElementById('viewer3d-loading').style.display = 'none';
+                        alert('Error loading 3D model. It might be an unsupported or corrupted file.');
+                    }
+                });
+            })
+            .catch(error => {
                 document.getElementById('viewer3d-loading').style.display = 'none';
-            },
-            onLoadError: () => {
-                document.getElementById('viewer3d-loading').style.display = 'none';
-                alert('Error loading 3D model. It might be an unsupported or corrupted file.');
-            }
-        });
+                console.error(error);
+                alert('Failed to download the 3D model from the server.');
+            });
     }, 300);
 };
 
