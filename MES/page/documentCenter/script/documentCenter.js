@@ -216,6 +216,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     linkHtml = `<a href="javascript:void(0)" onclick="window.open3DViewer(${doc.id}, '${escapeHTML(doc.file_name)}')" style="color: var(--primary-color); text-decoration: none;">${escapeHTML(doc.file_name)}</a>`;
                 } else {
                     linkHtml = `<a href="api/view_document.php?id=${doc.id}" target="_blank" style="color: var(--primary-color); text-decoration: none;">${escapeHTML(doc.file_name)}</a>`;
+                    if (doc.linked_3d_id) {
+                        linkHtml += ` <button onclick="window.open3DViewer(${doc.linked_3d_id}, '${escapeHTML(doc.linked_3d_name)}')" class="btn btn-sm btn-outline-info ms-2" style="padding: 0 6px; font-size: 0.75rem; border-radius: 12px;" title="View associated 3D Model"><i class="fas fa-cube"></i> 3D Preview</button>`;
+                    }
                 }
 
                 tr.innerHTML = `

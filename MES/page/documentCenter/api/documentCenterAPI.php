@@ -153,6 +153,35 @@ try {
 
             foreach ($documentsToReturn as &$doc) {
                 $doc['is_folder'] = false;
+                $doc['linked_3d_id'] = null;
+                $doc['linked_3d_name'] = null;
+                
+                $ext = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
+                if ($ext === 'pdf') {
+                    $baseName = pathinfo($doc['file_name'], PATHINFO_FILENAME);
+                    
+                    $sql3D = "SELECT TOP 1 id, file_name FROM dbo.{$documentsTable} 
+                              WHERE category = ? 
+                              AND LOWER(file_name) IN (?, ?, ?, ?, ?, ?, ?, ?)";
+                    $stmt3D = $pdo->prepare($sql3D);
+                    $stmt3D->execute([
+                        $doc['category'],
+                        strtolower($baseName . '.step'),
+                        strtolower($baseName . '.stp'),
+                        strtolower($baseName . '.igs'),
+                        strtolower($baseName . '.iges'),
+                        strtolower($baseName . '.stl'),
+                        strtolower($baseName . '.obj'),
+                        strtolower($baseName . '.gltf'),
+                        strtolower($baseName . '.glb')
+                    ]);
+                    $linked3D = $stmt3D->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($linked3D) {
+                        $doc['linked_3d_id'] = $linked3D['id'];
+                        $doc['linked_3d_name'] = $linked3D['file_name'];
+                    }
+                }
             }
 
             // Combine: Folders first, then documents
