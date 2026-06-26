@@ -31,7 +31,46 @@
 <link rel="stylesheet" href="../components/css/mobile.css?v=<?php echo filemtime(__DIR__ . '/../components/css/mobile.css'); ?>">
 <link rel="stylesheet" href="../components/css/fonts.css?v=<?php echo filemtime(__DIR__ . '/../components/css/fonts.css'); ?>">
 
-<script src="../components/js/apiClient.js?v=<?php echo filemtime(__DIR__ . '/js/apiClient.js'); ?>" defer></script>
+<script>
+// Inline sendRequest to guarantee global availability before any other script runs
+window.sendRequest = async function sendRequest(endpoint, action, method, body = null, params = null) {
+    try {
+        let url = `${endpoint}?action=${action}`;
+        if (params) {
+            const filteredParams = Object.entries(params)
+                                    .filter(([key, value]) => value !== null && value !== '')
+                                    .reduce((obj, [key, value]) => {
+                                        obj[key] = value;
+                                        return obj;
+                                    }, {});
+            if (Object.keys(filteredParams).length > 0) {
+                 url += `&${new URLSearchParams(filteredParams).toString()}`;
+            }
+        }
+        const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : null;
+        const options = { method: method.toUpperCase(), headers: {} };
+        if (options.method !== 'GET' && csrfToken) { options.headers['X-CSRF-TOKEN'] = csrfToken; }
+        if (body && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH')) {
+            options.headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(body);
+        }
+        const response = await fetch(url, options);
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) { throw new Error(result.message || response.statusText || `HTTP error! status: ${response.status}`); }
+        if (typeof result.success === 'undefined') { result.success = false; }
+        return result;
+    } catch (error) {
+        console.error(`Request failed:`, error);
+        if (typeof showToast === 'function') {
+             showToast(`Error: ${error.message}` || 'An unexpected error occurred.', 'var(--bs-danger)');
+        } else {
+             alert(`Error: ${error.message}` || 'An unexpected error occurred.');
+        }
+        return { success: false, message: error.message || "Network error." };
+    }
+}
+</script>
 <script src="../components/js/appCore.js?v=<?php echo filemtime(__DIR__ . '/js/appCore.js'); ?>" defer></script>
 <script src="../components/js/theme-switcher.js?v=<?php echo filemtime(__DIR__ . '/js/theme-switcher.js'); ?>" defer></script>
 <script src="../components/js/spinner.js?v=<?php echo filemtime(__DIR__ . '/js/spinner.js'); ?>"></script>
