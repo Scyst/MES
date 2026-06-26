@@ -118,9 +118,14 @@ try {
     else if ($action === 'log') {
         $type = $_POST['type'] ?? 'FG'; // FG, SCRAP, or HOLD
         $qty = round((float)($_POST['qty'] ?? 0), 3);
-         // Default to 1 if no auth
         $jobId = $_POST['job_id'] ?? null;
         $locationId = $_POST['location_id'] ?? null;
+        
+        // NEW FIELDS
+        $lotNo = $_POST['lot_no'] ?? null;
+        $timeSlot = $_POST['time_slot'] ?? null; // format: "08:00:00|08:59:59"
+        $sapNo = $_POST['sap_no'] ?? null;
+        $customNotes = $_POST['notes'] ?? '';
 
         if ($qty <= 0) throw new Exception("Quantity must be greater than 0");
 
@@ -144,14 +149,25 @@ try {
             // Execute Production SP to deduct BOM & Update Stock
             $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?");
             $ts = date('Y-m-d H:i:s');
+            
+            // Parse timeSlot if provided
             $st = $job['start_time'] ? date('H:i:s', strtotime($job['start_time'])) : date('H:i:s');
             $et = date('H:i:s');
-            $note = "[MACHINE:" . ($machineId ?: '') . "] Mobile App " . time();
-            $locToUse = $locationId ?: $job['location_id'];
+            if ($timeSlot && strpos($timeSlot, '|') !== false) {
+                list($st, $et) = explode('|', $timeSlot);
+            }
 
-            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile']);
-            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile']);
-            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile']);
+            $note = "[MACHINE:" . ($machineId ?: 'NONE') . "] Mobile App";
+            if ($customNotes) {
+                $note .= " | " . $customNotes;
+            }
+            
+            $locToUse = $locationId ?: $job['location_id'];
+            $lotToUse = $lotNo ?: $job['job_no'];
+
+            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile']);
+            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile']);
+            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile']);
 
             // Update machine_id since SP doesn't take it
             if ($machineId) {
@@ -166,12 +182,23 @@ try {
             else if ($type === 'HOLD') $transType = 'PRODUCTION_HOLD';
 
             $note = "Mobile App Entry";
+            if ($timeSlot) $note .= " [TIME: $timeSlot]";
+            if ($customNotes) $note .= " | " . $customNotes;
+            
+            // Resolve SAP No to Item ID if provided
+            $itemId = null;
+            if ($sapNo) {
+                $itemStmt = $pdo->prepare("SELECT item_id FROM " . ITEMS_TABLE . " WHERE sap_no = ?");
+                $itemStmt->execute([$sapNo]);
+                $itemId = $itemStmt->fetchColumn();
+            }
+
             $sql = "INSERT INTO " . TRANSACTIONS_TABLE . " 
-                    (transaction_type, quantity, created_by_user_id, notes, transaction_timestamp, machine_id, to_location_id)
-                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?)";
+                    (transaction_type, quantity, created_by_user_id, notes, transaction_timestamp, machine_id, to_location_id, reference_id, parameter_id)
+                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?, ?)";
             
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$transType, $qty, $userId, $note, $machineId, $locationId]);
+            $stmt->execute([$transType, $qty, $userId, $note, $machineId, $locationId, $lotNo, $itemId]);
         }
 
         echo json_encode(['success' => true, 'message' => "Logged $qty $type"]);

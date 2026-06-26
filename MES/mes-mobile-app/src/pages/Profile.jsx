@@ -29,10 +29,18 @@ export default function Profile() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      const url = (import.meta.env.VITE_API_BASE_URL || './api/v1') + '/logout.php';
+      await fetch(url);
+    } catch (e) {
+      console.error(e);
+    }
     localStorage.removeItem('mes_active_team');
-    // Redirect to main system logout
-    window.location.href = '../../auth/logout.php';
+    
+    // Hard reload to reset state or navigate
+    window.location.href = '#/login';
+    window.location.reload();
   };
 
   return (

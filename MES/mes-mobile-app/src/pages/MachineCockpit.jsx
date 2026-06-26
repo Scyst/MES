@@ -13,6 +13,13 @@ export default function MachineCockpit({ type = 'machine' }) {
   const [machineData, setMachineData] = useState(null);
   const [locationData, setLocationData] = useState(null);
 
+  // Missing features from old system
+  const [timeSlot, setTimeSlot] = useState('');
+  const [lotNo, setLotNo] = useState('');
+  const [notes, setNotes] = useState('');
+  const [sapNo, setSapNo] = useState('');
+
+
   // Job & Team state
   const [activeJobs, setActiveJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState('');
@@ -121,10 +128,16 @@ export default function MachineCockpit({ type = 'machine' }) {
     formData.append('type', logType);
     formData.append('qty', qty);
     if (selectedJob) formData.append('job_id', selectedJob);
+    if (sapNo) formData.append('sap_no', sapNo);
+    if (timeSlot) formData.append('time_slot', timeSlot);
+    if (lotNo) formData.append('lot_no', lotNo);
+    
+    let combinedNotes = notes;
     if (activeTeam.length > 0) {
       const teamNames = activeTeam.map(t => t.name || t.fullname || t.username).join(', ');
-      formData.append('notes', `[TEAM_OVERRIDE: ${teamNames}]`);
+      combinedNotes = combinedNotes ? `${combinedNotes} [TEAM: ${teamNames}]` : `[TEAM: ${teamNames}]`;
     }
+    if (combinedNotes) formData.append('notes', combinedNotes);
 
     try {
       const res = await fetch(`${API_BASE_URL}/production_logs.php`, { method: 'POST', body: formData });
@@ -242,6 +255,19 @@ export default function MachineCockpit({ type = 'machine' }) {
                 </option>
               ))}
             </select>
+            
+            {!selectedJob && (
+              <div className="mt-3">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Item (SAP No.) *</label>
+                <input 
+                  type="text" 
+                  value={sapNo}
+                  onChange={(e) => setSapNo(e.target.value)}
+                  placeholder="Required for manual entry..."
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+                />
+              </div>
+            )}
           </div>
 
           {/* Quick Stepper Input */}
@@ -269,6 +295,46 @@ export default function MachineCockpit({ type = 'machine' }) {
               <button onClick={() => adjustQty(50)} className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">+50</button>
               <button onClick={() => adjustQty(100)} className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">+100</button>
               <button onClick={() => setQty(0)} className="px-4 py-2 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">Reset</button>
+            </div>
+          </div>
+
+          {/* Additional Info Fields */}
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-2xl shadow-lg transition-colors space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Time Slot</label>
+              <select 
+                value={timeSlot}
+                onChange={(e) => setTimeSlot(e.target.value)}
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+              >
+                <option value="">-- Now / Unspecified --</option>
+                <option value="08:00:00|08:59:59">08:00 - 09:00</option>
+                <option value="09:00:00|09:59:59">09:00 - 10:00</option>
+                <option value="10:00:00|10:59:59">10:00 - 11:00</option>
+                <option value="11:00:00|11:59:59">11:00 - 12:00</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Lot No.</label>
+                <input 
+                  type="text" 
+                  value={lotNo}
+                  onChange={(e) => setLotNo(e.target.value)}
+                  placeholder="Optional"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Notes</label>
+                <input 
+                  type="text" 
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Failure reason..."
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+                />
+              </div>
             </div>
           </div>
 

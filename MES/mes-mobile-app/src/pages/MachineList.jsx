@@ -69,14 +69,17 @@ export default function MachineList() {
   };
 
   const getMachineImage = (machine) => {
-    if (machine.image_path) {
-      if (machine.image_path.startsWith('http')) return machine.image_path;
-      let path = machine.image_path;
+    let path = machine.image_path || machine.image_url;
+    if (path) {
+      if (path.startsWith('http')) return path;
+      
+      // Clean up legacy paths
+      path = path.replace('../../uploads/', '');
+      path = path.replace('uploads/', '');
       if (path.startsWith('/')) path = path.substring(1);
-      if (!path.startsWith('../')) {
-        return `../../${path}`;
-      }
-      return path;
+      
+      // Based on user FTP structure: MobileApp/index.html -> ../MES/MES/uploads/pe_images/
+      return `../MES/MES/uploads/${path}`;
     }
     
     const line = machine.line || '';
