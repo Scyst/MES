@@ -413,9 +413,9 @@ try {
         const canAdd = <?php echo json_encode($canAdd); ?>;
         const currentUser = <?php echo json_encode($currentUserForJS); ?>;
     </script>
-    <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>"></script>
-    <script src="../../utils/libs/xlsx.full.min.js"></script>
-    <script src="script/inventory.js?v=<?php echo filemtime('script/inventory.js'); ?>"></script>
-    <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>"></script>
+    <script src="../components/js/pagination.js?v=<?php echo filemtime('../components/js/pagination.js'); ?>" defer></script>
+    <script src="../../utils/libs/xlsx.full.min.js" defer></script>
+    <script src="script/inventory.js?v=<?php echo filemtime('script/inventory.js'); ?>" defer></script>
+    <script src="script/export_data.js?v=<?php echo filemtime('script/export_data.js'); ?>" defer></script>
 </body>
 </html>
