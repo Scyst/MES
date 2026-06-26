@@ -13,7 +13,7 @@
  * @param {object|null} params URL parameters (key-value pairs). Filters out null/empty values.
  * @returns {Promise<object>} A promise that resolves with the JSON response from the server ({success: boolean, ...}). Returns a standard error object on failure.
  */
-async function sendRequest(endpoint, action, method, body = null, params = null) {
+window.sendRequest = async function sendRequest(endpoint, action, method, body = null, params = null) {
     try {
         let url = `${endpoint}?action=${action}`;
         if (params) {
