@@ -149,8 +149,10 @@ try {
             $locId = $tag['location_id'];
             
             $remark = " [Manual Force Issue by User $userId]";
-            $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET status = 'WIP', remark = ISNULL(remark, '') + ? WHERE serial_no = ?")
-                ->execute([$remark, $serial_no]);
+            $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET status = 'WIP' WHERE serial_no = ?")
+                ->execute([$serial_no]);
+            $pdo->prepare("INSERT INTO dbo.TAG_TRANSACTIONS (serial_no, transaction_type, quantity_changed, reference_id, created_by_user_id, notes) VALUES (?, 'FORCE_ISSUE', ?, NULL, ?, ?)")
+                ->execute([$serial_no, -$tag['current_qty'], $userId, $remark]);
                 
             if ($locId) {
                 // Prevent negative inventory by checking current quantity
@@ -239,16 +241,20 @@ try {
                         if ($tagQty <= $qty_to_deduct) {
                             // Transfer whole tag to WIP
                             $qty_to_deduct -= $tagQty;
-                            $updateSql = "UPDATE dbo.RM_SERIAL_TAGS SET status = 'WIP', remark = ISNULL(remark, '') + ?";
+                            $updateSql = "UPDATE dbo.RM_SERIAL_TAGS SET status = 'WIP'";
                             if ($destLocId) $updateSql .= ", location_id = " . intval($destLocId);
                             $updateSql .= " WHERE serial_no = ?";
                             
                             $pdo->prepare($updateSql)
-                                ->execute([" [Transfer to WIP for $req_number: Full]", $t['serial_no']]);
+                                ->execute([$t['serial_no']]);
+                            $pdo->prepare("INSERT INTO dbo.TAG_TRANSACTIONS (serial_no, transaction_type, quantity_changed, reference_id, created_by_user_id, notes) VALUES (?, 'ISSUE_FULL', ?, ?, ?, ?)")
+                                ->execute([$t['serial_no'], -$tagQty, $req_number, $issuer_id, "Transfer to WIP for Full"]);
                         } else {
                             // Partial transfer: Deduct from parent tag, create child tag in WIP
-                            $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET current_qty = current_qty - ?, remark = ISNULL(remark, '') + ? WHERE serial_no = ?")
-                                ->execute([$qty_to_deduct, " [Transfer to WIP for $req_number: Partial $qty_to_deduct pcs]", $t['serial_no']]);
+                            $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET current_qty = current_qty - ? WHERE serial_no = ?")
+                                ->execute([$qty_to_deduct, $t['serial_no']]);
+                            $pdo->prepare("INSERT INTO dbo.TAG_TRANSACTIONS (serial_no, transaction_type, quantity_changed, reference_id, created_by_user_id, notes) VALUES (?, 'ISSUE_PARTIAL', ?, ?, ?, ?)")
+                                ->execute([$t['serial_no'], -$qty_to_deduct, $req_number, $issuer_id, "Transfer to WIP Partial"]);
                             
                             // Clone tag to WIP
                             $childSerial = $t['serial_no'] . '-W' . rand(100, 999);

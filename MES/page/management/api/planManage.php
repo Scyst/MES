@@ -269,14 +269,36 @@ try {
 
         case 'calculate_carry_over':
             try {
-                set_time_limit(300); 
+                // 1. ตอบกลับ HTTP ทันที เพื่อไม่ให้ Node-RED ต้องรอจน Timeout
+                ob_start();
+                echo json_encode([
+                    'success' => true, 
+                    'message' => "Carry Over calculation started in background."
+                ]);
+                
+                $size = ob_get_length();
+                header("Connection: close");
+                header("Content-Encoding: none");
+                header("Content-Length: $size");
+                ob_end_flush();
+                @ob_flush();
+                flush();
+                
+                if (function_exists('fastcgi_finish_request')) {
+                    fastcgi_finish_request();
+                }
+
+                // 2. ให้ PHP ทำงานต่อใน Background (ไม่จำกัดเวลา)
+                ignore_user_abort(true);
+                set_time_limit(0); 
+
                 try {
-                    $pdo->setAttribute(PDO::ATTR_TIMEOUT, 300);
+                    $pdo->setAttribute(PDO::ATTR_TIMEOUT, 600);
                 } catch (Exception $ex) { /* Ignore if not supported */ }
                 
                 if (defined('PDO::SQLSRV_ATTR_QUERY_TIMEOUT')) {
                     try {
-                        $pdo->setAttribute(PDO::SQLSRV_ATTR_QUERY_TIMEOUT, 300);
+                        $pdo->setAttribute(PDO::SQLSRV_ATTR_QUERY_TIMEOUT, 600);
                     } catch (Exception $ex) { /* Ignore */ }
                 }
 
@@ -291,22 +313,17 @@ try {
                 $sql = "EXEC $spName @StartDate = :start, @EndDate = :end";
                 $options = array();
                 if (defined('PDO::SQLSRV_ATTR_QUERY_TIMEOUT')) {
-                    $options[PDO::SQLSRV_ATTR_QUERY_TIMEOUT] = 300;
+                    $options[PDO::SQLSRV_ATTR_QUERY_TIMEOUT] = 600;
                 } else {
-                    $options[PDO::ATTR_TIMEOUT] = 300;
+                    $options[PDO::ATTR_TIMEOUT] = 600;
                 }
                 
                 $stmt = $pdo->prepare($sql, $options);
                 $stmt->execute([':start' => $startDate, ':end' => $endDate]);
-                
-                echo json_encode([
-                    'success' => true, 
-                    'message' => "Carry Over updated successfully (Year-to-Date: $startDate)."
-                ]);
 
             } catch (Exception $e) {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Calculation Error: ' . $e->getMessage()]);
+                // Background error - Can log this to a file if needed
+                error_log("Carry Over Background Error: " . $e->getMessage());
             }
             break;
 
