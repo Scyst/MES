@@ -2481,8 +2481,6 @@ const Actions = {
                     let detectMsg;
                     if (row.detect_type === 'DAY_BUT_NIGHT_SCAN') {
                         detectMsg = '🌙 กะเช้าแต่สแกนเข้าช่วงบ่าย-ค่ำ (น่าจะเป็นกะดึก)';
-                    } else if (row.detect_type === 'NIGHT_BUT_DAY_SCAN') {
-                        detectMsg = '☀️ กะดึกแต่สแกนเข้าช่วงเช้า (น่าจะเป็นกะเช้า)';
                     } else if (row.detect_type === 'NIGHT_LATE_SUSPECT') {
                         detectMsg = '⏰ กะดึกแต่สาย — เวลาเข้าอาจเป็นเวลาออกงาน OT จริงๆ (น่าจะเป็นกะเช้า)';
                     } else if (row.detect_type === 'ORPHAN_OUT') {
