@@ -205,7 +205,7 @@ async function loadLedgerData() {
                     <td class="text-muted small">${escapeHTML(row.sap_no || '-')}</td>
                     <td>
                         <div class="fw-bold text-primary" style="font-size: 0.95rem;">${escapeHTML(row.item_no)}</div>
-                        <div class="small text-muted text-truncate" style="max-width: 220px;" title="${escapeHTML(row.part_description || '')}">${escapeHTML(row.part_description || '-')}</div>
+                        <div class="small text-muted text-truncate" style="max-width: 220px;" title="${escapeHTML(row.part_description || '')}">${escapeHTML((row.part_description || '-').startsWith(row.item_no) ? (row.part_description || '-').replace(row.item_no, '').trim() : (row.part_description || '-'))}</div>
                     </td>
                     <td>${locDisplay}</td>
                     <td class="text-center"><span class="badge ${typeBadge} w-100">${escapeHTML(row.transaction_type)}</span></td>

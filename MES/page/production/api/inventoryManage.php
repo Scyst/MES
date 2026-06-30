@@ -119,7 +119,8 @@ try {
                     $params[] = $_GET['user_filter'];
                 }
             } else if ($currentUser['role'] === 'supervisor') {
-                $conditions[] = "loc.production_line = ?";
+                $conditions[] = "(loc.production_line = ? OR u.line = ?)";
+                $params[] = $currentUser['line'];
                 $params[] = $currentUser['line'];
                 
                 if (!empty($_GET['user_filter'])) {

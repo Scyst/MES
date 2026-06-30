@@ -1358,8 +1358,8 @@ try {
                 $params = array_merge($params, array_fill(0, 4, $searchParam));
             }
 
-            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
-                // Admin sees all
+            if (in_array($currentUser['role'], ['admin', 'creator', 'qa', 'qa_qc', 'qc'])) {
+                // Admin and QA sees all
             } else if ($currentUser['role'] === 'supervisor') {
                 $conditions[] = "(loc_to.production_line = ? OR t.created_by_user_id = ?)";
                 $params[] = $currentUser['line'] ?? '';
@@ -2040,7 +2040,7 @@ try {
                 $conditions[] = "(loc_to.production_line = ? OR t.created_by_user_id = ?)";
                 $params[] = $currentUser['line'] ?? '';
                 $params[] = $currentUser['id'];
-            } else if ($currentUser['role'] !== 'admin' && $currentUser['role'] !== 'creator') {
+            } else if (!in_array($currentUser['role'], ['admin', 'creator', 'qa', 'qa_qc', 'qc'])) {
                 $conditions[] = "t.created_by_user_id = ?";
                 $params[] = $currentUser['id'];
             }
