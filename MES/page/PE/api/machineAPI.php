@@ -249,6 +249,33 @@ try {
             }
             break;
 
+            break;
+
+        case 'save_map_positions':
+            $positions = $input['positions'] ?? [];
+            if (empty($positions) || !is_array($positions)) {
+                throw new Exception("Positions array is required");
+            }
+            
+            $pdo->beginTransaction();
+            try {
+                $stmt = $pdo->prepare("UPDATE " . PE_MACHINES_TABLE . " SET map_x = ?, map_y = ? WHERE machine_code = ?");
+                foreach ($positions as $pos) {
+                    $code = $pos['machine_code'] ?? null;
+                    $x = isset($pos['x']) ? floatval($pos['x']) : null;
+                    $y = isset($pos['y']) ? floatval($pos['y']) : null;
+                    if ($code && $x !== null && $y !== null) {
+                        $stmt->execute([$x, $y, $code]);
+                    }
+                }
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'Map layout saved successfully']);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
         default:
             throw new Exception("Invalid action");
     }

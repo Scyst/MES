@@ -2,6 +2,7 @@ const IIoTModule = (function() {
     let pollingInterval = null;
     let machinesWithIIoT = [];
     let isSimulating = false;
+    let isMapEditMode = false;
 
     async function init() {
         try {
@@ -68,6 +69,81 @@ const IIoTModule = (function() {
                 </div>
             </div>
         `).join('');
+
+        renderFloorplan();
+    }
+
+    function renderFloorplan() {
+        const floorplan = document.getElementById('iiotFloorplan');
+        if (!floorplan) return;
+        
+        // Remove existing nodes (except tooltip)
+        Array.from(floorplan.children).forEach(child => {
+            if (child.id !== 'machineTooltip') floorplan.removeChild(child);
+        });
+
+        machinesWithIIoT.forEach((m, index) => {
+            const x = m.map_x != null ? parseFloat(m.map_x) : 15 + ((index * 30) % 70); 
+            const y = m.map_y != null ? parseFloat(m.map_y) : 20 + ((index * 25) % 60);
+            
+            const node = document.createElement('div');
+            node.className = 'machine-node offline';
+            node.id = `iiot-node-${m.machine_code}`;
+            node.dataset.code = m.machine_code;
+            node.style.left = `${x}%`;
+            node.style.top = `${y}%`;
+            
+            node.addEventListener('mousedown', (e) => {
+                if (!isMapEditMode) return;
+                e.preventDefault();
+                let isDragging = true;
+                
+                const moveHandler = (moveEvent) => {
+                    if (!isDragging) return;
+                    const rect = floorplan.getBoundingClientRect();
+                    let newX = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+                    let newY = ((moveEvent.clientY - rect.top) / rect.height) * 100;
+                    
+                    newX = Math.max(0, Math.min(100, newX));
+                    newY = Math.max(0, Math.min(100, newY));
+                    
+                    node.style.left = `${newX}%`;
+                    node.style.top = `${newY}%`;
+                };
+                
+                const upHandler = () => {
+                    isDragging = false;
+                    document.removeEventListener('mousemove', moveHandler);
+                    document.removeEventListener('mouseup', upHandler);
+                };
+                
+                document.addEventListener('mousemove', moveHandler);
+                document.addEventListener('mouseup', upHandler);
+            });
+            
+            node.addEventListener('mouseenter', () => {
+                const tt = document.getElementById('machineTooltip');
+                if (!tt) return;
+                document.getElementById('ttMachineName').innerText = m.machine_name || m.machine_code;
+                
+                const statusEl = document.getElementById(`iiot-status-${m.machine_code}`);
+                document.getElementById('ttStatus').innerText = statusEl ? statusEl.innerText : 'OFFLINE';
+                
+                const powerEl = document.getElementById(`iiot-power-${m.machine_code}`);
+                document.getElementById('ttTemp').innerText = powerEl && powerEl.innerText !== '-' ? powerEl.innerText : 'N/A';
+                
+                tt.style.left = node.style.left;
+                tt.style.top = node.style.top;
+                tt.classList.add('visible');
+            });
+            
+            node.addEventListener('mouseleave', () => {
+                const tt = document.getElementById('machineTooltip');
+                if (tt) tt.classList.remove('visible');
+            });
+            
+            floorplan.appendChild(node);
+        });
     }
 
     function startPolling() {
@@ -196,25 +272,37 @@ const IIoTModule = (function() {
             // Update Power and Check Threshold Alert
             const powerRow = document.getElementById(`iiot-row-power-${m.machine_code}`);
             const cardEl = document.getElementById(`iiot-card-${m.machine_code}`);
+            let isAlert = false;
+            
             if (powerRow && data.power_kw !== null) {
                 powerRow.style.display = 'flex';
-                const p = parseFloat(data.power_kw);
-                if (powerEl) powerEl.innerText = p.toFixed(2) + ' kW';
-                
-                // Threshold logic (Flash card red if power > 55 in our simulation)
-                if (p > 55 || (data.live_status || '').toUpperCase() === 'WARNING') {
-                    if (cardEl && !cardEl.classList.contains('pe-animate-pulse')) {
-                        cardEl.style.border = '2px solid #ef4444';
-                        cardEl.classList.add('pe-animate-pulse');
-                    }
+                powerEl.innerText = `${data.power_kw} kW`;
+                if (parseFloat(data.power_kw) > 50) {
+                    powerEl.style.color = 'var(--pe-danger)';
+                    isAlert = true;
+                    if (cardEl) cardEl.style.border = '1px solid var(--pe-danger)';
                 } else {
-                    if (cardEl) {
-                        cardEl.style.border = '1px solid #334155';
-                        cardEl.classList.remove('pe-animate-pulse');
-                    }
+                    powerEl.style.color = '#f59e0b';
+                    if (cardEl) cardEl.style.border = '1px solid #334155';
                 }
             } else if (powerRow) {
                 powerRow.style.display = 'none';
+            }
+
+            // Update Floorplan Node
+            const nodeEl = document.getElementById(`iiot-node-${m.machine_code}`);
+            if (nodeEl) {
+                nodeEl.className = 'machine-node';
+                const s = (data.live_status || '').toUpperCase();
+                if (s === 'WARNING' || isAlert) {
+                    nodeEl.classList.add('warning');
+                } else if (s.includes('RUN') || s.includes('ON')) {
+                    nodeEl.classList.add('running');
+                } else if (s.includes('STOP') || s.includes('OFF') || s.includes('DOWN')) {
+                    nodeEl.classList.add('stopped');
+                } else {
+                    nodeEl.classList.add('offline');
+                }
             }
 
             // Update Output
@@ -251,5 +339,71 @@ const IIoTModule = (function() {
         }
     }
 
-    return { init, stop, toggleSimulation };
+    function toggleEditMode() {
+        isMapEditMode = !isMapEditMode;
+        const floorplan = document.getElementById('iiotFloorplan');
+        const editBtn = document.getElementById('iiotEditMapBtn');
+        const saveBtn = document.getElementById('iiotSaveMapBtn');
+        const uploadBtn = document.getElementById('iiotUploadMapBtn');
+
+        if (isMapEditMode) {
+            floorplan.classList.add('edit-mode');
+            if (editBtn) editBtn.classList.replace('btn-outline-secondary', 'btn-secondary');
+            if (saveBtn) saveBtn.style.display = 'inline-block';
+            if (uploadBtn) uploadBtn.style.display = 'inline-block';
+        } else {
+            floorplan.classList.remove('edit-mode');
+            if (editBtn) editBtn.classList.replace('btn-secondary', 'btn-outline-secondary');
+            if (saveBtn) saveBtn.style.display = 'none';
+            if (uploadBtn) uploadBtn.style.display = 'none';
+        }
+    }
+
+    async function saveMapPositions() {
+        const positions = [];
+        document.querySelectorAll('.machine-node').forEach(node => {
+            const code = node.dataset.code;
+            if (code) {
+                positions.push({
+                    machine_code: code,
+                    x: parseFloat(node.style.left),
+                    y: parseFloat(node.style.top)
+                });
+            }
+        });
+
+        try {
+            const res = await PEApp.apiCall('machineAPI.php', {}, 'POST', {
+                action: 'save_map_positions',
+                positions: positions
+            });
+            if (res.success) {
+                PEApp.showToast('Map layout saved successfully', 'success');
+                toggleEditMode(); // Exit edit mode
+                positions.forEach(p => {
+                    const m = machinesWithIIoT.find(mac => mac.machine_code === p.machine_code);
+                    if (m) {
+                        m.map_x = p.x;
+                        m.map_y = p.y;
+                    }
+                });
+            }
+        } catch (e) {
+            PEApp.showToast(e.message || 'Error saving layout', 'error');
+        }
+    }
+
+    function uploadMapBg(input) {
+        if (!input.files || input.files.length === 0) return;
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const floorplan = document.getElementById('iiotFloorplan');
+            if (floorplan) floorplan.style.backgroundImage = `url('${e.target.result}')`;
+            PEApp.showToast('Background updated (Local only)', 'info');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    return { init, stop, toggleSimulation, toggleEditMode, saveMapPositions, uploadMapBg };
 })();
