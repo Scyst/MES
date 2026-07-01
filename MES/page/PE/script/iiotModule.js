@@ -3,6 +3,7 @@ const IIoTModule = (function() {
     let machinesWithIIoT = [];
     let isSimulating = false;
     let isMapEditMode = false;
+    let cropperInstance = null;
 
     async function init() {
         try {
@@ -395,34 +396,87 @@ const IIoTModule = (function() {
         }
     }
 
-    async function uploadMapBg(input) {
+    function uploadMapBg(input) {
         if (!input.files || input.files.length === 0) return;
         const file = input.files[0];
+        const reader = new FileReader();
         
-        const formData = new FormData();
-        formData.append('action', 'upload_map_bg');
-        formData.append('map_bg', file);
-        
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-        
-        try {
-            const res = await fetch('api/machineAPI.php', {
-                method: 'POST',
-                headers: { 'X-CSRF-Token': csrfToken },
-                body: formData
-            });
-            const data = await res.json();
-            if (data.success) {
-                const img = document.getElementById('iiotFloorplanImg');
-                if (img) img.src = data.path + '?' + new Date().getTime(); // cache bust
-                PEApp.showToast('Background map updated successfully', 'success');
-            } else {
-                throw new Error(data.message);
+        reader.onload = function(e) {
+            const cropModal = new bootstrap.Modal(document.getElementById('iiotCropModal'));
+            const image = document.getElementById('iiotCropImage');
+            image.src = e.target.result;
+            
+            if (cropperInstance) {
+                cropperInstance.destroy();
             }
-        } catch (e) {
-            PEApp.showToast('Upload failed: ' + e.message, 'error');
+            
+            cropModal.show();
+            
+            document.getElementById('iiotCropModal').addEventListener('shown.bs.modal', function () {
+                cropperInstance = new Cropper(image, {
+                    viewMode: 1,
+                    dragMode: 'move',
+                    autoCropArea: 1,
+                    restore: false,
+                    guides: true,
+                    center: true,
+                    highlight: false,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    toggleDragModeOnDblclick: false,
+                });
+            }, { once: true });
+        };
+        reader.readAsDataURL(file);
+        input.value = ''; // Reset input
+    }
+    
+    function rotateMap(degree) {
+        if (cropperInstance) {
+            cropperInstance.rotate(degree);
         }
     }
 
-    return { init, stop, toggleSimulation, toggleEditMode, saveMapPositions, uploadMapBg };
+    async function confirmMapCrop() {
+        if (!cropperInstance) return;
+        
+        const canvas = cropperInstance.getCroppedCanvas({
+            maxWidth: 2048,
+            maxHeight: 2048
+        });
+        
+        if (!canvas) return;
+        
+        canvas.toBlob(async (blob) => {
+            const formData = new FormData();
+            formData.append('action', 'upload_map_bg');
+            formData.append('map_bg', blob, 'map_bg.png');
+            
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            
+            try {
+                const res = await fetch('api/machineAPI.php', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': csrfToken },
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const img = document.getElementById('iiotFloorplanImg');
+                    if (img) img.src = data.path + '?' + new Date().getTime(); // cache bust
+                    PEApp.showToast('Background map updated successfully', 'success');
+                    
+                    const modalEl = document.getElementById('iiotCropModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (e) {
+                PEApp.showToast('Upload failed: ' + e.message, 'error');
+            }
+        }, 'image/png');
+    }
+
+    return { init, stop, toggleSimulation, toggleEditMode, saveMapPositions, uploadMapBg, rotateMap, confirmMapCrop };
 })();
