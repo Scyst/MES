@@ -77,9 +77,11 @@ const IIoTModule = (function() {
         const floorplan = document.getElementById('iiotFloorplan');
         if (!floorplan) return;
         
-        // Remove existing nodes (except tooltip)
+        // Remove existing nodes (except tooltip and image)
         Array.from(floorplan.children).forEach(child => {
-            if (child.id !== 'machineTooltip') floorplan.removeChild(child);
+            if (child.id !== 'machineTooltip' && child.id !== 'iiotFloorplanImg') {
+                floorplan.removeChild(child);
+            }
         });
 
         machinesWithIIoT.forEach((m, index) => {
