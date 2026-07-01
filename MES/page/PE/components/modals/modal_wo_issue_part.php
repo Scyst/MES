@@ -11,7 +11,7 @@
                     <div class="col-12">
                           <div class="mb-3">
                               <label class="pe-form-label">อะไหล่ (Item) <span class="pe-text-danger">*</span></label>
-                              <input type="text" class="pe-form-input" id="woIssueItemInput" list="woIssueItemList" placeholder="-- พิมพ์เพื่อค้นหาอะไหล่ --" oninput="WorkOrderModule.onSparePartChange()" required>
+                              <input type="text" class="pe-form-input" id="woIssueItemInput" list="woIssueItemList" placeholder="-- พิมพ์เพื่อค้นหาอะไหล่ --" oninput="typeof WorkOrderModule !== 'undefined' ? WorkOrderModule.onSparePartChange() : TechModule.onSparePartChange()" required>
                               <datalist id="woIssueItemList"></datalist>
                               <input type="hidden" id="woIssueItem" required>
                               <div class="pe-text-xs mt-1 text-muted" id="woIssueItemDesc"></div>
@@ -48,7 +48,7 @@
             </div>
             <div class="modal-footer" style="border-top: none;">
                 <button type="button" class="pe-btn pe-btn-ghost" data-bs-dismiss="modal">ยกเลิก</button>
-                <button type="button" class="pe-btn pe-btn-primary" onclick="WorkOrderModule.confirmIssuePart()">
+                <button type="button" class="pe-btn pe-btn-primary" onclick="typeof WorkOrderModule !== 'undefined' ? WorkOrderModule.confirmIssuePart() : TechModule.confirmIssuePart()">
                     <i class="fas fa-check me-1"></i> ยืนยันการเบิก
                 </button>
             </div>

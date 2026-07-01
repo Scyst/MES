@@ -94,6 +94,10 @@ $pageTitle = "PE Enterprise";
 
             <div class="pe-nav-section">
                 <div class="pe-nav-section-label">Quick Links</div>
+                <a class="pe-nav-item" href="peTechMobile.php" target="_blank">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span class="nav-label">Technician Portal</span>
+                </a>
                 <a class="pe-nav-item" href="peRequest.php">
                     <i class="fas fa-external-link-alt"></i>
                     <span class="nav-label">PE Request Portal</span>

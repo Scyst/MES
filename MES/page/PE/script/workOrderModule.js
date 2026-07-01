@@ -274,6 +274,33 @@ const WorkOrderModule = (() => {
         const targetWo = allData.find(w => w.wo_id == woId);
         if (targetWo && targetWo.status === newStatus) return;
 
+        // Validation Rules for Drag and Drop
+        if (newStatus === 'Assigned' && (!targetWo.assigned_to || targetWo.assigned_to.trim() === '')) {
+            renderBoard(allData); // Revert board UI
+            openModal(woId); // Open full modal to assign tech
+            document.getElementById('woFrmStatus').value = 'Assigned';
+            setTimeout(() => {
+                const el = document.getElementById('woFrmAssignedTo');
+                if (el) el.focus();
+            }, 500);
+            PEApp.showToast('กรุณาระบุชื่อช่างผู้รับผิดชอบก่อนย้ายไปที่ Assigned', 'info');
+            return;
+        }
+
+        if (newStatus === 'Completed' && (!targetWo.photo_after || !targetWo.action_taken || targetWo.action_taken.trim() === '')) {
+            renderBoard(allData); // Revert board UI
+            if (typeof openQuickClose === 'function') openQuickClose(woId); 
+            else if (typeof window.openQuickClose === 'function') window.openQuickClose(woId);
+            else if (typeof openQuickCloseModal === 'function') openQuickCloseModal(woId);
+            else {
+                // Fallback to full modal
+                openModal(woId);
+                document.getElementById('woFrmStatus').value = 'Completed';
+            }
+            PEApp.showToast('กรุณาระบุรูปภาพและรายละเอียดการซ่อมเพื่อปิดงาน', 'info');
+            return;
+        }
+
         try {
             // Optimistic UI update
             if (targetWo) targetWo.status = newStatus;

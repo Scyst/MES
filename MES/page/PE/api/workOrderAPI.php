@@ -154,6 +154,19 @@ try {
             }
             break;
 
+        case 'update_status_only':
+            $id = $input['wo_id'] ?? null;
+            $newStatus = $input['status'] ?? null;
+            if (!$id || !$newStatus) throw new Exception("Work Order ID and new status are required");
+
+            // Optional check for Assignee or Image here too, but frontend validation handles it
+            $stmt = $pdo->prepare("UPDATE " . PE_WORK_ORDERS_TABLE . " SET status = ? WHERE wo_id = ?");
+            $stmt->execute([$newStatus, $id]);
+
+            writeLog($pdo, 'UPDATE_STATUS', 'PE_WO_API', $id, null, null, "Status updated to: $newStatus");
+            echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
+            break;
+
         case 'update_wo':
             $id = $input['wo_id'] ?? null;
             if (!$id) throw new Exception("Work Order ID is required");
@@ -240,16 +253,55 @@ try {
 
             $pdo->beginTransaction();
             try {
-                // If it doesn't have an assigned_to yet, we can optionally assign it to the current user.
-                // Assuming $currentUserForJS holds the username if we want to, but for now just update status.
+                $assignedTo = $currentUser['fullname'] ?? $currentUser['username'];
+                $stmt = $pdo->prepare("UPDATE " . PE_WORK_ORDERS_TABLE . " 
+                    SET status = 'Assigned', assigned_to = ?, assigned_at = GETDATE(), updated_at = GETDATE() 
+                    WHERE wo_id = ?");
+                $stmt->execute([$assignedTo, $id]);
+                
+                writeLog($pdo, 'QUICK_ACCEPT_WO', 'PE_WO_API', $id, null, null, "Accepted job ($assignedTo)");
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'Job accepted']);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
+        case 'quick_start':
+            $id = $input['wo_id'] ?? null;
+            if (!$id) throw new Exception("Work Order ID is required");
+
+            $pdo->beginTransaction();
+            try {
                 $stmt = $pdo->prepare("UPDATE " . PE_WORK_ORDERS_TABLE . " 
                     SET status = 'In Progress', started_at = GETDATE(), updated_at = GETDATE() 
                     WHERE wo_id = ?");
                 $stmt->execute([$id]);
                 
-                writeLog($pdo, 'QUICK_ACCEPT_WO', 'PE_WO_API', $id, null, null, "Accepted job (In Progress)");
+                writeLog($pdo, 'QUICK_START_WO', 'PE_WO_API', $id, null, null, "Started job");
                 $pdo->commit();
-                echo json_encode(['status' => 'success', 'message' => 'Job accepted']);
+                echo json_encode(['success' => true, 'message' => 'Job started']);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
+        case 'revert_start':
+            $id = $input['wo_id'] ?? null;
+            if (!$id) throw new Exception("Work Order ID is required");
+
+            $pdo->beginTransaction();
+            try {
+                $stmt = $pdo->prepare("UPDATE " . PE_WORK_ORDERS_TABLE . " 
+                    SET status = 'Assigned', started_at = NULL, updated_at = GETDATE() 
+                    WHERE wo_id = ?");
+                $stmt->execute([$id]);
+                
+                writeLog($pdo, 'REVERT_START_WO', 'PE_WO_API', $id, null, null, "Reverted job to Assigned");
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'Job reverted']);
             } catch (Exception $e) {
                 $pdo->rollBack();
                 throw $e;
@@ -279,7 +331,7 @@ try {
                 
                 writeLog($pdo, 'QUICK_CLOSE_WO', 'PE_WO_API', $id, null, null, "Closed job (Completed)");
                 $pdo->commit();
-                echo json_encode(['status' => 'success', 'message' => 'Job closed']);
+                echo json_encode(['success' => true, 'message' => 'Job closed']);
             } catch (Exception $e) {
                 $pdo->rollBack();
                 throw $e;

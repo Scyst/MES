@@ -206,7 +206,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('iQMS Dashboard', 'ระบบจัดการคุณภาพ (NCR/CAR)', '<i class="fas fa-shield-alt"></i>', '../QMS/qmsDashboard.php', 'view_qms', $themeQa);
                         renderServiceLink('Accessories Inspection', 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', '<i class="fas fa-camera"></i>', '../AccessoriesInspection/accessoriesInspectionUI.php', '', $themeQa);
                         renderServiceLink('PE Enterprise', 'ศูนย์กลางจัดการเครื่องจักรและซ่อมบำรุง', '<i class="fas fa-cogs"></i>', '../PE/peDashboard.php', 'view_maintenance', $themeQa);
-                        renderServiceLink('MT Stock', 'จัดการคลังอะไหล่ซ่อมบำรุง', '<i class="fas fa-tools"></i>', '../maintenancePE/maintenanceStockUI.php', 'view_maintenance', $themeQa);
+                        renderServiceLink('PE Tech (Mobile)', 'ระบบรับงานและจัดการซ่อมสำหรับช่าง (มือถือ)', '<i class="fas fa-wrench"></i>', '../PE/peTechMobile.php', 'view_maintenance', $themeQa);
                         ?>
                     </div>
                 </div>

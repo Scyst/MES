@@ -37,16 +37,23 @@
 
             </div>
             <div class="modal-footer pe-d-flex pe-justify-between bg-light pe-modal-footer-mobile">
-                <button type="button" class="pe-btn pe-btn-ghost" onclick="WorkOrderModule.openModal(document.getElementById('qcWoId').value)">
+                <button type="button" class="pe-btn pe-btn-ghost" onclick="typeof WorkOrderModule !== 'undefined' ? WorkOrderModule.openModal(document.getElementById('qcWoId').value) : null" id="qcOpenFullBtn">
                     <i class="fas fa-expand-arrows-alt me-1"></i> เปิดฟอร์มเต็ม
                 </button>
                 <div class="pe-d-flex pe-gap-8">
                     <button type="button" class="pe-btn pe-btn-ghost" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="button" class="pe-btn pe-btn-success" id="qcSaveBtn" onclick="WorkOrderModule.submitQuickClose()">
+                    <button type="button" class="pe-btn pe-btn-success" id="qcSaveBtn" onclick="typeof WorkOrderModule !== 'undefined' ? WorkOrderModule.submitQuickClose() : TechModule.submitQuickClose()">
                         <i class="fas fa-check me-1"></i> ยืนยันการปิดงาน
                     </button>
                 </div>
             </div>
+            <script>
+                // Hide "Open full form" button if not in the main app
+                if (typeof WorkOrderModule === 'undefined') {
+                    const fullBtn = document.getElementById('qcOpenFullBtn');
+                    if (fullBtn) fullBtn.style.display = 'none';
+                }
+            </script>
         </div>
     </div>
 </div>

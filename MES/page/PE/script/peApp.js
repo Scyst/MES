@@ -34,13 +34,17 @@ const PEApp = (() => {
 
         // Update topbar
         const cfg = tabConfig[tabName];
-        document.getElementById('topbarTitle').textContent = cfg.title;
-        document.getElementById('topbarBreadcrumb').textContent = cfg.breadcrumb;
+        if (cfg) {
+            const titleEl = document.getElementById('topbarTitle');
+            if (titleEl) titleEl.textContent = cfg.title;
+            const breadcrumbEl = document.getElementById('topbarBreadcrumb');
+            if (breadcrumbEl) breadcrumbEl.textContent = cfg.breadcrumb;
 
-        // Load data if first time
-        if (!loadedTabs.has(tabName)) {
-            loadedTabs.add(tabName);
-            cfg.loader();
+            // Load data if first time
+            if (!loadedTabs.has(tabName)) {
+                loadedTabs.add(tabName);
+                if (typeof cfg.loader === 'function') cfg.loader();
+            }
         }
 
         // Close mobile sidebar
@@ -251,8 +255,10 @@ const PEApp = (() => {
 
     // Init
     document.addEventListener('DOMContentLoaded', () => {
-        // Initialize default tab
-        switchTab('workorders');
+        // Initialize default tab only if we are on the main dashboard
+        if (document.getElementById('peSidebar')) {
+            switchTab('workorders');
+        }
     });
 
     return {

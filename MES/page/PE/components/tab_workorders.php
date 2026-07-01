@@ -75,7 +75,7 @@
         <div class="pe-view-toggle">
             <button class="active" id="woViewTable" onclick="WorkOrderModule.setView('table')" title="Table View"><i class="fas fa-list"></i></button>
             <button id="woViewKanban" onclick="WorkOrderModule.setView('kanban')" title="Card View (Mobile)"><i class="fas fa-th-large"></i></button>
-            <button class="d-none d-md-flex" id="woViewBoard" onclick="WorkOrderModule.setView('board')" title="Board View (Drag & Drop)"><i class="fas fa-columns"></i></button>
+            <button class="d-none d-md-inline-block" id="woViewBoard" onclick="WorkOrderModule.setView('board')" title="Board View (Drag & Drop)"><i class="fas fa-columns"></i></button>
         </div>
 
         <button class="pe-btn pe-btn-ghost d-none d-md-inline-flex" onclick="WorkOrderModule.exportExcel()" title="Export Excel">
