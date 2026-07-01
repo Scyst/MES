@@ -398,8 +398,8 @@ const IIoTModule = (function() {
         const file = input.files[0];
         const reader = new FileReader();
         reader.onload = function(e) {
-            const floorplan = document.getElementById('iiotFloorplan');
-            if (floorplan) floorplan.style.backgroundImage = `url('${e.target.result}')`;
+            const img = document.getElementById('iiotFloorplanImg');
+            if (img) img.src = e.target.result;
             PEApp.showToast('Background updated (Local only)', 'info');
         };
         reader.readAsDataURL(file);

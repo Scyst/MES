@@ -140,14 +140,15 @@
 .iiot-floorplan {
     position: relative;
     width: 100%;
-    height: 400px;
     background-color: #0f172a;
-    background-image: 
-        linear-gradient(rgba(51, 65, 85, 0.4) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(51, 65, 85, 0.4) 1px, transparent 1px);
-    background-size: 40px 40px;
     border-radius: 8px;
     border: 1px solid #475569;
+    overflow: hidden;
+}
+.iiot-floorplan-img {
+    width: 100%;
+    height: auto;
+    display: block;
 }
 .machine-node {
     position: absolute;
@@ -258,7 +259,8 @@
                 </button>
             </div>
         </div>
-        <div class="iiot-floorplan" id="iiotFloorplan" style="background-image: url('assets/img/iiot-map-bg.png'); background-size: cover; background-position: center;">
+        <div class="iiot-floorplan" id="iiotFloorplan">
+            <img id="iiotFloorplanImg" src="assets/img/iiot-map-bg.png" class="iiot-floorplan-img" alt="Floor plan" onerror="this.src='https://placehold.co/1200x600/0f172a/334155?text=Upload+Map+Background'">
             <!-- Machine Nodes will be injected here -->
             <div id="machineTooltip" class="machine-tooltip">
                 <h6 id="ttMachineName">Machine Name</h6>
