@@ -83,9 +83,12 @@ const WorkOrderModule = (() => {
             let quickActionBtn = '';
             let rowAction = `WorkOrderModule.openModal(${w.wo_id})`; // default
 
-            if (w.status === 'Open' || w.status === 'Assigned') {
+            if (w.status === 'Open') {
                 quickActionBtn = `<button class="pe-btn pe-btn-primary pe-btn-sm" onclick="event.stopPropagation(); WorkOrderModule.quickAccept(${w.wo_id})" style="margin-right:4px;">รับงาน</button>`;
                 rowAction = `WorkOrderModule.quickAccept(${w.wo_id})`;
+            } else if (w.status === 'Assigned') {
+                quickActionBtn = `<button class="pe-btn pe-btn-warning pe-btn-sm" onclick="event.stopPropagation(); WorkOrderModule.quickStart(${w.wo_id})" style="margin-right:4px; color:white;">เริ่มงาน</button>`;
+                rowAction = `WorkOrderModule.quickStart(${w.wo_id})`;
             } else if (w.status === 'In Progress') {
                 quickActionBtn = `<button class="pe-btn pe-btn-success pe-btn-sm" onclick="event.stopPropagation(); WorkOrderModule.openQuickCloseModal(${w.wo_id})" style="margin-right:4px;">ปิดงาน</button>`;
                 rowAction = `WorkOrderModule.openQuickCloseModal(${w.wo_id})`;
@@ -131,9 +134,12 @@ const WorkOrderModule = (() => {
             let quickActionBtn = '';
             let rowAction = `WorkOrderModule.openModal(${w.wo_id})`; // default
             
-            if (w.status === 'Open' || w.status === 'Assigned') {
+            if (w.status === 'Open') {
                 quickActionBtn = `<button class="pe-btn pe-btn-primary pe-btn-sm" onclick="event.stopPropagation(); WorkOrderModule.quickAccept(${w.wo_id})" style="padding: 5px 14px; font-size: 13px;">รับงาน</button>`;
                 rowAction = `WorkOrderModule.quickAccept(${w.wo_id})`;
+            } else if (w.status === 'Assigned') {
+                quickActionBtn = `<button class="pe-btn pe-btn-warning pe-btn-sm" onclick="event.stopPropagation(); WorkOrderModule.quickStart(${w.wo_id})" style="padding: 5px 14px; font-size: 13px; color:white;">เริ่มงาน</button>`;
+                rowAction = `WorkOrderModule.quickStart(${w.wo_id})`;
             } else if (w.status === 'In Progress') {
                 quickActionBtn = `<button class="pe-btn pe-btn-success pe-btn-sm" onclick="event.stopPropagation(); WorkOrderModule.openQuickCloseModal(${w.wo_id})" style="padding: 5px 14px; font-size: 13px;">ปิดงาน</button>`;
                 rowAction = `WorkOrderModule.openQuickCloseModal(${w.wo_id})`;
@@ -1133,6 +1139,42 @@ const WorkOrderModule = (() => {
         }
     }
 
+    async function quickStart(woId) {
+        try {
+            const result = await Swal.fire({
+                title: 'เริ่มงานซ่อม?',
+                text: "สถานะจะเปลี่ยนเป็น In Progress",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#f59e0b',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'เริ่มงาน',
+                cancelButtonText: 'ยกเลิก'
+            });
+
+            if (result.isConfirmed) {
+                await PEApp.apiCall('workOrderAPI.php', {}, 'POST', {
+                    action: 'quick_start',
+                    wo_id: woId
+                });
+                
+                PEApp.showToast('เริ่มงานเรียบร้อย', 'success');
+                
+                // Hide main modal if open
+                const mainModalEl = document.getElementById('workOrderModal');
+                if (mainModalEl) {
+                    const mainModal = bootstrap.Modal.getInstance(mainModalEl);
+                    if (mainModal) mainModal.hide();
+                }
+
+                loadData();
+            }
+        } catch (error) {
+            console.error(error);
+            PEApp.showToast(error.message, 'error');
+        }
+    }
+
     function openQuickCloseModal(woId) {
         const wo = allData.find(w => w.wo_id == woId);
         if (!wo) return;
@@ -1244,7 +1286,7 @@ const WorkOrderModule = (() => {
     return { 
         loadData, filterTable, setView, openModal, save, deleteItem, restoreItem, exportExcel, 
         onMachineChange, printPDF, openSparePartsModal, onSparePartChange, confirmIssuePart, deleteSparePart,
-        quickAccept, openQuickCloseModal, submitQuickClose,
+        quickAccept, quickStart, openQuickCloseModal, submitQuickClose,
         dragStart, allowDrop, dragEnter, dragLeave, drop
     };
 })();
