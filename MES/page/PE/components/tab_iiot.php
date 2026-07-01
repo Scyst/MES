@@ -278,7 +278,7 @@
             </div>
         </div>
         <div class="iiot-floorplan" id="iiotFloorplan">
-            <div id="iiotPanzoomElement" style="position:relative; width:100%; height:100%; min-height:600px;">
+            <div id="iiotPanzoomElement" style="position:relative; width:100%; display:inline-block;">
                 <img id="iiotFloorplanImg" src="../../uploads/iiot-map-bg.png" class="iiot-floorplan-img" alt="Floor plan" onerror="this.src='https://placehold.co/1200x600/0f172a/334155?text=Upload+Map+Background'">
                 <!-- Machine Nodes will be injected here -->
             </div>
