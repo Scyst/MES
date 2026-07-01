@@ -367,6 +367,9 @@ function manageUIZones(data) {
             const currentHost = window.location.origin + window.location.pathname.replace('qmsDashboard.php', '');
             document.getElementById('customer_link').value = `${currentHost}guest/reply.php?token=${data.access_token}`;
         }
+        if(document.getElementById('view_token_expiry')) {
+            document.getElementById('view_token_expiry').innerText = data.token_expiry ? new Date(data.token_expiry).toLocaleString('th-TH') : '-';
+        }
     } 
     else if (status === 'CUSTOMER_REPLIED') {
         show('zone_customer_replied');
@@ -651,6 +654,59 @@ function rejectCAR() {
                 } else {
                     Swal.fire('ข้อผิดพลาด', escapeHTML(res.message), 'error');
                 }
+            });
+        }
+    });
+}
+
+function extendCarLink() {
+    const caseIdInput = document.getElementById('issue_case_id') || document.getElementById('claim_case_id');
+    const caseId = caseIdInput ? caseIdInput.value : null;
+
+    if(!caseId) {
+        Swal.fire('ข้อผิดพลาด', 'ไม่พบรหัสเอกสาร', 'error');
+        return;
+    }
+
+    Swal.fire({
+        title: 'ระบุจำนวนวันที่ต้องการขยายเวลา',
+        input: 'number',
+        inputAttributes: {
+            min: 1,
+            value: 7
+        },
+        inputValue: 7,
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยัน',
+        cancelButtonText: 'ยกเลิก',
+        inputValidator: (value) => {
+            if (!value || value <= 0) {
+                return 'กรุณาระบุจำนวนวันที่มากกว่า 0'
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const extendDays = result.value;
+            const formData = new FormData();
+            formData.append('action', 'extend_car_link');
+            formData.append('case_id', caseId);
+            formData.append('extend_days', extendDays);
+            appendCsrfToken(formData);
+
+            fetch('./api/qms_action.php', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(res => {
+                if(res.success) {
+                    Swal.fire('สำเร็จ', res.message, 'success');
+                    openCaseDetail(caseId);
+                    fetchCasesData();
+                } else {
+                    Swal.fire('ข้อผิดพลาด', escapeHTML(res.message), 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
             });
         }
     });

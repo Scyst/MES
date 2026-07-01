@@ -212,6 +212,10 @@
                             <label class="form-label info-label">Issue Description <span class="text-danger">*</span></label>
                             <textarea class="form-control border-primary bg-primary bg-opacity-10" name="qa_issue_description" rows="5" required placeholder="อธิบายปัญหาที่ต้องการให้ลูกค้าชี้แจง..."></textarea>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label info-label">Link Expiry (Days) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control border-primary bg-light" name="expire_days" value="7" min="1" required>
+                        </div>
                         <button type="submit" class="btn btn-primary fw-bold w-100 fs-5 py-2 shadow-sm rounded-pill">สร้างลิงก์ (Generate Link)</button>
                     </form>
                 </div>
@@ -220,9 +224,13 @@
                     <i class="fas fa-paper-plane fa-3x text-warning mb-3"></i>
                     <h5 class="fw-bold text-dark mb-1">รอการชี้แจงจากลูกค้า</h5>
                     <p class="text-secondary fw-bold small mb-4">ส่งลิงก์ด้านล่างนี้ให้ลูกค้าเพื่อเข้าสู่ระบบตอบกลับ</p>
-                    <div class="input-group px-4">
+                    <div class="input-group px-4 mb-3">
                         <input type="text" class="form-control border-warning text-dark fw-bold bg-white" id="customer_link" readonly>
                         <button class="btn btn-warning fw-bold text-dark" onclick="copyLink()"><i class="fas fa-copy"></i> Copy</button>
+                    </div>
+                    <div class="px-4 d-flex justify-content-center align-items-center gap-3">
+                        <span class="small text-danger fw-bold"><i class="fas fa-hourglass-half me-1"></i> หมดอายุ: <span id="view_token_expiry">-</span></span>
+                        <button class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3" onclick="extendCarLink()"><i class="fas fa-plus-circle me-1"></i> ขยายเวลา 7 วัน</button>
                     </div>
                 </div>
 

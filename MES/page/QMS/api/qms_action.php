@@ -142,10 +142,12 @@ try {
         case 'issue_car':
             $case_id = $_POST['case_id'] ?? null;
             $qa_desc = $_POST['qa_issue_description'] ?? '';
+            $expire_days = (int)($_POST['expire_days'] ?? 7);
+            if ($expire_days <= 0) $expire_days = 7;
             if (!$case_id) throw new Exception("Missing Case ID");
 
             $token = bin2hex(random_bytes(16));
-            $expiry = date('Y-m-d H:i:s', strtotime('+7 days'));
+            $expiry = date('Y-m-d H:i:s', strtotime("+$expire_days days"));
 
             // เรียกใช้ Stored Procedure (ไม่ต้องเปิด Transaction ใน PHP)
             $stmt = $pdo->prepare("EXEC sp_QMS_IssueCAR ?, ?, ?, ?");
@@ -215,6 +217,31 @@ try {
             $pdo->commit();
 
             echo json_encode(['success' => true, 'message' => 'ตีกลับ CAR ไปให้ลูกค้าเรียบร้อยแล้ว']);
+            break;
+
+        // ==========================================
+        // 5. EXTEND CAR LINK (ขยายเวลาลิงก์ให้ลูกค้า)
+        // ==========================================
+        case 'extend_car_link':
+            $case_id = $_POST['case_id'] ?? null;
+            $extend_days = (int)($_POST['extend_days'] ?? 7);
+            if ($extend_days <= 0) $extend_days = 7;
+            if (!$case_id) throw new Exception("Missing Case ID");
+
+            // ถ้าลิงก์หมดอายุไปแล้ว ให้บวกเวลาเพิ่มจาก "เวลาปัจจุบัน" (GETDATE()) 
+            // แต่ถ้ายืดล่วงหน้า (ยังไม่หมดอายุ) ให้บวกเพิ่มจาก "วันหมดอายุเดิม"
+            $sqlExtend = "
+                UPDATE QMS_CAR 
+                SET token_expiry = CASE 
+                    WHEN token_expiry < GETDATE() THEN DATEADD(DAY, ?, GETDATE())
+                    ELSE DATEADD(DAY, ?, token_expiry)
+                END 
+                WHERE case_id = ?
+            ";
+            $stmt = $pdo->prepare($sqlExtend);
+            $stmt->execute([$extend_days, $extend_days, $case_id]);
+
+            echo json_encode(['success' => true, 'message' => "ขยายเวลาสำเร็จ"]);
             break;
 
         default:
