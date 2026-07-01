@@ -140,6 +140,7 @@
 .iiot-floorplan {
     position: relative;
     width: 100%;
+    min-height: 400px;
     background-color: #0f172a;
     border-radius: 8px;
     border: 1px solid #475569;
