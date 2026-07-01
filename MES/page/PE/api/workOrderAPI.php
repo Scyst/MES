@@ -43,8 +43,10 @@ try {
             $conditions = [$isDeleted ? "W.is_active = 0" : "W.is_active = 1"];
             $params = [];
 
+            $isActiveFilter = (!empty($_GET['status']) && $_GET['status'] === 'Active');
+
             if (!empty($_GET['status']) && $_GET['status'] !== 'All' && !$isDeleted) {
-                if ($_GET['status'] === 'Active') {
+                if ($isActiveFilter) {
                     $conditions[] = "W.status IN ('Open', 'Pending', 'Assigned', 'In Progress')";
                 } else {
                     $conditions[] = "W.status = ?";
@@ -59,11 +61,11 @@ try {
                 $conditions[] = "W.line = ?";
                 $params[] = $_GET['line'];
             }
-            if (!empty($_GET['startDate'])) {
+            if (!empty($_GET['startDate']) && !$isActiveFilter) {
                 $conditions[] = "W.requested_at >= ?";
                 $params[] = $_GET['startDate'];
             }
-            if (!empty($_GET['endDate'])) {
+            if (!empty($_GET['endDate']) && !$isActiveFilter) {
                 $conditions[] = "W.requested_at < DATEADD(DAY, 1, CAST(? AS DATE))";
                 $params[] = $_GET['endDate'];
             }

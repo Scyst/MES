@@ -160,24 +160,29 @@ const PEApp = (() => {
     }
 
     function formatDate(dateStr) {
-        if (!dateStr) return '-';
+        if (!dateStr || String(dateStr).startsWith('0000-00-00')) return '-';
         const d = new Date(dateStr);
-        if (isNaN(d)) return dateStr;
+        if (isNaN(d)) return '-';
         return d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
 
     function formatDateTime(dateStr) {
-        if (!dateStr) return '-';
+        if (!dateStr || String(dateStr).startsWith('0000-00-00')) return '-';
         const d = new Date(dateStr);
-        if (isNaN(d)) return dateStr;
+        if (isNaN(d)) return '-';
         return d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })
              + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
     }
 
     function formatTime(dateStr) {
-        if (!dateStr) return '-';
-        const d = new Date(dateStr);
-        if (isNaN(d)) return dateStr;
+        if (!dateStr || String(dateStr).startsWith('0000-00-00')) return '-';
+        let d = new Date(dateStr);
+        if (isNaN(d)) {
+            // Handle time-only format like '14:30:00'
+            const timeMatch = String(dateStr).match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+            if (timeMatch) return `${timeMatch[1]}:${timeMatch[2]}`;
+            return '-';
+        }
         return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
     }
 

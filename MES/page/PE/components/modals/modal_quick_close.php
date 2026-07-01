@@ -10,10 +10,10 @@
                 <input type="hidden" id="qcWoId">
                 
                 <!-- Quick Close Form -->
-                <div class="pe-form-group mb-3">
-                    <label class="pe-form-label">Attached Image (After) <span class="required">*</span></label>
+                <div class="pe-form-group mb-4">
+                    <label class="pe-form-label">After <span class="required">*</span></label>
                     <input type="file" id="qcFrmImageAfter" accept="image/jpeg, image/png, image/webp" style="display:none;">
-                    <div class="pe-dropzone mx-auto" id="qcDropzoneAfter" style="aspect-ratio: 4/3; width: 100%; max-width: 360px; height: auto; min-height: 120px;">
+                    <div class="pe-dropzone mx-auto mt-2 mb-2" id="qcDropzoneAfter" style="aspect-ratio: 4/3; width: 100%; max-width: 400px; height: auto; min-height: 120px;">
                         <div class="pe-dropzone-content">
                             <i class="fas fa-camera"></i>
                             <p>ถ่ายรูปหรือเลือกรูปภาพหลังซ่อม</p>

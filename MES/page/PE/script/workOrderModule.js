@@ -197,7 +197,11 @@ const WorkOrderModule = (() => {
 
         data.forEach(w => {
             let colKey = w.status;
-            if (!cols[colKey]) return; // Or map 'Cancelled' somewhere else if needed
+            
+            // Map statuses for Board view
+            if (colKey === 'Pending') colKey = 'Open';
+            
+            if (!cols[colKey]) return; // Cancelled or other statuses won't appear on the board
             
             counts[colKey]++;
             
@@ -791,11 +795,20 @@ const WorkOrderModule = (() => {
     // Init date defaults & listeners
     document.addEventListener('DOMContentLoaded', () => {
         const now = new Date();
-        const first = new Date(now.getFullYear(), now.getMonth(), 1);
+        const start = new Date();
+        start.setDate(now.getDate() - 30);
+        
         const startEl = document.getElementById('woStartDate');
         const endEl = document.getElementById('woEndDate');
-        if (startEl && !startEl.value) startEl.value = first.toISOString().slice(0, 10);
-        if (endEl && !endEl.value) endEl.value = now.toISOString().slice(0, 10);
+        
+        // Use local timezone formatting (YYYY-MM-DD)
+        const formatLocal = (d) => {
+            const offset = d.getTimezoneOffset() * 60000;
+            return new Date(d - offset).toISOString().slice(0, 10);
+        };
+        
+        if (startEl && !startEl.value) startEl.value = formatLocal(start);
+        if (endEl && !endEl.value) endEl.value = formatLocal(now);
 
         // Setup image preview listeners
         document.getElementById('woFrmImage')?.addEventListener('change', function() {
@@ -1086,8 +1099,7 @@ const WorkOrderModule = (() => {
         if (dropzoneAfter) dropzoneAfter.classList.remove('has-image');
 
         croppedImageAfterBlob = null;
-        currentCropTarget = null; // We might need to ensure Cropper logic applies to qcDropzoneAfter if needed, but for simplicity we rely on standard input.
-
+        currentCropTarget = null;
         const mainModalEl = document.getElementById('workOrderModal');
         const mainModal = bootstrap.Modal.getInstance(mainModalEl);
         if (mainModal) mainModal.hide();

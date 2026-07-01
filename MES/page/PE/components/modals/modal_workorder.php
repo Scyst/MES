@@ -9,26 +9,26 @@
     }
 </style>
 <div class="modal fade pe-modal" id="workOrderModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" id="woModalDialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="fas fa-clipboard-list" style="color:var(--pe-primary);"></i> <span id="woModalTitle">New Work Order</span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body px-4 px-lg-5 py-3 py-lg-4">
                 <input type="hidden" id="woEditId">
                 
                 <div class="row g-0">
                     <!-- Left Column: Requester Info -->
-                    <div class="col-lg-6 wo-divider-col d-flex flex-column">
+                    <div class="col-lg-6 wo-divider-col d-flex flex-column" id="woRequesterCol">
                         <div class="pe-text-xs pe-fw-bold pe-text-muted mb-3" style="letter-spacing:1px;text-transform:uppercase;">
                             <i class="fas fa-info-circle me-1"></i> Request Details
                         </div>
 <div class="mb-3">
-                            <div class="pe-form-group mb-0">
-                                <label class="pe-form-label">Attached Image (Before) (optional)</label>
+                            <div class="pe-form-group mb-4">
+                                <label class="pe-form-label">Before <span class="required">*</span></label>
                                 <input type="file" id="woFrmImage" accept="image/jpeg, image/png, image/webp" style="display:none;">
-                                <div class="pe-dropzone" id="woDropzoneBefore" style="aspect-ratio: 4/3; width: 100%; height: auto;">
+                                <div class="pe-dropzone mx-auto mt-2 mb-2" id="woDropzoneBefore" style="aspect-ratio: 4/3; width: 100%; max-width: 400px; height: auto;">
                                     <div class="pe-dropzone-content">
                                         <i class="fas fa-cloud-upload-alt"></i>
                                         <p>Click or drag image here</p>
@@ -105,10 +105,10 @@
                             <i class="fas fa-user-cog me-1"></i> Technician Details
                         </div>
 <div class="mb-3" id="woImageAfterGroup" style="display:none;">
-                            <div class="pe-form-group mb-0">
-                                <label class="pe-form-label">Attached Image (After) (optional)</label>
+                            <div class="pe-form-group mb-4">
+                                <label class="pe-form-label">After <span class="required">*</span></label>
                                 <input type="file" id="woFrmImageAfter" accept="image/jpeg, image/png, image/webp" style="display:none;">
-                                <div class="pe-dropzone" id="woDropzoneAfter" style="aspect-ratio: 4/3; width: 100%; height: auto;">
+                                <div class="pe-dropzone mx-auto mt-2 mb-2" id="woDropzoneAfter" style="aspect-ratio: 4/3; width: 100%; max-width: 400px; height: auto;">
                                     <div class="pe-dropzone-content">
                                         <i class="fas fa-cloud-upload-alt"></i>
                                         <p>Click or drag image here</p>

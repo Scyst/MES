@@ -197,6 +197,7 @@ $pageTitle = "PE Enterprise";
     include __DIR__ . '/components/modals/modal_workorder.php';
     include __DIR__ . '/components/modals/modal_wo_issue_part.php';
     include __DIR__ . '/components/modals/modal_sparepart_tx.php';
+    include __DIR__ . '/components/modals/modal_quick_close.php';
 ?>
 
 <!-- Cropper Modal -->
