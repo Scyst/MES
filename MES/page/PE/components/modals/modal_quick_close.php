@@ -24,6 +24,20 @@
                         </div>
                     </div>
                 </div>
+                <div class="row">
+                    <div class="col-12 col-sm-6">
+                        <div class="pe-form-group mb-3">
+                            <label class="pe-form-label">เวลาเริ่มซ่อม <span class="required">*</span></label>
+                            <input type="datetime-local" class="pe-form-input" id="qcFrmStartedAt">
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="pe-form-group mb-3">
+                            <label class="pe-form-label">ซ่อมเสร็จ <span class="required">*</span></label>
+                            <input type="datetime-local" class="pe-form-input" id="qcFrmCompletedAt">
+                        </div>
+                    </div>
+                </div>
 
                 <div class="pe-form-group mb-3">
                     <label class="pe-form-label">สิ่งที่ทำ / วิธีแก้ไข (Action Taken) <span class="required">*</span></label>

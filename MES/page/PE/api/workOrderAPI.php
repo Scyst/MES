@@ -331,17 +331,50 @@ try {
                 $photo_after = $input['photo_after'] ?? null;
                 $action_taken = $input['action_taken'] ?? '';
                 $root_cause = $input['root_cause'] ?? '';
+                $started_at = !empty($input['started_at']) ? str_replace('T', ' ', $input['started_at']) : null;
+                $completed_at = !empty($input['completed_at']) ? str_replace('T', ' ', $input['completed_at']) : null;
 
-                $stmt = $pdo->prepare("UPDATE " . PE_WORK_ORDERS_TABLE . " 
+                $sql = "UPDATE " . PE_WORK_ORDERS_TABLE . " 
                     SET status = 'Completed', 
-                        completed_at = GETDATE(), 
                         updated_at = GETDATE(),
                         photo_after = ?,
                         action_taken = ?,
-                        root_cause = ?,
-                        repair_minutes = DATEDIFF(MINUTE, started_at, GETDATE())
-                    WHERE wo_id = ?");
-                $stmt->execute([$photo_after, $action_taken, $root_cause, $id]);
+                        root_cause = ?";
+                $params = [$photo_after, $action_taken, $root_cause];
+
+                if ($started_at) {
+                    $sql .= ", started_at = ?";
+                    $params[] = $started_at;
+                }
+                
+                if ($completed_at) {
+                    $sql .= ", completed_at = ?";
+                    $params[] = $completed_at;
+                } else {
+                    $sql .= ", completed_at = GETDATE()";
+                }
+
+                $sql .= ", repair_minutes = DATEDIFF(MINUTE, ";
+                if ($started_at) {
+                    $sql .= "?";
+                    $params[] = $started_at;
+                } else {
+                    $sql .= "started_at";
+                }
+                $sql .= ", ";
+                if ($completed_at) {
+                    $sql .= "?";
+                    $params[] = $completed_at;
+                } else {
+                    $sql .= "GETDATE()";
+                }
+                $sql .= ")";
+
+                $sql .= " WHERE wo_id = ?";
+                $params[] = $id;
+
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
                 
                 writeLog($pdo, 'QUICK_CLOSE_WO', 'PE_WO_API', $id, null, null, "Closed job (Completed)");
                 $pdo->commit();

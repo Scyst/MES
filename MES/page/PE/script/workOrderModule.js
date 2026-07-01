@@ -1183,6 +1183,15 @@ const WorkOrderModule = (() => {
         document.getElementById('qcFrmAction').value = wo.action_taken || '';
         document.getElementById('qcFrmRootCause').value = wo.root_cause || '';
 
+        if (document.getElementById('qcFrmStartedAt')) {
+            document.getElementById('qcFrmStartedAt').value = wo.started_at ? wo.started_at.slice(0, 16) : '';
+        }
+        if (document.getElementById('qcFrmCompletedAt')) {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('qcFrmCompletedAt').value = now.toISOString().slice(0, 16);
+        }
+
         // Reset image
         const imgAfterInput = document.getElementById('qcFrmImageAfter');
         if (imgAfterInput) imgAfterInput.value = '';
@@ -1205,6 +1214,8 @@ const WorkOrderModule = (() => {
         const woId = document.getElementById('qcWoId').value;
         const actionTaken = document.getElementById('qcFrmAction').value.trim();
         const rootCause = document.getElementById('qcFrmRootCause').value.trim();
+        const startedAt = document.getElementById('qcFrmStartedAt')?.value;
+        const completedAt = document.getElementById('qcFrmCompletedAt')?.value;
         const btn = document.getElementById('qcSaveBtn');
         const imgInput = document.getElementById('qcFrmImageAfter');
 
@@ -1235,7 +1246,9 @@ const WorkOrderModule = (() => {
                 wo_id: woId,
                 photo_after: photoAfter,
                 action_taken: actionTaken,
-                root_cause: rootCause
+                root_cause: rootCause,
+                started_at: startedAt,
+                completed_at: completedAt
             });
             
             PEApp.showToast('ปิดงานเรียบร้อย', 'success');

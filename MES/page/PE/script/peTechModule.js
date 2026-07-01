@@ -228,6 +228,15 @@ window.TechModule = (function() {
         document.getElementById('qcFrmAction').value = wo.action_taken || '';
         document.getElementById('qcFrmRootCause').value = wo.root_cause || '';
         
+        if (document.getElementById('qcFrmStartedAt')) {
+            document.getElementById('qcFrmStartedAt').value = wo.started_at ? wo.started_at.slice(0, 16) : '';
+        }
+        if (document.getElementById('qcFrmCompletedAt')) {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('qcFrmCompletedAt').value = now.toISOString().slice(0, 16);
+        }
+        
         document.getElementById('qcFrmImageAfter').value = '';
         document.getElementById('qcImageAfterPreview').style.display = 'none';
         document.getElementById('qcDropzoneAfter').classList.remove('has-image');
@@ -241,6 +250,8 @@ window.TechModule = (function() {
         const woId = document.getElementById('qcWoId').value;
         const actionTaken = document.getElementById('qcFrmAction').value.trim();
         const rootCause = document.getElementById('qcFrmRootCause').value.trim();
+        const startedAt = document.getElementById('qcFrmStartedAt')?.value;
+        const completedAt = document.getElementById('qcFrmCompletedAt')?.value;
         const btn = document.getElementById('qcSaveBtn');
         const imgInput = document.getElementById('qcFrmImageAfter');
 
@@ -268,9 +279,11 @@ window.TechModule = (function() {
             await PEApp.apiCall('workOrderAPI.php', {}, 'POST', {
                 action: 'quick_close',
                 wo_id: woId,
+                photo_after: photoAfter,
                 action_taken: actionTaken,
                 root_cause: rootCause,
-                photo_after: photoAfter
+                started_at: startedAt,
+                completed_at: completedAt
             });
 
             PEApp.showToast('ปิดงานเรียบร้อย', 'success');
