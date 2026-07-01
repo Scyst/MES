@@ -395,16 +395,33 @@ const IIoTModule = (function() {
         }
     }
 
-    function uploadMapBg(input) {
+    async function uploadMapBg(input) {
         if (!input.files || input.files.length === 0) return;
         const file = input.files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = document.getElementById('iiotFloorplanImg');
-            if (img) img.src = e.target.result;
-            PEApp.showToast('Background updated (Local only)', 'info');
-        };
-        reader.readAsDataURL(file);
+        
+        const formData = new FormData();
+        formData.append('action', 'upload_map_bg');
+        formData.append('map_bg', file);
+        
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        
+        try {
+            const res = await fetch('api/machineAPI.php', {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': csrfToken },
+                body: formData
+            });
+            const data = await res.json();
+            if (data.success) {
+                const img = document.getElementById('iiotFloorplanImg');
+                if (img) img.src = data.path + '?' + new Date().getTime(); // cache bust
+                PEApp.showToast('Background map updated successfully', 'success');
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (e) {
+            PEApp.showToast('Upload failed: ' + e.message, 'error');
+        }
     }
 
     return { init, stop, toggleSimulation, toggleEditMode, saveMapPositions, uploadMapBg };

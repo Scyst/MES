@@ -261,7 +261,7 @@
             </div>
         </div>
         <div class="iiot-floorplan" id="iiotFloorplan">
-            <img id="iiotFloorplanImg" src="assets/img/iiot-map-bg.png" class="iiot-floorplan-img" alt="Floor plan" onerror="this.src='https://placehold.co/1200x600/0f172a/334155?text=Upload+Map+Background'">
+            <img id="iiotFloorplanImg" src="../../uploads/iiot-map-bg.png" class="iiot-floorplan-img" alt="Floor plan" onerror="this.src='https://placehold.co/1200x600/0f172a/334155?text=Upload+Map+Background'">
             <!-- Machine Nodes will be injected here -->
             <div id="machineTooltip" class="machine-tooltip">
                 <h6 id="ttMachineName">Machine Name</h6>

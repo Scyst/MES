@@ -251,6 +251,28 @@ try {
 
             break;
 
+        case 'upload_map_bg':
+            if (isset($_FILES['map_bg']) && $_FILES['map_bg']['error'] === UPLOAD_ERR_OK) {
+                $target_dir = __DIR__ . '/../../../uploads/';
+                if (!is_dir($target_dir)) {
+                    mkdir($target_dir, 0777, true);
+                }
+                
+                $target_file = $target_dir . 'iiot-map-bg.png';
+                if (move_uploaded_file($_FILES['map_bg']['tmp_name'], $target_file)) {
+                    echo json_encode([
+                        'success' => true, 
+                        'message' => 'Uploaded successfully', 
+                        'path' => '../../uploads/iiot-map-bg.png'
+                    ]);
+                } else {
+                    throw new Exception("Failed to save uploaded file on server.");
+                }
+            } else {
+                throw new Exception("No file uploaded or upload error.");
+            }
+            break;
+
         case 'save_map_positions':
             $positions = $input['positions'] ?? [];
             if (empty($positions) || !is_array($positions)) {
