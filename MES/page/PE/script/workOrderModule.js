@@ -368,8 +368,13 @@ const WorkOrderModule = (() => {
             if (el) el.value = '';
         });
         document.getElementById('woFrmType').value = 'Corrective';
-        document.getElementById('woFrmPriority').value = 'Normal';
         document.getElementById('woFrmMachine').value = '';
+        if (document.getElementById('woFrmMachineName')) {
+            document.getElementById('woFrmMachineName').value = '';
+            if (document.getElementById('colCustomMachine')) document.getElementById('colCustomMachine').style.display = 'block';
+            if (document.getElementById('colLine')) document.getElementById('colLine').className = 'col-md-3';
+        }
+        document.getElementById('woFrmLine').value = '';
         // Default to current time for New Work Order
         document.getElementById('woFrmRequestDate').value = isEdit ? '' : getLocalISO();
         document.getElementById('woFrmRepairMin').value = '';
@@ -441,6 +446,11 @@ const WorkOrderModule = (() => {
                 document.getElementById('woFrmType').value = wo.wo_type || 'Corrective';
                 document.getElementById('woFrmPriority').value = wo.priority || 'Normal';
                 document.getElementById('woFrmMachine').value = wo.machine_id || '';
+                if (document.getElementById('woFrmMachineName')) {
+                    document.getElementById('woFrmMachineName').value = (!wo.machine_id && wo.machine_name) ? wo.machine_name : '';
+                    if (document.getElementById('colCustomMachine')) document.getElementById('colCustomMachine').style.display = wo.machine_id ? 'none' : 'block';
+                    if (document.getElementById('colLine')) document.getElementById('colLine').className = wo.machine_id ? 'col-md-6' : 'col-md-3';
+                }
                 document.getElementById('woFrmLine').value = wo.line || '';
                 document.getElementById('woFrmTitle').value = wo.issue_title || '';
                 document.getElementById('woFrmDetail').value = wo.issue_detail || '';
@@ -581,6 +591,8 @@ const WorkOrderModule = (() => {
                     wo_type: document.getElementById('woFrmType')?.value || 'Corrective',
                     priority: document.getElementById('woFrmPriority')?.value || 'Normal',
                     status: document.getElementById('woFrmStatus')?.value || 'Open',
+                    machine_id: document.getElementById('woFrmMachine')?.value || '',
+                    machine_name: document.getElementById('woFrmMachineName')?.value || '',
                     line: document.getElementById('woFrmLine')?.value || '',
                     issue_title: title,
                     issue_detail: document.getElementById('woFrmDetail')?.value || '',
@@ -600,6 +612,7 @@ const WorkOrderModule = (() => {
                     wo_type: document.getElementById('woFrmType')?.value || 'Corrective',
                     priority: document.getElementById('woFrmPriority')?.value || 'Normal',
                     machine_id: document.getElementById('woFrmMachine')?.value || '',
+                    machine_name: document.getElementById('woFrmMachineName')?.value || '',
                     line: document.getElementById('woFrmLine')?.value || '',
                     requested_at: document.getElementById('woFrmRequestDate')?.value || '',
                     issue_title: title,
@@ -814,9 +827,25 @@ const WorkOrderModule = (() => {
     function onMachineChange() {
         const sel = document.getElementById('woFrmMachine');
         const lineInput = document.getElementById('woFrmLine');
-        if (!sel || !lineInput) return;
-        const machine = machineList.find(m => m.machine_id == sel.value);
-        if (machine) lineInput.value = machine.line || '';
+        const nameInput = document.getElementById('woFrmMachineName');
+        const colCustomMachine = document.getElementById('colCustomMachine');
+        const colLine = document.getElementById('colLine');
+        if (!sel) return;
+        
+        if (colCustomMachine && colLine) {
+            if (sel.value === '') {
+                colCustomMachine.style.display = 'block';
+                colLine.className = 'col-md-3';
+            } else {
+                colCustomMachine.style.display = 'none';
+                colLine.className = 'col-md-6';
+            }
+        }
+
+        if (lineInput) {
+            const machine = machineList.find(m => m.machine_id == sel.value);
+            if (machine) lineInput.value = machine.line || '';
+        }
     }
 
     // Init date defaults & listeners
@@ -1084,24 +1113,19 @@ const WorkOrderModule = (() => {
             });
 
             if (result.isConfirmed) {
-                const res = await fetch(`api/workOrderAPI.php?action=quick_accept`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ wo_id: woId })
+                await PEApp.apiCall('workOrderAPI.php', {}, 'POST', {
+                    action: 'quick_accept',
+                    wo_id: woId
                 });
-                const data = await res.json();
-                if (data.status === 'success') {
-                    PEApp.showToast('รับงานเรียบร้อย', 'success');
-                    
-                    // Hide main modal if open
-                    const mainModalEl = document.getElementById('workOrderModal');
-                    const mainModal = bootstrap.Modal.getInstance(mainModalEl);
-                    if (mainModal) mainModal.hide();
+                
+                PEApp.showToast('รับงานเรียบร้อย', 'success');
+                
+                // Hide main modal if open
+                const mainModalEl = document.getElementById('workOrderModal');
+                const mainModal = bootstrap.Modal.getInstance(mainModalEl);
+                if (mainModal) mainModal.hide();
 
-                    loadData();
-                } else {
-                    throw new Error(data.message || 'Error accepting job');
-                }
+                loadData();
             }
         } catch (error) {
             console.error(error);
@@ -1164,26 +1188,18 @@ const WorkOrderModule = (() => {
                 photoAfter = await PEApp.uploadFile(imgInput.files[0], 'WO');
             }
 
-            const res = await fetch(`api/workOrderAPI.php?action=quick_close`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    wo_id: woId,
-                    photo_after: photoAfter,
-                    action_taken: actionTaken,
-                    root_cause: rootCause
-                })
+            await PEApp.apiCall('workOrderAPI.php', {}, 'POST', {
+                action: 'quick_close',
+                wo_id: woId,
+                photo_after: photoAfter,
+                action_taken: actionTaken,
+                root_cause: rootCause
             });
-            const data = await res.json();
             
-            if (data.status === 'success') {
-                PEApp.showToast('ปิดงานเรียบร้อย', 'success');
-                const modal = bootstrap.Modal.getInstance(document.getElementById('quickCloseModal'));
-                if (modal) modal.hide();
-                loadData();
-            } else {
-                throw new Error(data.message || 'Error closing job');
-            }
+            PEApp.showToast('ปิดงานเรียบร้อย', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('quickCloseModal'));
+            if (modal) modal.hide();
+            loadData();
         } catch (error) {
             console.error(error);
             PEApp.showToast(error.message, 'error');

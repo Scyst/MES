@@ -35,23 +35,48 @@ try {
             $dtStmt->execute($baseParams);
             $dtKpi = $dtStmt->fetch(PDO::FETCH_ASSOC);
 
-            // WO stats
+            // 1. Get Shift Hours
+            $shiftSql = "SELECT ISNULL(SUM(DATEDIFF(MINUTE, start_time, end_time)), 24*60) / 60.0 FROM MANPOWER_SHIFTS WITH (NOLOCK) WHERE is_active = 1";
+            $shiftStmt = $pdo->query($shiftSql);
+            $hoursPerDay = (float)$shiftStmt->fetchColumn();
+            if ($hoursPerDay <= 0) $hoursPerDay = 24;
+
+            // 2. WO stats with dynamic labor rate
             $woSql = "SELECT 
                         COUNT(*) as total_wo,
-                        SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed_wo,
-                        ISNULL(AVG(CASE WHEN status = 'Completed' AND repair_minutes > 0 THEN CAST(repair_minutes AS FLOAT) ELSE NULL END), 0) as avg_repair,
-                        ISNULL(SUM(total_cost), 0) as total_cost
-                      FROM " . PE_WORK_ORDERS_TABLE . " WITH (NOLOCK)
-                      WHERE requested_at >= ? AND requested_at < DATEADD(DAY, 1, CAST(? AS DATE)) $lineCondition";
+                        SUM(CASE WHEN W.status = 'Completed' THEN 1 ELSE 0 END) as completed_wo,
+                        ISNULL(AVG(CASE WHEN W.status = 'Completed' AND W.repair_minutes > 0 THEN CAST(W.repair_minutes AS FLOAT) ELSE NULL END), 0) as avg_repair,
+                        ISNULL(SUM(W.total_cost), 0) as parts_cost,
+                        ISNULL(SUM((ISNULL(W.repair_minutes, 0) / 60.0) * 
+                            ISNULL((
+                                SELECT TOP 1 
+                                    CASE 
+                                        WHEN R.rate_type = 'DAILY' THEN CAST(R.daily_rate AS FLOAT) / 8.0 
+                                        WHEN R.rate_type = 'MONTHLY' THEN (CAST(R.daily_rate AS FLOAT) / 30.0) / 8.0 
+                                        ELSE 200.0 
+                                    END
+                                FROM MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                                LEFT JOIN MANPOWER_POSITION_RATES R WITH (NOLOCK) 
+                                    ON E.position LIKE '%' + R.position_keyword + '%' 
+                                WHERE (E.emp_id = W.assigned_to OR E.name_th = W.assigned_to)
+                            ), 200.0)
+                        ), 0) as labor_cost
+                      FROM " . PE_WORK_ORDERS_TABLE . " W WITH (NOLOCK)
+                      WHERE W.requested_at >= ? AND W.requested_at < DATEADD(DAY, 1, CAST(? AS DATE))";
+            if ($lineFilter) {
+                $woSql .= " AND W.line = ?";
+            }
             $woStmt = $pdo->prepare($woSql);
             $woStmt->execute($baseParams);
             $woKpi = $woStmt->fetch(PDO::FETCH_ASSOC);
+            
+            $woKpi['total_cost'] = $woKpi['parts_cost'] + $woKpi['labor_cost'];
 
             // Calculate MTBF & MTTR & Availability
             $totalDowntimeHrs = ($dtKpi['total_downtime_min'] ?? 0) / 60;
             $totalEvents = max(1, $dtKpi['total_events'] ?? 1);
             
-            // Assume operating hours: days in range * 24hrs * number of active machines
+            // Assume operating hours: days in range * Shift Hours * number of active machines
             $daysDiff = max(1, (strtotime($endDate) - strtotime($startDate)) / 86400 + 1);
             $machineCount = 1;
             $mcSql = "SELECT COUNT(*) FROM " . PE_MACHINES_TABLE . " WITH (NOLOCK) WHERE is_active = 1 AND status = 'Active'";
@@ -64,7 +89,7 @@ try {
             }
             $machineCount = max(1, (int)$mcStmt->fetchColumn());
 
-            $totalOperatingHrs = $daysDiff * 24 * $machineCount;
+            $totalOperatingHrs = $daysDiff * $hoursPerDay * $machineCount;
             $uptimeHrs = $totalOperatingHrs - $totalDowntimeHrs;
 
             $mtbf = $totalEvents > 0 ? round($uptimeHrs / $totalEvents, 1) : 0;

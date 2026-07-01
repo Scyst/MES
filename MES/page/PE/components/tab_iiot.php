@@ -122,8 +122,14 @@
 <div class="iiot-dashboard pe-animate-in">
     <div class="iiot-header">
         <h4><i class="fas fa-satellite-dish"></i> Live IIoT Monitor</h4>
-        <div class="live-indicator">
-            <div class="dot"></div> LIVE
+        <div class="d-flex align-items-center gap-4">
+            <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                <input class="form-check-input mt-0" type="checkbox" id="iiotSimToggle" onchange="IIoTModule.toggleSimulation()">
+                <label class="form-check-label text-white small" for="iiotSimToggle" style="font-size:0.8rem; opacity:0.8;">Simulation Mode</label>
+            </div>
+            <div class="live-indicator">
+                <div class="dot"></div> LIVE
+            </div>
         </div>
     </div>
 

@@ -25,6 +25,9 @@
         <button class="pe-chip" onclick="AnalyticsModule.setPeriod('week')">This Week</button>
         <button class="pe-chip active" onclick="AnalyticsModule.setPeriod('month')">This Month</button>
         <button class="pe-chip" onclick="AnalyticsModule.setPeriod('quarter')">This Quarter</button>
+        <button class="pe-btn pe-btn-ghost pe-btn-sm ms-2" onclick="window.print()" title="Export PDF / Print" style="border-color:var(--pe-text-muted); color:var(--pe-text-primary);">
+            <i class="fas fa-print me-1"></i> Executive Report
+        </button>
     </div>
 </div>
 
@@ -62,11 +65,11 @@
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-clock"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-info pe-animate-in">
+    <div class="pe-kpi-card kpi-info pe-animate-in" title="Total Maintenance Cost">
         <div>
             <div class="pe-kpi-label">Maintenance Cost</div>
             <div class="pe-kpi-value" id="kpiMtCost">฿0</div>
-            <div class="pe-kpi-sub">Parts + Labor</div>
+            <div class="pe-kpi-sub" id="kpiMtCostSub">Parts + Labor</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-coins"></i></div>
     </div>

@@ -71,6 +71,13 @@ const AnalyticsModule = (() => {
 
             const costEl = document.getElementById('kpiMtCost');
             if (costEl) costEl.textContent = PEApp.formatCurrency(d.total_cost || 0);
+
+            const costSub = document.getElementById('kpiMtCostSub');
+            if (costSub) {
+                const parts = d.parts_cost || 0;
+                const labor = d.labor_cost || 0;
+                costSub.innerHTML = `<span title="Parts: ฿${PEApp.formatNumber(parts)} | Labor: ฿${PEApp.formatNumber(labor)}">Parts: ฿${PEApp.formatNumber(parts)} | Labor: ฿${PEApp.formatNumber(labor)}</span>`;
+            }
         } catch (e) { console.error('KPI Error:', e); }
     }
 

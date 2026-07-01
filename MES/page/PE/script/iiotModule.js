@@ -1,6 +1,7 @@
 const IIoTModule = (function() {
     let pollingInterval = null;
     let machinesWithIIoT = [];
+    let isSimulating = false;
 
     async function init() {
         try {
@@ -73,6 +74,10 @@ const IIoTModule = (function() {
         if (pollingInterval) clearInterval(pollingInterval);
         
         const fetchTelemetry = async () => {
+            if (isSimulating) {
+                simulateData();
+                return;
+            }
             try {
                 const res = await fetch('api/iiotAPI.php?action=get_live_telemetry');
                 const json = await res.json();
@@ -138,6 +143,24 @@ const IIoTModule = (function() {
             }
         });
     }
+    
+    function simulateData() {
+        const fakeData = {};
+        machinesWithIIoT.forEach(m => {
+            const power = (Math.random() * 40 + 20).toFixed(2); // 20-60 kW
+            const flow = (Math.random() * 5 + 10).toFixed(2); // 10-15 L/min
+            const isAlert = power > 55; // 55+ is alert threshold for simulation
+            
+            fakeData[m.machine_code] = {
+                live_status: isAlert ? 'WARNING' : 'RUNNING',
+                live_counter: Math.floor(Math.random() * 1000),
+                live_total: 1000,
+                power_kw: power,
+                flow_rate: flow
+            };
+        });
+        updateUI(fakeData);
+    }
 
     function updateUI(telemetryData) {
         machinesWithIIoT.forEach(m => {
@@ -170,11 +193,26 @@ const IIoTModule = (function() {
                 }
             }
 
-            // Update Power
+            // Update Power and Check Threshold Alert
             const powerRow = document.getElementById(`iiot-row-power-${m.machine_code}`);
+            const cardEl = document.getElementById(`iiot-card-${m.machine_code}`);
             if (powerRow && data.power_kw !== null) {
                 powerRow.style.display = 'flex';
-                if (powerEl) powerEl.innerText = parseFloat(data.power_kw).toFixed(2) + ' kW';
+                const p = parseFloat(data.power_kw);
+                if (powerEl) powerEl.innerText = p.toFixed(2) + ' kW';
+                
+                // Threshold logic (Flash card red if power > 55 in our simulation)
+                if (p > 55 || (data.live_status || '').toUpperCase() === 'WARNING') {
+                    if (cardEl && !cardEl.classList.contains('pe-animate-pulse')) {
+                        cardEl.style.border = '2px solid #ef4444';
+                        cardEl.classList.add('pe-animate-pulse');
+                    }
+                } else {
+                    if (cardEl) {
+                        cardEl.style.border = '1px solid #334155';
+                        cardEl.classList.remove('pe-animate-pulse');
+                    }
+                }
             } else if (powerRow) {
                 powerRow.style.display = 'none';
             }
@@ -205,6 +243,13 @@ const IIoTModule = (function() {
             pollingInterval = null;
         }
     }
+    
+    function toggleSimulation() {
+        isSimulating = document.getElementById('iiotSimToggle')?.checked || false;
+        if (isSimulating) {
+            PEApp.showToast('IIoT Simulation Mode Enabled', 'info');
+        }
+    }
 
-    return { init, stop };
+    return { init, stop, toggleSimulation };
 })();

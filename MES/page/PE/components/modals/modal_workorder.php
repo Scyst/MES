@@ -74,11 +74,17 @@
                                 <div class="pe-form-group">
                                     <label class="pe-form-label">Machine <span class="required">*</span></label>
                                     <select class="pe-form-select" id="woFrmMachine" onchange="WorkOrderModule.onMachineChange()">
-                                        <option value="">-- Select Machine --</option>
+                                        <option value="">-- ไม่ระบุ (ระบุเอง) --</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div id="colCustomMachine" class="col-md-3" style="display: none;">
+                                <div class="pe-form-group">
+                                    <label class="pe-form-label text-primary">ระบุชื่ออุปกรณ์</label>
+                                    <input type="text" class="pe-form-input" id="woFrmMachineName" placeholder="พิมพ์ชื่ออุปกรณ์...">
+                                </div>
+                            </div>
+                            <div id="colLine" class="col-md-6">
                                 <div class="pe-form-group">
                                     <label class="pe-form-label">Line</label>
                                     <input list="woLineList" class="pe-form-input" id="woFrmLine" placeholder="Line">

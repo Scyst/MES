@@ -265,26 +265,18 @@ window.TechModule = (function() {
                 photoAfter = await PEApp.uploadFile(imgInput.files[0], 'WO');
             }
 
-            const res = await fetch(`api/workOrderAPI.php?action=quick_close`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    wo_id: woId,
-                    action_taken: actionTaken,
-                    root_cause: rootCause,
-                    photo_after: photoAfter
-                })
+            await PEApp.apiCall('workOrderAPI.php', {}, 'POST', {
+                action: 'quick_close',
+                wo_id: woId,
+                action_taken: actionTaken,
+                root_cause: rootCause,
+                photo_after: photoAfter
             });
 
-            const data = await res.json();
-            if (data.status === 'success' || data.success) {
-                PEApp.showToast('ปิดงานเรียบร้อย', 'success');
-                const modal = bootstrap.Modal.getInstance(document.getElementById('quickCloseModal'));
-                if (modal) modal.hide();
-                loadData();
-            } else {
-                PEApp.showToast('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่ทราบสาเหตุ'), 'error');
-            }
+            PEApp.showToast('ปิดงานเรียบร้อย', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('quickCloseModal'));
+            if (modal) modal.hide();
+            loadData();
         } catch (e) {
             PEApp.showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
         } finally {

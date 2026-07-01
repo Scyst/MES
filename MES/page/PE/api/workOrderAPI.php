@@ -179,8 +179,22 @@ try {
                 $updatableFields = [
                     'status', 'priority', 'assigned_to', 'wo_type',
                     'issue_title', 'issue_detail', 'root_cause', 'action_taken',
-                    'line', 'image_path', 'photo_after'
+                    'line', 'image_path', 'photo_after', 'machine_id', 'machine_name'
                 ];
+
+                if (array_key_exists('machine_id', $input)) {
+                    $input['machine_id'] = !empty($input['machine_id']) ? (int)$input['machine_id'] : null;
+                }
+                
+                if (!empty($input['machine_id'])) {
+                    $mStmt = $pdo->prepare("SELECT machine_name, line FROM " . PE_MACHINES_TABLE . " WHERE machine_id = ?");
+                    $mStmt->execute([$input['machine_id']]);
+                    $mData = $mStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($mData) {
+                        $input['machine_name'] = $mData['machine_name'];
+                        if (empty($input['line'])) $input['line'] = $mData['line'];
+                    }
+                }
 
                 foreach ($updatableFields as $f) {
                     if (isset($input[$f])) {

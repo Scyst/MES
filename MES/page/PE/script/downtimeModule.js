@@ -79,8 +79,10 @@ const DowntimeModule = (() => {
             <tr>
                 <td class="pe-text-sm">${PEApp.formatDate(d.log_date)}</td>
                 <td class="pe-text-sm">${PEApp.formatTime(d.start_time)}</td>
-                <td class="pe-text-sm">${PEApp.formatTime(d.end_time)}</td>
-                <td class="pe-fw-bold" style="color:var(--pe-warning);">${d.duration_min || 0} min</td>
+                <td class="pe-text-sm">
+                    ${d.end_time ? PEApp.formatTime(d.end_time) : '<span class="pe-badge pe-badge-danger pe-animate-pulse" style="animation: pulse-red 1.5s infinite;"><div class="dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#fff;margin-right:4px;"></div>Ongoing</span>'}
+                </td>
+                <td class="pe-fw-bold" style="color:var(--pe-warning);">${d.end_time ? (d.duration_min || 0) + ' min' : '-'}</td>
                 <td>${PEApp.escapeHtml(d.line || '-')}</td>
                 <td class="pe-text-sm">${PEApp.escapeHtml(d.machine_code || d.machine_name || '-')}</td>
                 <td><span class="pe-badge" style="background:${catColor.bg};color:${catColor.text};">${PEApp.escapeHtml(d.cause_category || '-')}</span></td>
@@ -190,6 +192,14 @@ const DowntimeModule = (() => {
         if (machine) lineInput.value = machine.line || '';
     }
 
+    function onCauseChange() {
+        const cat = document.getElementById('dtFrmCauseCategory')?.value;
+        const cb = document.getElementById('dtFrmCreateWO');
+        if (cb && (cat === 'Mechanical' || cat === 'Electrical')) {
+            cb.checked = true;
+        }
+    }
+
     function calcDuration() {
         const start = document.getElementById('dtFrmStartTime')?.value;
         const end = document.getElementById('dtFrmEndTime')?.value;
@@ -211,8 +221,8 @@ const DowntimeModule = (() => {
         const startTime = document.getElementById('dtFrmStartTime')?.value;
         const endTime = document.getElementById('dtFrmEndTime')?.value;
 
-        if (!date || !startTime || !endTime || !causeCategory || !causeDetail) {
-            PEApp.showToast('กรุณากรอกข้อมูลให้ครบ (Date, Start/End Time, Cause Category, Cause Detail)', 'warning');
+        if (!date || !startTime || !causeCategory || !causeDetail) {
+            PEApp.showToast('กรุณากรอกข้อมูลให้ครบ (Date, Start Time, Cause Category, Cause Detail)', 'warning');
             return;
         }
 
@@ -280,5 +290,5 @@ const DowntimeModule = (() => {
         if (endEl && !endEl.value) endEl.value = now.toISOString().slice(0, 10);
     });
 
-    return { loadData, filterTable, openModal, editRow, deleteRow, save, exportExcel, onMachineChange, calcDuration };
+    return { loadData, filterTable, openModal, editRow, deleteRow, save, exportExcel, onMachineChange, onCauseChange, calcDuration };
 })();

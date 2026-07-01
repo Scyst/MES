@@ -51,7 +51,7 @@
                     <div class="col-md-6">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Cause Category <span class="required">*</span></label>
-                            <select class="pe-form-select" id="dtFrmCauseCategory">
+                            <select class="pe-form-select" id="dtFrmCauseCategory" onchange="DowntimeModule.onCauseChange()">
                                 <option value="">-- Select --</option>
                                 <option value="Mechanical">Mechanical</option>
                                 <option value="Electrical">Electrical</option>
