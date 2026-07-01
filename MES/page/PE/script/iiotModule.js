@@ -8,6 +8,11 @@ const IIoTModule = (function() {
 
     async function init() {
         try {
+            const tt = document.getElementById('machineTooltip');
+            if (tt && tt.parentNode !== document.body) {
+                document.body.appendChild(tt);
+            }
+
             // Get all machines, filter only those with mqtt_topic
             const res = await PEApp.apiCall('machineAPI.php', { action: 'get_machines' });
             machinesWithIIoT = (res.data || []).filter(m => m.mqtt_topic && m.mqtt_topic.trim() !== '');
