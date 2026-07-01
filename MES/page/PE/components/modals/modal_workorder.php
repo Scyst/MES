@@ -11,9 +11,17 @@
 <div class="modal fade pe-modal" id="workOrderModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" id="woModalDialog">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header align-items-center">
                 <h5 class="modal-title"><i class="fas fa-clipboard-list" style="color:var(--pe-primary);"></i> <span id="woModalTitle">New Work Order</span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="d-flex align-items-center gap-2 ms-auto me-3">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="woPrintBtn" onclick="WorkOrderModule.printPDF()" style="display:none;" title="Print PDF">
+                        <i class="fas fa-print"></i> <span class="d-none d-md-inline ms-1">Print</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="woDeleteBtn" onclick="WorkOrderModule.deleteItem()" style="display:none;" title="Delete">
+                        <i class="fas fa-trash-alt"></i> <span class="d-none d-md-inline ms-1">Delete</span>
+                    </button>
+                </div>
+                <button type="button" class="btn-close m-0" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body px-4 px-lg-5 py-3 py-lg-4">
                 <input type="hidden" id="woEditId">
@@ -215,12 +223,7 @@
                     <button type="button" class="pe-btn pe-btn-primary" id="woQuickAcceptBtn" onclick="WorkOrderModule.quickAccept(document.getElementById('woEditId').value)" style="display:none;">
                         <i class="fas fa-play me-1"></i> รับงาน
                     </button>
-                    <button type="button" class="pe-btn pe-btn-danger" id="woDeleteBtn" onclick="WorkOrderModule.deleteItem()" style="display:none;">
-                        <i class="fas fa-trash-alt me-1"></i> Delete
-                    </button>
-                    <button type="button" class="pe-btn" id="woPrintBtn" onclick="WorkOrderModule.printPDF()" style="display:none; background-color: var(--pe-primary-light); color: var(--pe-primary); border: 1px solid var(--pe-primary);">
-                        <i class="fas fa-print me-1"></i> Print PDF
-                    </button>
+
                 </div>
                 <div class="d-flex ms-auto" style="gap: 8px;">
                     <button type="button" class="pe-btn pe-btn-ghost" data-bs-dismiss="modal">ยกเลิก</button>
