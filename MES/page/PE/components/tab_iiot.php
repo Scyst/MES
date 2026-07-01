@@ -165,6 +165,11 @@
 .machine-node:hover {
     transform: translate(-50%, -50%) scale(1.3);
 }
+.machine-node.offline {
+    background: #64748b;
+    border: 2px solid #94a3b8;
+    box-shadow: 0 0 8px rgba(100, 116, 139, 0.6);
+}
 .machine-node.running {
     background: #10b981;
     box-shadow: 0 0 15px 5px rgba(16, 185, 129, 0.4);
