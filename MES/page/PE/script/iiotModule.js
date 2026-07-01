@@ -4,6 +4,7 @@ const IIoTModule = (function() {
     let isSimulating = false;
     let isMapEditMode = false;
     let cropperInstance = null;
+    let panzoomInstance = null;
 
     async function init() {
         try {
@@ -75,13 +76,13 @@ const IIoTModule = (function() {
     }
 
     function renderFloorplan() {
-        const floorplan = document.getElementById('iiotFloorplan');
-        if (!floorplan) return;
+        const floorplanWrapper = document.getElementById('iiotPanzoomElement');
+        if (!floorplanWrapper) return;
         
-        // Remove existing nodes (except tooltip and image)
-        Array.from(floorplan.children).forEach(child => {
-            if (child.id !== 'machineTooltip' && child.id !== 'iiotFloorplanImg') {
-                floorplan.removeChild(child);
+        // Remove existing nodes (except image)
+        Array.from(floorplanWrapper.children).forEach(child => {
+            if (child.id !== 'iiotFloorplanImg') {
+                floorplanWrapper.removeChild(child);
             }
         });
 
@@ -99,29 +100,30 @@ const IIoTModule = (function() {
             node.addEventListener('mousedown', (e) => {
                 if (!isMapEditMode) return;
                 e.preventDefault();
-                let isDragging = true;
+                e.stopPropagation(); // Prevent panzoom from triggering
+                let startX = e.clientX;
+                let startY = e.clientY;
+                let startLeft = parseFloat(node.style.left);
+                let startTop = parseFloat(node.style.top);
                 
-                const moveHandler = (moveEvent) => {
-                    if (!isDragging) return;
-                    const rect = floorplan.getBoundingClientRect();
-                    let newX = ((moveEvent.clientX - rect.left) / rect.width) * 100;
-                    let newY = ((moveEvent.clientY - rect.top) / rect.height) * 100;
+                const onMouseMove = (moveEvent) => {
+                    const scale = panzoomInstance.getScale();
+                    const dx = ((moveEvent.clientX - startX) / (floorplanWrapper.offsetWidth * scale)) * 100;
+                    const dy = ((moveEvent.clientY - startY) / (floorplanWrapper.offsetHeight * scale)) * 100;
                     
-                    newX = Math.max(0, Math.min(100, newX));
-                    newY = Math.max(0, Math.min(100, newY));
+                    let newX = Math.max(0, Math.min(100, startLeft + dx));
+                    let newY = Math.max(0, Math.min(100, startTop + dy));
                     
                     node.style.left = `${newX}%`;
                     node.style.top = `${newY}%`;
                 };
                 
-                const upHandler = () => {
-                    isDragging = false;
-                    document.removeEventListener('mousemove', moveHandler);
-                    document.removeEventListener('mouseup', upHandler);
+                const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
                 };
                 
-                document.addEventListener('mousemove', moveHandler);
-                document.addEventListener('mouseup', upHandler);
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp, { once: true });
             });
             
             node.addEventListener('mouseenter', () => {
@@ -145,7 +147,7 @@ const IIoTModule = (function() {
                 if (tt) tt.classList.remove('visible');
             });
             
-            floorplan.appendChild(node);
+            floorplanWrapper.appendChild(node);
         });
     }
 
@@ -188,6 +190,20 @@ const IIoTModule = (function() {
         pollingInterval = setInterval(() => {
             tick++;
             fetchTelemetry();
+            
+            // Initialize Panzoom
+            const pzElement = document.getElementById('iiotPanzoomElement');
+            const pzParent = document.getElementById('iiotFloorplan');
+            if (pzElement && typeof Panzoom !== 'undefined' && !panzoomInstance) {
+                panzoomInstance = Panzoom(pzElement, {
+                    maxScale: 5,
+                    minScale: 0.5,
+                    step: 0.1,
+                    contain: 'outside'
+                });
+                pzParent.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
+            }
+
             // Fetch availability every 15 seconds (5 ticks)
             if (tick % 5 === 0) {
                 fetchAvailability();

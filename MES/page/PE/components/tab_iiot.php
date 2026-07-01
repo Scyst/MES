@@ -151,6 +151,18 @@
     height: auto;
     display: block;
 }
+.machine-tooltip {
+    position: fixed;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid #334155;
+    padding: 10px;
+    border-radius: 6px;
+    color: #fff;
+    pointer-events: none;
+    z-index: 9999;
+    display: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
 .machine-node {
     position: absolute;
     width: 16px;
@@ -266,8 +278,10 @@
             </div>
         </div>
         <div class="iiot-floorplan" id="iiotFloorplan">
-            <img id="iiotFloorplanImg" src="../../uploads/iiot-map-bg.png" class="iiot-floorplan-img" alt="Floor plan" onerror="this.src='https://placehold.co/1200x600/0f172a/334155?text=Upload+Map+Background'">
-            <!-- Machine Nodes will be injected here -->
+            <div id="iiotPanzoomElement" style="position:relative; width:100%; height:100%; min-height:600px;">
+                <img id="iiotFloorplanImg" src="../../uploads/iiot-map-bg.png" class="iiot-floorplan-img" alt="Floor plan" onerror="this.src='https://placehold.co/1200x600/0f172a/334155?text=Upload+Map+Background'">
+                <!-- Machine Nodes will be injected here -->
+            </div>
             <div id="machineTooltip" class="machine-tooltip">
                 <h6 id="ttMachineName">Machine Name</h6>
                 <div><span>Status:</span> <span id="ttStatus" class="val">Running</span></div>
@@ -285,9 +299,10 @@
     </div>
 </div>
 
-<!-- Cropper Modal -->
+<!-- Cropper & Panzoom -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
 <div class="modal fade" id="iiotCropModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content pe-modal">
