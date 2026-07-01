@@ -402,7 +402,12 @@ const IIoTModule = (function() {
         const reader = new FileReader();
         
         reader.onload = function(e) {
-            const cropModal = new bootstrap.Modal(document.getElementById('iiotCropModal'));
+            const modalEl = document.getElementById('iiotCropModal');
+            if (modalEl && modalEl.parentNode !== document.body) {
+                document.body.appendChild(modalEl); // Fix backdrop overlay bug
+            }
+            
+            const cropModal = bootstrap.Modal.getOrCreateInstance(modalEl);
             const image = document.getElementById('iiotCropImage');
             image.src = e.target.result;
             
