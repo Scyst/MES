@@ -33,12 +33,17 @@
 </div>
 
 <!-- Filter Bar -->
-<div class="pe-filter-bar">
-    <div class="pe-search">
-        <i class="fas fa-search"></i>
-        <input type="text" id="woSearchInput" placeholder="ค้นหา WO#, Machine, Issue..." oninput="WorkOrderModule.filterTable()">
+<div class="pe-filter-bar" id="woFilterBar">
+    <div class="pe-filter-header-mobile">
+        <div class="pe-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="woSearchInput" placeholder="ค้นหา WO#, Machine, Issue..." oninput="WorkOrderModule.filterTable()">
+        </div>
+        <button class="pe-btn pe-btn-ghost pe-mobile-filter-toggle" onclick="document.getElementById('woFilterBar').classList.toggle('expanded')" title="Toggle Filters">
+            <i class="fas fa-filter"></i>
+        </button>
     </div>
-    <select class="pe-filter-select" id="woFilterStatus" onchange="WorkOrderModule.loadData()">
+    <select class="pe-filter-select filter-item" id="woFilterStatus" onchange="WorkOrderModule.loadData()">
         <option value="Active" selected>Active (Open + In Progress)</option>
         <option value="">All Status</option>
         <option value="Open">Open</option>
@@ -48,17 +53,17 @@
         <option value="Cancelled">Cancelled</option>
         <option value="Deleted">Deleted (ถังขยะ)</option>
     </select>
-    <select class="pe-filter-select" id="woFilterPriority" onchange="WorkOrderModule.loadData()">
+    <select class="pe-filter-select filter-item" id="woFilterPriority" onchange="WorkOrderModule.loadData()">
         <option value="">ทุก Priority</option>
         <option value="Critical">Critical</option>
         <option value="High">High</option>
         <option value="Normal">Normal</option>
         <option value="Low">Low</option>
     </select>
-    <select class="pe-filter-select" id="woFilterLine" onchange="WorkOrderModule.loadData()">
+    <select class="pe-filter-select filter-item" id="woFilterLine" onchange="WorkOrderModule.loadData()">
         <option value="">ทุก Line</option>
     </select>
-    <div class="pe-filter-date">
+    <div class="pe-filter-date filter-item">
         <input type="date" id="woStartDate" onchange="WorkOrderModule.loadData()">
         <span class="separator">—</span>
         <input type="date" id="woEndDate" onchange="WorkOrderModule.loadData()">
@@ -66,18 +71,68 @@
 
     <div class="pe-filter-spacer"></div>
 
-    <div class="pe-view-toggle">
-        <button class="active" id="woViewTable" onclick="WorkOrderModule.setView('table')" title="Table View"><i class="fas fa-list"></i></button>
-        <button id="woViewKanban" onclick="WorkOrderModule.setView('kanban')" title="Kanban Board"><i class="fas fa-columns"></i></button>
+    <div class="pe-filter-actions">
+        <div class="pe-view-toggle">
+            <button class="active" id="woViewTable" onclick="WorkOrderModule.setView('table')" title="Table View"><i class="fas fa-list"></i></button>
+            <button id="woViewKanban" onclick="WorkOrderModule.setView('kanban')" title="Card View (Mobile)"><i class="fas fa-th-large"></i></button>
+            <button class="d-none d-md-flex" id="woViewBoard" onclick="WorkOrderModule.setView('board')" title="Board View (Drag & Drop)"><i class="fas fa-columns"></i></button>
+        </div>
+
+        <button class="pe-btn pe-btn-ghost d-none d-md-inline-flex" onclick="WorkOrderModule.exportExcel()" title="Export Excel">
+            <i class="fas fa-file-excel pe-me-1"></i> <span class="d-none d-lg-inline" style="margin-left: 4px;">Export</span>
+        </button>
+
+        <button class="pe-btn pe-btn-primary d-none d-md-inline-flex" onclick="WorkOrderModule.openModal()">
+            <i class="fas fa-plus"></i> <span class="ms-2">New Work Order</span>
+        </button>
     </div>
+</div>
 
-    <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="WorkOrderModule.exportExcel()" title="Export Excel">
-        <i class="fas fa-file-excel"></i>
-    </button>
+<!-- Kanban View (Single Column for Mobile) -->
+<div class="pe-card" id="woKanbanView" style="display:none;">
+    <div class="pe-card-body" id="woCardContainer">
+        <!-- Rendered by JS -->
+    </div>
+</div>
 
-    <button class="pe-btn pe-btn-primary" onclick="WorkOrderModule.openModal()">
-        <i class="fas fa-plus"></i> New Work Order
-    </button>
+<!-- Board View (4-Column Drag and Drop for Desktop) -->
+<div class="pe-board-container" id="woBoardView" style="display:none;">
+    <div class="pe-board-column" data-status="Open" ondragover="WorkOrderModule.allowDrop(event)" ondrop="WorkOrderModule.drop(event)" ondragenter="WorkOrderModule.dragEnter(event)" ondragleave="WorkOrderModule.dragLeave(event)">
+        <div class="pe-board-column-header">
+            <div class="pe-board-column-title">
+                <i class="fas fa-envelope-open text-primary"></i> รอรับงาน (Open)
+            </div>
+            <div class="pe-board-column-count" id="count-board-Open">0</div>
+        </div>
+        <div class="pe-board-column-content" id="board-col-Open"></div>
+    </div>
+    <div class="pe-board-column" data-status="Assigned" ondragover="WorkOrderModule.allowDrop(event)" ondrop="WorkOrderModule.drop(event)" ondragenter="WorkOrderModule.dragEnter(event)" ondragleave="WorkOrderModule.dragLeave(event)">
+        <div class="pe-board-column-header">
+            <div class="pe-board-column-title">
+                <i class="fas fa-user-check text-info"></i> มอบหมายแล้ว (Assigned)
+            </div>
+            <div class="pe-board-column-count" id="count-board-Assigned">0</div>
+        </div>
+        <div class="pe-board-column-content" id="board-col-Assigned"></div>
+    </div>
+    <div class="pe-board-column" data-status="In Progress" ondragover="WorkOrderModule.allowDrop(event)" ondrop="WorkOrderModule.drop(event)" ondragenter="WorkOrderModule.dragEnter(event)" ondragleave="WorkOrderModule.dragLeave(event)">
+        <div class="pe-board-column-header">
+            <div class="pe-board-column-title">
+                <i class="fas fa-cogs text-warning"></i> กำลังดำเนินการ (In Progress)
+            </div>
+            <div class="pe-board-column-count" id="count-board-InProgress">0</div>
+        </div>
+        <div class="pe-board-column-content" id="board-col-InProgress"></div>
+    </div>
+    <div class="pe-board-column" data-status="Completed" ondragover="WorkOrderModule.allowDrop(event)" ondrop="WorkOrderModule.drop(event)" ondragenter="WorkOrderModule.dragEnter(event)" ondragleave="WorkOrderModule.dragLeave(event)">
+        <div class="pe-board-column-header">
+            <div class="pe-board-column-title">
+                <i class="fas fa-check-circle text-success"></i> เสร็จสิ้น (Completed)
+            </div>
+            <div class="pe-board-column-count" id="count-board-Completed">0</div>
+        </div>
+        <div class="pe-board-column-content" id="board-col-Completed"></div>
+    </div>
 </div>
 
 <!-- Table View -->
@@ -108,34 +163,12 @@
     </div>
 </div>
 
-<!-- Kanban View (hidden by default) -->
-<div class="pe-kanban" id="woKanbanView" style="display:none;">
-    <div class="pe-kanban-column" id="kanbanOpen">
-        <div class="pe-kanban-column-header">
-            <span><i class="fas fa-inbox me-2" style="color:var(--pe-primary);"></i>Open</span>
-            <span class="count" id="kanbanOpenCount">0</span>
-        </div>
-        <div class="pe-kanban-cards" id="kanbanOpenCards"></div>
-    </div>
-    <div class="pe-kanban-column" id="kanbanAssigned">
-        <div class="pe-kanban-column-header">
-            <span><i class="fas fa-user-check me-2" style="color:#7c3aed;"></i>Assigned</span>
-            <span class="count" id="kanbanAssignedCount">0</span>
-        </div>
-        <div class="pe-kanban-cards" id="kanbanAssignedCards"></div>
-    </div>
-    <div class="pe-kanban-column" id="kanbanProgress">
-        <div class="pe-kanban-column-header">
-            <span><i class="fas fa-cog fa-spin me-2" style="color:var(--pe-warning);"></i>In Progress</span>
-            <span class="count" id="kanbanProgressCount">0</span>
-        </div>
-        <div class="pe-kanban-cards" id="kanbanProgressCards"></div>
-    </div>
-    <div class="pe-kanban-column" id="kanbanCompleted">
-        <div class="pe-kanban-column-header">
-            <span><i class="fas fa-check-circle me-2" style="color:var(--pe-success);"></i>Completed</span>
-            <span class="count" id="kanbanCompletedCount">0</span>
-        </div>
-        <div class="pe-kanban-cards" id="kanbanCompletedCards"></div>
-    </div>
+<!-- Card View (hidden by default) -->
+<div class="pe-card-view mt-3" id="woKanbanView" style="display:none; max-width: 800px; margin: 0 auto; padding-bottom: 24px;">
+    <div class="pe-kanban-cards" id="woCardContainer" style="overflow-y: visible;"></div>
 </div>
+
+<!-- Mobile FAB (Floating Action Button) -->
+<button class="pe-fab d-md-none" onclick="WorkOrderModule.openModal()" title="New Work Order">
+    <i class="fas fa-plus"></i>
+</button>

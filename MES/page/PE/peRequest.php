@@ -38,6 +38,7 @@ try {
     <link rel="stylesheet" href="../../utils/libs/cropper.min.css">
     
     <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/pe-enterprise.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="css/peRequest.css?v=<?php echo time(); ?>">
 </head>
 <body>
@@ -65,17 +66,17 @@ try {
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?? '' ?>">
                 
                 <div class="mb-3">
-                    <label class="form-label d-flex justify-content-between align-items-center w-100 m-0 pb-1">
-                        <span>ชื่อผู้แจ้ง <span class="text-danger">*</span></span>
+                    <label class="pe-form-label d-flex justify-content-between align-items-center w-100 m-0 pb-1">
+                        <span>ชื่อผู้แจ้ง <span class="required">*</span></span>
                         <span class="text-muted text-transform-none" style="letter-spacing: normal; font-weight: 500; font-size: 0.75rem;"><i class="far fa-clock"></i> <span id="req_requested_at_display"></span></span>
                     </label>
-                    <input type="text" class="form-control" name="requested_by" value="<?= htmlspecialchars($currentUserForJS['fullname'] ?? $currentUserForJS['username']) ?>" required>
+                    <input type="text" class="pe-form-input" name="requested_by" value="<?= htmlspecialchars($currentUserForJS['fullname'] ?? $currentUserForJS['username']) ?>" required>
                 </div>
 
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <label class="form-label">ประเภทงาน <span class="text-danger">*</span></label>
-                        <select class="form-select border-primary" id="req_wo_type" name="wo_type" required>
+                        <label class="pe-form-label">ประเภทงาน <span class="required">*</span></label>
+                        <select class="pe-form-select border-primary" id="req_wo_type" name="wo_type" required>
                             <option value="Corrective">ซ่อมแซม (Corrective)</option>
                             <option value="Preventive">ป้องกัน (Preventive)</option>
                             <option value="Improvement">พัฒนา/ปรับปรุง (Improvement)</option>
@@ -83,8 +84,8 @@ try {
                         </select>
                     </div>
                     <div class="col-6">
-                        <label class="form-label text-primary"><i class="fas fa-industry me-1"></i> เลือกจากระบบ</label>
-                        <select class="form-select border-primary" id="req_machine_id" name="machine_id">
+                        <label class="pe-form-label text-primary"><i class="fas fa-industry me-1"></i> เลือกจากระบบ</label>
+                        <select class="pe-form-select border-primary" id="req_machine_id" name="machine_id">
                             <option value="">-- ไม่ระบุ --</option>
                             <?php foreach($machines as $m): ?>
                                 <option value="<?= $m['machine_id'] ?>" data-line="<?= htmlspecialchars($m['line']) ?>" data-name="<?= htmlspecialchars($m['machine_name']) ?>">
@@ -97,12 +98,12 @@ try {
 
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <label class="form-label">ชื่ออุปกรณ์/เครื่องจักร <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="req_machine_name" name="machine_name" placeholder="ระบุชื่ออุปกรณ์..." required>
+                        <label class="pe-form-label">ชื่ออุปกรณ์/เครื่องจักร <span class="required">*</span></label>
+                        <input type="text" class="pe-form-input" id="req_machine_name" name="machine_name" placeholder="ระบุชื่ออุปกรณ์..." required>
                     </div>
                     <div class="col-6">
-                        <label class="form-label">ไลน์ผลิต/แผนก <span class="text-danger">*</span></label>
-                        <input list="lineOptions" class="form-control" id="req_line" name="line" placeholder="ระบุไลน์/แผนก..." required>
+                        <label class="pe-form-label">ไลน์ผลิต/แผนก <span class="required">*</span></label>
+                        <input list="lineOptions" class="pe-form-input" id="req_line" name="line" placeholder="ระบุไลน์/แผนก..." required>
                         <datalist id="lineOptions">
                             <?php foreach($uniqueLines as $l): ?>
                                 <option value="<?= htmlspecialchars($l) ?>"></option>
@@ -112,18 +113,18 @@ try {
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">อาการเสีย / หัวข้อปัญหา <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="req_issue_title" name="issue_title" placeholder="เช่น สว่านมือเสีย, ปลั๊กไฟช็อต..." required>
+                    <label class="pe-form-label">อาการเสีย / หัวข้อปัญหา <span class="required">*</span></label>
+                    <input type="text" class="pe-form-input" id="req_issue_title" name="issue_title" placeholder="เช่น สว่านมือเสีย, ปลั๊กไฟช็อต..." required>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">รายละเอียด</label>
-                    <textarea class="form-control" id="req_issue_detail" name="issue_detail" placeholder="อธิบายอาการเพิ่มเติม..."></textarea>
+                    <label class="pe-form-label">รายละเอียด</label>
+                    <textarea class="pe-form-textarea" id="req_issue_detail" name="issue_detail" placeholder="อธิบายอาการเพิ่มเติม..."></textarea>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">ระดับความสำคัญ <span class="text-danger">*</span></label>
-                    <select class="form-select bg-light" id="req_priority" name="priority" required>
+                    <label class="pe-form-label">ระดับความสำคัญ <span class="required">*</span></label>
+                    <select class="pe-form-select bg-light" id="req_priority" name="priority" required>
                         <option value="Normal">🔴 Normal (รอได้)</option>
                         <option value="High">🟠 High (ด่วน)</option>
                         <option value="Critical">🔴 Critical (ฉุกเฉิน)</option>
@@ -131,8 +132,8 @@ try {
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label"><i class="fas fa-camera"></i> รูปถ่ายปัญหา (บังคับ)*</label>
-                    <input type="file" class="form-control" id="req_photo" name="image" accept="image/*" required>
+                    <label class="pe-form-label"><i class="fas fa-camera"></i> รูปถ่ายปัญหา (บังคับ)*</label>
+                    <input type="file" class="pe-form-input" id="req_photo" name="image" accept="image/*" required>
                     <div id="photo_preview_container" class="mt-2 text-center" style="display: none;">
                         <img id="photo_preview" src="" alt="Preview" class="img-fluid rounded border shadow-sm" style="max-height: 200px;">
                         <div class="mt-1">
@@ -141,7 +142,7 @@ try {
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-app-primary mt-2">
+                <button type="submit" class="pe-btn pe-btn-primary w-100 mt-2">
                     <i class="fas fa-paper-plane me-1"></i> ส่งเรื่องแจ้งซ่อม
                 </button>
             </form>
@@ -160,8 +161,8 @@ try {
                 
                 <div class="row g-2 mb-3">
                     <div class="col-12">
-                        <label class="form-label text-danger"><i class="fas fa-industry me-1"></i> เครื่องจักร</label>
-                        <select class="form-select border-danger" id="dt_machine_id" name="machine_id">
+                        <label class="pe-form-label text-danger"><i class="fas fa-industry me-1"></i> เครื่องจักร</label>
+                        <select class="pe-form-select border-danger" id="dt_machine_id" name="machine_id">
                             <option value="">-- ไม่ระบุ --</option>
                             <?php foreach($machines as $m): ?>
                                 <option value="<?= $m['machine_id'] ?>" data-line="<?= htmlspecialchars($m['line']) ?>" data-name="<?= htmlspecialchars($m['machine_name']) ?>">
@@ -174,33 +175,33 @@ try {
 
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <label class="form-label">ชื่ออุปกรณ์/เครื่องจักร <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="dt_machine_name" name="machine_name" placeholder="ระบุชื่อ..." required>
+                        <label class="pe-form-label">ชื่ออุปกรณ์/เครื่องจักร <span class="required">*</span></label>
+                        <input type="text" class="pe-form-input" id="dt_machine_name" name="machine_name" placeholder="ระบุชื่อ..." required>
                     </div>
                     <div class="col-6">
-                        <label class="form-label">ไลน์ผลิต/แผนก <span class="text-danger">*</span></label>
-                        <input list="lineOptions" class="form-control" id="dt_line" name="line" placeholder="ระบุไลน์..." required>
+                        <label class="pe-form-label">ไลน์ผลิต/แผนก <span class="required">*</span></label>
+                        <input list="lineOptions" class="pe-form-input" id="dt_line" name="line" placeholder="ระบุไลน์..." required>
                     </div>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">วันที่ <span class="text-danger">*</span></label>
-                    <input type="date" class="form-control" id="dt_start_date" name="log_date" required>
+                    <label class="pe-form-label">วันที่ <span class="required">*</span></label>
+                    <input type="date" class="pe-form-input" id="dt_start_date" name="log_date" required>
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <label class="form-label">เริ่มหยุด <span class="text-danger">*</span></label>
-                        <input type="time" class="form-control" id="dt_start_time" name="start_time" required>
+                        <label class="pe-form-label">เริ่มหยุด <span class="required">*</span></label>
+                        <input type="time" class="pe-form-input" id="dt_start_time" name="start_time" required>
                     </div>
                     <div class="col-6">
-                        <label class="form-label">กลับมาเดิน <small class="text-muted fw-normal" style="font-size:0.75rem;">(เว้นว่างได้)</small></label>
-                        <input type="time" class="form-control" id="dt_end_time" name="end_time">
+                        <label class="pe-form-label">กลับมาเดิน <small class="text-muted fw-normal" style="font-size:0.75rem;">(เว้นว่างได้)</small></label>
+                        <input type="time" class="pe-form-input" id="dt_end_time" name="end_time">
                     </div>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">สาเหตุการหยุด <span class="text-danger">*</span></label>
-                    <select class="form-select bg-light" id="dt_cause_category" name="cause_category" required>
+                    <label class="pe-form-label">สาเหตุการหยุด <span class="required">*</span></label>
+                    <select class="pe-form-select bg-light" id="dt_cause_category" name="cause_category" required>
                         <option value="">-- ระบุหมวดหมู่ --</option>
                         <option value="Mechanical">เครื่องกล (Mechanical)</option>
                         <option value="Electrical">ไฟฟ้า/คอนโทรล (Electrical)</option>
@@ -216,12 +217,12 @@ try {
 
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <label class="form-label">รายละเอียด/หมายเหตุ <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="dt_cause_detail" name="cause_detail" placeholder="ระบุสาเหตุการหยุด..." required>
+                        <label class="pe-form-label">รายละเอียด/หมายเหตุ <span class="required">*</span></label>
+                        <input type="text" class="pe-form-input" id="dt_cause_detail" name="cause_detail" placeholder="ระบุสาเหตุการหยุด..." required>
                     </div>
                     <div class="col-6">
-                        <label class="form-label">ผู้แก้ไข (ถ้ามี)</label>
-                        <input type="text" class="form-control" id="dt_recovered_by" name="recovered_by" placeholder="ชื่อช่าง/พนักงาน...">
+                        <label class="pe-form-label">ผู้แก้ไข (ถ้ามี)</label>
+                        <input type="text" class="pe-form-input" id="dt_recovered_by" name="recovered_by" placeholder="ชื่อช่าง/พนักงาน...">
                     </div>
                 </div>
 
@@ -233,7 +234,7 @@ try {
                     <div class="form-text" style="font-size: 0.75rem;">ติ๊กเลือกถ้าต้องการให้ช่างซ่อมบำรุงเข้ามาแก้ไขอาการนี้</div>
                 </div>
 
-                <button type="submit" class="btn btn-danger btn-app-primary mt-2">
+                <button type="submit" class="pe-btn pe-btn-danger w-100 mt-2">
                     <i class="fas fa-stop-circle me-1"></i> บันทึกเวลาหยุดเครื่อง
                 </button>
             </form>
@@ -259,9 +260,9 @@ try {
             <div class="p-3">
                 <div class="d-flex align-items-center justify-content-between mb-3 gap-2">
                     <div class="d-flex flex-grow-1 gap-1">
-                        <input type="date" id="hist_start_date" class="form-control form-control-sm border-secondary text-secondary" style="font-size: 0.8rem;" onchange="loadCurrentHistory()">
+                        <input type="date" id="hist_start_date" class="pe-form-input form-control-sm border-secondary text-secondary" style="font-size: 0.8rem;" onchange="loadCurrentHistory()">
                         <span class="text-muted d-flex align-items-center">-</span>
-                        <input type="date" id="hist_end_date" class="form-control form-control-sm border-secondary text-secondary" style="font-size: 0.8rem;" onchange="loadCurrentHistory()">
+                        <input type="date" id="hist_end_date" class="pe-form-input form-control-sm border-secondary text-secondary" style="font-size: 0.8rem;" onchange="loadCurrentHistory()">
                     </div>
                 </div>
                 <div id="history-container">

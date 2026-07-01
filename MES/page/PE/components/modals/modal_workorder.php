@@ -24,6 +24,21 @@
                         <div class="pe-text-xs pe-fw-bold pe-text-muted mb-3" style="letter-spacing:1px;text-transform:uppercase;">
                             <i class="fas fa-info-circle me-1"></i> Request Details
                         </div>
+<div class="mb-3">
+                            <div class="pe-form-group mb-0">
+                                <label class="pe-form-label">Attached Image (Before) (optional)</label>
+                                <input type="file" id="woFrmImage" accept="image/jpeg, image/png, image/webp" style="display:none;">
+                                <div class="pe-dropzone" id="woDropzoneBefore" style="aspect-ratio: 4/3; width: 100%; height: auto;">
+                                    <div class="pe-dropzone-content">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>Click or drag image here</p>
+                                        <div class="pe-dropzone-hint">JPEG, PNG, WEBP</div>
+                                    </div>
+                                    <div id="woImagePreview" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:2; align-items:center; justify-content:center;">
+                                        <img src="" alt="Preview" style="max-width:100%; border-radius:var(--pe-radius-sm); object-fit:contain; cursor:pointer; width:100%; height:100%; display:block;" onclick="event.stopPropagation(); window.open(this.src, '_blank')">
+                                    </div>
+                                </div>
+                            </div>
                         <div class="row g-2">
                             <!-- Basic Information -->
                             <div class="col-md-4">
@@ -80,21 +95,7 @@
                             <label class="pe-form-label">Issue Detail</label>
                             <textarea class="pe-form-textarea flex-grow-1" id="woFrmDetail" placeholder="อธิบายรายละเอียดปัญหา..." style="min-height: 100px; resize: none;"></textarea>
                         </div>
-                        <div class="mt-auto pt-3">
-                            <div class="pe-form-group mb-0">
-                                <label class="pe-form-label">Attached Image (Before) (optional)</label>
-                                <input type="file" id="woFrmImage" accept="image/jpeg, image/png, image/webp" style="display:none;">
-                                <div class="pe-dropzone" id="woDropzoneBefore" style="aspect-ratio: 4/3; width: 100%; height: auto;">
-                                    <div class="pe-dropzone-content">
-                                        <i class="fas fa-cloud-upload-alt"></i>
-                                        <p>Click or drag image here</p>
-                                        <div class="pe-dropzone-hint">JPEG, PNG, WEBP</div>
-                                    </div>
-                                    <div id="woImagePreview" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:2; align-items:center; justify-content:center;">
-                                        <img src="" alt="Preview" style="max-width:100%; border-radius:var(--pe-radius-sm); object-fit:contain; cursor:pointer; width:100%; height:100%; display:block;" onclick="event.stopPropagation(); window.open(this.src, '_blank')">
-                                    </div>
-                                </div>
-                            </div>
+                        
                         </div>
                     </div>
 
@@ -103,6 +104,21 @@
                         <div class="pe-text-xs pe-fw-bold pe-text-muted mb-3" style="letter-spacing:1px;text-transform:uppercase;">
                             <i class="fas fa-user-cog me-1"></i> Technician Details
                         </div>
+<div class="mb-3" id="woImageAfterGroup" style="display:none;">
+                            <div class="pe-form-group mb-0">
+                                <label class="pe-form-label">Attached Image (After) (optional)</label>
+                                <input type="file" id="woFrmImageAfter" accept="image/jpeg, image/png, image/webp" style="display:none;">
+                                <div class="pe-dropzone" id="woDropzoneAfter" style="aspect-ratio: 4/3; width: 100%; height: auto;">
+                                    <div class="pe-dropzone-content">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>Click or drag image here</p>
+                                        <div class="pe-dropzone-hint">JPEG, PNG, WEBP</div>
+                                    </div>
+                                    <div id="woImageAfterPreview" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:2; align-items:center; justify-content:center;">
+                                        <img src="" alt="Preview After" style="max-width:100%; border-radius:var(--pe-radius-sm); object-fit:contain; cursor:pointer; width:100%; height:100%; display:block;" onclick="event.stopPropagation(); window.open(this.src, '_blank')">
+                                    </div>
+                                </div>
+                            </div>
                         <div class="row g-2">
                             <div class="col-md-6" id="woAssignedToGroup" style="display:none;">
                                 <div class="pe-form-group">
@@ -186,27 +202,19 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-auto pt-3" id="woImageAfterGroup" style="display:none;">
-                            <div class="pe-form-group mb-0">
-                                <label class="pe-form-label">Attached Image (After) (optional)</label>
-                                <input type="file" id="woFrmImageAfter" accept="image/jpeg, image/png, image/webp" style="display:none;">
-                                <div class="pe-dropzone" id="woDropzoneAfter" style="aspect-ratio: 4/3; width: 100%; height: auto;">
-                                    <div class="pe-dropzone-content">
-                                        <i class="fas fa-cloud-upload-alt"></i>
-                                        <p>Click or drag image here</p>
-                                        <div class="pe-dropzone-hint">JPEG, PNG, WEBP</div>
-                                    </div>
-                                    <div id="woImageAfterPreview" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:2; align-items:center; justify-content:center;">
-                                        <img src="" alt="Preview After" style="max-width:100%; border-radius:var(--pe-radius-sm); object-fit:contain; cursor:pointer; width:100%; height:100%; display:block;" onclick="event.stopPropagation(); window.open(this.src, '_blank')">
-                                    </div>
-                                </div>
-                            </div>
+                        
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer pe-d-flex pe-justify-between">
-                <div class="pe-d-flex pe-gap-8">
+            <div class="modal-footer d-flex flex-wrap justify-content-between" style="gap: 12px; border-top: 1px solid var(--pe-border-light); padding: 16px;">
+                <div class="d-flex me-auto" style="gap: 8px;">
+                    <button type="button" class="pe-btn pe-btn-success" id="woQuickCloseBtn" onclick="WorkOrderModule.openQuickCloseModal(document.getElementById('woEditId').value)" style="display:none;">
+                        <i class="fas fa-check-circle me-1"></i> ปิดงานด่วน
+                    </button>
+                    <button type="button" class="pe-btn pe-btn-primary" id="woQuickAcceptBtn" onclick="WorkOrderModule.quickAccept(document.getElementById('woEditId').value)" style="display:none;">
+                        <i class="fas fa-play me-1"></i> รับงาน
+                    </button>
                     <button type="button" class="pe-btn pe-btn-danger" id="woDeleteBtn" onclick="WorkOrderModule.deleteItem()" style="display:none;">
                         <i class="fas fa-trash-alt me-1"></i> Delete
                     </button>
@@ -214,10 +222,10 @@
                         <i class="fas fa-print me-1"></i> Print PDF
                     </button>
                 </div>
-                <div class="pe-d-flex pe-gap-8">
-                    <button type="button" class="pe-btn pe-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                <div class="d-flex ms-auto" style="gap: 8px;">
+                    <button type="button" class="pe-btn pe-btn-ghost" data-bs-dismiss="modal">ยกเลิก</button>
                     <button type="button" class="pe-btn pe-btn-primary" id="woSaveBtn" onclick="WorkOrderModule.save()">
-                        <i class="fas fa-save me-1"></i> Create Work Order
+                        <i class="fas fa-save me-1"></i> บันทึก
                     </button>
                 </div>
             </div>

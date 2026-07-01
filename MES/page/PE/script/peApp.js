@@ -246,11 +246,8 @@ const PEApp = (() => {
 
     // Init
     document.addEventListener('DOMContentLoaded', () => {
-        // Load first tab
-        loadedTabs.add('machines');
-        if (typeof MachineModule !== 'undefined') {
-            MachineModule.loadData();
-        }
+        // Initialize default tab
+        switchTab('workorders');
     });
 
     return {

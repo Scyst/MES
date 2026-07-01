@@ -2,7 +2,7 @@
 const WorkOrderModule = (() => {
     let allData = [];
     let machineList = [];
-    let currentView = 'table';
+    let currentView = window.innerWidth <= 768 ? 'kanban' : 'table';
 
     // Cropper State
     let cropper = null;
@@ -62,7 +62,8 @@ const WorkOrderModule = (() => {
             : allData;
 
         if (currentView === 'table') renderTable(filtered);
-        else renderKanban(filtered);
+        else if (currentView === 'kanban') renderKanban(filtered);
+        else if (currentView === 'board') renderBoard(filtered);
     }
 
     function renderTable(data) {
@@ -79,8 +80,19 @@ const WorkOrderModule = (() => {
                 ? `${PEApp.escapeHtml(w.machine_code)}`
                 : PEApp.escapeHtml(w.machine_name || '-');
 
+            let quickActionBtn = '';
+            let rowAction = `WorkOrderModule.openModal(${w.wo_id})`; // default
+
+            if (w.status === 'Open' || w.status === 'Assigned') {
+                quickActionBtn = `<button class="pe-btn pe-btn-primary pe-btn-sm" onclick="event.stopPropagation(); WorkOrderModule.quickAccept(${w.wo_id})" style="margin-right:4px;">รับงาน</button>`;
+                rowAction = `WorkOrderModule.quickAccept(${w.wo_id})`;
+            } else if (w.status === 'In Progress') {
+                quickActionBtn = `<button class="pe-btn pe-btn-success pe-btn-sm" onclick="event.stopPropagation(); WorkOrderModule.openQuickCloseModal(${w.wo_id})" style="margin-right:4px;">ปิดงาน</button>`;
+                rowAction = `WorkOrderModule.openQuickCloseModal(${w.wo_id})`;
+            }
+
             return `
-            <tr style="cursor:pointer;" onclick="WorkOrderModule.openModal(${w.wo_id})">
+            <tr style="cursor:pointer;" onclick="${rowAction}">
                 <td>${PEApp.getStatusBadge(w.status)}</td>
                 <td class="pe-fw-bold" style="color:var(--pe-primary);">${PEApp.escapeHtml(w.wo_number)}</td>
                 <td class="pe-text-sm">${PEApp.escapeHtml(w.wo_type || '-')}</td>
@@ -91,7 +103,8 @@ const WorkOrderModule = (() => {
                 <td class="pe-text-sm">${PEApp.formatDate(w.requested_at)}</td>
                 <td class="pe-text-sm">${PEApp.escapeHtml(w.assigned_to || '-')}</td>
                 <td class="pe-text-sm pe-text-center">${w.repair_minutes ? w.repair_minutes + ' min' : '-'}</td>
-                <td class="pe-text-center">
+                <td class="pe-text-center" style="white-space:nowrap;">
+                    ${quickActionBtn}
                     <button class="pe-btn pe-btn-ghost pe-btn-sm pe-btn-icon" onclick="event.stopPropagation(); WorkOrderModule.printPDF(${w.wo_id})" title="Print PDF" style="color:var(--pe-primary); margin-right:4px;">
                         <i class="fas fa-print"></i>
                     </button>
@@ -104,49 +117,194 @@ const WorkOrderModule = (() => {
     }
 
     function renderKanban(data) {
-        const statuses = ['Open', 'Assigned', 'In Progress', 'Completed'];
-        const groups = { Open: [], Assigned: [], 'In Progress': [], Completed: [] };
-
-        data.forEach(w => {
-            const g = groups[w.status] || groups['Open'];
-            g.push(w);
-        });
-
-        statuses.forEach(s => {
-            const key = s.replace(/\s+/g, '');
-            const container = document.getElementById(`kanban${key}Cards`);
-            const countEl = document.getElementById(`kanban${key}Count`);
-            if (countEl) countEl.textContent = groups[s].length;
-
-            if (container) {
-                container.innerHTML = groups[s].map(w => `
-                    <div class="pe-kanban-card" onclick="WorkOrderModule.openModal(${w.wo_id})">
-                        <div class="pe-d-flex pe-justify-between pe-align-center pe-mb-8">
-                            <div class="wo-number" style="margin-bottom:0;">${PEApp.escapeHtml(w.wo_number)}</div>
-                            <button class="pe-btn pe-btn-ghost pe-btn-sm pe-btn-icon" onclick="event.stopPropagation(); WorkOrderModule.printPDF(${w.wo_id})" title="Print PDF" style="color:var(--pe-primary); padding:2px;">
-                                <i class="fas fa-print"></i>
-                            </button>
-                        </div>
-                        <div class="pe-d-flex pe-gap-8 pe-mb-0" style="margin-bottom:6px;">
-                            ${PEApp.getPriorityBadge(w.priority)}
-                        </div>
-                        <div class="wo-title">${PEApp.escapeHtml(w.issue_title || '-')}</div>
-                        <div class="wo-meta">
-                            <span><i class="fas fa-cog me-1"></i>${PEApp.escapeHtml(w.machine_code || w.machine_name || '-')}</span>
-                            <span>${PEApp.formatDate(w.requested_at)}</span>
-                        </div>
-                    </div>
-                `).join('') || '<div class="pe-text-center pe-text-muted pe-text-xs" style="padding:20px;">No items</div>';
+        const container = document.getElementById('woCardContainer');
+        if (!container) return;
+        
+        container.innerHTML = data.map(w => {
+            const priorityAccent = {
+                'Critical': 'var(--pe-danger)',
+                'High': '#f97316',
+                'Normal': 'var(--pe-primary)',
+                'Low': 'var(--pe-text-muted)'
+            }[w.priority] || 'var(--pe-border)';
+            
+            let quickActionBtn = '';
+            let rowAction = `WorkOrderModule.openModal(${w.wo_id})`; // default
+            
+            if (w.status === 'Open' || w.status === 'Assigned') {
+                quickActionBtn = `<button class="pe-btn pe-btn-primary pe-btn-sm" onclick="event.stopPropagation(); WorkOrderModule.quickAccept(${w.wo_id})" style="padding: 5px 14px; font-size: 13px;">รับงาน</button>`;
+                rowAction = `WorkOrderModule.quickAccept(${w.wo_id})`;
+            } else if (w.status === 'In Progress') {
+                quickActionBtn = `<button class="pe-btn pe-btn-success pe-btn-sm" onclick="event.stopPropagation(); WorkOrderModule.openQuickCloseModal(${w.wo_id})" style="padding: 5px 14px; font-size: 13px;">ปิดงาน</button>`;
+                rowAction = `WorkOrderModule.openQuickCloseModal(${w.wo_id})`;
             }
-        });
+            
+            return `
+            <div class="pe-kanban-card" style="border-left: 4px solid ${priorityAccent};" onclick="${rowAction}">
+                <!-- Row 1: Machine (Top Left) & Badges (Top Right) -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 8px;">
+                    <div style="font-size: 13px; font-weight: 600; color: var(--pe-text-secondary); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${PEApp.escapeHtml(w.machine_code || w.machine_name || '-')}">
+                        <i class="fas fa-cogs me-1"></i>${PEApp.escapeHtml(w.machine_code || w.machine_name || '-')}
+                    </div>
+                    <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end; flex-shrink: 0;">
+                        ${PEApp.getStatusBadge(w.status)}
+                        ${PEApp.getPriorityBadge(w.priority)}
+                    </div>
+                </div>
+                
+                <!-- Row 2: Issue Title -->
+                <div style="font-size: 15px; font-weight: 700; color: var(--pe-text-primary); line-height: 1.4; margin-bottom: 10px;">
+                    ${PEApp.escapeHtml(w.issue_title || '-')}
+                </div>
+                
+                <!-- Row 3: WO# & Date -->
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--pe-text-secondary); margin-bottom: 12px;">
+                    <span style="font-weight: 600; color: var(--pe-text-muted);"><i class="fas fa-hashtag me-1" style="opacity:0.6;"></i>${PEApp.escapeHtml(w.wo_number)}</span>
+                    <span><i class="far fa-clock me-1"></i>${PEApp.formatDate(w.requested_at)}</span>
+                </div>
+                
+                <!-- Row 4: Icons (Left) & Actions (Right) -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--pe-border-light);">
+                    <div style="display: flex; gap: 6px;">
+                        <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="event.stopPropagation(); WorkOrderModule.printPDF(${w.wo_id})" title="Print PDF" style="padding: 4px 8px; color: var(--pe-text-muted);">
+                            <i class="fas fa-print"></i>
+                        </button>
+                        <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="event.stopPropagation(); WorkOrderModule.openModal(${w.wo_id})" title="Edit Details" style="padding: 4px 8px; color: var(--pe-primary);">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                    </div>
+                    <div>
+                        ${quickActionBtn}
+                    </div>
+                </div>
+            </div>
+        `}).join('') || '<div class="pe-text-center pe-text-muted" style="padding: 48px 20px;"><i class="fas fa-inbox fa-2x mb-3" style="display:block; opacity:0.3;"></i>ไม่พบรายการ</div>';
     }
 
+
+    function renderBoard(data) {
+        const cols = {
+            'Open': document.getElementById('board-col-Open'),
+            'Assigned': document.getElementById('board-col-Assigned'),
+            'In Progress': document.getElementById('board-col-InProgress'),
+            'Completed': document.getElementById('board-col-Completed')
+        };
+        
+        const counts = { 'Open': 0, 'Assigned': 0, 'In Progress': 0, 'Completed': 0 };
+
+        // Clear cols
+        for (let k in cols) { if (cols[k]) cols[k].innerHTML = ''; }
+
+        data.forEach(w => {
+            let colKey = w.status;
+            if (!cols[colKey]) return; // Or map 'Cancelled' somewhere else if needed
+            
+            counts[colKey]++;
+            
+            const machineTxt = w.machine_code
+                ? `${PEApp.escapeHtml(w.machine_code)}`
+                : PEApp.escapeHtml(w.machine_name || '-');
+                
+            let cardHtml = `
+            <div class="pe-board-card" draggable="true" ondragstart="WorkOrderModule.dragStart(event, ${w.wo_id})" id="board-card-${w.wo_id}" onclick="WorkOrderModule.openModal(${w.wo_id})">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="pe-fw-bold" style="color:var(--pe-primary); font-size: 0.95rem;">${PEApp.escapeHtml(w.wo_number)}</div>
+                    ${PEApp.getPriorityBadge(w.priority)}
+                </div>
+                <div class="pe-text-sm pe-text-muted mb-2 pe-text-truncate" title="${PEApp.escapeHtml(w.issue_title)}">
+                    ${PEApp.escapeHtml(w.issue_title)}
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto" style="font-size: 0.8rem; color: var(--pe-text-muted);">
+                    <div><i class="fas fa-industry me-1"></i> ${machineTxt}</div>
+                </div>
+            </div>`;
+            
+            cols[colKey].insertAdjacentHTML('beforeend', cardHtml);
+        });
+
+        // Update counts
+        for (let k in counts) {
+            const countEl = document.getElementById(`count-board-${k.replace(' ', '')}`);
+            if (countEl) countEl.innerText = counts[k];
+        }
+    }
+
+    function dragStart(ev, id) {
+        ev.dataTransfer.setData("text/plain", id);
+        setTimeout(() => ev.target.classList.add('dragging'), 0);
+    }
+
+    function allowDrop(ev) {
+        ev.preventDefault();
+    }
+
+    function dragEnter(ev) {
+        ev.preventDefault();
+        const col = ev.currentTarget;
+        if (col.classList.contains('pe-board-column')) {
+            col.classList.add('drag-over');
+        }
+    }
+
+    function dragLeave(ev) {
+        const col = ev.currentTarget;
+        if (col.classList.contains('pe-board-column')) {
+            col.classList.remove('drag-over');
+        }
+    }
+
+    async function drop(ev) {
+        ev.preventDefault();
+        const col = ev.currentTarget;
+        col.classList.remove('drag-over');
+        
+        const woId = ev.dataTransfer.getData("text/plain");
+        const newStatus = col.getAttribute('data-status');
+        
+        if (!woId || !newStatus) return;
+        
+        const card = document.getElementById(`board-card-${woId}`);
+        if (card) card.classList.remove('dragging');
+
+        // Check current status to avoid redundant calls
+        const targetWo = allData.find(w => w.wo_id == woId);
+        if (targetWo && targetWo.status === newStatus) return;
+
+        try {
+            // Optimistic UI update
+            if (targetWo) targetWo.status = newStatus;
+            renderBoard(allData);
+
+            // Send API call to update status
+            const res = await PEApp.apiCall('workOrderAPI.php', {}, 'POST', {
+                action: 'update_status_only',
+                wo_id: woId,
+                status: newStatus
+            });
+            
+            if (res.success) {
+                // Background refresh to ensure full data sync without jitter
+                loadData();
+            } else {
+                throw new Error(res.message);
+            }
+        } catch (e) {
+            PEApp.showToast(e.message || 'Error updating status', 'error');
+            loadData(); // rollback
+        }
+    }
     function setView(view) {
         currentView = view;
         document.getElementById('woViewTable')?.classList.toggle('active', view === 'table');
         document.getElementById('woViewKanban')?.classList.toggle('active', view === 'kanban');
+        document.getElementById('woViewBoard')?.classList.toggle('active', view === 'board');
+        
         document.getElementById('woTableView').style.display = view === 'table' ? '' : 'none';
         document.getElementById('woKanbanView').style.display = view === 'kanban' ? '' : 'none';
+        
+        const board = document.getElementById('woBoardView');
+        if (board) board.style.display = view === 'board' ? '' : 'none';
+        
         renderView();
     }
 
@@ -154,6 +312,20 @@ const WorkOrderModule = (() => {
         const isEdit = !!editId;
         document.getElementById('woEditId').value = editId || '';
         document.getElementById('woModalTitle').textContent = isEdit ? 'Edit Work Order' : 'New Work Order';
+        
+        const modalDialog = document.getElementById('woModalDialog');
+        const reqCol = document.getElementById('woRequesterCol');
+        const imgBefore = document.getElementById('woImageBeforeCol');
+        
+        if (isEdit) {
+            if (modalDialog) { modalDialog.classList.remove('modal-lg'); modalDialog.classList.add('modal-xl'); }
+            if (reqCol) { reqCol.classList.remove('col-lg-12'); reqCol.classList.add('col-lg-6', 'wo-divider-col'); }
+            if (imgBefore) { imgBefore.classList.remove('col-md-12'); imgBefore.classList.add('col-md-6'); }
+        } else {
+            if (modalDialog) { modalDialog.classList.remove('modal-xl'); modalDialog.classList.add('modal-lg'); }
+            if (reqCol) { reqCol.classList.remove('col-lg-6', 'wo-divider-col'); reqCol.classList.add('col-lg-12'); }
+            if (imgBefore) { imgBefore.classList.remove('col-md-6'); imgBefore.classList.add('col-md-12'); }
+        }
         
         const isDeleted = editId && allData.find(w => w.wo_id == editId && (w.is_active === 0 || w.is_active === '0'));
         
@@ -167,7 +339,8 @@ const WorkOrderModule = (() => {
         document.getElementById('woFrmType').value = 'Corrective';
         document.getElementById('woFrmPriority').value = 'Normal';
         document.getElementById('woFrmMachine').value = '';
-        document.getElementById('woFrmRequestDate').value = '';
+        // Default to current time for New Work Order
+        document.getElementById('woFrmRequestDate').value = isEdit ? '' : getLocalISO();
         document.getElementById('woFrmRepairMin').value = '';
         document.getElementById('woFrmStartedAt').value = '';
         document.getElementById('woFrmCompletedAt').value = '';
@@ -175,7 +348,17 @@ const WorkOrderModule = (() => {
 
         // Show/hide tech section
         const techFields = ['woTechSection', 'woAssignedToGroup', 'woStartedAtGroup', 'woCompletedAtGroup', 'woStatusGroup', 'woRepairMinGroup', 'woRootCauseGroup', 'woActionGroup', 'woSparePartsGroup', 'woImageAfterGroup'];
-        techFields.forEach(id => { document.getElementById(id).style.display = isEdit ? '' : 'none'; });
+        techFields.forEach(id => { 
+            const el = document.getElementById(id);
+            if (el) {
+                if (isEdit) {
+                    el.classList.remove('d-none');
+                    el.style.display = '';
+                } else {
+                    el.classList.add('d-none');
+                }
+            }
+        });
 
         // Reset images
         const imgInput = document.getElementById('woFrmImage');
@@ -198,11 +381,16 @@ const WorkOrderModule = (() => {
         const deleteBtn = document.getElementById('woDeleteBtn');
         const printBtn = document.getElementById('woPrintBtn');
         const saveBtn = document.getElementById('woSaveBtn');
+        const acceptBtn = document.getElementById('woQuickAcceptBtn');
+        const closeBtn = document.getElementById('woQuickCloseBtn');
         
         if (printBtn) {
             printBtn.style.display = (isEdit && !isDeleted) ? '' : 'none';
         }
         
+        if (acceptBtn) acceptBtn.style.display = 'none';
+        if (closeBtn) closeBtn.style.display = 'none';
+
         if (isDeleted) {
             document.getElementById('woModalTitle').textContent = 'Restore Work Order';
             saveBtn.innerHTML = '<i class="fas fa-trash-restore me-1"></i> Restore Work Order';
@@ -234,6 +422,13 @@ const WorkOrderModule = (() => {
                 if (wo.requested_at) document.getElementById('woFrmRequestDate').value = wo.requested_at.replace(' ', 'T').substring(0, 16);
                 if (wo.started_at) document.getElementById('woFrmStartedAt').value = wo.started_at.replace(' ', 'T').substring(0, 16);
                 if (wo.completed_at) document.getElementById('woFrmCompletedAt').value = wo.completed_at.replace(' ', 'T').substring(0, 16);
+
+                if (acceptBtn) {
+                    acceptBtn.style.display = (wo.status === 'Open' || wo.status === 'Assigned') && !isDeleted ? '' : 'none';
+                }
+                if (closeBtn) {
+                    closeBtn.style.display = (wo.status === 'In Progress') && !isDeleted ? '' : 'none';
+                }
 
                 if (wo.image_path) {
                     const img = previewDiv.querySelector('img');
@@ -299,6 +494,31 @@ const WorkOrderModule = (() => {
         btn.disabled = true;
 
         const editId = document.getElementById('woEditId')?.value;
+        
+        // Require Before Image for New Work Orders
+        if (!editId) {
+            const imgInput = document.getElementById('woFrmImage');
+            if (!croppedImageBlob && (!imgInput || imgInput.files.length === 0)) {
+                PEApp.showToast('กรุณาแนบรูปภาพปัญหาก่อนซ่อม (Before Image)', 'warning');
+                btn.disabled = false;
+                return;
+            }
+        }
+
+        const status = document.getElementById('woFrmStatus')?.value || 'Open';
+        
+        // Require After Image if status is Completed
+        if (status === 'Completed') {
+            const imgAfterInput = document.getElementById('woFrmImageAfter');
+            const previewAfterDiv = document.getElementById('woImageAfterPreview');
+            const hasExistingAfterImage = previewAfterDiv && previewAfterDiv.style.display !== 'none';
+            
+            if (!croppedImageAfterBlob && (!imgAfterInput || imgAfterInput.files.length === 0) && !hasExistingAfterImage) {
+                PEApp.showToast('กรุณาแนบรูปภาพหลังซ่อม (After Image) เนื่องจากสถานะเป็น Completed', 'warning');
+                btn.disabled = false;
+                return;
+            }
+        }
 
         try {
             let imagePath = null;
@@ -435,6 +655,7 @@ const WorkOrderModule = (() => {
 
         setupDropzone('woDropzoneBefore', 'woFrmImage', 'before');
         setupDropzone('woDropzoneAfter', 'woFrmImageAfter', 'after');
+        setupDropzone('qcDropzoneAfter', 'qcFrmImageAfter', 'qc_after');
 
         document.getElementById('btnRotateLeft')?.addEventListener('click', () => { if (cropper) cropper.rotate(-90); });
         document.getElementById('btnRotateRight')?.addEventListener('click', () => { if (cropper) cropper.rotate(90); });
@@ -448,11 +669,17 @@ const WorkOrderModule = (() => {
                     document.getElementById('woDropzoneBefore').classList.remove('has-image');
                     document.getElementById('woImagePreview').style.display = 'none';
                 }
-            } else {
+            } else if (currentCropTarget === 'after') {
                 document.getElementById('woFrmImageAfter').value = '';
                 if (!croppedImageAfterBlob) {
                     document.getElementById('woDropzoneAfter').classList.remove('has-image');
                     document.getElementById('woImageAfterPreview').style.display = 'none';
+                }
+            } else if (currentCropTarget === 'qc_after') {
+                document.getElementById('qcFrmImageAfter').value = '';
+                if (!croppedImageAfterBlob) {
+                    document.getElementById('qcDropzoneAfter').classList.remove('has-image');
+                    document.getElementById('qcImageAfterPreview').style.display = 'none';
                 }
             }
         });
@@ -467,11 +694,16 @@ const WorkOrderModule = (() => {
                     document.getElementById('woImagePreview').querySelector('img').src = url;
                     document.getElementById('woImagePreview').style.display = 'flex';
                     document.getElementById('woDropzoneBefore').classList.add('has-image');
-                } else {
+                } else if (currentCropTarget === 'after') {
                     croppedImageAfterBlob = blob;
                     document.getElementById('woImageAfterPreview').querySelector('img').src = url;
                     document.getElementById('woImageAfterPreview').style.display = 'flex';
                     document.getElementById('woDropzoneAfter').classList.add('has-image');
+                } else if (currentCropTarget === 'qc_after') {
+                    croppedImageAfterBlob = blob;
+                    document.getElementById('qcImageAfterPreview').querySelector('img').src = url;
+                    document.getElementById('qcImageAfterPreview').style.display = 'flex';
+                    document.getElementById('qcDropzoneAfter').classList.add('has-image');
                 }
                 cropModal.hide();
                 if (cropper) { cropper.destroy(); cropper = null; }
@@ -781,5 +1013,183 @@ const WorkOrderModule = (() => {
         }
     }
 
-    return { loadData, filterTable, setView, openModal, save, deleteItem, restoreItem, exportExcel, onMachineChange, printPDF, openSparePartsModal, onSparePartChange, confirmIssuePart, deleteSparePart };
+    // --- Helpers for Auto-Calculation & Defaults ---
+    function getLocalISO(date = new Date()) {
+        const offset = date.getTimezoneOffset() * 60000;
+        return new Date(date - offset).toISOString().substring(0, 16);
+    }
+
+    function calcRepairTime() {
+        const start = document.getElementById('woFrmStartedAt')?.value;
+        const end = document.getElementById('woFrmCompletedAt')?.value;
+        if (start && end) {
+            const diffMs = new Date(end) - new Date(start);
+            if (diffMs >= 0) {
+                document.getElementById('woFrmRepairMin').value = Math.floor(diffMs / 60000);
+            }
+        }
+    }
+
+    async function quickAccept(woId) {
+        try {
+            const result = await Swal.fire({
+                title: 'รับงานซ่อม?',
+                text: "สถานะจะเปลี่ยนเป็น In Progress",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'รับงาน',
+                cancelButtonText: 'ยกเลิก'
+            });
+
+            if (result.isConfirmed) {
+                const res = await fetch(`api/workOrderAPI.php?action=quick_accept`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wo_id: woId })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    PEApp.showToast('รับงานเรียบร้อย', 'success');
+                    
+                    // Hide main modal if open
+                    const mainModalEl = document.getElementById('workOrderModal');
+                    const mainModal = bootstrap.Modal.getInstance(mainModalEl);
+                    if (mainModal) mainModal.hide();
+
+                    loadData();
+                } else {
+                    throw new Error(data.message || 'Error accepting job');
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            PEApp.showToast(error.message, 'error');
+        }
+    }
+
+    function openQuickCloseModal(woId) {
+        const wo = allData.find(w => w.wo_id == woId);
+        if (!wo) return;
+
+        document.getElementById('qcWoId').value = woId;
+        document.getElementById('qcFrmAction').value = wo.action_taken || '';
+        document.getElementById('qcFrmRootCause').value = wo.root_cause || '';
+
+        // Reset image
+        const imgAfterInput = document.getElementById('qcFrmImageAfter');
+        if (imgAfterInput) imgAfterInput.value = '';
+        const previewAfterDiv = document.getElementById('qcImageAfterPreview');
+        if (previewAfterDiv) previewAfterDiv.style.display = 'none';
+        const dropzoneAfter = document.getElementById('qcDropzoneAfter');
+        if (dropzoneAfter) dropzoneAfter.classList.remove('has-image');
+
+        croppedImageAfterBlob = null;
+        currentCropTarget = null; // We might need to ensure Cropper logic applies to qcDropzoneAfter if needed, but for simplicity we rely on standard input.
+
+        const mainModalEl = document.getElementById('workOrderModal');
+        const mainModal = bootstrap.Modal.getInstance(mainModalEl);
+        if (mainModal) mainModal.hide();
+
+        const modal = new bootstrap.Modal(document.getElementById('quickCloseModal'));
+        modal.show();
+    }
+
+    async function submitQuickClose() {
+        const woId = document.getElementById('qcWoId').value;
+        const actionTaken = document.getElementById('qcFrmAction').value.trim();
+        const rootCause = document.getElementById('qcFrmRootCause').value.trim();
+        const btn = document.getElementById('qcSaveBtn');
+        const imgInput = document.getElementById('qcFrmImageAfter');
+
+        if (!actionTaken) {
+            PEApp.showToast('กรุณาระบุสิ่งที่ดำเนินการแก้ไข', 'warning');
+            return;
+        }
+
+        if (!croppedImageAfterBlob && (!imgInput || imgInput.files.length === 0)) {
+            PEApp.showToast('กรุณาแนบรูปภาพหลังซ่อม (After Image)', 'warning');
+            return;
+        }
+
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+
+            let photoAfter = null;
+            if (croppedImageAfterBlob) {
+                const file = new File([croppedImageAfterBlob], "image_after.webp", { type: "image/webp" });
+                photoAfter = await PEApp.uploadFile(file, 'WO');
+            } else if (imgInput && imgInput.files.length > 0) {
+                photoAfter = await PEApp.uploadFile(imgInput.files[0], 'WO');
+            }
+
+            const res = await fetch(`api/workOrderAPI.php?action=quick_close`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    wo_id: woId,
+                    photo_after: photoAfter,
+                    action_taken: actionTaken,
+                    root_cause: rootCause
+                })
+            });
+            const data = await res.json();
+            
+            if (data.status === 'success') {
+                PEApp.showToast('ปิดงานเรียบร้อย', 'success');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('quickCloseModal'));
+                if (modal) modal.hide();
+                loadData();
+            } else {
+                throw new Error(data.message || 'Error closing job');
+            }
+        } catch (error) {
+            console.error(error);
+            PEApp.showToast(error.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i> ยืนยันการปิดงาน';
+        }
+    }
+
+    function setupHelpers() {
+        const statusEl = document.getElementById('woFrmStatus');
+        const startEl = document.getElementById('woFrmStartedAt');
+        const endEl = document.getElementById('woFrmCompletedAt');
+
+        if (startEl && endEl) {
+            startEl.addEventListener('change', calcRepairTime);
+            endEl.addEventListener('change', calcRepairTime);
+        }
+
+        if (statusEl) {
+            statusEl.addEventListener('change', (e) => {
+                const s = e.target.value;
+                if (s === 'In Progress' && startEl && !startEl.value) {
+                    startEl.value = getLocalISO();
+                } else if (s === 'Completed' && endEl && !endEl.value) {
+                    endEl.value = getLocalISO();
+                    calcRepairTime();
+                }
+            });
+        }
+
+        // Sync view toggle buttons and container visibility on load
+        setView(currentView);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupHelpers);
+    } else {
+        setupHelpers();
+    }
+
+    return { 
+        loadData, filterTable, setView, openModal, save, deleteItem, restoreItem, exportExcel, 
+        onMachineChange, printPDF, openSparePartsModal, onSparePartChange, confirmIssuePart, deleteSparePart,
+        quickAccept, openQuickCloseModal, submitQuickClose,
+        dragStart, allowDrop, dragEnter, dragLeave, drop
+    };
 })();

@@ -232,6 +232,58 @@ try {
             }
             break;
 
+        case 'quick_accept':
+            $id = $input['wo_id'] ?? null;
+            if (!$id) throw new Exception("Work Order ID is required");
+
+            $pdo->beginTransaction();
+            try {
+                // If it doesn't have an assigned_to yet, we can optionally assign it to the current user.
+                // Assuming $currentUserForJS holds the username if we want to, but for now just update status.
+                $stmt = $pdo->prepare("UPDATE " . PE_WORK_ORDERS_TABLE . " 
+                    SET status = 'In Progress', started_at = GETDATE(), updated_at = GETDATE() 
+                    WHERE wo_id = ?");
+                $stmt->execute([$id]);
+                
+                writeLog($pdo, 'QUICK_ACCEPT_WO', 'PE_WO_API', $id, null, null, "Accepted job (In Progress)");
+                $pdo->commit();
+                echo json_encode(['status' => 'success', 'message' => 'Job accepted']);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
+        case 'quick_close':
+            $id = $input['wo_id'] ?? null;
+            if (!$id) throw new Exception("Work Order ID is required");
+
+            $pdo->beginTransaction();
+            try {
+                $photo_after = $input['photo_after'] ?? null;
+                $action_taken = $input['action_taken'] ?? '';
+                $root_cause = $input['root_cause'] ?? '';
+
+                $stmt = $pdo->prepare("UPDATE " . PE_WORK_ORDERS_TABLE . " 
+                    SET status = 'Completed', 
+                        completed_at = GETDATE(), 
+                        updated_at = GETDATE(),
+                        photo_after = ?,
+                        action_taken = ?,
+                        root_cause = ?,
+                        repair_minutes = DATEDIFF(MINUTE, started_at, GETDATE())
+                    WHERE wo_id = ?");
+                $stmt->execute([$photo_after, $action_taken, $root_cause, $id]);
+                
+                writeLog($pdo, 'QUICK_CLOSE_WO', 'PE_WO_API', $id, null, null, "Closed job (Completed)");
+                $pdo->commit();
+                echo json_encode(['status' => 'success', 'message' => 'Job closed']);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
         case 'delete_wo':
             $id = $input['wo_id'] ?? null;
             if (!$id) throw new Exception("Work Order ID is required");

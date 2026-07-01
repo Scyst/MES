@@ -48,11 +48,11 @@ $pageTitle = "PE Enterprise";
         <nav class="pe-sidebar-nav">
             <div class="pe-nav-section">
                 <div class="pe-nav-section-label">Main</div>
-                <button class="pe-nav-item active" data-tab="machines" onclick="PEApp.switchTab('machines')">
+                <button class="pe-nav-item" data-tab="machines" onclick="PEApp.switchTab('machines')">
                     <i class="fas fa-industry"></i>
                     <span class="nav-label">Machine Registry</span>
                 </button>
-                <button class="pe-nav-item" data-tab="workorders" onclick="PEApp.switchTab('workorders')">
+                <button class="pe-nav-item active" data-tab="workorders" onclick="PEApp.switchTab('workorders')">
                     <i class="fas fa-clipboard-list"></i>
                     <span class="nav-label">Work Orders</span>
                     <span class="nav-badge" id="woOpenBadge" style="display:none;">0</span>
@@ -141,12 +141,12 @@ $pageTitle = "PE Enterprise";
         <div class="pe-content">
 
             <!-- Machines Tab -->
-            <div class="pe-tab-panel active" id="panel-machines">
+            <div class="pe-tab-panel" id="panel-machines">
                 <?php include 'components/tab_machines.php'; ?>
             </div>
 
             <!-- Work Orders Tab -->
-            <div class="pe-tab-panel" id="panel-workorders">
+            <div class="pe-tab-panel active" id="panel-workorders">
                 <?php include 'components/tab_workorders.php'; ?>
             </div>
 
