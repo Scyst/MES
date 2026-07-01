@@ -558,7 +558,8 @@
                         <li>เพิ่มการบังคับใส่เลข <strong>Reservation No.</strong> ลงในหน้า Material Requisition
                             เพื่อติดตามเส้นทางการเบิกจ่ายทั้งหมด</li>
                         <li>เพิ่มคอลัมน์ <code>Insp</code> ลงในหน้า <strong>Shipping Schedule</strong>
-                            พร้อมปรับปรุงฟอร์มการพิมพ์ (Label Printing) ให้เชื่อมต่อกับฝั่ง Sales Order</li>
+                            (ปุ่มตรวจสอบสถานะเชื่อมต่อกับ Sales Order โดยตรง) พร้อมปรับปรุงระบบการพิมพ์แก้ไขฉลาก (Label
+                            Printing) และอัปเดตระบบ Export/Import ใหม่</li>
                         <li>พัฒนาระบบเปิดและปิด <strong>กล่อง W20</strong> เพื่อช่วยฝ่าย QC ในการจำแนกการตรวจสอบคุณภาพ
                         </li>
                         <li>จัดทำแผนผังออกแบบ (Flow Chart / Sequence Chart) สำหรับเตรียมขึ้นระบบ <strong>Forklift
@@ -727,6 +728,55 @@
                         <strong>📈 Business Impact:</strong>
                         <p>สร้างรากฐานและนวัตกรรมเตรียมพร้อมสำหรับลูกค้าองค์กร (Enterprise) ที่ต้องการระบบระดับ ERP และ
                             CRM ภายใน</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Roadmap Section -->
+            <div class="card"
+                style="margin-top: 3rem; background: linear-gradient(to right, #F8FAFC, #FFFFFF); border-left: 4px solid var(--primary);">
+                <div class="module-header" style="border-bottom: none; margin-bottom: 0;">
+                    <h3 style="font-size: 1.8rem; color: var(--text-primary);">📍 Roadmap & Next Steps
+                        (แผนการพัฒนาระยะถัดไป)</h3>
+                </div>
+                <div class="presentation-content" style="margin-top: 1rem;">
+                    <p style="padding-left: 0; font-size: 1.05rem;">เป้าหมายและแผนการพัฒนาที่รอการดำเนินการในเดือนถัดไป
+                        (อ้างอิงจากเอกสาร Development Plan):</p>
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                        <div
+                            style="background: #FFFFFF; border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 12px; box-shadow: var(--shadow-sm);">
+                            <strong
+                                style="color: var(--warning); display: block; margin-bottom: 0.75rem; font-size: 1.1rem;">✏️
+                                In Progress (กำลังดำเนินการ)</strong>
+                            <ul style="padding-left: 1rem; margin-bottom: 0;">
+                                <li style="color: var(--text-secondary); margin-bottom: 0.5rem;"><strong>PE
+                                        Systems:</strong> ระบบวิเคราะห์ความคุ้มทุนการซ่อมบำรุง
+                                    และทำนายการเสียล่วงหน้าของเครื่องจักร (ต่อยอด OEE)</li>
+                                <li style="color: var(--text-secondary); margin-bottom: 0.5rem;"><strong>Production
+                                        System:</strong> รวมศูนย์ Production UI, Mobile และ Scanner
+                                    เข้าเป็นหน้าเดียวเพื่อความสะดวก</li>
+                                <li style="color: var(--text-secondary); margin-bottom: 0;"><strong>Refactor
+                                        Architecture:</strong> อัปเกรดเทคโนโลยีโครงสร้างเป็น
+                                    <code>React + Vite + TailwindCSS</code> แบบเต็มตัว</li>
+                            </ul>
+                        </div>
+                        <div
+                            style="background: #FFFFFF; border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 12px; box-shadow: var(--shadow-sm);">
+                            <strong
+                                style="color: var(--text-secondary); display: block; margin-bottom: 0.75rem; font-size: 1.1rem;">⏳
+                                Planning & Review (แผนงานที่รออนุมัติ)</strong>
+                            <ul style="padding-left: 1rem; margin-bottom: 0;">
+                                <li style="color: var(--text-secondary); margin-bottom: 0.5rem;"><strong>Planning
+                                        Systems:</strong> ระบบวางแผนการผลิตแบบลากวาง (Drag & Drop) และแสดงคอขวดของ Job
+                                    Order</li>
+                                <li style="color: var(--text-secondary); margin-bottom: 0.5rem;"><strong>Daily
+                                        P&L:</strong> ปรับปรุงตารางสรุปผลกำไรขาดทุนรายวัน/เดือน ให้เป็นรูปแบบใหม่</li>
+                                <li style="color: var(--text-secondary); margin-bottom: 0;"><strong>RM vs PO:</strong>
+                                    ตรวจสอบวัตถุดิบอัตโนมัติว่าเพียงพอต่อการผลิตตามใบสั่งซื้อ (Sales Tracking) หรือไม่
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -41,6 +41,9 @@ $pageTitle = "Technician Portal";
     <!-- Header -->
     <header class="tech-header">
         <div class="tech-header-title">
+            <a href="../dailyLog/dailyLogUI.php" class="text-white me-2 text-decoration-none">
+                <i class="fas fa-arrow-left"></i>
+            </a>
             <i class="fas fa-wrench"></i>
             Technician Portal
         </div>

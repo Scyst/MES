@@ -309,7 +309,7 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
         const locFilterId = document.getElementById('locationFilter')?.value || 'ALL';
         const [res, tagRes] = await Promise.all([
             fetchAPI(`get_item_details&item_id=${itemId}&location_id=${locFilterId}`, 'GET'),
-            fetchAPI(`get_available_tags_for_item&item_code=${encodeURIComponent(itemNo)}&location_id=${locFilterId}`, 'GET').catch(e => ({data: []}))
+            fetchAPI(`get_available_tags_for_item&item_code=${encodeURIComponent(itemNo)}&item_id=${itemId}&location_id=${locFilterId}`, 'GET').catch(e => ({data: []}))
         ]);
         
         let totalSystemStock = 0;

@@ -111,11 +111,17 @@ try {
 
         case 'get_available_tags_for_item':
             $item_code = $_REQUEST['item_code'] ?? '';
+            $item_id = $_REQUEST['item_id'] ?? null;
             $location_id = $_REQUEST['location_id'] ?? 'ALL';
-            if (!$item_code) throw new Exception("ไม่พบรหัสสินค้า");
+            if (!$item_code && !$item_id) throw new Exception("ไม่พบรหัสสินค้า");
             
-            $cond = "t.item_id = (SELECT TOP 1 item_id FROM dbo.ITEMS WHERE sap_no = ? OR part_no = ?) AND t.status = 'AVAILABLE'";
-            $params = [$item_code, $item_code];
+            if ($item_id) {
+                $cond = "t.item_id = ? AND t.status = 'AVAILABLE'";
+                $params = [$item_id];
+            } else {
+                $cond = "t.item_id = (SELECT TOP 1 item_id FROM dbo.ITEMS WHERE sap_no = ? OR part_no = ?) AND t.status = 'AVAILABLE'";
+                $params = [$item_code, $item_code];
+            }
             
             if ($location_id !== 'ALL') {
                 $cond .= " AND t.location_id = ?";
