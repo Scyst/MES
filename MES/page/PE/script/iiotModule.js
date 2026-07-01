@@ -126,7 +126,7 @@ const IIoTModule = (function() {
                 document.addEventListener('mouseup', onMouseUp, { once: true });
             });
             
-            node.addEventListener('mouseenter', () => {
+            node.addEventListener('mouseenter', (e) => {
                 const tt = document.getElementById('machineTooltip');
                 if (!tt) return;
                 document.getElementById('ttMachineName').innerText = m.machine_name || m.machine_code;
@@ -137,9 +137,17 @@ const IIoTModule = (function() {
                 const powerEl = document.getElementById(`iiot-power-${m.machine_code}`);
                 document.getElementById('ttTemp').innerText = powerEl && powerEl.innerText !== '-' ? powerEl.innerText : 'N/A';
                 
-                tt.style.left = node.style.left;
-                tt.style.top = node.style.top;
+                tt.style.left = e.clientX + 15 + 'px';
+                tt.style.top = e.clientY + 15 + 'px';
                 tt.classList.add('visible');
+            });
+            
+            node.addEventListener('mousemove', (e) => {
+                const tt = document.getElementById('machineTooltip');
+                if (tt && tt.classList.contains('visible')) {
+                    tt.style.left = e.clientX + 15 + 'px';
+                    tt.style.top = e.clientY + 15 + 'px';
+                }
             });
             
             node.addEventListener('mouseleave', () => {

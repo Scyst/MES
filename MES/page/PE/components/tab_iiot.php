@@ -163,6 +163,9 @@
     display: none;
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
+.machine-tooltip.visible {
+    display: block;
+}
 .machine-node {
     position: absolute;
     width: 16px;
