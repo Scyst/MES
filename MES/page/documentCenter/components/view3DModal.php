@@ -13,8 +13,8 @@
                 <!-- 3D Viewer Container -->
                 <div id="viewer3d-container" style="width: 100%; height: 100%;"></div>
                 
-                <!-- Dimensions Overlay (Top Left) -->
-                <div id="viewer3d-dimensions" class="position-absolute top-0 start-0 m-3 p-2 bg-dark text-white rounded shadow-sm opacity-75 small d-none" style="pointer-events: none; z-index: 10;">
+                <!-- Dimensions Overlay (Bottom Right, above Axis) -->
+                <div id="viewer3d-dimensions" class="position-absolute p-2 bg-dark text-white rounded shadow-sm opacity-75 small d-none" style="bottom: 90px; right: 15px; pointer-events: none; z-index: 10;">
                     <i class="fas fa-ruler-combined me-1"></i> <span id="viewer3d-size-text">Size: -</span>
                 </div>
 
