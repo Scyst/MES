@@ -27,8 +27,8 @@
                     </div>
                 </div>
                 
-                <!-- Floating Toolbar (Bottom Center) -->
-                <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4 z-index-10">
+                <!-- Floating Toolbar (Top Right) -->
+                <div class="position-absolute top-0 end-0 m-3 z-index-10">
                     <div class="d-flex gap-2 p-2 bg-white rounded-pill shadow-lg border" style="background: rgba(255, 255, 255, 0.85) !important; backdrop-filter: blur(5px);">
                         <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="toggle3DTheme()" id="btn-3d-theme" title="Change Background">
                             <i class="fas fa-adjust me-1"></i> Theme
@@ -43,7 +43,7 @@
                 </div>
 
                 <!-- 3D Axis Helper (Bottom Right, Above Dimensions) -->
-                <div id="viewer3d-axis-helper" style="position: absolute; bottom: 100px; right: 35px; width: 60px; height: 60px; pointer-events: none; z-index: 10; perspective: 300px; display: none; transform: scale(1.4); transform-origin: bottom right;">
+                <div id="viewer3d-axis-helper" style="position: absolute; bottom: 85px; right: 35px; width: 60px; height: 60px; pointer-events: none; z-index: 10; perspective: 300px; display: none; transform: scale(1.4); transform-origin: bottom right;">
                     <div id="axis-cube" style="width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transform-origin: center center;">
                         <!-- Center Dot -->
                         <div style="position: absolute; top: 27px; left: 27px; width: 6px; height: 6px; background: #333; border-radius: 50%; z-index: 20;"></div>
