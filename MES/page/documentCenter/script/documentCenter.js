@@ -838,10 +838,10 @@ window.toggle3DXRay = function() {
     if (!viewer3DInstance) return;
     window.is3DXRay = !window.is3DXRay;
     let viewer = viewer3DInstance.GetViewer();
-    if (!viewer || !viewer.EnumerateMeshesAndLines) return;
+    if (!viewer) return;
     
-    viewer.EnumerateMeshesAndLines((child) => {
-        if (child.material) {
+    let iterate = (child) => {
+        if ((child.isMesh || child.isLineSegments) && child.material) {
             let materials = Array.isArray(child.material) ? child.material : [child.material];
             materials.forEach(mat => {
                 if (window.is3DXRay) {
@@ -856,8 +856,17 @@ window.toggle3DXRay = function() {
                 mat.needsUpdate = true;
             });
         }
-    });
-    viewer.Render();
+    };
+    
+    if (viewer.EnumerateMeshesAndLines) {
+        viewer.EnumerateMeshesAndLines(iterate);
+    } else if (viewer.scene) {
+        viewer.scene.traverse(iterate);
+    } else if (viewer.mainModel) {
+        viewer.mainModel.traverse(iterate);
+    }
+    
+    if (viewer.Render) viewer.Render();
     
     let btn = document.getElementById('btn-3d-xray');
     if (window.is3DXRay) {
@@ -874,6 +883,7 @@ window.close3DViewer = function() {
         viewer3DModal.hide();
     }
     if (viewer3DInstance) {
-        viewer3DInstance.Clear();
+        document.getElementById('viewer3d-container').innerHTML = '';
+        viewer3DInstance = null;
     }
 };
