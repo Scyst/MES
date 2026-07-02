@@ -86,9 +86,13 @@ $pageTitle = "PE Enterprise";
                     <i class="fas fa-chart-pie" style="color: #4ade80;"></i>
                     <span class="nav-label">IIoT OEE Dashboard</span>
                 </button>
+                <button class="pe-nav-item" data-tab="iiot_traditional" onclick="PEApp.switchTab('iiot_traditional')">
+                    <i class="fas fa-chart-line" style="color: #fcd34d;"></i>
+                    <span class="nav-label">Traditional Dashboard</span>
+                </button>
                 <button class="pe-nav-item" data-tab="analytics" onclick="PEApp.switchTab('analytics')">
                     <i class="fas fa-chart-line"></i>
-                    <span class="nav-label">Traditional Dashboard</span>
+                    <span class="nav-label">Maintenance Analytics</span>
                 </button>
             </div>
 
@@ -164,16 +168,21 @@ $pageTitle = "PE Enterprise";
                 <?php include 'components/tab_spareparts.php'; ?>
             </div>
 
-            <!-- Analytics Tab -->
+            <!-- Maintenance Analytics Tab -->
             <div class="pe-tab-panel" id="panel-analytics">
                 <?php include 'components/tab_analytics.php'; ?>
             </div>
 
-            <!-- IIoT Tab -->
+            <!-- Live IIoT Monitor -->
             <div class="pe-tab-panel" id="panel-iiot">
                 <?php include 'components/tab_iiot.php'; ?>
             </div>
             
+            <!-- Traditional KPI Dashboard -->
+            <div class="pe-tab-panel" id="panel-iiot_traditional">
+                <?php include 'components/tab_iiot_traditional.php'; ?>
+            </div>
+
             <!-- IIoT OEE Tab -->
             <div class="pe-tab-panel" id="panel-iiot_oee">
                 <?php include 'components/tab_iiot_oee.php'; ?>
@@ -255,6 +264,7 @@ $pageTitle = "PE Enterprise";
 <script src="script/sparePartsModule.js?v=<?php echo filemtime(__DIR__ . '/script/sparePartsModule.js'); ?>"></script>
 <script src="script/analyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/analyticsModule.js'); ?>"></script>
 <script src="script/iiotModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotModule.js'); ?>"></script>
+<script src="script/iiotTraditionalModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotTraditionalModule.js'); ?>"></script>
 <script src="script/iiotOeeModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotOeeModule.js'); ?>"></script>
 <script src="script/productionOverviewModule.js?v=<?php echo filemtime(__DIR__ . '/script/productionOverviewModule.js'); ?>"></script>
 <script src="script/machineTimelineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineTimelineModule.js'); ?>"></script>
