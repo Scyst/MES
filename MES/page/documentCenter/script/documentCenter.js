@@ -740,23 +740,37 @@ window.open3DViewer = function(docId, fileName) {
     }
     
     document.getElementById('view3DModalTitle').textContent = fileName;
+    
+    // Reset UI state
+    document.getElementById('viewer3d-dimensions').classList.add('d-none');
+    document.getElementById('viewer3d-size-text').textContent = 'Size: -';
+    let btnXray = document.getElementById('btn-3d-xray');
+    if (btnXray) {
+        btnXray.classList.replace('btn-info', 'btn-outline-info');
+        btnXray.classList.remove('text-white');
+    }
+    document.getElementById('viewer3d-body').style.background = '#f8fafc';
+    window.current3DTheme = 0;
+    window.is3DXRay = false;
+    
     viewer3DModal.show();
 
-    // Small delay to let modal layout calculate dimensions before initializing viewer
     setTimeout(() => {
         const container = document.getElementById('viewer3d-container');
         
-        if (!viewer3DInstance) {
-            OV.SetExternalLibLocation('https://cdn.jsdelivr.net/npm/online-3d-viewer@0.14.0/libs');
-            OV.Init3DViewerElements();
-            viewer3DInstance = new OV.EmbeddedViewer(container, {
-                backgroundColor : new OV.RGBAColor (248, 250, 252, 255), // Match #f8fafc bg
-                defaultColor : new OV.RGBColor (200, 200, 200),
-                edgeSettings : new OV.EdgeSettings (true, new OV.RGBColor (0, 0, 0), 1)
-            });
-        } else {
-            viewer3DInstance.Clear();
+        // Fix bug where second model doesn't load by destroying old instance
+        if (viewer3DInstance) {
+            container.innerHTML = '';
+            viewer3DInstance = null;
         }
+
+        OV.SetExternalLibLocation('https://cdn.jsdelivr.net/npm/online-3d-viewer@0.14.0/libs');
+        OV.Init3DViewerElements();
+        viewer3DInstance = new OV.EmbeddedViewer(container, {
+            backgroundColor : new OV.RGBAColor (248, 250, 252, 255),
+            defaultColor : new OV.RGBColor (200, 200, 200),
+            edgeSettings : new OV.EdgeSettings (true, new OV.RGBColor (0, 0, 0), 1)
+        });
 
         const modelUrl = `api/view_document.php?id=${docId}&download=1`; 
         
@@ -768,12 +782,89 @@ window.open3DViewer = function(docId, fileName) {
             .then(blob => {
                 const file = new File([blob], fileName);
                 viewer3DInstance.LoadModelFromFileList([file]);
+                
+                // Poll for dimensions
+                let checkDim = setInterval(() => {
+                    if (!viewer3DInstance) { clearInterval(checkDim); return; }
+                    let viewer = viewer3DInstance.GetViewer();
+                    if (viewer && viewer.GetBoundingBox) {
+                        let bb = viewer.GetBoundingBox();
+                        if (bb && bb.min && bb.max) {
+                            let w = (bb.max.x - bb.min.x).toFixed(2);
+                            let h = (bb.max.y - bb.min.y).toFixed(2);
+                            let d = (bb.max.z - bb.min.z).toFixed(2);
+                            if (w > 0 && h > 0 && d > 0) {
+                                document.getElementById('viewer3d-size-text').textContent = `Size: ${w} x ${h} x ${d} mm`;
+                                document.getElementById('viewer3d-dimensions').classList.remove('d-none');
+                                clearInterval(checkDim);
+                            }
+                        }
+                    }
+                }, 1000);
             })
             .catch(error => {
                 console.error(error);
                 alert('Failed to download or load the 3D model from the server.');
             });
     }, 300);
+};
+
+window.current3DTheme = 0;
+window.toggle3DTheme = function() {
+    if (!viewer3DInstance) return;
+    window.current3DTheme = (window.current3DTheme + 1) % 3;
+    let viewer = viewer3DInstance.GetViewer();
+    let body = document.getElementById('viewer3d-body');
+    if (!viewer) return;
+    
+    let color;
+    if (window.current3DTheme === 0) {
+        color = new OV.RGBAColor(248, 250, 252, 255); // Light
+        body.style.background = '#f8fafc';
+    } else if (window.current3DTheme === 1) {
+        color = new OV.RGBAColor(156, 163, 175, 255); // Gray
+        body.style.background = '#9ca3af';
+    } else {
+        color = new OV.RGBAColor(31, 41, 55, 255); // Dark
+        body.style.background = '#1f2937';
+    }
+    
+    viewer.SetBackgroundColor(color);
+    viewer.Render();
+};
+
+window.is3DXRay = false;
+window.toggle3DXRay = function() {
+    if (!viewer3DInstance) return;
+    window.is3DXRay = !window.is3DXRay;
+    let viewer = viewer3DInstance.GetViewer();
+    if (!viewer || !viewer.GetScene) return;
+    
+    viewer.GetScene().traverse((child) => {
+        if (child.isMesh && child.material) {
+            // Apply transparency to the material
+            if (window.is3DXRay) {
+                child.material.transparent = true;
+                child.material.opacity = 0.35;
+                child.material.depthWrite = false; // prevents weird internal occlusion
+            } else {
+                child.material.transparent = false;
+                child.material.opacity = 1.0;
+                child.material.depthWrite = true;
+            }
+            child.material.needsUpdate = true;
+        }
+    });
+    viewer.Render();
+    
+    let btn = document.getElementById('btn-3d-xray');
+    if (window.is3DXRay) {
+        btn.classList.replace('btn-outline-info', 'btn-info');
+        btn.classList.add('text-white');
+    } else {
+        btn.classList.replace('btn-info', 'btn-outline-info');
+        btn.classList.remove('text-white');
+    }
 };
 
 window.close3DViewer = function() {
