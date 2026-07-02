@@ -2,8 +2,8 @@
 
 <div class="pe-d-flex pe-justify-between pe-align-center pe-mb-16">
     <div class="pe-d-flex pe-align-center pe-gap-8">
-        <i class="fas fa-chart-line" style="color:var(--pe-primary);font-size:20px;"></i>
-        <h4 class="pe-m-0">Production OEE Overview (Traditional)</h4>
+        <i class="fas fa-industry" style="color:var(--pe-primary);font-size:20px;"></i>
+        <h4 class="pe-m-0">Machine Assets Overview</h4>
     </div>
     <div class="pe-d-flex pe-gap-8">
         <span class="pe-badge pe-badge-success pe-d-flex pe-align-center pe-gap-4">
@@ -17,65 +17,67 @@
 
 <!-- KPI Row -->
 <div class="pe-kpi-row" id="iiotTraditionalKpiRow" style="grid-template-columns: repeat(6, 1fr);">
-    <div class="pe-kpi-card kpi-success pe-animate-in">
-        <div>
-            <div class="pe-kpi-label">Avg OEE</div>
-            <div class="pe-kpi-value" id="kpiTradOEE">- <span class="unit">%</span></div>
-            <div class="pe-kpi-sub">Overall Equipment Effectiveness</div>
-        </div>
-        <div class="pe-kpi-icon"><i class="fas fa-chart-pie"></i></div>
-    </div>
-    <div class="pe-kpi-card kpi-info pe-animate-in">
-        <div>
-            <div class="pe-kpi-label">Availability</div>
-            <div class="pe-kpi-value" id="kpiTradAvail">- <span class="unit">%</span></div>
-            <div class="pe-kpi-sub">Uptime vs Planned</div>
-        </div>
-        <div class="pe-kpi-icon"><i class="fas fa-power-off"></i></div>
-    </div>
-    <div class="pe-kpi-card kpi-warning pe-animate-in">
-        <div>
-            <div class="pe-kpi-label">Performance</div>
-            <div class="pe-kpi-value" id="kpiTradPerf">- <span class="unit">%</span></div>
-            <div class="pe-kpi-sub">Speed vs Standard</div>
-        </div>
-        <div class="pe-kpi-icon"><i class="fas fa-tachometer-alt"></i></div>
-    </div>
     <div class="pe-kpi-card kpi-primary pe-animate-in">
         <div>
-            <div class="pe-kpi-label">Quality</div>
-            <div class="pe-kpi-value" id="kpiTradQual">- <span class="unit">%</span></div>
-            <div class="pe-kpi-sub">Good vs Total Parts</div>
+            <div class="pe-kpi-label">Total Machines</div>
+            <div class="pe-kpi-value" id="kpiTradTotal">- <span class="unit">units</span></div>
+            <div class="pe-kpi-sub">All registered assets</div>
+        </div>
+        <div class="pe-kpi-icon"><i class="fas fa-server"></i></div>
+    </div>
+    <div class="pe-kpi-card kpi-success pe-animate-in">
+        <div>
+            <div class="pe-kpi-label">Active Machines</div>
+            <div class="pe-kpi-value" id="kpiTradActive">- <span class="unit">units</span></div>
+            <div class="pe-kpi-sub">Currently running</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-check-circle"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-success pe-animate-in">
-        <div>
-            <div class="pe-kpi-label">Total Output</div>
-            <div class="pe-kpi-value" id="kpiTradOutput">- <span class="unit">pcs</span></div>
-            <div class="pe-kpi-sub">Total Good Parts</div>
-        </div>
-        <div class="pe-kpi-icon"><i class="fas fa-boxes"></i></div>
-    </div>
     <div class="pe-kpi-card kpi-danger pe-animate-in">
         <div>
-            <div class="pe-kpi-label">Total Defects</div>
-            <div class="pe-kpi-value" id="kpiTradDefects">- <span class="unit">pcs</span></div>
-            <div class="pe-kpi-sub">Total NG Parts</div>
+            <div class="pe-kpi-label">Under Repair</div>
+            <div class="pe-kpi-value" id="kpiTradRepair">- <span class="unit">units</span></div>
+            <div class="pe-kpi-sub">Requires maintenance</div>
         </div>
-        <div class="pe-kpi-icon"><i class="fas fa-times-circle"></i></div>
+        <div class="pe-kpi-icon"><i class="fas fa-tools"></i></div>
+    </div>
+    <div class="pe-kpi-card kpi-info pe-animate-in">
+        <div>
+            <div class="pe-kpi-label">IIoT Connected</div>
+            <div class="pe-kpi-value" id="kpiTradConnected">- <span class="unit">units</span></div>
+            <div class="pe-kpi-sub">With active MQTT topics</div>
+        </div>
+        <div class="pe-kpi-icon"><i class="fas fa-wifi"></i></div>
+    </div>
+    <div class="pe-kpi-card kpi-warning pe-animate-in">
+        <div>
+            <div class="pe-kpi-label">Total Lines</div>
+            <div class="pe-kpi-value" id="kpiTradLines">- <span class="unit">lines</span></div>
+            <div class="pe-kpi-sub">Unique production lines</div>
+        </div>
+        <div class="pe-kpi-icon"><i class="fas fa-stream"></i></div>
+    </div>
+    <div class="pe-kpi-card kpi-secondary pe-animate-in">
+        <div>
+            <div class="pe-kpi-label">Total Areas</div>
+            <div class="pe-kpi-value" id="kpiTradAreas">- <span class="unit">areas</span></div>
+            <div class="pe-kpi-sub">Unique factory zones</div>
+        </div>
+        <div class="pe-kpi-icon"><i class="fas fa-map-marked-alt"></i></div>
     </div>
 </div>
 
 <!-- Charts Row 1 -->
 <div class="pe-analytics-grid-row-2" style="margin-top: 16px;">
-    <!-- Hourly Production Trend -->
-    <div class="pe-card">
+    <!-- Machines by Line Chart -->
+    <div class="pe-card pe-animate-in" style="flex: 2;">
         <div class="pe-card-header">
-            <h6><i class="fas fa-chart-bar"></i> Hourly Production (Output vs Target)</h6>
+            <h5 class="pe-m-0"><i class="fas fa-chart-bar pe-text-muted pe-me-2"></i> Machines by Line</h5>
         </div>
         <div class="pe-card-body">
-            <canvas id="chartTradHourlyProduction" height="280"></canvas>
+            <div style="height: 350px;">
+                <canvas id="chartTradHourlyProduction"></canvas>
+            </div>
         </div>
     </div>
 
@@ -103,13 +105,13 @@
             <table class="pe-table" id="tradMachineTable">
                 <thead>
                     <tr>
-                        <th>Machine Code</th>
-                        <th>Machine Name</th>
-                        <th class="pe-text-center">Status</th>
-                        <th class="pe-text-end">OEE (%)</th>
-                        <th class="pe-text-end">Good (pcs)</th>
-                        <th class="pe-text-end">NG (pcs)</th>
-                        <th class="pe-text-end">Temp (°C)</th>
+                        <th style="width:15%">MACHINE CODE</th>
+                        <th style="width:20%">MACHINE NAME</th>
+                        <th style="width:10%">LINE</th>
+                        <th style="width:15%">TYPE</th>
+                        <th style="width:15%">MANUFACTURER</th>
+                        <th class="pe-text-center" style="width:10%">STATUS</th>
+                        <th class="pe-text-center" style="width:15%">IIoT TOPIC</th>
                     </tr>
                 </thead>
                 <tbody id="tradMachineBody">
