@@ -796,6 +796,7 @@ window.open3DViewer = function(docId, fileName) {
                             if (w > 0 && h > 0 && d > 0) {
                                 document.getElementById('viewer3d-size-text').innerHTML = `Size: <span class="text-danger fw-bold" title="Width">X: ${w}</span> | <span class="text-success fw-bold" title="Height">Y: ${h}</span> | <span class="text-primary fw-bold" title="Depth">Z: ${d}</span> mm`;
                                 document.getElementById('viewer3d-dimensions').classList.remove('d-none');
+                                window.startAxisSync(); // Start syncing the axis helper
                                 clearInterval(checkDim);
                             }
                         }
@@ -878,6 +879,31 @@ window.toggle3DXRay = function() {
     }
 };
 
+window.syncAxisAnimFrame = null;
+window.startAxisSync = function() {
+    let axisHelper = document.getElementById('viewer3d-axis-helper');
+    let axisCube = document.getElementById('axis-cube');
+    if (!axisHelper || !axisCube) return;
+    axisHelper.style.display = 'block';
+
+    function syncLoop() {
+        if (!viewer3DInstance) {
+            window.syncAxisAnimFrame = null;
+            return;
+        }
+        
+        let viewer = viewer3DInstance.GetViewer();
+        if (viewer && viewer.camera && viewer.camera.rotation) {
+            let rot = viewer.camera.rotation;
+            // Map Three.js camera rotation to CSS world rotation
+            axisCube.style.transform = `rotateX(${rot.x}rad) rotateY(${-rot.y}rad) rotateZ(${-rot.z}rad)`;
+        }
+        window.syncAxisAnimFrame = requestAnimationFrame(syncLoop);
+    }
+    if (window.syncAxisAnimFrame) cancelAnimationFrame(window.syncAxisAnimFrame);
+    window.syncAxisAnimFrame = requestAnimationFrame(syncLoop);
+};
+
 window.is3DAutoRotate = false;
 window.autoRotateAnimFrame = null;
 
@@ -933,6 +959,10 @@ window.toggle3DAutoRotate = function() {
 window.close3DViewer = function() {
     if (window.is3DAutoRotate) {
         window.toggle3DAutoRotate();
+    }
+    if (window.syncAxisAnimFrame) {
+        cancelAnimationFrame(window.syncAxisAnimFrame);
+        window.syncAxisAnimFrame = null;
     }
     if (viewer3DModal) {
         viewer3DModal.hide();
