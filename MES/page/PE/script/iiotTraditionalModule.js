@@ -201,37 +201,65 @@ const iiotTraditionalModule = (function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '65%',
+                cutout: '60%',
                 layout: {
-                    padding: { top: 0 }
+                    padding: 40 // Give room for the outside labels
                 },
                 plugins: {
                     legend: {
-                        position: 'bottom',
-                        labels: { 
-                            color: '#475569', 
-                            padding: 16, 
-                            font: { size: 13, weight: '500' }
-                        }
+                        display: false // Hide legend since we will show labels outside
                     }
                 }
             },
             plugins: [{
-                id: 'doughnutLabel',
+                id: 'doughnutCalloutLabel',
                 afterDraw(chart) {
-                    const { ctx } = chart;
+                    const { ctx, chartArea } = chart;
                     chart.data.datasets.forEach((dataset, i) => {
                         const meta = chart.getDatasetMeta(i);
                         meta.data.forEach((element, index) => {
                             const val = dataset.data[index];
                             if (val > 0) {
-                                const pos = element.tooltipPosition();
+                                const centerX = (chartArea.left + chartArea.right) / 2;
+                                const centerY = (chartArea.top + chartArea.bottom) / 2;
+                                
+                                const startAngle = element.startAngle;
+                                const endAngle = element.endAngle;
+                                const midAngle = startAngle + (endAngle - startAngle) / 2;
+                                
+                                const outerRadius = element.outerRadius;
+                                const lineLen1 = 15; // Line outwards
+                                const lineLen2 = 15; // Horizontal line
+                                
+                                const edgeX = centerX + Math.cos(midAngle) * outerRadius;
+                                const edgeY = centerY + Math.sin(midAngle) * outerRadius;
+                                
+                                const outX = centerX + Math.cos(midAngle) * (outerRadius + lineLen1);
+                                const outY = centerY + Math.sin(midAngle) * (outerRadius + lineLen1);
+                                
+                                const isRight = outX > centerX;
+                                const hX = isRight ? outX + lineLen2 : outX - lineLen2;
+                                
                                 ctx.save();
-                                ctx.fillStyle = '#ffffff';
-                                ctx.font = 'bold 15px Inter, sans-serif';
-                                ctx.textAlign = 'center';
+                                // Draw Line
+                                ctx.beginPath();
+                                ctx.moveTo(edgeX, edgeY);
+                                ctx.lineTo(outX, outY);
+                                ctx.lineTo(hX, outY);
+                                ctx.strokeStyle = dataset.backgroundColor[index];
+                                ctx.lineWidth = 1.5;
+                                ctx.stroke();
+                                
+                                // Draw Text
+                                ctx.fillStyle = '#475569';
+                                ctx.font = 'bold 12px Inter, sans-serif';
                                 ctx.textBaseline = 'middle';
-                                ctx.fillText(val, pos.x, pos.y);
+                                ctx.textAlign = isRight ? 'left' : 'right';
+                                
+                                const labelText = chart.data.labels[index];
+                                const text = `${labelText}: ${val}`;
+                                const padding = 5;
+                                ctx.fillText(text, isRight ? hX + padding : hX - padding, outY);
                                 ctx.restore();
                             }
                         });
