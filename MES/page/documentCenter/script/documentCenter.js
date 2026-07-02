@@ -842,17 +842,19 @@ window.toggle3DXRay = function() {
     
     viewer.EnumerateMeshesAndLines((child) => {
         if (child.material) {
-            // Apply transparency to the material
-            if (window.is3DXRay) {
-                child.material.transparent = true;
-                child.material.opacity = 0.35;
-                child.material.depthWrite = false; // prevents weird internal occlusion
-            } else {
-                child.material.transparent = false;
-                child.material.opacity = 1.0;
-                child.material.depthWrite = true;
-            }
-            child.material.needsUpdate = true;
+            let materials = Array.isArray(child.material) ? child.material : [child.material];
+            materials.forEach(mat => {
+                if (window.is3DXRay) {
+                    mat.transparent = true;
+                    mat.opacity = 0.35;
+                    mat.depthWrite = false; 
+                } else {
+                    mat.transparent = false;
+                    mat.opacity = 1.0;
+                    mat.depthWrite = true;
+                }
+                mat.needsUpdate = true;
+            });
         }
     });
     viewer.Render();
