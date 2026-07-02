@@ -210,6 +210,7 @@ $pageTitle = "PE Enterprise";
     include __DIR__ . '/components/modals/modal_workorder.php';
     include __DIR__ . '/components/modals/modal_wo_issue_part.php';
     include __DIR__ . '/components/modals/modal_sparepart_tx.php';
+    include __DIR__ . '/components/modals/modal_mt_item.php';
     include __DIR__ . '/components/modals/modal_quick_close.php';
 ?>
 
@@ -263,6 +264,8 @@ $pageTitle = "PE Enterprise";
 <script src="script/downtimeModule.js?v=<?php echo filemtime(__DIR__ . '/script/downtimeModule.js'); ?>"></script>
 <script src="script/sparePartsModule.js?v=<?php echo filemtime(__DIR__ . '/script/sparePartsModule.js'); ?>"></script>
 <script src="script/analyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/analyticsModule.js'); ?>"></script>
+<script src="../../utils/libs/fabric.min.js"></script>
+<script src="script/mapBuilderModule.js?v=<?php echo time(); ?>"></script>
 <script src="script/iiotModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotModule.js'); ?>"></script>
 <script src="script/iiotTraditionalModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotTraditionalModule.js'); ?>"></script>
 <script src="script/iiotOeeModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotOeeModule.js'); ?>"></script>

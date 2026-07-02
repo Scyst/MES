@@ -268,9 +268,12 @@
         <div class="iiot-floorplan-title">
             <span><i class="fas fa-map"></i> 2D Interactive Floor Plan</span>
             <div>
+                <button class="btn btn-sm btn-outline-primary me-2" id="iiotMapBuilderBtn" onclick="MapBuilderModule.toggleMode()">
+                    <i class="fas fa-drafting-compass"></i> Map Builder
+                </button>
                 <input type="file" id="iiotMapBgInput" accept="image/*" style="display: none;" onchange="IIoTModule.uploadMapBg(this)">
                 <button class="btn btn-sm btn-outline-secondary" id="iiotEditMapBtn" onclick="IIoTModule.toggleEditMode()">
-                    <i class="fas fa-edit"></i> Edit Layout
+                    <i class="fas fa-edit"></i> Edit Nodes
                 </button>
                 <button class="btn btn-sm btn-secondary me-2" id="iiotUploadMapBtn" onclick="document.getElementById('iiotMapBgInput').click()" style="display: none;">
                     <i class="fas fa-upload"></i> Background
@@ -280,10 +283,42 @@
                 </button>
             </div>
         </div>
-        <div class="iiot-floorplan" id="iiotFloorplan">
-            <div id="iiotPanzoomElement" style="position:relative; width:100%; display:inline-block;">
+        <div class="iiot-floorplan" id="iiotFloorplan" style="position: relative;">
+            
+            <!-- Map Builder Toolbar (Hidden by default) -->
+            <div id="mapBuilderToolbar" class="pe-card" style="display: none; position: absolute; top: 16px; left: 16px; z-index: 100; padding: 12px; width: 220px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); background: #1e293b;">
+                <h6 style="margin-bottom: 12px; font-size: 14px; color: #f8fafc;"><i class="fas fa-tools text-primary"></i> Map Builder Tools</h6>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('select')" id="btnDrawSelect"><i class="fas fa-mouse-pointer me-2"></i> Select / Move</button>
+                    <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('line')" id="btnDrawLine"><i class="fas fa-grip-lines me-2"></i> Draw Wall (Line)</button>
+                    <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('rect')" id="btnDrawRect"><i class="far fa-square me-2"></i> Draw Zone (Box)</button>
+                    <button class="btn btn-outline-danger btn-sm text-start" onclick="MapBuilderModule.deleteSelected()"><i class="fas fa-trash me-2"></i> Delete Selected</button>
+                    
+                    <hr style="margin: 8px 0; border-color: #334155;">
+                    
+                    <label style="font-size: 12px; margin-bottom: 4px; color: #cbd5e1;">Tracing Blueprint</label>
+                    <input type="file" id="mapTracingUpload" class="form-control bg-dark text-white border-secondary" style="font-size: 11px; padding: 4px;" accept="image/*" onchange="MapBuilderModule.uploadTracingImage(this)">
+                    
+                    <label style="font-size: 12px; margin-top: 10px; margin-bottom: 4px; color: #cbd5e1;">Blueprint Opacity</label>
+                    <input type="range" id="mapTracingOpacity" min="0" max="1" step="0.1" value="0.5" style="width: 100%;" onchange="MapBuilderModule.changeTracingOpacity(this.value)">
+                    <button class="btn btn-outline-secondary btn-sm mt-1" onclick="MapBuilderModule.clearTracing()"><i class="fas fa-times me-1"></i> Remove Tracing</button>
+                    
+                    <hr style="margin: 8px 0; border-color: #334155;">
+                    
+                    <button class="btn btn-primary btn-sm" onclick="MapBuilderModule.saveMap()"><i class="fas fa-save me-2"></i> Save Map to Server</button>
+                </div>
+            </div>
+
+            <div id="iiotPanzoomElement" style="position:relative; width:100%; display:inline-block; min-height: 600px;">
                 <img id="iiotFloorplanImg" src="../../uploads/iiot-map-bg.png" class="iiot-floorplan-img" alt="Floor plan" onerror="this.src='https://placehold.co/1200x600/0f172a/334155?text=Upload+Map+Background'">
+                
+                <!-- Canvas wrapper for Fabric.js -->
+                <div id="mapCanvasWrapper" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none;">
+                    <canvas id="iiotMapCanvas"></canvas>
+                </div>
+
                 <!-- Machine Nodes will be injected here -->
+                <div id="mapNodesContainer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;"></div>
             </div>
             <div id="machineTooltip" class="machine-tooltip">
                 <h6 id="ttMachineName">Machine Name</h6>

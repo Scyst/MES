@@ -16,7 +16,17 @@ const IIoTModule = (function() {
             // Get all machines, filter only those with mqtt_topic
             const res = await PEApp.apiCall('machineAPI.php', { action: 'get_machines' });
             machinesWithIIoT = (res.data || []).filter(m => m.mqtt_topic && m.mqtt_topic.trim() !== '');
-            
+            // Initialize Panzoom
+            const panzoomEl = document.getElementById('iiotPanzoomElement');
+            if (panzoomEl && typeof Panzoom !== 'undefined') {
+                panzoomInstance = Panzoom(panzoomEl, {
+                    maxScale: 5,
+                    minScale: 0.5,
+                    contain: 'outside'
+                });
+                panzoomEl.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
+            }
+
             renderGrid();
             startPolling();
         } catch (e) {
@@ -81,15 +91,11 @@ const IIoTModule = (function() {
     }
 
     function renderFloorplan() {
-        const floorplanWrapper = document.getElementById('iiotPanzoomElement');
-        if (!floorplanWrapper) return;
+        const nodesContainer = document.getElementById('mapNodesContainer');
+        if (!nodesContainer) return;
         
-        // Remove existing nodes (except image)
-        Array.from(floorplanWrapper.children).forEach(child => {
-            if (child.id !== 'iiotFloorplanImg') {
-                floorplanWrapper.removeChild(child);
-            }
-        });
+        // Remove existing nodes
+        nodesContainer.innerHTML = '';
 
         machinesWithIIoT.forEach((m, index) => {
             const x = m.map_x != null ? parseFloat(m.map_x) : 15 + ((index * 30) % 70); 
@@ -160,7 +166,10 @@ const IIoTModule = (function() {
                 if (tt) tt.classList.remove('visible');
             });
             
-            floorplanWrapper.appendChild(node);
+            // Allow pointer events on nodes specifically, since container is pointer-events: none
+            node.style.pointerEvents = 'auto';
+
+            nodesContainer.appendChild(node);
         });
     }
 
@@ -383,11 +392,13 @@ const IIoTModule = (function() {
             if (editBtn) editBtn.classList.replace('btn-outline-secondary', 'btn-secondary');
             if (saveBtn) saveBtn.style.display = 'inline-block';
             if (uploadBtn) uploadBtn.style.display = 'inline-block';
+            if (panzoomInstance) panzoomInstance.setOptions({ disablePan: true, disableZoom: true });
         } else {
             floorplan.classList.remove('edit-mode');
             if (editBtn) editBtn.classList.replace('btn-secondary', 'btn-outline-secondary');
             if (saveBtn) saveBtn.style.display = 'none';
             if (uploadBtn) uploadBtn.style.display = 'none';
+            if (panzoomInstance) panzoomInstance.setOptions({ disablePan: false, disableZoom: false });
         }
     }
 
@@ -512,5 +523,11 @@ const IIoTModule = (function() {
         }, 'image/png');
     }
 
-    return { init, stop, toggleSimulation, toggleEditMode, saveMapPositions, uploadMapBg, rotateMap, confirmMapCrop };
+    function setPanzoomState(enabled) {
+        if (panzoomInstance) {
+            panzoomInstance.setOptions({ disablePan: !enabled, disableZoom: !enabled });
+        }
+    }
+
+    return { init, stop, toggleSimulation, toggleEditMode, saveMapPositions, uploadMapBg, rotateMap, confirmMapCrop, setPanzoomState };
 })();

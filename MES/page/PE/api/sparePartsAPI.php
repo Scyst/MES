@@ -221,6 +221,95 @@ try {
             echo json_encode(['success' => true, 'message' => 'ลบรายการและคืนสต๊อกเรียบร้อย', 'new_total_cost' => $totalCost]);
             break;
 
+        case 'get_mt_items':
+            $sql = "SELECT * FROM dbo.MT_ITEMS WITH (NOLOCK) ORDER BY is_active DESC, item_code ASC";
+            $stmt = $pdo->query($sql);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
+        case 'save_mt_item':
+            $itemId = $input['item_id'] ?? '';
+            $itemCode = trim($input['item_code'] ?? '');
+            $itemName = trim($input['item_name'] ?? '');
+            
+            if (empty($itemCode) || empty($itemName)) {
+                throw new Exception("กรุณากรอกรหัสและชื่ออะไหล่ให้ครบถ้วน");
+            }
+
+            $desc = trim($input['description'] ?? '');
+            $supplier = trim($input['supplier'] ?? '');
+            $uom = trim($input['uom'] ?? 'PCS');
+            $unitPrice = (float)($input['unit_price'] ?? 0);
+            $minStock = (float)($input['min_stock'] ?? 0);
+            $maxStock = (float)($input['max_stock'] ?? 0);
+
+            $checkSql = "SELECT item_id FROM dbo.MT_ITEMS WITH (NOLOCK) WHERE item_code = ?";
+            $stmtCheck = $pdo->prepare($checkSql);
+            $stmtCheck->execute([$itemCode]);
+            $existing = $stmtCheck->fetch();
+
+            if (empty($itemId)) {
+                if ($existing) throw new Exception("รหัสอะไหล่นี้ ($itemCode) มีในระบบแล้ว");
+                
+                $sql = "INSERT INTO dbo.MT_ITEMS (item_code, item_name, description, supplier, unit_price, uom, min_stock, max_stock) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$itemCode, $itemName, $desc, $supplier, $unitPrice, $uom, $minStock, $maxStock]);
+                $msg = "เพิ่มรายการอะไหล่ใหม่สำเร็จ";
+            } else {
+                if ($existing && $existing['item_id'] != $itemId) {
+                    throw new Exception("รหัสอะไหล่นี้ ($itemCode) ถูกใช้ไปแล้วโดยรายการอื่น");
+                }
+
+                $sql = "UPDATE dbo.MT_ITEMS 
+                        SET item_code = ?, item_name = ?, description = ?, supplier = ?, 
+                            unit_price = ?, uom = ?, min_stock = ?, max_stock = ? 
+                        WHERE item_id = ?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$itemCode, $itemName, $desc, $supplier, $unitPrice, $uom, $minStock, $maxStock, $itemId]);
+                $msg = "อัปเดตข้อมูลอะไหล่สำเร็จ";
+            }
+            echo json_encode(['success' => true, 'message' => $msg]);
+            break;
+
+        case 'toggle_mt_item':
+            $itemId = $input['item_id'] ?? null;
+            if (!$itemId) throw new Exception("Invalid Item ID");
+
+            $sql = "UPDATE dbo.MT_ITEMS SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END WHERE item_id = ?";
+            $pdo->prepare($sql)->execute([$itemId]);
+            echo json_encode(['success' => true, 'message' => 'เปลี่ยนสถานะการใช้งานสำเร็จ']);
+            break;
+
+        case 'get_transactions':
+            $limit = (int)($input['limit'] ?? 200);
+            
+            $sql = "SELECT TOP " . $limit . " 
+                        t.transaction_id, 
+                        t.transaction_type, 
+                        t.quantity, 
+                        t.notes, 
+                        t.created_at,
+                        i.item_code, 
+                        i.item_name, 
+                        i.uom,
+                        l.location_name,
+                        u.fullname AS created_by_name,
+                        j.wo_number, 
+                        m.machine_code,
+                        j.issue_title
+                    FROM dbo.MT_TRANSACTIONS t WITH (NOLOCK)
+                    JOIN dbo.MT_ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                    LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON t.location_id = l.location_id
+                    LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                    LEFT JOIN dbo.PE_WORK_ORDERS j WITH (NOLOCK) ON t.pe_wo_id = j.wo_id
+                    LEFT JOIN dbo.PE_MACHINES m WITH (NOLOCK) ON j.machine_id = m.machine_id
+                    ORDER BY t.transaction_id DESC";
+                    
+            $stmt = $pdo->query($sql);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
         default:
             throw new Exception("Invalid Action");
     }

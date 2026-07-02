@@ -1,6 +1,8 @@
 // sparePartsModule.js — Spare Parts & Inventory Module
 const SparePartsModule = (() => {
     let allData = [];
+    let allMasterData = [];
+    let allHistoryData = [];
 
     async function loadData() {
         try {
@@ -193,5 +195,216 @@ const SparePartsModule = (() => {
         XLSX.writeFile(wb, `SpareParts_${new Date().toISOString().slice(0, 10)}.xlsx`);
     }
 
-    return { loadData, filterTable, openReceiveModal, openIssueModal, submitTransaction, exportExcel, onItemInput };
+    function switchTab(tab) {
+        if (tab === 'master') {
+            loadMasterList();
+        } else if (tab === 'history') {
+            loadHistory();
+        }
+    }
+
+    async function loadMasterList() {
+        try {
+            const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_mt_items' });
+            allMasterData = res.data || [];
+            renderMasterTable();
+        } catch (e) {
+            PEApp.showToast(e.message, 'error');
+        }
+    }
+
+    function filterMasterTable() {
+        const q = (document.getElementById('spMasterSearchInput')?.value || '').toLowerCase();
+        renderMasterTable(q);
+    }
+
+    function renderMasterTable(searchQuery = '') {
+        const tbody = document.getElementById('spMasterTableBody');
+        if (!tbody) return;
+
+        let filtered = allMasterData;
+        if (searchQuery) {
+            filtered = filtered.filter(r =>
+                (r.item_code || '').toLowerCase().includes(searchQuery) ||
+                (r.item_name || '').toLowerCase().includes(searchQuery) ||
+                (r.supplier || '').toLowerCase().includes(searchQuery)
+            );
+        }
+
+        if (!filtered.length) {
+            tbody.innerHTML = `<tr><td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">No items found</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = filtered.map(r => {
+            const isActive = parseInt(r.is_active) === 1;
+            const statusBadge = isActive ? '<span class="pe-badge pe-status-active">Active</span>' : '<span class="pe-badge pe-status-inactive">Inactive</span>';
+            return `
+            <tr>
+                <td class="pe-fw-bold">${PEApp.escapeHtml(r.item_code)}</td>
+                <td>${PEApp.escapeHtml(r.item_name)}</td>
+                <td class="pe-text-sm pe-text-muted">${PEApp.escapeHtml(r.description || '-')}</td>
+                <td class="pe-text-sm">${PEApp.escapeHtml(r.supplier || '-')}</td>
+                <td class="pe-text-end">${PEApp.formatCurrency(r.unit_price || 0)}</td>
+                <td class="pe-text-center pe-text-sm">${PEApp.formatNumber(r.min_stock)} / ${PEApp.formatNumber(r.max_stock)}</td>
+                <td class="pe-text-center">${statusBadge}</td>
+                <td class="pe-text-center">
+                    <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.openItemModal('${r.item_id}')" title="Edit"><i class="fas fa-edit pe-text-primary"></i></button>
+                    <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.toggleItemStatus('${r.item_id}')" title="Toggle Status"><i class="fas fa-power-off ${isActive ? 'pe-text-danger' : 'pe-text-success'}"></i></button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function openItemModal(id = null) {
+        const form = document.getElementById('formMtItem');
+        form.reset();
+        
+        if (id) {
+            const item = allMasterData.find(x => x.item_id == id);
+            if (item) {
+                document.getElementById('mt_item_id').value = item.item_id;
+                document.getElementById('mt_item_code').value = item.item_code;
+                document.getElementById('mt_item_name').value = item.item_name;
+                document.getElementById('mt_description').value = item.description || '';
+                document.getElementById('mt_supplier').value = item.supplier || '';
+                document.getElementById('mt_unit_price').value = item.unit_price || 0;
+                document.getElementById('mt_uom').value = item.uom || 'PCS';
+                document.getElementById('mt_min_stock').value = item.min_stock || 0;
+                document.getElementById('mt_max_stock').value = item.max_stock || 0;
+            }
+        } else {
+            document.getElementById('mt_item_id').value = '';
+        }
+
+        form.onsubmit = saveItem;
+        PEApp.showModal('modalMtItem');
+    }
+
+    async function saveItem(e) {
+        e.preventDefault();
+        
+        const payload = {
+            action: 'save_mt_item',
+            item_id: document.getElementById('mt_item_id').value,
+            item_code: document.getElementById('mt_item_code').value,
+            item_name: document.getElementById('mt_item_name').value,
+            description: document.getElementById('mt_description').value,
+            supplier: document.getElementById('mt_supplier').value,
+            unit_price: document.getElementById('mt_unit_price').value,
+            uom: document.getElementById('mt_uom').value,
+            min_stock: document.getElementById('mt_min_stock').value,
+            max_stock: document.getElementById('mt_max_stock').value
+        };
+
+        try {
+            await PEApp.apiCall('sparePartsAPI.php', {}, 'POST', payload);
+            PEApp.showToast('บันทึกข้อมูลสำเร็จ', 'success');
+            PEApp.hideModal('modalMtItem');
+            loadMasterList();
+            loadData(); 
+        } catch(err) {
+            PEApp.showToast(err.message, 'error');
+        }
+    }
+
+    async function toggleItemStatus(id) {
+        if (!confirm('ยืนยันการเปลี่ยนสถานะการใช้งาน?')) return;
+        try {
+            await PEApp.apiCall('sparePartsAPI.php', {}, 'POST', { action: 'toggle_mt_item', item_id: id });
+            PEApp.showToast('เปลี่ยนสถานะเรียบร้อย', 'success');
+            loadMasterList();
+            loadData();
+        } catch(err) {
+            PEApp.showToast(err.message, 'error');
+        }
+    }
+
+    function exportMasterExcel() {
+        if (!allMasterData.length) { PEApp.showToast('No data', 'warning'); return; }
+        if (typeof XLSX === 'undefined') return;
+
+        const ws = XLSX.utils.json_to_sheet(allMasterData.map(r => ({
+            'Item Code': r.item_code, 'Item Name': r.item_name, 'Description': r.description,
+            'Supplier': r.supplier, 'Unit Price': r.unit_price, 'UoM': r.uom,
+            'Min': r.min_stock, 'Max': r.max_stock, 'Active': parseInt(r.is_active) === 1 ? 'Y' : 'N'
+        })));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Item Master');
+        XLSX.writeFile(wb, `ItemMaster_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    }
+
+    async function loadHistory() {
+        try {
+            const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_transactions' });
+            allHistoryData = res.data || [];
+            renderHistoryTable();
+        } catch (e) {
+            PEApp.showToast(e.message, 'error');
+        }
+    }
+
+    function filterHistoryTable() {
+        const q = (document.getElementById('spHistorySearchInput')?.value || '').toLowerCase();
+        renderHistoryTable(q);
+    }
+
+    function renderHistoryTable(searchQuery = '') {
+        const tbody = document.getElementById('spHistoryTableBody');
+        if (!tbody) return;
+
+        let filtered = allHistoryData;
+        if (searchQuery) {
+            filtered = filtered.filter(r =>
+                (r.item_code || '').toLowerCase().includes(searchQuery) ||
+                (r.item_name || '').toLowerCase().includes(searchQuery) ||
+                (r.created_by_name || '').toLowerCase().includes(searchQuery) ||
+                (r.wo_number || '').toLowerCase().includes(searchQuery) ||
+                (r.machine_code || '').toLowerCase().includes(searchQuery)
+            );
+        }
+
+        if (!filtered.length) {
+            tbody.innerHTML = `<tr><td colspan="7" class="pe-text-center pe-text-muted" style="padding:60px;">No transactions found</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = filtered.map(r => {
+            let typeBadge = '';
+            let qtyClass = '';
+            if (r.transaction_type === 'RECEIVE') {
+                typeBadge = '<span class="pe-badge pe-status-active"><i class="fas fa-arrow-down me-1"></i>IN</span>';
+                qtyClass = 'text-success fw-bold';
+            } else if (r.transaction_type === 'ISSUE') {
+                typeBadge = '<span class="pe-badge pe-status-inactive"><i class="fas fa-arrow-up me-1"></i>OUT</span>';
+                qtyClass = 'text-danger fw-bold';
+            } else {
+                typeBadge = `<span class="pe-badge" style="background:#6c757d;color:#fff;">${r.transaction_type}</span>`;
+                qtyClass = 'pe-text-muted';
+            }
+            
+            const jobStr = r.wo_number ? `<b>[${r.wo_number}]</b> ${r.machine_code}<br><small class="text-muted">${r.issue_title}</small>` : '-';
+            const dateStr = new Date(r.created_at).toLocaleString('en-GB');
+
+            return `
+            <tr>
+                <td class="pe-text-sm">${dateStr}</td>
+                <td>${typeBadge}</td>
+                <td>
+                    <b>${PEApp.escapeHtml(r.item_code)}</b><br>
+                    <span class="pe-text-sm pe-text-muted">${PEApp.escapeHtml(r.item_name)}</span>
+                </td>
+                <td class="pe-text-sm">${PEApp.escapeHtml(r.location_name || '-')}</td>
+                <td class="pe-text-end ${qtyClass}">${PEApp.formatNumber(Math.abs(r.quantity))} <span class="pe-text-xs pe-text-muted">${PEApp.escapeHtml(r.uom)}</span></td>
+                <td class="pe-text-sm">${PEApp.escapeHtml(r.created_by_name || 'System')}</td>
+                <td class="pe-text-sm">${r.notes ? `<i>${PEApp.escapeHtml(r.notes)}</i><br>` : ''}${jobStr}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    return { 
+        loadData, filterTable, openReceiveModal, openIssueModal, submitTransaction, exportExcel, onItemInput,
+        switchTab, loadMasterList, filterMasterTable, renderMasterTable, openItemModal, saveItem, toggleItemStatus, exportMasterExcel,
+        loadHistory, filterHistoryTable, renderHistoryTable
+    };
 })();
