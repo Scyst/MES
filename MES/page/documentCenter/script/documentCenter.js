@@ -904,6 +904,30 @@ window.startAxisSync = function() {
     window.syncAxisAnimFrame = requestAnimationFrame(syncLoop);
 };
 
+window.take3DScreenshot = function() {
+    if (!viewer3DInstance) return;
+    let viewer = viewer3DInstance.GetViewer();
+    if (viewer && viewer.GetImageAsDataUrl) {
+        // Use current canvas dimensions or default to 1920x1080
+        let canvas = document.getElementById('viewer');
+        let w = canvas ? canvas.width : 1920;
+        let h = canvas ? canvas.height : 1080;
+        
+        let dataUrl = viewer.GetImageAsDataUrl(w, h);
+        if (dataUrl) {
+            let a = document.createElement('a');
+            a.href = dataUrl;
+            let title = document.getElementById('view3DModalTitle').innerText;
+            a.download = title + '_Screenshot.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    } else {
+        alert('Screenshot feature is not supported in this viewer version.');
+    }
+};
+
 window.is3DAutoRotate = false;
 window.autoRotateAnimFrame = null;
 

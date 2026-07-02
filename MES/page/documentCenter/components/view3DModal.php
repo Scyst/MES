@@ -30,6 +30,9 @@
                 <!-- Floating Toolbar (Top Right) -->
                 <div class="position-absolute top-0 end-0 m-3 z-index-10">
                     <div class="d-flex gap-2 p-2 bg-white rounded-pill shadow-lg border" style="background: rgba(255, 255, 255, 0.85) !important; backdrop-filter: blur(5px);">
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="take3DScreenshot()" id="btn-3d-screenshot" title="Take Screenshot">
+                            <i class="fas fa-camera me-1"></i> Screenshot
+                        </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="toggle3DTheme()" id="btn-3d-theme" title="Change Background">
                             <i class="fas fa-adjust me-1"></i> Theme
                         </button>
