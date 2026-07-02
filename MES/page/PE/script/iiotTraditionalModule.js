@@ -155,11 +155,16 @@ const iiotTraditionalModule = (function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: { padding: { top: 0 } },
+                layout: { padding: { top: 0, bottom: 0, left: 0, right: 0 } },
                 plugins: {
                     legend: {
-                        position: 'bottom',
-                        labels: { color: '#475569', font: { size: 13 } }
+                        position: 'top',
+                        labels: { 
+                            color: '#475569', 
+                            font: { size: 13 },
+                            boxWidth: 12,
+                            padding: 10
+                        }
                     }
                 },
                 scales: {
@@ -203,7 +208,7 @@ const iiotTraditionalModule = (function () {
                 maintainAspectRatio: false,
                 cutout: '60%',
                 layout: {
-                    padding: 40 // Give room for the outside labels
+                    padding: { top: 20, bottom: 40, left: 40, right: 40 } // Remove excess top padding
                 },
                 plugins: {
                     legend: {
