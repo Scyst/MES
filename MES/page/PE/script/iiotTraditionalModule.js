@@ -14,9 +14,8 @@ const iiotTraditionalModule = (function () {
 
     async function refreshData() {
         try {
-            // Fetch machine data
             const res = await PEApp.apiCall('machineAPI.php', { action: 'get_machines' });
-            if (res.status === 'success') {
+            if (res.success) {
                 // Filter only IIoT connected machines
                 machineData = res.data.filter(m => m.mqtt_topic && m.mqtt_topic.trim() !== '');
                 
