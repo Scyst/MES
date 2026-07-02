@@ -158,20 +158,20 @@ const iiotTraditionalModule = (function () {
                 plugins: {
                     legend: {
                         position: 'top',
-                        labels: { color: '#e2e8f0', font: { size: 13 } }
+                        labels: { color: '#475569', font: { size: 13 } }
                     }
                 },
                 scales: {
                     x: {
                         stacked: true,
                         grid: { display: false },
-                        ticks: { color: '#e2e8f0' }
+                        ticks: { color: '#475569' }
                     },
                     y: {
                         stacked: true,
                         beginAtZero: true,
-                        grid: { color: '#334155' },
-                        ticks: { color: '#e2e8f0', stepSize: 1 }
+                        grid: { color: '#e2e8f0' },
+                        ticks: { color: '#475569', stepSize: 1 }
                     }
                 }
             }
@@ -200,17 +200,14 @@ const iiotTraditionalModule = (function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '55%',
-                layout: {
-                    padding: 10
-                },
+                cutout: '65%',
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: { 
-                            color: '#f8fafc', 
-                            padding: 24, 
-                            font: { size: 14, weight: '500' }
+                            color: '#475569', 
+                            padding: 16, 
+                            font: { size: 13, weight: '500' }
                         }
                     }
                 }
