@@ -155,9 +155,10 @@ const iiotTraditionalModule = (function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: { padding: { top: 0 } },
                 plugins: {
                     legend: {
-                        position: 'top',
+                        position: 'bottom',
                         labels: { color: '#475569', font: { size: 13 } }
                     }
                 },
@@ -201,6 +202,9 @@ const iiotTraditionalModule = (function () {
                 responsive: true,
                 maintainAspectRatio: false,
                 cutout: '65%',
+                layout: {
+                    padding: { top: 0 }
+                },
                 plugins: {
                     legend: {
                         position: 'bottom',
@@ -211,7 +215,29 @@ const iiotTraditionalModule = (function () {
                         }
                     }
                 }
-            }
+            },
+            plugins: [{
+                id: 'doughnutLabel',
+                afterDraw(chart) {
+                    const { ctx } = chart;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((element, index) => {
+                            const val = dataset.data[index];
+                            if (val > 0) {
+                                const pos = element.tooltipPosition();
+                                ctx.save();
+                                ctx.fillStyle = '#ffffff';
+                                ctx.font = 'bold 15px Inter, sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(val, pos.x, pos.y);
+                                ctx.restore();
+                            }
+                        });
+                    });
+                }
+            }]
         });
     }
 
