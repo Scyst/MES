@@ -788,7 +788,7 @@ window.open3DViewer = function(docId, fileName) {
                     if (!viewer3DInstance) { clearInterval(checkDim); return; }
                     let viewer = viewer3DInstance.GetViewer();
                     if (viewer && viewer.GetBoundingBox) {
-                        let bb = viewer.GetBoundingBox();
+                        let bb = viewer.GetBoundingBox(() => true); // Pass true callback to include all meshes
                         if (bb && bb.min && bb.max) {
                             let w = (bb.max.x - bb.min.x).toFixed(2);
                             let h = (bb.max.y - bb.min.y).toFixed(2);
@@ -838,10 +838,10 @@ window.toggle3DXRay = function() {
     if (!viewer3DInstance) return;
     window.is3DXRay = !window.is3DXRay;
     let viewer = viewer3DInstance.GetViewer();
-    if (!viewer || !viewer.GetScene) return;
+    if (!viewer || !viewer.EnumerateMeshesAndLines) return;
     
-    viewer.GetScene().traverse((child) => {
-        if (child.isMesh && child.material) {
+    viewer.EnumerateMeshesAndLines((child) => {
+        if (child.material) {
             // Apply transparency to the material
             if (window.is3DXRay) {
                 child.material.transparent = true;
