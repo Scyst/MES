@@ -31,6 +31,9 @@
                     <button type="button" class="btn btn-outline-info btn-sm" onclick="toggle3DXRay()" id="btn-3d-xray" title="Toggle X-Ray/Transparent Mode">
                         <i class="fas fa-eye"></i> X-Ray
                     </button>
+                    <button type="button" class="btn btn-outline-success btn-sm" onclick="toggle3DAutoRotate()" id="btn-3d-rotate" title="Toggle Auto-Rotate">
+                        <i class="fas fa-play"></i> Auto-Rotate
+                    </button>
                     <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal" onclick="close3DViewer()">Close</button>
                 </div>
             </div>

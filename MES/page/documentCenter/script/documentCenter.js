@@ -794,7 +794,7 @@ window.open3DViewer = function(docId, fileName) {
                             let h = (bb.max.y - bb.min.y).toFixed(2);
                             let d = (bb.max.z - bb.min.z).toFixed(2);
                             if (w > 0 && h > 0 && d > 0) {
-                                document.getElementById('viewer3d-size-text').textContent = `Size: ${w} x ${h} x ${d} mm`;
+                                document.getElementById('viewer3d-size-text').innerHTML = `Size: <span class="text-danger fw-bold" title="Width">X: ${w}</span> | <span class="text-success fw-bold" title="Height">Y: ${h}</span> | <span class="text-primary fw-bold" title="Depth">Z: ${d}</span> mm`;
                                 document.getElementById('viewer3d-dimensions').classList.remove('d-none');
                                 clearInterval(checkDim);
                             }
@@ -878,7 +878,62 @@ window.toggle3DXRay = function() {
     }
 };
 
+window.is3DAutoRotate = false;
+window.autoRotateAnimFrame = null;
+
+window.toggle3DAutoRotate = function() {
+    if (!viewer3DInstance) return;
+    window.is3DAutoRotate = !window.is3DAutoRotate;
+    
+    let btn = document.getElementById('btn-3d-rotate');
+    if (!btn) return;
+    
+    if (window.is3DAutoRotate) {
+        btn.classList.replace('btn-outline-success', 'btn-success');
+        btn.classList.add('text-white');
+        
+        let viewer = viewer3DInstance.GetViewer();
+        if (!viewer || !viewer.navigation || !viewer.navigation.Orbit) {
+            console.warn("Auto-rotate not supported on this viewer instance");
+            return;
+        }
+        
+        let lastTime = performance.now();
+        let speedDegreesPerSecond = 30; // 30 degrees per sec
+        
+        function rotateLoop(time) {
+            if (!window.is3DAutoRotate || !viewer3DInstance) {
+                window.autoRotateAnimFrame = null;
+                return;
+            }
+            
+            let dt = (time - lastTime) / 1000;
+            lastTime = time;
+            if (dt > 0.1) dt = 0.1;
+            
+            let angle = speedDegreesPerSecond * dt;
+            viewer.navigation.Orbit(angle, 0); // Orbit horizontally
+            if (viewer.navigation.Update) viewer.navigation.Update();
+            if (viewer.Render) viewer.Render();
+            
+            window.autoRotateAnimFrame = requestAnimationFrame(rotateLoop);
+        }
+        window.autoRotateAnimFrame = requestAnimationFrame(rotateLoop);
+        
+    } else {
+        btn.classList.replace('btn-success', 'btn-outline-success');
+        btn.classList.remove('text-white');
+        if (window.autoRotateAnimFrame) {
+            cancelAnimationFrame(window.autoRotateAnimFrame);
+            window.autoRotateAnimFrame = null;
+        }
+    }
+};
+
 window.close3DViewer = function() {
+    if (window.is3DAutoRotate) {
+        window.toggle3DAutoRotate();
+    }
     if (viewer3DModal) {
         viewer3DModal.hide();
     }
