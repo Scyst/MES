@@ -147,9 +147,9 @@
     overflow: hidden;
 }
 .iiot-floorplan-img {
-    width: 100%;
     height: auto;
     display: block;
+    max-width: none;
 }
 .machine-tooltip {
     position: fixed;
@@ -292,6 +292,7 @@
                     <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('select')" id="btnDrawSelect"><i class="fas fa-mouse-pointer me-2"></i> Select / Move</button>
                     <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('line')" id="btnDrawLine"><i class="fas fa-grip-lines me-2"></i> Draw Wall (Line)</button>
                     <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('rect')" id="btnDrawRect"><i class="far fa-square me-2"></i> Draw Zone (Box)</button>
+                    <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('poly')" id="btnDrawPoly"><i class="fas fa-draw-polygon me-2"></i> Draw Area (Polygon)</button>
                     <button class="btn btn-outline-danger btn-sm text-start" onclick="MapBuilderModule.deleteSelected()"><i class="fas fa-trash me-2"></i> Delete Selected</button>
                     
                     <hr style="margin: 8px 0; border-color: #334155;">
@@ -300,7 +301,11 @@
                     <input type="file" id="mapTracingUpload" class="form-control bg-dark text-white border-secondary" style="font-size: 11px; padding: 4px;" accept="image/*" onchange="MapBuilderModule.uploadTracingImage(this)">
                     
                     <label style="font-size: 12px; margin-top: 10px; margin-bottom: 4px; color: #cbd5e1;">Blueprint Opacity</label>
-                    <input type="range" id="mapTracingOpacity" min="0" max="1" step="0.1" value="0.5" style="width: 100%;" onchange="MapBuilderModule.changeTracingOpacity(this.value)">
+                    <input type="range" id="mapTracingOpacity" min="0" max="1" step="0.1" value="1" style="width: 100%;" oninput="MapBuilderModule.changeTracingOpacity(this.value)">
+                    
+                    <label style="font-size: 12px; margin-top: 10px; margin-bottom: 4px; color: #cbd5e1;">2D Map Opacity</label>
+                    <input type="range" id="mapCanvasOpacity" min="0" max="1" step="0.1" value="1" style="width: 100%;" oninput="MapBuilderModule.changeMapOpacity(this.value)">
+                    
                     <button class="btn btn-outline-secondary btn-sm mt-1" onclick="MapBuilderModule.clearTracing()"><i class="fas fa-times me-1"></i> Remove Tracing</button>
                     
                     <hr style="margin: 8px 0; border-color: #334155;">
@@ -309,16 +314,16 @@
                 </div>
             </div>
 
-            <div id="iiotPanzoomElement" style="position:relative; width:100%; display:inline-block; min-height: 600px;">
+            <div id="iiotPanzoomElement" style="position:relative; display:inline-block;">
                 <img id="iiotFloorplanImg" src="../../uploads/iiot-map-bg.png" class="iiot-floorplan-img" alt="Floor plan" onerror="this.src='https://placehold.co/1200x600/0f172a/334155?text=Upload+Map+Background'">
                 
-                <!-- Canvas wrapper for Fabric.js -->
-                <div id="mapCanvasWrapper" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none;">
-                    <canvas id="iiotMapCanvas"></canvas>
+                <!-- FABRIC CANVAS CONTAINER -->
+                <div id="mapCanvasWrapper" class="panzoom-exclude" style="position: absolute; top:0; left:0; width: 100%; height: 100%; z-index: 1; pointer-events: none;">
+                    <canvas id="iiotMapCanvas" class="panzoom-exclude" style="width: 100%; height: 100%;"></canvas>
                 </div>
 
-                <!-- Machine Nodes will be injected here -->
-                <div id="mapNodesContainer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;"></div>
+                <!-- MACHINE NODES CONTAINER -->
+                <div id="mapNodesContainer" style="position: absolute; top:0; left:0; width: 100%; height: 100%; z-index: 10;"></div>
             </div>
             <div id="machineTooltip" class="machine-tooltip">
                 <h6 id="ttMachineName">Machine Name</h6>

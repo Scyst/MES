@@ -4,7 +4,8 @@ require_once __DIR__ . '/../../components/init.php';
 header('Content-Type: application/json');
 requirePermission(['view_dashboard']);
 
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
+$input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+$action = $_REQUEST['action'] ?? $input['action'] ?? '';
 $uploadDir = __DIR__ . '/../uploads/pe_maps/';
 
 if (!is_dir($uploadDir)) {

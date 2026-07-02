@@ -21,10 +21,31 @@ const IIoTModule = (function() {
             if (panzoomEl && typeof Panzoom !== 'undefined') {
                 panzoomInstance = Panzoom(panzoomEl, {
                     maxScale: 5,
-                    minScale: 0.5,
-                    contain: 'outside'
+                    minScale: 0.1,
+                    excludeClass: 'panzoom-exclude'
                 });
                 panzoomEl.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
+
+                const fitMap = () => {
+                    const img = document.getElementById('iiotFloorplanImg');
+                    const wrapper = panzoomEl.parentElement;
+                    if (img && img.naturalWidth) {
+                        const scale = Math.min(
+                            wrapper.clientWidth / img.naturalWidth,
+                            wrapper.clientHeight / img.naturalHeight
+                        ) * 0.95;
+                        panzoomInstance.zoom(scale, { animate: false });
+                        const dx = (wrapper.clientWidth - img.naturalWidth * scale) / 2;
+                        const dy = (wrapper.clientHeight - img.naturalHeight * scale) / 2;
+                        panzoomInstance.pan(dx, dy, { animate: false });
+                    }
+                };
+
+                const img = document.getElementById('iiotFloorplanImg');
+                if (img) {
+                    if (img.complete) fitMap();
+                    else img.addEventListener('load', fitMap);
+                }
             }
 
             renderGrid();
@@ -523,9 +544,9 @@ const IIoTModule = (function() {
         }, 'image/png');
     }
 
-    function setPanzoomState(enabled) {
+    function setPanzoomState(state) {
         if (panzoomInstance) {
-            panzoomInstance.setOptions({ disablePan: !enabled, disableZoom: !enabled });
+            panzoomInstance.setOptions({ disablePan: !state, disableZoom: !state });
         }
     }
 

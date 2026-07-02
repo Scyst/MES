@@ -19,11 +19,10 @@ const MapBuilderModule = (function() {
         if (!canvasEl) return;
 
         const container = document.getElementById('iiotPanzoomElement');
-        const rect = container.getBoundingClientRect();
-        
+        // Use clientWidth/Height which are unscaled (unlike getBoundingClientRect)
         canvas = new fabric.Canvas('iiotMapCanvas', {
-            width: rect.width || 800,
-            height: rect.height || 600,
+            width: container.clientWidth || 800,
+            height: container.clientHeight || 600,
             selection: true
         });
 
@@ -35,12 +34,30 @@ const MapBuilderModule = (function() {
         // Load existing map if any
         loadMap();
 
-        // Handle window resize
+        // Make toolbar draggable
+        const toolbar = document.getElementById('mapBuilderToolbar');
+        if (toolbar) {
+            let isDraggingTb = false, tbStartX, tbStartY;
+            toolbar.style.cursor = 'move';
+            toolbar.onmousedown = (e) => {
+                if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'I') {
+                    isDraggingTb = true;
+                    tbStartX = e.clientX - toolbar.offsetLeft;
+                    tbStartY = e.clientY - toolbar.offsetTop;
+                }
+            };
+            document.addEventListener('mousemove', (e) => {
+                if (isDraggingTb) {
+                    toolbar.style.left = (e.clientX - tbStartX) + 'px';
+                    toolbar.style.top = (e.clientY - tbStartY) + 'px';
+                }
+            });
+            document.addEventListener('mouseup', () => isDraggingTb = false);
+        }
+
         window.addEventListener('resize', () => {
             if (isBuilderMode && canvas) {
-                const r = container.getBoundingClientRect();
-                canvas.setWidth(r.width);
-                canvas.setHeight(r.height);
+                canvas.calcOffset(); // Just re-calculate pointer offset on resize
             }
         });
     }
@@ -67,6 +84,7 @@ const MapBuilderModule = (function() {
             const container = document.getElementById('iiotPanzoomElement');
             canvas.setWidth(container.clientWidth);
             canvas.setHeight(container.clientHeight);
+            canvas.calcOffset();
             canvas.renderAll();
         } else {
             toolbar.style.display = 'none';
@@ -84,7 +102,24 @@ const MapBuilderModule = (function() {
 
     function setMode(mode) {
         currentMode = mode;
+        if (!canvas) return;
+        
         canvas.isDrawingMode = false;
+        
+        // Update button visual states
+        ['select', 'line', 'rect', 'poly'].forEach(m => {
+            let btnId = 'btnDraw' + m.charAt(0).toUpperCase() + m.slice(1);
+            if (m === 'poly') btnId = 'btnDrawPoly';
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                if (m === mode) {
+                    btn.classList.replace('btn-outline-light', 'btn-primary');
+                    btn.classList.replace('text-start', 'text-start'); // Keep it
+                } else {
+                    btn.classList.replace('btn-primary', 'btn-outline-light');
+                }
+            }
+        });
         
         if (mode === 'select') {
             canvas.selection = true;
@@ -115,6 +150,7 @@ const MapBuilderModule = (function() {
         if (currentMode === 'select') return;
         
         isDrawing = true;
+        canvas.calcOffset(); // Ensure coordinates are accurate
         const pointer = canvas.getPointer(o.e);
         origX = pointer.x;
         origY = pointer.y;
@@ -145,6 +181,26 @@ const MapBuilderModule = (function() {
                 evented: false
             });
             canvas.add(currentShape);
+        } else if (currentMode === 'poly') {
+            currentShape = new fabric.Polygon([
+                {x: 0, y: 0},
+                {x: 50, y: -50},
+                {x: 100, y: 0},
+                {x: 100, y: 100},
+                {x: 0, y: 100}
+            ], {
+                left: origX,
+                top: origY,
+                fill: 'rgba(56, 189, 248, 0.2)',
+                stroke: '#38bdf8',
+                strokeWidth: 2,
+                selectable: true,
+                evented: true
+            });
+            canvas.add(currentShape);
+            setMode('select'); // Instantly select the polygon to let them resize it
+            canvas.setActiveObject(currentShape);
+            isDrawing = false;
         }
     }
 
@@ -180,33 +236,29 @@ const MapBuilderModule = (function() {
 
     // --- Background Tracing ---
     function uploadTracingImage(input) {
-        if (!input.files || input.files.length === 0) return;
-        
-        const file = input.files[0];
-        const reader = new FileReader();
-        
-        reader.onload = function(f) {
-            const imgEl = document.getElementById('iiotFloorplanImg');
-            if (imgEl) {
-                imgEl.src = f.target.result;
-                imgEl.style.display = 'block';
-            }
-        };
-        reader.readAsDataURL(file);
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.getElementById('iiotFloorplanImg');
+                if (img) img.src = e.target.result;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
     }
 
     function changeTracingOpacity(val) {
-        const imgEl = document.getElementById('iiotFloorplanImg');
-        if (imgEl) {
-            imgEl.style.opacity = val;
-        }
+        const img = document.getElementById('iiotFloorplanImg');
+        if (img) img.style.opacity = val;
+    }
+    
+    function changeMapOpacity(val) {
+        const canvasWrap = document.getElementById('mapCanvasWrapper');
+        if (canvasWrap) canvasWrap.style.opacity = val;
     }
 
     function clearTracing() {
-        const imgEl = document.getElementById('iiotFloorplanImg');
-        if (imgEl) {
-            imgEl.style.display = 'none';
-        }
+        const img = document.getElementById('iiotFloorplanImg');
+        if (img) img.src = '';
         document.getElementById('mapTracingUpload').value = '';
     }
 
@@ -257,10 +309,11 @@ const MapBuilderModule = (function() {
         toggleMode,
         setMode,
         deleteSelected,
+        saveMap,
         uploadTracingImage,
         changeTracingOpacity,
+        changeMapOpacity,
         clearTracing,
-        saveMap,
         forceRender
     };
 })();
