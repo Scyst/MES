@@ -71,11 +71,11 @@
 <div class="pe-analytics-grid-row-2 pe-d-flex" style="margin-top: 16px; flex-wrap: wrap; gap: 16px;">
     <!-- Asset Health by Line Chart -->
     <div class="pe-card pe-animate-in" style="flex: 2; min-width: 300px;">
-        <div class="pe-card-header">
+        <div class="pe-card-header" style="padding-bottom: 0;">
             <h5 class="pe-m-0"><i class="fas fa-heartbeat pe-text-muted pe-me-2"></i> Asset Health by Line</h5>
         </div>
-        <div class="pe-card-body">
-            <div style="height: 350px;">
+        <div class="pe-card-body" style="padding-top: 0;">
+            <div style="height: 390px;">
                 <canvas id="chartTradHourlyProduction"></canvas>
             </div>
         </div>
@@ -83,11 +83,11 @@
 
     <!-- Machine Status Distribution -->
     <div class="pe-card pe-animate-in" style="flex: 1; min-width: 300px;">
-        <div class="pe-card-header">
+        <div class="pe-card-header" style="padding-bottom: 0;">
             <h5 class="pe-m-0"><i class="fas fa-chart-pie pe-text-muted pe-me-2"></i> Machine Status</h5>
         </div>
-        <div class="pe-card-body pe-d-flex pe-flex-column pe-align-center pe-justify-center">
-            <div style="width: 100%; height: 350px; position: relative;">
+        <div class="pe-card-body pe-d-flex pe-flex-column pe-align-center pe-justify-center" style="padding-top: 0;">
+            <div style="width: 100%; height: 390px; position: relative;">
                 <canvas id="chartTradMachineStatus"></canvas>
             </div>
         </div>
