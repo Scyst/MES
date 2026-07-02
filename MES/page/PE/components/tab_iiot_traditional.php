@@ -69,10 +69,10 @@
 
 <!-- Charts Row 1 -->
 <div class="pe-analytics-grid-row-2" style="margin-top: 16px;">
-    <!-- Machines by Line Chart -->
+    <!-- Asset Health by Line Chart -->
     <div class="pe-card pe-animate-in" style="flex: 2;">
         <div class="pe-card-header">
-            <h5 class="pe-m-0"><i class="fas fa-chart-bar pe-text-muted pe-me-2"></i> Machines by Line</h5>
+            <h5 class="pe-m-0"><i class="fas fa-heartbeat pe-text-muted pe-me-2"></i> Asset Health by Line</h5>
         </div>
         <div class="pe-card-body">
             <div style="height: 350px;">

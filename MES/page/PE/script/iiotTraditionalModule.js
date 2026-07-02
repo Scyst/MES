@@ -107,17 +107,25 @@ const iiotTraditionalModule = (function () {
         if (chartHourly) chartHourly.destroy();
         if (chartStatus) chartStatus.destroy();
 
-        // 1. Machines by Line (Bar Chart)
+        // 1. Asset Health by Line (Stacked Bar Chart)
         const ctxHourly = document.getElementById('chartTradHourlyProduction').getContext('2d');
         
-        // Group by line
-        const lineCount = {};
+        // Group by line and status
+        const lineStats = {};
         machineData.forEach(m => {
             const l = m.line || 'Unassigned';
-            lineCount[l] = (lineCount[l] || 0) + 1;
+            if (!lineStats[l]) {
+                lineStats[l] = { active: 0, repair: 0, other: 0 };
+            }
+            if (m.status === 'Active') lineStats[l].active++;
+            else if (m.status === 'Under Repair') lineStats[l].repair++;
+            else lineStats[l].other++;
         });
-        const labelsHourly = Object.keys(lineCount);
-        const dataOutput = Object.values(lineCount);
+        
+        const labelsHourly = Object.keys(lineStats);
+        const dataActive = labelsHourly.map(l => lineStats[l].active);
+        const dataRepair = labelsHourly.map(l => lineStats[l].repair);
+        const dataOther = labelsHourly.map(l => lineStats[l].other);
 
         chartHourly = new Chart(ctxHourly, {
             type: 'bar',
@@ -125,9 +133,21 @@ const iiotTraditionalModule = (function () {
                 labels: labelsHourly,
                 datasets: [
                     {
-                        label: 'Total Machines',
-                        data: dataOutput,
-                        backgroundColor: '#38bdf8',
+                        label: 'Active',
+                        data: dataActive,
+                        backgroundColor: '#22c55e',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Under Repair',
+                        data: dataRepair,
+                        backgroundColor: '#ef4444',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Inactive/Other',
+                        data: dataOther,
+                        backgroundColor: '#64748b',
                         borderRadius: 4
                     }
                 ]
@@ -137,18 +157,21 @@ const iiotTraditionalModule = (function () {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: false // hide legend since it's just one dataset
+                        position: 'top',
+                        labels: { color: '#e2e8f0', font: { size: 13 } }
                     }
                 },
                 scales: {
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    },
                     y: {
+                        stacked: true,
                         beginAtZero: true,
                         grid: { color: '#334155' },
-                        ticks: { color: '#cbd5e1', stepSize: 1 }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: '#cbd5e1' }
+                        ticks: { color: '#e2e8f0', stepSize: 1 }
                     }
                 }
             }
@@ -177,11 +200,18 @@ const iiotTraditionalModule = (function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '70%',
+                cutout: '55%',
+                layout: {
+                    padding: 10
+                },
                 plugins: {
                     legend: {
                         position: 'bottom',
-                        labels: { color: '#cbd5e1', padding: 20 }
+                        labels: { 
+                            color: '#f8fafc', 
+                            padding: 24, 
+                            font: { size: 14, weight: '500' }
+                        }
                     }
                 }
             }
