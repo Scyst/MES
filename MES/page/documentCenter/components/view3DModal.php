@@ -13,8 +13,8 @@
                 <!-- 3D Viewer Container -->
                 <div id="viewer3d-container" style="width: 100%; height: 100%;"></div>
                 
-                <!-- Dimensions Overlay (Bottom Right, above Axis) -->
-                <div id="viewer3d-dimensions" class="position-absolute p-2 bg-dark text-white rounded shadow-sm opacity-75 small d-none" style="bottom: 90px; right: 15px; pointer-events: none; z-index: 10;">
+                <!-- Dimensions Overlay (Bottom Right, Below Axis) -->
+                <div id="viewer3d-dimensions" class="position-absolute p-2 bg-dark text-white rounded shadow-sm opacity-75 small d-none" style="bottom: 25px; right: 25px; pointer-events: none; z-index: 10;">
                     <i class="fas fa-ruler-combined me-1"></i> <span id="viewer3d-size-text">Size: -</span>
                 </div>
 
@@ -42,8 +42,8 @@
                     </div>
                 </div>
 
-                <!-- 3D Axis Helper (Bottom Right) -->
-                <div id="viewer3d-axis-helper" style="position: absolute; bottom: 20px; right: 30px; width: 60px; height: 60px; pointer-events: none; z-index: 10; perspective: 300px; display: none;">
+                <!-- 3D Axis Helper (Bottom Right, Above Dimensions) -->
+                <div id="viewer3d-axis-helper" style="position: absolute; bottom: 100px; right: 35px; width: 60px; height: 60px; pointer-events: none; z-index: 10; perspective: 300px; display: none; transform: scale(1.4); transform-origin: bottom right;">
                     <div id="axis-cube" style="width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transform-origin: center center;">
                         <!-- Center Dot -->
                         <div style="position: absolute; top: 27px; left: 27px; width: 6px; height: 6px; background: #333; border-radius: 50%; z-index: 20;"></div>
