@@ -27,25 +27,33 @@ const IIoTModule = (function() {
                 panzoomEl.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
 
                 const fitMap = () => {
-                    const img = document.getElementById('iiotFloorplanImg');
-                    const wrapper = panzoomEl.parentElement;
-                    if (img && img.naturalWidth) {
-                        const scale = Math.min(
-                            wrapper.clientWidth / img.naturalWidth,
-                            wrapper.clientHeight / img.naturalHeight
-                        ) * 0.95;
-                        panzoomInstance.zoom(scale, { animate: false });
-                        const dx = (wrapper.clientWidth - img.naturalWidth * scale) / 2;
-                        const dy = (wrapper.clientHeight - img.naturalHeight * scale) / 2;
-                        panzoomInstance.pan(dx, dy, { animate: false });
-                    }
+                    setTimeout(() => {
+                        const img = document.getElementById('iiotFloorplanImg');
+                        const wrapper = panzoomEl.parentElement;
+                        // Since we use flexbox to center the element, we can just set pan(0,0)
+                        if (img && img.naturalWidth && wrapper.clientWidth > 0) {
+                            const scale = Math.min(
+                                wrapper.clientWidth / img.naturalWidth,
+                                wrapper.clientHeight / img.naturalHeight
+                            ) * 0.95;
+                            panzoomInstance.zoom(scale, { animate: false });
+                            panzoomInstance.pan(0, 0, { animate: false });
+                        }
+                    }, 100);
                 };
 
                 const img = document.getElementById('iiotFloorplanImg');
                 if (img) {
-                    if (img.complete) fitMap();
-                    else img.addEventListener('load', fitMap);
+                    if (img.complete && img.naturalWidth) fitMap();
+                    img.addEventListener('load', fitMap);
                 }
+                
+                // Also trigger fitMap when the tab is clicked (so container has dimensions)
+                document.querySelectorAll('[data-tab="iiot"]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        setTimeout(fitMap, 300);
+                    });
+                });
             }
 
             renderGrid();

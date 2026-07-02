@@ -1,4 +1,4 @@
-const MapBuilderModule = (function() {
+const MapBuilderModule = (function () {
     let canvas = null;
     let currentMode = 'select';
     let isBuilderMode = false;
@@ -10,7 +10,8 @@ const MapBuilderModule = (function() {
     let polyPoints = [];
     let activePolyShape = null;
     let snapToGrid = false;
-    const gridSize = 20;
+    const gridSize = 50;
+    let gridLines = [];
 
     function init() {
         if (typeof fabric === 'undefined') {
@@ -23,10 +24,14 @@ const MapBuilderModule = (function() {
         if (!canvasEl) return;
 
         const container = document.getElementById('iiotPanzoomElement');
-        // Use clientWidth/Height which are unscaled (unlike getBoundingClientRect)
+        const img = document.getElementById('iiotFloorplanImg');
+        const w = img ? (img.naturalWidth || img.clientWidth) : (container.clientWidth || 800);
+        const h = img ? (img.naturalHeight || img.clientHeight) : (container.clientHeight || 600);
+
+        // Use intrinsic image dimensions
         canvas = new fabric.Canvas('iiotMapCanvas', {
-            width: container.clientWidth || 800,
-            height: container.clientHeight || 600,
+            width: w,
+            height: h,
             selection: true
         });
 
@@ -38,7 +43,7 @@ const MapBuilderModule = (function() {
         canvas.on('selection:created', onObjectSelected);
         canvas.on('selection:updated', onObjectSelected);
         canvas.on('selection:cleared', onSelectionCleared);
-        
+
         canvas.on('object:moving', (o) => {
             if (snapToGrid) {
                 o.target.set({
@@ -57,7 +62,7 @@ const MapBuilderModule = (function() {
             let isDraggingTb = false, tbStartX, tbStartY;
             toolbar.style.cursor = 'move';
             toolbar.onmousedown = (e) => {
-                if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'I') {
+                if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'I') {
                     isDraggingTb = true;
                     tbStartX = e.clientX - toolbar.offsetLeft;
                     tbStartY = e.clientY - toolbar.offsetTop;
@@ -72,6 +77,13 @@ const MapBuilderModule = (function() {
             document.addEventListener('mouseup', () => isDraggingTb = false);
         }
 
+        // Key down to finish polygon
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'Enter' || e.key === 'Escape') && currentMode === 'poly') {
+                finishPolygon();
+            }
+        });
+
         window.addEventListener('resize', () => {
             if (isBuilderMode && canvas) {
                 canvas.calcOffset(); // Just re-calculate pointer offset on resize
@@ -81,7 +93,7 @@ const MapBuilderModule = (function() {
 
     function toggleMode() {
         isBuilderMode = !isBuilderMode;
-        
+
         const toolbar = document.getElementById('mapBuilderToolbar');
         const nodesContainer = document.getElementById('mapNodesContainer');
         const canvasWrapper = document.getElementById('mapCanvasWrapper');
@@ -92,7 +104,7 @@ const MapBuilderModule = (function() {
             nodesContainer.style.display = 'none'; // Hide machine nodes while building
             canvasWrapper.style.pointerEvents = 'auto'; // Enable canvas interactions
             btnToggle.classList.replace('btn-outline-primary', 'btn-primary');
-            
+
             if (typeof IIoTModule !== 'undefined' && IIoTModule.setPanzoomState) {
                 IIoTModule.setPanzoomState(false);
             }
@@ -108,7 +120,7 @@ const MapBuilderModule = (function() {
             nodesContainer.style.display = 'block';
             canvasWrapper.style.pointerEvents = 'none'; // Disable canvas interactions, let nodes receive clicks
             btnToggle.classList.replace('btn-primary', 'btn-outline-primary');
-            
+
             if (typeof IIoTModule !== 'undefined' && IIoTModule.setPanzoomState) {
                 IIoTModule.setPanzoomState(true);
             }
@@ -120,16 +132,16 @@ const MapBuilderModule = (function() {
     function setMode(mode) {
         currentMode = mode;
         if (!canvas) return;
-        
+
         canvas.isDrawingMode = false;
-        
+
         // Reset poly drawing state if switching modes
         if (mode !== 'poly' && activePolyShape) {
             canvas.remove(activePolyShape);
             activePolyShape = null;
             polyPoints = [];
         }
-        
+
         // Update button visual states
         ['select', 'line', 'rect', 'poly', 'text'].forEach(m => {
             let btnId = 'btnDraw' + m.charAt(0).toUpperCase() + m.slice(1);
@@ -145,7 +157,7 @@ const MapBuilderModule = (function() {
                 }
             }
         });
-        
+
         if (mode === 'select') {
             canvas.selection = true;
             canvas.getObjects().forEach(o => {
@@ -169,9 +181,30 @@ const MapBuilderModule = (function() {
             canvas.requestRenderAll();
         }
     }
-    
+
+    function drawGridLines() {
+        if (!canvas) return;
+        gridLines.forEach(l => canvas.remove(l));
+        gridLines = [];
+        if (snapToGrid) {
+            const w = canvas.width;
+            const h = canvas.height;
+            for (let i = 0; i < (w / gridSize); i++) {
+                gridLines.push(new fabric.Line([i * gridSize, 0, i * gridSize, h], { stroke: '#475569', strokeWidth: 1, selectable: false, evented: false, opacity: 0.5, isGrid: true }));
+                canvas.add(gridLines[gridLines.length - 1]);
+            }
+            for (let j = 0; j < (h / gridSize); j++) {
+                gridLines.push(new fabric.Line([0, j * gridSize, w, j * gridSize], { stroke: '#475569', strokeWidth: 1, selectable: false, evented: false, opacity: 0.5, isGrid: true }));
+                canvas.add(gridLines[gridLines.length - 1]);
+            }
+            gridLines.forEach(l => l.sendToBack());
+        }
+        canvas.renderAll();
+    }
+
     function toggleSnap(val) {
         snapToGrid = val;
+        drawGridLines();
     }
 
     function getPointerWithSnap(pointer) {
@@ -185,11 +218,11 @@ const MapBuilderModule = (function() {
     // --- Drawing Handlers ---
     function onMouseDown(o) {
         if (currentMode === 'select') return;
-        
+
         isDrawing = true;
         const rawPointer = canvas.getPointer(o.e);
         const pointer = getPointerWithSnap(rawPointer);
-        
+
         origX = pointer.x;
         origY = pointer.y;
 
@@ -233,6 +266,8 @@ const MapBuilderModule = (function() {
                 canvas.add(activePolyShape);
             } else {
                 activePolyShape.set({ points: [...polyPoints] });
+                activePolyShape._calcDimensions();
+                activePolyShape.setCoords();
             }
             canvas.renderAll();
             isDrawing = false; // poly does not drag-to-draw
@@ -261,6 +296,8 @@ const MapBuilderModule = (function() {
         if (currentMode === 'poly' && activePolyShape && polyPoints.length > 0) {
             const tempPoints = [...polyPoints, { x: pointer.x, y: pointer.y }];
             activePolyShape.set({ points: tempPoints });
+            activePolyShape._calcDimensions();
+            activePolyShape.setCoords();
             canvas.renderAll();
             return;
         }
@@ -276,11 +313,11 @@ const MapBuilderModule = (function() {
             if (origY > pointer.y) {
                 currentShape.set({ top: Math.abs(pointer.y) });
             }
-            
+
             currentShape.set({ width: Math.abs(origX - pointer.x) });
             currentShape.set({ height: Math.abs(origY - pointer.y) });
         }
-        
+
         canvas.renderAll();
     }
 
@@ -293,6 +330,12 @@ const MapBuilderModule = (function() {
     }
 
     function onMouseDblClick(o) {
+        if (currentMode === 'poly') {
+            finishPolygon();
+        }
+    }
+
+    function finishPolygon() {
         if (currentMode === 'poly' && polyPoints.length > 2) {
             // Finish polygon
             const newPoly = new fabric.Polygon([...polyPoints], {
@@ -309,6 +352,13 @@ const MapBuilderModule = (function() {
             polyPoints = [];
             setMode('select');
             canvas.setActiveObject(newPoly);
+            canvas.renderAll();
+        } else if (currentMode === 'poly') {
+            // Cancel drawing if too few points
+            if (activePolyShape) canvas.remove(activePolyShape);
+            activePolyShape = null;
+            polyPoints = [];
+            setMode('select');
             canvas.renderAll();
         }
     }
@@ -349,30 +399,60 @@ const MapBuilderModule = (function() {
 
     // --- Background Tracing ---
     function uploadTracingImage(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = document.getElementById('iiotFloorplanImg');
-                if (img) img.src = e.target.result;
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
+        if (!input.files || !input.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            fabric.Image.fromURL(e.target.result, (img) => {
+                clearTracing(); // remove existing if any
+                const currentOpacity = document.getElementById('tracingOpacitySlider') ? document.getElementById('tracingOpacitySlider').value : 0.5;
+                img.set({
+                    left: 0,
+                    top: 0,
+                    opacity: parseFloat(currentOpacity),
+                    selectable: false,
+                    evented: false,
+                    isTracingImage: true
+                });
+                
+                // Scale to fit canvas width
+                img.scaleToWidth(canvas.width);
+                canvas.add(img);
+                img.sendToBack(); // push behind lines
+                
+                // Ensure grid lines stay behind the tracing image if grid is enabled
+                if (snapToGrid) drawGridLines(); 
+                
+                canvas.renderAll();
+            });
+        };
+        reader.readAsDataURL(input.files[0]);
     }
 
     function changeTracingOpacity(val) {
-        const img = document.getElementById('iiotFloorplanImg');
-        if (img) img.style.opacity = val;
+        if (!canvas) return;
+        const objects = canvas.getObjects();
+        const tracingImg = objects.find(o => o.type === 'image' && o.isTracingImage);
+        if (tracingImg) {
+            tracingImg.set('opacity', parseFloat(val));
+            canvas.renderAll();
+        }
     }
     
     function changeMapOpacity(val) {
-        const canvasWrap = document.getElementById('mapCanvasWrapper');
-        if (canvasWrap) canvasWrap.style.opacity = val;
+        const img = document.getElementById('iiotFloorplanImg');
+        if (img) img.style.opacity = val;
     }
 
     function clearTracing() {
-        const img = document.getElementById('iiotFloorplanImg');
-        if (img) img.src = '';
-        document.getElementById('mapTracingUpload').value = '';
+        if (!canvas) return;
+        const objects = canvas.getObjects();
+        const tracingImg = objects.find(o => o.type === 'image' && o.isTracingImage);
+        if (tracingImg) {
+            canvas.remove(tracingImg);
+            canvas.renderAll();
+        }
+        const uploadEl = document.getElementById('mapTracingUpload');
+        if (uploadEl) uploadEl.value = '';
     }
 
     // --- Layer Management ---
@@ -406,7 +486,7 @@ const MapBuilderModule = (function() {
                 action: 'save_map',
                 map_data: JSON.stringify(json)
             });
-            
+
             if (res.success) {
                 PEApp.showToast('Vector map saved successfully!', 'success');
             } else {
@@ -427,7 +507,7 @@ const MapBuilderModule = (function() {
             console.log("No existing vector map found or failed to load.", e);
         }
     }
-    
+
     // Provide a way for IIoTModule to force resize/render
     function forceRender() {
         if (canvas) {

@@ -283,66 +283,86 @@
                 </button>
             </div>
         </div>
-        <div class="iiot-floorplan" id="iiotFloorplan" style="position: relative;">
+        <!-- Map Area -->
+        <div class="iiot-floorplan" id="iiotFloorplan" style="position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; height: calc(100vh - 200px); min-height: 500px;">
             
             <!-- Map Builder Toolbar (Hidden by default) -->
-            <div id="mapBuilderToolbar" class="pe-card" style="display: none; position: absolute; top: 16px; left: 16px; z-index: 100; padding: 12px; width: 220px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); background: #1e293b;">
+            <div id="mapBuilderToolbar" class="pe-card" style="display: none; position: absolute; top: 16px; left: 16px; z-index: 100; padding: 12px; width: 440px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); background: #1e293b;">
                 <h6 style="margin-bottom: 12px; font-size: 14px; color: #f8fafc;"><i class="fas fa-tools text-primary"></i> Map Builder Tools</h6>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('select')" id="btnDrawSelect"><i class="fas fa-mouse-pointer me-2"></i> Select / Move</button>
-                    <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('line')" id="btnDrawLine"><i class="fas fa-grip-lines me-2"></i> Draw Wall (Line)</button>
-                    <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('rect')" id="btnDrawRect"><i class="far fa-square me-2"></i> Draw Zone (Box)</button>
-                    <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('poly')" id="btnDrawPoly"><i class="fas fa-draw-polygon me-2"></i> Draw Area (Polygon)</button>
-                    <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('text')" id="btnDrawText"><i class="fas fa-font me-2"></i> Add Text Label</button>
-                    <button class="btn btn-outline-danger btn-sm text-start" onclick="MapBuilderModule.deleteSelected()"><i class="fas fa-trash me-2"></i> Delete Selected</button>
-                    
-                    <div id="objProperties" style="display: none; background: #0f172a; padding: 8px; border-radius: 6px; margin-top: 8px;">
-                        <label style="font-size: 11px; color: #cbd5e1;">Zone Name / Text</label>
-                        <input type="text" id="objNameInput" class="form-control bg-dark text-white border-secondary form-control-sm" style="font-size: 12px;" oninput="MapBuilderModule.updateObjName(this.value)">
+                <div class="row">
+                    <!-- Left Column: Drawing Tools -->
+                    <div class="col-6">
+                        <label style="font-size: 12px; margin-bottom: 4px; color: #cbd5e1;">Drawing</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <button class="btn btn-outline-light btn-sm text-start w-100" onclick="MapBuilderModule.setMode('select')" id="btnDrawSelect"><i class="fas fa-mouse-pointer me-1"></i> Select</button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-light btn-sm text-start w-100" onclick="MapBuilderModule.setMode('line')" id="btnDrawLine"><i class="fas fa-grip-lines me-1"></i> Wall</button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-light btn-sm text-start w-100" onclick="MapBuilderModule.setMode('rect')" id="btnDrawRect"><i class="far fa-square me-1"></i> Box</button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-light btn-sm text-start w-100" onclick="MapBuilderModule.setMode('poly')" id="btnDrawPoly" title="Double click or Enter to finish"><i class="fas fa-draw-polygon me-1"></i> Poly</button>
+                            </div>
+                            <div class="col-12">
+                                <button class="btn btn-outline-light btn-sm text-start w-100" onclick="MapBuilderModule.setMode('text')" id="btnDrawText"><i class="fas fa-font me-2"></i> Add Text Label</button>
+                            </div>
+                            <div class="col-12">
+                                <button class="btn btn-outline-danger btn-sm text-start w-100" onclick="MapBuilderModule.deleteSelected()"><i class="fas fa-trash me-2"></i> Delete Selected</button>
+                            </div>
+                        </div>
+                        
+                        <div id="objProperties" style="display: none; background: #0f172a; padding: 8px; border-radius: 6px; margin-top: 8px;">
+                            <label style="font-size: 11px; color: #cbd5e1;">Zone Name / Text</label>
+                            <input type="text" id="objNameInput" class="form-control bg-dark text-white border-secondary form-control-sm" style="font-size: 12px;" oninput="MapBuilderModule.updateObjName(this.value)">
+                        </div>
+                        
+                        <hr style="margin: 12px 0; border-color: #334155;">
+                        <label style="font-size: 12px; margin-bottom: 4px; color: #cbd5e1;">Layers & Config</label>
+                        <div class="form-check form-switch mt-1 mb-2">
+                            <input class="form-check-input" type="checkbox" id="snapToGridToggle" onchange="MapBuilderModule.toggleSnap(this.checked)">
+                            <label class="form-check-label text-light" style="font-size: 12px;">Snap to Grid (50px)</label>
+                        </div>
+                        <div class="form-check form-switch mt-1">
+                            <input class="form-check-input layer-toggle" type="checkbox" checked onchange="MapBuilderModule.toggleLayer('line', this.checked)">
+                            <label class="form-check-label text-light" style="font-size: 12px;">Walls</label>
+                        </div>
+                        <div class="form-check form-switch mt-1">
+                            <input class="form-check-input layer-toggle" type="checkbox" checked onchange="MapBuilderModule.toggleLayer('zone', this.checked)">
+                            <label class="form-check-label text-light" style="font-size: 12px;">Zones</label>
+                        </div>
+                        <div class="form-check form-switch mt-1">
+                            <input class="form-check-input layer-toggle" type="checkbox" checked onchange="MapBuilderModule.toggleLayer('text', this.checked)">
+                            <label class="form-check-label text-light" style="font-size: 12px;">Text Labels</label>
+                        </div>
+                        <div class="form-check form-switch mt-1 mb-2">
+                            <input class="form-check-input layer-toggle" type="checkbox" checked onchange="MapBuilderModule.toggleLayer('machine', this.checked)">
+                            <label class="form-check-label text-light" style="font-size: 12px;">Machines</label>
+                        </div>
                     </div>
                     
-                    <div class="form-check form-switch mt-3 mb-2">
-                        <input class="form-check-input bg-secondary border-secondary" type="checkbox" id="snapToGridToggle" onchange="MapBuilderModule.toggleSnap(this.checked)">
-                        <label class="form-check-label text-light" style="font-size: 12px;">Snap to Grid</label>
+                    <!-- Right Column: Tracing & Opacity -->
+                    <div class="col-6" style="border-left: 1px solid #334155;">
+                        
+                        <label style="font-size: 12px; margin-bottom: 4px; color: #cbd5e1;">Tracing Blueprint</label>
+                        <input type="file" id="mapTracingUpload" class="form-control bg-dark text-white border-secondary mb-3" style="font-size: 11px; padding: 4px;" accept="image/*" onchange="MapBuilderModule.uploadTracingImage(this)">
+                        
+                        <label style="font-size: 12px; margin-bottom: 4px; color: #cbd5e1;">Trace Opacity</label>
+                        <div class="d-flex align-items-center mt-1 mb-3">
+                            <input type="range" class="form-range w-100" min="0" max="1" step="0.1" value="0.5" id="tracingOpacitySlider" oninput="MapBuilderModule.changeTracingOpacity(this.value)">
+                        </div>
+                        
+                        <label style="font-size: 12px; margin-bottom: 4px; color: #cbd5e1;">2D Map Opacity</label>
+                        <div class="d-flex align-items-center mt-1 mb-3">
+                            <input type="range" class="form-range w-100" min="0" max="1" step="0.1" value="1" id="mapOpacitySlider" oninput="MapBuilderModule.changeMapOpacity(this.value)">
+                        </div>
+                        
+                        <button class="btn btn-outline-warning btn-sm w-100" onclick="MapBuilderModule.clearTracing()"><i class="fas fa-eraser me-2"></i> Clear Tracing</button>
                     </div>
-                    
-                    <hr style="margin: 8px 0; border-color: #334155;">
-                    <label style="font-size: 12px; margin-bottom: 4px; color: #cbd5e1;">Layers</label>
-                    
-                    <div class="form-check form-switch mt-1">
-                        <input class="form-check-input bg-secondary border-secondary layer-toggle" type="checkbox" checked onchange="MapBuilderModule.toggleLayer('line', this.checked)">
-                        <label class="form-check-label text-light" style="font-size: 12px;">Walls</label>
-                    </div>
-                    <div class="form-check form-switch mt-1">
-                        <input class="form-check-input bg-secondary border-secondary layer-toggle" type="checkbox" checked onchange="MapBuilderModule.toggleLayer('zone', this.checked)">
-                        <label class="form-check-label text-light" style="font-size: 12px;">Zones</label>
-                    </div>
-                    <div class="form-check form-switch mt-1">
-                        <input class="form-check-input bg-secondary border-secondary layer-toggle" type="checkbox" checked onchange="MapBuilderModule.toggleLayer('text', this.checked)">
-                        <label class="form-check-label text-light" style="font-size: 12px;">Text Labels</label>
-                    </div>
-                    <div class="form-check form-switch mt-1">
-                        <input class="form-check-input bg-secondary border-secondary layer-toggle" type="checkbox" checked onchange="MapBuilderModule.toggleLayer('machine', this.checked)">
-                        <label class="form-check-label text-light" style="font-size: 12px;">Machines</label>
-                    </div>
-                    
-                    <hr style="margin: 8px 0; border-color: #334155;">
-                    
-                    <label style="font-size: 12px; margin-bottom: 4px; color: #cbd5e1;">Tracing Blueprint</label>
-                    <input type="file" id="mapTracingUpload" class="form-control bg-dark text-white border-secondary" style="font-size: 11px; padding: 4px;" accept="image/*" onchange="MapBuilderModule.uploadTracingImage(this)">
-                    
-                    <label style="font-size: 12px; margin-top: 10px; margin-bottom: 4px; color: #cbd5e1;">Blueprint Opacity</label>
-                    <input type="range" id="mapTracingOpacity" min="0" max="1" step="0.1" value="1" style="width: 100%;" oninput="MapBuilderModule.changeTracingOpacity(this.value)">
-                    
-                    <label style="font-size: 12px; margin-top: 10px; margin-bottom: 4px; color: #cbd5e1;">2D Map Opacity</label>
-                    <input type="range" id="mapCanvasOpacity" min="0" max="1" step="0.1" value="1" style="width: 100%;" oninput="MapBuilderModule.changeMapOpacity(this.value)">
-                    
-                    <button class="btn btn-outline-secondary btn-sm mt-1" onclick="MapBuilderModule.clearTracing()"><i class="fas fa-times me-1"></i> Remove Tracing</button>
-                    
-                    <hr style="margin: 8px 0; border-color: #334155;">
-                    
-                    <button class="btn btn-primary btn-sm" onclick="MapBuilderModule.saveMap()"><i class="fas fa-save me-2"></i> Save Map to Server</button>
-                </div>
+                </div> <!-- /row -->
+                <button class="btn btn-primary btn-sm mt-3 w-100" onclick="MapBuilderModule.saveMap()"><i class="fas fa-save me-2"></i> Save Map to Server</button>
             </div>
 
             <div id="iiotPanzoomElement" style="position:relative; display:inline-block;">
