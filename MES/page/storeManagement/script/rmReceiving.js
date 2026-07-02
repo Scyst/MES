@@ -621,12 +621,7 @@ window.bulkReceiveTags = async function() {
         Swal.close();
         
         if (res && res.data && res.data.locations) {
-            res.data.items.forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item.item_id;
-                opt.textContent = `[${item.material_type || 'N/A'}] ${item.sku} - ${item.part_no} - ${item.part_description}`;
-                $('#man_item_no').append(opt);
-            });
+
             res.data.locations.forEach(loc => {
                 locOptions[loc.location_id] = loc.location_name;
 

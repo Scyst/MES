@@ -293,7 +293,38 @@
                     <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('line')" id="btnDrawLine"><i class="fas fa-grip-lines me-2"></i> Draw Wall (Line)</button>
                     <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('rect')" id="btnDrawRect"><i class="far fa-square me-2"></i> Draw Zone (Box)</button>
                     <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('poly')" id="btnDrawPoly"><i class="fas fa-draw-polygon me-2"></i> Draw Area (Polygon)</button>
+                    <button class="btn btn-outline-light btn-sm text-start" onclick="MapBuilderModule.setMode('text')" id="btnDrawText"><i class="fas fa-font me-2"></i> Add Text Label</button>
                     <button class="btn btn-outline-danger btn-sm text-start" onclick="MapBuilderModule.deleteSelected()"><i class="fas fa-trash me-2"></i> Delete Selected</button>
+                    
+                    <div id="objProperties" style="display: none; background: #0f172a; padding: 8px; border-radius: 6px; margin-top: 8px;">
+                        <label style="font-size: 11px; color: #cbd5e1;">Zone Name / Text</label>
+                        <input type="text" id="objNameInput" class="form-control bg-dark text-white border-secondary form-control-sm" style="font-size: 12px;" oninput="MapBuilderModule.updateObjName(this.value)">
+                    </div>
+                    
+                    <div class="form-check form-switch mt-3 mb-2">
+                        <input class="form-check-input bg-secondary border-secondary" type="checkbox" id="snapToGridToggle" onchange="MapBuilderModule.toggleSnap(this.checked)">
+                        <label class="form-check-label text-light" style="font-size: 12px;">Snap to Grid</label>
+                    </div>
+                    
+                    <hr style="margin: 8px 0; border-color: #334155;">
+                    <label style="font-size: 12px; margin-bottom: 4px; color: #cbd5e1;">Layers</label>
+                    
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input bg-secondary border-secondary layer-toggle" type="checkbox" checked onchange="MapBuilderModule.toggleLayer('line', this.checked)">
+                        <label class="form-check-label text-light" style="font-size: 12px;">Walls</label>
+                    </div>
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input bg-secondary border-secondary layer-toggle" type="checkbox" checked onchange="MapBuilderModule.toggleLayer('zone', this.checked)">
+                        <label class="form-check-label text-light" style="font-size: 12px;">Zones</label>
+                    </div>
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input bg-secondary border-secondary layer-toggle" type="checkbox" checked onchange="MapBuilderModule.toggleLayer('text', this.checked)">
+                        <label class="form-check-label text-light" style="font-size: 12px;">Text Labels</label>
+                    </div>
+                    <div class="form-check form-switch mt-1">
+                        <input class="form-check-input bg-secondary border-secondary layer-toggle" type="checkbox" checked onchange="MapBuilderModule.toggleLayer('machine', this.checked)">
+                        <label class="form-check-label text-light" style="font-size: 12px;">Machines</label>
+                    </div>
                     
                     <hr style="margin: 8px 0; border-color: #334155;">
                     

@@ -300,6 +300,55 @@ const IIoTModule = (function() {
         updateUI(fakeData);
     }
 
+    function evaluateZones() {
+        if (typeof MapBuilderModule === 'undefined') return;
+        const canvas = MapBuilderModule.getCanvas();
+        if (!canvas) return;
+        const polygons = canvas.getObjects('polygon');
+        if (polygons.length === 0) return;
+        
+        const nodes = document.querySelectorAll('.machine-node');
+        const machines = [];
+        nodes.forEach(n => {
+            const status = n.classList.contains('running') ? 'running' :
+                           n.classList.contains('stopped') ? 'stopped' :
+                           n.classList.contains('warning') ? 'warning' : 'offline';
+            const mapContainer = document.getElementById('mapNodesContainer');
+            if(!mapContainer) return;
+            
+            const leftPercent = parseFloat(n.style.left) / 100;
+            const topPercent = parseFloat(n.style.top) / 100;
+            
+            const x = leftPercent * mapContainer.offsetWidth;
+            const y = topPercent * mapContainer.offsetHeight;
+            
+            machines.push({ x: x, y: y, status: status });
+        });
+        
+        polygons.forEach(poly => {
+            let hasStopped = false;
+            let hasWarning = false;
+            let hasRunning = false;
+            
+            machines.forEach(m => {
+                const pt = new fabric.Point(m.x, m.y);
+                if (poly.containsPoint(pt)) {
+                    if (m.status === 'stopped') hasStopped = true;
+                    else if (m.status === 'warning') hasWarning = true;
+                    else if (m.status === 'running') hasRunning = true;
+                }
+            });
+            
+            let color = 'rgba(56, 189, 248, 0.2)'; // Default Blue
+            if (hasStopped) color = 'rgba(239, 68, 68, 0.5)'; // Red
+            else if (hasWarning) color = 'rgba(245, 158, 11, 0.5)'; // Yellow
+            else if (hasRunning) color = 'rgba(16, 185, 129, 0.3)'; // Green
+            
+            poly.set('fill', color);
+        });
+        if(canvas.renderAll) canvas.renderAll();
+    }
+
     function updateUI(telemetryData) {
         machinesWithIIoT.forEach(m => {
             const data = telemetryData[m.machine_code];
@@ -351,6 +400,8 @@ const IIoTModule = (function() {
                 powerRow.style.display = 'none';
             }
 
+
+
             // Update Floorplan Node
             const nodeEl = document.getElementById(`iiot-node-${m.machine_code}`);
             if (nodeEl) {
@@ -365,6 +416,7 @@ const IIoTModule = (function() {
                 } else {
                     nodeEl.classList.add('offline');
                 }
+                evaluateZones();
             }
 
             // Update Output

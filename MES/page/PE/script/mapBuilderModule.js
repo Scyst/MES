@@ -7,6 +7,10 @@ const MapBuilderModule = (function() {
     let isDrawing = false;
     let origX, origY;
     let currentShape = null;
+    let polyPoints = [];
+    let activePolyShape = null;
+    let snapToGrid = false;
+    const gridSize = 20;
 
     function init() {
         if (typeof fabric === 'undefined') {
@@ -30,6 +34,19 @@ const MapBuilderModule = (function() {
         canvas.on('mouse:down', onMouseDown);
         canvas.on('mouse:move', onMouseMove);
         canvas.on('mouse:up', onMouseUp);
+        canvas.on('mouse:dblclick', onMouseDblClick);
+        canvas.on('selection:created', onObjectSelected);
+        canvas.on('selection:updated', onObjectSelected);
+        canvas.on('selection:cleared', onSelectionCleared);
+        
+        canvas.on('object:moving', (o) => {
+            if (snapToGrid) {
+                o.target.set({
+                    left: Math.round(o.target.left / gridSize) * gridSize,
+                    top: Math.round(o.target.top / gridSize) * gridSize
+                });
+            }
+        });
 
         // Load existing map if any
         loadMap();
@@ -106,10 +123,18 @@ const MapBuilderModule = (function() {
         
         canvas.isDrawingMode = false;
         
+        // Reset poly drawing state if switching modes
+        if (mode !== 'poly' && activePolyShape) {
+            canvas.remove(activePolyShape);
+            activePolyShape = null;
+            polyPoints = [];
+        }
+        
         // Update button visual states
-        ['select', 'line', 'rect', 'poly'].forEach(m => {
+        ['select', 'line', 'rect', 'poly', 'text'].forEach(m => {
             let btnId = 'btnDraw' + m.charAt(0).toUpperCase() + m.slice(1);
             if (m === 'poly') btnId = 'btnDrawPoly';
+            if (m === 'text') btnId = 'btnDrawText';
             const btn = document.getElementById(btnId);
             if (btn) {
                 if (m === mode) {
@@ -144,14 +169,27 @@ const MapBuilderModule = (function() {
             canvas.requestRenderAll();
         }
     }
+    
+    function toggleSnap(val) {
+        snapToGrid = val;
+    }
+
+    function getPointerWithSnap(pointer) {
+        if (!snapToGrid) return pointer;
+        return {
+            x: Math.round(pointer.x / gridSize) * gridSize,
+            y: Math.round(pointer.y / gridSize) * gridSize
+        };
+    }
 
     // --- Drawing Handlers ---
     function onMouseDown(o) {
         if (currentMode === 'select') return;
         
         isDrawing = true;
-        canvas.calcOffset(); // Ensure coordinates are accurate
-        const pointer = canvas.getPointer(o.e);
+        const rawPointer = canvas.getPointer(o.e);
+        const pointer = getPointerWithSnap(rawPointer);
+        
         origX = pointer.x;
         origY = pointer.y;
 
@@ -182,33 +220,53 @@ const MapBuilderModule = (function() {
             });
             canvas.add(currentShape);
         } else if (currentMode === 'poly') {
-            currentShape = new fabric.Polygon([
-                {x: 0, y: 0},
-                {x: 50, y: -50},
-                {x: 100, y: 0},
-                {x: 100, y: 100},
-                {x: 0, y: 100}
-            ], {
+            polyPoints.push({ x: pointer.x, y: pointer.y });
+            if (polyPoints.length === 1) {
+                activePolyShape = new fabric.Polygon([...polyPoints], {
+                    fill: 'rgba(56, 189, 248, 0.2)',
+                    stroke: '#38bdf8',
+                    strokeWidth: 2,
+                    selectable: false,
+                    evented: false,
+                    zoneName: 'New Zone'
+                });
+                canvas.add(activePolyShape);
+            } else {
+                activePolyShape.set({ points: [...polyPoints] });
+            }
+            canvas.renderAll();
+            isDrawing = false; // poly does not drag-to-draw
+        } else if (currentMode === 'text') {
+            const text = new fabric.IText('New Label', {
                 left: origX,
                 top: origY,
-                fill: 'rgba(56, 189, 248, 0.2)',
-                stroke: '#38bdf8',
-                strokeWidth: 2,
+                fontFamily: 'Inter',
+                fontSize: 20,
+                fill: '#f8fafc',
                 selectable: true,
-                evented: true
+                evented: true,
+                zoneName: 'New Label'
             });
-            canvas.add(currentShape);
-            setMode('select'); // Instantly select the polygon to let them resize it
-            canvas.setActiveObject(currentShape);
+            canvas.add(text);
+            setMode('select');
+            canvas.setActiveObject(text);
             isDrawing = false;
         }
     }
 
     function onMouseMove(o) {
+        const rawPointer = canvas.getPointer(o.e);
+        const pointer = getPointerWithSnap(rawPointer);
+
+        if (currentMode === 'poly' && activePolyShape && polyPoints.length > 0) {
+            const tempPoints = [...polyPoints, { x: pointer.x, y: pointer.y }];
+            activePolyShape.set({ points: tempPoints });
+            canvas.renderAll();
+            return;
+        }
+
         if (!isDrawing || currentMode === 'select' || !currentShape) return;
 
-        const pointer = canvas.getPointer(o.e);
-        
         if (currentMode === 'line') {
             currentShape.set({ x2: pointer.x, y2: pointer.y });
         } else if (currentMode === 'rect') {
@@ -231,6 +289,61 @@ const MapBuilderModule = (function() {
         if (currentShape) {
             currentShape.setCoords();
             currentShape = null;
+        }
+    }
+
+    function onMouseDblClick(o) {
+        if (currentMode === 'poly' && polyPoints.length > 2) {
+            // Finish polygon
+            const newPoly = new fabric.Polygon([...polyPoints], {
+                fill: 'rgba(56, 189, 248, 0.2)',
+                stroke: '#38bdf8',
+                strokeWidth: 2,
+                selectable: true,
+                evented: true,
+                zoneName: 'New Zone' // custom property for analytics
+            });
+            canvas.add(newPoly);
+            if (activePolyShape) canvas.remove(activePolyShape);
+            activePolyShape = null;
+            polyPoints = [];
+            setMode('select');
+            canvas.setActiveObject(newPoly);
+            canvas.renderAll();
+        }
+    }
+
+    // --- Object Selection & Properties ---
+    function onObjectSelected(o) {
+        const obj = o.selected[0];
+        if (!obj) return;
+        const panel = document.getElementById('objProperties');
+        const input = document.getElementById('objNameInput');
+        if (panel && input) {
+            panel.style.display = 'block';
+            if (obj.type === 'i-text') {
+                input.value = obj.text || '';
+            } else {
+                input.value = obj.zoneName || '';
+            }
+        }
+    }
+
+    function onSelectionCleared() {
+        const panel = document.getElementById('objProperties');
+        if (panel) panel.style.display = 'none';
+    }
+
+    function updateObjName(val) {
+        if (!canvas) return;
+        const obj = canvas.getActiveObject();
+        if (obj) {
+            if (obj.type === 'i-text') {
+                obj.set('text', val);
+            } else {
+                obj.zoneName = val;
+            }
+            canvas.renderAll();
         }
     }
 
@@ -262,10 +375,33 @@ const MapBuilderModule = (function() {
         document.getElementById('mapTracingUpload').value = '';
     }
 
+    // --- Layer Management ---
+    function toggleLayer(layerType, isVisible) {
+        if (layerType === 'machine') {
+            const nodes = document.querySelectorAll('.machine-node');
+            nodes.forEach(n => {
+                n.style.display = isVisible ? 'block' : 'none';
+            });
+            const tooltips = document.querySelectorAll('.machine-tooltip');
+            tooltips.forEach(t => {
+                t.style.display = 'none'; // always hide tooltip on toggle
+            });
+        } else {
+            if (!canvas) return;
+            canvas.getObjects().forEach(obj => {
+                if (layerType === 'line' && obj.type === 'line') obj.visible = isVisible;
+                if (layerType === 'zone' && (obj.type === 'rect' || obj.type === 'polygon')) obj.visible = isVisible;
+                if (layerType === 'text' && obj.type === 'i-text') obj.visible = isVisible;
+            });
+            canvas.renderAll();
+        }
+    }
+
     // --- Save & Load ---
     async function saveMap() {
         try {
-            const json = canvas.toJSON();
+            // Include custom properties in JSON export
+            const json = canvas.toJSON(['zoneName', 'id', 'name']);
             const res = await PEApp.apiCall('mapAPI.php', {}, 'POST', {
                 action: 'save_map',
                 map_data: JSON.stringify(json)
@@ -314,7 +450,11 @@ const MapBuilderModule = (function() {
         changeTracingOpacity,
         changeMapOpacity,
         clearTracing,
-        forceRender
+        toggleLayer,
+        updateObjName,
+        forceRender,
+        toggleSnap,
+        getCanvas: () => canvas
     };
 })();
 
