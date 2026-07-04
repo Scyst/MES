@@ -309,6 +309,24 @@ try {
                 ];
             }
             
+            // Add fallback for missing state logs (assume current state since shift start)
+            $telStatusStmt = $pdo->query("SELECT machine_code, live_status FROM PE_IIOT_TELEMETRY WITH (NOLOCK)");
+            $telStatuses = [];
+            while($row = $telStatusStmt->fetch(PDO::FETCH_ASSOC)) {
+                $telStatuses[$row['machine_code']] = strtoupper($row['live_status']);
+            }
+            
+            foreach ($machineStats as $mc => &$stats) {
+                if ($stats['total_online_seconds'] == 0 && $stats['total_offline_seconds'] == 0) {
+                    $s = $telStatuses[$mc] ?? 'OFFLINE';
+                    if (strpos($s, 'RUN') !== false || strpos($s, 'ON') !== false) {
+                        $stats['total_online_seconds'] = $totalPassedSeconds;
+                    } else {
+                        $stats['total_offline_seconds'] = $totalPassedSeconds;
+                    }
+                }
+            }
+            
             // For each machine, get Live Counter (from IIoT or History) and Planned Output (from Routes)
             foreach ($machineStats as $mc => &$stats) {
                 // Determine whether to get Live Telemetry (Today) or Historical Production
@@ -350,6 +368,11 @@ try {
                 $routeStmt->execute([$mc]);
                 $route = $routeStmt->fetch(PDO::FETCH_ASSOC);
                 $stats['planned_output_ph'] = $route ? (float)$route['planned_output'] : 0;
+                
+                // Fallback for missing routes so OEE isn't 0
+                if ($stats['planned_output_ph'] <= 0) {
+                    $stats['planned_output_ph'] = 300; // Default 300 parts per hour
+                }
                 $strokes = $route ? (int)$route['strokes_per_part'] : 1;
                 if ($strokes > 1) {
                     $stats['live_counter'] = floor($stats['live_counter'] / $strokes);

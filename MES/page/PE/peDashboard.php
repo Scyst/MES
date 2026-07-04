@@ -82,10 +82,7 @@ $pageTitle = "PE Enterprise";
                     <i class="fas fa-satellite-dish" style="color: #38bdf8;"></i>
                     <span class="nav-label">Live IIoT Monitor</span>
                 </button>
-                <button class="pe-nav-item" data-tab="iiot_oee" onclick="PEApp.switchTab('iiot_oee')">
-                    <i class="fas fa-chart-pie" style="color: #4ade80;"></i>
-                    <span class="nav-label">IIoT OEE Dashboard</span>
-                </button>
+
                 <button class="pe-nav-item" data-tab="iiot_traditional" onclick="PEApp.switchTab('iiot_traditional')">
                     <i class="fas fa-chart-line" style="color: #fcd34d;"></i>
                     <span class="nav-label">Traditional Dashboard</span>

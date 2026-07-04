@@ -1,6 +1,7 @@
 const IIoTModule = (function() {
     let pollingInterval = null;
     let machinesWithIIoT = [];
+    let lastOeeData = {};
     let isSimulating = false;
     let isMapEditMode = false;
     let cropperInstance = null;
@@ -86,31 +87,41 @@ const IIoTModule = (function() {
                 </div>
                 <div class="iiot-card-subtitle">${PEApp.escapeHtml(m.machine_name)}</div>
                 
-                <div class="iiot-metrics">
-                    <div class="iiot-metric-row" id="iiot-row-power-${m.machine_code}" style="display: none;">
-                        <span class="iiot-metric-label"><i class="fas fa-bolt"></i> Power</span>
-                        <span class="iiot-metric-value power" id="iiot-power-${m.machine_code}">-</span>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="text-center" style="min-width: 60px;">
+                        <h3 class="mb-0 fw-bold" id="iiot-oee-text-${m.machine_code}" style="color: #0ea5e9;">0%</h3>
+                        <small class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 1px;">OEE</small>
                     </div>
-                    <div class="iiot-metric-row" id="iiot-row-output-${m.machine_code}" style="display: none;">
-                        <span class="iiot-metric-label"><i class="fas fa-sort-numeric-up-alt"></i> Output</span>
-                        <span class="iiot-metric-value output" id="iiot-output-${m.machine_code}">-</span>
-                    </div>
-                    <div class="iiot-metric-row" id="iiot-row-flow-${m.machine_code}" style="display: none;">
-                        <span class="iiot-metric-label"><i class="fas fa-wind"></i> Flow</span>
-                        <span class="iiot-metric-value flow" id="iiot-flow-${m.machine_code}">-</span>
+                    <div style="flex: 1; margin-left: 15px;">
+                        <div class="d-flex justify-content-between mb-1" style="font-size:10px; font-weight:bold;">
+                            <span style="color:#64748b;">A: <span id="iiot-avail-text-${m.machine_code}">0%</span></span>
+                            <span style="color:#64748b;">P: <span id="iiot-perf-text-${m.machine_code}">0%</span></span>
+                            <span style="color:#64748b;">Q: <span id="iiot-qual-text-${m.machine_code}">0%</span></span>
+                        </div>
+                        <div class="progress mb-1" style="height: 4px; border-radius: 2px; background-color: #f1f5f9;">
+                            <div class="progress-bar" id="iiot-avail-bar-${m.machine_code}" style="width: 0%; background-color: #10b981;"></div>
+                        </div>
+                        <div class="progress mb-1" style="height: 4px; border-radius: 2px; background-color: #f1f5f9;">
+                            <div class="progress-bar" id="iiot-perf-bar-${m.machine_code}" style="width: 0%; background-color: #3b82f6;"></div>
+                        </div>
+                        <div class="progress" style="height: 4px; border-radius: 2px; background-color: #f1f5f9;">
+                            <div class="progress-bar" id="iiot-qual-bar-${m.machine_code}" style="width: 0%; background-color: #8b5cf6;"></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="iiot-oee-section mt-3 pt-2" style="border-top: 1px dashed #e2e8f0;">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span style="font-size: 11px; font-weight: 600; color: var(--pe-primary);"><i class="fas fa-chart-pie"></i> Availability</span>
-                        <span style="font-size: 11px; font-weight: 700; color: #1e293b;" id="iiot-avail-text-${m.machine_code}">0.0%</span>
+                <div class="iiot-metrics">
+                    <div class="iiot-metric-row">
+                        <span class="iiot-metric-label"><i class="fas fa-cube text-primary"></i> Current Output</span>
+                        <span class="iiot-metric-value" id="iiot-counter-${m.machine_code}">0</span>
                     </div>
-                    <div class="progress" style="height: 6px; border-radius: 3px; background-color: #e2e8f0;">
-                        <div class="progress-bar" id="iiot-avail-bar-${m.machine_code}" role="progressbar" style="width: 0%; background-color: #10b981;"></div>
+                    <div class="iiot-metric-row">
+                        <span class="iiot-metric-label"><i class="fas fa-bullseye text-warning"></i> Planned Output</span>
+                        <span class="iiot-metric-value" id="iiot-planned-${m.machine_code}">0</span>
                     </div>
-                    <div class="text-end mt-1" style="font-size: 10px; color: #64748b;" id="iiot-avail-time-${m.machine_code}">
-                        Online: 0h 0m
+                    <div class="iiot-metric-row">
+                        <span class="iiot-metric-label"><i class="fas fa-stopwatch text-info"></i> Cycle Time</span>
+                        <span class="iiot-metric-value" id="iiot-cycle-${m.machine_code}">-</span>
                     </div>
                 </div>
             </div>
@@ -174,8 +185,11 @@ const IIoTModule = (function() {
                 const statusEl = document.getElementById(`iiot-status-${m.machine_code}`);
                 document.getElementById('ttStatus').innerText = statusEl ? statusEl.innerText : 'OFFLINE';
                 
-                const powerEl = document.getElementById(`iiot-power-${m.machine_code}`);
-                document.getElementById('ttTemp').innerText = powerEl && powerEl.innerText !== '-' ? powerEl.innerText : 'N/A';
+                const cycleEl = document.getElementById(`iiot-cycle-${m.machine_code}`);
+                document.getElementById('ttCycle').innerText = cycleEl && cycleEl.innerText !== '-' ? cycleEl.innerText : 'N/A';
+                
+                const oeeData = lastOeeData[m.machine_code];
+                document.getElementById('ttOEE').innerText = oeeData && oeeData.oee != null ? `${oeeData.oee}%` : '0%';
                 
                 tt.style.left = e.clientX + 15 + 'px';
                 tt.style.top = e.clientY + 15 + 'px';
@@ -221,20 +235,20 @@ const IIoTModule = (function() {
             }
         };
 
-        const fetchAvailability = async () => {
+        const fetchOeeStats = async () => {
             try {
-                const res = await fetch('api/iiotAPI.php?action=get_availability_stats');
+                const res = await fetch('api/iiotAPI.php?action=get_iiot_oee_stats');
                 const json = await res.json();
                 if (json.success && json.data) {
-                    updateAvailabilityUI(json.data);
+                    updateOeeUI(json.data);
                 }
             } catch (e) {
-                console.error("Availability fetch error", e);
+                console.error("OEE fetch error", e);
             }
         };
 
         fetchTelemetry();
-        fetchAvailability();
+        fetchOeeStats();
         
         // Polling loop
         let tick = 0;
@@ -255,57 +269,74 @@ const IIoTModule = (function() {
                 pzParent.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
             }
 
-            // Fetch availability every 15 seconds (5 ticks)
+            // Fetch OEE every 15 seconds (5 ticks)
             if (tick % 5 === 0) {
-                fetchAvailability();
+                fetchOeeStats();
             }
         }, 3000); // 3 seconds base tick
     }
 
-    function updateAvailabilityUI(availData) {
+    function updateOeeUI(oeeData) {
+        lastOeeData = { ...lastOeeData, ...oeeData };
         machinesWithIIoT.forEach(m => {
-            const data = availData[m.machine_code];
+            const data = oeeData[m.machine_code];
             if (!data) return;
 
-            const textEl = document.getElementById(`iiot-avail-text-${m.machine_code}`);
-            const barEl = document.getElementById(`iiot-avail-bar-${m.machine_code}`);
-            const timeEl = document.getElementById(`iiot-avail-time-${m.machine_code}`);
+            const oeeText = document.getElementById(`iiot-oee-text-${m.machine_code}`);
+            const aText = document.getElementById(`iiot-avail-text-${m.machine_code}`);
+            const pText = document.getElementById(`iiot-perf-text-${m.machine_code}`);
+            const qText = document.getElementById(`iiot-qual-text-${m.machine_code}`);
+            const aBar = document.getElementById(`iiot-avail-bar-${m.machine_code}`);
+            const pBar = document.getElementById(`iiot-perf-bar-${m.machine_code}`);
+            const qBar = document.getElementById(`iiot-qual-bar-${m.machine_code}`);
 
-            if (textEl && barEl && timeEl) {
-                textEl.innerText = `${data.availability_percent}%`;
-                barEl.style.width = `${data.availability_percent}%`;
-                
-                // Set color based on value
-                let color = '#10b981'; // Green
-                if (data.availability_percent < 50) color = '#ef4444'; // Red
-                else if (data.availability_percent < 80) color = '#f59e0b'; // Yellow
-                
-                barEl.style.backgroundColor = color;
-                
-                // Format online time
-                const h = Math.floor(data.total_online_seconds / 3600);
-                const min = Math.floor((data.total_online_seconds % 3600) / 60);
-                timeEl.innerText = `Online: ${h}h ${min}m`;
-            }
+            if (oeeText) oeeText.innerText = `${data.oee}%`;
+            if (aText) aText.innerText = `${data.availability}%`;
+            if (pText) pText.innerText = `${data.performance}%`;
+            if (qText) qText.innerText = `${data.quality}%`;
+
+            if (aBar) aBar.style.width = `${data.availability}%`;
+            if (pBar) pBar.style.width = `${data.performance}%`;
+            if (qBar) qBar.style.width = `${data.quality}%`;
+
+            // Update planned and current output if elements exist (planned output comes from OEE endpoint)
+            const plannedEl = document.getElementById(`iiot-planned-${m.machine_code}`);
+            if (plannedEl) plannedEl.innerText = data.expected_output || 0;
+            
+            const counterEl = document.getElementById(`iiot-counter-${m.machine_code}`);
+            if (counterEl) counterEl.innerText = data.live_counter || 0;
         });
     }
     
     function simulateData() {
         const fakeData = {};
+        const fakeOeeData = {};
         machinesWithIIoT.forEach(m => {
-            const power = (Math.random() * 40 + 20).toFixed(2); // 20-60 kW
-            const flow = (Math.random() * 5 + 10).toFixed(2); // 10-15 L/min
-            const isAlert = power > 55; // 55+ is alert threshold for simulation
+            const isAlert = Math.random() > 0.8;
             
             fakeData[m.machine_code] = {
                 live_status: isAlert ? 'WARNING' : 'RUNNING',
                 live_counter: Math.floor(Math.random() * 1000),
                 live_total: 1000,
-                power_kw: power,
-                flow_rate: flow
+                cycle_time: (Math.random() * 5 + 5).toFixed(2)
+            };
+            
+            const avail = (Math.random() * 20 + 80).toFixed(1);
+            const perf = (Math.random() * 20 + 80).toFixed(1);
+            const qual = (Math.random() * 5 + 95).toFixed(1);
+            const oee = ((avail/100) * (perf/100) * (qual/100) * 100).toFixed(1);
+            
+            fakeOeeData[m.machine_code] = {
+                availability: avail,
+                performance: perf,
+                quality: qual,
+                oee: oee,
+                expected_output: 1000,
+                live_counter: fakeData[m.machine_code].live_counter
             };
         });
         updateUI(fakeData);
+        updateOeeUI(fakeOeeData);
     }
 
     function evaluateZones() {
@@ -361,9 +392,8 @@ const IIoTModule = (function() {
         machinesWithIIoT.forEach(m => {
             const data = telemetryData[m.machine_code];
             const statusEl = document.getElementById(`iiot-status-${m.machine_code}`);
-            const powerEl = document.getElementById(`iiot-power-${m.machine_code}`);
-            const outputEl = document.getElementById(`iiot-output-${m.machine_code}`);
-            const flowEl = document.getElementById(`iiot-flow-${m.machine_code}`);
+            const cycleEl = document.getElementById(`iiot-cycle-${m.machine_code}`);
+            const cardEl = document.getElementById(`iiot-card-${m.machine_code}`);
 
             if (!data) {
                 if (statusEl) {
@@ -374,6 +404,7 @@ const IIoTModule = (function() {
             }
 
             // Update Status
+            let isAlert = false;
             if (statusEl) {
                 const s = (data.live_status || '').toUpperCase();
                 if (s.includes('RUN') || s.includes('ON')) {
@@ -382,33 +413,30 @@ const IIoTModule = (function() {
                 } else if (s.includes('STOP') || s.includes('OFF') || s.includes('DOWN')) {
                     statusEl.className = 'iiot-status stopped';
                     statusEl.innerText = s;
+                    isAlert = true;
                 } else {
                     statusEl.className = 'iiot-status idle';
                     statusEl.innerText = s || 'UNKNOWN';
                 }
             }
 
-            // Update Power and Check Threshold Alert
-            const powerRow = document.getElementById(`iiot-row-power-${m.machine_code}`);
-            const cardEl = document.getElementById(`iiot-card-${m.machine_code}`);
-            let isAlert = false;
-            
-            if (powerRow && data.power_kw !== null) {
-                powerRow.style.display = 'flex';
-                powerEl.innerText = `${data.power_kw} kW`;
-                if (parseFloat(data.power_kw) > 50) {
-                    powerEl.style.color = 'var(--pe-danger)';
-                    isAlert = true;
-                    if (cardEl) cardEl.style.border = '1px solid var(--pe-danger)';
+            // Update Cycle Time
+            if (cycleEl) {
+                if (data.cycle_time != null && parseFloat(data.cycle_time) > 0) {
+                    cycleEl.innerText = `${parseFloat(data.cycle_time).toFixed(1)} s`;
                 } else {
-                    powerEl.style.color = '#f59e0b';
-                    if (cardEl) cardEl.style.border = '1px solid #334155';
+                    cycleEl.innerText = '-';
                 }
-            } else if (powerRow) {
-                powerRow.style.display = 'none';
             }
 
-
+            // Update Card Border on Stop
+            if (cardEl) {
+                if (isAlert) {
+                    cardEl.style.border = '1px solid var(--pe-danger)';
+                } else {
+                    cardEl.style.border = '1px solid #e2e8f0';
+                }
+            }
 
             // Update Floorplan Node
             const nodeEl = document.getElementById(`iiot-node-${m.machine_code}`);
@@ -426,24 +454,6 @@ const IIoTModule = (function() {
                 }
                 evaluateZones();
             }
-
-            // Update Output
-            const outputRow = document.getElementById(`iiot-row-output-${m.machine_code}`);
-            if (outputRow && data.live_counter !== null) {
-                outputRow.style.display = 'flex';
-                if (outputEl) outputEl.innerText = `${data.live_counter} ${data.live_total ? '/ ' + data.live_total : ''} pcs`;
-            } else if (outputRow) {
-                outputRow.style.display = 'none';
-            }
-
-            // Update Flow
-            const flowRow = document.getElementById(`iiot-row-flow-${m.machine_code}`);
-            if (flowRow && data.flow_rate !== null) {
-                flowRow.style.display = 'flex';
-                if (flowEl) flowEl.innerText = parseFloat(data.flow_rate).toFixed(2);
-            } else if (flowRow) {
-                flowRow.style.display = 'none';
-            }
         });
     }
 
@@ -455,9 +465,29 @@ const IIoTModule = (function() {
     }
     
     function toggleSimulation() {
-        isSimulating = document.getElementById('iiotSimToggle')?.checked || false;
+        isSimulating = !isSimulating;
+        const icon = document.getElementById('iiotSimIcon');
+        const liveIndicator = document.querySelector('.live-indicator');
+        
         if (isSimulating) {
             PEApp.showToast('IIoT Simulation Mode Enabled', 'info');
+            if (icon) {
+                icon.style.color = '#3b82f6';
+                icon.classList.add('fa-spin');
+            }
+            if (liveIndicator) {
+                liveIndicator.classList.add('sim-mode');
+                liveIndicator.innerHTML = '<div class="dot"></div> SIMULATION';
+            }
+        } else {
+            if (icon) {
+                icon.style.color = 'inherit';
+                icon.classList.remove('fa-spin');
+            }
+            if (liveIndicator) {
+                liveIndicator.classList.remove('sim-mode');
+                liveIndicator.innerHTML = '<div class="dot"></div> LIVE';
+            }
         }
     }
 

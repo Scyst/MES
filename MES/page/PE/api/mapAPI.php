@@ -1,18 +1,12 @@
 <?php
 require_once __DIR__ . '/../../components/init.php';
+require_once __DIR__ . '/../../db.php';
 
 header('Content-Type: application/json');
 requirePermission(['view_dashboard']);
 
 $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
 $action = $_REQUEST['action'] ?? $input['action'] ?? '';
-$uploadDir = __DIR__ . '/../uploads/pe_maps/';
-
-if (!is_dir($uploadDir)) {
-    mkdir($uploadDir, 0777, true);
-}
-
-$mapFile = $uploadDir . 'floorplan.json';
 
 try {
     switch ($action) {
@@ -22,8 +16,18 @@ try {
                 throw new Exception('No map data provided.');
             }
             
-            // Save the JSON string
-            file_put_contents($mapFile, $data['map_data']);
+            $mapJson = $data['map_data'];
+            $username = $_SESSION['user']['username'] ?? 'System';
+            
+            $stmt = $pdo->prepare("SELECT id FROM PE_IIOT_MAP_DATA WHERE id = 1");
+            $stmt->execute();
+            if ($stmt->fetch()) {
+                $upd = $pdo->prepare("UPDATE PE_IIOT_MAP_DATA SET map_json = ?, updated_at = GETDATE(), updated_by = ? WHERE id = 1");
+                $upd->execute([$mapJson, $username]);
+            } else {
+                $ins = $pdo->prepare("INSERT INTO PE_IIOT_MAP_DATA (id, map_json, updated_by) VALUES (1, ?, ?)");
+                $ins->execute([$mapJson, $username]);
+            }
             
             echo json_encode([
                 'success' => true,
@@ -32,16 +36,19 @@ try {
             break;
 
         case 'load_map':
-            if (file_exists($mapFile)) {
-                $mapData = file_get_contents($mapFile);
+            $stmt = $pdo->prepare("SELECT map_json FROM PE_IIOT_MAP_DATA WHERE id = 1");
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($row) {
                 echo json_encode([
                     'success' => true,
-                    'map_data' => $mapData
+                    'map_data' => $row['map_json']
                 ]);
             } else {
                 echo json_encode([
                     'success' => false,
-                    'message' => 'Map file not found.',
+                    'message' => 'Map data not found in database.',
                     'map_data' => null
                 ]);
             }

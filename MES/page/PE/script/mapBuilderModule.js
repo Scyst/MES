@@ -25,8 +25,12 @@ const MapBuilderModule = (function () {
 
         const container = document.getElementById('iiotPanzoomElement');
         const img = document.getElementById('iiotFloorplanImg');
-        const w = img ? (img.naturalWidth || img.clientWidth) : (container.clientWidth || 800);
-        const h = img ? (img.naturalHeight || img.clientHeight) : (container.clientHeight || 600);
+        let w = img ? (img.naturalWidth || img.clientWidth) : (container.clientWidth || 800);
+        let h = img ? (img.naturalHeight || img.clientHeight) : (container.clientHeight || 600);
+        
+        // Ensure minimum size if image is not loaded yet
+        w = w || 800;
+        h = h || 600;
 
         // Use intrinsic image dimensions
         canvas = new fabric.Canvas('iiotMapCanvas', {
@@ -34,6 +38,21 @@ const MapBuilderModule = (function () {
             height: h,
             selection: true
         });
+
+        // Resize when image is fully loaded
+        if (img && !img.complete) {
+            img.addEventListener('load', () => {
+                const nw = img.naturalWidth || img.clientWidth;
+                const nh = img.naturalHeight || img.clientHeight;
+                if (nw && nh && canvas) {
+                    canvas.setWidth(nw);
+                    canvas.setHeight(nh);
+                    canvas.setDimensions({ width: '100%', height: '100%' }, { cssOnly: true });
+                    canvas.calcOffset();
+                    canvas.renderAll();
+                }
+            });
+        }
 
         // Event listeners for drawing
         canvas.on('mouse:down', onMouseDown);
@@ -109,10 +128,7 @@ const MapBuilderModule = (function () {
                 IIoTModule.setPanzoomState(false);
             }
 
-            // Adjust canvas size when toggled on
-            const container = document.getElementById('iiotPanzoomElement');
-            canvas.setWidth(container.clientWidth);
-            canvas.setHeight(container.clientHeight);
+            // Calculate offset in case layout shifted
             canvas.calcOffset();
             canvas.renderAll();
         } else {
@@ -238,6 +254,7 @@ const MapBuilderModule = (function () {
             });
             canvas.add(currentShape);
         } else if (currentMode === 'rect') {
+            const currentOpacity = document.getElementById('zoneOpacitySlider') ? parseFloat(document.getElementById('zoneOpacitySlider').value) : 0.7;
             currentShape = new fabric.Rect({
                 left: origX,
                 top: origY,
@@ -248,17 +265,21 @@ const MapBuilderModule = (function () {
                 fill: 'rgba(56, 189, 248, 0.2)',
                 stroke: '#38bdf8',
                 strokeWidth: 2,
+                opacity: currentOpacity,
                 selectable: false,
-                evented: false
+                evented: false,
+                zoneName: 'New Zone'
             });
             canvas.add(currentShape);
         } else if (currentMode === 'poly') {
             polyPoints.push({ x: pointer.x, y: pointer.y });
             if (polyPoints.length === 1) {
+                const currentOpacity = document.getElementById('zoneOpacitySlider') ? parseFloat(document.getElementById('zoneOpacitySlider').value) : 0.7;
                 activePolyShape = new fabric.Polygon([...polyPoints], {
                     fill: 'rgba(56, 189, 248, 0.2)',
                     stroke: '#38bdf8',
                     strokeWidth: 2,
+                    opacity: currentOpacity,
                     selectable: false,
                     evented: false,
                     zoneName: 'New Zone'
@@ -338,10 +359,12 @@ const MapBuilderModule = (function () {
     function finishPolygon() {
         if (currentMode === 'poly' && polyPoints.length > 2) {
             // Finish polygon
+            const currentOpacity = document.getElementById('zoneOpacitySlider') ? parseFloat(document.getElementById('zoneOpacitySlider').value) : 0.7;
             const newPoly = new fabric.Polygon([...polyPoints], {
                 fill: 'rgba(56, 189, 248, 0.2)',
                 stroke: '#38bdf8',
                 strokeWidth: 2,
+                opacity: currentOpacity,
                 selectable: true,
                 evented: true,
                 zoneName: 'New Zone' // custom property for analytics
@@ -411,7 +434,8 @@ const MapBuilderModule = (function () {
                     opacity: parseFloat(currentOpacity),
                     selectable: false,
                     evented: false,
-                    isTracingImage: true
+                    isTracingImage: true,
+                    excludeFromExport: true
                 });
                 
                 // Scale to fit canvas width
@@ -441,6 +465,16 @@ const MapBuilderModule = (function () {
     function changeMapOpacity(val) {
         const img = document.getElementById('iiotFloorplanImg');
         if (img) img.style.opacity = val;
+    }
+
+    function changeZoneOpacity(val) {
+        if (!canvas) return;
+        canvas.getObjects().forEach(obj => {
+            if (obj.type === 'rect' || obj.type === 'polygon') {
+                obj.set('opacity', parseFloat(val));
+            }
+        });
+        canvas.renderAll();
     }
 
     function clearTracing() {
@@ -528,6 +562,7 @@ const MapBuilderModule = (function () {
         saveMap,
         uploadTracingImage,
         changeTracingOpacity,
+        changeZoneOpacity,
         changeMapOpacity,
         clearTracing,
         toggleLayer,
