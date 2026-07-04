@@ -165,14 +165,20 @@ try {
             $locToUse = $locationId ?: $job['location_id'];
             $lotToUse = $lotNo ?: $job['job_no'];
 
-            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile']);
-            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile']);
-            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile']);
+            $uniqToken = uniqid(' [TXN:');
+            $noteWithToken = $note . $uniqToken . ']';
 
-            // Update machine_id since SP doesn't take it
+            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $lotToUse, $noteWithToken, $ts, $st, $et, $userId, 'Mobile']);
+            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $lotToUse, $noteWithToken, $ts, $st, $et, $userId, 'Mobile']);
+            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $lotToUse, $noteWithToken, $ts, $st, $et, $userId, 'Mobile']);
+
+            // Update machine_id since SP doesn't take it, and remove token to keep notes clean
             if ($machineId) {
-                $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET machine_id = ? WHERE notes = ?")
-                    ->execute([$machineId, $note]);
+                $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET machine_id = ?, notes = ? WHERE notes = ?")
+                    ->execute([$machineId, $note, $noteWithToken]);
+            } else {
+                $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET notes = ? WHERE notes = ?")
+                    ->execute([$note, $noteWithToken]);
             }
 
         } else {
@@ -301,13 +307,19 @@ try {
                 $note = $oldTxn['notes'] . " (Edited)";
                 $locToUse = $locationId ?: $job['location_id'];
 
-                if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile']);
-                if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile']);
-                if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile']);
+                $uniqToken = uniqid(' [TXN:');
+                $noteWithToken = $note . $uniqToken . ']';
+
+                if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $noteWithToken, $ts, $st, $et, $userId, 'Mobile']);
+                if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $noteWithToken, $ts, $st, $et, $userId, 'Mobile']);
+                if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $noteWithToken, $ts, $st, $et, $userId, 'Mobile']);
 
                 if ($machineId) {
-                    $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET machine_id = ? WHERE notes = ?")
-                        ->execute([$machineId, $note]);
+                    $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET machine_id = ?, notes = ? WHERE notes = ?")
+                        ->execute([$machineId, $note, $noteWithToken]);
+                } else {
+                    $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET notes = ? WHERE notes = ?")
+                        ->execute([$note, $noteWithToken]);
                 }
             }
         } else {

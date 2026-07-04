@@ -114,19 +114,20 @@
                 <table class="pe-table" id="iiotMachineSummaryTable">
                     <thead>
                         <tr>
-                            <th>Machine</th>
-                            <th class="pe-text-end">Online Time (hrs)</th>
-                            <th class="pe-text-end">Offline Time (hrs)</th>
-                            <th class="pe-text-end">Total Output</th>
-                            <th class="pe-text-end">Defects</th>
-                            <th class="pe-text-end">Availability</th>
-                            <th class="pe-text-end">Performance</th>
-                            <th class="pe-text-end">Quality</th>
-                            <th class="pe-text-end">OEE</th>
+                            <th class="px-6 py-4 font-bold text-gray-500 dark:text-gray-400">MACHINE</th>
+                            <th class="px-6 py-4 font-bold text-gray-500 dark:text-gray-400 text-center">ONLINE TIME (HRS)</th>
+                            <th class="px-6 py-4 font-bold text-gray-500 dark:text-gray-400 text-center">OFFLINE TIME (HRS)</th>
+                            <th class="px-6 py-4 font-bold text-gray-500 dark:text-gray-400 text-right">TOTAL STROKES</th>
+                            <th class="px-6 py-4 font-bold text-blue-500 dark:text-blue-400 text-right bg-blue-50 dark:bg-blue-900/10">ERP PROD. (PCS)</th>
+                            <th class="px-6 py-4 font-bold text-gray-500 dark:text-gray-400 text-right">DEFECTS</th>
+                            <th class="px-6 py-4 font-bold text-gray-500 dark:text-gray-400 text-right w-32">AVAILABILITY</th>
+                            <th class="px-6 py-4 font-bold text-gray-500 dark:text-gray-400 text-right w-32">PERFORMANCE</th>
+                            <th class="px-6 py-4 font-bold text-gray-500 dark:text-gray-400 text-right w-32">QUALITY</th>
+                            <th class="px-6 py-4 font-bold text-gray-500 dark:text-gray-400 text-right w-24">OEE</th>
                         </tr>
                     </thead>
                     <tbody id="iiotMachineSummaryBody">
-                        <tr><td colspan="9" class="pe-text-center pe-text-muted" style="padding:40px;">Loading...</td></tr>
+                        <tr><td colspan="10" class="pe-text-center pe-text-muted" style="padding:40px;">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>

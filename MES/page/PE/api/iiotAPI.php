@@ -738,6 +738,58 @@ case 'get_historical_iiot_analytics':
             
                 SELECT 
                     m.machine_code, 
+                    'ERP_FG' as transaction_type, 
+                    CAST(DATEADD(hour, -8, t.transaction_timestamp) AS DATE) as shift_date,
+                    SUM(ABS(t.quantity)) as qty
+                FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
+                INNER JOIN PE_MACHINES m WITH (NOLOCK) ON t.machine_id = m.machine_id
+                WHERE t.transaction_type = 'PRODUCTION_FG'
+                  AND (m.mqtt_topic IS NOT NULL AND m.mqtt_topic != '')
+                  AND t.transaction_timestamp >= ? AND t.transaction_timestamp < ?
+";
+
+            $prodParams[] = $startStr;
+            $prodParams[] = $endStr;
+
+            if ($machineFilter) {
+                $sqlProd .= " AND m.machine_code = ?";
+                $prodParams[] = $machineFilter;
+            } else if ($lineFilter) {
+                $sqlProd .= " AND m.line = ?";
+                $prodParams[] = $lineFilter;
+            }
+            $sqlProd .= " GROUP BY m.machine_code, t.transaction_type, CAST(DATEADD(hour, -8, t.transaction_timestamp) AS DATE)
+            
+            UNION ALL
+            
+                SELECT 
+                    CONCAT(loc.production_line, ' (Unassigned)') as machine_code, 
+                    'ERP_FG' as transaction_type, 
+                    CAST(DATEADD(hour, -8, t.transaction_timestamp) AS DATE) as shift_date,
+                    SUM(ABS(t.quantity)) as qty
+                FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
+                INNER JOIN LOCATIONS loc WITH (NOLOCK) ON t.to_location_id = loc.location_id
+                WHERE t.transaction_type = 'PRODUCTION_FG'
+                  AND t.machine_id IS NULL
+                  AND t.transaction_timestamp >= ? AND t.transaction_timestamp < ?
+";
+
+            $prodParams[] = $startStr;
+            $prodParams[] = $endStr;
+
+            if ($machineFilter) {
+                // Hide unassigned if filtering by specific machine
+                $sqlProd .= " AND 1=0";
+            } else if ($lineFilter) {
+                $sqlProd .= " AND loc.production_line = ?";
+                $prodParams[] = $lineFilter;
+            }
+            $sqlProd .= " GROUP BY loc.production_line, t.transaction_type, CAST(DATEADD(hour, -8, t.transaction_timestamp) AS DATE)
+            
+            UNION ALL
+            
+                SELECT 
+                    m.machine_code, 
                     t.transaction_type, 
                     CAST(DATEADD(hour, -8, t.transaction_timestamp) AS DATE) as shift_date,
                     SUM(ABS(t.quantity)) as qty
@@ -759,7 +811,32 @@ case 'get_historical_iiot_analytics':
                 $sqlProd .= " AND m.line = ?";
                 $prodParams[] = $lineFilter;
             }
-            $sqlProd .= " GROUP BY m.machine_code, t.transaction_type, CAST(DATEADD(hour, -8, t.transaction_timestamp) AS DATE)";
+            $sqlProd .= " GROUP BY m.machine_code, t.transaction_type, CAST(DATEADD(hour, -8, t.transaction_timestamp) AS DATE)
+            
+            UNION ALL
+            
+                SELECT 
+                    CONCAT(loc.production_line, ' (Unassigned)') as machine_code, 
+                    t.transaction_type, 
+                    CAST(DATEADD(hour, -8, t.transaction_timestamp) AS DATE) as shift_date,
+                    SUM(ABS(t.quantity)) as qty
+                FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
+                INNER JOIN LOCATIONS loc WITH (NOLOCK) ON t.to_location_id = loc.location_id
+                WHERE t.transaction_type IN ('PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
+                  AND t.machine_id IS NULL
+                  AND t.transaction_timestamp >= ? AND t.transaction_timestamp < ?
+";
+            
+            $prodParams[] = $startStr;
+            $prodParams[] = $endStr;
+            
+            if ($machineFilter) {
+                $sqlProd .= " AND 1=0";
+            } else if ($lineFilter) {
+                $sqlProd .= " AND loc.production_line = ?";
+                $prodParams[] = $lineFilter;
+            }
+            $sqlProd .= " GROUP BY loc.production_line, t.transaction_type, CAST(DATEADD(hour, -8, t.transaction_timestamp) AS DATE)";
             
             $stmt = $pdo->prepare($sqlProd);
             $stmt->execute($prodParams);
@@ -767,6 +844,20 @@ case 'get_historical_iiot_analytics':
 
             $trendData = [];
             $machineData = [];
+            
+            // Ensure all lines have an Unassigned entry
+            $uniqueLines = [];
+            foreach ($machines as $m) {
+                if ($m['line']) $uniqueLines[$m['line']] = true;
+            }
+            foreach (array_keys($uniqueLines) as $line) {
+                $mc = $line . ' (Unassigned)';
+                $machineData[$mc] = [
+                    'machine_code' => $mc,
+                    'online_seconds' => 0, 'offline_seconds' => 0,
+                    'output' => 0, 'defects' => 0, 'expected_output' => 0, 'erp_output' => 0
+                ];
+            }
 
             // Initialize days
             $currTs = $startTs;
@@ -784,9 +875,10 @@ case 'get_historical_iiot_analytics':
 
             foreach ($prodLogs as $log) {
                 $mc = $log['machine_code'];
-                if (!$mc || !isset($machines[$mc])) continue;
+                $isUnassigned = strpos($mc, '(Unassigned)') !== false;
+                if (!$isUnassigned && (!$mc || !isset($machines[$mc]))) continue;
                 
-                $line = $machines[$mc]['line'];
+                $line = $isUnassigned ? str_replace(' (Unassigned)', '', $mc) : $machines[$mc]['line'];
                 $dateKey = $log['shift_date'];
                 $ttype = $log['transaction_type'];
                 
@@ -794,20 +886,25 @@ case 'get_historical_iiot_analytics':
                     $machineData[$mc] = [
                         'machine_code' => $mc,
                         'online_seconds' => 0, 'offline_seconds' => 0,
-                        'output' => 0, 'defects' => 0, 'expected_output' => 0
+                        'output' => 0, 'defects' => 0, 'expected_output' => 0, 'erp_output' => 0
                     ];
                 }
                 
                 $qty = (int)$log['qty'];
                 $strokes = $machineSpecs[$mc]['strokes'] ?? 1;
-                $netQty = ($strokes > 1) ? floor($qty / $strokes) : $qty;
                 
                 if ($ttype === 'PRODUCTION_FG') {
+                    // IIoT Strokes
+                    $netQty = ($strokes > 1) ? floor($qty / $strokes) : $qty;
                     if (isset($trendData[$dateKey])) $trendData[$dateKey]['output'] += $netQty;
                     $machineData[$mc]['output'] += $netQty;
+                } else if ($ttype === 'ERP_FG') {
+                    // ERP FG is pieces, don't divide by strokes
+                    $machineData[$mc]['erp_output'] += $qty;
                 } else {
-                    if (isset($trendData[$dateKey])) $trendData[$dateKey]['defects'] += $netQty;
-                    $machineData[$mc]['defects'] += $netQty;
+                    // Defects from STOCK_TRANSACTIONS are pieces, don't divide by strokes
+                    if (isset($trendData[$dateKey])) $trendData[$dateKey]['defects'] += $qty;
+                    $machineData[$mc]['defects'] += $qty;
                 }
             }
 
