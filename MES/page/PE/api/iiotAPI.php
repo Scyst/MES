@@ -3,7 +3,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../db.php';
 $action = $_GET['action'] ?? '';
-if ($action === 'update_telemetry') {
+if ($action === 'update_telemetry' || $action === 'snapshot_iiot_telemetry') {
     define('ALLOW_GUEST_ACCESS', true);
 }
 
@@ -746,7 +746,7 @@ try {
                 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='PE_IIOT_TELEMETRY_HISTORY' and xtype='U')
                 CREATE TABLE PE_IIOT_TELEMETRY_HISTORY (
                     id INT IDENTITY(1,1) PRIMARY KEY,
-                    snapshot_date DATE NOT NULL,
+                    snapshot_time DATETIME NOT NULL,
                     machine_code VARCHAR(50) NOT NULL,
                     live_counter INT NOT NULL,
                     shift_baseline_counter INT NOT NULL,
@@ -755,22 +755,22 @@ try {
             ";
             $pdo->exec($createSql);
             
-            // 2. Check if a snapshot for today already exists to prevent duplicates
-            $checkStmt = $pdo->query("SELECT COUNT(*) FROM PE_IIOT_TELEMETRY_HISTORY WHERE snapshot_date = CAST(GETDATE() AS DATE)");
+            // 2. Check if a snapshot for THIS HOUR already exists to prevent duplicates
+            $checkStmt = $pdo->query("SELECT COUNT(*) FROM PE_IIOT_TELEMETRY_HISTORY WHERE FORMAT(snapshot_time, 'yyyy-MM-dd HH:00:00') = FORMAT(GETDATE(), 'yyyy-MM-dd HH:00:00')");
             if ($checkStmt->fetchColumn() > 0) {
-                echo json_encode(['success' => false, 'message' => 'Snapshot for today already exists.']);
+                echo json_encode(['success' => false, 'message' => 'Snapshot for this hour already exists.']);
                 break;
             }
             
-            // 3. Take snapshot
+            // 3. Take snapshot for the current hour
             $insertSql = "
-                INSERT INTO PE_IIOT_TELEMETRY_HISTORY (snapshot_date, machine_code, live_counter, shift_baseline_counter)
-                SELECT CAST(GETDATE() AS DATE), machine_code, live_counter, shift_baseline_counter
+                INSERT INTO PE_IIOT_TELEMETRY_HISTORY (snapshot_time, machine_code, live_counter, shift_baseline_counter)
+                SELECT CAST(FORMAT(GETDATE(), 'yyyy-MM-dd HH:00:00') AS DATETIME), machine_code, live_counter, shift_baseline_counter
                 FROM PE_IIOT_TELEMETRY
             ";
             $pdo->exec($insertSql);
             
-            echo json_encode(['success' => true, 'message' => 'Snapshot taken successfully.']);
+            echo json_encode(['success' => true, 'message' => 'Hourly snapshot taken successfully.']);
             break;
 
         default:
