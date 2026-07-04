@@ -3,6 +3,8 @@ const AnalyticsModule = (() => {
     let chartTrend = null;
     let chartPareto = null;
     let chartWOStatus = null;
+    let chartCostDrivers = null;
+    let activeCauseFilter = '';
 
     async function loadAll() {
         await Promise.all([
@@ -10,8 +12,17 @@ const AnalyticsModule = (() => {
             loadTrend(),
             loadPareto(),
             loadTopMachines(),
-            loadWOStatus()
+            loadWOStatus(),
+            loadCostDrivers(),
+            loadTechnicianStats(),
+            loadPredictiveRisk()
         ]);
+    }
+
+    function clearCauseFilter() {
+        activeCauseFilter = '';
+        document.getElementById('topMachineFilterBadge').style.display = 'none';
+        loadTopMachines();
     }
 
     function getFilters() {
@@ -25,6 +36,7 @@ const AnalyticsModule = (() => {
     function setPeriod(period) {
         const now = new Date();
         let start;
+        let end = now;
 
         switch (period) {
             case 'today':
@@ -34,6 +46,10 @@ const AnalyticsModule = (() => {
                 start.setDate(now.getDate() - now.getDay() + 1); break;
             case 'month':
                 start = new Date(now.getFullYear(), now.getMonth(), 1); break;
+            case 'last_month':
+                start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                end = new Date(now.getFullYear(), now.getMonth(), 0); 
+                break;
             case 'quarter':
                 const q = Math.floor(now.getMonth() / 3);
                 start = new Date(now.getFullYear(), q * 3, 1); break;
@@ -41,8 +57,13 @@ const AnalyticsModule = (() => {
                 start = new Date(now.getFullYear(), now.getMonth(), 1);
         }
 
-        document.getElementById('analyticsStartDate').value = start.toISOString().slice(0, 10);
-        document.getElementById('analyticsEndDate').value = now.toISOString().slice(0, 10);
+        const formatLocal = d => {
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        };
+
+        document.getElementById('analyticsStartDate').value = formatLocal(start);
+        document.getElementById('analyticsEndDate').value = formatLocal(end);
 
         // Update chip active state
         document.querySelectorAll('#panel-analytics .pe-chip').forEach(c => c.classList.remove('active'));
@@ -198,9 +219,22 @@ const AnalyticsModule = (() => {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            activeCauseFilter = labels[index];
+                            const badge = document.getElementById('topMachineFilterBadge');
+                            if (badge) {
+                                badge.style.display = 'inline-block';
+                                document.getElementById('topMachineFilterText').innerText = activeCauseFilter;
+                            }
+                            loadTopMachines();
+                        }
+                    },
                     plugins: { 
                         datalabels: { display: false },
-                        legend: { labels: { font: { size: 11 }, usePointStyle: true } } 
+                        legend: { labels: { font: { size: 11 }, usePointStyle: true } },
+                        tooltip: { mode: 'index', intersect: false }
                     },
                     scales: {
                         y: { beginAtZero: true, title: { display: true, text: 'Minutes', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
@@ -215,6 +249,9 @@ const AnalyticsModule = (() => {
     async function loadTopMachines() {
         try {
             const f = getFilters();
+            if (activeCauseFilter) {
+                f.causeCategory = activeCauseFilter;
+            }
             const res = await PEApp.apiCall('analyticsAPI.php', { action: 'get_top_machines', ...f });
             const data = res.data || [];
 
@@ -283,6 +320,135 @@ const AnalyticsModule = (() => {
         } catch (e) { console.error('WO Status Error:', e); }
     }
 
+    async function loadCostDrivers() {
+        try {
+            const f = getFilters();
+            const res = await PEApp.apiCall('analyticsAPI.php', { action: 'get_cost_drivers', ...f });
+            const data = res.data || [];
+
+            const labels = data.map(d => PEApp.escapeHtml(d.machine_name || 'N/A'));
+            const partsCost = data.map(d => Number(d.parts_cost) || 0);
+            const laborCost = data.map(d => Number(d.labor_cost) || 0);
+
+            const ctx = document.getElementById('chartCostDrivers');
+            if (!ctx) return;
+
+            if (chartCostDrivers) chartCostDrivers.destroy();
+            chartCostDrivers = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Parts Cost', data: partsCost, backgroundColor: '#3b82f6', borderRadius: 4 },
+                        { label: 'Labor Cost', data: laborCost, backgroundColor: '#10b981', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            stacked: true, 
+                            grid: { display: false }, 
+                            ticks: { 
+                                font: { size: 10 },
+                                maxRotation: 45,
+                                minRotation: 45,
+                                callback: function(value, index, values) {
+                                    const label = this.getLabelForValue(value);
+                                    if (label && label.length > 6) {
+                                        return label.substring(0, 6) + '...';
+                                    }
+                                    return label;
+                                }
+                            } 
+                        },
+                        y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Baht (฿)', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+                    },
+                    plugins: {
+                        datalabels: { display: false },
+                        legend: { position: 'bottom', labels: { font: { size: 11 }, usePointStyle: true } },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label; // Shows full label on hover (Chart.js preserves the original label in tooltip)
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (e) { console.error('Cost Drivers Error:', e); }
+    }
+
+    async function loadTechnicianStats() {
+        try {
+            const f = getFilters();
+            const res = await PEApp.apiCall('analyticsAPI.php', { action: 'get_technician_performance', ...f });
+            const data = res.data || [];
+
+            const tbody = document.getElementById('techPerformanceBody');
+            if (!tbody) return;
+
+            if (!data.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="pe-text-center pe-text-muted" style="padding:40px;">No data</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map((d, i) => {
+                const total = Number(d.total_wo) || 0;
+                const completed = Number(d.completed_wo) || 0;
+                const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+                
+                return `
+                <tr>
+                    <td class="pe-text-muted pe-fw-bold">${i + 1}</td>
+                    <td class="pe-fw-bold">${PEApp.escapeHtml(d.tech_name || '-')}</td>
+                    <td class="pe-text-center">${total}</td>
+                    <td class="pe-text-center pe-fw-bold" style="color:var(--pe-success);">${completed}</td>
+                    <td class="pe-text-end">
+                        <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px;">
+                            <span>${pct}%</span>
+                            <div style="background:var(--pe-border-light);border-radius:4px;height:6px;width:60px;overflow:hidden;">
+                                <div style="background:var(--pe-success);width:${pct}%;height:100%;border-radius:4px;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="pe-text-end">${Math.round(Number(d.avg_repair) || 0)}</td>
+                </tr>`;
+            }).join('');
+        } catch (e) { console.error('Technician Stats Error:', e); }
+    }
+
+    async function loadPredictiveRisk() {
+        try {
+            const f = getFilters();
+            const res = await PEApp.apiCall('analyticsAPI.php', { action: 'get_predictive_risk', ...f });
+            const data = res.data || [];
+
+            const container = document.getElementById('predictiveRiskContainer');
+            const alertBox = document.getElementById('predictiveRiskAlerts');
+            if (!container || !alertBox) return;
+
+            if (!data.length) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+            alertBox.innerHTML = data.map(d => {
+                const color = d.risk_level === 'Critical' ? 'var(--pe-danger)' : (d.risk_level === 'High' ? 'var(--pe-warning)' : 'var(--pe-secondary)');
+                const textColor = d.risk_level === 'Critical' ? 'white' : 'black';
+                return `
+                <span class="badge" style="background-color: ${color}; color: ${textColor}; font-size: 0.85rem; padding: 6px 12px; border: 1px solid rgba(0,0,0,0.1);">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    ${PEApp.escapeHtml(d.machine_name)} 
+                    <span style="opacity: 0.8; font-weight: normal; margin-left: 4px;">(${d.risk_level} Risk: ${d.event_count} breakdowns)</span>
+                </span>`;
+            }).join('');
+        } catch (e) { console.error('Predictive Risk Error:', e); }
+    }
+
     // Init date defaults
     document.addEventListener('DOMContentLoaded', () => {
         const now = new Date();
@@ -293,5 +459,5 @@ const AnalyticsModule = (() => {
         if (endEl && !endEl.value) endEl.value = now.toISOString().slice(0, 10);
     });
 
-    return { loadAll, setPeriod };
+    return { loadAll, setPeriod, clearCauseFilter };
 })();

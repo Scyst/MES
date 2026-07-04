@@ -309,16 +309,34 @@ try {
                 ];
             }
             
-            // For each machine, get Live Counter (from IIoT) and Planned Output (from Routes)
+            // For each machine, get Live Counter (from IIoT or History) and Planned Output (from Routes)
             foreach ($machineStats as $mc => &$stats) {
-                // Get Live Counter (Calculate Net Production using Baseline)
-                $telStmt = $pdo->prepare("SELECT live_counter, shift_baseline_counter FROM PE_IIOT_TELEMETRY WITH (NOLOCK) WHERE machine_code = ?");
-                $telStmt->execute([$mc]);
-                $tel = $telStmt->fetch(PDO::FETCH_ASSOC);
-                
-                $live = $tel ? (int)$tel['live_counter'] : 0;
-                $base = $tel ? (int)$tel['shift_baseline_counter'] : 0;
-                $stats['live_counter'] = ($live >= $base) ? ($live - $base) : $live;
+                // Determine whether to get Live Telemetry (Today) or Historical Production
+                if ($reqDate && $reqDate < date('Y-m-d')) {
+                    // Fetch from STOCK_TRANSACTIONS (PRODUCTION_FG)
+                    $histProdSql = "
+                        SELECT ISNULL(SUM(ABS(t.quantity)), 0) as good_prod
+                        FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
+                        LEFT JOIN LOCATIONS l WITH (NOLOCK) ON t.to_location_id = l.location_id
+                        LEFT JOIN PE_MACHINES m WITH (NOLOCK) ON l.production_line = m.line
+                        WHERE m.machine_code = ? 
+                          AND t.transaction_type = 'PRODUCTION_FG'
+                          AND t.transaction_timestamp >= ? AND t.transaction_timestamp < ?
+                    ";
+                    $histProdStmt = $pdo->prepare($histProdSql);
+                    $histProdStmt->execute([$mc, $shiftStartDateStr, $shiftEndDateStr]);
+                    $histProd = $histProdStmt->fetch(PDO::FETCH_ASSOC);
+                    $stats['live_counter'] = $histProd ? (int)$histProd['good_prod'] : 0;
+                } else {
+                    // Get Live Counter (Calculate Net Production using Baseline)
+                    $telStmt = $pdo->prepare("SELECT live_counter, shift_baseline_counter FROM PE_IIOT_TELEMETRY WITH (NOLOCK) WHERE machine_code = ?");
+                    $telStmt->execute([$mc]);
+                    $tel = $telStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    $live = $tel ? (int)$tel['live_counter'] : 0;
+                    $base = $tel ? (int)$tel['shift_baseline_counter'] : 0;
+                    $stats['live_counter'] = ($live >= $base) ? ($live - $base) : $live;
+                }
                 
                 // Get planned output and strokes for the current active item on this machine
                 // (Approximation: average planned output for this line)
@@ -664,12 +682,87 @@ try {
                 ];
             }
             
+            // Post-process to merge small gaps and identical adjacent statuses
+            $MERGE_GAP_TOLERANCE = 300; // 5 minutes in seconds
+            foreach ($timeline as $mc => $mcLogs) {
+                if (empty($mcLogs)) continue;
+                $merged = [];
+                $current = null;
+                
+                // Sort by start time just in case (should already be sorted by SQL)
+                usort($mcLogs, function($a, $b) { return $a['start'] - $b['start']; });
+                
+                foreach ($mcLogs as $log) {
+                    if (!$current) {
+                        $current = $log;
+                        continue;
+                    }
+                    
+                    $gap = $log['start'] - $current['end'];
+                    
+                    if ($gap <= $MERGE_GAP_TOLERANCE) {
+                        if ($current['status'] === $log['status']) {
+                            // Same status: Merge into one continuous block
+                            $current['end'] = max($current['end'], $log['end']);
+                            $current['duration'] = $current['end'] - $current['start'];
+                        } else {
+                            // Different status: Eliminate gap by extending the current block to the start of the next block
+                            $current['end'] = $log['start'];
+                            $current['duration'] = $current['end'] - $current['start'];
+                            $merged[] = $current;
+                            $current = $log;
+                        }
+                    } else {
+                        // Gap is larger than tolerance, leave it as an OFFLINE gap
+                        $merged[] = $current;
+                        $current = $log;
+                    }
+                }
+                if ($current) {
+                    $merged[] = $current;
+                }
+                $timeline[$mc] = $merged;
+            }
+            
             echo json_encode([
                 'success' => true, 
                 'shift_start' => $shiftStart,
                 'shift_end' => $shiftEnd,
                 'data' => $timeline
             ]);
+            break;
+            
+        case 'snapshot_iiot_telemetry':
+            // 1. Ensure history table exists
+            $createSql = "
+                IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='PE_IIOT_TELEMETRY_HISTORY' and xtype='U')
+                CREATE TABLE PE_IIOT_TELEMETRY_HISTORY (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    snapshot_date DATE NOT NULL,
+                    machine_code VARCHAR(50) NOT NULL,
+                    live_counter INT NOT NULL,
+                    shift_baseline_counter INT NOT NULL,
+                    created_at DATETIME DEFAULT GETDATE()
+                );
+            ";
+            $pdo->exec($createSql);
+            
+            // 2. Check if a snapshot for today already exists to prevent duplicates
+            $checkStmt = $pdo->query("SELECT COUNT(*) FROM PE_IIOT_TELEMETRY_HISTORY WHERE snapshot_date = CAST(GETDATE() AS DATE)");
+            if ($checkStmt->fetchColumn() > 0) {
+                echo json_encode(['success' => false, 'message' => 'Snapshot for today already exists.']);
+                break;
+            }
+            
+            // 3. Take snapshot
+            $insertSql = "
+                INSERT INTO PE_IIOT_TELEMETRY_HISTORY (snapshot_date, machine_code, live_counter, shift_baseline_counter)
+                SELECT CAST(GETDATE() AS DATE), machine_code, live_counter, shift_baseline_counter
+                FROM PE_IIOT_TELEMETRY
+            ";
+            $pdo->exec($insertSql);
+            
+            echo json_encode(['success' => true, 'message' => 'Snapshot taken successfully.']);
             break;
 
         default:

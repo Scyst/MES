@@ -61,12 +61,18 @@ try {
                 $conditions[] = "W.line = ?";
                 $params[] = $_GET['line'];
             }
-            if (!empty($_GET['startDate']) && !$isActiveFilter) {
-                $conditions[] = "W.requested_at >= ?";
+            $dateType = $_GET['dateType'] ?? 'requested_at';
+            $validDateTypes = ['requested_at', 'assigned_at', 'completed_at', 'updated_at'];
+            if (!in_array($dateType, $validDateTypes)) {
+                $dateType = 'requested_at';
+            }
+
+            if (!empty($_GET['startDate'])) {
+                $conditions[] = "W.$dateType >= ?";
                 $params[] = $_GET['startDate'];
             }
-            if (!empty($_GET['endDate']) && !$isActiveFilter) {
-                $conditions[] = "W.requested_at < DATEADD(DAY, 1, CAST(? AS DATE))";
+            if (!empty($_GET['endDate'])) {
+                $conditions[] = "W.$dateType < DATEADD(DAY, 1, CAST(? AS DATE))";
                 $params[] = $_GET['endDate'];
             }
 

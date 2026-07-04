@@ -181,6 +181,43 @@ const IIoTOeeModule = (function() {
                     updateChart(perfChart, 0, '#ef4444');
                     updateChart(qualChart, 0, '#ef4444');
                 }
+
+                // Render Per-Machine Table
+                const tbody = document.getElementById('iiotOeeTableBody');
+                if (tbody) {
+                    const keys = Object.keys(data.data);
+                    if (keys.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No machine data available for this period.</td></tr>';
+                    } else {
+                        const displayKeys = mc ? (data.data[mc] ? [mc] : []) : keys.sort();
+                        
+                        if (displayKeys.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No data for selected machine.</td></tr>';
+                        } else {
+                            tbody.innerHTML = displayKeys.map(k => {
+                                const mData = data.data[k];
+                                const oeeVal = mData.oee || 0;
+                                const availVal = mData.availability || 0;
+                                const perfVal = mData.performance || 0;
+                                const qualVal = mData.quality || 0;
+                                
+                                const badgeColor = oeeVal >= 80 ? 'success' : (oeeVal >= 60 ? 'warning' : 'danger');
+                                
+                                return `
+                                <tr>
+                                    <td><span class="fw-bold">${k}</span></td>
+                                    <td class="text-center">${availVal.toFixed(1)}%</td>
+                                    <td class="text-center">${perfVal.toFixed(1)}%</td>
+                                    <td class="text-center">${qualVal.toFixed(1)}%</td>
+                                    <td class="text-center"><span class="badge bg-${badgeColor}" style="font-size:0.9rem;">${oeeVal.toFixed(1)}%</span></td>
+                                    <td class="text-end">
+                                        <span class="text-dark fw-bold">${mData.live_counter || 0}</span> / <span class="text-danger">${mData.defects || 0}</span>
+                                    </td>
+                                </tr>`;
+                            }).join('');
+                        }
+                    }
+                }
             }
         } catch (e) {
             console.error('Failed to fetch OEE stats', e);

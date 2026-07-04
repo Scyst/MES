@@ -17,9 +17,10 @@ const WorkOrderModule = (() => {
             const line = document.getElementById('woFilterLine')?.value || '';
             const startDate = document.getElementById('woStartDate')?.value || '';
             const endDate = document.getElementById('woEndDate')?.value || '';
+            const dateType = document.getElementById('woDateFilterType')?.value || 'requested_at';
 
             const res = await PEApp.apiCall('workOrderAPI.php', {
-                action: 'get_work_orders', status, priority, line, startDate, endDate
+                action: 'get_work_orders', status, priority, line, startDate, endDate, dateType
             });
             allData = res.data || [];
             const summary = res.summary || {};
@@ -1264,6 +1265,20 @@ const WorkOrderModule = (() => {
         }
     }
 
+    function openFilterModal() {
+        const m = new bootstrap.Modal(document.getElementById('woFilterModal'));
+        m.show();
+    }
+
+    function resetFilters() {
+        document.getElementById('woFilterStatus').value = 'Active';
+        document.getElementById('woFilterPriority').value = '';
+        document.getElementById('woFilterLine').value = '';
+        document.getElementById('woDateFilterType').value = 'requested_at';
+        document.getElementById('woStartDate').value = '';
+        document.getElementById('woEndDate').value = '';
+    }
+
     function setupHelpers() {
         const statusEl = document.getElementById('woFrmStatus');
         const startEl = document.getElementById('woFrmStartedAt');
@@ -1300,6 +1315,7 @@ const WorkOrderModule = (() => {
         loadData, filterTable, setView, openModal, save, deleteItem, restoreItem, exportExcel, 
         onMachineChange, printPDF, openSparePartsModal, onSparePartChange, confirmIssuePart, deleteSparePart,
         quickAccept, quickStart, openQuickCloseModal, submitQuickClose,
-        dragStart, allowDrop, dragEnter, dragLeave, drop
+        dragStart, allowDrop, dragEnter, dragLeave, drop,
+        openFilterModal, resetFilters
     };
 })();

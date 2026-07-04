@@ -114,3 +114,35 @@
         </div>
     </div>
 </div>
+
+<!-- Per-Machine OEE Breakdown Table -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0" style="border-radius: 12px;">
+            <div class="card-header bg-white border-bottom-0 pt-3 pb-2 pe-d-flex pe-justify-between pe-align-center">
+                <h6 class="fw-bold mb-0"><i class="fas fa-list text-muted me-2"></i> Per-Machine OEE Breakdown</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0 pe-table">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 25%">Machine</th>
+                                <th class="text-center" style="width: 15%">Availability</th>
+                                <th class="text-center" style="width: 15%">Performance</th>
+                                <th class="text-center" style="width: 15%">Quality</th>
+                                <th class="text-center" style="width: 15%">OEE</th>
+                                <th class="text-end" style="width: 15%">Production / Defects</th>
+                            </tr>
+                        </thead>
+                        <tbody id="iiotOeeTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted p-4">Loading machine breakdown...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

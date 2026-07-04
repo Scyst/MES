@@ -39,35 +39,13 @@
             <i class="fas fa-search"></i>
             <input type="text" id="woSearchInput" placeholder="ค้นหา WO#, Machine, Issue..." oninput="WorkOrderModule.filterTable()">
         </div>
-        <button class="pe-btn pe-btn-ghost pe-mobile-filter-toggle" onclick="document.getElementById('woFilterBar').classList.toggle('expanded')" title="Toggle Filters">
+        <button class="pe-btn pe-btn-ghost pe-mobile-filter-toggle" onclick="WorkOrderModule.openFilterModal()" title="Open Filters">
             <i class="fas fa-filter"></i>
         </button>
     </div>
-    <select class="pe-filter-select filter-item" id="woFilterStatus" onchange="WorkOrderModule.loadData()">
-        <option value="Active" selected>Active (Open + In Progress)</option>
-        <option value="">All Status</option>
-        <option value="Open">Open</option>
-        <option value="Assigned">Assigned</option>
-        <option value="In Progress">In Progress</option>
-        <option value="Completed">Completed</option>
-        <option value="Cancelled">Cancelled</option>
-        <option value="Deleted">Deleted (ถังขยะ)</option>
-    </select>
-    <select class="pe-filter-select filter-item" id="woFilterPriority" onchange="WorkOrderModule.loadData()">
-        <option value="">ทุก Priority</option>
-        <option value="Critical">Critical</option>
-        <option value="High">High</option>
-        <option value="Normal">Normal</option>
-        <option value="Low">Low</option>
-    </select>
-    <select class="pe-filter-select filter-item" id="woFilterLine" onchange="WorkOrderModule.loadData()">
-        <option value="">ทุก Line</option>
-    </select>
-    <div class="pe-filter-date filter-item">
-        <input type="date" id="woStartDate" onchange="WorkOrderModule.loadData()">
-        <span class="separator">—</span>
-        <input type="date" id="woEndDate" onchange="WorkOrderModule.loadData()">
-    </div>
+    <button class="pe-btn d-none d-md-inline-flex align-items-center" onclick="WorkOrderModule.openFilterModal()" id="woFilterBtn" style="background-color: #ffffff; color: var(--pe-text-primary, #333); border: 1px solid var(--pe-border-color, #e0e0e0); box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-right: 8px;">
+        <i class="fas fa-filter text-muted"></i> <span class="ms-1 fw-medium">ตัวกรอง</span>
+    </button>
 
     <div class="pe-filter-spacer"></div>
 

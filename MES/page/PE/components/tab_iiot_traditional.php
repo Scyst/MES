@@ -68,9 +68,9 @@
 </div>
 
 <!-- Charts Row 1 -->
-<div class="pe-analytics-grid-row-2 pe-d-flex" style="margin-top: 16px; flex-wrap: wrap; gap: 16px;">
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-top: 16px; width: 100%;" class="trad-charts-container">
     <!-- Asset Health by Line Chart -->
-    <div class="pe-card pe-animate-in" style="flex: 2; min-width: 300px;">
+    <div class="pe-card pe-animate-in" style="min-width: 0;">
         <div class="pe-card-header" style="padding-bottom: 5px;">
             <h5 class="pe-m-0"><i class="fas fa-heartbeat pe-text-muted pe-me-2"></i> Asset Health by Line</h5>
         </div>
@@ -82,7 +82,7 @@
     </div>
 
     <!-- Machine Status Distribution -->
-    <div class="pe-card pe-animate-in" style="flex: 1; min-width: 300px;">
+    <div class="pe-card pe-animate-in" style="min-width: 0;">
         <div class="pe-card-header" style="padding-bottom: 5px;">
             <h5 class="pe-m-0"><i class="fas fa-chart-pie pe-text-muted pe-me-2"></i> Machine Status</h5>
         </div>
@@ -93,6 +93,13 @@
         </div>
     </div>
 </div>
+<style>
+    @media (max-width: 991px) {
+        .trad-charts-container {
+            grid-template-columns: 1fr !important;
+        }
+    }
+</style>
 
 <!-- Table Row 2 -->
 <div class="pe-card" style="margin-top: 16px;">

@@ -24,6 +24,7 @@
         <button class="pe-chip" onclick="AnalyticsModule.setPeriod('today')">Today</button>
         <button class="pe-chip" onclick="AnalyticsModule.setPeriod('week')">This Week</button>
         <button class="pe-chip active" onclick="AnalyticsModule.setPeriod('month')">This Month</button>
+        <button class="pe-chip" onclick="AnalyticsModule.setPeriod('last_month')">Last Month</button>
         <button class="pe-chip" onclick="AnalyticsModule.setPeriod('quarter')">This Quarter</button>
         <button class="pe-btn pe-btn-ghost pe-btn-sm ms-2" onclick="window.print()" title="Export PDF / Print" style="border-color:var(--pe-text-muted); color:var(--pe-text-primary);">
             <i class="fas fa-print me-1"></i> Executive Report
@@ -103,9 +104,12 @@
 <div class="pe-analytics-grid-row-2">
     
     <!-- Top Problematic Machines -->
-    <div class="pe-card">
-        <div class="pe-card-header">
-            <h6><i class="fas fa-exclamation-triangle"></i> Top Problematic Machines</h6>
+    <div class="pe-card" style="position: relative;">
+        <div class="pe-card-header pe-d-flex pe-align-center" style="justify-content: space-between;">
+            <h6 style="margin: 0;"><i class="fas fa-exclamation-triangle"></i> Top Problematic Machines</h6>
+            <span id="topMachineFilterBadge" class="badge bg-warning text-dark" style="display: none; cursor: pointer;" onclick="AnalyticsModule.clearCauseFilter()" title="Click to clear filter">
+                <i class="fas fa-filter"></i> <span id="topMachineFilterText">Filter</span> <i class="fas fa-times ms-1"></i>
+            </span>
         </div>
         <div class="pe-card-body p-0">
             <div style="overflow-x:auto; max-height:320px;">
@@ -138,6 +142,45 @@
             <canvas id="chartWOStatus" height="250" style="max-width:280px;"></canvas>
         </div>
     </div>
+
+    <!-- Top Cost Drivers -->
+    <div class="pe-card">
+        <div class="pe-card-header">
+            <h6><i class="fas fa-coins"></i> Top Cost Drivers</h6>
+        </div>
+        <div class="pe-card-body">
+            <canvas id="chartCostDrivers" height="250"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Row 3 -->
+<div class="pe-analytics-grid-row-3">
+    <!-- Technician Performance -->
+    <div class="pe-card">
+        <div class="pe-card-header">
+            <h6><i class="fas fa-users-cog"></i> Technician Performance</h6>
+        </div>
+        <div class="pe-card-body p-0">
+            <div style="overflow-x:auto; max-height:300px;">
+                <table class="pe-table" id="techPerformanceTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Technician</th>
+                            <th class="pe-text-center">Total WO</th>
+                            <th class="pe-text-center">Completed</th>
+                            <th class="pe-text-end">Completion Rate</th>
+                            <th class="pe-text-end">Avg Repair Time (min)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="techPerformanceBody">
+                        <tr><td colspan="6" class="pe-text-center pe-text-muted" style="padding:40px;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Responsive fix for analytics charts -->
@@ -150,13 +193,39 @@
     }
     .pe-analytics-grid-row-2 {
         display: grid; 
-        grid-template-columns: 2fr 1fr; 
+        grid-template-columns: 2fr 1fr 1fr; 
         gap: 16px; 
         margin-bottom: 16px;
     }
+    .pe-analytics-grid-row-3 {
+        display: grid; 
+        grid-template-columns: 1fr; 
+        gap: 16px; 
+        margin-bottom: 16px;
+    }
+    @media (max-width: 1200px) {
+        .pe-analytics-grid-row-2 { grid-template-columns: 1fr 1fr; }
+    }
     @media (max-width: 991px) {
-        .pe-analytics-grid-row-1, .pe-analytics-grid-row-2 {
+        .pe-analytics-grid-row-1, .pe-analytics-grid-row-2, .pe-analytics-grid-row-3 {
             grid-template-columns: 1fr;
         }
+    }
+    
+    @media print {
+        body { background: white !important; }
+        .pe-sidebar, .pe-header, .pe-subnav, .pe-filter-bar { display: none !important; }
+        .pe-main-content { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+        .pe-card { border: 1px solid #ddd !important; box-shadow: none !important; margin-bottom: 20px !important; break-inside: avoid; }
+        .pe-analytics-grid-row-1, .pe-analytics-grid-row-2, .pe-analytics-grid-row-3 {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 16px !important;
+        }
+        .pe-analytics-grid-row-1 > div, .pe-analytics-grid-row-2 > div, .pe-analytics-grid-row-3 > div {
+            flex: 1 1 45% !important;
+        }
+        canvas { max-height: 250px !important; }
+        #predictiveRiskContainer { break-after: avoid; }
     }
 </style>
