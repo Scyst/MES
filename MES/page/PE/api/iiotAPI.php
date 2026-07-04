@@ -670,6 +670,8 @@ try {
                     $stateCat = 'RUNNING';
                 } else if (strpos($s, 'IDLE') !== false) {
                     $stateCat = 'IDLE';
+                } else if ($s === 'OFFLINE') {
+                    $stateCat = 'OFFLINE';
                 } else {
                     $stateCat = 'STOP';
                 }
@@ -684,6 +686,7 @@ try {
             
             // Post-process to merge small gaps and identical adjacent statuses
             $MERGE_GAP_TOLERANCE = 300; // 5 minutes in seconds
+            $IGNORE_OFFLINE_DURATION = 180; // Ignore OFFLINE blocks < 3 minutes
             foreach ($timeline as $mc => $mcLogs) {
                 if (empty($mcLogs)) continue;
                 $merged = [];
@@ -693,6 +696,11 @@ try {
                 usort($mcLogs, function($a, $b) { return $a['start'] - $b['start']; });
                 
                 foreach ($mcLogs as $log) {
+                    // Debounce: Skip short OFFLINE states so they become gaps and get merged
+                    if ($log['status'] === 'OFFLINE' && $log['duration'] <= $IGNORE_OFFLINE_DURATION) {
+                        continue;
+                    }
+
                     if (!$current) {
                         $current = $log;
                         continue;
