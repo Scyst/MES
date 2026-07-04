@@ -87,6 +87,10 @@ $pageTitle = "PE Enterprise";
                     <i class="fas fa-chart-line" style="color: #fcd34d;"></i>
                     <span class="nav-label">Traditional Dashboard</span>
                 </button>
+                <button class="pe-nav-item" data-tab="iiot_analytics" onclick="PEApp.switchTab('iiot_analytics')">
+                    <i class="fas fa-history" style="color: #a855f7;"></i>
+                    <span class="nav-label">IIoT Historical Analytics</span>
+                </button>
                 <button class="pe-nav-item" data-tab="analytics" onclick="PEApp.switchTab('analytics')">
                     <i class="fas fa-chart-line"></i>
                     <span class="nav-label">Maintenance Analytics</span>
@@ -180,9 +184,9 @@ $pageTitle = "PE Enterprise";
                 <?php include 'components/tab_iiot_traditional.php'; ?>
             </div>
 
-            <!-- IIoT OEE Tab -->
-            <div class="pe-tab-panel" id="panel-iiot_oee">
-                <?php include 'components/tab_iiot_oee.php'; ?>
+            <!-- IIoT Historical Analytics Tab -->
+            <div class="pe-tab-panel" id="panel-iiot_analytics">
+                <?php include 'components/tab_iiot_analytics.php'; ?>
             </div>
 
             <!-- Production Overview Tab -->
@@ -266,7 +270,7 @@ $pageTitle = "PE Enterprise";
 <script src="script/mapBuilderModule.js?v=<?php echo time(); ?>"></script>
 <script src="script/iiotModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotModule.js'); ?>"></script>
 <script src="script/iiotTraditionalModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotTraditionalModule.js'); ?>"></script>
-<script src="script/iiotOeeModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotOeeModule.js'); ?>"></script>
+<script src="script/iiotAnalyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotAnalyticsModule.js'); ?>"></script>
 <script src="script/productionOverviewModule.js?v=<?php echo filemtime(__DIR__ . '/script/productionOverviewModule.js'); ?>"></script>
 <script src="script/machineTimelineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineTimelineModule.js'); ?>"></script>
 

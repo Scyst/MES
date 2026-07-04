@@ -27,6 +27,10 @@ try {
             $conditions = [$isDeleted ? "is_active = 0" : "is_active = 1"];
             $params = [];
 
+            if (!empty($input['iiot_only']) || !empty($_GET['iiot_only'])) {
+                $conditions[] = "(mqtt_topic IS NOT NULL AND mqtt_topic != '')";
+            }
+
             if (!empty($_GET['line'])) {
                 $conditions[] = "line = ?";
                 $params[] = $_GET['line'];

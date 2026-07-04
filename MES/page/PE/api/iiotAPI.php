@@ -635,6 +635,277 @@ try {
 
             echo json_encode(['success' => true, 'data' => $overview]);
             break;
+case 'get_historical_iiot_analytics':
+            $startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-7 days'));
+            $endDate = $_GET['end_date'] ?? date('Y-m-d');
+            $machineFilter = $_GET['machine'] ?? null;
+            $lineFilter = $_GET['line'] ?? null;
+
+            $startTs = strtotime($startDate . ' 08:00:00');
+            $endTs = strtotime($endDate . ' 08:00:00 +1 day');
+
+            $startStr = date('Y-m-d H:i:s', $startTs);
+            $endStr = date('Y-m-d H:i:s', $endTs);
+
+            // 1. Get Uptime / Downtime from State Logs
+            $sqlAvail = "SELECT l.machine_code, l.status, l.start_time, l.end_time, l.duration_seconds 
+                         FROM PE_IIOT_STATE_LOG l WITH (NOLOCK)
+                         INNER JOIN PE_MACHINES m WITH (NOLOCK) ON l.machine_code = m.machine_code
+                         WHERE ((l.start_time >= ? AND l.start_time < ?) 
+                            OR (l.start_time < ? AND (l.end_time >= ? OR l.end_time IS NULL)))";
+            $params = [$startStr, $endStr, $startStr, $startStr];
+
+            if ($machineFilter) {
+                $sqlAvail .= " AND l.machine_code = ?";
+                $params[] = $machineFilter;
+            } else if ($lineFilter) {
+                $sqlAvail .= " AND m.line = ?";
+                $params[] = $lineFilter;
+            }
+
+            $stmt = $pdo->prepare($sqlAvail);
+            $stmt->execute($params);
+            $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 2. Fetch all unique machines & specs
+            $machines = [];
+            $sqlMachines = "SELECT machine_code, machine_name, line FROM PE_MACHINES WITH (NOLOCK) WHERE is_active = 1 AND (mqtt_topic IS NOT NULL AND mqtt_topic != '')";
+            $machParams = [];
+            
+            if ($machineFilter) {
+                $sqlMachines .= " AND machine_code = ?";
+                $machParams[] = $machineFilter;
+            } else if ($lineFilter) {
+                $sqlMachines .= " AND line = ?";
+                $machParams[] = $lineFilter;
+            }
+            
+            $stmtM = $pdo->prepare($sqlMachines);
+            $stmtM->execute($machParams);
+            foreach ($stmtM->fetchAll(PDO::FETCH_ASSOC) as $m) {
+                $machines[$m['machine_code']] = $m;
+            }
+
+            $routeStmt = $pdo->query("
+                SELECT m.machine_code, r.planned_output, ISNULL(i.strokes_per_part, 1) as strokes_per_part
+                FROM PE_MACHINES m WITH (NOLOCK)
+                LEFT JOIN MANUFACTURING_ROUTES r WITH (NOLOCK) ON m.line = r.line
+                LEFT JOIN ITEMS i WITH (NOLOCK) ON r.item_id = i.item_id
+                WHERE r.planned_output > 0
+            ");
+            $machineSpecs = [];
+            while ($row = $routeStmt->fetch(PDO::FETCH_ASSOC)) {
+                if (!isset($machineSpecs[$row['machine_code']])) {
+                    $machineSpecs[$row['machine_code']] = [
+                        'planned_output' => (float)$row['planned_output'],
+                        'strokes' => (int)$row['strokes_per_part']
+                    ];
+                }
+            }
+
+            // 3. Get Production (from IIoT Telemetry) and Defects (from Stock Transactions)
+            $sqlProd = "
+                SELECT 
+                    sub.machine_code, 
+                    'PRODUCTION_FG' as transaction_type, 
+                    CAST(sub.snapshot_time AS DATE) as shift_date,
+                    SUM(sub.strokes) as qty
+                FROM (
+                    SELECT 
+                        CAST(h.snapshot_time AS DATE) as snapshot_time,
+                        h.machine_code,
+                        h.shift_baseline_counter,
+                        (MAX(h.live_counter) - h.shift_baseline_counter) as strokes
+                    FROM PE_IIOT_TELEMETRY_HISTORY h WITH (NOLOCK)
+                    WHERE h.live_counter >= h.shift_baseline_counter
+                      AND h.snapshot_time >= ? AND h.snapshot_time < ?
+                    GROUP BY CAST(h.snapshot_time AS DATE), h.machine_code, h.shift_baseline_counter
+                ) sub
+                INNER JOIN PE_MACHINES m WITH (NOLOCK) ON sub.machine_code = m.machine_code
+                WHERE 1=1
+            ";
+            $prodParams = [$startStr, $endStr];
+            if ($machineFilter) {
+                $sqlProd .= " AND m.machine_code = ?";
+                $prodParams[] = $machineFilter;
+            } else if ($lineFilter) {
+                $sqlProd .= " AND m.line = ?";
+                $prodParams[] = $lineFilter;
+            }
+            $sqlProd .= " GROUP BY sub.machine_code, CAST(sub.snapshot_time AS DATE)
+            
+            UNION ALL
+            
+                SELECT 
+                    m.machine_code, 
+                    t.transaction_type, 
+                    CAST(DATEADD(hour, -8, t.transaction_timestamp) AS DATE) as shift_date,
+                    SUM(ABS(t.quantity)) as qty
+                FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
+                INNER JOIN LOCATIONS loc WITH (NOLOCK) ON t.to_location_id = loc.location_id
+                INNER JOIN PE_MACHINES m WITH (NOLOCK) ON loc.production_line = m.line
+                WHERE t.transaction_type IN ('PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
+                  AND (m.mqtt_topic IS NOT NULL AND m.mqtt_topic != '')
+                  AND t.transaction_timestamp >= ? AND t.transaction_timestamp < ?
+            ";
+            
+            $prodParams[] = $startStr;
+            $prodParams[] = $endStr;
+            
+            if ($machineFilter) {
+                $sqlProd .= " AND m.machine_code = ?";
+                $prodParams[] = $machineFilter;
+            } else if ($lineFilter) {
+                $sqlProd .= " AND m.line = ?";
+                $prodParams[] = $lineFilter;
+            }
+            $sqlProd .= " GROUP BY m.machine_code, t.transaction_type, CAST(DATEADD(hour, -8, t.transaction_timestamp) AS DATE)";
+            
+            $stmt = $pdo->prepare($sqlProd);
+            $stmt->execute($prodParams);
+            $prodLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $trendData = [];
+            $machineData = [];
+
+            // Initialize days
+            $currTs = $startTs;
+            while ($currTs < $endTs) {
+                $dateKey = date('Y-m-d', $currTs);
+                $trendData[$dateKey] = [
+                    'date' => $dateKey,
+                    'online_seconds' => 0, 'offline_seconds' => 0,
+                    'output' => 0, 'defects' => 0, 'expected_output' => 0
+                ];
+                $currTs += 86400;
+            }
+
+            $processedLineDates = [];
+
+            foreach ($prodLogs as $log) {
+                $mc = $log['machine_code'];
+                if (!$mc || !isset($machines[$mc])) continue;
+                
+                $line = $machines[$mc]['line'];
+                $dateKey = $log['shift_date'];
+                $ttype = $log['transaction_type'];
+                
+                if (!isset($machineData[$mc])) {
+                    $machineData[$mc] = [
+                        'machine_code' => $mc,
+                        'online_seconds' => 0, 'offline_seconds' => 0,
+                        'output' => 0, 'defects' => 0, 'expected_output' => 0
+                    ];
+                }
+                
+                $qty = (int)$log['qty'];
+                $strokes = $machineSpecs[$mc]['strokes'] ?? 1;
+                $netQty = ($strokes > 1) ? floor($qty / $strokes) : $qty;
+                
+                if ($ttype === 'PRODUCTION_FG') {
+                    if (isset($trendData[$dateKey])) $trendData[$dateKey]['output'] += $netQty;
+                    $machineData[$mc]['output'] += $netQty;
+                } else {
+                    if (isset($trendData[$dateKey])) $trendData[$dateKey]['defects'] += $netQty;
+                    $machineData[$mc]['defects'] += $netQty;
+                }
+            }
+
+            foreach ($logs as $log) {
+                $mc = $log['machine_code'];
+                if (!$mc) continue;
+                
+                if (!isset($machineData[$mc])) {
+                    $machineData[$mc] = [
+                        'machine_code' => $mc,
+                        'online_seconds' => 0, 'offline_seconds' => 0,
+                        'output' => 0, 'defects' => 0, 'expected_output' => 0
+                    ];
+                }
+                
+                $st = strtotime($log['start_time']);
+                $et = $log['end_time'] ? strtotime($log['end_time']) : time();
+                
+                $dateKey = date('Y-m-d', $st);
+                if (date('H', $st) < 8) $dateKey = date('Y-m-d', $st - 86400);
+                
+                if ($st < $startTs) $st = $startTs;
+                if ($et > $endTs) $et = $endTs;
+                $dur = max(0, $et - $st);
+                
+                $s = strtoupper($log['status']);
+                $isOnline = (strpos($s, 'RUN') !== false || strpos($s, 'ON') !== false);
+                
+                if ($isOnline) {
+                    if (isset($trendData[$dateKey])) $trendData[$dateKey]['online_seconds'] += $dur;
+                    $machineData[$mc]['online_seconds'] += $dur;
+                    
+                    $plannedPH = $machineSpecs[$mc]['planned_output'] ?? 300;
+                    $exp = ($dur / 3600.0) * $plannedPH;
+                    
+                    if (isset($trendData[$dateKey])) $trendData[$dateKey]['expected_output'] += $exp;
+                    $machineData[$mc]['expected_output'] += $exp;
+                } else {
+                    if (isset($trendData[$dateKey])) $trendData[$dateKey]['offline_seconds'] += $dur;
+                    $machineData[$mc]['offline_seconds'] += $dur;
+                }
+            }
+
+            $calcOEE = function($data) {
+                $totalTime = $data['online_seconds'] + $data['offline_seconds'];
+                if ($totalTime == 0) $totalTime = 86400; 
+                $avail = ($data['online_seconds'] / $totalTime) * 100;
+                $perf = $data['expected_output'] > 0 ? ($data['output'] / $data['expected_output']) * 100 : 0;
+                $totalParts = $data['output'] + $data['defects'];
+                $qual = $totalParts > 0 ? ($data['output'] / $totalParts) * 100 : 0;
+                $avail = min(100, max(0, $avail));
+                $perf = min(100, max(0, $perf));
+                $qual = min(100, max(0, $qual));
+                return [
+                    'availability' => round($avail, 1),
+                    'performance' => round($perf, 1),
+                    'quality' => round($qual, 1),
+                    'oee' => round(($avail / 100) * ($perf / 100) * ($qual / 100) * 100, 1)
+                ];
+            };
+
+            $trendArray = [];
+            foreach ($trendData as $date => $t) {
+                $oeeRes = $calcOEE($t);
+                $trendArray[] = array_merge($t, $oeeRes);
+            }
+
+            $machineArray = [];
+            $sumAvail = 0; $sumPerf = 0; $sumQual = 0; $sumOee = 0;
+            $totalMachines = count($machineData);
+            $totalOutput = 0; $totalDefects = 0;
+
+            foreach ($machineData as $mc => $m) {
+                $oeeRes = $calcOEE($m);
+                $sumAvail += $oeeRes['availability'];
+                $sumPerf += $oeeRes['performance'];
+                $sumQual += $oeeRes['quality'];
+                $sumOee += $oeeRes['oee'];
+                $totalOutput += $m['output'];
+                $totalDefects += $m['defects'];
+                $machineArray[] = array_merge($m, $oeeRes);
+            }
+
+            $summary = [
+                'availability' => $totalMachines > 0 ? ($sumAvail / $totalMachines) : 0,
+                'performance' => $totalMachines > 0 ? ($sumPerf / $totalMachines) : 0,
+                'quality' => $totalMachines > 0 ? ($sumQual / $totalMachines) : 0,
+                'oee' => $totalMachines > 0 ? ($sumOee / $totalMachines) : 0,
+                'total_output' => $totalOutput,
+                'total_defects' => $totalDefects
+            ];
+
+            echo json_encode(['success' => true, 'data' => [
+                'summary' => $summary,
+                'trend' => array_values($trendArray),
+                'machines' => array_values($machineArray)
+            ]]);
+            break;
 
         case 'get_machine_timeline':
             $reqDate = isset($_GET['date']) ? $_GET['date'] : null;

@@ -1,16 +1,22 @@
 <!-- tab_iiot_traditional.php — Traditional KPI Dashboard -->
 
-<div class="pe-d-flex pe-justify-between pe-align-center pe-mb-16">
+<div class="pe-filter-bar pe-mb-24">
     <div class="pe-d-flex pe-align-center pe-gap-8">
-        <i class="fas fa-industry" style="color:var(--pe-primary);font-size:20px;"></i>
-        <h4 class="pe-m-0">Machine Assets Overview</h4>
+        <i class="fas fa-chart-line" style="color:var(--pe-primary);font-size:16px;"></i>
+        <span class="pe-fw-bold" style="font-size:14px;">Traditional Dashboard</span>
     </div>
-    <div class="pe-d-flex pe-gap-8">
-        <span class="pe-badge pe-badge-success pe-d-flex pe-align-center pe-gap-4">
-            <span class="status-indicator blinking" style="background-color: #fff;"></span> LIVE
+
+    <div class="pe-filter-spacer"></div>
+
+    <div class="pe-d-flex pe-gap-8 pe-flex-wrap pe-align-center">
+        <span class="pe-badge pe-badge-success pe-d-flex pe-align-center pe-gap-4" style="height:28px; padding:0 12px; font-size:12px; margin-right: 8px;">
+            <span class="status-indicator blinking" style="background-color: #fff; width:6px; height:6px;"></span> LIVE
         </span>
-        <button class="pe-btn pe-btn-primary pe-btn-sm" onclick="iiotTraditionalModule.refreshData()">
+        <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="iiotTraditionalModule.refreshData()" title="Refresh" style="border-color:var(--pe-text-muted); color:var(--pe-text-primary);">
             <i class="fas fa-sync-alt me-1"></i> Refresh
+        </button>
+        <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="window.print()" title="Export PDF / Print" style="border-color:var(--pe-text-muted); color:var(--pe-text-primary);">
+            <i class="fas fa-print me-1"></i> Report
         </button>
     </div>
 </div>
