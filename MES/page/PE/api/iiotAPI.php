@@ -398,6 +398,11 @@ try {
             // Calculate final OEE metrics
             $result = [];
             foreach ($machineStats as $mc => $stats) {
+                // If a machine produced something but has 0 online seconds (e.g., manual machine without IIoT), assume 100% availability
+                if ($stats['live_counter'] > 0 && $stats['total_online_seconds'] == 0) {
+                    $stats['total_online_seconds'] = $totalPassedSeconds;
+                }
+
                 // Availability
                 $avail = min(100, ($stats['total_online_seconds'] / $totalPassedSeconds) * 100);
                 
@@ -408,7 +413,11 @@ try {
                 }
                 
                 $perf = 0;
-                if ($expectedOutput > 0) {
+                if ($stats['planned_output_ph'] == 0 && $stats['live_counter'] > 0) {
+                    // No target set, but output exists. Assume Performance is 100%.
+                    $perf = 100;
+                    $expectedOutput = $stats['live_counter'];
+                } else if ($expectedOutput > 0) {
                     $perf = ($stats['live_counter'] / $expectedOutput) * 100;
                 }
                 $perf = min(100, $perf); // Cap at 100%
@@ -434,6 +443,38 @@ try {
                     'live_counter' => $stats['live_counter'],
                     'defects' => $stats['defects'],
                     'expected_output' => round($expectedOutput, 0)
+                ];
+            }
+            
+            // Fetch Unassigned Output (FG logged without a specific machine)
+            $unassignedSql = "
+                SELECT 
+                    loc.production_line, 
+                    SUM(ABS(t.quantity)) as qty
+                FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
+                INNER JOIN LOCATIONS loc WITH (NOLOCK) ON t.to_location_id = loc.location_id
+                WHERE t.transaction_type = 'PRODUCTION_FG'
+                  AND t.machine_id IS NULL
+                  AND t.transaction_timestamp >= ? AND t.transaction_timestamp < ?
+                GROUP BY loc.production_line
+            ";
+            $unassignedStmt = $pdo->prepare($unassignedSql);
+            $unassignedStmt->execute([$shiftStartDateStr, $shiftEndDateStr]);
+            
+            while ($row = $unassignedStmt->fetch(PDO::FETCH_ASSOC)) {
+                $line = $row['production_line'];
+                if (!$line) continue;
+                $unassignedMc = $line . ' (Unassigned)';
+                $result[$unassignedMc] = [
+                    'availability' => 0,
+                    'performance' => 0,
+                    'quality' => 100,
+                    'oee' => 0,
+                    'total_online_seconds' => 0,
+                    'total_passed_seconds' => $totalPassedSeconds,
+                    'live_counter' => (int)$row['qty'],
+                    'defects' => 0,
+                    'expected_output' => 0
                 ];
             }
             

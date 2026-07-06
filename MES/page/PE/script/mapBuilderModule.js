@@ -12,12 +12,16 @@ const MapBuilderModule = (function () {
     let snapToGrid = false;
     const gridSize = 50;
     let gridLines = [];
+    let systemLocations = [];
 
     function init() {
         if (typeof fabric === 'undefined') {
             console.error('Fabric.js is not loaded. Map Builder cannot initialize.');
             return;
         }
+
+        // Fetch locations for binding
+        fetchLocations();
 
         // Initialize Fabric canvas
         const canvasEl = document.getElementById('iiotMapCanvas');
@@ -108,6 +112,8 @@ const MapBuilderModule = (function () {
                 canvas.calcOffset(); // Just re-calculate pointer offset on resize
             }
         });
+        
+        animateConveyors(); // Start conveyor animation
     }
 
     function toggleMode() {
@@ -159,10 +165,11 @@ const MapBuilderModule = (function () {
         }
 
         // Update button visual states
-        ['select', 'line', 'rect', 'poly', 'text'].forEach(m => {
+        ['select', 'line', 'rect', 'poly', 'text', 'conveyor'].forEach(m => {
             let btnId = 'btnDraw' + m.charAt(0).toUpperCase() + m.slice(1);
             if (m === 'poly') btnId = 'btnDrawPoly';
             if (m === 'text') btnId = 'btnDrawText';
+            if (m === 'conveyor') btnId = 'btnDrawConveyor';
             const btn = document.getElementById(btnId);
             if (btn) {
                 if (m === mode) {
@@ -253,6 +260,19 @@ const MapBuilderModule = (function () {
                 evented: false
             });
             canvas.add(currentShape);
+        } else if (currentMode === 'conveyor') {
+            currentShape = new fabric.Line([origX, origY, origX, origY], {
+                strokeWidth: 4,
+                fill: '#f59e0b',
+                stroke: '#f59e0b',
+                strokeDashArray: [15, 10],
+                originX: 'center',
+                originY: 'center',
+                selectable: false,
+                evented: false,
+                isConveyor: true
+            });
+            canvas.add(currentShape);
         } else if (currentMode === 'rect') {
             const currentOpacity = document.getElementById('zoneOpacitySlider') ? parseFloat(document.getElementById('zoneOpacitySlider').value) : 0.7;
             currentShape = new fabric.Rect({
@@ -325,7 +345,7 @@ const MapBuilderModule = (function () {
 
         if (!isDrawing || currentMode === 'select' || !currentShape) return;
 
-        if (currentMode === 'line') {
+        if (currentMode === 'line' || currentMode === 'conveyor') {
             currentShape.set({ x2: pointer.x, y2: pointer.y });
         } else if (currentMode === 'rect') {
             if (origX > pointer.x) {
@@ -392,12 +412,18 @@ const MapBuilderModule = (function () {
         if (!obj) return;
         const panel = document.getElementById('objProperties');
         const input = document.getElementById('objNameInput');
+        const locGroup = document.getElementById('objLocationGroup');
+        const locSelect = document.getElementById('objLocationSelect');
+        
         if (panel && input) {
             panel.style.display = 'block';
             if (obj.type === 'i-text') {
                 input.value = obj.text || '';
+                if (locGroup) locGroup.style.display = 'none';
             } else {
                 input.value = obj.zoneName || '';
+                if (locGroup) locGroup.style.display = 'block';
+                if (locSelect) locSelect.value = obj.location_id || '';
             }
         }
     }
@@ -417,6 +443,90 @@ const MapBuilderModule = (function () {
                 obj.zoneName = val;
             }
             canvas.renderAll();
+        }
+    }
+
+    function updateObjLocation(val) {
+        if (!canvas) return;
+        const obj = canvas.getActiveObject();
+        if (obj) {
+            obj.location_id = val;
+            canvas.renderAll();
+        }
+    }
+
+    async function fetchLocations() {
+        try {
+            const res = await fetch('api/mapAPI.php?action=get_locations');
+            const text = await res.text();
+            try {
+                const json = JSON.parse(text);
+                if (json.success) {
+                    systemLocations = json.data;
+                    const locSelect = document.getElementById('objLocationSelect');
+                    if (locSelect) {
+                        locSelect.innerHTML = '<option value="">-- No Location --</option>';
+                        systemLocations.forEach(loc => {
+                            const opt = document.createElement('option');
+                            opt.value = loc.location_id;
+                            opt.textContent = `${loc.location_name} ${loc.production_line ? '('+loc.production_line+')' : ''}`;
+                            locSelect.appendChild(opt);
+                        });
+                    }
+                }
+            } catch(err) {
+                console.error("JSON parse error from locations API. Raw text:", text);
+            }
+        } catch (e) {
+            console.error('Failed to load locations', e);
+        }
+    }
+
+    async function createLocationFromZone() {
+        if (!canvas) return;
+        const obj = canvas.getActiveObject();
+        if (!obj || !obj.zoneName) {
+            PEApp.showToast('Please enter a Zone Name first.', 'warning');
+            return;
+        }
+
+        const confirmMsg = `Create a new Location in the system using the name "${obj.zoneName}"?`;
+        if (typeof Swal !== 'undefined') {
+            const result = await Swal.fire({
+                title: 'Create Location',
+                text: confirmMsg,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, create it!'
+            });
+            if (!result.isConfirmed) return;
+        } else {
+            if (!confirm(confirmMsg)) return;
+        }
+
+        try {
+            const res = await PEApp.apiCall('api/mapAPI.php', {}, 'POST', {
+                action: 'save_location',
+                location_name: obj.zoneName,
+                location_type: 'WIP'
+            });
+
+            if (res.success) {
+                PEApp.showToast('Location created successfully!', 'success');
+                await fetchLocations();
+                
+                // Try to find the newly created location to auto-bind
+                const newLoc = systemLocations.find(l => l.location_name === obj.zoneName);
+                if (newLoc) {
+                    obj.location_id = newLoc.location_id;
+                    const locSelect = document.getElementById('objLocationSelect');
+                    if (locSelect) locSelect.value = obj.location_id;
+                }
+            } else {
+                throw new Error(res.message);
+            }
+        } catch (e) {
+            PEApp.showToast('Failed to create location: ' + e.message, 'error');
         }
     }
 
@@ -450,6 +560,77 @@ const MapBuilderModule = (function () {
             });
         };
         reader.readAsDataURL(input.files[0]);
+    }
+
+    function alignSelected(direction) {
+        if (!canvas) return;
+        const activeObjects = canvas.getActiveObjects();
+        if (activeObjects.length < 2) return;
+        
+        canvas.discardActiveObject(); // Temporarily ungroup to calculate absolute positions
+
+        let minX = Infinity, minY = Infinity;
+        let maxX = -Infinity, maxY = -Infinity;
+        
+        activeObjects.forEach(obj => {
+            const bound = obj.getBoundingRect(true, true);
+            if (bound.left < minX) minX = bound.left;
+            if (bound.top < minY) minY = bound.top;
+            if (bound.left + bound.width > maxX) maxX = bound.left + bound.width;
+            if (bound.top + bound.height > maxY) maxY = bound.top + bound.height;
+        });
+
+        const centerX = minX + (maxX - minX) / 2;
+        const centerY = minY + (maxY - minY) / 2;
+
+        activeObjects.forEach(obj => {
+            const bound = obj.getBoundingRect(true, true);
+            let targetLeft = obj.left;
+            let targetTop = obj.top;
+            
+            // Adjust based on object origin
+            let oX = obj.originX === 'center' ? bound.width / 2 : 0;
+            let oY = obj.originY === 'center' ? bound.height / 2 : 0;
+
+            switch (direction) {
+                case 'left': targetLeft = minX + oX; break;
+                case 'right': targetLeft = maxX - bound.width + oX; break;
+                case 'center': targetLeft = centerX - bound.width / 2 + oX; break;
+                case 'top': targetTop = minY + oY; break;
+                case 'bottom': targetTop = maxY - bound.height + oY; break;
+                case 'middle': targetTop = centerY - bound.height / 2 + oY; break;
+            }
+            obj.set({ left: targetLeft, top: targetTop });
+            obj.setCoords();
+        });
+        
+        const sel = new fabric.ActiveSelection(activeObjects, { canvas: canvas });
+        canvas.setActiveObject(sel);
+        canvas.requestRenderAll();
+    }
+
+    let conveyorAnimReq = null;
+    function animateConveyors() {
+        if (!canvas) {
+            conveyorAnimReq = requestAnimationFrame(animateConveyors);
+            return;
+        }
+        let renderNeeded = false;
+        canvas.getObjects().forEach(obj => {
+            // Treat as conveyor if explicitly flagged, or if it's a line with dash array [15,10]
+            const isDashArrayConveyor = obj.type === 'line' && obj.strokeDashArray && obj.strokeDashArray[0] === 15;
+            if (obj.isConveyor || isDashArrayConveyor) {
+                // Ensure isConveyor is set so it gets saved correctly next time
+                obj.isConveyor = true;
+                let offset = obj.strokeDashOffset || 0;
+                offset -= 1; // speed of conveyor
+                if (offset <= -25) offset = 0;
+                obj.set('strokeDashOffset', offset);
+                renderNeeded = true;
+            }
+        });
+        if (renderNeeded) canvas.renderAll();
+        conveyorAnimReq = requestAnimationFrame(animateConveyors);
     }
 
     function changeTracingOpacity(val) {
@@ -515,9 +696,11 @@ const MapBuilderModule = (function () {
     async function saveMap() {
         try {
             // Include custom properties in JSON export
-            const json = canvas.toJSON(['zoneName', 'id', 'name']);
+            const json = canvas.toJSON(['zoneName', 'location_id', 'id', 'name', 'isConveyor']);
+            const areaId = document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1;
             const res = await PEApp.apiCall('mapAPI.php', {}, 'POST', {
                 action: 'save_map',
+                area_id: areaId,
                 map_data: JSON.stringify(json)
             });
 
@@ -533,7 +716,8 @@ const MapBuilderModule = (function () {
 
     async function loadMap() {
         try {
-            const res = await PEApp.apiCall('mapAPI.php', { action: 'load_map' });
+            const areaId = document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1;
+            const res = await PEApp.apiCall('mapAPI.php', { action: 'load_map', area_id: areaId });
             if (res.success && res.map_data) {
                 canvas.loadFromJSON(res.map_data, canvas.renderAll.bind(canvas));
             }
@@ -567,9 +751,15 @@ const MapBuilderModule = (function () {
         clearTracing,
         toggleLayer,
         updateObjName,
+        updateObjLocation,
+        createLocationFromZone,
         forceRender,
         toggleSnap,
-        getCanvas: () => canvas
+        alignSelected,
+        loadMap,
+        isModeActive: () => isBuilderMode,
+        getCanvas: () => canvas,
+        getLocations: () => systemLocations
     };
 })();
 

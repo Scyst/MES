@@ -103,6 +103,19 @@
     overflow: hidden;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
 }
+
+@keyframes pulsateAlert {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); border-color: #ef4444; }
+    50% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); border-color: #b91c1c; }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); border-color: #ef4444; }
+}
+
+.pulsate-alert {
+    animation: pulsateAlert 1.5s infinite;
+    background-color: rgba(239, 68, 68, 0.2) !important;
+    border-width: 2px !important;
+}
+
 .iiot-floorplan-title {
     color: #1e293b;
     font-weight: 600;
@@ -269,6 +282,17 @@
                 </div>
             </div>
             <div>
+                <select id="iiotAreaSelect" class="form-select form-select-sm" style="display: inline-block; width: 150px; margin-right: 10px;" onchange="IIoTModule.loadArea(this.value)">
+                    <option value="1">Building A - Floor 1</option>
+                    <option value="2">Building A - Floor 2</option>
+                    <option value="3">Building B</option>
+                </select>
+                <button class="btn btn-sm btn-outline-danger me-2" id="iiotSimulateAlertBtn" onclick="IIoTModule.simulateAlert()">
+                    <i class="fas fa-bell"></i> Simulate Alert
+                </button>
+                <button class="btn btn-sm btn-outline-warning me-2" id="iiotHeatmapBtn" onclick="IIoTModule.toggleHeatmap()">
+                    <i class="fas fa-fire"></i> Heatmap
+                </button>
                 <button class="btn btn-sm btn-outline-primary me-2" id="iiotMapBuilderBtn" onclick="MapBuilderModule.toggleMode()">
                     <i class="fas fa-drafting-compass"></i> Map Builder
                 </button>
@@ -311,13 +335,26 @@
                                 <button class="btn btn-outline-secondary btn-sm text-start w-100" onclick="MapBuilderModule.setMode('text')" id="btnDrawText"><i class="fas fa-font me-2"></i> Add Text</button>
                             </div>
                             <div class="col-12">
+                                <button class="btn btn-outline-secondary btn-sm text-start w-100" onclick="MapBuilderModule.setMode('conveyor')" id="btnDrawConveyor"><i class="fas fa-route me-2"></i> Conveyor / Arrow</button>
+                            </div>
+                            <div class="col-12">
                                 <button class="btn btn-outline-danger btn-sm text-start w-100" onclick="MapBuilderModule.deleteSelected()"><i class="fas fa-trash me-2"></i> Delete Selected</button>
                             </div>
                         </div>
                         
                         <div id="objProperties" style="display: none; background: #f8fafc; padding: 8px; border-radius: 6px; margin-top: 8px; border: 1px solid #e2e8f0;">
                             <label style="font-size: 11px; color: #64748b;">Zone Name / Text</label>
-                            <input type="text" id="objNameInput" class="form-control bg-white text-dark border-secondary form-control-sm" style="font-size: 12px;" oninput="MapBuilderModule.updateObjName(this.value)">
+                            <input type="text" id="objNameInput" class="form-control bg-white text-dark border-secondary form-control-sm mb-2" style="font-size: 12px;" oninput="MapBuilderModule.updateObjName(this.value)">
+                            
+                            <div id="objLocationGroup" style="display: none;">
+                                <label style="font-size: 11px; color: #64748b;">Bind to Location (Optional)</label>
+                                <select id="objLocationSelect" class="form-select form-select-sm mb-1" style="font-size: 12px;" onchange="MapBuilderModule.updateObjLocation(this.value)">
+                                    <option value="">-- No Location --</option>
+                                </select>
+                                <button type="button" class="btn btn-sm btn-outline-success w-100" style="font-size: 11px; padding: 2px 4px;" onclick="MapBuilderModule.createLocationFromZone()">
+                                    <i class="fas fa-plus-circle me-1"></i> Create Zone as Location
+                                </button>
+                            </div>
                         </div>
                         
                         <hr style="margin: 12px 0; border-color: #e2e8f0;">
@@ -366,6 +403,29 @@
                         </div>
                         
                         <button class="btn btn-outline-warning btn-sm w-100" onclick="MapBuilderModule.clearTracing()"><i class="fas fa-eraser me-2"></i> Clear Tracing</button>
+                        
+                        <hr style="margin: 12px 0; border-color: #e2e8f0;">
+                        <label style="font-size: 12px; margin-bottom: 4px; color: #64748b;">Alignment Tools</label>
+                        <div class="row g-1">
+                            <div class="col-4">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="MapBuilderModule.alignSelected('left')" title="Align Left"><i class="fas fa-align-left"></i></button>
+                            </div>
+                            <div class="col-4">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="MapBuilderModule.alignSelected('center')" title="Align Center"><i class="fas fa-align-center"></i></button>
+                            </div>
+                            <div class="col-4">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="MapBuilderModule.alignSelected('right')" title="Align Right"><i class="fas fa-align-right"></i></button>
+                            </div>
+                            <div class="col-4 mt-1">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="MapBuilderModule.alignSelected('top')" title="Align Top"><i class="fas fa-arrow-up"></i></button>
+                            </div>
+                            <div class="col-4 mt-1">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="MapBuilderModule.alignSelected('middle')" title="Align Middle"><i class="fas fa-arrows-alt-v"></i></button>
+                            </div>
+                            <div class="col-4 mt-1">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="MapBuilderModule.alignSelected('bottom')" title="Align Bottom"><i class="fas fa-arrow-down"></i></button>
+                            </div>
+                        </div>
                     </div>
                 </div> <!-- /row -->
                 <button class="btn btn-primary btn-sm mt-3 w-100" onclick="MapBuilderModule.saveMap()"><i class="fas fa-save me-2"></i> Save Map to Server</button>

@@ -35,6 +35,10 @@ try {
                 $conditions[] = "line = ?";
                 $params[] = $_GET['line'];
             }
+            if (!empty($_GET['area_id'])) {
+                $conditions[] = "area_id = ?";
+                $params[] = (int)$_GET['area_id'];
+            }
             if (!empty($_GET['status']) && !$isDeleted) {
                 $conditions[] = "status = ?";
                 $params[] = $_GET['status'];

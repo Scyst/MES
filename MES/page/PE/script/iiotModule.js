@@ -14,9 +14,8 @@ const IIoTModule = (function() {
                 document.body.appendChild(tt);
             }
 
-            // Get all machines, filter only those with mqtt_topic
-            const res = await PEApp.apiCall('machineAPI.php', { action: 'get_machines' });
-            machinesWithIIoT = (res.data || []).filter(m => m.mqtt_topic && m.mqtt_topic.trim() !== '');
+            const initialArea = document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1;
+            await loadArea(initialArea);
             // Initialize Panzoom
             const panzoomEl = document.getElementById('iiotPanzoomElement');
             if (panzoomEl && typeof Panzoom !== 'undefined') {
@@ -57,8 +56,42 @@ const IIoTModule = (function() {
                 });
             }
 
+            // Zone Analytics Click Handler
+            const mapNodesContainer = document.getElementById('mapNodesContainer');
+            if (mapNodesContainer) {
+                mapNodesContainer.addEventListener('click', (e) => {
+                    // Only trigger if we clicked directly on the container (not a machine node)
+                    if (e.target.id === 'mapNodesContainer' && !isMapEditMode) {
+                        if (typeof MapBuilderModule === 'undefined') return;
+                        const canvas = MapBuilderModule.getCanvas();
+                        if (!canvas) return;
+
+                        // Calculate click coordinates relative to the container
+                        const rect = mapNodesContainer.getBoundingClientRect();
+                        const scale = panzoomInstance ? panzoomInstance.getScale() : 1;
+                        const x = (e.clientX - rect.left) / scale;
+                        const y = (e.clientY - rect.top) / scale;
+                        
+                        const pt = new fabric.Point(x, y);
+                        let clickedZone = null;
+
+                        // Check all zones (polygons and rects)
+                        const polygons = canvas.getObjects('polygon');
+                        const rects = canvas.getObjects('rect');
+                        [...polygons, ...rects].forEach(shape => {
+                            if (shape.containsPoint(pt)) clickedZone = shape;
+                        });
+
+                        if (clickedZone) {
+                            showZoneAnalytics(clickedZone);
+                        }
+                    }
+                });
+            }
+
             renderGrid();
             startPolling();
+            animateAlerts();
         } catch (e) {
             console.error("Failed to init IIoT Dashboard", e);
         }
@@ -306,6 +339,8 @@ const IIoTModule = (function() {
             const counterEl = document.getElementById(`iiot-counter-${m.machine_code}`);
             if (counterEl) counterEl.innerText = data.live_counter || 0;
         });
+
+        if (typeof updateHeatmapData === 'function') updateHeatmapData();
     }
     
     function simulateData() {
@@ -379,13 +414,219 @@ const IIoTModule = (function() {
             });
             
             let color = 'rgba(56, 189, 248, 0.2)'; // Default Blue
-            if (hasStopped) color = 'rgba(239, 68, 68, 0.5)'; // Red
-            else if (hasWarning) color = 'rgba(245, 158, 11, 0.5)'; // Yellow
-            else if (hasRunning) color = 'rgba(16, 185, 129, 0.3)'; // Green
+            poly.alert_state = 'idle';
+
+            if (hasStopped) {
+                color = 'rgba(239, 68, 68, 0.5)'; // Red
+                poly.alert_state = 'stopped';
+            }
+            else if (hasWarning) {
+                color = 'rgba(245, 158, 11, 0.5)'; // Yellow
+                poly.alert_state = 'warning';
+            }
+            else if (hasRunning) {
+                color = 'rgba(16, 185, 129, 0.3)'; // Green
+                poly.alert_state = 'running';
+            }
             
             poly.set('fill', color);
+            if (poly.alert_state === 'idle' || poly.alert_state === 'running') {
+                poly.opacity = 1; // Reset opacity
+            }
         });
         if(canvas.renderAll) canvas.renderAll();
+    }
+
+    let animationReq = null;
+    function animateAlerts() {
+        if (typeof MapBuilderModule !== 'undefined') {
+            const canvas = MapBuilderModule.getCanvas();
+            if (canvas) {
+                let renderNeeded = false;
+                const objects = canvas.getObjects('polygon');
+                objects.forEach(obj => {
+                    if (obj.alert_state === 'stopped' || obj.alert_state === 'warning') {
+                        if (obj.opacity === undefined) obj.opacity = 1;
+                        if (obj._dir === undefined) obj._dir = -0.02;
+
+                        obj.opacity += obj._dir;
+                        if (obj.opacity <= 0.2) {
+                            obj.opacity = 0.2;
+                            obj._dir = 0.02;
+                        } else if (obj.opacity >= 1) {
+                            obj.opacity = 1;
+                            obj._dir = -0.02;
+                        }
+                        renderNeeded = true;
+                    }
+                });
+                if (renderNeeded) canvas.renderAll();
+            }
+        }
+        animationReq = requestAnimationFrame(animateAlerts);
+    }
+
+    async function showZoneAnalytics(zone) {
+        const nodes = document.querySelectorAll('.machine-node');
+        const container = document.getElementById('mapNodesContainer');
+        if (!container) return;
+
+        let totalOutput = 0;
+        let expectedOutput = 0;
+        let sumAvail = 0, sumPerf = 0, sumQual = 0, sumOee = 0;
+        let machineCount = 0;
+        let machineCodes = [];
+
+        const lines = new Set();
+
+        nodes.forEach(n => {
+            const leftPercent = parseFloat(n.style.left) / 100;
+            const topPercent = parseFloat(n.style.top) / 100;
+            const x = leftPercent * container.offsetWidth;
+            const y = topPercent * container.offsetHeight;
+            
+            if (zone.containsPoint(new fabric.Point(x, y))) {
+                const mc = n.dataset.code;
+                machineCodes.push(mc);
+                const mObj = machinesWithIIoT.find(x => x.machine_code === mc);
+                if (mObj && mObj.line) lines.add(mObj.line);
+
+                const d = lastOeeData[mc]; 
+                if (d) {
+                    machineCount++;
+                    sumAvail += parseFloat(d.availability || 0);
+                    sumPerf += parseFloat(d.performance || 0);
+                    sumQual += parseFloat(d.quality || 0);
+                    sumOee += parseFloat(d.oee || 0);
+                    totalOutput += parseInt(d.live_counter || 0);
+                    expectedOutput += parseFloat(d.expected_output || 0);
+                } else {
+                    machineCount++;
+                }
+            }
+        });
+        let locationNameStr = '';
+        if (zone.location_id && typeof MapBuilderModule !== 'undefined') {
+            const locs = MapBuilderModule.getLocations();
+            const loc = locs.find(l => l.location_id == zone.location_id);
+            if (loc) {
+                locationNameStr = `<p class="mb-2 text-primary" style="font-size: 12px;"><i class="fas fa-map-marker-alt me-1"></i> Bound Location: <strong>${loc.location_name}</strong></p>`;
+                if (loc.production_line) {
+                    lines.add(loc.production_line);
+                }
+            }
+        }
+
+        let stockHtml = '';
+        /* 
+        // [INCOMPLETE FEATURE: Inventory Integration] 
+        // Commented out temporarily due to performance issues and inaccurate data summation (BOM explosion causes negative billions).
+        // To be developed later when the data structure is refined.
+        if (zone.location_id) {
+            try {
+                const res = await fetch(`api/mapAPI.php?action=get_inventory_balance&location_id=${zone.location_id}`);
+                const data = await res.json();
+                if (data.success && data.total_stock !== null) {
+                    stockHtml = `
+                    <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
+                        <span class="text-secondary"><i class="fas fa-boxes me-2"></i>Current Stock (WIP)</span>
+                        <strong class="text-warning">${parseFloat(data.total_stock).toLocaleString()} units</strong>
+                    </div>`;
+                }
+            } catch (e) {
+                console.error("Failed to fetch inventory", e);
+            }
+        }
+        */
+
+        let unassignedOutput = 0;
+        lines.forEach(line => {
+            const unassignedCode = `${line} (Unassigned)`;
+            const d = lastOeeData[unassignedCode];
+            if (d) {
+                const out = parseInt(d.live_counter || 0);
+                if (out > 0) {
+                    totalOutput += out;
+                    unassignedOutput += out;
+                    expectedOutput += parseFloat(d.expected_output || 0);
+                }
+            }
+        });
+
+        if (machineCodes.length === 0 && lines.size === 0) {
+            PEApp.showToast('No active machines or bound locations found in this zone', 'warning');
+            return;
+        }
+
+        let avgAvail = machineCount ? (sumAvail / machineCount).toFixed(1) : 0;
+        let avgPerf = machineCount ? (sumPerf / machineCount).toFixed(1) : 0;
+        let avgQual = machineCount ? (sumQual / machineCount).toFixed(1) : 0;
+        let avgOee = machineCount ? (sumOee / machineCount).toFixed(1) : 0;
+
+        // If we have totalOutput (including unassigned) and expectedOutput, recalculate Zone Performance
+        if (expectedOutput > 0) {
+            avgPerf = Math.min(100, (totalOutput / expectedOutput) * 100).toFixed(1);
+            if (parseFloat(avgQual) === 0 && totalOutput > 0) {
+                avgQual = '100.0';
+            }
+            // Recompute OEE based on new performance
+            avgOee = ((parseFloat(avgAvail) / 100) * (avgPerf / 100) * (parseFloat(avgQual) / 100) * 100).toFixed(1);
+        } else if (totalOutput > 0) {
+            // Edge case: Zone has output but no expected output (e.g. manual line without targets)
+            avgPerf = 100.0;
+            // Also assume 100% availability if it was 0, since it must have been available to produce
+            if (parseFloat(avgAvail) === 0) {
+                avgAvail = '100.0';
+            }
+            if (parseFloat(avgQual) === 0) {
+                avgQual = '100.0';
+            }
+            avgOee = ((parseFloat(avgAvail) / 100) * (avgPerf / 100) * (parseFloat(avgQual) / 100) * 100).toFixed(1);
+        }
+
+        const html = `
+            <div style="text-align:left; font-size: 14px;">
+                ${locationNameStr}
+                <p class="mb-3 text-muted"><strong>Machines:</strong> ${machineCodes.length > 0 ? machineCodes.join(', ') : 'None'}</p>
+                <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
+                    <span class="text-secondary"><i class="fas fa-cube me-2"></i>Total Output</span>
+                    <strong class="text-primary">${totalOutput.toLocaleString()} ${unassignedOutput > 0 ? `<br><small class="text-muted" style="font-size:10px;">(+${unassignedOutput.toLocaleString()} Unassigned)</small>` : ''}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
+                    <span class="text-secondary"><i class="fas fa-bullseye me-2"></i>Expected Output</span>
+                    <strong>${expectedOutput.toLocaleString()}</strong>
+                </div>
+                ${stockHtml}
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="text-secondary"><i class="fas fa-chart-pie me-2"></i>Avg Availability</span>
+                    <strong style="color: #10b981;">${avgAvail}%</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="text-secondary"><i class="fas fa-chart-line me-2"></i>Avg Performance</span>
+                    <strong style="color: #3b82f6;">${avgPerf}%</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-3 border-bottom pb-3">
+                    <span class="text-secondary"><i class="fas fa-check-circle me-2"></i>Avg Quality</span>
+                    <strong style="color: #8b5cf6;">${avgQual}%</strong>
+                </div>
+                <div class="text-center mt-3 p-3 bg-light rounded">
+                    <small class="text-muted text-uppercase fw-bold d-block mb-1">Zone OEE</small>
+                    <h2 class="mb-0 fw-bold" style="color: #0ea5e9;">${avgOee}%</h2>
+                </div>
+            </div>
+        `;
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: `<i class="fas fa-chart-area me-2 text-primary"></i> Zone Analytics`,
+                html: html,
+                confirmButtonColor: '#3b82f6',
+                confirmButtonText: 'Close',
+                width: '400px'
+            });
+        } else {
+            alert(`Zone Analytics\nMachines: ${machineCodes.join(', ')}\nOEE: ${avgOee}%`);
+        }
     }
 
     function updateUI(telemetryData) {
@@ -443,8 +684,8 @@ const IIoTModule = (function() {
             if (nodeEl) {
                 nodeEl.className = 'machine-node';
                 const s = (data.live_status || '').toUpperCase();
-                if (s === 'WARNING' || isAlert) {
-                    nodeEl.classList.add('warning');
+                if (s === 'WARNING' || s.includes('ALARM') || s.includes('ERROR') || isAlert || nodeEl.dataset.simulatedAlert) {
+                    nodeEl.classList.add('warning', 'pulsate-alert');
                 } else if (s.includes('RUN') || s.includes('ON')) {
                     nodeEl.classList.add('running');
                 } else if (s.includes('STOP') || s.includes('OFF') || s.includes('DOWN')) {
@@ -640,5 +881,118 @@ const IIoTModule = (function() {
         }
     }
 
-    return { init, stop, toggleSimulation, toggleEditMode, saveMapPositions, uploadMapBg, rotateMap, confirmMapCrop, setPanzoomState };
+    let heatmapInstance = null;
+    let isHeatmapActive = false;
+
+    function toggleHeatmap() {
+        isHeatmapActive = !isHeatmapActive;
+        const btn = document.getElementById('iiotHeatmapBtn');
+        if (!btn) return;
+        if (isHeatmapActive) {
+            btn.classList.replace('btn-outline-warning', 'btn-warning');
+            initHeatmap();
+            updateHeatmapData(); // Initial draw
+        } else {
+            btn.classList.replace('btn-warning', 'btn-outline-warning');
+            const c = document.getElementById('heatmapCanvas');
+            if (c) c.style.display = 'none';
+        }
+    }
+
+    function initHeatmap() {
+        let c = document.getElementById('heatmapCanvas');
+        const container = document.getElementById('iiotPanzoomElement');
+        if (!container) return;
+        
+        if (!c) {
+            c = document.createElement('canvas');
+            c.id = 'heatmapCanvas';
+            c.style.position = 'absolute';
+            c.style.top = '0';
+            c.style.left = '0';
+            c.style.pointerEvents = 'none';
+            c.style.zIndex = '50';
+            c.style.opacity = '0.7';
+            c.width = container.offsetWidth || 1200;
+            c.height = container.offsetHeight || 600;
+            container.appendChild(c);
+        }
+        c.width = container.offsetWidth;
+        c.height = container.offsetHeight;
+        c.style.display = 'block';
+
+        if (typeof simpleheat !== 'undefined') {
+            heatmapInstance = simpleheat(c);
+            heatmapInstance.max(100); // 100% OEE
+            heatmapInstance.radius(50, 30); // Adjusted to normal size
+        }
+    }
+
+    function updateHeatmapData() {
+        if (!isHeatmapActive || !heatmapInstance) return;
+        
+        const container = document.getElementById('iiotPanzoomElement');
+        const c = document.getElementById('heatmapCanvas');
+        if (c.width !== container.offsetWidth || c.height !== container.offsetHeight) {
+            c.width = container.offsetWidth;
+            c.height = container.offsetHeight;
+            if (heatmapInstance.resize) heatmapInstance.resize();
+        }
+
+        const nodes = document.querySelectorAll('.machine-node');
+        const points = [];
+        
+        nodes.forEach(n => {
+            const mc = n.dataset.code;
+            const leftPercent = parseFloat(n.style.left) / 100;
+            const topPercent = parseFloat(n.style.top) / 100;
+            const x = leftPercent * container.offsetWidth;
+            const y = topPercent * container.offsetHeight;
+            
+            const oee = lastOeeData[mc] ? parseFloat(lastOeeData[mc].oee || 0) : 0;
+            
+            // simpleheat expects [x, y, value]
+            if (oee > 0) {
+                points.push([x, y, oee]);
+            }
+        });
+
+        console.log("Heatmap updated, drawing points:", points.length);
+        heatmapInstance.data(points);
+        heatmapInstance.draw();
+    }
+
+    async function loadArea(areaId) {
+        if (!areaId) areaId = document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1;
+        
+        const res = await PEApp.apiCall('machineAPI.php', { action: 'get_machines', area_id: areaId });
+        machinesWithIIoT = (res.data || []).filter(m => m.mqtt_topic && m.mqtt_topic.trim() !== '');
+        
+        renderGrid(); // this calls renderFloorplan inside it
+        
+        if (typeof MapBuilderModule !== 'undefined') {
+            MapBuilderModule.loadMap();
+        }
+        
+        if (isHeatmapActive) updateHeatmapData();
+    }
+
+    function simulateAlert() {
+        const nodes = document.querySelectorAll('.machine-node');
+        if (nodes.length > 0) {
+            const node = nodes[0];
+            node.dataset.simulatedAlert = 'true';
+            node.className = 'machine-node warning pulsate-alert';
+            PEApp.showToast('Simulated ALARM on ' + node.dataset.code, 'warning');
+            setTimeout(() => {
+                delete node.dataset.simulatedAlert;
+                PEApp.showToast('Alert cleared', 'info');
+                node.classList.remove('warning', 'pulsate-alert');
+            }, 10000); 
+        } else {
+            PEApp.showToast('No machines available on map to simulate alert.', 'info');
+        }
+    }
+
+    return { init, stop, toggleSimulation, toggleEditMode, saveMapPositions, uploadMapBg, rotateMap, confirmMapCrop, setPanzoomState, toggleHeatmap, loadArea, simulateAlert };
 })();
