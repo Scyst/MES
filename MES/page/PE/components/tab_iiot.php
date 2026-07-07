@@ -631,46 +631,6 @@
         </div>
     </div>
 </div>
-        </div>
-    </div>
-
-    <div class="iiot-grid" id="iiotGrid">
-        <div class="iiot-empty">
-            <i class="fas fa-spinner fa-spin"></i>
-            <h5>Connecting to Telemetry Stream...</h5>
-        </div>
-    </div>
-</div>
-
-<!-- Cropper & Panzoom -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
-<div class="modal fade" id="iiotCropModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content pe-modal">
-            <div class="modal-header">
-                <h5 class="modal-title">Adjust Map Image</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center bg-dark">
-                <div style="max-height: 60vh; overflow: hidden;">
-                    <img id="iiotCropImage" src="" style="max-width: 100%; display: block;" alt="Crop Area">
-                </div>
-            </div>
-            <div class="modal-footer d-flex justify-content-between">
-                <div>
-                    <button class="btn btn-outline-secondary" onclick="IIoTModule.rotateMap(-90)"><i class="fas fa-undo"></i> Rotate Left</button>
-                    <button class="btn btn-outline-secondary" onclick="IIoTModule.rotateMap(90)"><i class="fas fa-redo"></i> Rotate Right</button>
-                </div>
-                <div>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="IIoTModule.confirmMapCrop()">Apply & Upload</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Asset Selection Modal -->
 <div class="modal fade" id="iiotAssetSelectModal" tabindex="-1">
