@@ -194,6 +194,9 @@ const MachineModule = (() => {
             saveBtn.onclick = save;
             if (deleteBtn) deleteBtn.style.display = editId ? 'block' : 'none';
         }
+        
+        const woBtn = document.getElementById('machineViewWOBtn');
+        if (woBtn) woBtn.style.display = editId && !isDeleted ? 'block' : 'none';
 
         // Clear fields
         ['machineFrmCode', 'machineFrmName', 'machineFrmMqttTopic', 'machineFrmLine', 'machineFrmArea', 
@@ -379,6 +382,32 @@ const MachineModule = (() => {
     function viewDetail(machineId) {
         openModal(machineId);
     }
+    
+    function viewWorkOrders() {
+        const machineCode = document.getElementById('machineFrmCode').value;
+        if (!machineCode) return;
+        
+        // Hide modal
+        const modalEl = document.getElementById('machineModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+        
+        // Switch tab
+        if (typeof PEApp !== 'undefined' && PEApp.switchTab) {
+            PEApp.switchTab('workorder');
+        }
+        
+        // Search and filter in Work Order module
+        setTimeout(() => {
+            const woSearchInput = document.getElementById('woSearchInput');
+            if (woSearchInput) {
+                woSearchInput.value = machineCode;
+                if (typeof WorkOrderModule !== 'undefined' && WorkOrderModule.filterTable) {
+                    WorkOrderModule.filterTable();
+                }
+            }
+        }, 300); // short delay for tab switch to complete
+    }
 
     let telemetryInterval = null;
 
@@ -543,7 +572,7 @@ const MachineModule = (() => {
     }
 
     return { 
-        loadData, filterTable, setView, openModal, save, viewDetail, deleteItem, restoreItem, startTelemetryPolling,
+        loadData, filterTable, setView, openModal, save, viewDetail, viewWorkOrders, deleteItem, restoreItem, startTelemetryPolling,
         openDiscoveryModal, closeDiscoveryModal, loadDiscovery, showDiscoveryRaw, closeDiscoveryRawModal, mapTopic,
         getAllData: () => allData
     };

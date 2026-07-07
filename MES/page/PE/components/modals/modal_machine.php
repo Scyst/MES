@@ -8,6 +8,9 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="machineEditId">
+                <input type="hidden" id="machineFrmMapX">
+                <input type="hidden" id="machineFrmMapY">
+                <input type="hidden" id="machineFrmAreaId">
                 
                 <div class="row g-3">
                     <div class="col-md-4">
@@ -147,9 +150,14 @@
                 </div>
             </div>
             <div class="modal-footer pe-d-flex pe-justify-between">
-                <button type="button" class="pe-btn pe-btn-danger" id="machineDeleteBtn" onclick="MachineModule.deleteItem()" style="display:none;">
-                    <i class="fas fa-trash-alt me-1"></i> Delete
-                </button>
+                <div class="pe-d-flex pe-gap-8">
+                    <button type="button" class="pe-btn pe-btn-danger" id="machineDeleteBtn" onclick="MachineModule.deleteItem()" style="display:none;">
+                        <i class="fas fa-trash-alt me-1"></i> Delete
+                    </button>
+                    <button type="button" class="pe-btn pe-btn-secondary" id="machineViewWOBtn" onclick="MachineModule.viewWorkOrders()" style="display:none;">
+                        <i class="fas fa-tools me-1"></i> View Work Orders
+                    </button>
+                </div>
                 <div class="pe-d-flex pe-gap-8">
                     <button type="button" class="pe-btn pe-btn-ghost" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="pe-btn pe-btn-primary" id="machineSaveBtn" onclick="MachineModule.save()">
