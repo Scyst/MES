@@ -1281,7 +1281,7 @@ const IIoTModule = (function() {
         const activeArea = document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1;
         
         try {
-            const res = await PEApp.apiCall('machineAPI.php', {
+            const res = await PEApp.apiCall('machineAPI.php', {}, 'POST', {
                 action: 'update_location',
                 machine_id: placingMachineId,
                 map_x: xPercent.toFixed(2),
