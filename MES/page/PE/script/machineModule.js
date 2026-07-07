@@ -197,7 +197,8 @@ const MachineModule = (() => {
 
         // Clear fields
         ['machineFrmCode', 'machineFrmName', 'machineFrmMqttTopic', 'machineFrmLine', 'machineFrmArea', 
-         'machineFrmManufacturer', 'machineFrmModel', 'machineFrmSerial', 'machineFrmAssetNo', 'machineFrmNotes'].forEach(id => {
+         'machineFrmManufacturer', 'machineFrmModel', 'machineFrmSerial', 'machineFrmAssetNo', 'machineFrmNotes',
+         'machineFrmMapX', 'machineFrmMapY', 'machineFrmAreaId'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
@@ -231,6 +232,13 @@ const MachineModule = (() => {
                 document.getElementById('machineFrmStatus').value = machine.status || 'Active';
                 document.getElementById('machineFrmCriticality').value = machine.criticality || 'Medium';
                 document.getElementById('machineFrmNotes').value = machine.notes || '';
+                
+                const mapX = document.getElementById('machineFrmMapX');
+                const mapY = document.getElementById('machineFrmMapY');
+                const mapArea = document.getElementById('machineFrmAreaId');
+                if (mapX) mapX.value = machine.map_x != null ? machine.map_x : '';
+                if (mapY) mapY.value = machine.map_y != null ? machine.map_y : '';
+                if (mapArea) mapArea.value = machine.area_id != null ? machine.area_id : '';
                 
                 if (machine.image_path) {
                     const img = previewDiv.querySelector('img');
@@ -286,6 +294,9 @@ const MachineModule = (() => {
                 mqtt_topic: document.getElementById('machineFrmMqttTopic')?.value || '',
                 line: document.getElementById('machineFrmLine')?.value || '',
                 area: document.getElementById('machineFrmArea')?.value || '',
+                map_x: document.getElementById('machineFrmMapX')?.value || '',
+                map_y: document.getElementById('machineFrmMapY')?.value || '',
+                area_id: document.getElementById('machineFrmAreaId')?.value || '',
                 machine_type: document.getElementById('machineFrmType')?.value || '',
                 manufacturer: document.getElementById('machineFrmManufacturer')?.value || '',
                 model: document.getElementById('machineFrmModel')?.value || '',
@@ -305,6 +316,7 @@ const MachineModule = (() => {
             PEApp.showToast('บันทึกเครื่องจักรเรียบร้อย', 'success');
             PEApp.hideModal('machineModal');
             loadData();
+            document.dispatchEvent(new CustomEvent('peMachineSaved'));
         } catch (e) {
             PEApp.showToast(e.message, 'error');
         } finally {
@@ -331,6 +343,7 @@ const MachineModule = (() => {
             PEApp.showToast('ลบเครื่องจักรเรียบร้อยแล้ว', 'success');
             PEApp.hideModal('machineModal');
             loadData();
+            document.dispatchEvent(new CustomEvent('peMachineSaved'));
         } catch (e) {
             PEApp.showToast(e.message, 'error');
         } finally {
@@ -355,6 +368,7 @@ const MachineModule = (() => {
             PEApp.showToast('กู้คืนเครื่องจักรเรียบร้อยแล้ว', 'success');
             PEApp.hideModal('machineModal');
             loadData();
+            document.dispatchEvent(new CustomEvent('peMachineSaved'));
         } catch (e) {
             PEApp.showToast(e.message, 'error');
         } finally {
@@ -530,6 +544,7 @@ const MachineModule = (() => {
 
     return { 
         loadData, filterTable, setView, openModal, save, viewDetail, deleteItem, restoreItem, startTelemetryPolling,
-        openDiscoveryModal, closeDiscoveryModal, loadDiscovery, showDiscoveryRaw, closeDiscoveryRawModal, mapTopic
+        openDiscoveryModal, closeDiscoveryModal, loadDiscovery, showDiscoveryRaw, closeDiscoveryRawModal, mapTopic,
+        getAllData: () => allData
     };
 })();

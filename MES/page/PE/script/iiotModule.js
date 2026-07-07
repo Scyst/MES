@@ -4,6 +4,10 @@ const IIoTModule = (function() {
     let lastOeeData = {};
     let isSimulating = false;
     let isMapEditMode = false;
+    let isAddAssetMode = false;
+    let isPlacingAssetMode = false;
+    let placingMachineId = null;
+    let currentFilterState = { search: '', type: '', line: '', status: '', criticality: '' };
     let cropperInstance = null;
     let panzoomInstance = null;
 
@@ -60,13 +64,11 @@ const IIoTModule = (function() {
             const mapNodesContainer = document.getElementById('mapNodesContainer');
             if (mapNodesContainer) {
                 mapNodesContainer.addEventListener('click', (e) => {
-                    // Only trigger if we clicked directly on the container (not a machine node)
-                    if (e.target.id === 'mapNodesContainer' && !isMapEditMode) {
+                    if (e.target.id === 'mapNodesContainer' && !isMapEditMode && !isAddAssetMode) {
                         if (typeof MapBuilderModule === 'undefined') return;
                         const canvas = MapBuilderModule.getCanvas();
                         if (!canvas) return;
 
-                        // Calculate click coordinates relative to the container
                         const rect = mapNodesContainer.getBoundingClientRect();
                         const scale = panzoomInstance ? panzoomInstance.getScale() : 1;
                         const x = (e.clientX - rect.left) / scale;
@@ -75,7 +77,6 @@ const IIoTModule = (function() {
                         const pt = new fabric.Point(x, y);
                         let clickedZone = null;
 
-                        // Check all zones (polygons and rects)
                         const polygons = canvas.getObjects('polygon');
                         const rects = canvas.getObjects('rect');
                         [...polygons, ...rects].forEach(shape => {
@@ -92,9 +93,23 @@ const IIoTModule = (function() {
             renderGrid();
             startPolling();
             animateAlerts();
+            
+            // Listen for Tab Changes to handle Polling Lifecycle
+            document.addEventListener('peTabChanged', (e) => {
+                if (e.detail.tab === 'iiot') {
+                    startPolling();
+                } else {
+                    stop();
+                }
+            });
+            
         } catch (e) {
             console.error("Failed to init IIoT Dashboard", e);
         }
+    }
+
+    function stop() {
+        if (pollingInterval) clearInterval(pollingInterval);
     }
 
     function renderGrid() {
@@ -240,6 +255,25 @@ const IIoTModule = (function() {
             node.addEventListener('mouseleave', () => {
                 const tt = document.getElementById('machineTooltip');
                 if (tt) tt.classList.remove('visible');
+            });
+            
+            node.addEventListener('click', async (e) => {
+                if (!isMapEditMode && !isAddAssetMode) {
+                    if (typeof MachineModule !== 'undefined' && MachineModule.openModal) {
+                        try {
+                            const prevHTML = node.innerHTML;
+                            node.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:12px; color:white;"></i>';
+                            await MachineModule.loadData();
+                            MachineModule.openModal(m.machine_id);
+                            node.innerHTML = prevHTML;
+                        } catch(err) {
+                            console.error(err);
+                            PEApp.showToast('Failed to open machine details', 'error');
+                        }
+                    } else {
+                        PEApp.showToast('Machine Registry module not loaded.', 'warning');
+                    }
+                }
             });
             
             // Allow pointer events on nodes specifically, since container is pointer-events: none
@@ -584,10 +618,17 @@ const IIoTModule = (function() {
             avgOee = ((parseFloat(avgAvail) / 100) * (avgPerf / 100) * (parseFloat(avgQual) / 100) * 100).toFixed(1);
         }
 
+        const machineBadges = machineCodes.map(mc => `<span class="badge bg-secondary me-1 mb-1">${mc}</span>`).join('');
+        
         const html = `
             <div style="text-align:left; font-size: 14px;">
                 ${locationNameStr}
-                <p class="mb-3 text-muted"><strong>Machines:</strong> ${machineCodes.length > 0 ? machineCodes.join(', ') : 'None'}</p>
+                <div style="margin-bottom: 15px;">
+                    <p style="margin-bottom: 5px;" class="text-muted"><strong>Machines (${machineCodes.length}):</strong></p>
+                    <div style="max-height: 80px; overflow-y: auto;">
+                        ${machineCodes.length > 0 ? machineBadges : 'None'}
+                    </div>
+                </div>
                 <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
                     <span class="text-secondary"><i class="fas fa-cube me-2"></i>Total Output</span>
                     <strong class="text-primary">${totalOutput.toLocaleString()} ${unassignedOutput > 0 ? `<br><small class="text-muted" style="font-size:10px;">(+${unassignedOutput.toLocaleString()} Unassigned)</small>` : ''}</strong>
@@ -693,9 +734,11 @@ const IIoTModule = (function() {
                 } else {
                     nodeEl.classList.add('offline');
                 }
-                evaluateZones();
             }
         });
+        
+        // Evaluate zones once after all machines are updated
+        evaluateZones();
     }
 
     function stop() {
@@ -705,6 +748,158 @@ const IIoTModule = (function() {
         }
     }
     
+    function applyFilter() {
+        let activeFilterCount = 0;
+        if (currentFilterState.search) activeFilterCount++;
+        if (currentFilterState.type) activeFilterCount++;
+        if (currentFilterState.line) activeFilterCount++;
+        if (currentFilterState.status) activeFilterCount++;
+        if (currentFilterState.criticality) activeFilterCount++;
+        
+        const badge = document.getElementById('iiotFilterActiveBadge');
+        if (badge) {
+            badge.style.display = activeFilterCount > 0 ? 'block' : 'none';
+        }
+        
+        const s = currentFilterState.search;
+        
+        machinesWithIIoT.forEach(m => {
+            const nodeEl = document.getElementById(`iiot-node-${m.machine_code}`);
+            if (nodeEl) {
+                let match = true;
+                
+                if (s) {
+                    const combined = `${m.machine_name} ${m.machine_code} ${m.asset_no} ${m.manufacturer} ${m.model}`.toLowerCase();
+                    if (!combined.includes(s)) match = false;
+                }
+                if (currentFilterState.type && m.machine_type !== currentFilterState.type) match = false;
+                if (currentFilterState.line && m.line !== currentFilterState.line) match = false;
+                if (currentFilterState.status && m.status !== currentFilterState.status) match = false;
+                if (currentFilterState.criticality && m.criticality !== currentFilterState.criticality) match = false;
+                
+                nodeEl.style.display = match ? 'flex' : 'none';
+            }
+        });
+    }
+
+    function openFilterModal() {
+        const modal = new bootstrap.Modal(document.getElementById('iiotFilterModal'));
+        
+        // Ensure dropdowns are populated
+        const types = [...new Set(machinesWithIIoT.map(m => m.machine_type).filter(Boolean))];
+        const lines = [...new Set(machinesWithIIoT.map(m => m.line).filter(Boolean))];
+        
+        const typeSelect = document.getElementById('iiotFilterType');
+        if (typeSelect) {
+            while(typeSelect.options.length > 1) typeSelect.options.remove(1);
+            types.forEach(t => typeSelect.add(new Option(t, t)));
+            typeSelect.value = currentFilterState.type;
+        }
+        
+        const lineSelect = document.getElementById('iiotFilterLine');
+        if (lineSelect) {
+            while(lineSelect.options.length > 1) lineSelect.options.remove(1);
+            lines.forEach(l => lineSelect.add(new Option(l, l)));
+            lineSelect.value = currentFilterState.line;
+        }
+        
+        document.getElementById('iiotFilterSearch').value = currentFilterState.search;
+        document.getElementById('iiotFilterStatus').value = currentFilterState.status;
+        document.getElementById('iiotFilterCriticality').value = currentFilterState.criticality;
+        
+        modal.show();
+    }
+    
+    function applyAdvancedFilter() {
+        currentFilterState.search = document.getElementById('iiotFilterSearch').value.toLowerCase();
+        currentFilterState.type = document.getElementById('iiotFilterType').value;
+        currentFilterState.line = document.getElementById('iiotFilterLine').value;
+        currentFilterState.status = document.getElementById('iiotFilterStatus').value;
+        currentFilterState.criticality = document.getElementById('iiotFilterCriticality').value;
+        
+        applyFilter();
+        
+        // Hide modal
+        const modalEl = document.getElementById('iiotFilterModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+    }
+    
+    function clearFilter() {
+        document.getElementById('iiotFilterSearch').value = '';
+        document.getElementById('iiotFilterType').value = '';
+        document.getElementById('iiotFilterLine').value = '';
+        document.getElementById('iiotFilterStatus').value = '';
+        document.getElementById('iiotFilterCriticality').value = '';
+        
+        currentFilterState = { search: '', type: '', line: '', status: '', criticality: '' };
+        applyFilter();
+    }
+
+    let allMachinesCache = [];
+
+    function toggleInventoryPanel() {
+        const panel = document.getElementById('iiotInventoryPanel');
+        if (panel) {
+            if (panel.style.display === 'none' || panel.style.display === '') {
+                renderInventory();
+                panel.style.display = 'block';
+            } else {
+                panel.style.display = 'none';
+                isPlacingAssetMode = false;
+                placingMachineId = null;
+                document.getElementById('iiotFloorplan').style.cursor = 'default';
+            }
+        }
+    }
+
+    function renderInventory() {
+        const unplaced = allMachinesCache.filter(m => m.map_x == null || m.map_x === '' || m.map_y == null || m.map_y === '');
+        
+        const badge = document.getElementById('iiotUnplacedBadge');
+        if (badge) {
+            badge.innerText = unplaced.length;
+            badge.style.display = unplaced.length > 0 ? 'inline-block' : 'none';
+        }
+        
+        const listEl = document.getElementById('iiotInventoryList');
+        if (!listEl) return;
+        
+        if (unplaced.length === 0) {
+            listEl.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-check-circle mb-2" style="font-size: 24px; opacity: 0.5;"></i><br><small>All assets are placed</small></div>';
+            return;
+        }
+        
+        listEl.innerHTML = unplaced.map(m => `
+            <div class="pe-card p-2 d-flex justify-content-between align-items-center" style="border: 1px solid #e2e8f0; margin-bottom: 8px;">
+                <div>
+                    <div class="fw-bold" style="font-size: 13px;">${PEApp.escapeHtml(m.machine_code)}</div>
+                    <div class="text-muted" style="font-size: 11px;">${PEApp.escapeHtml(m.machine_name)}</div>
+                </div>
+                <button class="btn btn-sm btn-primary-soft" onclick="IIoTModule.startPlacingAsset(${m.machine_id})" title="Place on Map">
+                    <i class="fas fa-map-pin"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    function startPlacingAsset(machineId) {
+        isPlacingAssetMode = true;
+        placingMachineId = machineId;
+        document.getElementById('iiotFloorplan').style.cursor = 'crosshair';
+        
+        // Hide panel so they can click the map
+        const panel = document.getElementById('iiotInventoryPanel');
+        if (panel) panel.style.display = 'none';
+        
+        const mapNodesContainer = document.getElementById('mapNodesContainer');
+        if (mapNodesContainer) {
+            mapNodesContainer.addEventListener('click', handlePlaceAssetClick);
+        }
+        
+        PEApp.showToast('Click on the map to place the asset.', 'info');
+    }
+
     function toggleSimulation() {
         isSimulating = !isSimulating;
         const icon = document.getElementById('iiotSimIcon');
@@ -965,13 +1160,27 @@ const IIoTModule = (function() {
     async function loadArea(areaId) {
         if (!areaId) areaId = document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1;
         
-        const res = await PEApp.apiCall('machineAPI.php', { action: 'get_machines', area_id: areaId });
-        machinesWithIIoT = (res.data || []).filter(m => m.mqtt_topic && m.mqtt_topic.trim() !== '');
+        // Fetch all machines to get unplaced items
+        const resAll = await PEApp.apiCall('machineAPI.php', { action: 'get_machines' });
+        allMachinesCache = resAll.data || [];
+        
+        // Update unplaced badge immediately
+        const unplaced = allMachinesCache.filter(m => m.map_x == null || m.map_x === '' || m.map_y == null || m.map_y === '');
+        const badge = document.getElementById('iiotUnplacedBadge');
+        if (badge) {
+            badge.innerText = unplaced.length;
+            badge.style.display = unplaced.length > 0 ? 'inline-block' : 'none';
+        }
+        
+        machinesWithIIoT = allMachinesCache.filter(m => m.area_id == areaId && ((m.mqtt_topic && m.mqtt_topic.trim() !== '') || (m.map_x != null && m.map_y != null)));
         
         renderGrid(); // this calls renderFloorplan inside it
         
+        // Ensure filter is applied if one is selected
+        applyFilter();
+        
         if (typeof MapBuilderModule !== 'undefined') {
-            MapBuilderModule.loadMap();
+            MapBuilderModule.loadMap(areaId);
         }
         
         if (isHeatmapActive) updateHeatmapData();
@@ -994,5 +1203,124 @@ const IIoTModule = (function() {
         }
     }
 
-    return { init, stop, toggleSimulation, toggleEditMode, saveMapPositions, uploadMapBg, rotateMap, confirmMapCrop, setPanzoomState, toggleHeatmap, loadArea, simulateAlert };
+    function toggleAddAssetMode() {
+        isAddAssetMode = !isAddAssetMode;
+        const btn = document.getElementById('iiotAddAssetBtn');
+        const floorplan = document.getElementById('iiotFloorplan');
+        
+        if (isAddAssetMode) {
+            PEApp.showToast('Click on the map to pin a new asset.', 'info');
+            if (btn) {
+                btn.style.backgroundColor = '#10b981';
+                btn.style.color = 'white';
+            }
+            if (floorplan) floorplan.style.cursor = 'crosshair';
+            if (panzoomInstance) panzoomInstance.setOptions({ disablePan: true, disableZoom: true });
+            
+            // Add click listener
+            const mapNodesContainer = document.getElementById('mapNodesContainer');
+            if (mapNodesContainer) {
+                mapNodesContainer.addEventListener('click', handleAddAssetClick);
+            }
+        } else {
+            if (btn) {
+                btn.style.backgroundColor = 'transparent';
+                btn.style.color = '#10b981';
+            }
+            if (floorplan) floorplan.style.cursor = 'default';
+            if (panzoomInstance) panzoomInstance.setOptions({ disablePan: false, disableZoom: false });
+            
+            const mapNodesContainer = document.getElementById('mapNodesContainer');
+            if (mapNodesContainer) {
+                mapNodesContainer.removeEventListener('click', handleAddAssetClick);
+            }
+        }
+    }
+
+    function handleAddAssetClick(e) {
+        if (!isAddAssetMode) return;
+        
+        const mapNodesContainer = document.getElementById('mapNodesContainer');
+        const rect = mapNodesContainer.getBoundingClientRect();
+        
+        // Calculate percentages
+        const xPercent = ((e.clientX - rect.left) / rect.width) * 100;
+        const yPercent = ((e.clientY - rect.top) / rect.height) * 100;
+        
+        const activeArea = document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1;
+        
+        // Open full MachineModal FIRST
+        if (typeof MachineModule !== 'undefined' && MachineModule.openModal) {
+            MachineModule.openModal(null);
+            
+            // Populate hidden fields in machineModal AFTER it opens (so it doesn't get cleared)
+            const xInput = document.getElementById('machineFrmMapX');
+            const yInput = document.getElementById('machineFrmMapY');
+            const areaInput = document.getElementById('machineFrmAreaId');
+            
+            if (xInput) xInput.value = xPercent.toFixed(2);
+            if (yInput) yInput.value = yPercent.toFixed(2);
+            if (areaInput) areaInput.value = activeArea;
+        } else {
+            PEApp.showToast('Machine Registry module not loaded', 'warning');
+        }
+        
+        // Exit add mode
+        toggleAddAssetMode();
+    }
+
+    async function handlePlaceAssetClick(e) {
+        if (!isPlacingAssetMode || !placingMachineId) return;
+        
+        const mapNodesContainer = document.getElementById('mapNodesContainer');
+        const rect = mapNodesContainer.getBoundingClientRect();
+        
+        const xPercent = ((e.clientX - rect.left) / rect.width) * 100;
+        const yPercent = ((e.clientY - rect.top) / rect.height) * 100;
+        
+        const activeArea = document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1;
+        
+        try {
+            const res = await PEApp.apiCall('machineAPI.php', {
+                action: 'update_location',
+                machine_id: placingMachineId,
+                map_x: xPercent.toFixed(2),
+                map_y: yPercent.toFixed(2),
+                area_id: activeArea
+            });
+            if (res.success) {
+                PEApp.showToast('Asset placed successfully!', 'success');
+                // Cleanup mode
+                isPlacingAssetMode = false;
+                placingMachineId = null;
+                document.getElementById('iiotFloorplan').style.cursor = 'default';
+                mapNodesContainer.removeEventListener('click', handlePlaceAssetClick);
+                
+                // Refresh map and inventory
+                await loadArea(activeArea);
+                if (document.getElementById('iiotInventoryPanel').style.display === 'block') {
+                    renderInventory();
+                }
+            } else {
+                throw new Error(res.message);
+            }
+        } catch (err) {
+            PEApp.showToast(err.message, 'error');
+            isPlacingAssetMode = false;
+            placingMachineId = null;
+            document.getElementById('iiotFloorplan').style.cursor = 'default';
+            mapNodesContainer.removeEventListener('click', handlePlaceAssetClick);
+        }
+    }
+
+    document.addEventListener('peMachineSaved', () => {
+        // Reload area to show the new/updated asset if IIoT tab is active
+        const iiotPanel = document.getElementById('panel-iiot');
+        if (iiotPanel && iiotPanel.classList.contains('active')) {
+            const activeArea = document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1;
+            loadArea(activeArea);
+        }
+    });
+
+    return { init, stop, toggleSimulation, toggleEditMode, saveMapPositions, uploadMapBg, rotateMap, confirmMapCrop, setPanzoomState, toggleHeatmap, loadArea, simulateAlert, toggleAddAssetMode, toggleInventoryPanel, applyFilter, startPlacingAsset, openFilterModal, applyAdvancedFilter, clearFilter };
 })();
