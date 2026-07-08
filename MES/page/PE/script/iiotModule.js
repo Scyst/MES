@@ -783,7 +783,9 @@ const IIoTModule = (function() {
     }
 
     function openFilterModal() {
-        const modal = new bootstrap.Modal(document.getElementById('iiotFilterModal'));
+        const modalEl = document.getElementById('iiotFilterModal');
+        let modal = bootstrap.Modal.getInstance(modalEl);
+        if (!modal) modal = new bootstrap.Modal(modalEl);
         
         // Ensure dropdowns are populated
         const types = [...new Set(machinesWithIIoT.map(m => m.machine_type).filter(Boolean))];
