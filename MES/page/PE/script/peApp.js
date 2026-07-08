@@ -1,7 +1,8 @@
 // peApp.js — PE Enterprise Core Application Controller
-const PEApp = (() => {
-    let currentTab = 'machines';
-    let sidebarCollapsed = false;
+
+// Internal state
+let currentTab = 'machines';
+let sidebarCollapsed = false;
     const tabConfig = {
         machines: { title: 'Machine Registry', breadcrumb: 'Machines', icon: 'fas fa-industry', loader: () => MachineModule.loadData() },
         workorders: { title: 'Work Orders', breadcrumb: 'Work Orders', icon: 'fas fa-clipboard-list', loader: () => WorkOrderModule.loadData() },
@@ -263,7 +264,8 @@ const PEApp = (() => {
         }
     });
 
-    return {
+    // Expose public API
+    const PEApp = {
         switchTab, refreshCurrentTab, toggleSidebar,
         apiCall, uploadFile, showToast, showConfirm, showModal, hideModal,
         formatDate, formatDateTime, formatTime, formatNumber, formatCurrency,
@@ -271,4 +273,7 @@ const PEApp = (() => {
         escapeHtml, animateValue,
         get currentTab() { return currentTab; }
     };
-})();
+// Attach to window for legacy inline handlers (onclick)
+window.PEApp = PEApp;
+
+export default PEApp;

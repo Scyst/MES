@@ -249,3 +249,6 @@ const IIoTOeeModule = (function() {
 document.addEventListener('DOMContentLoaded', () => {
     IIoTOeeModule.init();
 });
+
+window.IiotOeeModule = IiotOeeModule;
+export default IiotOeeModule;

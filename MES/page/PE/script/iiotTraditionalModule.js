@@ -277,3 +277,6 @@ const iiotTraditionalModule = (function () {
         filterTable
     };
 })();
+
+window.iiotTraditionalModule = iiotTraditionalModule;
+export default iiotTraditionalModule;

@@ -126,7 +126,8 @@ const MapBuilderModule = (function () {
 
         if (isBuilderMode) {
             toolbar.style.display = 'block';
-            nodesContainer.style.display = 'none'; // Hide machine nodes while building
+            nodesContainer.style.pointerEvents = 'none'; // Keep visible but unclickable
+            nodesContainer.style.opacity = '0.5';
             canvasWrapper.style.pointerEvents = 'auto'; // Enable canvas interactions
             btnToggle.classList.replace('btn-outline-primary', 'btn-primary');
 
@@ -139,7 +140,8 @@ const MapBuilderModule = (function () {
             canvas.renderAll();
         } else {
             toolbar.style.display = 'none';
-            nodesContainer.style.display = 'block';
+            nodesContainer.style.pointerEvents = 'auto'; // Restore pointer events
+            nodesContainer.style.opacity = '1';
             canvasWrapper.style.pointerEvents = 'none'; // Disable canvas interactions, let nodes receive clicks
             btnToggle.classList.replace('btn-primary', 'btn-outline-primary');
 
@@ -693,14 +695,14 @@ const MapBuilderModule = (function () {
     }
 
     // --- Save & Load ---
-    async function saveMap() {
+    async function saveMap(areaId) {
         try {
             // Include custom properties in JSON export
             const json = canvas.toJSON(['zoneName', 'location_id', 'id', 'name', 'isConveyor']);
-            const areaId = document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1;
+            const finalAreaId = areaId || (document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1);
             const res = await PEApp.apiCall('mapAPI.php', {}, 'POST', {
                 action: 'save_map',
-                area_id: areaId,
+                area_id: finalAreaId,
                 map_data: JSON.stringify(json)
             });
 
@@ -714,10 +716,10 @@ const MapBuilderModule = (function () {
         }
     }
 
-    async function loadMap() {
+    async function loadMap(areaId) {
         try {
-            const areaId = document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1;
-            const res = await PEApp.apiCall('mapAPI.php', { action: 'load_map', area_id: areaId });
+            const finalAreaId = areaId || (document.getElementById('iiotAreaSelect') ? document.getElementById('iiotAreaSelect').value : 1);
+            const res = await PEApp.apiCall('mapAPI.php', { action: 'load_map', area_id: finalAreaId });
             if (res.success && res.map_data) {
                 canvas.loadFromJSON(res.map_data, canvas.renderAll.bind(canvas));
             }
@@ -770,3 +772,6 @@ document.addEventListener('DOMContentLoaded', () => {
         MapBuilderModule.init();
     }, 1000); // Small delay to ensure DOM is fully rendered
 });
+
+window.MapBuilderModule = MapBuilderModule;
+export default MapBuilderModule;

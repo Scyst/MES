@@ -1329,3 +1329,6 @@ const IIoTModule = (function() {
 
     return { init, stop, toggleSimulation, toggleEditMode, saveMapPositions, uploadMapBg, rotateMap, confirmMapCrop, setPanzoomState, toggleHeatmap, loadArea, simulateAlert, toggleAddAssetMode, toggleInventoryPanel, applyFilter, startPlacingAsset, openFilterModal, applyAdvancedFilter, clearFilter };
 })();
+
+window.IIoTModule = IIoTModule;
+export default IIoTModule;

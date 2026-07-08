@@ -288,3 +288,6 @@ const IIoTAnalyticsModule = (() => {
         onLineChange
     };
 })();
+
+window.IIoTAnalyticsModule = IIoTAnalyticsModule;
+export default IIoTAnalyticsModule;

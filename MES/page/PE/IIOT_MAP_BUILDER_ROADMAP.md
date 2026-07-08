@@ -2,21 +2,21 @@
 
 This document outlines the planned future enhancements for the IIoT Map Builder and Live IIoT Monitor within the PE Enterprise module. It is intended for future developers or AI agents to pick up and continue development smoothly.
 
-## 1. Zone Analytics (ระบบรวมสถิติตามโซน)
+## 1. [DONE] Zone Analytics (ระบบรวมสถิติตามโซน)
 **Goal:** Make polygon/box "Zones" interactive. When a user clicks or hovers over a zone, the system calculates and displays aggregated metrics (OEE, Power, Output) for all machines physically located inside that zone.
 **Implementation Ideas:**
 - **Geometry Check:** Use a "Point in Polygon" algorithm (ray-casting) or Fabric.js intersection features to determine which machine nodes (`.machine-node`) fall inside the coordinates of a drawn Zone (`fabric.Polygon` or `fabric.Rect`).
 - **Data Aggregation:** Sum or average the telemetry data of the machines inside the zone.
 - **UI:** Show a summary popover or a side panel with the aggregated data when the zone is selected.
 
-## 2. Production Flow / Conveyors (การสร้างเส้นทางการผลิต)
+## 2. [DONE] Production Flow / Conveyors (การสร้างเส้นทางการผลิต)
 **Goal:** Allow users to draw arrows or conveyor belts connecting machines to visualize the material flow sequence.
 **Implementation Ideas:**
 - **New Drawing Mode:** Add an 'arrow' or 'conveyor' mode in `mapBuilderModule.js`.
 - **Connecting Nodes:** Instead of just drawing a static arrow, the arrows could logically link `machineId_A` to `machineId_B`.
 - **Animation:** Use SVG animations or Canvas dashed line animations to simulate material moving along the conveyor when the factory is running.
 
-## 3. Data Heatmap Overlay (แผนที่ความร้อน)
+## 3. [DONE] Data Heatmap Overlay (แผนที่ความร้อน)
 **Goal:** Overlay a thermal-like heatmap on the floorplan based on machine telemetry (e.g., red for high power consumption, green for normal).
 **Implementation Ideas:**
 - **Canvas Integration:** Use a library like `simpleheat` or `heatmap.js`. Add it as a top-level canvas overlay with low opacity (`pointer-events: none`).
@@ -41,4 +41,10 @@ This document outlines the planned future enhancements for the IIoT Map Builder 
 **Implementation Ideas:**
 - **Area Selector:** Add a dropdown at the top of the IIoT Dashboard (e.g., "Building A - Floor 1", "Building B").
 - **Database Schema:** Update the database to store `floor_id` or `area_id` alongside the saved objects and node positions.
-- **Dynamic Loading:** When a new area is selected, clear the canvas, load the specific background image for that area, and fetch only the machine nodes and map builder objects associated with that area.
+## 7. 3D Digital Twin (การจำลองเครื่องจักร 3 มิติ)
+**Goal:** Upgrade the 2D floorplan visualization into a full 3D interactive simulation where machine telemetry (temperature, speed, status) affects 3D meshes in real-time (similar to SolidWorks/Siemens NX digital twins).
+**Implementation Ideas:**
+- **Technology Stack:** Use WebGL libraries such as **Three.js** or **Babylon.js** (or React Three Fiber if moving to React). These allow rendering 3D assets directly in the browser.
+- **3D Assets & Optimization (The Bottleneck):** Raw CAD files (SolidWorks, AutoCAD) are too heavy for browsers (High-poly). They must be optimized, decimated, and re-topologized into lightweight `.gltf` or `.glb` formats by a 3D Artist.
+- **Data Binding:** Mesh components in the 3D model must have specific names (e.g., `mesh_motor_01`). The frontend will use these names to bind MQTT telemetry data to mesh properties (e.g., changing material color based on temperature, rotating the mesh based on RPM).
+- **Hybrid Approach:** To save client-side resources, keep the factory floor as a 2D City-Builder. When a user double-clicks a machine node, open a WebGL popup showing the specific machine's 3D model with real-time sensor overlays (Low-poly models recommended for initial MVP).

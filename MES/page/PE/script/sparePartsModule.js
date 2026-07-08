@@ -408,3 +408,6 @@ const SparePartsModule = (() => {
         loadHistory, filterHistoryTable, renderHistoryTable
     };
 })();
+
+window.SparePartsModule = SparePartsModule;
+export default SparePartsModule;

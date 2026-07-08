@@ -262,18 +262,18 @@ $pageTitle = "PE Enterprise";
     };
 </script>
 
-<script src="script/peApp.js?v=<?php echo filemtime(__DIR__ . '/script/peApp.js'); ?>"></script>
-<script src="script/machineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineModule.js'); ?>"></script>
-<script src="script/workOrderModule.js?v=<?php echo time(); ?>"></script>
-<script src="script/downtimeModule.js?v=<?php echo filemtime(__DIR__ . '/script/downtimeModule.js'); ?>"></script>
-<script src="script/sparePartsModule.js?v=<?php echo filemtime(__DIR__ . '/script/sparePartsModule.js'); ?>"></script>
-<script src="script/analyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/analyticsModule.js'); ?>"></script>
-<script src="script/mapBuilderModule.js?v=<?php echo time(); ?>"></script>
-<script src="script/iiotModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotModule.js'); ?>"></script>
-<script src="script/iiotTraditionalModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotTraditionalModule.js'); ?>"></script>
-<script src="script/iiotAnalyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotAnalyticsModule.js'); ?>"></script>
-<script src="script/productionOverviewModule.js?v=<?php echo filemtime(__DIR__ . '/script/productionOverviewModule.js'); ?>"></script>
-<script src="script/machineTimelineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineTimelineModule.js'); ?>"></script>
+<script type="module" src="script/peApp.js?v=<?php echo filemtime(__DIR__ . '/script/peApp.js'); ?>"></script>
+<script type="module" src="script/machineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineModule.js'); ?>"></script>
+<script type="module" src="script/workOrderModule.js?v=<?php echo time(); ?>"></script>
+<script type="module" src="script/downtimeModule.js?v=<?php echo filemtime(__DIR__ . '/script/downtimeModule.js'); ?>"></script>
+<script type="module" src="script/sparePartsModule.js?v=<?php echo filemtime(__DIR__ . '/script/sparePartsModule.js'); ?>"></script>
+<script type="module" src="script/analyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/analyticsModule.js'); ?>"></script>
+<script type="module" src="script/mapBuilderModule.js?v=<?php echo time(); ?>"></script>
+<script type="module" src="script/iiotModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotModule.js'); ?>"></script>
+<script type="module" src="script/iiotTraditionalModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotTraditionalModule.js'); ?>"></script>
+<script type="module" src="script/iiotAnalyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotAnalyticsModule.js'); ?>"></script>
+<script type="module" src="script/productionOverviewModule.js?v=<?php echo filemtime(__DIR__ . '/script/productionOverviewModule.js'); ?>"></script>
+<script type="module" src="script/machineTimelineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineTimelineModule.js'); ?>"></script>
 
 </body>
 </html>

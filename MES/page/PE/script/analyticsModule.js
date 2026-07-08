@@ -461,3 +461,6 @@ const AnalyticsModule = (() => {
 
     return { loadAll, setPeriod, clearCauseFilter };
 })();
+
+window.AnalyticsModule = AnalyticsModule;
+export default AnalyticsModule;

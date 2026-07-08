@@ -482,3 +482,6 @@ window.TechModule = (function() {
         confirmIssuePart
     };
 })();
+
+window.PeTechModule = PeTechModule;
+export default PeTechModule;

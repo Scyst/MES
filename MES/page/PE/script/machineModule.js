@@ -577,3 +577,6 @@ const MachineModule = (() => {
         getAllData: () => allData
     };
 })();
+
+window.MachineModule = MachineModule;
+export default MachineModule;

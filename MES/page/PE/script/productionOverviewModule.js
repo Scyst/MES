@@ -160,3 +160,6 @@ const ProductionOverviewModule = (function() {
 document.addEventListener('DOMContentLoaded', () => {
     ProductionOverviewModule.init();
 });
+
+window.ProductionOverviewModule = ProductionOverviewModule;
+export default ProductionOverviewModule;

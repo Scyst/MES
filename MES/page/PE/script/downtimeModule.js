@@ -292,3 +292,6 @@ const DowntimeModule = (() => {
 
     return { loadData, filterTable, openModal, editRow, deleteRow, save, exportExcel, onMachineChange, onCauseChange, calcDuration };
 })();
+
+window.DowntimeModule = DowntimeModule;
+export default DowntimeModule;

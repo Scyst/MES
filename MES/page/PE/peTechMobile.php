@@ -79,7 +79,9 @@ $pageTitle = "Technician Portal";
     <!-- Issue Spare Part Modal (Reused from Main System) -->
     <?php include 'components/modals/modal_wo_issue_part.php'; ?>
 
-    <script src="script/peApp.js?v=<?php echo time(); ?>"></script>
-    <script src="script/peTechModule.js?v=<?php echo time(); ?>"></script>
+    <script type="module" src="script/peApp.js?v=<?php echo time(); ?>"></script>
+    <script type="module" src="script/peTechModule.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
+
+

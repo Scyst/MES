@@ -263,3 +263,6 @@ const MachineTimelineModule = (function() {
 document.addEventListener('DOMContentLoaded', () => {
     MachineTimelineModule.init();
 });
+
+window.MachineTimelineModule = MachineTimelineModule;
+export default MachineTimelineModule;
