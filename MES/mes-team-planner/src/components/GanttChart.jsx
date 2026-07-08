@@ -151,7 +151,7 @@ export default function GanttChart() {
   const hours = Array.from({ length: 24 }).map((_, i) => i);
   const totalMinutes = 24 * 60;
 
-  if (loading) return <div className="flex-1 flex items-center justify-center text-slate-400">Loading Gantt Chart...</div>;
+  if (loading) return <div className="flex-1 flex items-center justify-center text-slate-600 dark:text-slate-400">Loading Gantt Chart...</div>;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -160,14 +160,14 @@ export default function GanttChart() {
         <div className="flex flex-row flex-nowrap overflow-x-auto items-center justify-between gap-3 custom-scrollbar pb-1 -mb-1">
           {/* Left Group: Date */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center gap-1 bg-slate-800 rounded-xl p-1 border border-slate-700">
-              <button onClick={prevDay} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors active:scale-90">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-300 dark:border-slate-700">
+              <button onClick={prevDay} className="p-2 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors active:scale-90">
                 <FiChevronLeft />
               </button>
-              <span className="text-slate-200 font-semibold px-2 min-w-[100px] sm:min-w-[130px] text-center text-sm">
+              <span className="text-slate-800 dark:text-slate-200 font-semibold px-2 min-w-[100px] sm:min-w-[130px] text-center text-sm">
                 {format(currentDate, 'dd MMM yyyy')}
               </span>
-              <button onClick={nextDay} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors active:scale-90">
+              <button onClick={nextDay} className="p-2 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors active:scale-90">
                 <FiChevronRight />
               </button>
             </div>
@@ -176,12 +176,12 @@ export default function GanttChart() {
           {/* Right Group: Filter + Search + Add */}
           <div className="flex items-center gap-2 shrink-0">
 
-            <button onClick={() => setShowSearch(!showSearch)} className={`p-2.5 rounded-xl transition-all active:scale-90 border h-10 w-10 flex items-center justify-center ${showSearch || searchQuery ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-400' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>
+            <button onClick={() => setShowSearch(!showSearch)} className={`p-2.5 rounded-xl transition-all active:scale-90 border h-10 w-10 flex items-center justify-center ${showSearch || searchQuery ? 'bg-indigo-500/10 dark:bg-indigo-500/15 border-indigo-500/30 text-indigo-400' : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
               <FiSearch className="text-sm" />
             </button>
             <button 
               onClick={() => { setEditingTask(null); setIsModalOpen(true); }}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white pl-3 pr-4 rounded-xl text-sm font-semibold transition-all active:scale-95 flex items-center gap-1.5 shadow-lg shadow-indigo-900/20 h-10"
+              className="bg-indigo-600 hover:bg-indigo-500 text-slate-900 dark:text-white pl-3 pr-4 rounded-xl text-sm font-semibold transition-all active:scale-95 flex items-center gap-1.5 shadow-lg shadow-indigo-900/20 h-10"
             >
               <FiPlus className="text-base" /> <span className="hidden sm:inline">สร้างงาน</span><span className="sm:hidden">เพิ่ม</span>
             </button>
@@ -192,26 +192,26 @@ export default function GanttChart() {
         {showSearch && (
           <div className="relative animate-slide-up">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="ค้นหางาน / ผู้รับผิดชอบ..." className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl pl-10 pr-10 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm placeholder-slate-500" />
+            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="ค้นหางาน / ผู้รับผิดชอบ..." className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-10 pr-10 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm placeholder-slate-500" />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><FiX className="text-sm" /></button>
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 dark:hover:text-white"><FiX className="text-sm" /></button>
             )}
           </div>
         )}
       </div>
 
       {/* ═══ Gantt Chart Area ═══ */}
-      <div className="flex-1 overflow-auto border border-slate-700/80 rounded-xl bg-slate-800/20 relative">
+      <div className="flex-1 overflow-auto border border-slate-300/80 dark:border-slate-700/80 rounded-xl bg-slate-100/20 dark:bg-slate-800/20 relative">
         <div className="min-w-[1200px]">
           
           {/* Header Row (Hours) */}
-          <div className="flex border-b border-slate-700 sticky top-0 bg-slate-800 z-20 shadow-md">
-            <div className="w-28 md:w-40 shrink-0 px-3 py-2 font-bold text-slate-400 text-xs border-r border-slate-700 flex items-center bg-slate-800 sticky left-0 z-40">
+          <div className="flex border-b border-slate-300 dark:border-slate-700 sticky top-0 bg-slate-100 dark:bg-slate-800 z-20 shadow-md">
+            <div className="w-28 md:w-40 shrink-0 px-3 py-2 font-bold text-slate-600 dark:text-slate-400 text-xs border-r border-slate-300 dark:border-slate-700 flex items-center bg-slate-100 dark:bg-slate-800 sticky left-0 z-40">
               ผู้รับผิดชอบ
             </div>
             <div className="flex flex-1 relative">
               {hours.map(hour => (
-                <div key={hour} className="flex-1 min-w-[50px] border-r border-slate-700/30 flex items-center justify-center py-2 text-[11px] text-slate-500 font-mono">
+                <div key={hour} className="flex-1 min-w-[50px] border-r border-slate-300/30 dark:border-slate-700/30 flex items-center justify-center py-2 text-[11px] text-slate-500 font-mono">
                   {hour.toString().padStart(2, '0')}
                 </div>
               ))}
@@ -257,11 +257,11 @@ export default function GanttChart() {
             const offsetY = (requiredHeight - blockHeight) / 2;
 
             return (
-              <div key={assignee} className="flex border-b border-slate-700/40 group hover:bg-slate-800/30 relative" style={{ minHeight: `${requiredHeight}px` }}>
+              <div key={assignee} className="flex border-b border-slate-300/40 dark:border-slate-700/40 group hover:bg-slate-200 dark:hover:bg-slate-800/30 relative" style={{ minHeight: `${requiredHeight}px` }}>
                 {/* Name column */}
-                <div className="w-28 md:w-40 shrink-0 px-3 py-2 text-sm font-medium text-slate-300 border-r border-slate-700 flex items-center bg-slate-900/95 z-20 sticky left-0 shadow-[2px_0_8px_rgba(0,0,0,0.3)]">
+                <div className="w-28 md:w-40 shrink-0 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 border-r border-slate-300 dark:border-slate-700 flex items-center bg-white dark:bg-slate-900/95 z-20 sticky left-0 shadow-[2px_0_8px_rgba(0,0,0,0.3)]">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[11px] text-white font-bold shrink-0 border border-indigo-400/30">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[11px] text-slate-900 dark:text-white font-bold shrink-0 border border-indigo-400/30">
                       {assignee.substring(0, 1).toUpperCase()}
                     </div>
                     <span className="truncate text-xs md:text-sm" title={assignee}>{assignee}</span>
@@ -273,7 +273,7 @@ export default function GanttChart() {
                   {hours.map(hour => (
                     <div 
                       key={hour} 
-                      className="flex-1 min-w-[50px] border-r border-slate-700/20 hover:bg-indigo-500/5 cursor-pointer transition-colors"
+                      className="flex-1 min-w-[50px] border-r border-slate-300/20 dark:border-slate-700/20 hover:bg-indigo-500/5 cursor-pointer transition-colors"
                       onClick={() => openAddModal(assignee, hour)}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => handleDrop(e, assignee, hour)}
@@ -299,7 +299,7 @@ export default function GanttChart() {
                                          (task.priority || 'normal') === 'low' ? 'bg-green-500/80 border-green-400/60' :
                                          task.Status === 'done' ? 'bg-emerald-500/90 border-emerald-400/60' :
                                          task.Status === 'in-progress' ? 'bg-amber-500/90 border-amber-400/60' :
-                                         'bg-indigo-500/90 border-indigo-400/60';
+                                         'bg-indigo-500/10 dark:bg-indigo-500/90 border-indigo-400/60';
 
                       return (
                         <div 
@@ -307,7 +307,7 @@ export default function GanttChart() {
                           draggable
                           onDragStart={(e) => handleDragStart(e, task)}
                           onClick={(e) => openEditModal(e, task)}
-                          className={`absolute rounded-lg border text-[11px] text-white px-2 py-0.5 shadow-md hover:shadow-lg cursor-grab active:cursor-grabbing hover:brightness-110 transition-all z-10 flex items-center overflow-hidden pointer-events-auto ${colorClass}`}
+                          className={`absolute rounded-lg border text-[11px] text-slate-900 dark:text-white px-2 py-0.5 shadow-md hover:shadow-lg cursor-grab active:cursor-grabbing hover:brightness-110 transition-all z-10 flex items-center overflow-hidden pointer-events-auto ${colorClass}`}
                           style={{ 
                             left: `${leftPct}%`, 
                             width: `${widthPct}%`,

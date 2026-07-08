@@ -146,16 +146,16 @@ export default function NotificationManager() {
           {notifications.map(notif => (
             <div 
               key={notif.id} 
-              className="bg-slate-800 border-l-4 border-amber-500 text-white p-4 rounded-lg shadow-2xl shadow-amber-900/20 max-w-sm flex items-start gap-4 animate-bounce-short"
+              className="bg-slate-100 dark:bg-slate-800 border-l-4 border-amber-500 text-slate-900 dark:text-white p-4 rounded-lg shadow-2xl shadow-amber-900/20 max-w-sm flex items-start gap-4 animate-bounce-short"
             >
               <div className="p-2 rounded-full shrink-0 bg-amber-500/20 text-amber-400">
                 <FiBell className="text-lg" />
               </div>
               <div className="flex-1">
                 <h4 className="font-bold text-sm mb-1 text-amber-400">{notif.title}</h4>
-                <p className="text-slate-300 text-xs leading-relaxed">{notif.message}</p>
+                <p className="text-slate-700 dark:text-slate-300 text-xs leading-relaxed">{notif.message}</p>
               </div>
-              <button onClick={() => dismiss(notif.id)} className="text-slate-400 hover:text-white shrink-0 p-1">
+              <button onClick={() => dismiss(notif.id)} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white shrink-0 p-1">
                 <FiX />
               </button>
             </div>
@@ -168,17 +168,17 @@ export default function NotificationManager() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="flex flex-col gap-4 max-w-md w-full">
             {urgentModals.map(notif => (
-              <div key={notif.id} className="bg-slate-900 border border-rose-500/50 rounded-2xl shadow-2xl overflow-hidden animate-bounce-short">
+              <div key={notif.id} className="bg-white dark:bg-slate-900 border border-rose-500/50 rounded-2xl shadow-2xl overflow-hidden animate-bounce-short">
                 <div className="bg-rose-500/10 p-6 flex flex-col items-center text-center relative">
                   <div className="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center text-rose-500 mb-4 animate-pulse">
                     <FiBell className="text-3xl" />
                   </div>
                   <h2 className="text-2xl font-bold text-rose-400 mb-3">{notif.title}</h2>
-                  <p className="text-slate-200 text-lg">{notif.message}</p>
+                  <p className="text-slate-800 dark:text-slate-200 text-lg">{notif.message}</p>
                   
                   <button 
                     onClick={() => setUrgentModals(prev => prev.filter(n => n.id !== notif.id))}
-                    className="mt-8 w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-rose-900/50"
+                    className="mt-8 w-full bg-rose-600 hover:bg-rose-500 text-slate-900 dark:text-white font-bold py-3 px-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-rose-900/50"
                   >
                     รับทราบ (Acknowledge)
                   </button>

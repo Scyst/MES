@@ -82,13 +82,13 @@ export default function Dashboard() {
   }, [tasks]);
   const maxWeekly = Math.max(...weeklyTrend.map(d => Math.max(d.created, d.completed)), 1);
 
-  if (loading) return <div className="flex-1 flex items-center justify-center text-slate-400">Loading dashboard...</div>;
+  if (loading) return <div className="flex-1 flex items-center justify-center text-slate-600 dark:text-slate-400">Loading dashboard...</div>;
 
   return (
     <div className="space-y-4">
       {/* Title */}
       <div className="flex items-center justify-between shrink-0">
-        <h2 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
+        <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <span className="text-indigo-400">📊</span> ภาพรวม
         </h2>
       </div>
@@ -96,38 +96,38 @@ export default function Dashboard() {
       {/* ═══ Stats Cards ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
         {/* Total */}
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
+        <div className="bg-slate-100/60 dark:bg-slate-800/60 border border-slate-300/60 dark:border-slate-700/60 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <FiBarChart2 className="text-indigo-400" />
-            <span className="text-xs text-slate-400 font-medium">งานทั้งหมด</span>
+            <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">งานทั้งหมด</span>
           </div>
-          <div className="text-2xl font-bold text-white">{totalTasks}</div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white">{totalTasks}</div>
         </div>
         {/* Completion */}
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
+        <div className="bg-slate-100/60 dark:bg-slate-800/60 border border-slate-300/60 dark:border-slate-700/60 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <FiCheckCircle className="text-emerald-400" />
-            <span className="text-xs text-slate-400 font-medium">เสร็จแล้ว</span>
+            <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">เสร็จแล้ว</span>
           </div>
           <div className="text-2xl font-bold text-emerald-400">{doneTasks}</div>
-          <div className="mt-2 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+          <div className="mt-2 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
             <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${completionRate}%` }}></div>
           </div>
           <div className="text-[10px] text-slate-500 mt-1">{completionRate}%</div>
         </div>
         {/* Overdue */}
-        <div className={`border rounded-xl p-4 ${overdueTasks > 0 ? 'bg-rose-500/10 border-rose-500/30' : 'bg-slate-800/60 border-slate-700/60'}`}>
+        <div className={`border rounded-xl p-4 ${overdueTasks > 0 ? 'bg-rose-500/10 border-rose-500/30' : 'bg-slate-100/60 dark:bg-slate-800/60 border-slate-300/60 dark:border-slate-700/60'}`}>
           <div className="flex items-center gap-2 mb-2">
             <FiAlertCircle className={overdueTasks > 0 ? 'text-rose-400' : 'text-slate-500'} />
-            <span className="text-xs text-slate-400 font-medium">เกินกำหนด</span>
+            <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">เกินกำหนด</span>
           </div>
           <div className={`text-2xl font-bold ${overdueTasks > 0 ? 'text-rose-400' : 'text-slate-500'}`}>{overdueTasks}</div>
         </div>
         {/* Urgent */}
-        <div className={`border rounded-xl p-4 ${urgentTasks > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-slate-800/60 border-slate-700/60'}`}>
+        <div className={`border rounded-xl p-4 ${urgentTasks > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-slate-100/60 dark:bg-slate-800/60 border-slate-300/60 dark:border-slate-700/60'}`}>
           <div className="flex items-center gap-2 mb-2">
             <FiClock className={urgentTasks > 0 ? 'text-red-400' : 'text-slate-500'} />
-            <span className="text-xs text-slate-400 font-medium">ด่วน/ด่วนมาก</span>
+            <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">ด่วน/ด่วนมาก</span>
           </div>
           <div className={`text-2xl font-bold ${urgentTasks > 0 ? 'text-red-400' : 'text-slate-500'}`}>{urgentTasks + highTasks}</div>
         </div>
@@ -179,8 +179,8 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
         
         {/* Status Distribution */}
-        <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-4">
-          <h3 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+        <div className="bg-slate-100/40 dark:bg-slate-800/40 border border-slate-300/60 dark:border-slate-700/60 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
             <FiPieChart className="text-indigo-400" /> สถานะงาน
           </h3>
           {totalTasks > 0 ? (
@@ -194,16 +194,16 @@ export default function Dashboard() {
               {/* Legend */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-emerald-500"></div><span className="text-xs text-slate-300">Done</span></div>
-                  <span className="text-xs text-slate-400 font-mono">{doneTasks} ({Math.round((doneTasks/totalTasks)*100)}%)</span>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-emerald-500"></div><span className="text-xs text-slate-700 dark:text-slate-300">Done</span></div>
+                  <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">{doneTasks} ({Math.round((doneTasks/totalTasks)*100)}%)</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-amber-500"></div><span className="text-xs text-slate-300">In Progress</span></div>
-                  <span className="text-xs text-slate-400 font-mono">{inProgressTasks} ({Math.round((inProgressTasks/totalTasks)*100)}%)</span>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-amber-500"></div><span className="text-xs text-slate-700 dark:text-slate-300">In Progress</span></div>
+                  <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">{inProgressTasks} ({Math.round((inProgressTasks/totalTasks)*100)}%)</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-slate-500"></div><span className="text-xs text-slate-300">To Do</span></div>
-                  <span className="text-xs text-slate-400 font-mono">{todoTasks} ({Math.round((todoTasks/totalTasks)*100)}%)</span>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-slate-500"></div><span className="text-xs text-slate-700 dark:text-slate-300">To Do</span></div>
+                  <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">{todoTasks} ({Math.round((todoTasks/totalTasks)*100)}%)</span>
                 </div>
               </div>
             </>
@@ -213,15 +213,15 @@ export default function Dashboard() {
         </div>
 
         {/* Weekly Trend */}
-        <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-4">
-          <h3 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+        <div className="bg-slate-100/40 dark:bg-slate-800/40 border border-slate-300/60 dark:border-slate-700/60 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
             <FiTrendingUp className="text-cyan-400" /> แนวโน้ม 7 วัน
           </h3>
           <div className="flex items-end gap-1.5 h-32">
             {weeklyTrend.map((day, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
                 <div className="flex-1 flex items-end gap-0.5 w-full">
-                  <div className="flex-1 bg-indigo-500/60 rounded-t transition-all duration-300 min-h-[2px]" style={{ height: `${(day.created/maxWeekly)*100}%` }} title={`สร้าง: ${day.created}`}></div>
+                  <div className="flex-1 bg-indigo-500/10 dark:bg-indigo-500/60 rounded-t transition-all duration-300 min-h-[2px]" style={{ height: `${(day.created/maxWeekly)*100}%` }} title={`สร้าง: ${day.created}`}></div>
                   <div className="flex-1 bg-emerald-500/60 rounded-t transition-all duration-300 min-h-[2px]" style={{ height: `${(day.completed/maxWeekly)*100}%` }} title={`เสร็จ: ${day.completed}`}></div>
                 </div>
                 <span className="text-[10px] text-slate-500 font-mono">{day.label}</span>
@@ -229,15 +229,15 @@ export default function Dashboard() {
             ))}
           </div>
           <div className="flex items-center justify-center gap-4 mt-3">
-            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-indigo-500/60"></div><span className="text-[10px] text-slate-400">สร้าง</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-emerald-500/60"></div><span className="text-[10px] text-slate-400">เสร็จ</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-indigo-500/10 dark:bg-indigo-500/60"></div><span className="text-[10px] text-slate-600 dark:text-slate-400">สร้าง</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-emerald-500/60"></div><span className="text-[10px] text-slate-600 dark:text-slate-400">เสร็จ</span></div>
           </div>
         </div>
       </div>
 
       {/* ═══ Workload Per Person ═══ */}
-      <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-4 shrink-0">
-        <h3 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+      <div className="bg-slate-100/40 dark:bg-slate-800/40 border border-slate-300/60 dark:border-slate-700/60 rounded-xl p-4 shrink-0">
+        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
           <FiUserCheck className="text-violet-400" /> Workload แต่ละคน
         </h3>
         {workloadData.length > 0 ? (
@@ -246,15 +246,15 @@ export default function Dashboard() {
               const maxLoad = Math.max(...workloadData.map(d => d[1].total), 1);
               return (
                 <div key={name} className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-[10px] text-white font-bold shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-[10px] text-slate-900 dark:text-white font-bold shrink-0">
                     {name.substring(0, 1).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-slate-300 font-medium truncate">{name}</span>
+                      <span className="text-xs text-slate-700 dark:text-slate-300 font-medium truncate">{name}</span>
                       <span className="text-[10px] text-slate-500 font-mono shrink-0 ml-2">{data.total} งาน</span>
                     </div>
-                    <div className="flex h-2 rounded-full overflow-hidden bg-slate-700/50 gap-px">
+                    <div className="flex h-2 rounded-full overflow-hidden bg-slate-200/50 dark:bg-slate-700/50 gap-px">
                       {data.done > 0 && <div className="bg-emerald-500 rounded-l" style={{ width: `${(data.done/data.total)*100}%` }}></div>}
                       {data.inProgress > 0 && <div className="bg-amber-500" style={{ width: `${(data.inProgress/data.total)*100}%` }}></div>}
                       {data.todo > 0 && <div className="bg-slate-500 rounded-r" style={{ width: `${(data.todo/data.total)*100}%` }}></div>}
@@ -271,10 +271,10 @@ export default function Dashboard() {
 
 
       {/* ═══ Activity Feed ═══ */}
-      <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-4 shrink-0">
+      <div className="bg-slate-100/40 dark:bg-slate-800/40 border border-slate-300/60 dark:border-slate-700/60 rounded-xl p-4 shrink-0">
         <div className="flex items-center gap-2 mb-4">
           <FiActivity className="text-indigo-400" />
-          <h3 className="text-sm font-bold text-slate-200">ความเคลื่อนไหวล่าสุด</h3>
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">ความเคลื่อนไหวล่าสุด</h3>
         </div>
         
         {activities.length > 0 ? (
@@ -285,7 +285,7 @@ export default function Dashboard() {
                   <div className="w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-indigo-500/20"></div>
                 </div>
                 <div>
-                  <p className="text-slate-300 text-xs leading-relaxed">{act.Message}</p>
+                  <p className="text-slate-700 dark:text-slate-300 text-xs leading-relaxed">{act.Message}</p>
                   <p className="text-slate-600 text-[10px] mt-0.5">{new Date(act.CreatedAt).toLocaleString('th-TH')}</p>
                 </div>
               </div>

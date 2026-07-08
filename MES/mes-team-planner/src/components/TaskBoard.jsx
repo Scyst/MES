@@ -5,7 +5,7 @@ import axios from 'axios';
 import AddTaskModal from './AddTaskModal';
 
 const cols = [
-  { id: 'todo', title: 'To Do', color: 'border-slate-500', bg: 'bg-slate-500/10', titleColor: 'text-slate-300' },
+  { id: 'todo', title: 'To Do', color: 'border-slate-500', bg: 'bg-slate-500/10', titleColor: 'text-slate-700 dark:text-slate-300' },
   { id: 'in-progress', title: 'In Progress', color: 'border-amber-500', bg: 'bg-amber-500/10', titleColor: 'text-amber-400' },
   { id: 'done', title: 'Done', color: 'border-emerald-500', bg: 'bg-emerald-500/10', titleColor: 'text-emerald-400' }
 ];
@@ -140,23 +140,23 @@ export default function TaskBoard() {
     }
   };
 
-  if (loading) return <div className="flex-1 flex items-center justify-center text-slate-400">Loading tasks...</div>;
+  if (loading) return <div className="flex-1 flex items-center justify-center text-slate-600 dark:text-slate-400">Loading tasks...</div>;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex flex-row flex-wrap items-center justify-end md:justify-between gap-3 shrink-0 mb-4">
-        <h2 className="hidden md:flex text-lg md:text-xl font-bold text-white items-center gap-2">
+        <h2 className="hidden md:flex text-lg md:text-xl font-bold text-slate-900 dark:text-white items-center gap-2">
           <span className="text-indigo-400">📊</span> กระดานงาน (Kanban)
         </h2>
         <div className="flex gap-2">
           <button onClick={handleExportCSV} className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 p-2 sm:px-3 sm:py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2" title="ส่งออก CSV">
             <FiDownload /> <span className="hidden sm:inline">ส่งออก CSV</span>
           </button>
-          <button onClick={() => setShowFilters(!showFilters)} className={`bg-slate-800 hover:bg-slate-700 text-white p-2 sm:px-3 sm:py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border ${hasActiveFilters ? 'border-indigo-500 text-indigo-400' : 'border-slate-700'}`} title="กรองข้อมูล">
+          <button onClick={() => setShowFilters(!showFilters)} className={`bg-slate-100 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-900 dark:text-white p-2 sm:px-3 sm:py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border ${hasActiveFilters ? 'border-indigo-500 text-indigo-400' : 'border-slate-300 dark:border-slate-700'}`} title="กรองข้อมูล">
             <FiFilter /> <span className="hidden sm:inline">กรองข้อมูล</span> {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-indigo-500"></span>}
           </button>
-          <button onClick={() => { setEditingTask(null); setIsModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-900/20 flex items-center gap-1.5">
+          <button onClick={() => { setEditingTask(null); setIsModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-500 text-slate-900 dark:text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-900/20 flex items-center gap-1.5">
             <FiPlus /> <span className="hidden sm:inline">สร้างงาน</span><span className="sm:hidden">เพิ่ม</span>
           </button>
         </div>
@@ -164,7 +164,7 @@ export default function TaskBoard() {
 
       {/* Search & Filter Bar */}
       {showFilters && (
-        <div className="mb-3 p-3 bg-slate-800/50 rounded-xl border border-slate-700/60 space-y-3 shrink-0 animate-slide-up">
+        <div className="mb-3 p-3 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl border border-slate-300/60 dark:border-slate-700/60 space-y-3 shrink-0 animate-slide-up">
           {/* Search */}
           <div className="relative">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -172,26 +172,26 @@ export default function TaskBoard() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ค้นหางาน, ชื่อ, ผู้รับผิดชอบ..."
-              className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm placeholder-slate-500"
+              className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm placeholder-slate-500"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white">
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 dark:hover:text-white">
                 <FiX className="text-sm" />
               </button>
             )}
           </div>
           {/* Filters row */}
           <div className="flex gap-2 flex-wrap">
-            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
-              <option value="all" className="bg-slate-800 text-slate-200">ทุกความสำคัญ</option>
-              <option value="urgent" className="bg-slate-800 text-slate-200">🔴 ด่วนมาก</option>
-              <option value="high" className="bg-slate-800 text-slate-200">🟠 ด่วน</option>
-              <option value="normal" className="bg-slate-800 text-slate-200">🟡 ปกติ</option>
-              <option value="low" className="bg-slate-800 text-slate-200">🟢 ต่ำ</option>
+            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+              <option value="all" className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">ทุกความสำคัญ</option>
+              <option value="urgent" className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">🔴 ด่วนมาก</option>
+              <option value="high" className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">🟠 ด่วน</option>
+              <option value="normal" className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">🟡 ปกติ</option>
+              <option value="low" className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">🟢 ต่ำ</option>
             </select>
-            <select value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)} className="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
-              <option value="all" className="bg-slate-800 text-slate-200">ทุกคน</option>
-              {allAssignees.map(a => <option key={a} value={a} className="bg-slate-800 text-slate-200">{a}</option>)}
+            <select value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)} className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+              <option value="all" className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">ทุกคน</option>
+              {allAssignees.map(a => <option key={a} value={a} className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">{a}</option>)}
             </select>
             {hasActiveFilters && (
               <button onClick={clearFilters} className="text-xs text-indigo-400 hover:text-indigo-300 px-2 py-1 rounded-lg hover:bg-indigo-500/10 transition-all">
@@ -210,15 +210,15 @@ export default function TaskBoard() {
           {cols.map(col => {
             const colTasks = filteredTasks.filter(t => t.Status === col.id);
             return (
-              <div key={col.id} className={`snap-center w-[85vw] md:w-auto md:flex-1 shrink-0 min-w-[280px] md:min-w-[300px] flex flex-col bg-slate-900/50 rounded-2xl border-t-4 ${col.color} border-l border-r border-b border-slate-800 shadow-lg`}>
-                <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-800 ${col.bg}`}>
+              <div key={col.id} className={`snap-center w-[85vw] md:w-auto md:flex-1 shrink-0 min-w-[280px] md:min-w-[300px] flex flex-col bg-white dark:bg-slate-900/50 rounded-2xl border-t-4 ${col.color} border-l border-r border-b border-slate-200 dark:border-slate-800 shadow-lg`}>
+                <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 ${col.bg}`}>
                   <h3 className={`font-bold ${col.titleColor} flex items-center gap-2 text-sm`}>
                     {col.title}
-                    <span className="bg-slate-800 text-slate-300 text-xs px-2 py-0.5 rounded-full border border-slate-700">
+                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs px-2 py-0.5 rounded-full border border-slate-300 dark:border-slate-700">
                       {colTasks.length}
                     </span>
                   </h3>
-                  <button onClick={() => { setEditingTask(null); setIsModalOpen(true); }} className="text-slate-400 hover:text-white p-1"><FiPlus /></button>
+                  <button onClick={() => { setEditingTask(null); setIsModalOpen(true); }} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-1"><FiPlus /></button>
                 </div>
                 
                 <Droppable droppableId={col.id}>
@@ -226,7 +226,7 @@ export default function TaskBoard() {
                     <div 
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`p-3 flex-1 overflow-y-auto space-y-3 transition-colors ${snapshot.isDraggingOver ? 'bg-slate-800/30' : ''}`}
+                      className={`p-3 flex-1 overflow-y-auto space-y-3 transition-colors ${snapshot.isDraggingOver ? 'bg-slate-100/30 dark:bg-slate-800/30' : ''}`}
                     >
                       {colTasks.map((task, index) => {
                         const pMeta = PRIORITY_META[task.priority || 'normal'] || PRIORITY_META.normal;
@@ -245,7 +245,7 @@ export default function TaskBoard() {
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
                               style={{ ...provided.draggableProps.style }}
-                              className={`bg-slate-800 rounded-xl p-4 border-l-[3px] border shadow-sm hover:border-slate-500 transition-colors ${pMeta.border} ${snapshot.isDragging ? 'border-r-emerald-500 ring-2 ring-emerald-500/20 opacity-90' : 'border-r-slate-700 border-t-slate-700 border-b-slate-700'}`}
+                              className={`bg-slate-100 dark:bg-slate-800 rounded-xl p-4 border-l-[3px] border shadow-sm hover:border-slate-500 transition-colors ${pMeta.border} ${snapshot.isDragging ? 'border-r-emerald-500 ring-2 ring-emerald-500/20 opacity-90' : 'border-r-slate-700 border-t-slate-700 border-b-slate-700'}`}
                             >
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -259,7 +259,7 @@ export default function TaskBoard() {
                                     </span>
                                   )}
                                   {/* Priority badge */}
-                                  <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                                  <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                                     <div className={`w-2 h-2 rounded-full ${pMeta.dot}`}></div>
                                     {pMeta.label}
                                   </span>
@@ -270,12 +270,12 @@ export default function TaskBoard() {
                                     </span>
                                   )}
                                 </div>
-                                <button className="text-slate-500 hover:text-white transition-all" onClick={() => { setEditingTask(task); setIsModalOpen(true); }}>
+                                <button className="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all" onClick={() => { setEditingTask(task); setIsModalOpen(true); }}>
                                   <FiMoreVertical />
                                 </button>
                               </div>
                               
-                              <h4 className="text-slate-200 font-medium text-sm mb-1 leading-snug">
+                              <h4 className="text-slate-800 dark:text-slate-200 font-medium text-sm mb-1 leading-snug">
                                 {task.Title}
                               </h4>
                               
@@ -288,28 +288,28 @@ export default function TaskBoard() {
                               {tagsList.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mb-2">
                                   {tagsList.map((tag, idx) => (
-                                    <span key={idx} className="bg-slate-700/50 text-slate-300 text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    <span key={idx} className="bg-slate-200/50 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1">
                                       <FiTag className="text-[8px]" /> {tag}
                                     </span>
                                   ))}
                                 </div>
                               )}
                               
-                              <div className="flex items-center justify-between text-xs text-slate-400">
+                              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
                                 <div className="flex items-center gap-2">
                                   <div className="flex items-center gap-1">
                                     <FiClock className="text-slate-500" />
                                     <span>{task.dueDate || '-'}</span>
                                   </div>
                                   {subtasks.length > 0 && (
-                                    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${completedSubtasks === subtasks.length ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700/50 text-slate-400'}`}>
+                                    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${completedSubtasks === subtasks.length ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-200/50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400'}`}>
                                       <FiCheckSquare className="text-[10px]" />
                                       <span className="text-[10px] font-medium">{completedSubtasks}/{subtasks.length}</span>
                                     </div>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 flex items-center justify-center text-[10px] text-white font-bold border border-slate-700" title={task.Assignee}>
+                                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 flex items-center justify-center text-[10px] text-slate-900 dark:text-white font-bold border border-slate-300 dark:border-slate-700" title={task.Assignee}>
                                     {task.Assignee ? task.Assignee.substring(0, 1) : '?'}
                                   </div>
                                 </div>
@@ -320,7 +320,7 @@ export default function TaskBoard() {
                       )})}
                       {provided.placeholder}
                       {colTasks.length === 0 && !snapshot.isDraggingOver && (
-                        <div className="h-24 border-2 border-dashed border-slate-700 rounded-xl flex items-center justify-center text-slate-500 text-sm">
+                        <div className="h-24 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex items-center justify-center text-slate-500 text-sm">
                           Drop tasks here
                         </div>
                       )}
