@@ -10,10 +10,7 @@ let sidebarCollapsed = false;
         spareparts: { title: 'Spare Parts', breadcrumb: 'Spare Parts', icon: 'fas fa-boxes-stacked', loader: () => SparePartsModule.loadData() },
         analytics: { title: 'Analytics Dashboard', breadcrumb: 'Dashboard', icon: 'fas fa-chart-line', loader: () => AnalyticsModule.loadAll() },
         iiot: { title: 'Live IIoT Monitor', breadcrumb: 'Live IIoT', icon: 'fas fa-satellite-dish', loader: () => IIoTModule.init() },
-
-        iiot_traditional: { title: 'Traditional Dashboard', breadcrumb: 'Traditional KPI', icon: 'fas fa-chart-line', loader: () => iiotTraditionalModule.init() },
         iiot_analytics: { title: 'IIoT Historical Analytics', breadcrumb: 'IIoT Analytics', icon: 'fas fa-history', loader: () => IIoTAnalyticsModule.init() },
-        production_overview: { title: 'Production Overview', breadcrumb: 'Production Overview', icon: 'fas fa-layer-group', loader: () => ProductionOverviewModule.fetchData() },
         machine_timeline: { title: 'Machine Timeline', breadcrumb: 'Machine Timeline', icon: 'fas fa-stream', loader: () => MachineTimelineModule.fetchData() }
     };
     const loadedTabs = new Set();

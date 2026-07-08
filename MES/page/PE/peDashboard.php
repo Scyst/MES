@@ -33,7 +33,7 @@ $pageTitle = "PE Enterprise";
 <div class="pe-app" id="peApp">
 
     <!-- Sidebar Overlay (Mobile) -->
-    <div class="pe-sidebar-overlay" id="sidebarOverlay" onclick="PEApp.toggleSidebar(false)"></div>
+    <div class="pe-sidebar-overlay" id="sidebarOverlay" id="sidebarOverlayBtn"></div>
 
     <!-- Sidebar -->
     <aside class="pe-sidebar" id="peSidebar">
@@ -48,20 +48,20 @@ $pageTitle = "PE Enterprise";
         <nav class="pe-sidebar-nav">
             <div class="pe-nav-section">
                 <div class="pe-nav-section-label">Main</div>
-                <button class="pe-nav-item" data-tab="machines" onclick="PEApp.switchTab('machines')">
+                <button class="pe-nav-item" data-tab="machines">
                     <i class="fas fa-industry"></i>
                     <span class="nav-label">Machine Registry</span>
                 </button>
-                <button class="pe-nav-item active" data-tab="workorders" onclick="PEApp.switchTab('workorders')">
+                <button class="pe-nav-item active" data-tab="workorders">
                     <i class="fas fa-clipboard-list"></i>
                     <span class="nav-label">Work Orders</span>
                     <span class="nav-badge" id="woOpenBadge" style="display:none;">0</span>
                 </button>
-                <button class="pe-nav-item" data-tab="downtime" onclick="PEApp.switchTab('downtime')">
+                <button class="pe-nav-item" data-tab="downtime">
                     <i class="fas fa-clock"></i>
                     <span class="nav-label">Downtime Tracker</span>
                 </button>
-                <button class="pe-nav-item" data-tab="spareparts" onclick="PEApp.switchTab('spareparts')">
+                <button class="pe-nav-item" data-tab="spareparts">
                     <i class="fas fa-boxes"></i>
                     <span class="nav-label">Spare Parts</span>
                     <span class="nav-badge" id="lowStockBadge" style="display:none;">0</span>
@@ -70,28 +70,20 @@ $pageTitle = "PE Enterprise";
 
             <div class="pe-nav-section">
                 <div class="pe-nav-section-label">Analytics & IIoT</div>
-                <button class="pe-nav-item" data-tab="production_overview" onclick="PEApp.switchTab('production_overview')">
-                    <i class="fas fa-layer-group" style="color: #6366f1;"></i>
-                    <span class="nav-label">Production Overview</span>
-                </button>
-                <button class="pe-nav-item" data-tab="machine_timeline" onclick="PEApp.switchTab('machine_timeline')">
+                <button class="pe-nav-item" data-tab="machine_timeline">
                     <i class="fas fa-stream" style="color: #0ea5e9;"></i>
                     <span class="nav-label">Machine Timeline</span>
                 </button>
-                <button class="pe-nav-item" data-tab="iiot" onclick="PEApp.switchTab('iiot')">
+                <button class="pe-nav-item" data-tab="iiot">
                     <i class="fas fa-satellite-dish" style="color: #38bdf8;"></i>
                     <span class="nav-label">Live IIoT Monitor</span>
                 </button>
 
-                <button class="pe-nav-item" data-tab="iiot_traditional" onclick="PEApp.switchTab('iiot_traditional')">
-                    <i class="fas fa-chart-line" style="color: #fcd34d;"></i>
-                    <span class="nav-label">Traditional Dashboard</span>
-                </button>
-                <button class="pe-nav-item" data-tab="iiot_analytics" onclick="PEApp.switchTab('iiot_analytics')">
+                <button class="pe-nav-item" data-tab="iiot_analytics">
                     <i class="fas fa-history" style="color: #a855f7;"></i>
                     <span class="nav-label">IIoT Historical Analytics</span>
                 </button>
-                <button class="pe-nav-item" data-tab="analytics" onclick="PEApp.switchTab('analytics')">
+                <button class="pe-nav-item" data-tab="analytics">
                     <i class="fas fa-chart-line"></i>
                     <span class="nav-label">Maintenance Analytics</span>
                 </button>
@@ -115,7 +107,7 @@ $pageTitle = "PE Enterprise";
         </nav>
 
         <div class="pe-sidebar-footer">
-            <button class="pe-sidebar-toggle" onclick="PEApp.toggleSidebar()" title="Toggle Sidebar">
+            <button class="pe-sidebar-toggle" id="sidebarToggleBtn" title="Toggle Sidebar">
                 <i class="fas fa-chevron-left" id="sidebarToggleIcon"></i>
             </button>
         </div>
@@ -126,7 +118,7 @@ $pageTitle = "PE Enterprise";
 
         <!-- Top Bar -->
         <header class="pe-topbar">
-            <button class="pe-mobile-menu-btn" onclick="PEApp.toggleSidebar(true)">
+            <button class="pe-mobile-menu-btn" id="sidebarMobileToggleBtn">
                 <i class="fas fa-bars"></i>
             </button>
             <div class="pe-topbar-title">
@@ -137,7 +129,7 @@ $pageTitle = "PE Enterprise";
                 PE Enterprise <i class="fas fa-chevron-right" style="font-size:9px;"></i> <span id="topbarBreadcrumb">Machines</span>
             </div>
             <div class="pe-topbar-actions">
-                <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="PEApp.refreshCurrentTab()" title="Refresh">
+                <button class="pe-btn pe-btn-ghost pe-btn-sm" id="topbarRefreshBtn" title="Refresh">
                     <i class="fas fa-sync-alt"></i>
                 </button>
                 <span class="pe-text-sm pe-text-muted" style="margin-left:4px;">
@@ -178,20 +170,10 @@ $pageTitle = "PE Enterprise";
             <div class="pe-tab-panel" id="panel-iiot">
                 <?php include 'components/tab_iiot.php'; ?>
             </div>
-            
-            <!-- Traditional KPI Dashboard -->
-            <div class="pe-tab-panel" id="panel-iiot_traditional">
-                <?php include 'components/tab_iiot_traditional.php'; ?>
-            </div>
 
             <!-- IIoT Historical Analytics Tab -->
             <div class="pe-tab-panel" id="panel-iiot_analytics">
                 <?php include 'components/tab_iiot_analytics.php'; ?>
-            </div>
-
-            <!-- Production Overview Tab -->
-            <div class="pe-tab-panel" id="panel-production_overview">
-                <?php include 'components/tab_production_overview.php'; ?>
             </div>
 
             <!-- Machine Timeline Tab -->
@@ -270,9 +252,8 @@ $pageTitle = "PE Enterprise";
 <script type="module" src="script/analyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/analyticsModule.js'); ?>"></script>
 <script type="module" src="script/mapBuilderModule.js?v=<?php echo time(); ?>"></script>
 <script type="module" src="script/iiotModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotModule.js'); ?>"></script>
-<script type="module" src="script/iiotTraditionalModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotTraditionalModule.js'); ?>"></script>
 <script type="module" src="script/iiotAnalyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotAnalyticsModule.js'); ?>"></script>
-<script type="module" src="script/productionOverviewModule.js?v=<?php echo filemtime(__DIR__ . '/script/productionOverviewModule.js'); ?>"></script>
+
 <script type="module" src="script/machineTimelineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineTimelineModule.js'); ?>"></script>
 
 </body>

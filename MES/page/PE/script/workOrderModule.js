@@ -10,17 +10,22 @@ const WorkOrderModule = (() => {
     let croppedImageBlob = null;
     let croppedImageAfterBlob = null;
 
-    async function loadData() {
-        try {
-            const status = document.getElementById('woFilterStatus')?.value || '';
-            const priority = document.getElementById('woFilterPriority')?.value || '';
-            const line = document.getElementById('woFilterLine')?.value || '';
-            const startDate = document.getElementById('woStartDate')?.value || '';
-            const endDate = document.getElementById('woEndDate')?.value || '';
-            const dateType = document.getElementById('woDateFilterType')?.value || 'requested_at';
+    function getFiltersFromDOM() {
+        return {
+            status: document.getElementById('woFilterStatus')?.value || '',
+            priority: document.getElementById('woFilterPriority')?.value || '',
+            line: document.getElementById('woFilterLine')?.value || '',
+            startDate: document.getElementById('woStartDate')?.value || '',
+            endDate: document.getElementById('woEndDate')?.value || '',
+            dateType: document.getElementById('woDateFilterType')?.value || 'requested_at'
+        };
+    }
 
+    async function loadData(filters = null) {
+        try {
+            const apiParams = filters || getFiltersFromDOM();
             const res = await PEApp.apiCall('workOrderAPI.php', {
-                action: 'get_work_orders', status, priority, line, startDate, endDate, dateType
+                action: 'get_work_orders', ...apiParams
             });
             allData = res.data || [];
             const summary = res.summary || {};

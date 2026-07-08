@@ -671,6 +671,9 @@ const IIoTModule = (function() {
     }
 
     function updateUI(telemetryData) {
+        let activeCount = 0;
+        let repairCount = 0;
+        
         machinesWithIIoT.forEach(m => {
             const data = telemetryData[m.machine_code];
             const statusEl = document.getElementById(`iiot-status-${m.machine_code}`);
@@ -689,6 +692,10 @@ const IIoTModule = (function() {
             let isAlert = false;
             if (statusEl) {
                 const s = (data.live_status || '').toUpperCase();
+                if (m.status === 'Under Repair' || m.status === 'Maintenance') {
+                    repairCount++;
+                }
+                
                 if (s.includes('RUN') || s.includes('ON')) {
                     statusEl.className = 'iiot-status running';
                     statusEl.innerText = s;
@@ -737,6 +744,17 @@ const IIoTModule = (function() {
             }
         });
         
+        // Update Overview KPIs
+        const elTotal = document.getElementById('iiotKpiTotal');
+        const elActive = document.getElementById('iiotKpiActive');
+        const elRepair = document.getElementById('iiotKpiRepair');
+        const elConnected = document.getElementById('iiotKpiConnected');
+        
+        if (elTotal) elTotal.innerText = allMachinesCache.length || machinesWithIIoT.length;
+        if (elActive) elActive.innerText = activeCount;
+        if (elRepair) elRepair.innerText = repairCount;
+        if (elConnected) elConnected.innerText = machinesWithIIoT.length;
+
         // Evaluate zones once after all machines are updated
         evaluateZones();
     }
@@ -1187,6 +1205,21 @@ const IIoTModule = (function() {
         if (typeof MapBuilderModule !== 'undefined') {
             MapBuilderModule.loadMap(areaId);
         }
+
+        // Calculate KPI metrics
+        const activeCount = allMachinesCache.filter(m => m.status === 'running').length;
+        const repairCount = allMachinesCache.filter(m => m.status === 'repair').length;
+
+        // Update Overview KPIs
+        const elTotal = document.getElementById('iiotKpiTotal');
+        const elActive = document.getElementById('iiotKpiActive');
+        const elRepair = document.getElementById('iiotKpiRepair');
+        const elConnected = document.getElementById('iiotKpiConnected');
+        
+        if (elTotal) elTotal.innerText = allMachinesCache.length;
+        if (elActive) elActive.innerText = activeCount;
+        if (elRepair) elRepair.innerText = repairCount;
+        if (elConnected) elConnected.innerText = machinesWithIIoT.length;
         
         if (isHeatmapActive) updateHeatmapData();
     }

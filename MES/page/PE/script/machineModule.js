@@ -3,13 +3,18 @@ const MachineModule = (() => {
     let allData = [];
     let currentView = 'card';
 
-    async function loadData() {
-        try {
-            const line = document.getElementById('machineFilterLine')?.value || '';
-            const status = document.getElementById('machineFilterStatus')?.value || '';
-            const type = document.getElementById('machineFilterType')?.value || '';
+    function getFiltersFromDOM() {
+        return {
+            line: document.getElementById('machineFilterLine')?.value || '',
+            status: document.getElementById('machineFilterStatus')?.value || '',
+            machine_type: document.getElementById('machineFilterType')?.value || ''
+        };
+    }
 
-            const res = await PEApp.apiCall('machineAPI.php', { action: 'get_machines', line, status, machine_type: type });
+    async function loadData(filters = null) {
+        try {
+            const apiParams = filters || getFiltersFromDOM();
+            const res = await PEApp.apiCall('machineAPI.php', { action: 'get_machines', ...apiParams });
             allData = res.data || [];
 
             // Update KPIs

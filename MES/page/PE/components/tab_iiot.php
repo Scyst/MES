@@ -6,7 +6,38 @@
     min-height: 70vh;
 }
 .iiot-header {
-    display: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px 10px;
+}
+
+.iiot-overview-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 0 20px 16px;
+}
+.iiot-overview-card {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid var(--pe-border-light);
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--pe-shadow-sm);
+}
+.iiot-overview-card .kpi-label {
+    font-size: 11px;
+    color: var(--pe-text-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+.iiot-overview-card .kpi-val {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--pe-text-primary);
 }
 
 .iiot-grid {
@@ -92,8 +123,7 @@
 }
 .iiot-empty i { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
 
-/* 2D Floor Plan Styles */
-.iiot-floorplan-wrapper {
+/* 2D Floor Plan Styles */`r`n.iiot-floorplan-wrapper {
     margin: 0 20px 20px 20px;
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -374,6 +404,25 @@
 </style>
 
 <div class="iiot-dashboard pe-animate-in">
+    <!-- Top KPI Overview -->
+    <div class="iiot-overview-row">
+        <div class="iiot-overview-card pe-animate-in" style="border-left: 4px solid var(--pe-primary);">
+            <div><div class="kpi-label">Registered Assets</div><div class="kpi-val" id="iiotKpiTotal">-</div></div>
+            <i class="fas fa-server pe-text-muted fa-2x"></i>
+        </div>
+        <div class="iiot-overview-card pe-animate-in" style="border-left: 4px solid var(--pe-success);">
+            <div><div class="kpi-label">Active / Running</div><div class="kpi-val" id="iiotKpiActive">-</div></div>
+            <i class="fas fa-check-circle pe-text-muted fa-2x"></i>
+        </div>
+        <div class="iiot-overview-card pe-animate-in" style="border-left: 4px solid var(--pe-danger);">
+            <div><div class="kpi-label">Under Repair</div><div class="kpi-val" id="iiotKpiRepair">-</div></div>
+            <i class="fas fa-tools pe-text-muted fa-2x"></i>
+        </div>
+        <div class="iiot-overview-card pe-animate-in" style="border-left: 4px solid var(--pe-info);">
+            <div><div class="kpi-label">IIoT Connected</div><div class="kpi-val" id="iiotKpiConnected">-</div></div>
+            <i class="fas fa-wifi pe-text-muted fa-2x"></i>
+        </div>
+    </div>
 
     <div class="iiot-floorplan-wrapper">
         <div class="map-header-container">
@@ -714,3 +763,4 @@
         </div>
     </div>
 </div>
+
