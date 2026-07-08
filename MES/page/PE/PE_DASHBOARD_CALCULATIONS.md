@@ -17,17 +17,17 @@ Measures the percentage of time the machine was online compared to the total tim
 - `Availability = (Online Seconds / Passed Seconds) * 100`
 
 ### 1.2 Performance (ประสิทธิภาพการเดินเครื่อง)
-Measures the actual output speed against the theoretical maximum speed.
-- **Expected Output:** `(Online Seconds / 3600) * planned_output_ph` (from `PE_MACHINES`).
-- **Actual Output:** `live_counter`.
-- `Performance = (Actual Output / Expected Output) * 100`
+Measures the actual machine cycles (Strokes) against the theoretical maximum expected strokes.
+- **Expected Strokes:** `(Online Seconds / 3600) * (planned_output_ph * strokes_per_part)` (from `PE_MACHINES` and `MANUFACTURING_ROUTES`).
+- **Actual Strokes:** `live_counter` (from IIoT).
+- `Performance = (Actual Strokes / Expected Strokes) * 100`
 - *Note:* Capped at 100% to prevent inflation from overly conservative targets.
 
 ### 1.3 Quality (คุณภาพการผลิต)
-Measures the ratio of Good Parts to Total Parts produced.
-- **Total Produced:** `live_counter`.
-- **Defects:** Fetched dynamically from `STOCK_TRANSACTIONS` where type is `PRODUCTION_HOLD` or `PRODUCTION_SCRAP`.
-- `Quality = ((Total Produced - Defects) / Total Produced) * 100`
+Measures the ratio of Good Parts (Yield) to Total Parts (Yield + Defects) produced. This is decoupled from the IIoT Strokes and relies entirely on human-logged data.
+- **Good Parts (Yield):** Fetched from `STOCK_TRANSACTIONS` where type is `PRODUCTION_FG` for the specific `machine_id`.
+- **Defects:** Fetched from `STOCK_TRANSACTIONS` where type is `PRODUCTION_HOLD` or `PRODUCTION_SCRAP` for the specific `machine_id`.
+- `Quality = (Good Parts / (Good Parts + Defects)) * 100`
 
 ---
 

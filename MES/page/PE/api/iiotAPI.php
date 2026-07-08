@@ -336,8 +336,7 @@ try {
                     $histProdSql = "
                         SELECT ISNULL(SUM(ABS(t.quantity)), 0) as good_prod
                         FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
-                        LEFT JOIN LOCATIONS l WITH (NOLOCK) ON t.to_location_id = l.location_id
-                        LEFT JOIN PE_MACHINES m WITH (NOLOCK) ON l.production_line = m.line
+                        LEFT JOIN PE_MACHINES m WITH (NOLOCK) ON t.machine_id = m.machine_id
                         WHERE m.machine_code = ? 
                           AND t.transaction_type = 'PRODUCTION_FG'
                           AND t.transaction_timestamp >= ? AND t.transaction_timestamp < ?
@@ -379,12 +378,25 @@ try {
                     $stats['live_counter'] = floor($stats['live_counter'] / $strokes);
                 }
                 
+                // Get actual Yield (FG) from STOCK_TRANSACTIONS to calculate Quality
+                $fgSql = "
+                    SELECT ISNULL(SUM(ABS(t.quantity)), 0) as fg
+                    FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
+                    LEFT JOIN PE_MACHINES m WITH (NOLOCK) ON t.machine_id = m.machine_id
+                    WHERE m.machine_code = ? 
+                      AND t.transaction_type = 'PRODUCTION_FG'
+                      AND t.transaction_timestamp >= ? AND t.transaction_timestamp < ?
+                ";
+                $fgStmt = $pdo->prepare($fgSql);
+                $fgStmt->execute([$mc, $shiftStartDateStr, $shiftEndDateStr]);
+                $fgResult = $fgStmt->fetch(PDO::FETCH_ASSOC);
+                $stats['actual_fg'] = $fgResult ? (float)$fgResult['fg'] : 0;
+
                 // Get defects from STOCK_TRANSACTIONS (Hold + Scrap)
                 $defSql = "
                     SELECT ISNULL(SUM(ABS(t.quantity)), 0) as defects
                     FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
-                    LEFT JOIN LOCATIONS l WITH (NOLOCK) ON t.to_location_id = l.location_id
-                    LEFT JOIN PE_MACHINES m WITH (NOLOCK) ON l.production_line = m.line
+                    LEFT JOIN PE_MACHINES m WITH (NOLOCK) ON t.machine_id = m.machine_id
                     WHERE m.machine_code = ? 
                       AND t.transaction_type IN ('PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
                       AND t.transaction_timestamp >= ? AND t.transaction_timestamp < ?
@@ -423,11 +435,11 @@ try {
                 }
                 $perf = min(100, $perf); // Cap at 100%
                 
-                // Quality
+                // Quality (Calculated from Actual FG vs Defects, Decoupled from Strokes)
                 $qual = 100;
-                if ($stats['live_counter'] > 0) {
-                    $good = max(0, $stats['live_counter'] - $stats['defects']);
-                    $qual = ($good / $stats['live_counter']) * 100;
+                $totalYield = $stats['actual_fg'] + $stats['defects'];
+                if ($totalYield > 0) {
+                    $qual = ($stats['actual_fg'] / $totalYield) * 100;
                 }
                 $qual = min(100, $qual);
                 
@@ -563,12 +575,11 @@ try {
                 }
             }
 
-            // 4. Get Defects
+            // 4. Get Defects and Actual Yield
             $defSql = "
                 SELECT m.machine_code, ISNULL(SUM(ABS(t.quantity)), 0) as defects
                 FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
-                LEFT JOIN LOCATIONS l WITH (NOLOCK) ON t.to_location_id = l.location_id
-                LEFT JOIN PE_MACHINES m WITH (NOLOCK) ON l.production_line = m.line
+                LEFT JOIN PE_MACHINES m WITH (NOLOCK) ON t.machine_id = m.machine_id
                 WHERE t.transaction_type IN ('PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
                   AND t.transaction_timestamp >= ? AND t.transaction_timestamp < ?
                 GROUP BY m.machine_code
@@ -578,6 +589,21 @@ try {
             $defectsMap = [];
             while ($d = $defStmt->fetch(PDO::FETCH_ASSOC)) {
                 $defectsMap[$d['machine_code']] = (int)$d['defects'];
+            }
+
+            $fgSql = "
+                SELECT m.machine_code, ISNULL(SUM(ABS(t.quantity)), 0) as fg
+                FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
+                LEFT JOIN PE_MACHINES m WITH (NOLOCK) ON t.machine_id = m.machine_id
+                WHERE t.transaction_type = 'PRODUCTION_FG'
+                  AND t.transaction_timestamp >= ? AND t.transaction_timestamp < ?
+                GROUP BY m.machine_code
+            ";
+            $fgStmt = $pdo->prepare($fgSql);
+            $fgStmt->execute([$shiftStartDateStr, $shiftEndDateStr]);
+            $fgMap = [];
+            while ($f = $fgStmt->fetch(PDO::FETCH_ASSOC)) {
+                $fgMap[$f['machine_code']] = (int)$f['fg'];
             }
 
             // 5. Aggregate by Line
@@ -631,10 +657,14 @@ try {
                 
                 $overview[$line]['total_actual'] += $net;
 
-                // Defects
+                // Defects & FG (For Quality Calculation)
                 $mc = $m['machine_code'];
                 $def = isset($defectsMap[$mc]) ? $defectsMap[$mc] : 0;
                 $overview[$line]['total_defects'] += $def;
+                
+                $fg = isset($fgMap[$mc]) ? $fgMap[$mc] : 0;
+                if (!isset($overview[$line]['total_actual_fg'])) $overview[$line]['total_actual_fg'] = 0;
+                $overview[$line]['total_actual_fg'] += $fg;
 
                 // Expected Output & Online Time
                 $onlineSec = isset($machineOnlineSec[$mc]) ? $machineOnlineSec[$mc] : 0;
@@ -662,9 +692,9 @@ try {
                 $stats['performance'] = min(100, round($perf, 1));
                 
                 $qual = 100;
-                if ($stats['total_actual'] > 0) {
-                    $good = max(0, $stats['total_actual'] - $stats['total_defects']);
-                    $qual = ($good / $stats['total_actual']) * 100;
+                $totalYield = $stats['total_actual_fg'] + $stats['total_defects'];
+                if ($totalYield > 0) {
+                    $qual = ($stats['total_actual_fg'] / $totalYield) * 100;
                 }
                 $stats['quality'] = min(100, round($qual, 1));
                 
