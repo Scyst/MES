@@ -1325,6 +1325,74 @@ try {
             $response = ['success' => true, 'message' => 'ปฏิเสธคำขอเรียบร้อย'];
             break;
 
+        case 'bulk_approve_requests':
+            $input = json_decode(file_get_contents("php://input"), true);
+            if (!hasPermission('manage_warehouse')) {
+                throw new Exception("Unauthorized: ไม่มีสิทธิ์อนุมัติการเบิกจ่าย");
+            }
+            if (!isset($input['transfer_ids']) || !is_array($input['transfer_ids']) || count($input['transfer_ids']) === 0) {
+                throw new Exception("กรุณาเลือกอย่างน้อย 1 รายการ");
+            }
+
+            $pdo->beginTransaction();
+            $timestamp = date('Y-m-d H:i:s');
+            
+            $reqStmt = $pdo->prepare("SELECT * FROM dbo.STOCK_TRANSFER_ORDERS WITH (UPDLOCK) WHERE transfer_id = ?");
+            $spStock = $pdo->prepare("EXEC dbo.sp_UpdateOnhandBalance @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+            $updateStmt = $pdo->prepare("UPDATE dbo.STOCK_TRANSFER_ORDERS SET status = 'COMPLETED', confirmed_by_user_id = ?, confirmed_at = ? WHERE transfer_id = ?");
+            $insertTxn = $pdo->prepare("INSERT INTO dbo.STOCK_TRANSACTIONS (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, reference_id, transaction_timestamp, notes) VALUES (?, ?, 'INTERNAL_TRANSFER', ?, ?, ?, ?, ?, ?)");
+
+            $processedCount = 0;
+            foreach ($input['transfer_ids'] as $transfer_id) {
+                $reqStmt->execute([$transfer_id]);
+                $req = $reqStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($req && $req['status'] === 'PENDING') {
+                    $qty = floatval($req['quantity']);
+                    
+                    $spStock->execute([$req['item_id'], $req['from_location_id'], -$qty]); 
+                    $spStock->execute([$req['item_id'], $req['to_location_id'], $qty]);
+
+                    $updateStmt->execute([$currentUser['id'], $timestamp, $transfer_id]);
+                    $insertTxn->execute([$req['item_id'], $qty, $req['from_location_id'], $req['to_location_id'], $currentUser['id'], $req['transfer_uuid'], $timestamp, "Approved Replacement (Bulk)"]);
+                    $processedCount++;
+                }
+            }
+
+            $pdo->commit();
+            $response = ['success' => true, 'message' => "อนุมัติจ่ายของสำเร็จ $processedCount รายการ"];
+            break;
+
+        case 'bulk_reject_requests':
+            $input = json_decode(file_get_contents("php://input"), true);
+            if (!hasPermission('manage_warehouse')) {
+                throw new Exception("Unauthorized: ไม่มีสิทธิ์อนุมัติการเบิกจ่าย");
+            }
+            if (!isset($input['transfer_ids']) || !is_array($input['transfer_ids']) || count($input['transfer_ids']) === 0) {
+                throw new Exception("กรุณาเลือกอย่างน้อย 1 รายการ");
+            }
+            
+            $pdo->beginTransaction();
+            $reason = trim($input['reject_reason'] ?? 'Bulk Rejected by Admin');
+            
+            $reqStmt = $pdo->prepare("SELECT status FROM dbo.STOCK_TRANSFER_ORDERS WITH (UPDLOCK) WHERE transfer_id = ?");
+            $updateStmt = $pdo->prepare("UPDATE dbo.STOCK_TRANSFER_ORDERS SET status = 'REJECTED', confirmed_by_user_id = ?, confirmed_at = GETDATE(), notes = ISNULL(notes,'') + ' | Reject Reason: ' + ? WHERE transfer_id = ?");
+
+            $processedCount = 0;
+            foreach ($input['transfer_ids'] as $transfer_id) {
+                $reqStmt->execute([$transfer_id]);
+                $currentStatus = $reqStmt->fetchColumn();
+
+                if ($currentStatus === 'PENDING') {
+                    $updateStmt->execute([$currentUser['id'], $reason, $transfer_id]);
+                    $processedCount++;
+                }
+            }
+
+            $pdo->commit();
+            $response = ['success' => true, 'message' => "ปฏิเสธคำขอสำเร็จ $processedCount รายการ"];
+            break;
+
         case 'get_scrap_requests':
             $status = $_GET['status'] ?? 'ALL';
             $search = $_GET['search'] ?? '';

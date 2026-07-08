@@ -89,6 +89,15 @@ try {
                                     <i class="fas fa-chart-pie me-1"></i> Dashboard
                                 </button>
 
+                                <div class="dropdown d-none" id="bulkActionDropdown">
+                                    <button class="btn btn-dark btn-sm fw-bold px-3 shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-layer-group me-1"></i> Bulk (<span id="bulkActionCount">0</span>)
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                        <li><a class="dropdown-item text-success fw-bold py-2" href="#" onclick="bulkApprove(); return false;"><i class="fas fa-check-double me-2"></i> Approve Selected</a></li>
+                                        <li><a class="dropdown-item text-danger fw-bold py-2" href="#" onclick="bulkReject(); return false;"><i class="fas fa-times-circle me-2"></i> Reject Selected</a></li>
+                                    </ul>
+                                </div>
                                 <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" onclick="openRequestModal()">
                                     <i class="fas fa-plus me-1"></i> New Request
                                 </button>
@@ -107,6 +116,9 @@ try {
                         <table class="table table-striped table-hover align-middle mb-0 text-nowrap">
                             <thead class="sticky-top bg-light shadow-sm">
                                 <tr class="text-secondary small text-uppercase">
+                                    <th style="width: 3%" class="text-center">
+                                        <input class="form-check-input border-secondary" type="checkbox" id="selectAllReq" onclick="toggleAllReq(this)">
+                                    </th>
                                     <th style="width: 10%">Date</th>
                                     <th style="width: 10%">SAP No.</th>
                                     <th style="width: 12%">Part No.</th>

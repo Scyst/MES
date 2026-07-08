@@ -130,6 +130,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await originalFetch.apply(this, arguments);
             
             if (response.status === 401) {
+                let logoutUrl = '/MES/MES/auth/logout.php';
+                const logoutBtn = document.querySelector('.logout-action');
+                if (logoutBtn && logoutBtn.getAttribute('href')) {
+                    logoutUrl = logoutBtn.getAttribute('href');
+                } else if (window.location.pathname.includes('/page/')) {
+                    logoutUrl = window.location.pathname.split('/page/')[0] + '/auth/logout.php';
+                }
+
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         icon: 'warning',
@@ -138,10 +146,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         confirmButtonText: 'ตกลง',
                         allowOutsideClick: false
                     }).then(() => {
-                        window.location.href = '/MES/MES/auth/logout.php';
+                        window.location.href = logoutUrl;
                     });
                 } else {
-                    window.location.href = '/MES/MES/auth/logout.php';
+                    window.location.href = logoutUrl;
                 }
                 return Promise.reject('Unauthorized 401');
             }

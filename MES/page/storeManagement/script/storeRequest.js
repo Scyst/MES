@@ -165,7 +165,7 @@ async function loadRequests() {
     const tbody = document.getElementById('reqTableBody');
     const cardCon = document.getElementById('reqCardContainer');
     
-    if(tbody) tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i></td></tr>`;
+    if(tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i></td></tr>`;
     if(cardCon) cardCon.innerHTML = `<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i></div>`;
 
     try {
@@ -180,6 +180,11 @@ async function loadRequests() {
             document.getElementById('sumQty').innerText = fmt.format(res.kpi.total_qty);
             document.getElementById('sumCost').innerText = fmtMoney.format(res.kpi.total_cost);
         }
+        
+        const chkAll = document.getElementById('selectAllReq');
+        if(chkAll) chkAll.checked = false;
+        if(typeof updateBulkActionButtons === 'function') updateBulkActionButtons();
+        
         renderTableHTML(res.data);
 
         if (res.pagination) {
@@ -188,7 +193,7 @@ async function loadRequests() {
         }
 
     } catch (e) {
-        const errorHtml = `<tr><td colspan="10" class="text-center py-4 text-danger"><i class="fas fa-exclamation-circle"></i> เกิดข้อผิดพลาด</td></tr>`;
+        const errorHtml = `<tr><td colspan="11" class="text-center py-4 text-danger"><i class="fas fa-exclamation-circle"></i> เกิดข้อผิดพลาด</td></tr>`;
         if(tbody) tbody.innerHTML = errorHtml;
         if(cardCon) cardCon.innerHTML = errorHtml;
     }
@@ -234,16 +239,19 @@ function renderTableHTML(data) {
             const safeReason = escapeHTML(reason);
 
             let btnAction = '';
+            let chkBox = '<td></td>';
             if (typeof IS_STORE_ROLE !== 'undefined' && IS_STORE_ROLE && row.status === 'PENDING') {
                 btnAction = `
                 <div class="btn-group">
                     <button class="btn btn-sm btn-outline-success rounded-circle me-1" style="width:32px;height:32px;" onclick="approveReq(${row.transfer_id})" title="อนุมัติ"><i class="fas fa-check"></i></button>
                     <button class="btn btn-sm btn-outline-danger rounded-circle" style="width:32px;height:32px;" onclick="rejectReq(${row.transfer_id})" title="ปฏิเสธ"><i class="fas fa-times"></i></button>
                 </div>`;
+                chkBox = `<td class="text-center"><input class="form-check-input row-req-chk border-secondary" type="checkbox" value="${row.transfer_id}" onchange="updateBulkActionButtons()"></td>`;
             }
 
             tableRowsHTML += `
                 <tr>
+                    ${chkBox}
                     <td class="text-secondary small text-nowrap">${createdDate}</td>
                     <td class="fw-bold text-primary">${safeSap}</td>
                     <td class="text-dark">${safePartNo}</td>
@@ -284,7 +292,7 @@ function renderTableHTML(data) {
         });
     } else {
         const empty = '<div class="text-center text-muted py-5"><i class="fas fa-inbox fa-3x mb-3 opacity-25"></i><br>ไม่พบรายการในช่วงเวลานี้</div>';
-        tableRowsHTML = `<tr><td colspan="10">${empty}</td></tr>`;
+        tableRowsHTML = `<tr><td colspan="11">${empty}</td></tr>`;
         mobileCardsHTML = empty;
     }
 
@@ -377,6 +385,56 @@ window.rejectReq = async (id) => {
     if (!r) return;
     const res = await fetchAPI('reject_request', 'POST', { transfer_id: id, reject_reason: r });
     if (res) loadRequests();
+};
+
+window.toggleAllReq = (source) => {
+    const checkboxes = document.querySelectorAll('.row-req-chk');
+    checkboxes.forEach(chk => chk.checked = source.checked);
+    updateBulkActionButtons();
+};
+
+window.updateBulkActionButtons = () => {
+    const checkedBoxes = document.querySelectorAll('.row-req-chk:checked');
+    const dropdown = document.getElementById('bulkActionDropdown');
+    const cnt = document.getElementById('bulkActionCount');
+    
+    if (checkedBoxes.length > 0) {
+        if(dropdown) dropdown.classList.remove('d-none');
+        if(cnt) cnt.innerText = checkedBoxes.length;
+    } else {
+        if(dropdown) dropdown.classList.add('d-none');
+    }
+};
+
+window.bulkApprove = async () => {
+    const checkedBoxes = document.querySelectorAll('.row-req-chk:checked');
+    if (checkedBoxes.length === 0) return;
+    
+    if (!confirm(`ยืนยันการอนุมัติจ่ายของจำนวน ${checkedBoxes.length} รายการ?`)) return;
+    
+    const ids = Array.from(checkedBoxes).map(chk => chk.value);
+    const res = await fetchAPI('bulk_approve_requests', 'POST', { transfer_ids: ids });
+    if (res) {
+        document.getElementById('selectAllReq').checked = false;
+        updateBulkActionButtons();
+        loadRequests();
+    }
+};
+
+window.bulkReject = async () => {
+    const checkedBoxes = document.querySelectorAll('.row-req-chk:checked');
+    if (checkedBoxes.length === 0) return;
+    
+    const r = prompt(`ระบุเหตุผลที่ปฏิเสธสำหรับ ${checkedBoxes.length} รายการ:\n(หากเว้นว่างจะใช้เหตุผลเริ่มต้น)`);
+    if (r === null) return;
+    
+    const ids = Array.from(checkedBoxes).map(chk => chk.value);
+    const res = await fetchAPI('bulk_reject_requests', 'POST', { transfer_ids: ids, reject_reason: r });
+    if (res) {
+        document.getElementById('selectAllReq').checked = false;
+        updateBulkActionButtons();
+        loadRequests();
+    }
 };
 
 async function exportData() {
