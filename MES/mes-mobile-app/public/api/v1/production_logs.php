@@ -50,9 +50,7 @@ try {
     // 1. Fetch History
     if ($action === 'history') {
         // Fetch recent transactions for this machine today
-        // Assuming location_id or another field stores machine_id. Let's use reference_no or notes to store machine_id temporarily if not explicit.
-        // Wait, what column in STOCK_TRANSACTIONS maps to machine? Usually parameter_id is Item.
-        // I will use `notes` like '[MACHINE:123]' for now unless there is a machine_id column.
+        // Fetch recent transactions for this machine today
         $sql = "SELECT t.transaction_id, t.transaction_type, t.quantity, t.transaction_timestamp, 
                 ISNULL(NULLIF(u.fullname, ''), u.username) AS user_name, t.notes, t.reference_id as job_no 
                 FROM " . TRANSACTIONS_TABLE . " t
@@ -147,7 +145,7 @@ try {
             $pdo->prepare($sql)->execute([$add_actual, $add_hold, $add_scrap, $jobId]);
 
             // Execute Production SP to deduct BOM & Update Stock
-            $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?");
+            $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?, @machine_id = ?");
             $ts = date('Y-m-d H:i:s');
             
             // Parse timeSlot if provided
@@ -165,21 +163,9 @@ try {
             $locToUse = $locationId ?: $job['location_id'];
             $lotToUse = $lotNo ?: $job['job_no'];
 
-            $uniqToken = uniqid(' [TXN:');
-            $noteWithToken = $note . $uniqToken . ']';
-
-            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $lotToUse, $noteWithToken, $ts, $st, $et, $userId, 'Mobile']);
-            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $lotToUse, $noteWithToken, $ts, $st, $et, $userId, 'Mobile']);
-            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $lotToUse, $noteWithToken, $ts, $st, $et, $userId, 'Mobile']);
-
-            // Update machine_id since SP doesn't take it, and remove token to keep notes clean
-            if ($machineId) {
-                $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET machine_id = ?, notes = ? WHERE notes = ?")
-                    ->execute([$machineId, $note, $noteWithToken]);
-            } else {
-                $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET notes = ? WHERE notes = ?")
-                    ->execute([$note, $noteWithToken]);
-            }
+            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile', $machineId]);
+            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile', $machineId]);
+            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile', $machineId]);
 
         } else {
             // Old Flow: Direct insert without Job
@@ -300,27 +286,16 @@ try {
                 $sql = "UPDATE PRODUCTION_JOBS SET actual_qty = ISNULL(actual_qty, 0) + ?, hold_qty = ISNULL(hold_qty, 0) + ?, scrap_qty = ISNULL(scrap_qty, 0) + ? WHERE job_id = ?";
                 $pdo->prepare($sql)->execute([$add_actual, $add_hold, $add_scrap, $job['job_id']]);
 
-                $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?");
+                $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?, @machine_id = ?");
                 $ts = date('Y-m-d H:i:s');
                 $st = $job['start_time'] ? date('H:i:s', strtotime($job['start_time'])) : date('H:i:s');
                 $et = date('H:i:s');
                 $note = $oldTxn['notes'] . " (Edited)";
                 $locToUse = $locationId ?: $job['location_id'];
 
-                $uniqToken = uniqid(' [TXN:');
-                $noteWithToken = $note . $uniqToken . ']';
-
-                if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $noteWithToken, $ts, $st, $et, $userId, 'Mobile']);
-                if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $noteWithToken, $ts, $st, $et, $userId, 'Mobile']);
-                if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $noteWithToken, $ts, $st, $et, $userId, 'Mobile']);
-
-                if ($machineId) {
-                    $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET machine_id = ?, notes = ? WHERE notes = ?")
-                        ->execute([$machineId, $note, $noteWithToken]);
-                } else {
-                    $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET notes = ? WHERE notes = ?")
-                        ->execute([$note, $noteWithToken]);
-                }
+                if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $machineId]);
+                if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $machineId]);
+                if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $machineId]);
             }
         } else {
             $note = $oldTxn['notes'] . " (Edited)";
