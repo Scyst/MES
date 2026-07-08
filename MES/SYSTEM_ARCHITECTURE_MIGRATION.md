@@ -30,7 +30,7 @@ Used by `page/production`. This table focuses on physical inventory movement.
 - `quantity`: The total amount produced in a batch.
 - `to_location_id`: Where the goods were sent (e.g., Finished Goods Warehouse).
 - `reference_id`: Tied to a Job Order or Work Order.
-- **Limitation:** There is no `machine_id` column natively tied to this that is updated in real-time.
+- `machine_id`: **(NEWLY ADDED)** This column exists in the database but is currently bypassed by the legacy Stored Procedure `dbo.sp_ExecuteProduction`.
 
 ### 2.2 Modern IIoT Schema (`PE_IIOT_TELEMETRY`)
 Used by `page/PE`. This table focuses on real-time equipment status.
@@ -38,11 +38,50 @@ Used by `page/PE`. This table focuses on real-time equipment status.
 - `live_counter`: The total cumulative production count measured directly by the PLC/sensor.
 - `live_status`: Current state (`running`, `stopped`, `warning`).
 - `last_updated`: Timestamp of the last 3-second poll.
-- **Integration Target:** Future architecture must take the delta of `live_counter` (e.g., +100 units) and automatically generate a `PRODUCTION_FG` record in `STOCK_TRANSACTIONS`.
+- **Integration Target:** Future architecture must take the delta of `live_counter` (e.g., +100 units) and automatically generate a `PRODUCTION_FG` record in `STOCK_TRANSACTIONS` using the `machine_id`.
 
 ---
 
-## 3. Frontend Modernization & Mobile Apps
+## 3. Safe Migration Plan for `dbo.sp_ExecuteProduction`
+
+Currently, `mes-mobile-app` uses a temporary hack to associate production with a machine because `dbo.sp_ExecuteProduction` does not accept `@machine_id`. It injects a token into `notes`, executes the SP, and then runs a subsequent `UPDATE` statement to set the `machine_id`. 
+
+To eliminate this hack safely without breaking legacy systems (like `page/production`), follow this exact plan:
+
+### Step 1: Modify the Stored Procedure Parameters
+Alter `dbo.sp_ExecuteProduction` to accept `@machine_id` as an **optional** parameter by giving it a default value of `NULL`.
+```sql
+ALTER PROCEDURE [dbo].[sp_ExecuteProduction]
+    @item_id INT,
+    @location_id INT,
+    @quantity DECIMAL(18,4),
+    @count_type VARCHAR(50),
+    @lot_no VARCHAR(100) = NULL,
+    @notes NVARCHAR(500) = NULL,
+    @timestamp DATETIME = NULL,
+    @start_time TIME = NULL,
+    @end_time TIME = NULL,
+    @user_id INT = NULL,
+    @username VARCHAR(100) = NULL,
+    @machine_id INT = NULL -- [NEW] Optional parameter
+AS
+BEGIN
+...
+```
+
+### Step 2: Update the INSERT Statement inside the SP
+Inside the SP, find the `INSERT INTO STOCK_TRANSACTIONS` block and add `@machine_id` to it. Since it defaults to `NULL`, legacy callers won't crash and will simply insert `NULL` for `machine_id`, preserving backward compatibility.
+
+### Step 3: Refactor the Frontend APIs
+Once the SP is updated, modify `mes-mobile-app/public/api/v1/production_logs.php` to pass the `@machine_id` directly to `$spProd->execute()`.
+- Remove the `uniqid()` token logic entirely.
+- Remove the subsequent `UPDATE STOCK_TRANSACTIONS SET machine_id = ? WHERE notes = ?` query.
+
+This 3-step process ensures 100% backward compatibility while making the `mes-mobile-app` codebase cleaner and more performant.
+
+---
+
+## 4. Frontend Modernization & Mobile Apps
 
 ### 📱 Legacy Mobile Web
 **Location:** `e:\MES\MES\MES\page\production\mobile_app.php`
