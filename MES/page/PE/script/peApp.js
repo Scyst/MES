@@ -258,6 +258,25 @@ let sidebarCollapsed = false;
         // Initialize default tab only if we are on the main dashboard
         if (document.getElementById('peSidebar')) {
             switchTab('workorders');
+            
+            // Attach event listeners for navigation tabs
+            document.querySelectorAll('[data-tab]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const tabId = e.currentTarget.getAttribute('data-tab');
+                    if (tabId) switchTab(tabId);
+                });
+            });
+
+            // Attach event listeners for global header controls
+            const btnRefresh = document.getElementById('btnRefreshTab');
+            if (btnRefresh) {
+                btnRefresh.addEventListener('click', refreshCurrentTab);
+            }
+
+            const btnToggle = document.getElementById('btnToggleSidebar');
+            if (btnToggle) {
+                btnToggle.addEventListener('click', toggleSidebar);
+            }
         }
     });
 
