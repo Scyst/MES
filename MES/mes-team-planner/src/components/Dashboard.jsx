@@ -1,0 +1,300 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
+import { FiActivity, FiUserCheck, FiAlertCircle, FiCheckCircle, FiClock, FiBarChart2, FiTrendingUp, FiPieChart } from 'react-icons/fi';
+import { format, subDays } from 'date-fns';
+
+export default function Dashboard() {
+  const [activities, setActivities] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [resAct, resEvents, resTasks] = await Promise.all([
+          axios.get('/api/activities'),
+          axios.get('/api/events'),
+          axios.get('/api/tasks')
+        ]);
+        setActivities(resAct.data);
+        setEvents(resEvents.data);
+        setTasks(resTasks.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todaysLeaves = events.filter(e => e.Type === 'leave' && e.date === todayStr);
+  const todaysTasks = tasks.filter(t => t.dueDate === todayStr && t.Status !== 'done');
+
+  // ═══ Analytics ═══
+  const totalTasks = tasks.length;
+  const doneTasks = tasks.filter(t => t.Status === 'done').length;
+  const inProgressTasks = tasks.filter(t => t.Status === 'in-progress').length;
+  const todoTasks = tasks.filter(t => t.Status === 'todo').length;
+  const completionRate = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
+  // Priority breakdown
+  const urgentTasks = tasks.filter(t => (t.priority || 'normal') === 'urgent' && t.Status !== 'done').length;
+  const highTasks = tasks.filter(t => (t.priority || 'normal') === 'high' && t.Status !== 'done').length;
+
+  // Overdue tasks (dueDate < today and not done)
+  const overdueTasks = tasks.filter(t => t.dueDate && t.dueDate < todayStr && t.Status !== 'done').length;
+
+  // Workload per person
+  const workloadData = useMemo(() => {
+    const map = {};
+    tasks.forEach(t => {
+      const name = t.Assignee || 'Unassigned';
+      if (!map[name]) map[name] = { total: 0, done: 0, inProgress: 0, todo: 0 };
+      map[name].total++;
+      if (t.Status === 'done') map[name].done++;
+      else if (t.Status === 'in-progress') map[name].inProgress++;
+      else map[name].todo++;
+    });
+    return Object.entries(map).sort((a, b) => b[1].total - a[1].total);
+  }, [tasks]);
+
+  // Weekly trend (last 7 days tasks created)
+  const weeklyTrend = useMemo(() => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = format(subDays(new Date(), i), 'yyyy-MM-dd');
+      const label = format(subDays(new Date(), i), 'dd');
+      const created = tasks.filter(t => {
+        if (!t.CreatedAt) return false;
+        try {
+          return format(new Date(t.CreatedAt), 'yyyy-MM-dd') === d;
+        } catch {
+          return false;
+        }
+      }).length;
+      const completed = tasks.filter(t => t.dueDate === d && t.Status === 'done').length;
+      days.push({ date: d, label, created, completed });
+    }
+    return days;
+  }, [tasks]);
+  const maxWeekly = Math.max(...weeklyTrend.map(d => Math.max(d.created, d.completed)), 1);
+
+  if (loading) return <div className="flex-1 flex items-center justify-center text-slate-400">Loading dashboard...</div>;
+
+  return (
+    <div className="space-y-4">
+      {/* Title */}
+      <div className="flex items-center justify-between shrink-0">
+        <h2 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
+          <span className="text-indigo-400">📊</span> ภาพรวม
+        </h2>
+      </div>
+
+      {/* ═══ Stats Cards ═══ */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
+        {/* Total */}
+        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <FiBarChart2 className="text-indigo-400" />
+            <span className="text-xs text-slate-400 font-medium">งานทั้งหมด</span>
+          </div>
+          <div className="text-2xl font-bold text-white">{totalTasks}</div>
+        </div>
+        {/* Completion */}
+        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <FiCheckCircle className="text-emerald-400" />
+            <span className="text-xs text-slate-400 font-medium">เสร็จแล้ว</span>
+          </div>
+          <div className="text-2xl font-bold text-emerald-400">{doneTasks}</div>
+          <div className="mt-2 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${completionRate}%` }}></div>
+          </div>
+          <div className="text-[10px] text-slate-500 mt-1">{completionRate}%</div>
+        </div>
+        {/* Overdue */}
+        <div className={`border rounded-xl p-4 ${overdueTasks > 0 ? 'bg-rose-500/10 border-rose-500/30' : 'bg-slate-800/60 border-slate-700/60'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <FiAlertCircle className={overdueTasks > 0 ? 'text-rose-400' : 'text-slate-500'} />
+            <span className="text-xs text-slate-400 font-medium">เกินกำหนด</span>
+          </div>
+          <div className={`text-2xl font-bold ${overdueTasks > 0 ? 'text-rose-400' : 'text-slate-500'}`}>{overdueTasks}</div>
+        </div>
+        {/* Urgent */}
+        <div className={`border rounded-xl p-4 ${urgentTasks > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-slate-800/60 border-slate-700/60'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <FiClock className={urgentTasks > 0 ? 'text-red-400' : 'text-slate-500'} />
+            <span className="text-xs text-slate-400 font-medium">ด่วน/ด่วนมาก</span>
+          </div>
+          <div className={`text-2xl font-bold ${urgentTasks > 0 ? 'text-red-400' : 'text-slate-500'}`}>{urgentTasks + highTasks}</div>
+        </div>
+      </div>
+      {/* ═══ Row: Today's Leaves + Due Today ═══ */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
+        {/* Today's Leaves */}
+        <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <FiUserCheck className="text-amber-400" />
+            <h3 className="text-sm font-bold text-amber-200">ผู้ที่ลาพักงานวันนี้</h3>
+          </div>
+          {todaysLeaves.length > 0 ? (
+            <ul className="space-y-2">
+              {todaysLeaves.map(leave => (
+                <li key={leave.Id} className="text-amber-200 text-xs bg-amber-900/30 px-3 py-2 rounded-lg border border-amber-700/40">
+                  {leave.Assignee} — {leave.Title}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-amber-400/50 text-xs">วันนี้ไม่มีใครลา 🎉</div>
+          )}
+        </div>
+
+        {/* Due Today */}
+        <div className="bg-rose-500/5 border border-rose-500/20 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <FiAlertCircle className="text-rose-400" />
+            <h3 className="text-sm font-bold text-rose-200">งานที่ครบกำหนดวันนี้</h3>
+          </div>
+          {todaysTasks.length > 0 ? (
+            <ul className="space-y-2">
+              {todaysTasks.map(task => (
+                <li key={task.Id} className="text-rose-200 text-xs bg-rose-900/30 px-3 py-2 rounded-lg border border-rose-700/40 flex justify-between">
+                  <span className="truncate">{task.Title}</span>
+                  <span className="text-rose-400 text-[10px] shrink-0 ml-2">({task.Assignee})</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-rose-400/50 text-xs">ไม่มีงานที่ครบกำหนดวันนี้ ✅</div>
+          )}
+        </div>
+      </div>
+
+
+      {/* ═══ Row: Status Breakdown + Weekly Trend ═══ */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
+        
+        {/* Status Distribution */}
+        <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+            <FiPieChart className="text-indigo-400" /> สถานะงาน
+          </h3>
+          {totalTasks > 0 ? (
+            <>
+              {/* Visual bar */}
+              <div className="flex h-4 rounded-full overflow-hidden mb-4 gap-0.5">
+                {doneTasks > 0 && <div className="bg-emerald-500 transition-all duration-500" style={{ width: `${(doneTasks/totalTasks)*100}%` }}></div>}
+                {inProgressTasks > 0 && <div className="bg-amber-500 transition-all duration-500" style={{ width: `${(inProgressTasks/totalTasks)*100}%` }}></div>}
+                {todoTasks > 0 && <div className="bg-slate-500 transition-all duration-500" style={{ width: `${(todoTasks/totalTasks)*100}%` }}></div>}
+              </div>
+              {/* Legend */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-emerald-500"></div><span className="text-xs text-slate-300">Done</span></div>
+                  <span className="text-xs text-slate-400 font-mono">{doneTasks} ({Math.round((doneTasks/totalTasks)*100)}%)</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-amber-500"></div><span className="text-xs text-slate-300">In Progress</span></div>
+                  <span className="text-xs text-slate-400 font-mono">{inProgressTasks} ({Math.round((inProgressTasks/totalTasks)*100)}%)</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-slate-500"></div><span className="text-xs text-slate-300">To Do</span></div>
+                  <span className="text-xs text-slate-400 font-mono">{todoTasks} ({Math.round((todoTasks/totalTasks)*100)}%)</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-sm text-slate-500 py-4 text-center">ยังไม่มีข้อมูล</div>
+          )}
+        </div>
+
+        {/* Weekly Trend */}
+        <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+            <FiTrendingUp className="text-cyan-400" /> แนวโน้ม 7 วัน
+          </h3>
+          <div className="flex items-end gap-1.5 h-32">
+            {weeklyTrend.map((day, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                <div className="flex-1 flex items-end gap-0.5 w-full">
+                  <div className="flex-1 bg-indigo-500/60 rounded-t transition-all duration-300 min-h-[2px]" style={{ height: `${(day.created/maxWeekly)*100}%` }} title={`สร้าง: ${day.created}`}></div>
+                  <div className="flex-1 bg-emerald-500/60 rounded-t transition-all duration-300 min-h-[2px]" style={{ height: `${(day.completed/maxWeekly)*100}%` }} title={`เสร็จ: ${day.completed}`}></div>
+                </div>
+                <span className="text-[10px] text-slate-500 font-mono">{day.label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-center gap-4 mt-3">
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-indigo-500/60"></div><span className="text-[10px] text-slate-400">สร้าง</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-emerald-500/60"></div><span className="text-[10px] text-slate-400">เสร็จ</span></div>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ Workload Per Person ═══ */}
+      <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-4 shrink-0">
+        <h3 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+          <FiUserCheck className="text-violet-400" /> Workload แต่ละคน
+        </h3>
+        {workloadData.length > 0 ? (
+          <div className="space-y-3">
+            {workloadData.map(([name, data]) => {
+              const maxLoad = Math.max(...workloadData.map(d => d[1].total), 1);
+              return (
+                <div key={name} className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-[10px] text-white font-bold shrink-0">
+                    {name.substring(0, 1).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-slate-300 font-medium truncate">{name}</span>
+                      <span className="text-[10px] text-slate-500 font-mono shrink-0 ml-2">{data.total} งาน</span>
+                    </div>
+                    <div className="flex h-2 rounded-full overflow-hidden bg-slate-700/50 gap-px">
+                      {data.done > 0 && <div className="bg-emerald-500 rounded-l" style={{ width: `${(data.done/data.total)*100}%` }}></div>}
+                      {data.inProgress > 0 && <div className="bg-amber-500" style={{ width: `${(data.inProgress/data.total)*100}%` }}></div>}
+                      {data.todo > 0 && <div className="bg-slate-500 rounded-r" style={{ width: `${(data.todo/data.total)*100}%` }}></div>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-sm text-slate-500 py-4 text-center">ยังไม่มีข้อมูล</div>
+        )}
+      </div>
+
+
+      {/* ═══ Activity Feed ═══ */}
+      <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-4 shrink-0">
+        <div className="flex items-center gap-2 mb-4">
+          <FiActivity className="text-indigo-400" />
+          <h3 className="text-sm font-bold text-slate-200">ความเคลื่อนไหวล่าสุด</h3>
+        </div>
+        
+        {activities.length > 0 ? (
+          <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar">
+            {activities.slice(0, 20).map(act => (
+              <div key={act.Id} className="flex gap-3">
+                <div className="mt-1.5 shrink-0">
+                  <div className="w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-indigo-500/20"></div>
+                </div>
+                <div>
+                  <p className="text-slate-300 text-xs leading-relaxed">{act.Message}</p>
+                  <p className="text-slate-600 text-[10px] mt-0.5">{new Date(act.CreatedAt).toLocaleString('th-TH')}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-slate-500 text-xs">ยังไม่มีความเคลื่อนไหว</div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -84,6 +84,11 @@ export const courses = [
         id: 'm3',
         title: 'เทคโนโลยีที่ใช้ (Tech Stack)',
         content: 'react-arch-tech'
+      },
+      {
+        id: 'm4',
+        title: 'ขั้นตอนการทำงานร่วมกัน (Team Workflow)',
+        content: 'team-workflow'
       }
     ]
   },

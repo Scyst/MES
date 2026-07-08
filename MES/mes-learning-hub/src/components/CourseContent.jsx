@@ -14,6 +14,7 @@ import SysMap from '../data/content/SysMap';
 import SysSecurity from '../data/content/SysSecurity';
 import SysAuth from '../data/content/SysAuth';
 import SysIntegration from '../data/content/SysIntegration';
+import TeamWorkflow from '../data/content/TeamWorkflow';
 
 export default function CourseContent({ courseId, moduleContent }) {
   // Mapping content IDs to actual React components containing the text/layout
@@ -32,7 +33,8 @@ export default function CourseContent({ courseId, moduleContent }) {
     'sys-map': <SysMap />,
     'sys-security': <SysSecurity />,
     'sys-auth': <SysAuth />,
-    'sys-integration': <SysIntegration />
+    'sys-integration': <SysIntegration />,
+    'team-workflow': <TeamWorkflow />
   };
 
   const ContentComponent = contentMap[moduleContent];
