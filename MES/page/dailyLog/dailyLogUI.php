@@ -171,7 +171,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         <?php 
                         $themeProd = 'text-primary bg-primary bg-opacity-10';
                         renderServiceLink('Production Entry', 'บันทึกผลผลิตประจำวัน', '<i class="fas fa-boxes"></i>', '../production/productionUI.php', 'view_production', $themeProd);
-                        renderServiceLink('Mobile Entry', 'ลงยอดผ่านมือถือ (New)', '<i class="fas fa-mobile-alt"></i>', '/MobileApp/index.html', 'view_production', $themeProd);
+                        renderServiceLink('Mobile Entry', 'ลงยอดผ่านมือถือ (New)', '<i class="fas fa-mobile-alt"></i>', '/iot-toolbox/sandbox-b9/MobileApp/index.html', 'view_production', $themeProd);
                         renderServiceLink('Live Job Queue', 'ระบบจัดการคิวงานหน้าไลน์ (KDS)', '<i class="fas fa-list-ol"></i>', '../production/jobQueueUI.php', 'view_production', $themeProd);
                         renderServiceLink('Scan Barcode', 'ระบบสแกนบาร์โค้ด', '<i class="fas fa-barcode"></i>', '../scanBarcode/scanBarcodeUI.php', 'view_production', $themeProd);
                         renderServiceLink('Tag Printer', 'พิมพ์แท็กส่งงาน (WIP/FG)', '<i class="fas fa-print"></i>', '../production/label_printer.php', 'print_label', $themeProd);
