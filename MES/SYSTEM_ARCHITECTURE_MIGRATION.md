@@ -35,10 +35,10 @@ Used by `page/production`. This table focuses on physical inventory movement.
 ### 2.2 Modern IIoT Schema (`PE_IIOT_TELEMETRY`)
 Used by `page/PE`. This table focuses on real-time equipment status.
 - `machine_code`: The unique identifier of the equipment (e.g., `M-01`).
-- `live_counter`: The total cumulative production count measured directly by the PLC/sensor.
+- `live_counter`: **(CRITICAL DISTINCTION)** This is the number of **machine strokes** (or cycles), NOT the actual finished goods yield. It is used for calculating OEE (Availability, Performance), machine lifespan, and preventative maintenance.
 - `live_status`: Current state (`running`, `stopped`, `warning`).
 - `last_updated`: Timestamp of the last 3-second poll.
-- **Integration Target:** Future architecture must take the delta of `live_counter` (e.g., +100 units) and automatically generate a `PRODUCTION_FG` record in `STOCK_TRANSACTIONS` using the `machine_id`.
+- **Integration Strategy:** `PE_IIOT_TELEMETRY` (Strokes/Maintenance) and `STOCK_TRANSACTIONS` (Actual Yield) will remain separate. The key change is that manual yield entries are now tied to a specific `machine_id` instead of a generic Production Line.
 
 ---
 
@@ -112,6 +112,6 @@ This 3-step process ensures 100% backward compatibility while making the `mes-mo
 
 To ensure a seamless transition from the Old to the New system, the following challenges must be addressed:
 
-- **[ ] Double Counting Prevention:** As we transition, we must ensure that automated `live_counter` increments from the PE module do not overlap or conflict with manual `STOCK_TRANSACTIONS` entries if an operator uses both systems.
-- **[ ] Material Consumption Sync:** If a machine produces 100 Finished Goods automatically, the system needs an automated trigger (Backflushing) to deduct the corresponding Raw Materials from `STOCK_TRANSACTIONS`.
+- **[ ] Update Legacy SPs:** Execute the 3-step safe migration plan for `dbo.sp_ExecuteProduction` so we can permanently move away from the `notes` hack and properly enforce `machine_id` integrity.
+- **[ ] Consolidate Yield vs. Strokes:** Ensure the BI Dashboard can overlay the actual Yield (from `STOCK_TRANSACTIONS`) against the Machine Strokes (from `PE_IIOT_TELEMETRY`) to accurately measure Quality and real-world efficiency per machine.
 - **[ ] Legacy App Sunset:** Plan a hard cutoff date to decommission `page/production/mobile_app.php` and force all operators to use the new `mes-mobile-app`.
