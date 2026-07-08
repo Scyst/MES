@@ -784,6 +784,9 @@ const IIoTModule = (function() {
 
     function openFilterModal() {
         const modalEl = document.getElementById('iiotFilterModal');
+        if (modalEl && modalEl.parentNode !== document.body) {
+            document.body.appendChild(modalEl);
+        }
         let modal = bootstrap.Modal.getInstance(modalEl);
         if (!modal) modal = new bootstrap.Modal(modalEl);
         
