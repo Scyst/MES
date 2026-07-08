@@ -20,7 +20,29 @@ This document outlines the architectural shift from the legacy manual production
 
 ---
 
-## 2. Frontend Modernization & Mobile Apps
+## 2. Core Data Structure Mapping
+
+To plan migrations and API rewrites, developers must understand how the legacy schema maps to the modern schema.
+
+### 2.1 Legacy Production Schema (`STOCK_TRANSACTIONS`)
+Used by `page/production`. This table focuses on physical inventory movement.
+- `transaction_type`: e.g., `'PRODUCTION_FG'`, `'PRODUCTION_SCRAP'`.
+- `quantity`: The total amount produced in a batch.
+- `to_location_id`: Where the goods were sent (e.g., Finished Goods Warehouse).
+- `reference_id`: Tied to a Job Order or Work Order.
+- **Limitation:** There is no `machine_id` column natively tied to this that is updated in real-time.
+
+### 2.2 Modern IIoT Schema (`PE_IIOT_TELEMETRY`)
+Used by `page/PE`. This table focuses on real-time equipment status.
+- `machine_code`: The unique identifier of the equipment (e.g., `M-01`).
+- `live_counter`: The total cumulative production count measured directly by the PLC/sensor.
+- `live_status`: Current state (`running`, `stopped`, `warning`).
+- `last_updated`: Timestamp of the last 3-second poll.
+- **Integration Target:** Future architecture must take the delta of `live_counter` (e.g., +100 units) and automatically generate a `PRODUCTION_FG` record in `STOCK_TRANSACTIONS`.
+
+---
+
+## 3. Frontend Modernization & Mobile Apps
 
 ### 📱 Legacy Mobile Web
 **Location:** `e:\MES\MES\MES\page\production\mobile_app.php`
