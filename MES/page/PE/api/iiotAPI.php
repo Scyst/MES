@@ -8,6 +8,7 @@ if ($action === 'update_telemetry' || $action === 'snapshot_iiot_telemetry') {
 }
 
 require_once __DIR__ . '/../../components/init.php';
+$pdo->setAttribute(PDO::SQLSRV_ATTR_DIRECT_QUERY, true);
 
 try {
     switch ($action) {

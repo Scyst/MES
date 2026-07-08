@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../components/init.php';
 
 
 requirePermission(['view_maintenance', 'view_production', 'view_dashboard']);
+$pdo->setAttribute(PDO::SQLSRV_ATTR_DIRECT_QUERY, true);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
