@@ -394,7 +394,7 @@ const MachineModule = (() => {
         
         // Switch tab
         if (typeof PEApp !== 'undefined' && PEApp.switchTab) {
-            PEApp.switchTab('workorder');
+            PEApp.switchTab('workorders');
         }
         
         // Search and filter in Work Order module
