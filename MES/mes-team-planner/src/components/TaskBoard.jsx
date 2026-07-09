@@ -165,7 +165,7 @@ export default function TaskBoard({ tasks = [], onSaveTask, onDeleteTask, loadin
             )}
           </div>
           {hasActiveFilters && (
-            <div className="text-[11px] text-slate-500">พบ {filteredTasks.length} จาก {tasks.length} งาน</div>
+            <div className="text-[11px] md:text-xs text-slate-500">พบ {filteredTasks.length} จาก {tasks.length} งาน</div>
           )}
         </div>
       )}
@@ -215,22 +215,22 @@ export default function TaskBoard({ tasks = [], onSaveTask, onDeleteTask, loadin
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   {task.Visibility === 'private' ? (
-                                    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
+                                    <span className="flex items-center gap-1 text-[10px] md:text-[11px] font-bold uppercase tracking-wider text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
                                       <FiLock /> Private
                                     </span>
                                   ) : (
-                                    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                                    <span className="flex items-center gap-1 text-[10px] md:text-[11px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
                                       <FiGlobe /> Public
                                     </span>
                                   )}
                                   {/* Priority badge */}
-                                  <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                  <span className="flex items-center gap-1 text-[10px] md:text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                                     <div className={`w-2 h-2 rounded-full ${pMeta.dot}`}></div>
                                     {pMeta.label}
                                   </span>
                                   {/* Recurrence Icon */}
                                   {task.recurrence && task.recurrence !== 'none' && (
-                                    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-sky-400" title={`ทำซ้ำ: ${task.recurrence}`}>
+                                    <span className="flex items-center gap-1 text-[10px] md:text-[11px] font-bold uppercase tracking-wider text-sky-400" title={`ทำซ้ำ: ${task.recurrence}`}>
                                       <FiRefreshCw />
                                     </span>
                                   )}
@@ -240,20 +240,20 @@ export default function TaskBoard({ tasks = [], onSaveTask, onDeleteTask, loadin
                                 </button>
                               </div>
                               
-                              <h4 className="text-slate-800 dark:text-slate-200 font-medium text-sm mb-1 leading-snug">
+                              <h4 className="text-slate-800 dark:text-slate-200 font-medium text-sm md:text-base mb-1 leading-snug">
                                 {task.Title}
                               </h4>
                               
                               {/* Description preview */}
                               {task.description && (
-                                <p className="text-slate-500 text-xs mb-2 line-clamp-2 leading-relaxed">{task.description}</p>
+                                <p className="text-slate-500 text-xs md:text-sm mb-2 line-clamp-2 leading-relaxed">{task.description}</p>
                               )}
                               
                               {/* Tags */}
                               {tagsList.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mb-2">
                                   {tagsList.map((tag, idx) => (
-                                    <span key={idx} className="bg-slate-200/50 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    <span key={idx} className="bg-slate-200/50 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 text-[9px] md:text-[11px] px-1.5 py-0.5 rounded flex items-center gap-1">
                                       <FiTag className="text-[8px]" /> {tag}
                                     </span>
                                   ))}
@@ -269,12 +269,12 @@ export default function TaskBoard({ tasks = [], onSaveTask, onDeleteTask, loadin
                                   {subtasks.length > 0 && (
                                     <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${completedSubtasks === subtasks.length ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-200/50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400'}`}>
                                       <FiCheckSquare className="text-[10px]" />
-                                      <span className="text-[10px] font-medium">{completedSubtasks}/{subtasks.length}</span>
+                                      <span className="text-[10px] md:text-[11px] font-medium">{completedSubtasks}/{subtasks.length}</span>
                                     </div>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 flex items-center justify-center text-[10px] text-white font-bold border border-slate-300 dark:border-slate-700" title={task.Assignee}>
+                                  <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 flex items-center justify-center text-[10px] md:text-xs text-white font-bold border border-slate-300 dark:border-slate-700" title={task.Assignee}>
                                     {task.Assignee ? task.Assignee.substring(0, 1) : '?'}
                                   </div>
                                 </div>

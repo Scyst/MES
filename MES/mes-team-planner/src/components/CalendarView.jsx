@@ -105,7 +105,7 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
           <button onClick={prevMonth} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors active:scale-90">
             <FiChevronLeft />
           </button>
-          <span className="text-slate-800 dark:text-slate-200 font-semibold px-3 min-w-[90px] text-center text-sm">{currentMonthDisplay}</span>
+          <span className="text-slate-800 dark:text-slate-200 font-semibold px-3 min-w-[90px] text-center text-sm md:text-base">{currentMonthDisplay}</span>
           <button onClick={nextMonth} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors active:scale-90">
             <FiChevronRight />
           </button>
@@ -126,7 +126,7 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
         {/* Day headers */}
         <div className="grid grid-cols-7 bg-slate-50 dark:bg-slate-800/80 shrink-0">
           {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map((day, idx) => (
-            <div key={idx} className="text-center py-2 text-[11px] sm:text-xs font-bold text-slate-500">
+            <div key={idx} className="text-center py-2 text-[11px] sm:text-xs md:text-sm font-bold text-slate-500">
               {day}
             </div>
           ))}
@@ -136,7 +136,7 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
         <div className="grid grid-cols-7 flex-1 auto-rows-fr overflow-y-auto custom-scrollbar">
           {/* Empty cells before first day */}
           {Array.from({ length: startDay }).map((_, i) => (
-            <div key={`empty-${i}`} className="aspect-square sm:aspect-auto sm:min-h-[80px] p-1 border-t border-r border-slate-200/50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/30"></div>
+            <div key={`empty-${i}`} className="aspect-square sm:aspect-auto sm:min-h-[80px] md:min-h-[100px] p-1 border-t border-r border-slate-200/50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/30"></div>
           ))}
           
           {/* Day cells */}
@@ -151,13 +151,13 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
               <div 
                 key={day} 
                 onClick={() => handleDayClick(day)}
-                className={`aspect-square sm:aspect-auto sm:min-h-[80px] p-1 sm:p-1.5 border-t border-r border-slate-200/50 dark:border-slate-800/50 cursor-pointer transition-all relative
+                className={`aspect-square sm:aspect-auto sm:min-h-[80px] md:min-h-[100px] p-1 sm:p-1.5 md:p-2 border-t border-r border-slate-200/50 dark:border-slate-800/50 cursor-pointer transition-all relative
                   ${isSelected ? 'bg-indigo-50 dark:bg-indigo-500/10 ring-2 ring-inset ring-indigo-500/50' : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800/50'}
                   ${isToday && !isSelected ? 'ring-2 ring-inset ring-fuchsia-500/70' : ''}
                 `}
               >
                 {/* Day number */}
-                <div className={`text-[11px] sm:text-xs w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full mx-auto sm:mx-0 mb-0.5 
+                <div className={`text-[11px] sm:text-xs md:text-sm w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full mx-auto sm:mx-0 mb-0.5 md:mb-1 
                   ${isToday ? 'bg-fuchsia-500 text-white font-bold' : isSelected ? 'text-indigo-600 dark:text-indigo-300 font-semibold' : 'text-slate-700 dark:text-slate-400'}
                 `}>
                   {day}
@@ -175,17 +175,17 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
                 )}
 
                 {/* Desktop: event labels */}
-                <div className="hidden sm:block space-y-0.5 mt-0.5">
+                <div className="hidden sm:block space-y-0.5 md:space-y-1 mt-0.5">
                   {dayEvents.slice(0, 2).map(item => {
                     const color = getItemColor(item);
                     return (
-                      <div key={`${item._type}-${item.Id}`} className={`text-[10px] px-1.5 py-0.5 rounded truncate ${color.bg} ${color.text} border ${color.border}`}>
+                      <div key={`${item._type}-${item.Id}`} className={`text-[10px] md:text-xs px-1.5 py-0.5 md:py-1 rounded truncate ${color.bg} ${color.text} border ${color.border}`}>
                         {item.Title}
                       </div>
                     );
                   })}
                   {dayEvents.length > 2 && (
-                    <div className="text-[9px] text-slate-500 px-1">+{dayEvents.length - 2}</div>
+                    <div className="text-[9px] md:text-xs text-slate-500 px-1">+{dayEvents.length - 2}</div>
                   )}
                 </div>
               </div>
@@ -194,15 +194,15 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
           
           {/* Empty cells after last day */}
           {Array.from({ length: (7 - ((daysInMonth + startDay) % 7)) % 7 }).map((_, i) => (
-            <div key={`empty-end-${i}`} className="aspect-square sm:aspect-auto sm:min-h-[80px] p-1 border-t border-r border-slate-200/50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/30"></div>
+            <div key={`empty-end-${i}`} className="aspect-square sm:aspect-auto sm:min-h-[80px] md:min-h-[100px] p-1 border-t border-r border-slate-200/50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/30"></div>
           ))}
         </div>
       </div>
 
       {/* Selected Day Detail Panel */}
-      <div className="md:w-72 shrink-0 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700/80 overflow-hidden flex flex-col h-64 md:h-full">
+      <div className="md:w-80 lg:w-96 shrink-0 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700/80 overflow-hidden flex flex-col h-64 md:h-full">
         <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 shrink-0 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+          <h3 className="text-sm md:text-base font-bold text-slate-800 dark:text-slate-200">
             📋 {selectedDate ? (() => { 
               try { return format(new Date(selectedDate + 'T00:00:00'), 'dd MMM yyyy'); } 
               catch { return selectedDate; } 
@@ -236,14 +236,14 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
                   >
                     <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${color.dot}`}></div>
                     <div className="min-w-0 flex-1">
-                      <div className={`text-sm font-medium ${color.text} truncate`}>
+                      <div className={`text-sm md:text-base font-medium ${color.text} truncate`}>
                         {item.Title}
                       </div>
                       {item._type === 'task' && item.Assignee && (
-                        <div className="text-[11px] text-slate-500 mt-0.5">👤 {item.Assignee}</div>
+                        <div className="text-[11px] md:text-xs text-slate-500 mt-0.5">👤 {item.Assignee}</div>
                       )}
                       {item._type === 'event' && item.Type && (
-                        <div className="text-[11px] text-slate-500 mt-0.5">
+                        <div className="text-[11px] md:text-xs text-slate-500 mt-0.5">
                           {item.Type === 'leave' ? '🏖️ วันลา' : item.Type === 'holiday' ? '🎉 วันหยุด' : item.Type === 'maintenance' ? '🔧 บำรุงรักษา' : '📌 นัดหมาย'}
                           {item.Assignee ? ` · ${item.Assignee}` : ''}
                         </div>

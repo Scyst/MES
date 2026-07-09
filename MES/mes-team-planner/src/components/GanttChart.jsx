@@ -225,7 +225,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
               </div>
               <div className="flex flex-1 relative">
                 {hours.map(hour => (
-                  <div key={hour} className="flex-1 min-w-[50px] border-r border-slate-200/30 dark:border-slate-700/30 flex items-center justify-center py-2 text-[11px] text-slate-500 font-mono">
+                  <div key={hour} className="flex-1 min-w-[50px] border-r border-slate-200/30 dark:border-slate-700/30 flex items-center justify-center py-2 text-[11px] md:text-xs text-slate-500 font-mono">
                     {hour.toString().padStart(2, '0')}
                   </div>
                 ))}
@@ -262,7 +262,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                 <div key={assignee} className="flex border-b border-slate-200/40 dark:border-slate-700/40 group hover:bg-slate-100/50 dark:hover:bg-slate-800/30 relative" style={{ minHeight: `${requiredHeight}px` }}>
                   <div className="w-28 md:w-40 shrink-0 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-slate-700 flex items-center bg-white dark:bg-slate-900/95 z-20 sticky left-0 shadow-[2px_0_8px_rgba(0,0,0,0.08)] dark:shadow-[2px_0_8px_rgba(0,0,0,0.3)]">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[11px] text-white font-bold shrink-0 border border-indigo-400/30">
+                      <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[11px] md:text-xs text-white font-bold shrink-0 border border-indigo-400/30">
                         {assignee.substring(0, 1).toUpperCase()}
                       </div>
                       <span className="truncate text-xs md:text-sm" title={assignee}>{assignee}</span>
@@ -304,7 +304,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                             draggable
                             onDragStart={(e) => handleDragStart(e, task)}
                             onClick={(e) => openEditModal(e, task)}
-                            className={`absolute rounded-lg border text-[11px] text-white px-2 py-0.5 shadow-md hover:shadow-lg cursor-grab active:cursor-grabbing hover:brightness-110 transition-all z-10 flex items-center overflow-hidden pointer-events-auto ${colorClass}`}
+                            className={`absolute rounded-lg border text-[11px] md:text-xs text-white px-2 py-0.5 shadow-md hover:shadow-lg cursor-grab active:cursor-grabbing hover:brightness-110 transition-all z-10 flex items-center overflow-hidden pointer-events-auto ${colorClass}`}
                             style={{ 
                               left: `${leftPct}%`, 
                               width: `${widthPct}%`,
@@ -340,7 +340,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
             
             {/* Header Row (Days of Week) */}
             <div className="flex border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-slate-50 dark:bg-slate-800 z-20 shadow-md">
-              <div className="w-16 shrink-0 px-2 py-2 font-bold text-slate-500 text-[10px] border-r border-slate-200 dark:border-slate-700 flex items-center justify-center bg-slate-50 dark:bg-slate-800 sticky left-0 z-40">
+              <div className="w-16 md:w-20 shrink-0 px-2 py-2 font-bold text-slate-500 text-[10px] md:text-xs border-r border-slate-200 dark:border-slate-700 flex items-center justify-center bg-slate-50 dark:bg-slate-800 sticky left-0 z-40">
                 เวลา
               </div>
               <div className="flex flex-1">
@@ -349,7 +349,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                   const isToday = dayStr === format(new Date(), 'yyyy-MM-dd');
                   return (
                     <div key={idx} className={`flex-1 min-w-[100px] border-r border-slate-200/30 dark:border-slate-700/30 flex flex-col items-center justify-center py-2 ${isToday ? 'bg-indigo-50 dark:bg-indigo-500/10' : ''}`}>
-                      <span className="text-[10px] text-slate-500 font-medium">{thaiDayNames[idx]}</span>
+                      <span className="text-[10px] md:text-xs text-slate-500 font-medium">{thaiDayNames[idx]}</span>
                       <span className={`text-sm font-bold ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
                         {format(day, 'dd')}
                       </span>
@@ -363,7 +363,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
             {weeklyHours.map(hour => (
               <div key={hour} className="flex border-b border-slate-200/30 dark:border-slate-700/30" style={{ minHeight: '60px' }}>
                 {/* Hour label */}
-                <div className="w-16 shrink-0 px-2 py-1 text-[11px] text-slate-500 font-mono border-r border-slate-200 dark:border-slate-700 flex items-start justify-center pt-2 bg-white dark:bg-slate-900/50 sticky left-0 z-20">
+                <div className="w-16 md:w-20 shrink-0 px-2 py-1 text-[11px] md:text-xs text-slate-500 font-mono border-r border-slate-200 dark:border-slate-700 flex items-start justify-center pt-2 bg-white dark:bg-slate-900/50 sticky left-0 z-20">
                   {hour.toString().padStart(2, '0')}:00
                 </div>
                 {/* Day cells */}
@@ -407,7 +407,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                               <div 
                                 key={task.Id}
                                 onClick={(e) => openEditModal(e, task)}
-                                className={`text-[10px] px-1.5 py-1 rounded truncate cursor-pointer hover:brightness-110 transition-all border ${isMultiPerson ? `${personColor.light} ${personColor.border} ${personColor.text}` : 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300'}`}
+                                className={`text-[10px] md:text-xs px-1.5 py-1 rounded truncate cursor-pointer hover:brightness-110 transition-all border ${isMultiPerson ? `${personColor.light} ${personColor.border} ${personColor.text}` : 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300'}`}
                                 title={`${task.Title} (${task.Assignee || 'Unassigned'})\n${task.startTime} - ${task.endTime}`}
                               >
                                 {isMultiPerson && <span className="font-bold">{(task.Assignee || 'U').charAt(0)}</span>}{' '}
@@ -427,14 +427,14 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
           {/* Legend for team comparison */}
           {selectedAssignee === 'All' && (
             <div className="sticky bottom-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-t border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center gap-3 flex-wrap">
-              <span className="text-[10px] text-slate-500 font-medium">สมาชิก:</span>
+              <span className="text-[10px] md:text-xs text-slate-500 font-medium">สมาชิก:</span>
               {allAssignees.slice(0, 8).map(name => {
                 const color = getPersonColor(name);
                 return (
                   <button 
                     key={name} 
                     onClick={() => setSelectedAssignee(name)}
-                    className={`flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-lg border transition-all hover:scale-105 ${color.light} ${color.border} ${color.text}`}
+                    className={`flex items-center gap-1.5 text-[11px] md:text-xs px-2 py-1 rounded-lg border transition-all hover:scale-105 ${color.light} ${color.border} ${color.text}`}
                   >
                     <div className={`w-2 h-2 rounded-full ${color.bg}`}></div>
                     {name}
