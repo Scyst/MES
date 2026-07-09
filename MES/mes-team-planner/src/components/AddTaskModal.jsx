@@ -136,7 +136,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         
         {/* Header */}
         <div className="flex flex-col shrink-0">
-          <div className="flex justify-between items-center px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-800/80 to-slate-900/80">
+          <div className="flex justify-between items-center px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-800/80 dark:to-slate-900/80">
             <div className="flex items-center gap-3">
               <div className={`w-3 h-3 rounded-full ${isEditing ? 'bg-amber-400' : 'bg-emerald-400'} animate-pulse`}></div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEditing ? 'แก้ไขงาน' : 'สร้างงานใหม่'}</h3>
@@ -296,7 +296,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     className="flex-1 bg-slate-100 dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                     placeholder="เพิ่มงานย่อยใหม่..."
                   />
-                  <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-slate-900 dark:text-white px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-1 transition-colors">
+                  <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-1 transition-colors">
                     <FiPlus /> เพิ่ม
                   </button>
                 </form>
@@ -357,7 +357,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     className="flex-1 bg-slate-100 dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-sky-500"
                     placeholder="พิมพ์คอมเมนต์..."
                   />
-                  <button type="submit" disabled={!newComment.trim()} className="bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-slate-900 dark:text-white px-4 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition-colors">
+                  <button type="submit" disabled={!newComment.trim()} className="bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition-colors">
                     <FiSend /> ส่ง
                   </button>
                 </div>
@@ -381,7 +381,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 ยกเลิก
               </button>
               {/* Only submit the form if we are on general tab, or just use a button that triggers handleSubmit directly */}
-              <button type="button" onClick={handleSubmit} className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-slate-900 dark:text-white rounded-xl font-semibold shadow-lg shadow-indigo-900/30 transition-all active:scale-95 text-sm flex items-center gap-2">
+              <button type="button" onClick={handleSubmit} className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl font-semibold shadow-lg shadow-indigo-900/30 transition-all active:scale-95 text-sm flex items-center gap-2">
                 {isEditing ? '💾 บันทึกทั้งหมด' : '✨ สร้างงาน'}
               </button>
             </div>

@@ -11,6 +11,10 @@ $_base   = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
 define('CAMERA_HOST', "{$_scheme}://{$_SERVER['HTTP_HOST']}{$_base}/cam_proxy.php");
 require_once __DIR__ . '/../../auth/check_auth.php';
 
+// เฉพาะ creator/admin/supervisor แก้ค่า/สั่งงานได้ — role อื่นดูอย่างเดียว
+// บังคับจริงที่ cam_proxy.php (บล็อก POST); ตรงนี้ใช้ซ่อน/ปิดปุ่มเพื่อ UX เท่านั้น
+$canEdit = hasRole(['creator', 'admin', 'supervisor']);
+
 $pageTitle          = 'Accessories Inspection';
 $pageIcon           = 'fas fa-camera';
 $pageHeaderTitle    = 'Accessories Inspection';
@@ -25,6 +29,30 @@ $products = [
     "CH-5608HGBLK","CH-5608HGBLU","CH-5608HGR","CH-5608HGGRY","CH-5608HGGRE","CH-5608HGPR",
     "TC-5608TSBLK","TC-5608TSBLU","TC-5608TSR","TC-5608TSGRY","TC-5608TSGRE","TC-5608TSPR",
 ];
+
+/**
+ * ข้อความแสดงผลของรุ่นงาน: โค้ด + สีในวงเล็บ เช่น "CH-2607HGBLK (Black)"
+ * ใช้แค่ตอน "แสดง" — ค่าที่บันทึก/ส่ง (option value) ยังเป็นโค้ดล้วน
+ * (mirror ของ product_label() ใน ui_theme.py ฝั่ง Python)
+ */
+function accessory_product_label(string $code): string {
+    // longest-suffix-first: "PR" ต้องมาก่อน "R", "BLK"/"BLU" มาก่อน "R"
+    static $map = [
+        'BLACK' => 'Black', 'BLUE' => 'Blue', 'RED' => 'Red',
+        'BLK' => 'Black', 'BLU' => 'Blue', 'GRY' => 'Gray',
+        'GRE' => 'Green', 'PR' => 'Purple', 'R' => 'Red',
+    ];
+    $up = strtoupper($code);
+    foreach ($map as $suffix => $name) {
+        if (substr($up, -strlen($suffix)) === $suffix) {
+            if (strpos(' ' . $up, ' ' . strtoupper($name)) !== false) {
+                return $code;   // สะกดสีเต็มอยู่แล้ว → ไม่ใส่ซ้ำ
+            }
+            return $code . ' (' . $name . ')';
+        }
+    }
+    return $code;
+}
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -33,7 +61,8 @@ $products = [
     <meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="stylesheet" href="css/accessoriesInspection.css?v=<?php echo filemtime(__DIR__ . '/css/accessoriesInspection.css'); ?>">
 </head>
-<body class="layout-top-header bg-body-tertiary">
+<body class="layout-top-header bg-body-tertiary<?= $canEdit ? '' : ' viewer-mode' ?>"
+      data-can-edit="<?= $canEdit ? '1' : '0' ?>">
 
     <?php include '../components/php/top_header.php'; ?>
 
@@ -111,8 +140,9 @@ $products = [
                             onchange="applySettings()">
                         <option value="">-- เลือกรุ่นงาน --</option>
                         <?php foreach ($products as $p):
-                            $e = htmlspecialchars($p, ENT_QUOTES, 'UTF-8'); ?>
-                        <option value="<?= $e ?>"><?= $e ?></option>
+                            $e = htmlspecialchars($p, ENT_QUOTES, 'UTF-8');
+                            $lbl = htmlspecialchars(accessory_product_label($p), ENT_QUOTES, 'UTF-8'); ?>
+                        <option value="<?= $e ?>"><?= $lbl ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -376,7 +406,21 @@ $products = [
 </div>
 
 <script>const CAMERA_HOST = '<?= CAMERA_HOST ?>';</script>
-
+<script src="../components/js/sendRequest.js?v=<?php echo filemtime(__DIR__ . '/../components/js/sendRequest.js'); ?>"></script>
 <script src="script/accessoriesInspection.js?v=<?php echo filemtime(__DIR__ . '/script/accessoriesInspection.js'); ?>"></script>
+<script>
+// View-only (UX layer): ปิด control ใน .ctrl-card ยกเว้น Dropdown เลือกรุ่นงาน (#productSelect)
+// การบังคับจริงอยู่ที่ cam_proxy.php (บล็อก POST) — ตรงนี้แค่กันการกดเฉยๆ
+// stream / status / ประวัติ / ตัวกรองวันที่-กะ ยังใช้ได้ปกติ (อยู่นอก .ctrl-card)
+if (document.body.dataset.canEdit !== '1') {
+    document.querySelectorAll(
+        '.ctrl-card input, .ctrl-card select, .ctrl-card button, .ctrl-card textarea'
+    ).forEach(function (el) {
+        if (el.id !== 'productSelect') {
+            el.disabled = true;
+        }
+    });
+}
+</script>
 </body>
 </html>

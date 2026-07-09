@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { FiPlus, FiMoreVertical, FiLock, FiGlobe, FiClock, FiSearch, FiFilter, FiX, FiDownload, FiTag, FiCheckSquare, FiRefreshCw } from 'react-icons/fi';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import axios from 'axios';
 import AddTaskModal from './AddTaskModal';
 
 const cols = [
@@ -17,32 +16,15 @@ const PRIORITY_META = {
   low: { label: 'ต่ำ', dot: 'bg-green-400', border: 'border-l-green-500' },
 };
 
-export default function TaskBoard() {
-  const [tasks, setTasks] = useState([]);
+export default function TaskBoard({ tasks = [], onSaveTask, onDeleteTask, loading }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterAssignee, setFilterAssignee] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
-
-  const fetchTasks = async () => {
-    try {
-      const res = await axios.get('/api/tasks');
-      setTasks(res.data);
-    } catch (err) {
-      console.error('Failed to fetch tasks', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTasks();
-  }, []);
 
   // Filtered tasks
   const filteredTasks = useMemo(() => {
@@ -96,29 +78,18 @@ export default function TaskBoard() {
   };
 
   const handleSaveTask = async (taskData) => {
-    try {
-      if (taskData.Id) {
-        const res = await axios.put(`/api/tasks/${taskData.Id}`, taskData);
-        setTasks(tasks.map(t => t.Id === taskData.Id ? res.data : t));
-      } else {
-        const res = await axios.post('/api/tasks', taskData);
-        setTasks([res.data, ...tasks]);
-      }
+    const success = await onSaveTask(taskData);
+    if (success) {
       setIsModalOpen(false);
       setEditingTask(null);
-    } catch (err) {
-      console.error('Failed to save task', err);
     }
   };
 
   const handleDeleteTask = async (taskId) => {
-    try {
-      await axios.delete(`/api/tasks/${taskId}`);
-      setTasks(tasks.filter(t => t.Id !== taskId));
+    const success = await onDeleteTask(taskId);
+    if (success) {
       setIsModalOpen(false);
       setEditingTask(null);
-    } catch (err) {
-      console.error('Failed to delete task', err);
     }
   };
 
@@ -130,14 +101,8 @@ export default function TaskBoard() {
     const draggedTaskId = parseInt(draggableId);
     const newStatus = destination.droppableId;
 
-    setTasks(prev => prev.map(t => t.Id === draggedTaskId ? { ...t, Status: newStatus } : t));
-
-    try {
-      await axios.put(`/api/tasks/${draggedTaskId}`, { status: newStatus });
-    } catch (err) {
-      console.error('Failed to update task status', err);
-      fetchTasks();
-    }
+    // Optimistic update via shared handler
+    onSaveTask({ Id: draggedTaskId, status: newStatus });
   };
 
   if (loading) return <div className="flex-1 flex items-center justify-center text-slate-600 dark:text-slate-400">Loading tasks...</div>;
@@ -156,7 +121,7 @@ export default function TaskBoard() {
           <button onClick={() => setShowFilters(!showFilters)} className={`bg-slate-100 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-900 dark:text-white p-2 sm:px-3 sm:py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border ${hasActiveFilters ? 'border-indigo-500 text-indigo-400' : 'border-slate-300 dark:border-slate-700'}`} title="กรองข้อมูล">
             <FiFilter /> <span className="hidden sm:inline">กรองข้อมูล</span> {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-indigo-500"></span>}
           </button>
-          <button onClick={() => { setEditingTask(null); setIsModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-500 text-slate-900 dark:text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-900/20 flex items-center gap-1.5">
+          <button onClick={() => { setEditingTask(null); setIsModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-900/20 flex items-center gap-1.5">
             <FiPlus /> <span className="hidden sm:inline">สร้างงาน</span><span className="sm:hidden">เพิ่ม</span>
           </button>
         </div>
@@ -309,7 +274,7 @@ export default function TaskBoard() {
                                   )}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 flex items-center justify-center text-[10px] text-slate-900 dark:text-white font-bold border border-slate-300 dark:border-slate-700" title={task.Assignee}>
+                                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 flex items-center justify-center text-[10px] text-white font-bold border border-slate-300 dark:border-slate-700" title={task.Assignee}>
                                     {task.Assignee ? task.Assignee.substring(0, 1) : '?'}
                                   </div>
                                 </div>

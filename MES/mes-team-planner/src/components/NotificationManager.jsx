@@ -178,7 +178,7 @@ export default function NotificationManager() {
                   
                   <button 
                     onClick={() => setUrgentModals(prev => prev.filter(n => n.id !== notif.id))}
-                    className="mt-8 w-full bg-rose-600 hover:bg-rose-500 text-slate-900 dark:text-white font-bold py-3 px-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-rose-900/50"
+                    className="mt-8 w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-rose-900/50"
                   >
                     รับทราบ (Acknowledge)
                   </button>

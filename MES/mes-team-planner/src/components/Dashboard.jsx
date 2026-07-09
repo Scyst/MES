@@ -1,33 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
+import React, { useMemo } from 'react';
 import { FiActivity, FiUserCheck, FiAlertCircle, FiCheckCircle, FiClock, FiBarChart2, FiTrendingUp, FiPieChart } from 'react-icons/fi';
 import { format, subDays } from 'date-fns';
 
-export default function Dashboard() {
-  const [activities, setActivities] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [resAct, resEvents, resTasks] = await Promise.all([
-          axios.get('/api/activities'),
-          axios.get('/api/events'),
-          axios.get('/api/tasks')
-        ]);
-        setActivities(resAct.data);
-        setEvents(resEvents.data);
-        setTasks(resTasks.data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+export default function Dashboard({ tasks = [], events = [], activities = [], loading }) {
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todaysLeaves = events.filter(e => e.Type === 'leave' && e.date === todayStr);
@@ -138,18 +113,18 @@ export default function Dashboard() {
         <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <FiUserCheck className="text-amber-400" />
-            <h3 className="text-sm font-bold text-amber-200">ผู้ที่ลาพักงานวันนี้</h3>
+            <h3 className="text-sm font-bold text-amber-800 dark:text-amber-200">ผู้ที่ลาพักงานวันนี้</h3>
           </div>
           {todaysLeaves.length > 0 ? (
             <ul className="space-y-2">
               {todaysLeaves.map(leave => (
-                <li key={leave.Id} className="text-amber-200 text-xs bg-amber-900/30 px-3 py-2 rounded-lg border border-amber-700/40">
+                <li key={leave.Id} className="text-amber-800 dark:text-amber-200 text-xs bg-amber-100 dark:bg-amber-900/30 px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-700/40">
                   {leave.Assignee} — {leave.Title}
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="text-amber-400/50 text-xs">วันนี้ไม่มีใครลา 🎉</div>
+            <div className="text-amber-600 dark:text-amber-400/50 text-xs">วันนี้ไม่มีใครลา 🎉</div>
           )}
         </div>
 
@@ -157,19 +132,19 @@ export default function Dashboard() {
         <div className="bg-rose-500/5 border border-rose-500/20 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <FiAlertCircle className="text-rose-400" />
-            <h3 className="text-sm font-bold text-rose-200">งานที่ครบกำหนดวันนี้</h3>
+            <h3 className="text-sm font-bold text-rose-800 dark:text-rose-200">งานที่ครบกำหนดวันนี้</h3>
           </div>
           {todaysTasks.length > 0 ? (
             <ul className="space-y-2">
               {todaysTasks.map(task => (
-                <li key={task.Id} className="text-rose-200 text-xs bg-rose-900/30 px-3 py-2 rounded-lg border border-rose-700/40 flex justify-between">
+                <li key={task.Id} className="text-rose-800 dark:text-rose-200 text-xs bg-rose-100 dark:bg-rose-900/30 px-3 py-2 rounded-lg border border-rose-300 dark:border-rose-700/40 flex justify-between">
                   <span className="truncate">{task.Title}</span>
-                  <span className="text-rose-400 text-[10px] shrink-0 ml-2">({task.Assignee})</span>
+                  <span className="text-rose-600 dark:text-rose-400 text-[10px] shrink-0 ml-2">({task.Assignee})</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="text-rose-400/50 text-xs">ไม่มีงานที่ครบกำหนดวันนี้ ✅</div>
+            <div className="text-rose-600 dark:text-rose-400/50 text-xs">ไม่มีงานที่ครบกำหนดวันนี้ ✅</div>
           )}
         </div>
       </div>
@@ -221,7 +196,7 @@ export default function Dashboard() {
             {weeklyTrend.map((day, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
                 <div className="flex-1 flex items-end gap-0.5 w-full">
-                  <div className="flex-1 bg-indigo-500/10 dark:bg-indigo-500/60 rounded-t transition-all duration-300 min-h-[2px]" style={{ height: `${(day.created/maxWeekly)*100}%` }} title={`สร้าง: ${day.created}`}></div>
+                  <div className="flex-1 bg-indigo-500/30 dark:bg-indigo-500/60 rounded-t transition-all duration-300 min-h-[2px]" style={{ height: `${(day.created/maxWeekly)*100}%` }} title={`สร้าง: ${day.created}`}></div>
                   <div className="flex-1 bg-emerald-500/60 rounded-t transition-all duration-300 min-h-[2px]" style={{ height: `${(day.completed/maxWeekly)*100}%` }} title={`เสร็จ: ${day.completed}`}></div>
                 </div>
                 <span className="text-[10px] text-slate-500 font-mono">{day.label}</span>
@@ -229,7 +204,7 @@ export default function Dashboard() {
             ))}
           </div>
           <div className="flex items-center justify-center gap-4 mt-3">
-            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-indigo-500/10 dark:bg-indigo-500/60"></div><span className="text-[10px] text-slate-600 dark:text-slate-400">สร้าง</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-indigo-500/30 dark:bg-indigo-500/60"></div><span className="text-[10px] text-slate-600 dark:text-slate-400">สร้าง</span></div>
             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-emerald-500/60"></div><span className="text-[10px] text-slate-600 dark:text-slate-400">เสร็จ</span></div>
           </div>
         </div>
@@ -246,7 +221,7 @@ export default function Dashboard() {
               const maxLoad = Math.max(...workloadData.map(d => d[1].total), 1);
               return (
                 <div key={name} className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-[10px] text-slate-900 dark:text-white font-bold shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-[10px] text-white font-bold shrink-0">
                     {name.substring(0, 1).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">

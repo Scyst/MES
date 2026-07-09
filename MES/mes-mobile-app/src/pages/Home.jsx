@@ -43,10 +43,10 @@ export default function Home() {
     fetchDashboard();
   }, [API_BASE_URL, activeTeam]);
 
-  const headerTitle = activeTeam.length > 0 ? "My Performance" : "Factory Overview";
+  const headerTitle = activeTeam.length > 0 ? "ผลงานของทีม" : "ภาพรวมโรงงาน";
   const headerSub = activeTeam.length > 0 
-    ? `Today's Output for ${activeTeam.map(u => u.name || u.fullname).join(', ')}` 
-    : "Today's Live Production Status";
+    ? `ยอดผลิตวันนี้สำหรับ ${activeTeam.map(u => u.name || u.fullname).join(', ')}` 
+    : "สถานะการผลิตล่าสุดวันนี้";
 
   return (
     <div className="space-y-6 pb-24 max-w-4xl mx-auto px-4 mt-6">
@@ -65,7 +65,7 @@ export default function Home() {
         
         <div className="col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 rounded-3xl flex items-center justify-between shadow-lg transition-colors duration-300">
           <div>
-            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">Total Good Parts (FG)</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">ยอดผลิตรวมของดี (FG)</p>
             <p className="text-4xl font-black text-green-600 dark:text-green-400">
               {loading ? '...' : stats.total_fg.toLocaleString()}
             </p>
@@ -78,7 +78,7 @@ export default function Home() {
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 rounded-3xl shadow-lg transition-colors duration-300">
           <div className="flex items-center space-x-2 mb-3">
             <Clock size={20} className="text-yellow-600 dark:text-yellow-500" />
-            <p className="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase">Hold Parts</p>
+            <p className="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase">ยอดรอดำเนินการ (Hold)</p>
           </div>
           <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
             {loading ? '...' : stats.total_hold.toLocaleString()}
@@ -88,7 +88,7 @@ export default function Home() {
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 rounded-3xl shadow-lg transition-colors duration-300">
           <div className="flex items-center space-x-2 mb-3">
             <AlertOctagon size={20} className="text-red-600 dark:text-red-500" />
-            <p className="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase">Scrap Parts</p>
+            <p className="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase">ยอดของเสีย (Scrap)</p>
           </div>
           <p className="text-2xl font-bold text-red-600 dark:text-red-400">
             {loading ? '...' : stats.total_scrap.toLocaleString()}
@@ -99,13 +99,13 @@ export default function Home() {
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 p-5 rounded-2xl flex flex-col justify-center items-center text-center transition-colors duration-300">
             <Activity size={24} className="text-blue-600 dark:text-blue-400 mb-2" />
             <p className="text-3xl font-bold text-gray-900 dark:text-white">{loading ? '...' : stats.active_machines}</p>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 uppercase font-medium">Active Machines</p>
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 uppercase font-medium">เครื่องจักรกำลังทำงาน</p>
           </div>
           
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 p-5 rounded-2xl flex flex-col justify-center items-center text-center transition-colors duration-300">
             <AlertOctagon size={24} className="text-red-600 dark:text-red-400 mb-2" />
             <p className="text-3xl font-bold text-gray-900 dark:text-white">{loading ? '...' : stats.hold_machines}</p>
-            <p className="text-xs text-red-600 dark:text-red-400 mt-1 uppercase font-medium">Machines Down</p>
+            <p className="text-xs text-red-600 dark:text-red-400 mt-1 uppercase font-medium">เครื่องจักรหยุด</p>
           </div>
         </div>
 
@@ -113,19 +113,19 @@ export default function Home() {
 
       {/* Quick Links */}
       <div className="mt-8">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3 ml-2 transition-colors">Quick Links</h2>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3 ml-2 transition-colors">เมนูด่วน (Quick Links)</h2>
         <div className="grid grid-cols-2 gap-3">
           <button onClick={() => window.location.href = '../../dashboard.php'} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center space-y-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-300">
             <div className="p-3 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl">
               <Activity size={24} />
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">OEE System</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ระบบประสิทธิภาพ (OEE)</span>
           </button>
           <button onClick={() => window.location.href = '../../stop_causes.php'} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center space-y-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-300">
             <div className="p-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl">
               <AlertOctagon size={24} />
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Stop Causes</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ระบบแจ้งซ่อมเครื่องจักร</span>
           </button>
         </div>
       </div>
@@ -134,7 +134,7 @@ export default function Home() {
         onClick={() => navigate('/machines')}
         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-xl mt-4 transition-colors"
       >
-        Go to Machine Selection
+        ไปที่หน้าเลือกเครื่องจักร
       </button>
 
     </div>

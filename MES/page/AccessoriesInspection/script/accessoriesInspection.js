@@ -89,13 +89,12 @@ function updateStatus(s) {
     badge.className   = `badge ${cls}`;
     badge.textContent = text;
 
+    // หยุด detection สั่งได้เฉพาะที่เครื่อง Python หน้าไลน์ — เว็บมีแค่ START
+    // ขณะ armed อยู่ให้หรี่/disable ปุ่ม START กันกดซ้ำ
     const btnStart = document.getElementById('btnStart');
-    const btnStop  = document.getElementById('btnStop');
-    if (btnStart && btnStop) {
+    if (btnStart) {
         btnStart.disabled      = s.armed;
-        btnStop.disabled       = !s.armed;
-        btnStart.style.opacity = s.armed  ? '0.45' : '1';
-        btnStop.style.opacity  = !s.armed ? '0.45' : '1';
+        btnStart.style.opacity = s.armed ? '0.45' : '1';
     }
 
     document.getElementById('camOffline').style.display =
@@ -265,12 +264,8 @@ function updateErrorBanner(s) {
 function detectStateChanges(s) {
     if (!_prev.io_state) return;
 
-    if (s.io_state === 'alarm' && _prev.io_state !== 'alarm') {
-        showToast('⚠ ALARM — ชิ้นงานหลุดออกก่อนตรวจจับสำเร็จ', 'var(--bs-danger)');
-    }
-    if (s.io_state === 'idle' && _prev.io_state === 'detecting' && s.armed) {
-        showToast('✓ ตรวจจับสำเร็จ', 'var(--mes-color-success, #198754)');
-    }
+    // ALARM toast popup removed per request — แถบ banner สีแดงด้านบนยังบอกสถานะ alarm อยู่
+    // OK-completion popup removed per request — ไฟเขียว + panel "ALL FOUND" บอกผลอยู่แล้ว
     if (!s.camera_connected && _prev.camera_connected && s.armed) {
         showModal('กล้องหลุดการเชื่อมต่อ', 'กล้องขาดการเชื่อมต่อขณะระบบทำงานอยู่\nกรุณาตรวจสอบสาย LAN', 'error');
     }
@@ -387,7 +382,10 @@ function _addDays(dateStr, n) {
 }
 
 async function _fetchHistoryByDate(date) {
-    const url = _camUrl('/api/history') + '&limit=5000&date=' + encodeURIComponent(date);
+    // ประวัติดึงจาก SQL Server ผ่าน PHP (same-origin) — ไม่ผ่าน Python/proxy
+    // คืน { ok, rows:[{model, timestamp, result, elapsed_s, image}, ...] }
+    const url = 'api/inspectionAPI.php?action=get_logs&limit=5000&date='
+              + encodeURIComponent(date);
     const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
@@ -468,8 +466,9 @@ function renderLogs(rows) {
             ? `${ts.slice(8,10)}/${ts.slice(5,7)}/${ts.slice(0,4)} ${ts.slice(11,19)}`
             : '-';
         const imgCell  = r.image
-            ? `<td class="col-img"><span class="log-img-link"
-                 onclick="showImgModal('${escHtml(r.image)}')">img</span></td>`
+            ? `<td class="col-img"><button type="button" class="log-img-link"
+                 onclick="showImgModal('${escHtml(r.image)}')" title="ดูรูป">
+                 <i class="fas fa-image"></i></button></td>`
             : '<td class="col-img"></td>';
 
         let hourDiv = '';
@@ -507,8 +506,13 @@ function renderLogs(rows) {
 }
 
 function showImgModal(imgName) {
-    const url = _camUrl('/images/' + encodeURIComponent(imgName));
-    document.getElementById('imgModalImg').src        = url;
+    // รูปถูก upload มาเก็บที่ web server (img/) — โหลดจาก same-origin ก่อน
+    // ถ้าไม่เจอ (ยังไม่ถูก upload / upload ปิด) fallback ไปดึงผ่าน Python proxy
+    const local   = 'img/' + encodeURIComponent(imgName);
+    const proxied = _camUrl('/images/' + encodeURIComponent(imgName));
+    const img = document.getElementById('imgModalImg');
+    img.onerror = function () { img.onerror = null; img.src = proxied; };
+    img.src = local;
     document.getElementById('imgModalTitle').textContent = imgName;
     bootstrap.Modal.getOrCreateInstance(document.getElementById('imgModal')).show();
 }
@@ -742,19 +746,6 @@ async function cmdStart() {
     }
 }
 
-async function cmdStop() {
-    try {
-        const res  = await fetch(_camUrl('/api/stop'), {
-            method: 'POST', signal: AbortSignal.timeout(5000),
-        });
-        const json = await res.json();
-        if (json.ok) showToast('Detection หยุดทำงานแล้ว', 'var(--mes-color-warning, #ffc107)');
-        else         showToast('ไม่สามารถสั่ง STOP ได้', 'var(--bs-danger)');
-    } catch (_) {
-        showToast('ไม่สามารถติดต่อกล้องได้', 'var(--bs-danger)');
-    }
-}
-
 async function capture() {
     try {
         const res  = await fetch(_camUrl('/api/capture'), {
@@ -794,4 +785,5 @@ function _schedulePoll() {
 pollStatus().then(_schedulePoll);
 pollLogs();
 loadModels();
-setInterval(pollLogs, 5000);
+// log refresh ทุก 20 วิ (เดิม 5 วิ) — ลดภาระ SQL + การ re-render ตารางทั้งวัน
+setInterval(pollLogs, 20000);

@@ -66,13 +66,10 @@ export default function Receipt() {
   };
 
   return (
-    <div className="space-y-6 pb-20 max-w-lg mx-auto">
+    <div className="space-y-6 pb-6 pt-2 max-w-lg mx-auto">
       {/* Header */}
-      <div className="flex items-center space-x-3 mb-6">
-        <button onClick={() => navigate(-1)} className="p-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0 transition-colors">
-          <ChevronLeft size={24} />
-        </button>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Goods Receipt (IN)</h2>
+      <div className="mb-6 px-2">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">รับเข้าสินค้า (Receipt)</h2>
       </div>
 
       <form onSubmit={handleReceipt} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 rounded-3xl shadow-lg space-y-4">

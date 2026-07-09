@@ -92,7 +92,7 @@ export default function MachineList() {
     <div className="space-y-4 h-full flex flex-col">
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4 sticky top-0 z-10 transition-colors duration-300">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Select Machine</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-3">เลือกเครื่องจักร (Select Machine)</h1>
         
         {/* Line Filter */}
         <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -117,18 +117,18 @@ export default function MachineList() {
         {loading && machines.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-gray-500 col-span-full">
             <RefreshCcw size={32} className="animate-spin mb-4" />
-            <p>Loading machines...</p>
+            <p>กำลังโหลดข้อมูลเครื่องจักร...</p>
           </div>
         ) : error ? (
           <div className="bg-red-900/20 text-red-400 p-4 rounded-2xl text-center border border-red-900/50 col-span-full">
             <AlertTriangle className="mx-auto mb-2" size={32} />
-            <p className="font-bold">Error loading data</p>
+            <p className="font-bold">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
             <p className="text-sm mt-1">{error}</p>
-            <button onClick={fetchMachines} className="mt-4 px-4 py-2 bg-red-900/40 rounded-full text-sm">Retry</button>
+            <button onClick={fetchMachines} className="mt-4 px-4 py-2 bg-red-900/40 rounded-full text-sm">ลองใหม่</button>
           </div>
         ) : machines.length === 0 ? (
           <div className="text-center text-gray-500 py-10 col-span-full">
-            <p>No active machines found.</p>
+            <p>ไม่พบเครื่องจักรที่กำลังทำงานอยู่</p>
           </div>
         ) : (
           machines.filter(m => filter === 'All' || m.line === filter).map(machine => {
@@ -156,7 +156,7 @@ export default function MachineList() {
                 </div>
                 <div className={`flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium border ${status.border} ${status.color} ${status.bg} shrink-0 ml-2`}>
                   {status.icon}
-                  <span className="capitalize ml-1">{machine.status || 'Unknown'}</span>
+                  <span className="capitalize ml-1">{machine.status || 'ไม่ทราบสถานะ'}</span>
                 </div>
               </button>
             )
@@ -167,7 +167,7 @@ export default function MachineList() {
       {/* General Lines Grid */}
       {(filter === 'All' && locations.length > 0) && (
         <>
-          <h2 className="text-xl font-bold mt-4 mb-2 text-gray-300">General Assembly Lines</h2>
+          <h2 className="text-xl font-bold mt-4 mb-2 text-gray-300">สายการประกอบทั่วไป (Assembly Lines)</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-24">
             {locations.map(loc => (
               <button
@@ -180,7 +180,7 @@ export default function MachineList() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-bold text-lg text-blue-100">{loc.name}</h3>
-                  <p className="text-blue-400/70 text-sm">Line / General Area</p>
+                  <p className="text-blue-400/70 text-sm">ไลน์การประกอบ / พื้นที่ทั่วไป</p>
                 </div>
               </button>
             ))}

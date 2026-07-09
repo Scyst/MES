@@ -21,7 +21,7 @@ export default function MobileLayout() {
         {/* Header */}
         <header className="flex justify-between items-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800 p-4 transition-colors duration-300">
           <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-teal-500 dark:from-blue-400 dark:to-teal-400 bg-clip-text text-transparent">
-            MES Data Entry
+            ระบบลงยอดผลิต (MES Mobile)
           </h1>
           <button 
             onClick={handleToggleTheme}
@@ -33,7 +33,7 @@ export default function MobileLayout() {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto pb-20 p-4">
+        <main className="flex-1 overflow-y-auto pb-20 px-4 pt-0">
           <Outlet />
         </main>
 
@@ -42,25 +42,25 @@ export default function MobileLayout() {
           <div className="flex justify-around items-center h-16 px-2">
             <NavLink to="/" className={({isActive}) => `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
               <Home size={22} />
-              <span className="text-[9px] mt-1 font-medium">Home</span>
+              <span className="text-[9px] mt-1 font-medium">หน้าแรก</span>
             </NavLink>
             <NavLink to="/receipt" className={({isActive}) => `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-              <span className="text-[9px] mt-1 font-medium">Receipt</span>
+              <span className="text-[9px] mt-1 font-medium">รับเข้า</span>
             </NavLink>
             <NavLink to="/machines" className={({isActive}) => `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
               <div className="bg-blue-600 dark:bg-blue-500 text-white p-3 rounded-full -mt-6 shadow-lg shadow-blue-500/30 ring-4 ring-gray-50 dark:ring-gray-950 transition-colors">
                 <Server size={24} />
               </div>
-              <span className="text-[9px] mt-1 font-medium text-gray-500 dark:text-gray-300">Production</span>
+              <span className="text-[9px] mt-1 font-medium text-gray-500 dark:text-gray-300">ลงยอดผลิต</span>
             </NavLink>
             <NavLink to="/scan" className={({isActive}) => `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
               <ScanLine size={22} />
-              <span className="text-[9px] mt-1 font-medium">Scan</span>
+              <span className="text-[9px] mt-1 font-medium">สแกน</span>
             </NavLink>
             <NavLink to="/history" className={({isActive}) => `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
               <History size={22} />
-              <span className="text-[9px] mt-1 font-medium">History</span>
+              <span className="text-[9px] mt-1 font-medium">ประวัติ</span>
             </NavLink>
           </div>
         </nav>

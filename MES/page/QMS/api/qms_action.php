@@ -233,8 +233,8 @@ try {
             $sqlExtend = "
                 UPDATE QMS_CAR 
                 SET token_expiry = CASE 
-                    WHEN token_expiry < GETDATE() THEN DATEADD(DAY, ?, GETDATE())
-                    ELSE DATEADD(DAY, ?, token_expiry)
+                    WHEN token_expiry < GETDATE() THEN DATEADD(DAY, CAST(? AS INT), GETDATE())
+                    ELSE DATEADD(DAY, CAST(? AS INT), token_expiry)
                 END 
                 WHERE case_id = ?
             ";

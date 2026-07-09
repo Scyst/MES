@@ -79,7 +79,7 @@ export default function LinkHub() {
           </h2>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-500 text-slate-900 dark:text-white pl-3 pr-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 flex items-center gap-1.5 shadow-lg shadow-blue-900/20"
+            className="bg-blue-600 hover:bg-blue-500 text-white pl-3 pr-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 flex items-center gap-1.5 shadow-lg shadow-blue-900/20"
           >
             <FiPlus className="text-base" /> <span className="hidden sm:inline">เพิ่มลิงก์</span><span className="sm:hidden">เพิ่ม</span>
           </button>

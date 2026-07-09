@@ -15,7 +15,7 @@ function Login({ onLoginSuccess }) {
     setError('');
     
     if (!username || !password) {
-      setError('Please enter both username and password.');
+      setError('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
       return;
     }
 
@@ -52,11 +52,11 @@ function Login({ onLoginSuccess }) {
            navigate('/');
         }
       } else {
-        setError(data.message || 'Invalid credentials');
+        setError(data.message || 'ข้อมูลเข้าระบบไม่ถูกต้อง');
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Connection failed. Please try again.');
+      setError('เชื่อมต่อล้มเหลว กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +71,7 @@ function Login({ onLoginSuccess }) {
             <Lock className="w-8 h-8" />
           </div>
           <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">MES Toolbox</h2>
-          <p className="text-slate-500 dark:text-slate-400">Sign in to access your dashboard</p>
+          <p className="text-slate-500 dark:text-slate-400">เข้าสู่ระบบ (Sign In)</p>
         </div>
 
         {/* Login Form Card */}
@@ -89,7 +89,7 @@ function Login({ onLoginSuccess }) {
 
               {/* Username Input */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Username</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">ชื่อผู้ใช้ (Username)</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <User className="h-5 w-5 text-slate-400" />
@@ -100,7 +100,7 @@ function Login({ onLoginSuccess }) {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="block w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-colors"
-                    placeholder="Enter your username"
+                    placeholder="ระบุชื่อผู้ใช้"
                   />
                 </div>
               </div>
@@ -108,7 +108,7 @@ function Login({ onLoginSuccess }) {
               {/* Password Input */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between ml-1">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">รหัสผ่าน (Password)</label>
                 </div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -120,7 +120,7 @@ function Login({ onLoginSuccess }) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="block w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-colors"
-                    placeholder="Enter your password"
+                    placeholder="ระบุรหัสผ่าน"
                   />
                 </div>
               </div>
@@ -134,10 +134,10 @@ function Login({ onLoginSuccess }) {
                 {isLoading ? (
                   <>
                     <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
-                    Signing in...
+                    กำลังเข้าสู่ระบบ...
                   </>
                 ) : (
-                  'Sign in'
+                  'เข้าสู่ระบบ'
                 )}
               </button>
             </form>
@@ -145,7 +145,7 @@ function Login({ onLoginSuccess }) {
           
           <div className="px-8 py-5 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-700/50 text-center">
              <p className="text-sm text-slate-500 dark:text-slate-400">
-               Secure Access System
+               ระบบรักษาความปลอดภัย
              </p>
           </div>
         </div>

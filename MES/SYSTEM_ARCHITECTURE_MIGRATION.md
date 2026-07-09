@@ -112,6 +112,6 @@ This 3-step process ensures 100% backward compatibility while making the `mes-mo
 
 To ensure a seamless transition from the Old to the New system, the following challenges must be addressed:
 
-- **[ ] Update Legacy SPs:** Execute the 3-step safe migration plan for `dbo.sp_ExecuteProduction` so we can permanently move away from the `notes` hack and properly enforce `machine_id` integrity.
-- **[ ] Consolidate Yield vs. Strokes:** Ensure the BI Dashboard can overlay the actual Yield (from `STOCK_TRANSACTIONS`) against the Machine Strokes (from `PE_IIOT_TELEMETRY`) to accurately measure Quality and real-world efficiency per machine.
+- **[x] Update Legacy SPs:** Execute the 3-step safe migration plan for `dbo.sp_ExecuteProduction` so we can permanently move away from the `notes` hack and properly enforce `machine_id` integrity. (Completed)
+- **[x] Consolidate Yield vs. Strokes:** Ensure the BI Dashboard can overlay the actual Yield (from `STOCK_TRANSACTIONS`) against the Machine Strokes (from `PE_IIOT_TELEMETRY`) to accurately measure Quality and real-world efficiency per machine. (Completed)
 - **[ ] Legacy App Sunset:** Plan a hard cutoff date to decommission `page/production/mobile_app.php` and force all operators to use the new `mes-mobile-app`.

@@ -169,12 +169,12 @@
 }
 .status-cell .conn-badge { font-size: 0.55rem; padding: 1px 4px; }
 
-/* ── Detection status box ────────────────────────────────────────────────────*/
+/* ── Detection status box — ขนาดตามเนื้อหา (ไม่ขยายเติมความสูง) ──────────────*/
 .detect-box-wrap {
     background: var(--bs-tertiary-bg);
     border: 1px solid var(--bs-border-color);
     border-radius: 6px;
-    padding: 3px 7px;
+    padding: 5px 9px;
     min-height: 22px;
     display: flex;
     align-items: flex-start;
@@ -440,16 +440,28 @@
 }
 .log-model { font-size: 0.8rem; color: var(--bs-secondary-color); }
 .log-img-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
     cursor: pointer;
     color: var(--bs-info);
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 4px;
+    font-size: 0.85rem;
+    line-height: 1;
+    border-radius: 7px;
     border: 1px solid rgba(13,202,240,0.35);
-    white-space: nowrap;
+    background: rgba(13,202,240,0.06);
+    transition: background .15s ease, color .15s ease,
+                border-color .15s ease, transform .1s ease;
 }
-.log-img-link:hover { background: rgba(13,202,240,0.12); }
+.log-img-link:hover {
+    background: var(--bs-info);
+    color: #fff;
+    border-color: var(--bs-info);
+}
+.log-img-link:active { transform: scale(0.92); }
 
 /* ── Hour divider (สไตล์เดียวกับ scanBarcode) ────────────────────────────────*/
 .hour-divider td {
@@ -555,12 +567,12 @@ tr.hour-band-3 td { background-color: rgba(255,193,7,0.04); }
 
 /* ── Per-class detection status ──────────────────────────────────────────────*/
 .cls-status-list { display: flex; flex-direction: column; }
-.cls-item        { font-size: 0.72rem; font-weight: 700; line-height: 1.5; }
+.cls-item        { font-size: 1.3rem;  font-weight: 700; line-height: 1.4; }
 .cls-ok          { color: #20c997; }
 .cls-detecting   { color: #f59e0b; }
 .cls-missing     { color: var(--bs-secondary-color); }
-.cls-all-found   { font-size: 0.78rem; font-weight: 800; color: #20c997;
-                   letter-spacing: 0.04em; line-height: 1.6; }
+.cls-all-found   { font-size: 1.5rem; font-weight: 800; color: #20c997;
+                   letter-spacing: 0.04em; line-height: 1.4; }
 
 /* ── Range slider track color ────────────────────────────────────────────────*/
 .ctrl-card input[type=range] { accent-color: #0d6efd; }

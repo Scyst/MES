@@ -33,7 +33,7 @@ export default function GlobalHistory() {
   }, [API_BASE_URL]);
 
   const handleVoid = async (txn) => {
-    if (!window.confirm(`Are you sure you want to void ${txn.quantity} parts from ${txn.machine_name || txn.location_name}?`)) return;
+    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการยกเลิกจำนวน ${txn.quantity} จาก ${txn.machine_name || txn.location_name}?`)) return;
     
     try {
       const fd = new FormData();
@@ -53,7 +53,7 @@ export default function GlobalHistory() {
   };
 
   const handleEditSubmit = async () => {
-    if (editQty <= 0) return alert('Quantity must be greater than 0');
+    if (editQty <= 0) return alert('จำนวนต้องมากกว่า 0');
     
     try {
       const fd = new FormData();
@@ -107,9 +107,9 @@ export default function GlobalHistory() {
       <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 border border-blue-200 dark:border-gray-700 p-6 rounded-3xl shadow-xl transition-colors duration-300">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center">
           <History className="mr-2 text-blue-600 dark:text-blue-400" />
-          Recent Transactions
+          ประวัติการลงยอดล่าสุด
         </h2>
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Latest 50 logs across all machines</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">50 รายการล่าสุดจากทุกเครื่องจักร</p>
         
         <div className="mt-4 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -118,7 +118,7 @@ export default function GlobalHistory() {
           <input
             type="text"
             className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm transition-colors"
-            placeholder="Search by Machine, Job, or Employee..."
+            placeholder="ค้นหาด้วยชื่อเครื่อง, Job หรือพนักงาน..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -128,9 +128,9 @@ export default function GlobalHistory() {
       {/* Activity Log */}
       <div className="space-y-3">
         {loading ? (
-          <p className="text-center text-gray-500 py-8">Loading history...</p>
+          <p className="text-center text-gray-500 py-8">กำลังโหลดประวัติ...</p>
         ) : filteredHistory.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">No matching transactions found.</p>
+          <p className="text-center text-gray-500 py-8">ไม่พบรายการที่ค้นหา</p>
         ) : (
           filteredHistory.map((log) => (
             <div key={log.transaction_id} className="flex flex-col p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-colors duration-300">
@@ -141,10 +141,10 @@ export default function GlobalHistory() {
                     : log.transaction_type === 'PRODUCTION_HOLD' ? 'text-yellow-600 dark:text-yellow-400'
                     : 'text-red-600 dark:text-red-400'
                   }`}>
-                    {log.transaction_type === 'PRODUCTION_FG' ? 'GOOD' : log.transaction_type === 'PRODUCTION_HOLD' ? 'HOLD' : 'SCRAP'}: +{Number(log.quantity)}
+                    {log.transaction_type === 'PRODUCTION_FG' ? 'ยอดดี (FG)' : log.transaction_type === 'PRODUCTION_HOLD' ? 'ยอดรอ (Hold)' : 'ยอดเสีย (Scrap)'}: +{Number(log.quantity)}
                   </p>
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mt-1">
-                    {log.machine_name || log.location_name || 'Manual Log'}
+                    {log.machine_name || log.location_name || 'ลงยอดด้วยมือ'}
                   </p>
                   {log.job_no && <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">Job: {log.job_no}</p>}
                   {getDisplayName(log) && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">By: {getDisplayName(log)}</p>}
@@ -184,10 +184,10 @@ export default function GlobalHistory() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 w-full max-w-sm border border-gray-200 dark:border-gray-800 shadow-2xl transition-colors duration-300">
             <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-white">
-              <Edit2 className="mr-2 text-blue-600 dark:text-blue-400" /> Edit Quantity
+              <Edit2 className="mr-2 text-blue-600 dark:text-blue-400" /> แก้ไขจำนวน
             </h3>
             <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-              Editing log for <span className="text-gray-700 dark:text-gray-200 font-bold">{editTxn.machine_name || editTxn.location_name}</span> 
+              แก้ไขรายการของ <span className="text-gray-700 dark:text-gray-200 font-bold">{editTxn.machine_name || editTxn.location_name}</span> 
               {editTxn.job_no && ` (Job: ${editTxn.job_no})`}
             </p>
             
@@ -208,13 +208,13 @@ export default function GlobalHistory() {
                 onClick={() => setShowEditModal(false)}
                 className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl font-bold flex justify-center items-center transition-colors"
               >
-                <X className="mr-2" size={20} /> Cancel
+                <X className="mr-2" size={20} /> ยกเลิก
               </button>
               <button 
                 onClick={handleEditSubmit}
                 className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex justify-center items-center transition-colors shadow-lg"
               >
-                <Check className="mr-2" size={20} /> Save
+                <Check className="mr-2" size={20} /> บันทึก
               </button>
             </div>
           </div>

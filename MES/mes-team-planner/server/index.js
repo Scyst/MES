@@ -2,10 +2,18 @@ import express from 'express';
 import cors from 'cors';
 import { connectDB } from './db.js';
 
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 3001;
+const PHP_BACKEND_URL = process.env.PHP_BACKEND_URL || 'http://localhost/MES';
 
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 app.use(express.json());
 
 // Helpers to extract dates nicely
@@ -34,6 +42,49 @@ const logActivity = async (pool, message) => {
     console.error('Failed to log activity', e);
   }
 };
+
+// --- AUTH MIDDLEWARE (PHP BRIDGE) ---
+const verifyPHPAuth = async (req, res, next) => {
+  try {
+    const cookieHeader = req.headers.cookie;
+    
+    // For development/testing without PHP server, you can bypass by setting DEV_BYPASS_AUTH=true in .env
+    if (process.env.DEV_BYPASS_AUTH === 'true') {
+      req.user = { username: 'DevUser', fullname: 'Developer Mode', role: 'admin' };
+      return next();
+    }
+
+    if (!cookieHeader) {
+      return res.status(401).json({ error: 'Unauthorized: No cookies provided' });
+    }
+
+    const response = await fetch(`${PHP_BACKEND_URL}/auth/api_verify.php`, {
+      method: 'GET',
+      headers: {
+        'Cookie': cookieHeader,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      return res.status(401).json({ error: 'Unauthorized: Invalid PHP Session' });
+    }
+
+    const data = await response.json();
+    if (data.success && data.user) {
+      req.user = data.user;
+      next();
+    } else {
+      res.status(401).json({ error: 'Unauthorized: Session invalid or expired' });
+    }
+  } catch (error) {
+    console.error('Auth Bridge Error:', error);
+    res.status(500).json({ error: 'Internal Server Error during Auth Verification' });
+  }
+};
+
+// Apply auth middleware to all API routes
+app.use('/api', verifyPHPAuth);
 
 // --- TASKS API ---
 
