@@ -17,7 +17,7 @@ const PERSON_COLORS = [
 
 export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loading }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState('daily'); // 'daily' | 'weekly'
+  const [viewMode, setViewMode] = useState('daily'); // 'daily' | 'monthly'
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -71,6 +71,32 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
     });
   };
 
+  const handleWeeklyDrop = async (e, targetDateStr, targetHour) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('taskId');
+    const task = tasks.find(t => t.Id.toString() === taskId);
+    if (!task) return;
+
+    const startMins = parseTimeToMinutes(task.startTime || '09:00');
+    const endMins = parseTimeToMinutes(task.endTime || '18:00');
+    const duration = endMins - startMins > 0 ? endMins - startMins : 60;
+
+    const newStartMins = targetHour * 60;
+    let newEndMins = newStartMins + duration;
+    if (newEndMins > 24 * 60) newEndMins = 24 * 60;
+
+    const newStartTime = formatMinutesToTime(newStartMins);
+    const newEndTime = formatMinutesToTime(newEndMins);
+
+    onSaveTask({
+      Id: task.Id,
+      startDate: targetDateStr,
+      dueDate: targetDateStr,
+      startTime: newStartTime,
+      endTime: newEndTime
+    });
+  };
+
   // --- Helpers ---
   const parseTimeToMinutes = (timeStr) => {
     if (!timeStr) return 0;
@@ -86,12 +112,17 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
 
   const nextDay = () => setCurrentDate(addDays(currentDate, 1));
   const prevDay = () => setCurrentDate(subDays(currentDate, 1));
-  const nextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
-  const prevWeek = () => setCurrentDate(subWeeks(currentDate, 1));
+  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
 
   const currentDateStr = format(currentDate, 'yyyy-MM-dd');
 
-  const allAssignees = [...new Set(tasks.map(t => t.Assignee || 'Unassigned'))];
+  const allAssignees = [...new Set(
+    tasks.flatMap(t => {
+      const names = (t.Assignee || '').split(',').map(a => a.trim()).filter(Boolean);
+      return names.length > 0 ? names : ['Unassigned'];
+    })
+  )].sort();
   if (allAssignees.length === 0) allAssignees.push('Unassigned');
 
   const assignees = selectedAssignee === 'All' ? allAssignees : [selectedAssignee];
@@ -130,11 +161,12 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   const hours = Array.from({ length: 24 }).map((_, i) => i);
   const totalMinutes = 24 * 60;
 
-  // Weekly view helpers
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
-  const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
-  const thaiDayNames = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
-  const weeklyHours = Array.from({ length: 13 }).map((_, i) => i + 7); // 07:00-19:00
+  // Monthly view helpers
+  const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+  const monthDays = Array.from({ length: daysInMonth }).map((_, i) => addDays(monthStart, i));
+  const thaiDayNamesFull = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+  const thaiDayNames = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
   const getPersonColor = (name) => {
     const idx = allAssignees.indexOf(name);
@@ -155,23 +187,23 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
               <button onClick={() => setViewMode('daily')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'daily' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
                 <FiUsers className="text-sm" /> รายวัน
               </button>
-              <button onClick={() => setViewMode('weekly')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'weekly' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
-                <FiUser className="text-sm" /> รายสัปดาห์
+              <button onClick={() => setViewMode('monthly')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'monthly' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
+                <FiUser className="text-sm" /> รายเดือน
               </button>
             </div>
 
             {/* Date/Week Nav */}
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
-              <button onClick={viewMode === 'daily' ? prevDay : prevWeek} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors active:scale-90">
+              <button onClick={viewMode === 'daily' ? prevDay : prevMonth} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors active:scale-90">
                 <FiChevronLeft />
               </button>
               <span className="text-slate-800 dark:text-slate-200 font-semibold px-2 min-w-[100px] sm:min-w-[130px] text-center text-sm">
                 {viewMode === 'daily' 
                   ? format(currentDate, 'dd MMM yyyy')
-                  : `${format(weekStart, 'dd MMM')} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'dd MMM')}`
+                  : format(monthStart, 'MMMM yyyy')
                 }
               </span>
-              <button onClick={viewMode === 'daily' ? nextDay : nextWeek} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors active:scale-90">
+              <button onClick={viewMode === 'daily' ? nextDay : nextMonth} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors active:scale-90">
                 <FiChevronRight />
               </button>
             </div>
@@ -234,7 +266,10 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
 
             {/* Body Rows */}
             {assignees.map(assignee => {
-              const assigneeTasks = todaysTasks.filter(t => (t.Assignee || 'Unassigned') === assignee);
+              const assigneeTasks = todaysTasks.filter(t => {
+                const names = (t.Assignee || '').split(',').map(a => a.trim()).filter(Boolean);
+                return (names.length > 0 ? names : ['Unassigned']).includes(assignee);
+              });
               const sortedTasks = [...assigneeTasks].sort((a, b) => parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime));
               const rows = [];
               
@@ -273,7 +308,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                     {hours.map(hour => (
                       <div 
                         key={hour} 
-                        className="flex-1 min-w-[50px] border-r border-slate-200/20 dark:border-slate-700/20 hover:bg-indigo-500/5 cursor-pointer transition-colors"
+                        className="flex-1 min-w-[50px] border-r border-slate-300 dark:border-slate-700/60 cursor-pointer transition-all hover:shadow-[inset_0_0_0_1px_rgba(99,102,241,0.2)] hover:bg-slate-100 dark:hover:bg-slate-800/80"
                         onClick={() => openAddModal(assignee, hour)}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => handleDrop(e, assignee, hour)}
@@ -304,7 +339,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                             draggable
                             onDragStart={(e) => handleDragStart(e, task)}
                             onClick={(e) => openEditModal(e, task)}
-                            className={`absolute rounded-lg border text-[11px] md:text-xs text-white px-2 py-0.5 shadow-md hover:shadow-lg cursor-grab active:cursor-grabbing hover:brightness-110 transition-all z-10 flex items-center overflow-hidden pointer-events-auto ${colorClass}`}
+                            className={`absolute rounded-lg border text-[11px] md:text-xs text-white px-2 py-0.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-grab active:cursor-grabbing hover:brightness-110 transition-all z-10 flex items-center overflow-hidden pointer-events-auto ${colorClass}`}
                             style={{ 
                               left: `${leftPct}%`, 
                               width: `${widthPct}%`,
@@ -333,60 +368,86 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
         </div>
       )}
 
-      {/* ═══ WEEKLY VIEW (New) ═══ */}
-      {viewMode === 'weekly' && (
-        <div className="flex-1 overflow-auto border border-slate-200 dark:border-slate-700/80 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 relative">
-          <div className="min-w-[800px]">
+      {/* ═══ MONTHLY VIEW ═══ */}
+      {viewMode === 'monthly' && (
+        <div className="flex-1 overflow-auto border border-slate-200 dark:border-slate-700/80 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 relative shadow-inner">
+          <div className="min-w-[1200px]">
             
-            {/* Header Row (Days of Week) */}
-            <div className="flex border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-slate-50 dark:bg-slate-800 z-20 shadow-md">
-              <div className="w-16 md:w-20 shrink-0 px-2 py-2 font-bold text-slate-500 text-[10px] md:text-xs border-r border-slate-200 dark:border-slate-700 flex items-center justify-center bg-slate-50 dark:bg-slate-800 sticky left-0 z-40">
-                เวลา
+            {/* Header Row (Hours) */}
+            <div className="flex border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-slate-50 dark:bg-slate-800 z-30 shadow-md">
+              <div className="w-28 md:w-40 shrink-0 px-3 py-2 font-bold text-slate-600 dark:text-slate-400 text-xs border-r border-slate-200 dark:border-slate-700 flex items-center justify-center bg-slate-50 dark:bg-slate-800 sticky left-0 z-40">
+                วัน / วันที่
               </div>
-              <div className="flex flex-1">
-                {weekDays.map((day, idx) => {
-                  const dayStr = format(day, 'yyyy-MM-dd');
-                  const isToday = dayStr === format(new Date(), 'yyyy-MM-dd');
-                  return (
-                    <div key={idx} className={`flex-1 min-w-[100px] border-r border-slate-200/30 dark:border-slate-700/30 flex flex-col items-center justify-center py-2 ${isToday ? 'bg-indigo-50 dark:bg-indigo-500/10' : ''}`}>
-                      <span className="text-[10px] md:text-xs text-slate-500 font-medium">{thaiDayNames[idx]}</span>
-                      <span className={`text-sm font-bold ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                        {format(day, 'dd')}
-                      </span>
-                    </div>
-                  );
-                })}
+              <div className="flex flex-1 relative">
+                {hours.map(hour => (
+                  <div key={hour} className="flex-1 min-w-[50px] border-r border-slate-200/30 dark:border-slate-700/30 flex items-center justify-center py-2 text-[11px] md:text-xs text-slate-500 font-mono">
+                    {hour.toString().padStart(2, '0')}
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Body: Hour Rows */}
-            {weeklyHours.map(hour => (
-              <div key={hour} className="flex border-b border-slate-200/30 dark:border-slate-700/30" style={{ minHeight: '60px' }}>
-                {/* Hour label */}
-                <div className="w-16 md:w-20 shrink-0 px-2 py-1 text-[11px] md:text-xs text-slate-500 font-mono border-r border-slate-200 dark:border-slate-700 flex items-start justify-center pt-2 bg-white dark:bg-slate-900/50 sticky left-0 z-20">
-                  {hour.toString().padStart(2, '0')}:00
-                </div>
-                {/* Day cells */}
-                <div className="flex flex-1">
-                  {weekDays.map((day, dayIdx) => {
-                    const dayStr = format(day, 'yyyy-MM-dd');
-                    const isToday = dayStr === format(new Date(), 'yyyy-MM-dd');
-                    
-                    // Find tasks for this cell
-                    const cellTasks = tasks.filter(t => {
-                      if (!t.startDate || !t.dueDate) return false;
-                      const inDateRange = t.startDate <= dayStr && t.dueDate >= dayStr;
-                      if (!inDateRange) return false;
-                      if (selectedAssignee !== 'All' && t.Assignee !== selectedAssignee) return false;
-                      const startMin = parseTimeToMinutes(t.startTime || '09:00');
-                      const endMin = parseTimeToMinutes(t.endTime || '18:00');
-                      return startMin < (hour + 1) * 60 && endMin > hour * 60;
-                    });
+            {/* Body Rows */}
+            {monthDays.map((day, idx) => {
+              const dayStr = format(day, 'yyyy-MM-dd');
+              const isToday = dayStr === format(new Date(), 'yyyy-MM-dd');
+              const dayOfWeek = day.getDay();
+              
+              // Filter tasks for this day
+              const dayTasks = tasks.filter(t => {
+                if (!t.startDate || !t.dueDate) return false;
+                const inDateRange = t.startDate <= dayStr && t.dueDate >= dayStr;
+                if (!inDateRange) return false;
+                if (selectedAssignee !== 'All' && t.Assignee !== selectedAssignee) return false;
+                if (searchQuery) {
+                  const q = searchQuery.toLowerCase();
+                  return t.Title?.toLowerCase().includes(q) || t.Assignee?.toLowerCase().includes(q);
+                }
+                return true;
+              });
 
-                    return (
+              const sortedTasks = [...dayTasks].sort((a, b) => parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime));
+              const rows = [];
+              
+              sortedTasks.forEach(task => {
+                const taskStartMins = parseTimeToMinutes(task.startTime || '09:00');
+                const taskEndMins = parseTimeToMinutes(task.endTime || '18:00');
+                let rowIndex = 0;
+                while(true) {
+                  if (!rows[rowIndex]) { rows[rowIndex] = [task]; task._rowIndex = rowIndex; break; }
+                  const overlaps = rows[rowIndex].some(eTask => {
+                    const eStart = parseTimeToMinutes(eTask.startTime || '09:00');
+                    const eEnd = parseTimeToMinutes(eTask.endTime || '18:00');
+                    return (taskStartMins < eEnd && taskEndMins > eStart);
+                  });
+                  if (!overlaps) { rows[rowIndex].push(task); task._rowIndex = rowIndex; break; }
+                  rowIndex++;
+                }
+              });
+
+              const requiredHeight = Math.max(56, rows.length * 34 + 16);
+              const blockHeight = rows.length * 34 - 6;
+              const offsetY = (requiredHeight - blockHeight) / 2;
+
+              return (
+                <div key={dayStr} className={`flex border-b border-slate-200/40 dark:border-slate-700/40 group relative ${isToday ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : 'hover:bg-slate-100/50 dark:hover:bg-slate-800/30'}`} style={{ minHeight: `${requiredHeight}px` }}>
+                  {/* Left Sidebar Day Cell */}
+                  <div className={`w-28 md:w-40 shrink-0 px-2 py-2 flex items-center gap-2 md:gap-3 border-r border-slate-200 dark:border-slate-700 z-20 sticky left-0 shadow-[2px_0_8px_rgba(0,0,0,0.08)] dark:shadow-[2px_0_8px_rgba(0,0,0,0.3)] ${isToday ? 'bg-indigo-50 dark:bg-slate-800' : 'bg-white dark:bg-slate-900/95'}`}>
+                    <div className={`w-9 h-9 md:w-10 md:h-10 rounded-lg flex flex-col items-center justify-center shrink-0 ${isToday ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}>
+                      <span className="text-[9px] md:text-[10px] font-bold leading-none mt-1">{thaiDayNames[dayOfWeek]}</span>
+                      <span className="text-sm md:text-base font-black leading-tight">{format(day, 'dd')}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={`text-[11px] md:text-xs font-semibold ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}>{format(day, 'MMM')}</span>
+                      <span className="text-[9px] md:text-[10px] text-slate-400">{format(day, 'yyyy')}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-1 relative">
+                    {hours.map(hour => (
                       <div 
-                        key={dayIdx} 
-                        className={`flex-1 min-w-[100px] border-r border-slate-200/20 dark:border-slate-700/20 p-0.5 relative cursor-pointer hover:bg-indigo-500/5 transition-colors ${isToday ? 'bg-indigo-50/50 dark:bg-indigo-500/5' : ''}`}
+                        key={hour} 
+                        className={`flex-1 min-w-[50px] border-r border-slate-300 dark:border-slate-700/60 cursor-pointer transition-all hover:shadow-[inset_0_0_0_1px_rgba(99,102,241,0.2)] hover:bg-slate-100 dark:hover:bg-slate-800/80 ${isToday ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : ''}`}
                         onClick={() => {
                           setEditingTask({
                             startDate: dayStr,
@@ -397,36 +458,68 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                           });
                           setIsModalOpen(true);
                         }}
-                      >
-                        {/* Task chips */}
-                        <div className="space-y-0.5">
-                          {cellTasks.map(task => {
-                            const personColor = getPersonColor(task.Assignee || 'Unassigned');
-                            const isMultiPerson = selectedAssignee === 'All';
-                            return (
-                              <div 
-                                key={task.Id}
-                                onClick={(e) => openEditModal(e, task)}
-                                className={`text-[10px] md:text-xs px-1.5 py-1 rounded truncate cursor-pointer hover:brightness-110 transition-all border ${isMultiPerson ? `${personColor.light} ${personColor.border} ${personColor.text}` : 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300'}`}
-                                title={`${task.Title} (${task.Assignee || 'Unassigned'})\n${task.startTime} - ${task.endTime}`}
-                              >
-                                {isMultiPerson && <span className="font-bold">{(task.Assignee || 'U').charAt(0)}</span>}{' '}
-                                {task.Title}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => handleWeeklyDrop(e, dayStr, hour)}
+                      ></div>
+                    ))}
+
+                    <div className="absolute inset-0 pointer-events-none" style={{ minHeight: `${requiredHeight}px` }}>
+                      {sortedTasks.map(task => {
+                        const taskStartMins = parseTimeToMinutes(task.startTime || '09:00');
+                        const taskEndMins = parseTimeToMinutes(task.endTime || '18:00');
+                        const visStart = Math.max(taskStartMins, 0);
+                        const visEnd = Math.min(taskEndMins, 24 * 60);
+                        if (visEnd <= visStart) return null;
+
+                        const leftPct = (visStart / totalMinutes) * 100;
+                        const widthPct = ((visEnd - visStart) / totalMinutes) * 100;
+
+                        const colorClass = (task.priority || 'normal') === 'urgent' ? 'bg-red-500/90 border-red-400/60' :
+                                           (task.priority || 'normal') === 'high' ? 'bg-orange-500/90 border-orange-400/60' :
+                                           (task.priority || 'normal') === 'low' ? 'bg-green-500/80 border-green-400/60' :
+                                           task.Status === 'done' ? 'bg-emerald-500/90 border-emerald-400/60' :
+                                           task.Status === 'in-progress' ? 'bg-amber-500/90 border-amber-400/60' :
+                                           'bg-indigo-500/90 border-indigo-400/60';
+
+                        const personColor = getPersonColor(task.Assignee || 'Unassigned');
+
+                        return (
+                          <div 
+                            key={task.Id} 
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task)}
+                            onClick={(e) => openEditModal(e, task)}
+                            className={`absolute rounded-lg border text-[11px] md:text-xs text-white px-2 py-0.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-grab active:cursor-grabbing hover:brightness-110 transition-all z-10 flex items-center overflow-hidden pointer-events-auto ${colorClass}`}
+                            style={{ 
+                              left: `${leftPct}%`, 
+                              width: `${widthPct}%`,
+                              top: `${offsetY + (task._rowIndex * 34)}px`,
+                              height: '26px',
+                              minWidth: '24px'
+                            }}
+                            title={`${task.Title} (${task.Assignee || 'Unassigned'})\nเวลา: ${task.startTime} - ${task.endTime}`}
+                          >
+                            <div className="flex items-center gap-1.5 w-full">
+                              {selectedAssignee === 'All' && (
+                                <div className={`w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold ${personColor.bg} text-white shadow-[0_0_2px_rgba(0,0,0,0.5)] border border-white/20`}>
+                                  {(task.Assignee || 'U').charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <span className="font-semibold truncate w-full leading-tight">{task.Title}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Legend for team comparison */}
           {selectedAssignee === 'All' && (
-            <div className="sticky bottom-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-t border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center gap-3 flex-wrap">
+            <div className="sticky bottom-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-t border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center gap-3 flex-wrap z-50">
               <span className="text-[10px] md:text-xs text-slate-500 font-medium">สมาชิก:</span>
               {allAssignees.slice(0, 8).map(name => {
                 const color = getPersonColor(name);
@@ -434,7 +527,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                   <button 
                     key={name} 
                     onClick={() => setSelectedAssignee(name)}
-                    className={`flex items-center gap-1.5 text-[11px] md:text-xs px-2 py-1 rounded-lg border transition-all hover:scale-105 ${color.light} ${color.border} ${color.text}`}
+                    className={`flex items-center gap-1.5 text-[11px] md:text-xs px-2 py-1 rounded-lg border transition-all hover:scale-105 shadow-sm hover:shadow ${color.light} ${color.border} ${color.text}`}
                   >
                     <div className={`w-2 h-2 rounded-full ${color.bg}`}></div>
                     {name}

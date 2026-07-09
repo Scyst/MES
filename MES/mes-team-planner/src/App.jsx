@@ -54,10 +54,26 @@ function App() {
 
   // ══════════ Shared Handlers ══════════
   const handleSaveTask = useCallback(async (taskData) => {
+    // Optimistic UI Update for immediate feedback (crucial for drag & drop)
+    if (taskData.Id) {
+      setTasks(prev => prev.map(t => {
+        if (String(t.Id) === String(taskData.Id)) {
+          const updated = { ...t, ...taskData };
+          // Ensure casing matches backend for TaskBoard filtering
+          if (taskData.status) updated.Status = taskData.status;
+          return updated;
+        }
+        return t;
+      }));
+    }
+
     try {
       if (taskData.Id) {
         const res = await axios.put(`/api/tasks/${taskData.Id}`, taskData);
-        setTasks(prev => prev.map(t => t.Id === taskData.Id ? res.data : t));
+        // Only update from response if it's an actual task object
+        if (res.data && res.data.Id) {
+          setTasks(prev => prev.map(t => String(t.Id) === String(taskData.Id) ? { ...t, ...res.data } : t));
+        }
       } else {
         const res = await axios.post('/api/tasks', taskData);
         setTasks(prev => [res.data, ...prev]);
@@ -65,9 +81,11 @@ function App() {
       return true;
     } catch (err) {
       console.error('Failed to save task', err);
+      // Revert optimistic update on error by refetching
+      refreshData();
       return false;
     }
-  }, []);
+  }, [refreshData]);
 
   const handleDeleteTask = useCallback(async (taskId) => {
     try {
@@ -164,7 +182,7 @@ function App() {
 
   // ══════════ Render Content with Props ══════════
   const renderContent = () => {
-    const sharedTaskProps = { tasks, onSaveTask: handleSaveTask, onDeleteTask: handleDeleteTask, loading: dataLoading };
+    const sharedTaskProps = { currentUser, tasks, setTasks, onSaveTask: handleSaveTask, onDeleteTask: handleDeleteTask, loading: dataLoading };
 
     switch (activeTab) {
       case 'dashboard': 
@@ -199,18 +217,82 @@ function App() {
     );
   };
 
+  const RealTimeClock = () => {
+    const [time, setTime] = useState(new Date());
+    useEffect(() => {
+      const timer = setInterval(() => setTime(new Date()), 1000);
+      return () => clearInterval(timer);
+    }, []);
+    return (
+      <div className="hidden lg:flex items-center justify-center">
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400" style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {time.toLocaleTimeString('th-TH', { hour12: false, hour: '2-digit', minute: '2-digit' })} น. • {time.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans overflow-hidden">
       
-      {/* ══════════ Desktop Sidebar (hidden on mobile) ══════════ */}
-      <div className="hidden md:flex md:flex-row flex-1 overflow-hidden">
-        <aside className="w-56 lg:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
-          <div className="p-5 pb-3">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">MES Planner</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Team Collaboration</p>
+      {/* ══════════ Desktop Top Header ══════════ */}
+      <header className="hidden md:flex h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0 px-5 items-center justify-between shadow-sm z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <FiCalendar className="text-xl" />
           </div>
+          <div className="flex flex-col justify-center">
+            <h1 className="text-base font-bold text-slate-900 dark:text-white leading-tight">MES Planner</h1>
+            <p className="text-[11px] text-slate-500">Team Collaboration</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 md:gap-4">
+          <RealTimeClock />
           
-          <nav className="flex-1 px-3 space-y-1 overflow-y-auto pb-3">
+          <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 hidden lg:block"></div>
+          
+          <div className="relative">
+            <div className="flex items-center gap-3 cursor-pointer p-1 pl-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700" onClick={() => setShowProfileMenu(!showProfileMenu)}>
+              {currentUser && (
+                <div className="hidden lg:flex items-center text-right">
+                  <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{currentUser.fullname || currentUser.username}</span>
+                </div>
+              )}
+              <ProfileAvatar size="md" />
+            </div>
+            
+            {showProfileMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)}></div>
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden animate-slide-up">
+                  {currentUser && (
+                    <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{currentUser.fullname || currentUser.username}</p>
+                      <p className="text-xs text-slate-500 capitalize mt-0.5">{currentUser.role || 'Admin'}</p>
+                    </div>
+                  )}
+                  <div className="p-2">
+                    <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
+                      <div className="flex items-center gap-3">
+                        {isDarkMode ? <FiSun className="text-[1.1rem]" /> : <FiMoon className="text-[1.1rem]" />} 
+                        <span>{isDarkMode ? 'โหมดสว่าง' : 'โหมดมืด'}</span>
+                      </div>
+                    </button>
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors">
+                      <FiLogOut className="text-[1.1rem]" /> ออกจากระบบ
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="hidden md:flex md:flex-row flex-1 overflow-hidden relative">
+        <aside className="w-56 lg:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
+          <nav className="flex-1 px-3 space-y-1 overflow-y-auto py-4">
             {navItems.map(item => (
               <button 
                 key={item.tab}
@@ -227,76 +309,8 @@ function App() {
               </button>
             ))}
           </nav>
-
-          <div className="p-3 border-t border-slate-200 dark:border-slate-800 shrink-0 flex flex-col gap-2">
-            <button 
-              onClick={toggleTheme} 
-              className="w-full flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-              title="Toggle Theme"
-            >
-              {isDarkMode ? <FiSun className="text-base" /> : <FiMoon className="text-base" />}
-              <span className="text-xs">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
-            </button>
-            <button 
-              onClick={() => handleNav('dashboard')} 
-              className="w-full flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-              title="Activity & Notifications"
-            >
-              <FiBell className="text-base" />
-              <span className="text-xs">Notifications</span>
-              <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
-            </button>
-            
-            {currentUser && (
-              <div className="mt-2 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center gap-3 px-2">
-                <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0">
-                  {(currentUser.fullname || currentUser.username || 'U').charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{currentUser.fullname || currentUser.username}</p>
-                  <p className="text-[10px] text-slate-500 truncate capitalize">{currentUser.role || 'Member'}</p>
-                </div>
-                <button onClick={handleLogout} className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors" title="Logout">
-                  <FiLogOut className="text-base" />
-                </button>
-              </div>
-            )}
-          </div>
         </aside>
-
-        {/* Desktop Content */}
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50 dark:bg-slate-950">
-          {/* Desktop Top Bar with Profile Icon */}
-          <div className="flex items-center justify-end px-5 lg:px-6 py-2 shrink-0 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <button onClick={toggleTheme} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" title="Toggle Theme">
-                {isDarkMode ? <FiSun className="text-sm" /> : <FiMoon className="text-sm" />}
-              </button>
-              {/* Profile Icon — Top Right */}
-              <div className="relative">
-                <ProfileAvatar onClick={() => setShowProfileMenu(!showProfileMenu)} />
-                {showProfileMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)}></div>
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden animate-slide-up">
-                      {currentUser && (
-                        <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{currentUser.fullname || currentUser.username}</p>
-                          <p className="text-xs text-slate-500 capitalize">{currentUser.role || 'Member'}</p>
-                        </div>
-                      )}
-                      <div className="p-2">
-                        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors">
-                          <FiLogOut className="text-base" />
-                          ออกจากระบบ
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
           <div className="flex-1 p-5 lg:p-6 overflow-y-auto custom-scrollbar">
             {renderContent()}
           </div>

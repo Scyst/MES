@@ -16,7 +16,7 @@ const PRIORITY_META = {
   low: { label: 'ต่ำ', dot: 'bg-green-400', border: 'border-l-green-500' },
 };
 
-export default function TaskBoard({ tasks = [], onSaveTask, onDeleteTask, loading }) {
+export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTask, onDeleteTask, loading }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
 
@@ -78,11 +78,11 @@ export default function TaskBoard({ tasks = [], onSaveTask, onDeleteTask, loadin
   };
 
   const handleSaveTask = async (taskData) => {
-    const success = await onSaveTask(taskData);
-    if (success) {
-      setIsModalOpen(false);
-      setEditingTask(null);
-    }
+    setIsModalOpen(false);
+    setEditingTask(null);
+    setTimeout(async () => {
+      await onSaveTask(taskData);
+    }, 10);
   };
 
   const handleDeleteTask = async (taskId) => {
@@ -273,10 +273,22 @@ export default function TaskBoard({ tasks = [], onSaveTask, onDeleteTask, loadin
                                     </div>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 flex items-center justify-center text-[10px] md:text-xs text-white font-bold border border-slate-300 dark:border-slate-700" title={task.Assignee}>
-                                    {task.Assignee ? task.Assignee.substring(0, 1) : '?'}
-                                  </div>
+                                <div className="flex items-center">
+                                  {(task.Assignee || '').split(',').map(a => a.trim()).filter(Boolean).slice(0, 3).map((assignee, idx) => (
+                                    <div key={idx} className={`w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 flex items-center justify-center text-[10px] md:text-xs text-white font-bold border-2 border-white dark:border-slate-800 ${idx > 0 ? '-ml-2' : ''}`} title={assignee} style={{ zIndex: 10 - idx }}>
+                                      {assignee.substring(0, 1)}
+                                    </div>
+                                  ))}
+                                  {((task.Assignee || '').split(',').map(a => a.trim()).filter(Boolean).length > 3) && (
+                                     <div className="-ml-2 w-6 h-6 md:w-7 md:h-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[9px] md:text-[10px] text-slate-700 dark:text-slate-300 font-bold border-2 border-white dark:border-slate-800" style={{ zIndex: 1 }}>
+                                      +{(task.Assignee || '').split(',').map(a => a.trim()).filter(Boolean).length - 3}
+                                     </div>
+                                  )}
+                                  {!(task.Assignee || '').trim() && (
+                                    <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] md:text-xs text-slate-500 font-bold border-2 border-white dark:border-slate-800">
+                                      ?
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -304,6 +316,8 @@ export default function TaskBoard({ tasks = [], onSaveTask, onDeleteTask, loadin
         onSave={handleSaveTask}
         onDelete={handleDeleteTask}
         initialData={editingTask}
+        currentUser={currentUser}
+        tasks={tasks}
       />
     </div>
   );
