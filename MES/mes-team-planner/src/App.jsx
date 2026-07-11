@@ -30,8 +30,8 @@ function App() {
   const [dataLoading, setDataLoading] = useState(true);
 
   // Fetch all data once
-  const refreshData = useCallback(async () => {
-    setDataLoading(true);
+  const refreshData = useCallback(async (silent = false) => {
+    if (!silent) setDataLoading(true);
     try {
       const [resTasks, resEvents, resAct] = await Promise.all([
         axios.get('/api/tasks'),
@@ -44,12 +44,19 @@ function App() {
     } catch (err) {
       console.error('Failed to fetch data', err);
     } finally {
-      setDataLoading(false);
+      if (!silent) setDataLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    refreshData();
+    refreshData(false);
+    
+    // Background polling every 15 seconds
+    const interval = setInterval(() => {
+      refreshData(true);
+    }, 15000);
+    
+    return () => clearInterval(interval);
   }, [refreshData]);
 
   // ══════════ Shared Handlers ══════════

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { format, addDays, subDays, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns';
-import { FiChevronLeft, FiChevronRight, FiSearch, FiPlus, FiX, FiUsers, FiUser } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiSearch, FiPlus, FiX, FiUsers, FiUser, FiDownload } from 'react-icons/fi';
+import html2canvas from 'html2canvas';
 import AddTaskModal from './AddTaskModal';
 
 // Assign stable colors to assignees
@@ -9,17 +10,23 @@ const PERSON_COLORS = [
   { bg: 'bg-emerald-500', text: 'text-emerald-500', light: 'bg-emerald-500/20', border: 'border-emerald-400/40' },
   { bg: 'bg-amber-500', text: 'text-amber-500', light: 'bg-amber-500/20', border: 'border-amber-400/40' },
   { bg: 'bg-rose-500', text: 'text-rose-500', light: 'bg-rose-500/20', border: 'border-rose-400/40' },
-  { bg: 'bg-cyan-500', text: 'text-cyan-500', light: 'bg-cyan-500/20', border: 'border-cyan-400/40' },
+  { bg: 'bg-fuchsia-500', text: 'text-fuchsia-500', light: 'bg-fuchsia-500/20', border: 'border-fuchsia-400/40' },
   { bg: 'bg-violet-500', text: 'text-violet-500', light: 'bg-violet-500/20', border: 'border-violet-400/40' },
   { bg: 'bg-pink-500', text: 'text-pink-500', light: 'bg-pink-500/20', border: 'border-pink-400/40' },
   { bg: 'bg-teal-500', text: 'text-teal-500', light: 'bg-teal-500/20', border: 'border-teal-400/40' },
 ];
 
-export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loading }) {
+export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loading, currentUser }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('daily'); // 'daily' | 'monthly'
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [timelineRange, setTimelineRange] = useState(() => localStorage.getItem('timelineRange') || '24h');
+  const [isExporting, setIsExporting] = useState(false);
+  
+  React.useEffect(() => {
+    localStorage.setItem('timelineRange', timelineRange);
+  }, [timelineRange]);
   const [editingTask, setEditingTask] = useState(null);
   const [selectedAssignee, setSelectedAssignee] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,6 +122,29 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
 
+  const exportAsImage = async () => {
+    setIsExporting(true);
+    setTimeout(async () => {
+      const chart = document.getElementById('gantt-chart-container');
+      if (!chart) {
+        setIsExporting(false);
+        return;
+      }
+      try {
+        const canvas = await html2canvas(chart, { backgroundColor: '#ffffff', scale: 2 });
+        const image = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = image;
+        link.download = `Schedule-${format(currentDate, 'yyyy-MM-dd')}.png`;
+        link.click();
+      } catch (err) {
+        console.error('Export failed', err);
+      } finally {
+        setIsExporting(false);
+      }
+    }, 100);
+  };
+
   const currentDateStr = format(currentDate, 'yyyy-MM-dd');
 
   const allAssignees = [...new Set(
@@ -157,20 +187,44 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
     setIsModalOpen(true);
   };
 
-  // Full 24-hour view
-  const hours = Array.from({ length: 24 }).map((_, i) => i);
-  const totalMinutes = 24 * 60;
+  let hours = [];
+  let totalMinutes = 0;
+  let timelineStart = 0;
+
+  if (timelineRange === 'working') {
+    // 08:00 - 17:00 (10 hours)
+    hours = Array.from({ length: 10 }).map((_, i) => i + 8);
+    timelineStart = 8 * 60;
+    totalMinutes = 10 * 60;
+  } else if (timelineRange === 'day') {
+    // 06:00 - 18:00 (13 hours)
+    hours = Array.from({ length: 13 }).map((_, i) => i + 6);
+    timelineStart = 6 * 60;
+    totalMinutes = 13 * 60;
+  } else if (timelineRange === 'night') {
+    // 20:00 - 08:00 (13 hours)
+    hours = Array.from({ length: 13 }).map((_, i) => (i + 20) % 24);
+    timelineStart = 20 * 60;
+    totalMinutes = 13 * 60;
+  } else {
+    // 24h: 06:00 - 05:59
+    hours = Array.from({ length: 24 }).map((_, i) => (i + 6) % 24);
+    timelineStart = 6 * 60;
+    totalMinutes = 24 * 60;
+  }
+  const timelineEnd = timelineStart + totalMinutes;
 
   // Monthly view helpers
   const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const monthDays = Array.from({ length: daysInMonth }).map((_, i) => addDays(monthStart, i));
-  const thaiDayNamesFull = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
   const thaiDayNames = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
   const getPersonColor = (name) => {
-    const idx = allAssignees.indexOf(name);
-    return PERSON_COLORS[idx % PERSON_COLORS.length];
+    const firstName = (name || '').split(',')[0].trim();
+    let idx = allAssignees.indexOf(firstName);
+    if (idx === -1) idx = 0;
+    return PERSON_COLORS[idx % PERSON_COLORS.length] || PERSON_COLORS[0];
   };
 
   if (loading) return <div className="flex-1 flex items-center justify-center text-slate-600 dark:text-slate-400">Loading Gantt Chart...</div>;
@@ -215,20 +269,37 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
             <select 
               value={selectedAssignee} 
               onChange={(e) => setSelectedAssignee(e.target.value)}
-              className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-xl px-3 py-2.5 outline-none cursor-pointer h-10"
+              className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 h-10 text-xs font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer hidden md:block"
             >
               <option value="All">ทุกคน</option>
               {allAssignees.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+            <select
+              value={timelineRange}
+              onChange={(e) => setTimelineRange(e.target.value)}
+              className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 h-10 text-xs font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer hidden md:block"
+            >
+              <option value="24h">24 ชม. (06:00-06:00)</option>
+              <option value="working">08:00 - 17:00</option>
+              <option value="day">06:00 - 18:00</option>
+              <option value="night">20:00 - 08:00</option>
             </select>
 
             <button onClick={() => setShowSearch(!showSearch)} className={`p-2.5 rounded-xl transition-all active:scale-90 border h-10 w-10 flex items-center justify-center ${showSearch || searchQuery ? 'bg-indigo-500/10 dark:bg-indigo-500/15 border-indigo-500/30 text-indigo-600 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
               <FiSearch className="text-sm" />
             </button>
             <button 
-              onClick={() => { setEditingTask(null); setIsModalOpen(true); }}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white pl-3 pr-4 rounded-xl text-sm font-semibold transition-all active:scale-95 flex items-center gap-1.5 shadow-lg shadow-indigo-900/20 h-10"
+              onClick={exportAsImage}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-emerald-900/20 flex items-center gap-1.5 hidden md:flex"
+              title="ดาวน์โหลดเป็นรูปภาพ"
             >
-              <FiPlus className="text-base" /> <span className="hidden sm:inline">สร้างงาน</span><span className="sm:hidden">เพิ่ม</span>
+              <FiDownload className="text-sm" /> ดาวน์โหลด
+            </button>
+            <button 
+              onClick={() => { setEditingTask(null); setIsModalOpen(true); }}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-indigo-900/20 flex items-center gap-1.5"
+            >
+              <FiPlus className="text-sm" /> <span className="hidden sm:inline">สร้างงาน</span><span className="sm:hidden">เพิ่ม</span>
             </button>
           </div>
         </div>
@@ -245,9 +316,9 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
         )}
       </div>
 
-      {/* ═══ DAILY VIEW (Original) ═══ */}
+      {/* ═══ DAILY VIEW ═══ */}
       {viewMode === 'daily' && (
-        <div className="flex-1 overflow-auto border border-slate-200 dark:border-slate-700/80 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 relative">
+        <div id="gantt-chart-container" className="flex-1 overflow-auto border border-slate-200 dark:border-slate-700/80 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 relative">
           <div className="min-w-[1200px]">
             
             {/* Header Row (Hours) */}
@@ -317,14 +388,32 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
 
                     <div className="absolute inset-0 pointer-events-none" style={{ minHeight: `${requiredHeight}px` }}>
                       {sortedTasks.map(task => {
-                        const taskStartMins = parseTimeToMinutes(task.startTime || '09:00');
-                        const taskEndMins = parseTimeToMinutes(task.endTime || '18:00');
-                        const visStart = Math.max(taskStartMins, 0);
-                        const visEnd = Math.min(taskEndMins, 24 * 60);
+                        const getAbsoluteMinutes = (dateStr, timeStr, refDateStr) => {
+                          const d1 = new Date(dateStr);
+                          const d2 = new Date(refDateStr);
+                          const diffDays = Math.round((d1.getTime() - d2.getTime()) / (1000 * 3600 * 24));
+                          return (diffDays * 24 * 60) + parseTimeToMinutes(timeStr || '00:00');
+                        };
+
+                        const taskStartMins = getAbsoluteMinutes(task.startDate, task.startTime || '09:00', currentDateStr);
+                        const taskEndMins = getAbsoluteMinutes(task.dueDate, task.endTime || '18:00', currentDateStr);
+                        
+                        const visStart = Math.max(taskStartMins, timelineStart);
+                        const visEnd = Math.min(taskEndMins, timelineEnd);
                         if (visEnd <= visStart) return null;
 
-                        const leftPct = (visStart / totalMinutes) * 100;
+                        const leftPct = ((visStart - timelineStart) / totalMinutes) * 100;
                         const widthPct = ((visEnd - visStart) / totalMinutes) * 100;
+
+                        let progress = 0;
+                        try {
+                          const subtasksList = typeof task.subtasks === 'string' ? JSON.parse(task.subtasks) : task.subtasks;
+                          if (Array.isArray(subtasksList) && subtasksList.length > 0) {
+                            progress = Math.round((subtasksList.filter(s => s.completed || s.IsChecked).length / subtasksList.length) * 100);
+                          }
+                        } catch (e) {
+                          console.error("Subtasks parse error", e);
+                        }
 
                         const colorClass = (task.priority || 'normal') === 'urgent' ? 'bg-red-500/90 border-red-400/60' :
                                            (task.priority || 'normal') === 'high' ? 'bg-orange-500/90 border-orange-400/60' :
@@ -349,7 +438,9 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                             }}
                             title={`${task.Title}\nเวลา: ${task.startTime} - ${task.endTime}`}
                           >
-                            <span className="font-semibold truncate w-full leading-tight">{task.Title}</span>
+                            <span className={`font-semibold w-full leading-tight z-10 relative truncate`}>{task.Title}</span>
+                            {progress > 0 && <span className="text-[9px] font-bold opacity-80 z-10 relative ml-1 shrink-0">{progress}%</span>}
+                            {progress > 0 && <div className="absolute left-0 top-0 bottom-0 bg-black/20" style={{ width: `${progress}%` }}></div>}
                           </div>
                         );
                       })}
@@ -465,14 +556,35 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
 
                     <div className="absolute inset-0 pointer-events-none" style={{ minHeight: `${requiredHeight}px` }}>
                       {sortedTasks.map(task => {
-                        const taskStartMins = parseTimeToMinutes(task.startTime || '09:00');
-                        const taskEndMins = parseTimeToMinutes(task.endTime || '18:00');
-                        const visStart = Math.max(taskStartMins, 0);
-                        const visEnd = Math.min(taskEndMins, 24 * 60);
+                        const getAbsoluteMinutes = (dateStr, timeStr, refDateStr) => {
+                          const d1 = new Date(dateStr);
+                          const d2 = new Date(refDateStr);
+                          const diffDays = Math.round((d1.getTime() - d2.getTime()) / (1000 * 3600 * 24));
+                          return (diffDays * 24 * 60) + parseTimeToMinutes(timeStr || '00:00');
+                        };
+
+                        const taskStartMins = getAbsoluteMinutes(task.startDate, task.startTime || '09:00', dayStr);
+                        const taskEndMins = getAbsoluteMinutes(task.dueDate, task.endTime || '18:00', dayStr);
+                        
+                        const timelineStart = 6 * 60;
+                        const timelineEnd = timelineStart + (24 * 60);
+
+                        const visStart = Math.max(taskStartMins, timelineStart);
+                        const visEnd = Math.min(taskEndMins, timelineEnd);
                         if (visEnd <= visStart) return null;
 
-                        const leftPct = (visStart / totalMinutes) * 100;
+                        const leftPct = ((visStart - timelineStart) / totalMinutes) * 100;
                         const widthPct = ((visEnd - visStart) / totalMinutes) * 100;
+
+                        let progress = 0;
+                        try {
+                          const subtasksList = typeof task.subtasks === 'string' ? JSON.parse(task.subtasks) : task.subtasks;
+                          if (Array.isArray(subtasksList) && subtasksList.length > 0) {
+                            progress = Math.round((subtasksList.filter(s => s.completed || s.IsChecked).length / subtasksList.length) * 100);
+                          }
+                        } catch (e) {
+                          console.error("Subtasks parse error", e);
+                        }
 
                         const colorClass = (task.priority || 'normal') === 'urgent' ? 'bg-red-500/90 border-red-400/60' :
                                            (task.priority || 'normal') === 'high' ? 'bg-orange-500/90 border-orange-400/60' :
@@ -500,12 +612,14 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                             title={`${task.Title} (${task.Assignee || 'Unassigned'})\nเวลา: ${task.startTime} - ${task.endTime}`}
                           >
                             <div className="flex items-center gap-1.5 w-full">
-                              {selectedAssignee === 'All' && (
+                              {task.Assignee && (
                                 <div className={`w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold ${personColor.bg} text-white shadow-[0_0_2px_rgba(0,0,0,0.5)] border border-white/20`}>
                                   {(task.Assignee || 'U').charAt(0).toUpperCase()}
                                 </div>
                               )}
-                              <span className="font-semibold truncate w-full leading-tight">{task.Title}</span>
+                              <span className="font-semibold truncate w-full leading-tight z-10 relative">{task.Title}</span>
+                              {progress > 0 && <span className="text-[9px] font-bold opacity-80 z-10 relative ml-1 shrink-0">{progress}%</span>}
+                              {progress > 0 && <div className="absolute left-0 top-0 bottom-0 bg-black/20" style={{ width: `${progress}%` }}></div>}
                             </div>
                           </div>
                         );
@@ -545,6 +659,8 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
         onSave={handleSaveTask}
         onDelete={handleDeleteTask}
         initialData={editingTask}
+        tasks={tasks}
+        currentUser={currentUser}
       />
     </div>
   );

@@ -67,9 +67,17 @@ export default function Receipt() {
 
   return (
     <div className="space-y-6 pb-6 pt-2 max-w-lg mx-auto">
-      {/* Header */}
-      <div className="mb-6 px-2">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">รับเข้าสินค้า (Receipt)</h2>
+      {/* Premium Header */}
+      <div className="flex items-center space-x-4 w-full bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-900 dark:to-indigo-900 p-5 rounded-3xl shadow-lg relative overflow-hidden transition-colors mb-6 mx-2 max-w-[calc(100%-16px)]">
+        <div className="p-3 bg-white/20 text-white rounded-2xl shadow-inner backdrop-blur-md">
+          <Download size={24} />
+        </div>
+        <div className="relative z-10">
+          <h2 className="text-xl font-bold text-white">รับเข้าสินค้า</h2>
+          <p className="text-[11px] text-blue-100 mt-0.5">บันทึกรับเข้าสินค้า (Goods Receipt)</p>
+        </div>
+        {/* subtle background decoration */}
+        <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
       </div>
 
       <form onSubmit={handleReceipt} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 rounded-3xl shadow-lg space-y-4">

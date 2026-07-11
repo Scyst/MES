@@ -115,7 +115,7 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
           <span className="text-indigo-400">📊</span> กระดานงาน (Kanban)
         </h2>
         <div className="flex gap-2">
-          <button onClick={handleExportCSV} className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 p-2 sm:px-3 sm:py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2" title="ส่งออก CSV">
+          <button onClick={handleExportCSV} className="bg-emerald-100 dark:bg-emerald-600/20 hover:bg-emerald-200 dark:hover:bg-emerald-600/40 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30 p-2 sm:px-3 sm:py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2" title="ส่งออก CSV">
             <FiDownload /> <span className="hidden sm:inline">ส่งออก CSV</span>
           </button>
           <button onClick={() => setShowFilters(!showFilters)} className={`bg-slate-100 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-900 dark:text-white p-2 sm:px-3 sm:py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border ${hasActiveFilters ? 'border-indigo-500 text-indigo-400' : 'border-slate-300 dark:border-slate-700'}`} title="กรองข้อมูล">
@@ -173,7 +173,16 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 flex-1 snap-x snap-mandatory custom-scrollbar">
           {cols.map(col => {
-            const colTasks = filteredTasks.filter(t => t.Status === col.id);
+            let colTasks = filteredTasks.filter(t => t.Status === col.id);
+            const isDoneLimited = col.id === 'done' && !searchQuery && colTasks.length > 30;
+            if (col.id === 'done' && !searchQuery) {
+              colTasks.sort((a, b) => {
+                const dateA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+                const dateB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+                return dateB - dateA || (b.Id || 0) - (a.Id || 0);
+              });
+              colTasks = colTasks.slice(0, 30);
+            }
             return (
               <div key={col.id} className={`snap-center w-[85vw] md:w-auto md:flex-1 shrink-0 min-w-[280px] md:min-w-[300px] flex flex-col bg-white dark:bg-slate-900/50 rounded-2xl border-t-4 ${col.color} border-l border-r border-b border-slate-200 dark:border-slate-800 shadow-lg`}>
                 <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 ${col.bg}`}>
@@ -296,6 +305,13 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
                         </Draggable>
                       )})}
                       {provided.placeholder}
+                      {isDoneLimited && (
+                        <div className="text-center py-2 mt-2">
+                          <span className="text-xs text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">
+                            แสดงเฉพาะ 30 รายการล่าสุด
+                          </span>
+                        </div>
+                      )}
                       {colTasks.length === 0 && !snapshot.isDraggingOver && (
                         <div className="h-24 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex items-center justify-center text-slate-500 text-sm">
                           Drop tasks here

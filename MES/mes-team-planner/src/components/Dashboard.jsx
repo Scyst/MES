@@ -6,6 +6,9 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todaysLeaves = events.filter(e => e.Type === 'leave' && e.date === todayStr);
+  const peopleOnLeaveCount = todaysLeaves.reduce((acc, leave) => {
+    return acc + (leave.Assignee ? leave.Assignee.split(',').filter(x => x.trim()).length : 0);
+  }, 0);
   const todaysTasks = tasks.filter(t => t.dueDate === todayStr && t.Status !== 'done');
 
   // ═══ Analytics ═══
@@ -26,12 +29,14 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
   const workloadData = useMemo(() => {
     const map = {};
     tasks.forEach(t => {
-      const name = t.Assignee || 'Unassigned';
-      if (!map[name]) map[name] = { total: 0, done: 0, inProgress: 0, todo: 0 };
-      map[name].total++;
-      if (t.Status === 'done') map[name].done++;
-      else if (t.Status === 'in-progress') map[name].inProgress++;
-      else map[name].todo++;
+      const names = (t.Assignee || 'Unassigned').split(',').map(n => n.trim()).filter(Boolean);
+      names.forEach(name => {
+        if (!map[name]) map[name] = { total: 0, done: 0, inProgress: 0, todo: 0 };
+        map[name].total++;
+        if (t.Status === 'done') map[name].done++;
+        else if (t.Status === 'in-progress') map[name].inProgress++;
+        else map[name].todo++;
+      });
     });
     return Object.entries(map).sort((a, b) => b[1].total - a[1].total);
   }, [tasks]);
@@ -113,7 +118,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
         <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <FiUserCheck className="text-amber-400" />
-            <h3 className="text-sm md:text-base font-bold text-amber-800 dark:text-amber-200">ผู้ที่ลาพักงานวันนี้</h3>
+            <h3 className="text-sm md:text-base font-bold text-amber-800 dark:text-amber-200">คนลาพักผ่อนวันนี้ ({peopleOnLeaveCount})</h3>
           </div>
           {todaysLeaves.length > 0 ? (
             <ul className="space-y-2">
@@ -135,7 +140,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
             <h3 className="text-sm md:text-base font-bold text-rose-800 dark:text-rose-200">งานที่ครบกำหนดวันนี้</h3>
           </div>
           {todaysTasks.length > 0 ? (
-            <ul className="space-y-2">
+            <ul className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
               {todaysTasks.map(task => (
                 <li key={task.Id} className="text-rose-800 dark:text-rose-200 text-xs md:text-sm bg-rose-100 dark:bg-rose-900/30 px-3 py-2 rounded-lg border border-rose-300 dark:border-rose-700/40 flex justify-between">
                   <span className="truncate">{task.Title}</span>
@@ -216,23 +221,34 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
           <FiUserCheck className="text-violet-400" /> Workload แต่ละคน
         </h3>
         {workloadData.length > 0 ? (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
             {workloadData.map(([name, data]) => {
               const maxLoad = Math.max(...workloadData.map(d => d[1].total), 1);
               return (
-                <div key={name} className="flex items-center gap-3">
-                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-[10px] md:text-xs text-white font-bold shrink-0">
-                    {name.substring(0, 1).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs md:text-sm text-slate-700 dark:text-slate-300 font-medium truncate">{name}</span>
-                      <span className="text-[10px] md:text-xs text-slate-500 font-mono shrink-0 ml-2">{data.total} งาน</span>
+                <div key={name} className="flex flex-col gap-2.5 bg-white/50 dark:bg-slate-900/50 p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-800 hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-500 transition-all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xs text-white font-bold shrink-0 shadow-sm">
+                        {name.substring(0, 1).toUpperCase()}
+                      </div>
+                      <span className="text-sm text-slate-800 dark:text-slate-200 font-bold truncate">{name}</span>
                     </div>
-                    <div className="flex h-2 rounded-full overflow-hidden bg-slate-200/50 dark:bg-slate-700/50 gap-px">
-                      {data.done > 0 && <div className="bg-emerald-500 rounded-l" style={{ width: `${(data.done/data.total)*100}%` }}></div>}
-                      {data.inProgress > 0 && <div className="bg-amber-500" style={{ width: `${(data.inProgress/data.total)*100}%` }}></div>}
-                      {data.todo > 0 && <div className="bg-slate-500 rounded-r" style={{ width: `${(data.todo/data.total)*100}%` }}></div>}
+                    <div className="flex flex-col items-end shrink-0 ml-2">
+                      <span className="text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono leading-none">{data.total}</span>
+                      <span className="text-[9px] text-slate-500 mt-0.5">งานทั้งหมด</span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-1">
+                    <div className="flex h-2.5 rounded-full overflow-hidden bg-slate-200/60 dark:bg-slate-700/60 gap-[1px] w-full">
+                      {data.done > 0 && <div className="bg-emerald-500 hover:brightness-110 transition-all" style={{ width: `${(data.done/data.total)*100}%` }} title={`เสร็จ: ${data.done}`}></div>}
+                      {data.inProgress > 0 && <div className="bg-amber-500 hover:brightness-110 transition-all" style={{ width: `${(data.inProgress/data.total)*100}%` }} title={`กำลังทำ: ${data.inProgress}`}></div>}
+                      {data.todo > 0 && <div className="bg-slate-400 dark:bg-slate-500 hover:brightness-110 transition-all" style={{ width: `${(data.todo/data.total)*100}%` }} title={`รอดำเนินการ: ${data.todo}`}></div>}
+                    </div>
+                    <div className="flex justify-between mt-2 px-0.5">
+                       <span className="text-[10px] text-slate-500"><span className="text-emerald-500 font-bold">{data.done}</span> เสร็จ</span>
+                       <span className="text-[10px] text-slate-500"><span className="text-amber-500 font-bold">{data.inProgress}</span> กำลังทำ</span>
+                       <span className="text-[10px] text-slate-500"><span className="text-slate-500 font-bold">{data.todo}</span> รอทำ</span>
                     </div>
                   </div>
                 </div>

@@ -141,7 +141,6 @@ export default function LinkHub() {
       {isModalOpen && (
         <div 
           className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
         >
           <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-2xl border border-slate-300/80 dark:border-slate-700/80 shadow-2xl shadow-black/50 overflow-hidden animate-slide-up">
             <div className="flex justify-between items-center px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-800/80 to-slate-900/80">

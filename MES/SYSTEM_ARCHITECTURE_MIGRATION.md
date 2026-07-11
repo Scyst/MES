@@ -115,3 +115,19 @@ To ensure a seamless transition from the Old to the New system, the following ch
 - **[x] Update Legacy SPs:** Execute the 3-step safe migration plan for `dbo.sp_ExecuteProduction` so we can permanently move away from the `notes` hack and properly enforce `machine_id` integrity. (Completed)
 - **[x] Consolidate Yield vs. Strokes:** Ensure the BI Dashboard can overlay the actual Yield (from `STOCK_TRANSACTIONS`) against the Machine Strokes (from `PE_IIOT_TELEMETRY`) to accurately measure Quality and real-world efficiency per machine. (Completed)
 - **[ ] Legacy App Sunset:** Plan a hard cutoff date to decommission `page/production/mobile_app.php` and force all operators to use the new `mes-mobile-app`.
+
+---
+
+## 4. SAP Integration Architecture (Added July 2026)
+
+To pull live data from SNC-SAP, we have introduced a secondary Database Connection module specifically targeting the ERP system.
+
+### 4.1 Connection details
+- **Location:** page/sap_db.php`n- **Pattern:** Using PDO with sqlsrv connected to 10.0.0.4.
+- **Target Database:** SNC-SAP`n- **Use Case:** Real-time visibility into Operation Slips (View_OperationSlip_1820) and Stock Levels (View_SAP_ALL_STOCK_1820).
+
+### 4.2 Data Fetching (page/SAP_Sync)
+- **Frontend:** A modern UI module (page/SAP_Sync/index.php) fetching data asynchronously.
+- **Backend:** page/SAP_Sync/api/get_sap_data.php provides JSON responses.
+- **Strategy:** Read-only access to SAP Views. Does NOT duplicate data into the MES SQL Server unless explicitly required by future sync agents.
+

@@ -90,20 +90,20 @@ export default function MachineList() {
 
   return (
     <div className="space-y-4 h-full flex flex-col">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4 sticky top-0 z-10 transition-colors duration-300">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-3">เลือกเครื่องจักร (Select Machine)</h1>
+      {/* Premium Header */}
+      <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 pt-4 pb-4 px-4 sticky top-0 z-10 transition-colors duration-300 shadow-sm">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-4">เลือกเครื่องจักร</h1>
         
         {/* Line Filter */}
-        <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide -mx-2 px-2 relative z-10">
           {lines.map(line => (
             <button
               key={line}
               onClick={() => setFilter(line)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors ${
+              className={`px-5 py-2.5 rounded-2xl whitespace-nowrap text-sm font-bold transition-all active:scale-95 ${
                 filter === line 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 border border-blue-400/50' 
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-md'
               }`}
             >
               {line}
@@ -150,13 +150,9 @@ export default function MachineList() {
                     }}
                   />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 pr-4">
                   <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate">{machine.name}</h3>
                   <p className="text-gray-500 dark:text-gray-400 text-sm truncate">{machine.id} • {machine.line}</p>
-                </div>
-                <div className={`flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium border ${status.border} ${status.color} ${status.bg} shrink-0 ml-2`}>
-                  {status.icon}
-                  <span className="capitalize ml-1">{machine.status || 'ไม่ทราบสถานะ'}</span>
                 </div>
               </button>
             )

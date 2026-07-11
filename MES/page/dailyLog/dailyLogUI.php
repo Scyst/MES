@@ -150,8 +150,6 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
             <div class="portal-col">
                 <div class="section-header">เว็บไซต์บริการ (Service Modules)</div>
 
-
-
                 <div class="service-group">
                     <div class="service-group-title fw-bold text-dark border-bottom pb-1 mb-3">COMMON SERVICES (บริการส่วนกลาง & แจ้งเรื่อง)</div>
                     <div class="service-grid">
@@ -262,6 +260,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         <?php 
                         $themePrototype = 'text-success bg-success bg-opacity-10 border-success border';
                         renderServiceLink('New MES Toolbox (SPA)', 'ระบบเวอร์ชันใหม่ (ทดลองใช้งาน)', '<i class="fas fa-rocket"></i>', 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/Toolbox/index.html', '', $themePrototype);
+                        renderServiceLink('Team Planner', 'กระดานแผนงานและปฏิทินทีม (New)', '<i class="fas fa-calendar-check"></i>', '/iot-toolbox/sandbox-b9/Toolbox/planner/index.html', '', $themePrototype);
                         ?>
                     </div>
                 </div>

@@ -10,8 +10,9 @@ export default function MultiSelectInput({ value = '', onChange, suggestions = [
 
   const tags = value.split(',').map(t => t.trim()).filter(Boolean);
 
+  const searchStr = inputValue.trim().toLowerCase();
   const filteredSuggestions = suggestions.filter(
-    s => s.toLowerCase().includes(inputValue.toLowerCase()) && !tags.includes(s)
+    s => s.toLowerCase().includes(searchStr) && !tags.includes(s)
   );
 
   useEffect(() => {
@@ -69,7 +70,7 @@ export default function MultiSelectInput({ value = '', onChange, suggestions = [
   return (
     <div className="relative w-full" ref={wrapperRef}>
       <div 
-        className="flex flex-wrap items-center gap-1.5 w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-2 min-h-[44px] cursor-text transition-all focus-within:ring-2 focus-within:ring-indigo-500"
+        className="flex flex-wrap items-center gap-1.5 w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-2 min-h-[44px] max-h-[88px] overflow-y-auto custom-scrollbar cursor-text transition-all focus-within:ring-2 focus-within:ring-indigo-500"
         onClick={() => inputRef.current?.focus()}
       >
         {tags.map((tag, idx) => (

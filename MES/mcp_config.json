@@ -23,6 +23,21 @@
         "DB_TRUST_SERVER_CERTIFICATE": "true"
       }
     },
+    "sap-mssql": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-mssql-server"
+      ],
+      "env": {
+        "DB_SERVER": "10.0.0.4",
+        "DB_DATABASE_NAME": "SNC-SAP",
+        "DB_USER": "SNC-IIoT-Toolbox",
+        "DB_PASSWORD": "SnC@11oT#TOOlbOX",
+        "DB_ENCRYPT": "false",
+        "DB_TRUST_SERVER_CERTIFICATE": "true"
+      }
+    },
     "mes-custom-mcp": {
       "command": "node",
       "args": [

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FiX, FiTrash2 } from 'react-icons/fi';
+import MultiSelectInput from './common/MultiSelectInput';
 
-export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSelectedDate, initialData }) {
+export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSelectedDate, initialData, tasks = [] }) {
   const [formData, setFormData] = useState({
     title: '',
     date: preSelectedDate || '',
@@ -25,9 +26,26 @@ export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSe
     }
   }, [isOpen, initialData, preSelectedDate]);
 
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const isEditing = !!formData.Id;
+
+  const uniqueAssignees = Array.from(new Set(
+    tasks
+      .flatMap(t => (t.Assignee || t.assignee || '').split(','))
+      .map(a => a.trim())
+      .filter(a => a !== '')
+  )).sort();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -39,7 +57,7 @@ export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSe
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-slide-up">
         <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEditing ? 'แก้ไขนัดหมาย' : 'สร้างนัดหมายใหม่'}</h3>
@@ -72,7 +90,12 @@ export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSe
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 {formData.type === 'leave' ? 'ชื่อพนักงานที่ลา' : 'ผู้เข้าร่วม'}
               </label>
-              <input name="assignee" value={formData.assignee || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-fuchsia-500 outline-none transition" placeholder="Name..." />
+              <MultiSelectInput 
+                value={formData.assignee || ''}
+                onChange={(val) => setFormData({ ...formData, assignee: val })}
+                suggestions={uniqueAssignees}
+                placeholder="Name..."
+              />
             </div>
           )}
           <div className="pt-4 flex items-center justify-between">

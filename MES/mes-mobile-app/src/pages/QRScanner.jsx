@@ -45,7 +45,11 @@ export default function QRScanner() {
           (errorMessage) => {
             // ignore continuous scanning errors
           }
-        ).catch(err => {
+        ).then(() => {
+          if (!isMounted) {
+            html5QrCode.stop().then(() => html5QrCode.clear()).catch(console.error);
+          }
+        }).catch(err => {
           console.error(err);
           if (isMounted) setHasCamera(false);
         });

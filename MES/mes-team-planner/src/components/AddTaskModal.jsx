@@ -68,9 +68,20 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       });
       setSubtasksArr([]);
       setComments([]);
+      setNewComment('');
       setActiveTab('general');
     }
-  }, [initialData, isOpen]);
+  }, [isOpen, initialData]);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const fetchComments = async (taskId) => {
     try {
@@ -108,7 +119,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     if (!newComment.trim() || !formData.Id) return;
     try {
       const res = await axios.post(`/api/tasks/${formData.Id}/comments`, {
-        author: 'Me', // Ideally from auth, hardcoded for now
+        author: currentUser?.fullname || currentUser?.username || 'Unknown',
         message: newComment
       });
       setComments([...comments, res.data]);
@@ -139,7 +150,6 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   return (
     <div 
       className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-slide-up">
         
@@ -192,7 +202,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
           
           {/* GENERAL TAB */}
           {activeTab === 'general' && (
-            <form id="task-form" onSubmit={handleSubmit} className="p-5 space-y-4">
+            <form id="task-form" onSubmit={handleSubmit} className="p-5 pb-32 space-y-4">
               {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">ชื่องาน</label>

@@ -4,7 +4,7 @@ import { getDaysInMonth, startOfMonth, getDay, format, addMonths, subMonths } fr
 import AddTaskModal from './AddTaskModal';
 import AddEventModal from './AddEventModal';
 
-export default function CalendarView({ tasks = [], events = [], onSaveTask, onDeleteTask, onSaveEvent, onDeleteEvent, loading }) {
+export default function CalendarView({ tasks = [], events = [], onSaveTask, onDeleteTask, onSaveEvent, onDeleteEvent, loading, currentUser }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
@@ -87,7 +87,7 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
     if (item._type === 'task') {
       setEditingTask(item);
       setIsTaskModalOpen(true);
-    } else {
+    } else if (item._type === 'event') {
       setEditingEvent(item);
       setIsEventModalOpen(true);
     }
@@ -111,6 +111,9 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
           </button>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => { setEditingEvent({ date: selectedDate }); setIsEventModalOpen(true); }} className="bg-fuchsia-600 hover:bg-fuchsia-500 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-fuchsia-900/20 flex items-center gap-1.5 hidden md:flex">
+            <FiPlus className="text-sm" /> สร้างกิจกรรม
+          </button>
           <button onClick={() => { setEditingTask({ startDate: selectedDate, dueDate: selectedDate }); setIsTaskModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-indigo-900/20 flex items-center gap-1.5">
             <FiPlus className="text-sm" /> สร้างงาน
           </button>
@@ -176,7 +179,11 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
                   {dayEvents.slice(0, 2).map(item => {
                     const color = getItemColor(item);
                     return (
-                      <div key={`${item._type}-${item.Id}`} className={`text-[10px] md:text-xs px-1.5 py-0.5 md:py-1 rounded truncate ${color.bg} ${color.text} border ${color.border}`}>
+                      <div 
+                        key={`${item._type}-${item.Id}`} 
+                        onClick={(e) => { e.stopPropagation(); handleItemClick(item); }}
+                        className={`text-[10px] md:text-xs px-1.5 py-0.5 md:py-1 rounded truncate cursor-pointer hover:shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] ${color.bg} ${color.text} border ${color.border}`}
+                      >
                         {item.Title}
                       </div>
                     );
@@ -206,6 +213,12 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
             })() : 'เลือกวัน'}
           </h3>
           <div className="flex items-center gap-1">
+            <button 
+              onClick={() => { setEditingEvent({ date: selectedDate }); setIsEventModalOpen(true); }}
+              className="text-fuchsia-600 dark:text-fuchsia-400 hover:text-fuchsia-500 dark:hover:text-fuchsia-300 text-xs font-semibold px-2 py-1 rounded-lg hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 transition-all"
+            >
+              + กิจกรรม
+            </button>
             <button 
               onClick={() => { setEditingTask({ startDate: selectedDate, dueDate: selectedDate }); setIsTaskModalOpen(true); }}
               className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 text-xs font-semibold px-2 py-1 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all"
@@ -260,16 +273,20 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
         onSave={handleSaveTask}
         onDelete={handleDeleteTask}
         initialData={editingTask}
+        tasks={tasks}
+        currentUser={currentUser}
       />
 
       {/* Event Modal (for calendar events like meetings, holidays, leaves) */}
       <AddEventModal 
         isOpen={isEventModalOpen} 
         onClose={() => { setIsEventModalOpen(false); setEditingEvent(null); }} 
+        tasks={tasks}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
         preSelectedDate={selectedDate}
         initialData={editingEvent}
+        currentUser={currentUser}
       />
     </div>
   );
