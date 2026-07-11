@@ -227,6 +227,51 @@ try {
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
+        case 'import_mt_items':
+            $items = $input['data'] ?? [];
+            if (empty($items) || !is_array($items)) {
+                throw new Exception("ไม่พบข้อมูลที่จะนำเข้า");
+            }
+            $pdo->beginTransaction();
+            $upsertCount = 0;
+            $insertStmt = $pdo->prepare("
+                INSERT INTO dbo.MT_ITEMS (item_code, item_name, description, supplier, unit_price, uom, min_stock, max_stock, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())
+            ");
+            $updateStmt = $pdo->prepare("
+                UPDATE dbo.MT_ITEMS SET 
+                    item_name = ?, description = ?, supplier = ?, unit_price = ?, 
+                    uom = ?, min_stock = ?, max_stock = ?, is_active = ?, last_updated = GETDATE()
+                WHERE item_code = ?
+            ");
+            $checkStmt = $pdo->prepare("SELECT item_id FROM dbo.MT_ITEMS WITH (NOLOCK) WHERE item_code = ?");
+            
+            foreach ($items as $row) {
+                $itemCode = trim($row['Item Code'] ?? '');
+                $itemName = trim($row['Item Name'] ?? '');
+                if (empty($itemCode) || empty($itemName)) continue;
+                
+                $desc = trim($row['Description'] ?? '');
+                $supplier = trim($row['Supplier'] ?? '');
+                $unitPrice = (float)($row['Unit Price'] ?? 0);
+                $uom = trim($row['UoM'] ?? 'PCS');
+                $minStock = (float)($row['Min'] ?? 0);
+                $maxStock = (float)($row['Max'] ?? 0);
+                $isActiveStr = strtoupper(trim($row['Active'] ?? 'Y'));
+                $isActive = ($isActiveStr === 'Y' || $isActiveStr === 'YES' || $isActiveStr === '1' || $isActiveStr === 'TRUE') ? 1 : 0;
+                
+                $checkStmt->execute([$itemCode]);
+                if ($checkStmt->fetch()) {
+                    $updateStmt->execute([$itemName, $desc, $supplier, $unitPrice, $uom, $minStock, $maxStock, $isActive, $itemCode]);
+                } else {
+                    $insertStmt->execute([$itemCode, $itemName, $desc, $supplier, $unitPrice, $uom, $minStock, $maxStock, $isActive]);
+                }
+                $upsertCount++;
+            }
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => "นำเข้าข้อมูลสำเร็จ $upsertCount รายการ"]);
+            break;
+
         case 'save_mt_item':
             $itemId = $input['item_id'] ?? '';
             $itemCode = trim($input['item_code'] ?? '');
@@ -251,8 +296,8 @@ try {
             if (empty($itemId)) {
                 if ($existing) throw new Exception("รหัสอะไหล่นี้ ($itemCode) มีในระบบแล้ว");
                 
-                $sql = "INSERT INTO dbo.MT_ITEMS (item_code, item_name, description, supplier, unit_price, uom, min_stock, max_stock) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                $sql = "INSERT INTO dbo.MT_ITEMS (item_code, item_name, description, supplier, unit_price, uom, min_stock, max_stock, created_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$itemCode, $itemName, $desc, $supplier, $unitPrice, $uom, $minStock, $maxStock]);
                 $msg = "เพิ่มรายการอะไหล่ใหม่สำเร็จ";
@@ -263,7 +308,7 @@ try {
 
                 $sql = "UPDATE dbo.MT_ITEMS 
                         SET item_code = ?, item_name = ?, description = ?, supplier = ?, 
-                            unit_price = ?, uom = ?, min_stock = ?, max_stock = ? 
+                            unit_price = ?, uom = ?, min_stock = ?, max_stock = ?, last_updated = GETDATE()
                         WHERE item_id = ?";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$itemCode, $itemName, $desc, $supplier, $unitPrice, $uom, $minStock, $maxStock, $itemId]);

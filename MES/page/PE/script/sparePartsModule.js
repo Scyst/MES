@@ -334,6 +334,48 @@ const SparePartsModule = (() => {
         XLSX.writeFile(wb, `ItemMaster_${new Date().toISOString().slice(0, 10)}.xlsx`);
     }
 
+    async function importMasterExcel(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                if (!json || json.length === 0) {
+                    throw new Error("No data found in the Excel file.");
+                }
+
+                // Check columns
+                const firstRow = json[0];
+                if (!('Item Code' in firstRow)) {
+                    throw new Error("Invalid format: 'Item Code' column is missing.");
+                }
+
+                // Call API
+                PEApp.showToast('กำลังนำเข้าข้อมูล...', 'info');
+                await PEApp.apiCall('sparePartsAPI.php', {}, 'POST', {
+                    action: 'import_mt_items',
+                    data: json
+                });
+
+                PEApp.showToast('นำเข้าข้อมูลเรียบร้อยแล้ว', 'success');
+                loadMasterList();
+                loadData();
+            } catch (err) {
+                PEApp.showToast(err.message, 'error');
+            } finally {
+                event.target.value = ''; // Reset input
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
     async function loadHistory() {
         try {
             const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_transactions' });
@@ -404,7 +446,7 @@ const SparePartsModule = (() => {
 
     return { 
         loadData, filterTable, openReceiveModal, openIssueModal, submitTransaction, exportExcel, onItemInput,
-        switchTab, loadMasterList, filterMasterTable, renderMasterTable, openItemModal, saveItem, toggleItemStatus, exportMasterExcel,
+        switchTab, loadMasterList, filterMasterTable, renderMasterTable, openItemModal, saveItem, toggleItemStatus, exportMasterExcel, importMasterExcel,
         loadHistory, filterHistoryTable, renderHistoryTable
     };
 })();

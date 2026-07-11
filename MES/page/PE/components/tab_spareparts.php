@@ -144,6 +144,10 @@
                         <button class="pe-btn pe-btn-primary pe-btn-sm" onclick="SparePartsModule.openItemModal()">
                             <i class="fas fa-plus"></i> Add Item
                         </button>
+                        <input type="file" id="spImportFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="SparePartsModule.importMasterExcel(event)">
+                        <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="document.getElementById('spImportFileInput').click()" title="Import Master Data">
+                            <i class="fas fa-file-import" style="color:var(--pe-primary);"></i> Import
+                        </button>
                         <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.exportMasterExcel()" title="Export Master Data">
                             <i class="fas fa-file-excel" style="color:var(--pe-success);"></i> Export
                         </button>

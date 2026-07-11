@@ -7,6 +7,7 @@ import Dashboard from './components/Dashboard';
 import GanttChart from './components/GanttChart';
 import LinkHub from './components/LinkHub';
 import NotificationManager from './components/NotificationManager';
+import NotificationWidget from './components/NotificationWidget';
 
 // Reordered: Calendar first (default), then by usage importance
 const navItems = [
@@ -461,6 +462,14 @@ function App() {
 
       {/* Global Notifications */}
       <NotificationManager />
+      
+      {/* Chat Notification Widget */}
+      <NotificationWidget 
+        currentUser={currentUser}
+        tasks={tasks}
+        onSaveTask={handleSaveTask}
+        onDeleteTask={handleDeleteTask}
+      />
     </div>
   );
 }

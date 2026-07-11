@@ -3,9 +3,20 @@ require_once 'db_helper.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $taskId = isset($_GET['taskId']) ? $_GET['taskId'] : null;
+$action = isset($_GET['action']) ? $_GET['action'] : null;
 
 try {
-    if ($method === 'GET' && $taskId) {
+    if ($method === 'GET' && $action === 'recent') {
+        $sql = "SELECT c.*, t.Title as TaskTitle, t.Assignee as TaskAssignee 
+                FROM TeamPlanner_Comments c
+                JOIN TeamPlanner_Tasks t ON c.TaskId = t.Id
+                ORDER BY c.CreatedAt DESC
+                OFFSET 0 ROWS FETCH NEXT 50 ROWS ONLY";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute();
+        sendJson($stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+    elseif ($method === 'GET' && $taskId) {
         $stmt = $pdo->prepare("SELECT * FROM TeamPlanner_Comments WHERE TaskId = ? ORDER BY CreatedAt ASC");
         $stmt->execute([$taskId]);
         sendJson($stmt->fetchAll(PDO::FETCH_ASSOC));
