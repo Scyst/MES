@@ -308,6 +308,16 @@
                         <div class="stat-value">Bulk Scrap Confirmation</div>
                         <div class="stat-desc">ระบบการยืนยันอนุมัติการเบิกของเสียทีละหลายๆ รายการในคลิกเดียว (Bulk Action) ของแผนกคลังสินค้า</div>
                     </div>
+                    <div class="stat-box" style="border-left-color: #EC4899;">
+                        <div class="stat-icon">🔄</div>
+                        <div class="stat-value">SAP ERP Integration</div>
+                        <div class="stat-desc">เชื่อมต่อระบบ MES เข้ากับ SAP Database เพื่อดึงข้อมูล Operation Slips และ Stock แบบเรียลไทม์</div>
+                    </div>
+                    <div class="stat-box" style="border-left-color: #3B82F6;">
+                        <div class="stat-icon">🎓</div>
+                        <div class="stat-value">Learning Hub & Standalone Planner</div>
+                        <div class="stat-desc">สร้างแอปพลิเคชัน Standalone แบบแยกส่วนสำหรับ Team Planner และเพิ่มเนื้อหาหลักสูตรลงใน Learning Hub</div>
+                    </div>
                 </div>
             </div>
 
@@ -382,6 +392,41 @@
                             <tr>
                                 <td>11/07/2026 13:00</td><td>11/07/2026 17:30</td><td>4.5</td>
                                 <td>ปรับ Workload Grid (2 คอลัมน์บน PC), ซ่อมสไตล์รูป Export Gantt และอัปเกรดระบบแชทเป็น Messenger-style พร้อมระบบตั้งค่า AKA</td>
+                                <td class="status-complete">Complete ✓</td><td><span class="tag tag-dev">&lt;/&gt; Wep Develop</span></td>
+                            </tr>
+                            <tr>
+                                <td>12/07/2026 08:00</td><td>12/07/2026 12:00</td><td>4.0</td>
+                                <td>ปรับปรุง UI บน MobileApp แก้ปัญหา Header ทับเนื้อหา, เอาป้าย Active ที่ไม่จำเป็นออก และแก้ PWA Icon 404</td>
+                                <td class="status-complete">Complete ✓</td><td><span class="tag tag-dev">&lt;/&gt; Wep Develop</span></td>
+                            </tr>
+                            <tr>
+                                <td>12/07/2026 13:00</td><td>12/07/2026 16:30</td><td>3.5</td>
+                                <td>เพิ่มระบบ Import ข้อมูล Spare Part Item Master จาก Excel พร้อมปรับฐานข้อมูลรองรับ Timestamp</td>
+                                <td class="status-complete">Complete ✓</td><td><span class="tag tag-dev">&lt;/&gt; Wep Develop</span></td>
+                            </tr>
+                            <tr>
+                                <td>13/07/2026 09:00</td><td>13/07/2026 12:00</td><td>3.0</td>
+                                <td>เชื่อมต่อ SAP Database เข้ากับระบบ MES พร้อมสร้าง Dashboard สำหรับดูยอดผลิตแบบเรียลไทม์</td>
+                                <td class="status-complete">Complete ✓</td><td><span class="tag tag-dev">&lt;/&gt; Wep Develop</span></td>
+                            </tr>
+                            <tr>
+                                <td>13/07/2026 13:00</td><td>13/07/2026 14:00</td><td>1.0</td>
+                                <td>แก้ไขบัค 500 Server Error ในระบบ QMS (Extend CAR Link) จากปัญหา Data Type Mismatch ใน SQL</td>
+                                <td class="status-complete">Complete ✓</td><td><span class="tag tag-support">🛠️ Support</span></td>
+                            </tr>
+                            <tr>
+                                <td>13/07/2026 14:00</td><td>13/07/2026 15:30</td><td>1.5</td>
+                                <td>แก้ไขบัคการจัดประเภทรับของ (RM Receiving) และปรับ UI ปุ่ม Bulk Action แบบ Dropdown</td>
+                                <td class="status-complete">Complete ✓</td><td><span class="tag tag-dev">&lt;/&gt; Wep Develop</span></td>
+                            </tr>
+                            <tr>
+                                <td>13/07/2026 15:30</td><td>13/07/2026 16:30</td><td>1.0</td>
+                                <td>อัปเกรดระบบ Auto-Logout แบบ Dynamic URL และอัปเดตระบบ .gitignore ป้องกันไฟล์ขยะหลุด</td>
+                                <td class="status-complete">Complete ✓</td><td><span class="tag tag-support">🛠️ Support</span></td>
+                            </tr>
+                            <tr>
+                                <td>13/07/2026 16:30</td><td>13/07/2026 18:30</td><td>2.0</td>
+                                <td>พัฒนาแยก Standalone App สำหรับ Team Planner (SPA) และเพิ่มเนื้อหา Course 3, 4 ลงใน Learning Hub</td>
                                 <td class="status-complete">Complete ✓</td><td><span class="tag tag-dev">&lt;/&gt; Wep Develop</span></td>
                             </tr>
                         </tbody>
@@ -465,6 +510,8 @@
                             <ul>
                                 <li>อัปเกรดระบบแผนที่ <strong>IIoT Map Builder</strong> เพิ่มฟีเจอร์ Advanced Map Filtering และการค้นหาเครื่องจักร</li>
                                 <li>สร้างจุดเชื่อมโยง (Link) ให้ผู้ใช้สามารถกดคลิกที่เครื่องจักรบนแผนที่ แล้วกระโดดเข้าหน้าใบแจ้งซ่อม (Work Orders) ได้ทันที</li>
+                                <li>พัฒนาระบบ <strong>Import Item Master (Excel)</strong> สำหรับแผนกชิ้นส่วนอะไหล่ (Spare Parts) โดยใช้ Template เดียวกันกับหน้า Export แบบ 100% พร้อมระบบ Upsert (อัปเดตและสร้างใหม่) ในตัว</li>
+                                <li>ปรับโครงสร้างตารางฐานข้อมูล `MT_ITEMS` เพิ่มคอลัมน์ `created_at` และ `last_updated` เพื่อติดตามประวัติการแก้ไขข้อมูลแบบเงียบๆ หลังบ้าน</li>
                                 <li>อัปเกรดโครงสร้างซอร์สโค้ดของ PE ไปเป็น <strong>ES6 Modules</strong> (Javascript สมัยใหม่) และปรับจูนการเชื่อมต่อฐานข้อมูล SQL Server ให้เร็วขึ้น</li>
                                 <li>แก้ปัญหาบั๊กหน้าจอ (Layout corruption) และหน้าต่าง Modal ซ้อนทับกัน (Backdrop stacking bug) ในหน้า IIoT Filter</li>
                             </ul>
@@ -484,9 +531,96 @@
                             </div>
                             <h4>✨ สิ่งที่พัฒนาสำเร็จในสัปดาห์นี้</h4>
                             <ul>
-                                <li>พัฒนาระบบ <strong>Bulk Status Confirmation</strong> อนุญาตให้คลังสินค้ากดยืนยันคำขอเบิกวัตถุดิบทดแทน (Scrap requests) ได้ทีละหลายๆ รายการพร้อมกัน</li>
-                                <li>แก้ไขปัญหาระบบ Auto-logout ทำงานผิดพลาดในหน้าต่างของคลังสินค้า</li>
+                                <li>พัฒนาระบบ <strong>Bulk Status Confirmation</strong> อนุญาตให้คลังสินค้ากดยืนยันคำขอเบิกวัตถุดิบทดแทน (Scrap requests) ได้ทีละหลายๆ รายการพร้อมกัน ผ่าน UI แบบ <strong>Dropdown Menu</strong> ยุบรวมปุ่มเพื่อประหยัดพื้นที่</li>
+                                <li>ปรับปรุงลอจิกการรับของ (RM Receiving) แก้ปัญหาวัตถุดิบไปปรากฏในหมวดหมู่ SEMI หรือ WIP ผิดพลาด โดยการจัดลำดับความสำคัญ (Prioritize) ให้ประเภท FG, SEMI, WIP ไปอยู่ลำดับท้ายสุดแทน</li>
+                                <li>ปรับแก้การทำงานของระบบ <strong>Auto-Logout</strong> ใน <code>appCore.js</code> ให้ใช้การอ้างอิง Path แบบ Dynamic (URL Resolution) ช่วยลดปัญหาการเด้งหลุดหน้าขาว (401 Unauthorized) ในกรณีเรียกใช้งานข้ามโฟลเดอร์</li>
                             </ul>
+                        </div>
+                    </div>
+
+                    <!-- Module 5 -->
+                    <div class="module-item">
+                        <div class="module-header">
+                            <h3>5. Mobile App UX/UI Optimization (ปรับปรุงแอปมือถือ)</h3>
+                            <span class="module-tag">Optimization</span>
+                        </div>
+                        <div class="presentation-content">
+                            <div style="background: #F1F5F9; border-left: 4px solid var(--secondary); padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem;">
+                                <strong style="color: var(--text-primary); font-size: 1.05rem; display: block; margin-bottom: 0.5rem;">🎯 ปัญหา & เป้าหมายที่ต้องการแก้ไข</strong>
+                                <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">แอปพลิเคชัน MobileApp มีปัญหาการแสดงผล Header ที่ซ้อนทับกับหัวข้อและเนื้อหาในหน้าเลือกลงยอดผลิต ทำให้ตัวอักษรแหว่ง รวมถึงมี Error โหลดไอคอน PWA ไม่พบ และดีไซน์บางส่วนยังดูรกตา</p>
+                            </div>
+                            <h4>✨ สิ่งที่พัฒนาสำเร็จในสัปดาห์นี้</h4>
+                            <ul>
+                                <li>แก้ไขปัญหาตัวอักษร <strong>"เลือกเครื่องจักร" โดนตัดแหว่ง</strong> โดยยกเลิกการใช้ <code>overflow-hidden</code> ที่ขัดแย้งกับ Effect สีเหลือบของ CSS บน Safari/Chrome มือถือ</li>
+                                <li>ลบป้ายสถานะ (Active) ที่ไม่มีฟังก์ชันรองรับและสร้างความสับสน ออกจากหน้า Machine List เพื่อเพิ่มความคลีนของ UI</li>
+                                <li>แก้ไข Error 404 PWA Icons ด้วยการสร้างภาพโปร่งใสชั่วคราวรองรับการใช้งาน Add to Home Screen เพื่อไม่ให้เกิด Error ในระบบหลังบ้าน</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Module 6 -->
+                    <div class="module-item">
+                        <div class="module-header">
+                            <h3>6. SAP ERP Live Data Integration (เชื่อมโยงฐานข้อมูล SAP)</h3>
+                            <span class="module-tag major">Major Update</span>
+                        </div>
+                        <div class="presentation-content">
+                            <div style="background: #F1F5F9; border-left: 4px solid var(--secondary); padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem;">
+                                <strong style="color: var(--text-primary); font-size: 1.05rem; display: block; margin-bottom: 0.5rem;">🎯 ปัญหา & เป้าหมายที่ต้องการแก้ไข</strong>
+                                <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">ระบบ MES ขาดการมองเห็นข้อมูลฝั่ง ERP ทำให้พนักงานต้องสลับหน้าจอหรือใช้โปรแกรมแยกเพื่อเช็คใบสั่งผลิต (Operation Slips) และยอดสต๊อกวัตถุดิบ (Stock) ส่งผลให้เกิดความล่าช้าและต้องพึ่งพาทีม IT ตลอดเวลา</p>
+                            </div>
+                            <h4>✨ สิ่งที่พัฒนาสำเร็จในสัปดาห์นี้</h4>
+                            <ul>
+                                <li><strong>MCP System Setup:</strong> ตั้งค่า <code>sap-mssql</code> ผ่านระบบ AI Agent MCP Server เพื่อให้สามารถรันคำสั่ง Query ไปยัง SAP ได้อัตโนมัติในอนาคต</li>
+                                <li><strong>Independent Connection:</strong> สร้างไฟล์เชื่อมต่อ PDO (<code>sap_db.php</code>) ยิงตรงเข้า Server `10.0.0.4` (SNC-SAP) โดยไม่หน่วงฐานข้อมูลหลักของ MES</li>
+                                <li><strong>Smart Web Interface:</strong> พัฒนา Dashboard <code>SAP_Sync</code> ด้วยดีไซน์ล้ำสมัย (Dark Mode) รองรับการสลับ Tab พร้อมดึงชื่อคอลัมน์ของ SAP ออกมาแสดงผลแบบ <strong>Dynamic 100%</strong></li>
+                                <li><strong>Architectural Documentation:</strong> สรุปเอกสารโครงสร้างตาราง <code>View_OperationSlip_1820</code> (35 คอลัมน์) และ <code>View_SAP_ALL_STOCK</code> (8 คอลัมน์) ลงใน <code>SAP_INTEGRATION_DOC.md</code> อย่างสมบูรณ์แบบ</li>
+                            </ul>
+                            <div class="impact-box">
+                                <strong>Business Impact:</strong>
+                                ลดรอยต่อระหว่างหน้างานฝ่ายผลิต (MES) และระบบบัญชีส่วนกลาง (ERP) ทำให้พนักงานหน้างานสามารถตรวจสอบยอดสต๊อกและคำสั่งผลิตแบบเรียลไทม์ได้ด้วยตนเอง
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Module 7 -->
+                    <div class="module-item">
+                        <div class="module-header">
+                            <h3>7. QMS (Quality Management System)</h3>
+                            <span class="module-tag" style="background: #FEE2E2; color: #DC2626;">Bug Fix</span>
+                        </div>
+                        <div class="presentation-content">
+                            <div style="background: #F1F5F9; border-left: 4px solid var(--secondary); padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem;">
+                                <strong style="color: var(--text-primary); font-size: 1.05rem; display: block; margin-bottom: 0.5rem;">🎯 ปัญหา & เป้าหมายที่ต้องการแก้ไข</strong>
+                                <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">พบปัญหาผู้ใช้งานไม่สามารถกดขยายเวลาลิงก์ให้ลูกค้า (Extend CAR Link) ได้ ระบบแจ้งเตือน 500 Server Error เนื่องจากมีการส่งค่าประเภท String (nvarchar) เข้าไปยังฟังก์ชัน DATEADD ของ SQL Server ที่รองรับเฉพาะ Integer</p>
+                            </div>
+                            <h4>✨ สิ่งที่พัฒนาสำเร็จในสัปดาห์นี้</h4>
+                            <ul>
+                                <li><strong>SQL Type Casting:</strong> แก้ไขคำสั่ง SQL ใน <code>qms_action.php</code> โดยเพิ่มการทำ Type Casting <code>CAST(? AS INT)</code> เพื่อแปลงพารามิเตอร์ให้อยู่ในรูปแบบ Integer ก่อนส่งให้ <code>DATEADD</code> ทำให้ระบบขยายเวลากลับมาใช้งานได้ตามปกติ</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Module 8 -->
+                    <div class="module-item">
+                        <div class="module-header">
+                            <h3>8. MES Learning Hub & Team Planner (Standalone)</h3>
+                            <span class="module-tag major">Major Update</span>
+                        </div>
+                        <div class="presentation-content">
+                            <div style="background: #F1F5F9; border-left: 4px solid var(--secondary); padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem;">
+                                <strong style="color: var(--text-primary); font-size: 1.05rem; display: block; margin-bottom: 0.5rem;">🎯 ปัญหา & เป้าหมายที่ต้องการแก้ไข</strong>
+                                <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">ระบบศูนย์การเรียนรู้ยังขาดเนื้อหาเชิงสถาปัตยกรรม และตัวแอปพลิเคชัน Planner ไม่ควรนำมารวมในแอปเดียวกับระบบเรียนรู้ (Learning Hub) เพราะมีเป้าหมายการใช้งานที่แตกต่างกัน</p>
+                            </div>
+                            <h4>✨ สิ่งที่พัฒนาสำเร็จในสัปดาห์นี้</h4>
+                            <ul>
+                                <li><strong>Learning Hub (mes-learning-hub):</strong> เพิ่มเนื้อหา Course 3 (React + Vite Architecture) และ Course 4 (Enterprise System & Security) พร้อมย้ายหน้าคู่มือ <code>Team Workflow</code> เข้ามาไว้ในบทเรียนที่ 4 ของคอร์ส 3 อย่างสมบูรณ์</li>
+                                <li><strong>Standalone Planner (mes-team-planner):</strong> สร้างโปรเจกต์ SPA (Single Page Application) แยกร่างออกมาเด็ดขาด พัฒนาโครงสร้าง Layout Sidebar, Calendar View และ Kanban Task Board พร้อม Mock Data สำหรับใช้งาน</li>
+                                <li><strong>Vite Production Build:</strong> ปรับปรุงการตั้งค่า <code>base: './'</code> ใน <code>vite.config.js</code> ทำให้ Build และนำขึ้น Server ได้โดยไร้ปัญหาจอขาว</li>
+                            </ul>
+                            <div class="impact-box">
+                                <strong>Business Impact:</strong>
+                                ขยายความสามารถระบบ E-Learning ให้ครอบคลุมความรู้ด้านโครงสร้างระบบ และจัดระเบียบแอปพลิเคชันช่วยงานของทีมแบบ Standalone เพื่อการดูแลรักษาโค้ดที่ง่ายขึ้น (Modularity)
+                            </div>
                         </div>
                     </div>
 

@@ -131,7 +131,19 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
         return;
       }
       try {
-        const canvas = await html2canvas(chart, { backgroundColor: '#ffffff', scale: 2 });
+        const canvas = await html2canvas(chart, { 
+          backgroundColor: '#ffffff', 
+          scale: 2,
+          onclone: (clonedDoc) => {
+            const style = clonedDoc.createElement('style');
+            // Fix html2canvas vertical alignment bug with Thai fonts in flex containers
+            style.innerHTML = `
+              .export-fix-text { margin-top: -5px !important; }
+              .export-fix-avatar { margin-top: -2px !important; }
+            `;
+            clonedDoc.head.appendChild(style);
+          }
+        });
         const image = canvas.toDataURL('image/png');
         const link = document.createElement('a');
         link.href = image;
@@ -442,7 +454,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                               {progress > 0 && <div className="h-full bg-black/20" style={{ width: `${progress}%` }}></div>}
                             </div>
                             <div className="relative z-10 flex items-center w-full h-full px-2">
-                              <span className="font-semibold w-full leading-none truncate">{task.Title}</span>
+                              <span className="export-fix-text font-semibold w-full leading-tight truncate">{task.Title}</span>
                               {progress > 0 && <span className="text-[9px] font-bold opacity-90 ml-1 shrink-0">{progress}%</span>}
                             </div>
                           </div>
@@ -620,11 +632,11 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                             </div>
                             <div className="relative z-10 flex items-center gap-1.5 w-full h-full px-2">
                               {task.Assignee && (
-                                <div className={`w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold ${personColor.bg} text-white shadow-[0_0_2px_rgba(0,0,0,0.5)] border border-white/20`}>
+                                <div className={`export-fix-avatar w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold ${personColor.bg} text-white shadow-[0_0_2px_rgba(0,0,0,0.5)] border border-white/20`}>
                                   {(task.Assignee || 'U').charAt(0).toUpperCase()}
                                 </div>
                               )}
-                              <span className="font-semibold truncate w-full leading-none">{task.Title}</span>
+                              <span className="export-fix-text font-semibold truncate w-full leading-tight">{task.Title}</span>
                               {progress > 0 && <span className="text-[9px] font-bold opacity-90 ml-1 shrink-0">{progress}%</span>}
                             </div>
                           </div>
