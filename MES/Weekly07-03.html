@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Weekly Report - July 2026 (Week 3)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-light: #3B82F6;
+            --secondary: #475569;
+            --accent: #F59E0B;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --bg-color: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-primary: #1E293B;
+            --text-secondary: #64748B;
+            --border-color: #E2E8F0;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .header-title h1 {
+            margin: 0;
+            font-size: 2.2rem;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .header-title p {
+            margin: 0.5rem 0 0 0;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .badge {
+            background: var(--primary-light);
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .highlight-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .stat-box {
+            background: var(--bg-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .stat-box:nth-child(2)::before {
+            background: var(--success);
+        }
+
+        .stat-box:nth-child(3)::before {
+            background: var(--accent);
+        }
+
+        .stat-box:nth-child(4)::before {
+            background: var(--warning);
+        }
+
+        .stat-box:nth-child(5)::before {
+            background: #14B8A6;
+            /* Teal */
+        }
+
+        .stat-box:nth-child(6)::before {
+            background: #8B5CF6;
+            /* Violet */
+        }
+
+        .stat-icon {
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .module-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .module-item {
+            background: #FFFFFF;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .module-header {
+            background: linear-gradient(to right, #F8FAFC, #FFFFFF);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .module-header h3 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 1.25rem;
+        }
+
+        .module-tag {
+            background: #E0E7FF;
+            color: #4338CA;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .module-tag.major {
+            background: #FEF3C7;
+            color: #D97706;
+        }
+
+        .presentation-content {
+            padding: 1.5rem;
+        }
+
+        .presentation-content h4 {
+            color: var(--primary);
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .presentation-content ul {
+            margin: 0;
+            padding-left: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .presentation-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .presentation-content li strong {
+            color: var(--text-primary);
+        }
+
+        .impact-box {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #ECFDF5;
+            border: 1px solid #A7F3D0;
+            border-radius: 8px;
+            color: #065F46;
+        }
+
+        .impact-box strong {
+            display: block;
+            margin-bottom: 0.25rem;
+            color: #047857;
+        }
+
+        /* Schedule Table Styles */
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .schedule-table th {
+            background-color: #0E7490;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .schedule-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        .schedule-table tr:nth-child(even) {
+            background-color: #F8FAFC;
+        }
+
+        .schedule-table tr:hover {
+            background-color: #F1F5F9;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .tag-dev {
+            background: #F3E8FF;
+            color: #7E22CE;
+        }
+
+        .tag-support {
+            background: #E0F2FE;
+            color: #047857;
+        }
+
+        .tag-other {
+            background: #FEF3C7;
+            color: #B45309;
+        }
+
+        .status-complete {
+            color: var(--success);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title">
+                <h1>📊 Executive Weekly Report</h1>
+                <p>สรุปความคืบหน้าระบบประจำสัปดาห์ที่ 3 (วันที่ 13 - 19 กรกฎาคม 2026)</p>
+            </div>
+            <div class="badge">Programmer / Engineering</div>
+        </div>
+
+        <div class="grid-container">
+            <!-- Key Achievements -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>🚀 Key Weekly Achievements (สรุปไฮไลท์สำคัญ)</h2>
+                </div>
+                <div class="highlight-grid">
+                    <div class="stat-box" style="border-left-color: var(--primary);">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-value">OEE Team Filtering</div>
+                        <div class="stat-desc">อัปเกรดระบบ OEE Dashboard รองรับการวิเคราะห์ผลและกรองข้อมูลตามกะ/ทีมผลิต
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daily Schedule -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="card-header">
+                    <h2>🕒 Daily Work Management Schedule (13/07/26 - 19/07/26)</h2>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="schedule-table">
+                        <thead>
+                            <tr>
+                                <th>เริ่มต้น</th>
+                                <th>สิ้นสุด</th>
+                                <th>เวลา (Hrs)</th>
+                                <th>โมดูล / ระบบ</th>
+                                <th>สถานะ</th>
+                                <th>ประเภทงาน</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>13/07/2026 08:00</td>
+                                <td>13/07/2026 09:30</td>
+                                <td>4.0</td>
+                                <td>จัดทำเอกสาร Architecture, เพิ่มตัวกรอง Team Filter บนหน้า OEE Dashboard และแก้ไขบัค
+                                    UI กราฟ</td>
+                                <td class="status-complete">Complete ✓</td>
+                                <td><span class="tag tag-dev">&lt;/&gt; Web Develop</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Detailed Modules -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📋 System Modules Update (เจาะลึกรายละเอียดงาน)</h2>
+                </div>
+
+                <div class="module-list">
+
+                    <!-- Module 1 -->
+                    <div class="module-item">
+                        <div class="module-header">
+                            <h3>1. OEE Dashboard & Shopfloor Analytics</h3>
+                            <span class="module-tag major">Major Update</span>
+                        </div>
+                        <div class="presentation-content">
+                            <div
+                                style="background: #F1F5F9; border-left: 4px solid var(--secondary); padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem;">
+                                <strong
+                                    style="color: var(--text-primary); font-size: 1.05rem; display: block; margin-bottom: 0.5rem;">🎯
+                                    ปัญหา & เป้าหมายที่ต้องการแก้ไข</strong>
+                                <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">
+                                    ผู้บริหารและหัวหน้างานต้องการวิเคราะห์ข้อมูล OEE, ประสิทธิภาพ และของเสีย โดยแบ่งตาม
+                                    "ทีมผลิต (Team)" เพื่อเปรียบเทียบผลงานแต่ละกะ
+                                    แต่ระบบเดิมไม่รองรับการกรองข้อมูลระดับทีมบนหน้า OEE Dashboard
+                                    นอกจากนี้ยังมีปัญหาภาพกราฟิก UI เพี้ยนเมื่อสลับตัวกรองข้อมูล</p>
+                            </div>
+                            <h4>✨ สิ่งที่พัฒนาสำเร็จในสัปดาห์นี้</h4>
+                            <ul>
+                                <li>จัดทำเอกสารคู่มือ <strong>Architecture & Database Structure</strong> ของระบบ OEE
+                                    Dashboard ทั้งหมด เพื่อเป็นมาตรฐานในการพัฒนาต่อยอด</li>
+                                <li>อัปเกรด <strong>Stored Procedures 6 ตัว</strong> และปรับปรุง API
+                                    ให้รองรับพารามิเตอร์ <code>@Team</code> สำหรับวิเคราะห์ยอดผลิตและต้นทุนตามกะการทำงาน
+                                </li>
+                                <li>เพิ่มกล่องเลือก <strong>Team Filter</strong> ลงในแถบเครื่องมือของหน้า OEE Dashboard
+                                    & Shopfloor โดยดึงรายชื่อทีมจากฐานข้อมูลพนักงานแบบอัตโนมัติ</li>
+                                <li>แก้ไขบัคเชิงลึกของ <strong>HTML5 Canvas (Chart.js)</strong>
+                                    ที่ทำให้กราฟวงกลมวาดทับซ้อนกันจนเกิดเส้นสีประหลาดเวลาเปลี่ยนตัวกรอง (Context State
+                                    Corruption Fix)</li>
+                                <li>แก้ไขปัญหา <strong>CSS Border Rendering</strong> บนหน้าจอการ์ดสรุปยอดเงิน
+                                    (Revenue/Good/Scrap) ที่เส้นขอบ 1px ตีกันจนภาพแหว่ง
+                                    โดยปรับให้ไฮไลต์เฉพาะแถบสีหนาด้านซ้ายเท่านั้น</li>
+                            </ul>
+                            <div class="impact-box">
+                                <strong>Business Impact:</strong>
+                                ผู้บริหารสามารถติดตามประสิทธิภาพการผลิตและประเมินผลงาน (KPI) ของแต่ละทีม/กะ
+                                ได้อย่างแม่นยำ และระบบ UI
+                                ทำงานได้อย่างเสถียรไม่มีอาการกระตุกหรือกราฟิกแตกเมื่อดึงข้อมูลใหม่
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+
+</html>

@@ -428,7 +428,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                             draggable
                             onDragStart={(e) => handleDragStart(e, task)}
                             onClick={(e) => openEditModal(e, task)}
-                            className={`absolute rounded-lg border text-[11px] md:text-xs text-white px-2 py-0.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-grab active:cursor-grabbing hover:brightness-110 transition-all z-10 flex items-center overflow-hidden pointer-events-auto ${colorClass}`}
+                            className={`absolute rounded-lg border text-[11px] md:text-xs text-white shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-grab active:cursor-grabbing hover:brightness-110 transition-all z-10 pointer-events-auto ${colorClass}`}
                             style={{ 
                               left: `${leftPct}%`, 
                               width: `${widthPct}%`,
@@ -438,9 +438,13 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                             }}
                             title={`${task.Title}\nเวลา: ${task.startTime} - ${task.endTime}`}
                           >
-                            <span className={`font-semibold w-full leading-tight z-10 relative truncate`}>{task.Title}</span>
-                            {progress > 0 && <span className="text-[9px] font-bold opacity-80 z-10 relative ml-1 shrink-0">{progress}%</span>}
-                            {progress > 0 && <div className="absolute left-0 top-0 bottom-0 bg-black/20" style={{ width: `${progress}%` }}></div>}
+                            <div className="absolute inset-0 rounded-lg overflow-hidden pointer-events-none">
+                              {progress > 0 && <div className="h-full bg-black/20" style={{ width: `${progress}%` }}></div>}
+                            </div>
+                            <div className="relative z-10 flex items-center w-full h-full px-2">
+                              <span className="font-semibold w-full leading-none truncate">{task.Title}</span>
+                              {progress > 0 && <span className="text-[9px] font-bold opacity-90 ml-1 shrink-0">{progress}%</span>}
+                            </div>
                           </div>
                         );
                       })}
@@ -601,7 +605,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                             draggable
                             onDragStart={(e) => handleDragStart(e, task)}
                             onClick={(e) => openEditModal(e, task)}
-                            className={`absolute rounded-lg border text-[11px] md:text-xs text-white px-2 py-0.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-grab active:cursor-grabbing hover:brightness-110 transition-all z-10 flex items-center overflow-hidden pointer-events-auto ${colorClass}`}
+                            className={`absolute rounded-lg border text-[11px] md:text-xs text-white shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-grab active:cursor-grabbing hover:brightness-110 transition-all z-10 pointer-events-auto ${colorClass}`}
                             style={{ 
                               left: `${leftPct}%`, 
                               width: `${widthPct}%`,
@@ -611,15 +615,17 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                             }}
                             title={`${task.Title} (${task.Assignee || 'Unassigned'})\nเวลา: ${task.startTime} - ${task.endTime}`}
                           >
-                            <div className="flex items-center gap-1.5 w-full">
+                            <div className="absolute inset-0 rounded-lg overflow-hidden pointer-events-none">
+                              {progress > 0 && <div className="h-full bg-black/20" style={{ width: `${progress}%` }}></div>}
+                            </div>
+                            <div className="relative z-10 flex items-center gap-1.5 w-full h-full px-2">
                               {task.Assignee && (
                                 <div className={`w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold ${personColor.bg} text-white shadow-[0_0_2px_rgba(0,0,0,0.5)] border border-white/20`}>
                                   {(task.Assignee || 'U').charAt(0).toUpperCase()}
                                 </div>
                               )}
-                              <span className="font-semibold truncate w-full leading-tight z-10 relative">{task.Title}</span>
-                              {progress > 0 && <span className="text-[9px] font-bold opacity-80 z-10 relative ml-1 shrink-0">{progress}%</span>}
-                              {progress > 0 && <div className="absolute left-0 top-0 bottom-0 bg-black/20" style={{ width: `${progress}%` }}></div>}
+                              <span className="font-semibold truncate w-full leading-none">{task.Title}</span>
+                              {progress > 0 && <span className="text-[9px] font-bold opacity-90 ml-1 shrink-0">{progress}%</span>}
                             </div>
                           </div>
                         );

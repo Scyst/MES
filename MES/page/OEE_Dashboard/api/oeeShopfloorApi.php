@@ -38,6 +38,7 @@ $endDate = $_GET['endDate'] ?? date('Y-m-d');
 $line = (!empty($_GET['line']) && $_GET['line'] !== 'All') ? $_GET['line'] : null;
 $model = (!empty($_GET['model']) && $_GET['model'] !== 'All') ? $_GET['model'] : null;
 $machine = (!empty($_GET['machine']) && $_GET['machine'] !== 'All') ? $_GET['machine'] : null;
+$team = (!empty($_GET['team']) && $_GET['team'] !== 'All') ? $_GET['team'] : null;
 
 try {
     switch ($action) {
@@ -48,13 +49,15 @@ try {
             $models = $pdo->query($modelSql)->fetchAll(PDO::FETCH_COLUMN);
             $machineSql = "SELECT machine_id, machine_name, ISNULL(line, '') as line FROM dbo.PE_MACHINES WITH (NOLOCK) WHERE status = 'Active' ORDER BY machine_name ASC";
             $machines = $pdo->query($machineSql)->fetchAll(PDO::FETCH_ASSOC);
-            $response['data'] = ['lines' => $lines, 'models' => $models, 'machines' => $machines];
+            $teamSql = "SELECT DISTINCT team_group FROM " . USERS_TABLE . " WITH (NOLOCK) WHERE team_group IS NOT NULL AND team_group != '' ORDER BY team_group ASC";
+            $teams = $pdo->query($teamSql)->fetchAll(PDO::FETCH_COLUMN);
+            $response['data'] = ['lines' => $lines, 'models' => $models, 'machines' => $machines, 'teams' => $teams];
             $response['success'] = true;
             break;
 
         case 'getPieChart':
-            $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_PIE . " @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?, @MachineId = ?");
-            $stmt->execute([$startDate, $endDate, $line, $model, $machine]);
+            $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_PIE . " @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?, @MachineId = ?, @Team = ?");
+            $stmt->execute([$startDate, $endDate, $line, $model, $machine, $team]);
             $res = $stmt->fetch(PDO::FETCH_ASSOC);
             $response['data'] = [
                 "quality" => round((float)($res['Quality'] ?? 0), 1),
@@ -84,8 +87,8 @@ try {
                 $targetStartDate = $startDate;
                 $targetEndDate = $endDate;
             }
-            $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_LINE . " @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?, @MachineId = ?");
-            $stmt->execute([$targetStartDate, $targetEndDate, $line, $model, $machine]);
+            $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_LINE . " @StartDate = ?, @EndDate = ?, @Line = ?, @Model = ?, @MachineId = ?, @Team = ?");
+            $stmt->execute([$targetStartDate, $targetEndDate, $line, $model, $machine, $team]);
             $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($records as &$row) {
                 if (isset($row['date'])) $row['date'] = (new DateTime($row['date']))->format('d-m-y');
@@ -95,8 +98,8 @@ try {
             break;
 
         case 'getHourlySparklines':
-            $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_HOURLY . " @TargetDate = ?, @Line = ?, @Model = ?, @MachineId = ?");
-            $stmt->execute([$endDate, $line, $model, $machine]);
+            $stmt = $pdo->prepare("EXEC dbo." . SP_CALC_OEE_HOURLY . " @TargetDate = ?, @Line = ?, @Model = ?, @MachineId = ?, @Team = ?");
+            $stmt->execute([$endDate, $line, $model, $machine, $team]);
             $response['data'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $response['success'] = true;
             break;
@@ -129,6 +132,11 @@ try {
             if ($line) { $partCond[] = "l.production_line = ?"; $partParams[] = $line; }
             if ($model) { $partCond[] = "r.model = ?"; $partParams[] = $model; }
             if ($machine) { $partCond[] = "t.machine_id = ?"; $partParams[] = $machine; }
+            if ($team) { 
+                $partCond[] = "(u.team_group = ? OR t.notes LIKE ?)"; 
+                $partParams[] = $team; 
+                $partParams[] = '%[[]TEAM_OVERRIDE: ' . $team . ']%'; 
+            }
             $partWhere = "WHERE " . implode(" AND ", $partCond);
 
             $partSql = "SELECT 
@@ -142,6 +150,7 @@ try {
                         JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON t.parameter_id = i.item_id
                         LEFT JOIN " . LOCATIONS_TABLE . " l WITH (NOLOCK) ON t.to_location_id = l.location_id
                         LEFT JOIN " . ROUTES_TABLE . " r WITH (NOLOCK) ON t.parameter_id = r.item_id AND l.production_line = r.line
+                        LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON t.created_by_user_id = u.id
                         {$partWhere} 
                         AND t.quantity > 0
                         GROUP BY i.part_no, ISNULL(l.production_line, 'N/A'), ISNULL(r.model, 'N/A')
@@ -162,8 +171,8 @@ try {
             break;
 
         case 'getDailyProduction':
-            $stmt = $pdo->prepare("EXEC dbo." . SP_GET_DAILY_PROD . " @StartDate=?, @EndDate=?, @Line=?, @Model=?");
-            $stmt->execute([$startDate, $endDate, $line, $model]);
+            $stmt = $pdo->prepare("EXEC dbo." . SP_GET_DAILY_PROD . " @StartDate=?, @EndDate=?, @Line=?, @Model=?, @MachineId=?, @Team=?");
+            $stmt->execute([$startDate, $endDate, $line, $model, $machine, $team]);
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($results as &$r) {
                 if (isset($r['TotalQuantity'])) $r['TotalQuantity'] = (float)$r['TotalQuantity'];
@@ -174,11 +183,12 @@ try {
             break;
 
         case 'getCostSummary':
-            $stmtStd = $pdo->prepare("EXEC dbo." . SP_CALC_STD_COST . " @StartDate=:sd, @EndDate=:ed, @Line=:ln, @Model=:md");
+            $stmtStd = $pdo->prepare("EXEC dbo." . SP_CALC_STD_COST . " @StartDate=:sd, @EndDate=:ed, @Line=:ln, @Model=:md, @Team=:tm");
             $stmtStd->bindValue(':sd', $startDate);
             $stmtStd->bindValue(':ed', $endDate);
             $stmtStd->bindValue(':ln', empty($line) ? null : $line, PDO::PARAM_STR);
             $stmtStd->bindValue(':md', empty($model) ? null : $model, PDO::PARAM_STR);
+            $stmtStd->bindValue(':tm', empty($team) ? null : $team, PDO::PARAM_STR);
             $stmtStd->execute();
             $stdRes = $stmtStd->fetch(PDO::FETCH_ASSOC);
             

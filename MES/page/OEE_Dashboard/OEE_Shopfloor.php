@@ -53,10 +53,10 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
         .live-indicator { width: 10px; height: 10px; background-color: #198754; border-radius: 50%; display: inline-block; animation: pulse-green 2s infinite; margin-right: 8px; }
 
         .sf-card { border-radius: 16px; border-left: 6px solid #e2e8f0; text-align: center; padding: 20px !important; justify-content: center; }
-        .sf-card.revenue { border-color: #0d6efd; background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%); }
-        .sf-card.good { border-color: #198754; background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%); }
-        .sf-card.hold { border-color: #fd7e14; background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%); }
-        .sf-card.scrap { border-color: #dc3545; background: linear-gradient(180deg, #ffffff 0%, #fef2f2 100%); }
+        .sf-card.revenue { border-left-color: #0d6efd; background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%); }
+        .sf-card.good { border-left-color: #198754; background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%); }
+        .sf-card.hold { border-left-color: #fd7e14; background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%); }
+        .sf-card.scrap { border-left-color: #dc3545; background: linear-gradient(180deg, #ffffff 0%, #fef2f2 100%); }
         
         .sf-label { font-size: 1.2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #475569; }
         .sf-value { font-size: 3.5rem; font-weight: 900; line-height: 1.1; margin: 10px 0; font-family: 'Prompt', sans-serif; }
@@ -139,6 +139,9 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
                         </div>
                         <div class="d-flex align-items-center px-2 border-end filter-item">
                             <select id="machineFilter" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: 120px;"><option value="">All Machines</option></select>
+                        </div>
+                        <div class="d-flex align-items-center px-2 border-end filter-item">
+                            <select id="teamFilter" class="form-select form-select-sm border-0 bg-transparent fw-bold text-success" style="width: 120px;"><option value="">All Teams</option></select>
                         </div>
                         <div class="d-flex align-items-center px-2 date-item">
                             <input type="date" id="startDate" class="form-control form-control-sm border-0 bg-transparent fw-bold" style="width: 135px;">
@@ -310,7 +313,8 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
                 endDate: document.getElementById("endDate")?.value || '', 
                 line: document.getElementById("lineFilter")?.value || '', 
                 model: document.getElementById("modelFilter")?.value || '',
-                machine: document.getElementById("machineFilter")?.value || '' 
+                machine: document.getElementById("machineFilter")?.value || '',
+                team: document.getElementById("teamFilter")?.value || ''
             });
 
             try {

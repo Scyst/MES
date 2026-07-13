@@ -58,7 +58,8 @@ async function fetchAndRenderCostSummary() {
         endDate: document.getElementById("endDate")?.value || '', 
         line: document.getElementById("lineFilter")?.value || '', 
         model: document.getElementById("modelFilter")?.value || '',
-        machine: document.getElementById("machineFilter")?.value || ''
+        machine: document.getElementById("machineFilter")?.value || '',
+        team: document.getElementById("teamFilter")?.value || ''
     });
     const finCard = document.getElementById('financialSummaryCard');
     const sfRevCol = document.getElementById('sfRevenueCol');
@@ -173,6 +174,7 @@ async function applyFiltersAndInitCharts() {
         if (json.success) {
             populateSelectWithOptions(document.getElementById("lineFilter"), json.data.lines, "Lines", "");
             populateSelectWithOptions(document.getElementById("modelFilter"), json.data.models, "Models", "");
+            populateSelectWithOptions(document.getElementById("teamFilter"), json.data.teams, "Teams", "");
 
             if (json.data.machines && Array.isArray(json.data.machines)) {
                 window.allMachinesData = json.data.machines;
@@ -214,7 +216,8 @@ function handleFilterChange() {
         endDate: document.getElementById("endDate")?.value || '',
         line: document.getElementById("lineFilter")?.value || '',
         model: document.getElementById("modelFilter")?.value || '',
-        machine: document.getElementById("machineFilter")?.value || ''
+        machine: document.getElementById("machineFilter")?.value || '',
+        team: document.getElementById("teamFilter")?.value || ''
     });
     window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 
@@ -237,7 +240,7 @@ function startDashboardAutoUpdate() {
 
 window.addEventListener("load", () => {
     applyFiltersAndInitCharts();
-    ["startDate", "endDate", "lineFilter", "modelFilter", "machineFilter"].forEach(id => {
+    ["startDate", "endDate", "lineFilter", "modelFilter", "machineFilter", "teamFilter"].forEach(id => {
         document.getElementById(id)?.addEventListener("change", (e) => {
             if (id === "lineFilter") {
                 updateMachineDropdown(e.target.value);

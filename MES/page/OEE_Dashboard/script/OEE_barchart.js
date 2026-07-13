@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 let stopBarChartInstance = null;
 
 async function fetchAndRenderBarAndTable() {
@@ -7,10 +7,12 @@ async function fetchAndRenderBarAndTable() {
 
     const params = new URLSearchParams({
         action: 'getBarCharts',
-        startDate: document.getElementById("startDate").value,
-        endDate: document.getElementById("endDate").value,
-        line: document.getElementById("lineFilter").value,
-        model: document.getElementById("modelFilter").value,
+        startDate: document.getElementById("startDate")?.value || '',
+        endDate: document.getElementById("endDate")?.value || '',
+        line: document.getElementById("lineFilter")?.value || '',
+        model: document.getElementById("modelFilter")?.value || '',
+        machine: document.getElementById("machineFilter")?.value || '',
+        team: document.getElementById("teamFilter")?.value || '',
         stopCauseGroupBy: stopCauseGroupBy
     });
 

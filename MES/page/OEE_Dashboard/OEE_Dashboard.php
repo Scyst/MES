@@ -175,6 +175,9 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                         <div class="d-flex align-items-center px-2 border-end filter-item">
                             <select id="machineFilter" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: 120px;"><option value="">All Machines</option></select>
                         </div>
+                        <div class="d-flex align-items-center px-2 border-end filter-item">
+                            <select id="teamFilter" class="form-select form-select-sm border-0 bg-transparent fw-bold text-success" style="width: 120px;"><option value="">All Teams</option></select>
+                        </div>
                         <div class="d-flex align-items-center px-2 date-item">
                             <input type="date" id="startDate" class="form-control form-control-sm border-0 bg-transparent fw-bold" style="width: 135px;">
                             <span class="text-muted mx-1"><i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i></span>

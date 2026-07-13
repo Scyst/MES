@@ -71,7 +71,7 @@ function renderGaugeChart(chartName, canvasId, value, target, colorMain) {
                     const displayValue = currentData ? currentData.val : 0;
                     const displayColor = currentData ? currentData.color : '#000';
 
-                    ctx.restore();
+                    ctx.save();
                     ctx.font = `900 1.6rem "Prompt", sans-serif`;
                     ctx.textBaseline = "bottom";
                     ctx.fillStyle = displayColor;
@@ -81,7 +81,7 @@ function renderGaugeChart(chartName, canvasId, value, target, colorMain) {
                     const textY = chartArea.bottom - 5; 
                     
                     ctx.fillText(text, textX, textY);
-                    ctx.save();
+                    ctx.restore();
                 }
             }]
         };
@@ -92,10 +92,12 @@ function renderGaugeChart(chartName, canvasId, value, target, colorMain) {
 async function fetchAndRenderPieCharts() {
     const params = new URLSearchParams({
         action: 'getPieChart',
-        startDate: document.getElementById("startDate").value,
-        endDate: document.getElementById("endDate").value,
-        line: document.getElementById("lineFilter").value,
-        model: document.getElementById("modelFilter").value
+        startDate: document.getElementById("startDate")?.value || '',
+        endDate: document.getElementById("endDate")?.value || '',
+        line: document.getElementById("lineFilter")?.value || '',
+        model: document.getElementById("modelFilter")?.value || '',
+        machine: document.getElementById("machineFilter")?.value || '',
+        team: document.getElementById("teamFilter")?.value || ''
     });
 
     try {
@@ -145,10 +147,12 @@ async function fetchAndRenderLineCharts() {
 
     const params = new URLSearchParams({
         action: actionUrl,
-        startDate: document.getElementById("startDate").value,
-        endDate: document.getElementById("endDate").value,
-        line: document.getElementById("lineFilter").value,
-        model: document.getElementById("modelFilter").value
+        startDate: document.getElementById("startDate")?.value || '',
+        endDate: document.getElementById("endDate")?.value || '',
+        line: document.getElementById("lineFilter")?.value || '',
+        model: document.getElementById("modelFilter")?.value || '',
+        machine: document.getElementById("machineFilter")?.value || '',
+        team: document.getElementById("teamFilter")?.value || ''
     });
 
     try {
