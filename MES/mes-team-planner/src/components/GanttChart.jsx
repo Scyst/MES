@@ -124,25 +124,30 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
 
   const exportAsCSV = () => {
-    const headers = ['รหัสงาน', 'ชื่องาน', 'รายละเอียด', 'ผู้รับผิดชอบ', 'วันเริ่ม', 'วันสิ้นสุด', 'สถานะ', 'ความคืบหน้า (%)'];
-    const rows = tasks.map(t => [
-      `"${t.Id || ''}"`,
-      `"${(t.Title || '').replace(/"/g, '""')}"`,
-      `"${(t.Description || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
-      `"${t.Assignee || ''}"`,
-      `"${t.startDate ? t.startDate + (t.startTime ? ' ' + t.startTime : '') : ''}"`,
-      `"${t.dueDate ? t.dueDate + (t.endTime ? ' ' + t.endTime : '') : ''}"`,
-      `"${t.Status || ''}"`,
-      `"${t.Progress || 0}"`
-    ]);
-    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `mes_tasks_${new Date().toISOString().slice(0,10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    try {
+      const headers = ['รหัสงาน', 'ชื่องาน', 'รายละเอียด', 'ผู้รับผิดชอบ', 'วันเริ่ม', 'วันสิ้นสุด', 'สถานะ', 'ความคืบหน้า (%)'];
+      const rows = tasks.map(t => [
+        `"${t.Id || ''}"`,
+        `"${String(t.Title || '').replace(/"/g, '""')}"`,
+        `"${String(t.Description || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+        `"${t.Assignee || ''}"`,
+        `"${t.startDate ? t.startDate + (t.startTime ? ' ' + t.startTime : '') : ''}"`,
+        `"${t.dueDate ? t.dueDate + (t.endTime ? ' ' + t.endTime : '') : ''}"`,
+        `"${t.Status || ''}"`,
+        `"${t.Progress || 0}"`
+      ]);
+      const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `mes_tasks_${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('CSV Export Error:', error);
+      alert('เกิดข้อผิดพลาดในการดาวน์โหลด CSV: ' + error.message);
+    }
   };
 
   const exportAsImage = async () => {
@@ -262,7 +267,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* ═══ Toolbar ═══ */}
-      <div className="flex flex-col gap-3 mb-4 shrink-0">
+      <div className="flex flex-col gap-3 mb-4 shrink-0 relative z-30">
         <div className="flex flex-row flex-nowrap overflow-x-auto items-center justify-between gap-3 custom-scrollbar pb-1 -mb-1">
           {/* Left Group: View Toggle + Date Nav */}
           <div className="flex items-center gap-3 shrink-0">
