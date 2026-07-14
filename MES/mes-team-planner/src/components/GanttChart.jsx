@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { format, addDays, subDays, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { FiChevronLeft, FiChevronRight, FiSearch, FiPlus, FiX, FiUsers, FiUser, FiDownload } from 'react-icons/fi';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import AddTaskModal from './AddTaskModal';
 
 // Assign stable colors to assignees
@@ -125,28 +125,23 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   const exportAsImage = async () => {
     setIsExporting(true);
     setTimeout(async () => {
-      const chart = document.getElementById('gantt-chart-container');
+      // Find the inner content instead of the scrollable container to avoid cutting off data
+      const chart = document.getElementById('gantt-export-target');
       if (!chart) {
         setIsExporting(false);
         return;
       }
       try {
-        const canvas = await html2canvas(chart, { 
-          backgroundColor: '#ffffff', 
-          scale: 2,
-          onclone: (clonedDoc) => {
-            const style = clonedDoc.createElement('style');
-            // Fix html2canvas vertical alignment bug with Thai fonts in flex containers
-            style.innerHTML = `
-              .export-fix-text { margin-top: -5px !important; }
-              .export-fix-avatar { margin-top: -2px !important; }
-            `;
-            clonedDoc.head.appendChild(style);
+        // Use html-to-image which properly handles SVG, flexbox text baselines (Thai fonts), and overflow
+        const dataUrl = await toPng(chart, {
+          backgroundColor: '#ffffff',
+          pixelRatio: 2,
+          style: {
+            margin: '0', // Reset any potential margins
           }
         });
-        const image = canvas.toDataURL('image/png');
         const link = document.createElement('a');
-        link.href = image;
+        link.href = dataUrl;
         link.download = `Schedule-${format(currentDate, 'yyyy-MM-dd')}.png`;
         link.click();
       } catch (err) {
@@ -154,7 +149,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
       } finally {
         setIsExporting(false);
       }
-    }, 100);
+    }, 150);
   };
 
   const currentDateStr = format(currentDate, 'yyyy-MM-dd');
@@ -328,10 +323,9 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
         )}
       </div>
 
-      {/* ═══ DAILY VIEW ═══ */}
       {viewMode === 'daily' && (
-        <div id="gantt-chart-container" className="flex-1 overflow-auto border border-slate-200 dark:border-slate-700/80 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 relative">
-          <div className="min-w-[1200px]">
+        <div className="flex-1 overflow-auto border border-slate-200 dark:border-slate-700/80 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 relative">
+          <div id="gantt-export-target" className="min-w-[1200px] bg-slate-50 dark:bg-slate-800/20">
             
             {/* Header Row (Hours) */}
             <div className="flex border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-slate-50 dark:bg-slate-800 z-20 shadow-md">
@@ -454,7 +448,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                               {progress > 0 && <div className="h-full bg-black/20" style={{ width: `${progress}%` }}></div>}
                             </div>
                             <div className="relative z-10 flex items-center w-full h-full px-2">
-                              <span className="export-fix-text font-semibold w-full leading-tight truncate">{task.Title}</span>
+                              <span className="font-semibold w-full leading-tight truncate">{task.Title}</span>
                               {progress > 0 && <span className="text-[9px] font-bold opacity-90 ml-1 shrink-0">{progress}%</span>}
                             </div>
                           </div>
@@ -478,7 +472,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
       {/* ═══ MONTHLY VIEW ═══ */}
       {viewMode === 'monthly' && (
         <div className="flex-1 overflow-auto border border-slate-200 dark:border-slate-700/80 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 relative shadow-inner">
-          <div className="min-w-[1200px]">
+          <div id="gantt-export-target" className="min-w-[1200px] bg-slate-50 dark:bg-slate-800/20">
             
             {/* Header Row (Hours) */}
             <div className="flex border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-slate-50 dark:bg-slate-800 z-30 shadow-md">
@@ -632,11 +626,11 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                             </div>
                             <div className="relative z-10 flex items-center gap-1.5 w-full h-full px-2">
                               {task.Assignee && (
-                                <div className={`export-fix-avatar w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold ${personColor.bg} text-white shadow-[0_0_2px_rgba(0,0,0,0.5)] border border-white/20`}>
+                                <div className={`w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold ${personColor.bg} text-white shadow-[0_0_2px_rgba(0,0,0,0.5)] border border-white/20`}>
                                   {(task.Assignee || 'U').charAt(0).toUpperCase()}
                                 </div>
                               )}
-                              <span className="export-fix-text font-semibold truncate w-full leading-tight">{task.Title}</span>
+                              <span className="font-semibold truncate w-full leading-tight">{task.Title}</span>
                               {progress > 0 && <span className="text-[9px] font-bold opacity-90 ml-1 shrink-0">{progress}%</span>}
                             </div>
                           </div>

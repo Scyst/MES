@@ -30,6 +30,9 @@ axios.interceptors.request.use(config => {
       config.url = `api/${baseMatch[1]}.php`;
       return config;
     }
+    
+    // Fallback: strip leading slash so it resolves relatively (e.g. /api/comments.php -> api/comments.php)
+    config.url = url.substring(1);
   }
   return config;
 });
