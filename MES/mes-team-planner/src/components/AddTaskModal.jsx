@@ -202,7 +202,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
           
           {/* GENERAL TAB */}
           {activeTab === 'general' && (
-            <form id="task-form" onSubmit={handleSubmit} className="p-5 pb-32 space-y-4">
+            <form id="task-form" onSubmit={handleSubmit} className="p-5 flex flex-col h-full gap-4">
               {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">ชื่องาน</label>
@@ -210,9 +210,9 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               </div>
 
               {/* Description */}
-              <div>
+              <div className="flex flex-col flex-1 min-h-[120px]">
                 <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">รายละเอียด</label>
-                <textarea name="description" value={formData.description} onChange={handleChange} rows={3} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm resize-none placeholder-slate-500" placeholder="หมายเหตุ, ขั้นตอน..." />
+                <textarea name="description" value={formData.description} onChange={handleChange} className="flex-1 w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm resize-none placeholder-slate-500" placeholder="หมายเหตุ, ขั้นตอน..." />
               </div>
 
               {/* Status, Priority, Assignee */}
