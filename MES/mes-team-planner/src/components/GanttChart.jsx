@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { format, addDays, subDays, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns';
-import { FiChevronLeft, FiChevronRight, FiSearch, FiPlus, FiX, FiUsers, FiUser, FiDownload } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiSearch, FiPlus, FiX, FiUsers, FiUser, FiDownload, FiFileText } from 'react-icons/fi';
 import { toPng } from 'html-to-image';
 import AddTaskModal from './AddTaskModal';
 
@@ -121,6 +121,28 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   const prevDay = () => setCurrentDate(subDays(currentDate, 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+
+  const exportAsCSV = () => {
+    const headers = ['รหัสงาน', 'ชื่องาน', 'รายละเอียด', 'ผู้รับผิดชอบ', 'วันเริ่ม', 'วันสิ้นสุด', 'สถานะ', 'ความคืบหน้า (%)'];
+    const rows = tasks.map(t => [
+      `"${t.Id || ''}"`,
+      `"${(t.Title || '').replace(/"/g, '""')}"`,
+      `"${(t.Description || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+      `"${t.Assignee || ''}"`,
+      `"${t.StartDate || ''}"`,
+      `"${t.EndDate || ''}"`,
+      `"${t.Status || ''}"`,
+      `"${t.Progress || 0}"`
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `mes_tasks_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const exportAsImage = async () => {
     setIsExporting(true);
@@ -300,7 +322,14 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
               className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-emerald-900/20 flex items-center gap-1.5 hidden md:flex"
               title="ดาวน์โหลดเป็นรูปภาพ"
             >
-              <FiDownload className="text-sm" /> ดาวน์โหลด
+              <FiDownload className="text-sm" /> รูปภาพ (PNG)
+            </button>
+            <button 
+              onClick={exportAsCSV}
+              className="bg-sky-600 hover:bg-sky-500 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-sky-900/20 flex items-center gap-1.5 hidden md:flex"
+              title="ดาวน์โหลดเป็นข้อมูล Excel/CSV"
+            >
+              <FiFileText className="text-sm" /> ข้อมูล (CSV)
             </button>
             <button 
               onClick={() => { setEditingTask(null); setIsModalOpen(true); }}
