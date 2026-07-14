@@ -268,7 +268,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
     <div className="flex flex-col h-full overflow-hidden">
       {/* ═══ Toolbar ═══ */}
       <div className="flex flex-col gap-3 mb-4 shrink-0 relative z-30">
-        <div className="flex flex-row flex-nowrap overflow-x-auto items-center justify-between gap-3 custom-scrollbar pb-1 -mb-1">
+        <div className="flex flex-row flex-nowrap md:flex-wrap overflow-x-auto md:overflow-visible items-center justify-between gap-3 custom-scrollbar pb-1 -mb-1">
           {/* Left Group: View Toggle + Date Nav */}
           <div className="flex items-center gap-3 shrink-0">
             {/* View Mode Toggle */}
