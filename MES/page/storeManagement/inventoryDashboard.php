@@ -192,6 +192,7 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                         <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10 text-primary" href="inventoryDashboard.php"><i class="fas fa-boxes fa-fw me-2"></i> Stock Inventory (ยอดคงคลัง)</a></li>
                                         <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> Stock Receiving (รับเข้า/สร้าง Tag)</a></li>
                                         <li><a class="dropdown-item py-2 fw-bold" href="stockTransaction.php"><i class="fas fa-history text-secondary fa-fw me-2"></i> Stock Transaction (ประวัติฯ)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold text-success" href="tagHistoryTest.php"><i class="fas fa-search-location fa-fw me-2"></i> Trace Tag (ค้นหาประวัติแท็ก)</a></li>
                                     </ul>
                                 </div>
 

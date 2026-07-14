@@ -1074,9 +1074,13 @@ try {
 
 
             if (!empty($search)) {
-                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR t.notes LIKE ?)";
+                $conditions[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR t.reference_id LIKE ? OR t.notes LIKE ? 
+                    OR (t.reference_id LIKE 'REQ-%' AND EXISTS (
+                        SELECT 1 FROM dbo.RM_SERIAL_TAGS tag WITH (NOLOCK) 
+                        WHERE tag.serial_no LIKE ? AND tag.remark LIKE '%' + t.reference_id + '%'
+                    )))";
                 $searchWildcard = "%$search%";
-                $params = array_merge($params, array_fill(0, 4, $searchWildcard));
+                $params = array_merge($params, array_fill(0, 5, $searchWildcard));
             }
 
             $whereClause = implode(" AND ", $conditions);
@@ -1100,7 +1104,7 @@ try {
                     FROM dbo.STOCK_TRANSACTIONS t WITH (NOLOCK)
                     LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
                     LEFT JOIN dbo.LOCATIONS loc_from WITH (NOLOCK) ON t.from_location_id = loc_from.location_id
-                    JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
+                    LEFT JOIN dbo.LOCATIONS loc_to WITH (NOLOCK) ON t.to_location_id = loc_to.location_id
                     LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
                     LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
                     WHERE $whereClause
@@ -1915,10 +1919,15 @@ try {
 
             $history = [];
             if ($tagInfo['status'] != 'PENDING') {
+                $isWip = strpos($tagInfo['serial_no'], '-W') !== false;
                 $history[] = [
-                    'transaction_timestamp' => $tagInfo['created_at'], 'transaction_type' => 'RECEIVE_RM',
-                    'quantity' => $tagInfo['total_qty'] ?? $tagInfo['qty_per_pallet'],
-                    'notes' => 'รับเข้าสต็อก (สแกนรับของเข้า)', 'actor_name' => $tagInfo['actor_name'] ?? 'System'
+                    'transaction_timestamp' => $tagInfo['created_at'], 
+                    'transaction_type' => 'RECEIVE_RM',
+                    'quantity_changed' => $tagInfo['total_qty'] ?? $tagInfo['qty_per_pallet'],
+                    'notes' => $isWip ? 'สร้างแท็กลูกและโอนเข้า WIP (Cloned & Received to WIP)' : 'รับเข้าสต็อก (สแกนรับของเข้า)', 
+                    'actor_name' => $tagInfo['actor_name'] ?? 'System',
+                    'reference_id' => $tagInfo['po_number'] ?? null,
+                    'to_loc' => $tagInfo['location_name'] ?? ($isWip ? 'WIP' : 'Store')
                 ];
             }
 
@@ -1932,6 +1941,127 @@ try {
                 $transStmt->execute([$tagInfo['po_number']]);
                 $history = array_merge($history, $transStmt->fetchAll(PDO::FETCH_ASSOC));
             }
+
+            $response = ['success' => true, 'data' => ['tag_info' => $tagInfo, 'history' => $history]];
+            break;
+
+        case 'trace_tag_v2':
+            $barcode = isset($_GET['serial_no']) ? trim($_GET['serial_no']) : '';
+            if (empty($barcode)) throw new Exception("ระบุ Barcode");
+
+            $sqlTag = "SELECT 
+                        MAX(ISNULL(t.master_pallet_no, t.serial_no)) AS serial_no, 
+                        MAX(t.master_pallet_no) AS master_pallet_no,
+                        CASE WHEN COUNT(DISTINCT i.item_id) > 1 THEN 'MIXED PARTS' ELSE MAX(i.part_no) END AS item_no, 
+                        CASE WHEN COUNT(DISTINCT i.item_id) > 1 THEN 'พาเลทรวมชนิด (Consolidated Pallet)' ELSE MAX(i.part_description) END AS part_description, 
+                        MAX(t.description_ref) AS description_ref, MAX(t.category) AS category,
+                        SUM(t.qty_per_pallet) AS qty_per_pallet, SUM(t.current_qty) AS current_qty, 
+                        COUNT(t.serial_no) AS total_tags, COUNT(DISTINCT i.item_id) AS distinct_items,
+                        SUM(t.qty_per_pallet) AS total_qty, MAX(t.pallet_no) AS pallet_no, MAX(t.ctn_number) AS ctn_number,
+                        MAX(t.week_no) AS week_no, MAX(t.po_number) AS po_number, MAX(t.received_date) AS received_date,
+                        MAX(t.warehouse_no) AS warehouse_no, MAX(t.status) AS status, MAX(t.remark) AS remark,
+                        MAX(u.fullname) AS actor_name, MAX(t.created_at) AS created_at
+                    FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
+                    LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                    LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by = u.id
+                    WHERE t.serial_no = ? OR (t.master_pallet_no = ? AND ? NOT LIKE 'RM-%') OR t.ctn_number = ?";
+            
+            $stmtTag = $pdo->prepare($sqlTag);
+            $stmtTag->execute([$barcode, $barcode, $barcode, $barcode]);
+            $tagInfo = $stmtTag->fetch(PDO::FETCH_ASSOC);
+
+            if (!$tagInfo || empty($tagInfo['item_no'])) {
+                try {
+                    $delStmt = $pdo->prepare("SELECT d.deleted_at, u.fullname FROM dbo.DELETED_SERIAL_TAGS d LEFT JOIN dbo.USERS u ON d.deleted_by = u.id WHERE d.serial_no = ?");
+                    $delStmt->execute([$barcode]);
+                    $delInfo = $delStmt->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $delInfo = false; }
+                
+                if (!empty($delInfo)) {
+                    $dateDel = date('d/m/Y H:i', strtotime($delInfo['deleted_at']));
+                    $userDel = $delInfo['fullname'] ?? 'Unknown';
+                    throw new Exception("ถูกลบเมื่อ $dateDel โดย $userDel");
+                }
+                throw new Exception('ไม่พบระบุ');
+            }
+
+            if ($tagInfo['total_tags'] <= 1 && empty($tagInfo['master_pallet_no'])) {
+                unset($tagInfo['total_tags']);
+                unset($tagInfo['total_qty']);
+            }
+
+            $history = [];
+            
+            if ($tagInfo['status'] != 'PENDING') {
+                $history[] = [
+                    'transaction_timestamp' => $tagInfo['created_at'], 
+                    'transaction_type' => 'RECEIVE_RM',
+                    'quantity_changed' => $tagInfo['total_qty'] ?? $tagInfo['qty_per_pallet'],
+                    'notes' => 'รับเข้าสต็อก (Tag Created)', 
+                    'actor_name' => $tagInfo['actor_name'] ?? 'System'
+                ];
+            }
+
+            $tagTransSql = "SELECT t.transaction_timestamp, t.transaction_type, t.quantity_changed, t.notes, ISNULL(e.name_th, u.username) AS actor_name, t.reference_id
+                            FROM dbo.TAG_TRANSACTIONS t WITH (NOLOCK)
+                            LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                            LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                            WHERE t.serial_no = ? OR t.serial_no = ?";
+            $tagTransStmt = $pdo->prepare($tagTransSql);
+            $tagTransStmt->execute([$barcode, $tagInfo['serial_no']]);
+            $explicitLogs = $tagTransStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $implicitSql = "SELECT t.transaction_timestamp, t.transaction_type, t.quantity AS quantity_changed, t.notes, ISNULL(e.name_th, u.username) AS actor_name, t.reference_id,
+                            lf.location_name AS from_loc, lt.location_name AS to_loc
+                            FROM dbo.STOCK_TRANSACTIONS t WITH (NOLOCK)
+                            LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                            LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                            LEFT JOIN dbo.LOCATIONS lf WITH (NOLOCK) ON t.from_location_id = lf.location_id
+                            LEFT JOIN dbo.LOCATIONS lt WITH (NOLOCK) ON t.to_location_id = lt.location_id
+                            WHERE t.reference_id LIKE 'REQ-%' AND EXISTS (
+                                SELECT 1 FROM dbo.RM_SERIAL_TAGS tag WITH (NOLOCK) 
+                                WHERE (tag.serial_no = ? OR tag.serial_no = ?) 
+                                  AND tag.remark LIKE '%' + t.reference_id + '%'
+                            )";
+            $implicitStmt = $pdo->prepare($implicitSql);
+            $implicitStmt->execute([$barcode, $tagInfo['serial_no']]);
+            $implicitLogs = $implicitStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            $merged = [];
+            foreach ($explicitLogs as $log) {
+                $key = $log['reference_id'] . '_' . $log['transaction_type'];
+                $merged[$key] = $log;
+            }
+            foreach ($implicitLogs as $log) {
+                // Filter out RECEIVE_WIP entirely for RM tags (it belongs to the child)
+                // For WIP tags, we also filter it out because they already get a 'Tag Created' event at the beginning
+                $isWipTag = strpos($tagInfo['serial_no'], '-W') !== false;
+                if ($log['transaction_type'] === 'RECEIVE_WIP') continue;
+                if ($isWipTag && $log['transaction_type'] === 'ISSUE_STORE') continue;
+                
+                $key = $log['reference_id'] . '_' . $log['transaction_type'];
+                if (!isset($merged[$key])) {
+                    $merged[$key] = $log;
+                }
+            }
+            
+            $history = array_merge($history, array_values($merged));
+            
+            // Try to find if any child tags were cloned during these issues
+            $findChildStmt = $pdo->prepare("SELECT serial_no FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE serial_no LIKE ? + '-W%' AND remark LIKE '%' + ? + '%'");
+            foreach ($history as &$hItem) {
+                if (strpos($hItem['transaction_type'], 'ISSUE') !== false && !empty($hItem['reference_id'])) {
+                    $findChildStmt->execute([$tagInfo['serial_no'], $hItem['reference_id']]);
+                    $children = $findChildStmt->fetchAll(PDO::FETCH_COLUMN);
+                    if (!empty($children)) {
+                        $hItem['notes'] .= " (โคลนไปที่: " . implode(', ', $children) . ")";
+                    }
+                }
+            }
+            unset($hItem);
+            usort($history, function($a, $b) {
+                return strtotime($a['transaction_timestamp']) - strtotime($b['transaction_timestamp']);
+            });
 
             $response = ['success' => true, 'data' => ['tag_info' => $tagInfo, 'history' => $history]];
             break;
