@@ -1,12 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FiX } from 'react-icons/fi';
 
 export default function MultiSelectInput({ value = '', onChange, suggestions = [], placeholder = '' }) {
   const [inputValue, setInputValue] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [dropdownStyle, setDropdownStyle] = useState({});
   const inputRef = useRef(null);
   const wrapperRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   const tags = value.split(',').map(t => t.trim()).filter(Boolean);
 
@@ -15,9 +18,46 @@ export default function MultiSelectInput({ value = '', onChange, suggestions = [
     s => s.toLowerCase().includes(searchStr) && !tags.includes(s)
   );
 
+  const updatePosition = () => {
+    if (wrapperRef.current && showDropdown) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const dropdownHeight = 192; // max-h-48
+      
+      let top = rect.bottom + 4; // mt-1
+      let maxH = 192;
+      
+      if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+        top = rect.top - Math.min(dropdownHeight, spaceAbove - 10) - 4;
+        maxH = Math.min(dropdownHeight, spaceAbove - 10);
+      }
+
+      setDropdownStyle({
+        position: 'fixed',
+        top: `${top}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        maxHeight: `${maxH}px`,
+        zIndex: 999999
+      });
+    }
+  };
+
+  useEffect(() => {
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [showDropdown, tags.length]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target) &&
+          (!dropdownRef.current || !dropdownRef.current.contains(event.target))) {
         setShowDropdown(false);
       }
     };
@@ -70,13 +110,13 @@ export default function MultiSelectInput({ value = '', onChange, suggestions = [
   return (
     <div className="relative w-full" ref={wrapperRef}>
       <div 
-        className="flex flex-wrap items-center gap-1.5 w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-2 min-h-[44px] max-h-[88px] overflow-y-auto custom-scrollbar cursor-text transition-all focus-within:ring-2 focus-within:ring-indigo-500"
+        className="flex flex-row flex-nowrap items-center gap-1.5 w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-2 h-[44px] overflow-x-auto overflow-y-hidden custom-scrollbar cursor-text transition-all focus-within:ring-2 focus-within:ring-indigo-500"
         onClick={() => inputRef.current?.focus()}
       >
         {tags.map((tag, idx) => (
           <span 
             key={idx} 
-            className="flex items-center gap-1 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg text-[13px] font-medium border border-indigo-200 dark:border-indigo-500/30"
+            className="flex items-center gap-1 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg text-[13px] font-medium border border-indigo-200 dark:border-indigo-500/30 shrink-0 whitespace-nowrap"
           >
             {tag}
             <button 
@@ -100,14 +140,18 @@ export default function MultiSelectInput({ value = '', onChange, suggestions = [
           }}
           onKeyDown={handleKeyDown}
           onFocus={() => setShowDropdown(true)}
-          className="flex-1 min-w-[80px] bg-transparent outline-none text-slate-900 dark:text-white text-sm placeholder-slate-500 p-1"
+          className="flex-1 min-w-[100px] shrink-0 bg-transparent outline-none text-slate-900 dark:text-white text-sm placeholder-slate-500 p-1"
           placeholder={tags.length === 0 ? placeholder : ''}
         />
       </div>
 
       {/* Dropdown Suggestions */}
-      {showDropdown && filteredSuggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50 overflow-hidden max-h-48 overflow-y-auto animate-slide-up">
+      {showDropdown && filteredSuggestions.length > 0 && typeof document !== 'undefined' && createPortal(
+        <div 
+          ref={dropdownRef}
+          style={dropdownStyle}
+          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl overflow-y-auto animate-slide-up"
+        >
           {filteredSuggestions.map((suggestion, idx) => (
             <div
               key={idx}
@@ -121,7 +165,8 @@ export default function MultiSelectInput({ value = '', onChange, suggestions = [
               {suggestion}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
