@@ -195,11 +195,12 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                                         <th class="text-center" style="min-width: 120px;">ประเภท (Type)</th>
                                         <th class="text-end" style="width: 100px;">จำนวน (Qty)</th>
                                         <th class="text-center" style="min-width: 100px;">สถานะ</th>
+                                        <th style="min-width: 130px;">โลเคชั่น (Location)</th>
                                         <th style="min-width: 120px;">ผู้ทำรายการ</th>
                                     </tr>
                                 </thead>
                                 <tbody id="recentTagsTableBody">
-                                    <tr><td colspan="7" class="text-center py-4 text-muted">กำลังโหลดข้อมูล...</td></tr>
+                                    <tr><td colspan="8" class="text-center py-4 text-muted">กำลังโหลดข้อมูล...</td></tr>
                                 </tbody>
                             </table>
                         </div>

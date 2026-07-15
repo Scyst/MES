@@ -1998,12 +1998,13 @@ try {
                     i.part_description,
                     i.part_no,
                     t.status,
-                    t.warehouse_no as location
+                    ISNULL(l.location_name, t.warehouse_no) as location
                 FROM RecentTags rt
                 JOIN dbo.TAG_TRANSACTIONS tt WITH (NOLOCK) ON rt.serial_no = tt.serial_no AND rt.max_date = tt.transaction_timestamp
                 JOIN dbo.RM_SERIAL_TAGS t WITH (NOLOCK) ON rt.serial_no = t.serial_no
                 LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
                 LEFT JOIN dbo.USERS u WITH (NOLOCK) ON tt.created_by_user_id = u.id
+                LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON t.location_id = l.location_id
                 ORDER BY rt.max_date DESC
             ";
             $stmt = $pdo->query($sqlRecent);
