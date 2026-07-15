@@ -25,7 +25,10 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
             .dashboard-header-sticky { top: 56px; }
         }
         .kpi-card { transition: transform 0.2s; border-top: none !important; border-right: none !important; border-bottom: none !important; border-left: 4px solid !important; }
-        .label-micro { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: #9ca3af; }
+        /* Modal Tag Info */
+        .tag-label { font-size: 0.72rem; color: #6b7280; font-weight: 600; margin-bottom: 4px; }
+        .tag-value { font-size: 0.95rem; font-weight: 700; color: #111827; line-height: 1.3; }
+        .tag-sub   { font-size: 0.82rem; font-weight: 600; color: #6b7280; }
     </style>
 </head>
 <body class="layout-top-header bg-body-tertiary">
@@ -219,53 +222,29 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                 </div>
                 <div class="modal-body bg-body-tertiary p-3">
 
-                    <!-- Tag Info Summary: Left = Identity, Right = 2x2 Stats -->
-                    <div class="row g-3 align-items-stretch mb-3">
-
-                        <!-- Left: Identity Card -->
-                        <div class="col-md-5">
-                            <div class="bg-white rounded border p-3 h-100 d-flex flex-column justify-content-center">
-                                <div class="label-micro">หมายเลขแท็ก (Serial No.)</div>
-                                <div class="fw-bold text-primary text-truncate mt-1" style="font-size:1.25rem; line-height:1.3;" id="lblSerialNo">-</div>
-                                <div class="text-muted fw-semibold mt-1" style="font-size:0.8rem;" id="lblItemNo">-</div>
-                                <hr class="my-2">
-                                <div class="label-micro">รายละเอียด (Description)</div>
-                                <div class="text-dark fw-semibold mt-1" style="font-size:0.85rem; line-height:1.4;" id="lblPartDesc">-</div>
+                    <!-- Tag Info Summary -->
+                    <div class="bg-white border rounded p-3 mb-3">
+                        <div class="row g-0">
+                            <div class="col-md-3 pe-3 border-end">
+                                <div class="tag-label">หมายเลขแท็ก (Serial No.)</div>
+                                <div class="tag-value text-primary" id="lblSerialNo">-</div>
+                                <div class="tag-sub" id="lblItemNo">-</div>
+                            </div>
+                            <div class="col-md-4 px-3 border-end">
+                                <div class="tag-label">รายละเอียด (Description)</div>
+                                <div class="tag-value" id="lblPartDesc">-</div>
+                            </div>
+                            <div class="col-md-2 px-3 border-end">
+                                <div class="tag-label">จำนวน / สถานะ</div>
+                                <div class="tag-value text-success" id="lblQty">-</div>
+                                <div class="tag-sub mt-1" id="lblStatus">-</div>
+                            </div>
+                            <div class="col-md-3 ps-3">
+                                <div class="tag-label">PO / REF NO.</div>
+                                <div class="tag-value" id="lblPo">-</div>
+                                <div class="tag-sub mt-1"><i class="fas fa-map-marker-alt text-danger me-1"></i><span id="lblLocation">-</span></div>
                             </div>
                         </div>
-
-                        <!-- Right: 2x2 Stats Grid -->
-                        <div class="col-md-7">
-                            <div class="row g-3 h-100">
-                                <div class="col-6">
-                                    <div class="bg-white rounded border p-3 h-100">
-                                        <div class="label-micro">จำนวนปัจจุบัน (Qty)</div>
-                                        <div class="fw-bold text-success mt-2" style="font-size:1.3rem;" id="lblQty">-</div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="bg-white rounded border p-3 h-100">
-                                        <div class="label-micro">สถานะ (Status)</div>
-                                        <div class="fw-bold mt-2" style="font-size:1rem;" id="lblStatus">-</div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="bg-white rounded border p-3 h-100">
-                                        <div class="label-micro">PO / REF NO.</div>
-                                        <div class="text-dark fw-semibold mt-2" style="font-size:0.95rem;" id="lblPo">-</div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="bg-white rounded border p-3 h-100">
-                                        <div class="label-micro">คลัง / โลเคชั่น</div>
-                                        <div class="text-dark fw-semibold mt-2" style="font-size:0.95rem;">
-                                            <i class="fas fa-map-marker-alt text-danger me-1"></i><span id="lblLocation">-</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                     </div>
 
                     <!-- Timeline Table -->
