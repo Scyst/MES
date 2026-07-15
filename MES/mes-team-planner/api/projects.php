@@ -18,7 +18,7 @@ try {
     elseif ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
         
-        $sql = "INSERT INTO TeamPlanner_Projects (Title, Description, Status, Assignee, StartDate, DueDate, Tags, Priority) OUTPUT INSERTED.* VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO TeamPlanner_Projects (Title, Description, Status, Assignee, StartDate, DueDate, Tags, Priority, Checklist) OUTPUT INSERTED.* VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             $data['title'],
@@ -28,7 +28,8 @@ try {
             $data['startDate'] ?? null,
             $data['dueDate'] ?? null,
             $data['tags'] ?? null,
-            $data['priority'] ?? 'normal'
+            $data['priority'] ?? 'normal',
+            $data['checklist'] ?? '[]'
         ]);
         
         $newProject = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -45,7 +46,7 @@ try {
         $fields = [
             'status' => 'Status', 'title' => 'Title', 'description' => 'Description',
             'assignee' => 'Assignee', 'startDate' => 'StartDate', 'dueDate' => 'DueDate',
-            'tags' => 'Tags', 'priority' => 'Priority'
+            'tags' => 'Tags', 'priority' => 'Priority', 'checklist' => 'Checklist'
         ];
         
         foreach ($fields as $jsonKey => $dbKey) {

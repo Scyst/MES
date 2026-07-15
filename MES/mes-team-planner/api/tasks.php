@@ -19,6 +19,7 @@ try {
             $row['tags'] = $row['Tags'] ?: '';
             $row['recurrence'] = $row['Recurrence'] ?: 'none';
             $row['projectId'] = $row['ProjectId'] ?: null;
+            $row['projectChecklistId'] = $row['ProjectChecklistId'] ?: null;
             $tasks[] = $row;
         }
         sendJson($tasks);
@@ -26,9 +27,9 @@ try {
     elseif ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
         
-        $sql = "INSERT INTO TeamPlanner_Tasks (Title, Status, Visibility, Assignee, DueDate, StartDate, StartTime, EndTime, Priority, Description, Subtasks, Tags, Recurrence, ProjectId) 
+        $sql = "INSERT INTO TeamPlanner_Tasks (Title, Status, Visibility, Assignee, DueDate, StartDate, StartTime, EndTime, Priority, Description, Subtasks, Tags, Recurrence, ProjectId, ProjectChecklistId) 
                 OUTPUT INSERTED.* 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
@@ -45,7 +46,8 @@ try {
             $data['subtasks'] ?? '[]',
             $data['tags'] ?? '',
             $data['recurrence'] ?? 'none',
-            $data['projectId'] ?? null
+            $data['projectId'] ?? null,
+            $data['projectChecklistId'] ?? null
         ]);
         
         $newTask = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -59,6 +61,33 @@ try {
         $newTask['tags'] = $newTask['Tags'] ?: '';
         $newTask['recurrence'] = $newTask['Recurrence'] ?: 'none';
         $newTask['projectId'] = $newTask['ProjectId'] ?: null;
+        $newTask['projectChecklistId'] = $newTask['ProjectChecklistId'] ?: null;
+        
+        // Sync checklist if created as done
+        if ($newTask['Status'] === 'done' && !empty($newTask['ProjectChecklistId']) && !empty($newTask['ProjectId'])) {
+            $pStmt = $pdo->prepare("SELECT Checklist FROM TeamPlanner_Projects WHERE Id = ?");
+            $pStmt->execute([$newTask['ProjectId']]);
+            $project = $pStmt->fetch(PDO::FETCH_ASSOC);
+            if ($project && !empty($project['Checklist'])) {
+                $checklist = json_decode($project['Checklist'], true);
+                $changed = false;
+                if (is_array($checklist)) {
+                    foreach ($checklist as &$item) {
+                        if (isset($item['id']) && $item['id'] == $newTask['ProjectChecklistId']) {
+                            if (!$item['isDone']) {
+                                $item['isDone'] = true;
+                                $changed = true;
+                            }
+                            break;
+                        }
+                    }
+                }
+                if ($changed) {
+                    $updStmt = $pdo->prepare("UPDATE TeamPlanner_Projects SET Checklist = ? WHERE Id = ?");
+                    $updStmt->execute([json_encode($checklist), $newTask['ProjectId']]);
+                }
+            }
+        }
         
         logActivity($pdo, "Task created: " . $data['title'] . " by " . ($data['assignee'] ?? 'Unassigned'));
         sendJson($newTask, 201);
@@ -73,7 +102,7 @@ try {
             'status' => 'Status', 'title' => 'Title', 'assignee' => 'Assignee', 
             'startDate' => 'StartDate', 'dueDate' => 'DueDate', 'startTime' => 'StartTime', 
             'endTime' => 'EndTime', 'visibility' => 'Visibility', 'priority' => 'Priority', 
-            'description' => 'Description', 'subtasks' => 'Subtasks', 'tags' => 'Tags', 'recurrence' => 'Recurrence', 'projectId' => 'ProjectId'
+            'description' => 'Description', 'subtasks' => 'Subtasks', 'tags' => 'Tags', 'recurrence' => 'Recurrence', 'projectId' => 'ProjectId', 'projectChecklistId' => 'ProjectChecklistId'
         ];
         
         foreach ($fields as $jsonKey => $dbKey) {
@@ -108,6 +137,33 @@ try {
         $updatedTask['tags'] = $updatedTask['Tags'] ?: '';
         $updatedTask['recurrence'] = $updatedTask['Recurrence'] ?: 'none';
         $updatedTask['projectId'] = $updatedTask['ProjectId'] ?: null;
+        $updatedTask['projectChecklistId'] = $updatedTask['ProjectChecklistId'] ?: null;
+        
+        if (array_key_exists('status', $data) && !empty($updatedTask['ProjectChecklistId']) && !empty($updatedTask['ProjectId'])) {
+            $pStmt = $pdo->prepare("SELECT Checklist FROM TeamPlanner_Projects WHERE Id = ?");
+            $pStmt->execute([$updatedTask['ProjectId']]);
+            $project = $pStmt->fetch(PDO::FETCH_ASSOC);
+            if ($project && !empty($project['Checklist'])) {
+                $checklist = json_decode($project['Checklist'], true);
+                $isDone = ($updatedTask['Status'] === 'done');
+                $changed = false;
+                if (is_array($checklist)) {
+                    foreach ($checklist as &$item) {
+                        if (isset($item['id']) && $item['id'] == $updatedTask['ProjectChecklistId']) {
+                            if (!isset($item['isDone']) || $item['isDone'] !== $isDone) {
+                                $item['isDone'] = $isDone;
+                                $changed = true;
+                            }
+                            break;
+                        }
+                    }
+                }
+                if ($changed) {
+                    $updStmt = $pdo->prepare("UPDATE TeamPlanner_Projects SET Checklist = ? WHERE Id = ?");
+                    $updStmt->execute([json_encode($checklist), $updatedTask['ProjectId']]);
+                }
+            }
+        }
         
         logActivity($pdo, "Task updated: " . $updatedTask['Title']);
         sendJson($updatedTask);

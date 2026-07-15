@@ -18,6 +18,11 @@ async function deploy() {
         
         await client.uploadFromDir("dist");
         
+        console.log("Uploading backend files...");
+        await client.ensureDir("api");
+        await client.uploadFromDir("api");
+        await client.cd("..");
+        
         console.log("Deployment to PlannerDev successful!");
     }
     catch(err) {

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FiBriefcase, FiPlus, FiClock, FiTrash2, FiEdit2 } from 'react-icons/fi';
+import { FiBriefcase, FiPlus, FiClock, FiTrash2, FiEdit2, FiCheckSquare, FiTrash, FiCheckCircle } from 'react-icons/fi';
 
 export default function ProjectsTab({ tasks, refreshData }) {
   const [projects, setProjects] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ title: '', description: '', status: 'active', assignee: '', startDate: '', dueDate: '', tags: '', priority: 'normal' });
+  const [formData, setFormData] = useState({ title: '', description: '', status: 'active', assignee: '', startDate: '', dueDate: '', tags: '', priority: 'normal', checklist: [] });
+  const [newChecklistItem, setNewChecklistItem] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,12 +16,22 @@ export default function ProjectsTab({ tasks, refreshData }) {
   const fetchProjects = async () => {
     try {
       const res = await axios.get('/api/projects.php');
-      setProjects(res.data);
+      const formattedData = res.data.map(p => ({
+        ...p,
+        Checklist: p.Checklist ? (typeof p.Checklist === 'string' ? JSON.parse(p.Checklist) : p.Checklist) : []
+      }));
+      setProjects(formattedData);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getProgress = (checklist) => {
+    if (!checklist || checklist.length === 0) return 0;
+    const completed = checklist.filter(c => c.isDone).length;
+    return Math.round((completed / checklist.length) * 100);
   };
 
   const calculateTimeSpent = (projectId) => {
@@ -52,13 +63,18 @@ export default function ProjectsTab({ tasks, refreshData }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...formData,
+        checklist: JSON.stringify(formData.checklist)
+      };
       if (formData.Id) {
-        await axios.put(`/api/projects.php?id=${formData.Id}`, formData);
+        await axios.put(`/api/projects.php?id=${formData.Id}`, payload);
       } else {
-        await axios.post('/api/projects.php', formData);
+        await axios.post('/api/projects.php', payload);
       }
       setIsModalOpen(false);
-      setFormData({ title: '', description: '', status: 'active', assignee: '', startDate: '', dueDate: '', tags: '', priority: 'normal' });
+      setFormData({ title: '', description: '', status: 'active', assignee: '', startDate: '', dueDate: '', tags: '', priority: 'normal', checklist: [] });
+      setNewChecklistItem('');
       fetchProjects();
     } catch (e) {
       console.error(e);
@@ -77,6 +93,20 @@ export default function ProjectsTab({ tasks, refreshData }) {
     }
   };
 
+  const handleToggleChecklistInTab = async (project, itemIndex) => {
+    try {
+      const newChecklist = [...(project.Checklist || [])];
+      newChecklist[itemIndex].isDone = !newChecklist[itemIndex].isDone;
+      await axios.put(`/api/projects.php?id=${project.Id}`, {
+        checklist: JSON.stringify(newChecklist)
+      });
+      fetchProjects();
+    } catch (e) {
+      console.error(e);
+      alert('Failed to update checklist');
+    }
+  };
+
   return (
     <div className="p-4 h-full overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
@@ -87,7 +117,7 @@ export default function ProjectsTab({ tasks, refreshData }) {
           <p className="text-slate-500 text-sm mt-1">จัดการโปรเจ็คระยะยาวและติดตามเวลาที่ใช้</p>
         </div>
         <button 
-          onClick={() => { setFormData({ title: '', description: '', status: 'active', assignee: '', startDate: '', dueDate: '', tags: '', priority: 'normal' }); setIsModalOpen(true); }}
+          onClick={() => { setFormData({ title: '', description: '', status: 'active', assignee: '', startDate: '', dueDate: '', tags: '', priority: 'normal', checklist: [] }); setNewChecklistItem(''); setIsModalOpen(true); }}
           className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-medium shadow-md transition-all active:scale-95"
         >
           <FiPlus /> สร้างโปรเจ็ค
@@ -138,12 +168,37 @@ export default function ProjectsTab({ tasks, refreshData }) {
                 </div>
               )}
               
+              {p.Checklist && p.Checklist.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span>ความคืบหน้า</span>
+                    <span>{getProgress(p.Checklist)}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                    <div className="bg-indigo-500 h-2 rounded-full transition-all duration-500" style={{ width: `${getProgress(p.Checklist)}%` }}></div>
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    {p.Checklist.map((item, idx) => (
+                      <div key={item.id} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                        <button 
+                          onClick={() => handleToggleChecklistInTab(p, idx)}
+                          className={`flex-shrink-0 w-5 h-5 rounded flex items-center justify-center border transition-colors ${item.isDone ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 dark:border-slate-600 text-transparent hover:border-indigo-400'}`}
+                        >
+                          <FiCheckSquare className="w-3.5 h-3.5" />
+                        </button>
+                        <span className={`line-clamp-1 ${item.isDone ? 'line-through text-slate-400' : ''}`}>{item.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-2 rounded-lg font-medium text-sm mb-4">
                 <FiClock /> ใช้เวลาไปแล้ว: {calculateTimeSpent(p.Id)}
               </div>
               
               <div className="flex justify-end gap-2 border-t border-slate-100 dark:border-slate-700 pt-3">
-                <button onClick={() => { setFormData({ Id: p.Id, title: p.Title, description: p.Description, status: p.Status, assignee: p.Assignee || '', startDate: p.StartDate || '', dueDate: p.DueDate || '', tags: p.Tags || '', priority: p.Priority || 'normal' }); setIsModalOpen(true); }} className="p-2 text-slate-500 hover:text-sky-500 transition-colors">
+                <button onClick={() => { setFormData({ Id: p.Id, title: p.Title, description: p.Description, status: p.Status, assignee: p.Assignee || '', startDate: p.StartDate || '', dueDate: p.DueDate || '', tags: p.Tags || '', priority: p.Priority || 'normal', checklist: p.Checklist || [] }); setNewChecklistItem(''); setIsModalOpen(true); }} className="p-2 text-slate-500 hover:text-sky-500 transition-colors">
                   <FiEdit2 />
                 </button>
                 <button onClick={() => handleDelete(p.Id)} className="p-2 text-slate-500 hover:text-rose-500 transition-colors">
@@ -202,6 +257,84 @@ export default function ProjectsTab({ tasks, refreshData }) {
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">แท็ก (คั่นด้วยลูกน้ำ ,)</label>
                 <input value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} placeholder="ex. design, frontend" className="w-full border dark:border-slate-700 bg-transparent rounded-lg px-3 py-2 outline-none focus:border-indigo-500" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Checklist งานในโปรเจ็ค</label>
+                <div className="flex gap-2 mb-2">
+                  <input 
+                    value={newChecklistItem}
+                    onChange={e => setNewChecklistItem(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newChecklistItem.trim()) {
+                          setFormData({
+                            ...formData, 
+                            checklist: [...formData.checklist, { id: Date.now().toString(), text: newChecklistItem.trim(), isDone: false }]
+                          });
+                          setNewChecklistItem('');
+                        }
+                      }
+                    }}
+                    placeholder="เพิ่มงานย่อย แล้วกด Enter หรือปุ่ม +" 
+                    className="flex-1 border dark:border-slate-700 bg-transparent rounded-lg px-3 py-2 outline-none focus:border-indigo-500" 
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (newChecklistItem.trim()) {
+                        setFormData({
+                          ...formData, 
+                          checklist: [...formData.checklist, { id: Date.now().toString(), text: newChecklistItem.trim(), isDone: false }]
+                        });
+                        setNewChecklistItem('');
+                      }
+                    }}
+                    className="px-4 py-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 rounded-lg hover:bg-indigo-200 transition-colors"
+                  >
+                    <FiPlus />
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {formData.checklist.map((item, index) => (
+                    <div key={item.id} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const newList = [...formData.checklist];
+                          newList[index].isDone = !newList[index].isDone;
+                          setFormData({...formData, checklist: newList});
+                        }}
+                        className={`flex-shrink-0 w-5 h-5 rounded flex items-center justify-center border transition-colors ${item.isDone ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 dark:border-slate-600 text-transparent hover:border-indigo-400'}`}
+                      >
+                        <FiCheckSquare className="w-3.5 h-3.5" />
+                      </button>
+                      <input 
+                        value={item.text}
+                        onChange={(e) => {
+                          const newList = [...formData.checklist];
+                          newList[index].text = e.target.value;
+                          setFormData({...formData, checklist: newList});
+                        }}
+                        className={`flex-1 bg-transparent outline-none text-sm ${item.isDone ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const newList = formData.checklist.filter((_, i) => i !== index);
+                          setFormData({...formData, checklist: newList});
+                        }}
+                        className="text-slate-400 hover:text-rose-500 p-1 transition-colors"
+                      >
+                        <FiTrash />
+                      </button>
+                    </div>
+                  ))}
+                  {formData.checklist.length === 0 && (
+                    <p className="text-sm text-slate-500 text-center py-2">ยังไม่มี Checklist</p>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">สถานะ</label>
                 <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full border dark:border-slate-700 bg-transparent rounded-lg px-3 py-2 outline-none focus:border-indigo-500">

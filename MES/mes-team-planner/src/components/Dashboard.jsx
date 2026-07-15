@@ -1,8 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { FiActivity, FiUserCheck, FiAlertCircle, FiCheckCircle, FiClock, FiBarChart2, FiTrendingUp, FiPieChart } from 'react-icons/fi';
 import { format, subDays } from 'date-fns';
+import axios from 'axios';
 
 export default function Dashboard({ tasks = [], events = [], activities = [], loading }) {
+  const [projects, setProjects] = useState([]);
+
+  useEffect(() => {
+    axios.get('/api/projects.php')
+      .then(res => setProjects(res.data.filter(p => p.Status === 'active')))
+      .catch(console.error);
+  }, []);
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todaysLeaves = events.filter(e => e.Type === 'leave' && e.date === todayStr);
@@ -214,6 +222,44 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
           </div>
         </div>
       </div>
+
+      {/* ═══ Active Projects Summary ═══ */}
+      {projects.length > 0 && (
+        <div className="bg-slate-100/40 dark:bg-slate-800/40 border border-slate-300/60 dark:border-slate-700/60 rounded-xl p-4 shrink-0">
+          <h3 className="text-sm md:text-base font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+            <FiCheckCircle className="text-emerald-400" /> โปรเจ็คที่กำลังดำเนินการ
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+            {projects.map(proj => {
+              let checklist = [];
+              try {
+                checklist = proj.Checklist ? (typeof proj.Checklist === 'string' ? JSON.parse(proj.Checklist) : proj.Checklist) : [];
+              } catch (e) {}
+              const totalItems = checklist.length;
+              const doneItems = checklist.filter(c => c.isDone).length;
+              const progress = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
+              
+              return (
+                <div key={proj.Id} className="bg-white/50 dark:bg-slate-900/50 p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-800 flex flex-col gap-2 transition-all hover:shadow-md">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{proj.Title}</span>
+                    <span className="text-xs font-mono font-bold text-emerald-500 shrink-0">{progress}%</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="h-2.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] text-slate-500">
+                     <span>ความคืบหน้า Checklist</span>
+                     <span>{doneItems} / {totalItems}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ═══ Workload Per Person ═══ */}
       <div className="bg-slate-100/40 dark:bg-slate-800/40 border border-slate-300/60 dark:border-slate-700/60 rounded-xl p-4 shrink-0">

@@ -38,8 +38,9 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   const [formData, setFormData] = useState({
     title: '', status: 'todo', visibility: 'public', assignee: '',
     startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
+    startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
     priority: 'normal', description: '', tags: '', recurrence: 'none',
-    recurrenceDays: [], recurrenceEndDate: '', projectId: ''
+    recurrenceDays: [], recurrenceEndDate: '', projectId: '', projectChecklistId: ''
   });
   const [projectsList, setProjectsList] = useState([]);
 
@@ -59,6 +60,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         tags: initialData.tags || initialData.Tags || '',
         recurrence: initialData.recurrence || initialData.Recurrence || 'none',
         projectId: initialData.projectId || initialData.ProjectId || '',
+        projectChecklistId: initialData.projectChecklistId || initialData.ProjectChecklistId || '',
         Id: initialData.Id
       });
       
@@ -79,7 +81,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         title: '', status: 'todo', visibility: 'public', assignee: currentUser?.fullname || currentUser?.username || '',
         startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
         priority: 'normal', description: '', tags: '', recurrence: 'none',
-        recurrenceDays: [], recurrenceEndDate: '', projectId: ''
+        recurrenceDays: [], recurrenceEndDate: '', projectId: '', projectChecklistId: ''
       });
       setSubtasksArr([]);
       setComments([]);
@@ -100,7 +102,13 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
   useEffect(() => {
     if (isOpen) {
-      axios.get('/api/projects.php').then(res => setProjectsList(res.data)).catch(console.error);
+      axios.get('/api/projects.php').then(res => {
+        const formatted = res.data.map(p => ({
+          ...p,
+          Checklist: p.Checklist ? (typeof p.Checklist === 'string' ? JSON.parse(p.Checklist) : p.Checklist) : []
+        }));
+        setProjectsList(formatted);
+      }).catch(console.error);
     }
   }, [isOpen]);
 
@@ -117,6 +125,28 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleProjectChange = (e) => {
+    const val = e.target.value;
+    const selectedProj = projectsList.find(p => p.Id == val);
+    setFormData({
+      ...formData,
+      projectId: val,
+      projectChecklistId: '',
+      title: (selectedProj && !formData.title) ? selectedProj.Title : formData.title
+    });
+  };
+
+  const handleChecklistChange = (e) => {
+    const val = e.target.value;
+    const selectedProj = projectsList.find(p => p.Id == formData.projectId);
+    const selectedItem = selectedProj?.Checklist?.find(c => c.id == val);
+    setFormData({
+      ...formData,
+      projectChecklistId: val,
+      title: (selectedItem && selectedProj) ? `${selectedProj.Title} - ${selectedItem.text}` : formData.title
+    });
   };
 
   const handleSaveSubtask = (e) => {
@@ -272,6 +302,40 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
           {/* GENERAL TAB */}
           {activeTab === 'general' && (
             <form id="task-form" onSubmit={handleSubmit} className="p-5 flex flex-col h-full gap-4">
+              
+              {/* Projects */}
+              <div className="bg-indigo-50/50 dark:bg-indigo-500/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-500/20 mb-2">
+                <label className="block text-sm font-medium text-indigo-800 dark:text-indigo-300 mb-1.5 flex items-center gap-2">
+                  <FiBriefcase /> ผูกกับโปรเจ็ค (ทางเลือก)
+                </label>
+                <div className="relative mb-3">
+                  <select name="projectId" value={formData.projectId} onChange={handleProjectChange} className="w-full bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
+                    <option value="">-- ไม่ผูกกับโปรเจ็ค --</option>
+                    {projectsList.filter(p => p.Status === 'active' || p.Id == formData.projectId).map(p => (
+                      <option key={p.Id} value={p.Id}>{p.Title}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
+                </div>
+
+                {formData.projectId && (
+                  <div>
+                    <label className="block text-xs font-medium text-indigo-700 dark:text-indigo-400 mb-1.5">Checklist งานในโปรเจ็ค</label>
+                    <div className="relative">
+                      <select name="projectChecklistId" value={formData.projectChecklistId} onChange={handleChecklistChange} className="w-full bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 text-slate-900 dark:text-white rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
+                        <option value="">-- ไม่ระบุ --</option>
+                        {projectsList.find(p => p.Id == formData.projectId)?.Checklist?.map(c => (
+                          <option key={c.id} value={c.id} disabled={c.isDone}>
+                            {c.isDone ? '✅ ' : '⏳ '} {c.text}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">ชื่องาน</label>
@@ -320,19 +384,6 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 </div>
               </div>
 
-              {/* Projects */}
-              <div>
-                <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">ผูกกับโปรเจ็ค (ทางเลือก)</label>
-                <div className="relative">
-                  <select name="projectId" value={formData.projectId} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
-                    <option value="">-- ไม่ผูกกับโปรเจ็ค --</option>
-                    {projectsList.filter(p => p.Status === 'active' || p.Id == formData.projectId).map(p => (
-                      <option key={p.Id} value={p.Id}>{p.Title}</option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
-                </div>
-              </div>
 
               {/* Dates */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
