@@ -218,29 +218,41 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                 </div>
                 <div class="modal-body bg-body-tertiary p-3">
                     <!-- Tag Info Summary -->
-                    <div class="bg-white p-3 rounded shadow-sm border mb-3">
-                        <div class="row gx-4 gy-3">
-                            <div class="col-6 col-md-4 col-lg-3">
-                                <div class="text-muted small fw-bold text-uppercase mb-1">หมายเลขแท็ก / ไอเท็ม</div>
-                                <h5 class="text-primary fw-bold mb-0 text-truncate" id="lblSerialNo">-</h5>
-                                <div class="text-dark small mt-1 text-truncate" id="lblItemNo">-</div>
+                    <div class="bg-white p-4 rounded shadow-sm border mb-3">
+                        <div class="row gy-3">
+                            <!-- Column 1: Serial / Item -->
+                            <div class="col-md-6 col-lg-4">
+                                <div class="text-muted small mb-1">หมายเลขแท็ก / ไอเท็ม</div>
+                                <div class="fs-5 fw-bold text-primary text-truncate" id="lblSerialNo">-</div>
+                                <div class="text-secondary small mt-1 text-truncate" id="lblItemNo">-</div>
                             </div>
-                            <div class="col-6 col-md-4 col-lg-3">
-                                <div class="text-muted small fw-bold text-uppercase mb-1">รายละเอียด (Description)</div>
-                                <div class="text-dark fw-bold" style="font-size: 0.85rem;" id="lblPartDesc">-</div>
+                            
+                            <!-- Column 2: Quantity -->
+                            <div class="col-md-3 col-lg-2">
+                                <div class="text-muted small mb-1">จำนวนปัจจุบัน</div>
+                                <div class="fs-5 fw-bold text-success" id="lblQty">-</div>
                             </div>
-                            <div class="col-4 col-md-4 col-lg-2">
-                                <div class="text-muted small fw-bold text-uppercase mb-1">จำนวนปัจจุบัน</div>
-                                <h4 class="text-success fw-bold mb-0" id="lblQty">-</h4>
+
+                            <!-- Column 3: Status -->
+                            <div class="col-md-3 col-lg-2">
+                                <div class="text-muted small mb-1">สถานะ</div>
+                                <div class="fs-6 fw-bold mt-1" id="lblStatus">-</div>
                             </div>
-                            <div class="col-4 col-md-6 col-lg-2">
-                                <div class="text-muted small fw-bold text-uppercase mb-1">สถานะ / โลเคชั่น</div>
-                                <div class="mb-1"><span id="lblStatus"><span class="badge bg-secondary">-</span></span></div>
-                                <div class="text-dark small text-truncate" id="lblLocation">-</div>
+
+                            <!-- Column 4: Location & PO -->
+                            <div class="col-md-12 col-lg-4">
+                                <div class="text-muted small mb-1">คลัง / โลเคชั่น / PO No.</div>
+                                <div class="fs-6 fw-bold text-dark mt-1">
+                                    <span id="lblLocation"><i class="fas fa-map-marker-alt text-danger me-1"></i> -</span> 
+                                    <span class="text-muted mx-2">|</span> 
+                                    <span id="lblPo">-</span>
+                                </div>
                             </div>
-                            <div class="col-4 col-md-6 col-lg-2">
-                                <div class="text-muted small fw-bold text-uppercase mb-1">PO / Ref No.</div>
-                                <div class="text-dark fw-bold text-truncate mt-1" id="lblPo">-</div>
+
+                            <!-- Column 5: Description (Full width) -->
+                            <div class="col-12 mt-2 pt-3 border-top">
+                                <div class="text-muted small mb-1">รายละเอียด (Description)</div>
+                                <div class="text-dark fw-bold" id="lblPartDesc">-</div>
                             </div>
                         </div>
                     </div>
