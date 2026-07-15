@@ -441,15 +441,15 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
           {/* CHECKLIST TAB */}
           {activeTab === 'checklist' && (
-            <div className="p-5 space-y-6">
+            <div className="p-5 space-y-5">
               
-              {/* Projects Integration */}
-              <div className="bg-indigo-50/50 dark:bg-indigo-500/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-500/20">
-                <label className="block text-sm font-medium text-indigo-800 dark:text-indigo-300 mb-1.5 flex items-center gap-2">
-                  <FiBriefcase /> ผูกกับโปรเจ็ค (ทางเลือก)
+              {/* Projects Integration - Cleaned up */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-2">
+                  <FiBriefcase className="text-indigo-500" /> นำเข้าจากโปรเจ็ค (ทางเลือก)
                 </label>
                 <div className="relative mb-3">
-                  <select name="projectId" value={formData.projectId} onChange={handleProjectChange} className="w-full bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
+                  <select name="projectId" value={formData.projectId} onChange={handleProjectChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
                     <option value="">-- ไม่ผูกกับโปรเจ็ค --</option>
                     {projectsList.filter(p => p.Status === 'active' || p.Id == formData.projectId).map(p => (
                       <option key={p.Id} value={p.Id}>{p.Title}</option>
@@ -458,72 +458,74 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
                 </div>
 
-                {formData.projectId && (
-                  <div>
-                    <label className="block text-xs font-medium text-indigo-700 dark:text-indigo-400 mb-1.5">Checklist ในโปรเจ็คที่ยังไม่เสร็จ</label>
-                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                      {projectsList.find(p => p.Id == formData.projectId)?.Checklist?.filter(c => !c.isDone)?.length > 0 ? (
-                        projectsList.find(p => p.Id == formData.projectId)?.Checklist?.filter(c => !c.isDone)?.map(c => {
-                          const isAdded = subtasksArr.some(st => st.projectChecklistId === c.id);
-                          return (
-                            <div key={c.id} className="flex items-center justify-between bg-white dark:bg-slate-800 p-2 rounded-lg border border-indigo-100 dark:border-indigo-500/20">
-                              <span className="text-sm text-slate-700 dark:text-slate-300 truncate mr-2 flex-1" title={c.text}>{c.text}</span>
-                              <button
-                                type="button"
-                                disabled={isAdded}
-                                onClick={() => {
-                                  setSubtasksArr([...subtasksArr, {
-                                    id: Date.now().toString() + Math.random(),
-                                    text: c.text,
-                                    completed: false,
-                                    projectChecklistId: c.id
-                                  }]);
-                                }}
-                                className={`flex-shrink-0 px-2 py-1 rounded-md text-xs font-medium transition-colors ${isAdded ? 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500 cursor-not-allowed' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-400 dark:hover:bg-indigo-500/40'}`}
-                              >
-                                {isAdded ? 'ดึงแล้ว' : '+ ดึง'}
-                              </button>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <p className="text-sm text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-800/50 p-2 rounded-lg border border-dashed border-indigo-200 dark:border-indigo-500/20 text-center">ไม่มี Checklist ที่รอทำ</p>
-                      )}
+                {formData.projectId && projectsList.find(p => p.Id == formData.projectId)?.Checklist?.filter(c => !c.isDone && !subtasksArr.some(st => st.projectChecklistId === c.id))?.length > 0 && (
+                  <div className="bg-indigo-50/50 dark:bg-indigo-500/10 p-3 rounded-xl border border-indigo-100 dark:border-indigo-500/20 mb-4">
+                    <label className="block text-xs font-semibold text-indigo-700 dark:text-indigo-400 mb-2 uppercase tracking-wide">
+                      ดึง Checklist จากโปรเจ็คมาทำ
+                    </label>
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                      {projectsList.find(p => p.Id == formData.projectId)?.Checklist?.filter(c => !c.isDone && !subtasksArr.some(st => st.projectChecklistId === c.id))?.map(c => (
+                        <div key={c.id} className="group flex items-center justify-between bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-indigo-50 dark:border-indigo-500/10 hover:border-indigo-200 dark:hover:border-indigo-500/30 transition-all">
+                          <span className="text-sm text-slate-700 dark:text-slate-300 truncate mr-2 flex-1" title={c.text}>{c.text}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSubtasksArr([...subtasksArr, {
+                                id: Date.now().toString() + Math.random(),
+                                title: c.text, // Fixed from text to title
+                                completed: false,
+                                projectChecklistId: c.id
+                              }]);
+                            }}
+                            className="shrink-0 flex items-center justify-center w-6 h-6 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-500 hover:text-white dark:bg-indigo-500/20 dark:text-indigo-400 dark:hover:bg-indigo-500 dark:hover:text-white transition-colors"
+                            title="ดึงเข้างานย่อย"
+                          >
+                            <FiPlus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Internal Subtasks */}
-              <div className="bg-slate-100/50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-300/50 dark:border-slate-700/50">
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-5">
                 <form onSubmit={handleSaveSubtask} className="flex gap-2 mb-4">
                   <input 
                     value={newSubtask}
                     onChange={(e) => setNewSubtask(e.target.value)}
-                    className="flex-1 bg-slate-100 dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    className="flex-1 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                     placeholder="เพิ่มงานย่อยใหม่..."
                   />
-                  <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-1 transition-colors">
+                  <button type="submit" className="bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-1 transition-colors">
                     <FiPlus /> เพิ่ม
                   </button>
                 </form>
 
                 {subtasksArr.length === 0 ? (
-                  <div className="text-center text-slate-500 text-sm py-4">ยังไม่มีรายการย่อย</div>
+                  <div className="text-center text-slate-400 dark:text-slate-500 text-sm py-8 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl">
+                    ยังไม่มีรายการย่อยในงานนี้
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     {subtasksArr.map((st) => (
-                      <div key={st.id} className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all ${st.completed ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 hover:border-slate-500'}`}>
+                      <div key={st.id} className={`group flex items-center gap-3 p-3 rounded-xl border transition-all ${st.completed ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm hover:border-slate-300 dark:hover:border-slate-600'}`}>
                         <button 
                           onClick={() => toggleSubtask(st.id)}
-                          className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${st.completed ? 'bg-emerald-500 border-emerald-500 text-slate-900 dark:text-white' : 'border-slate-500 text-transparent hover:border-emerald-400'}`}
+                          className={`shrink-0 w-5 h-5 rounded flex items-center justify-center transition-all ${st.completed ? 'bg-emerald-500 text-white' : 'border-2 border-slate-300 dark:border-slate-600 text-transparent hover:border-emerald-400'}`}
                         >
-                          <FiCheckCircle className="text-sm" />
+                          <FiCheckSquare className="w-3.5 h-3.5" />
                         </button>
-                        <span className={`flex-1 text-sm transition-all ${st.completed ? 'text-emerald-400/70 line-through' : 'text-slate-800 dark:text-slate-200'}`}>
+                        <span className={`flex-1 text-sm transition-all ${st.completed ? 'text-emerald-500/70 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
                           {st.title}
+                          {st.projectChecklistId && (
+                            <span className="inline-block ml-2 px-1.5 py-0.5 rounded text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 font-medium">
+                              จากโปรเจ็ค
+                            </span>
+                          )}
                         </span>
-                        <button onClick={() => deleteSubtask(st.id)} className="text-slate-500 hover:text-rose-400 transition-colors">
+                        <button onClick={() => deleteSubtask(st.id)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 transition-all p-1">
                           <FiTrash2 />
                         </button>
                       </div>
@@ -531,8 +533,12 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <FiInfo className="shrink-0" /> อย่าลืมกด <b>บันทึก</b> ที่มุมขวาล่างเพื่อเซฟ Checklist นี้นะครับ
+              
+              <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
+                <FiInfo className="shrink-0 text-sky-500" /> 
+                <span>
+                  หากต้องการบันทึก Checklist อย่าลืมกด <b>บันทึกทั้งหมด</b> ที่ด้านล่างนะครับ
+                </span>
               </div>
             </div>
           )}
