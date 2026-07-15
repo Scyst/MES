@@ -16,7 +16,7 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
         .dashboard-header-sticky {
             position: sticky;
             top: 60px;
-            z-index: 1020;
+            z-index: 1040;
             background-color: var(--bs-body-bg);
             padding-bottom: 0.5rem;
             margin-bottom: 1rem;
