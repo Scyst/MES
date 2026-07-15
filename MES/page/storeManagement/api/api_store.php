@@ -2050,7 +2050,28 @@ try {
                     $userDel = $delInfo['fullname'] ?? 'Unknown';
                     throw new Exception("ถูกลบเมื่อ $dateDel โดย $userDel");
                 }
-                throw new Exception('ไม่พบระบุ');
+
+                // Check if the barcode is a Part No. (in ITEMS table)
+                try {
+                    $partStmt = $pdo->prepare("
+                        SELECT i.part_description, COUNT(t.serial_no) AS tag_count, SUM(t.current_qty) AS total_qty
+                        FROM dbo.ITEMS i WITH (NOLOCK)
+                        LEFT JOIN dbo.RM_SERIAL_TAGS t WITH (NOLOCK) ON t.item_id = i.item_id AND t.current_qty > 0
+                        WHERE i.part_no = ? OR i.sap_no = ?
+                        GROUP BY i.part_description
+                    ");
+                    $partStmt->execute([$barcode, $barcode]);
+                    $partInfo = $partStmt->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $partInfo = false; }
+
+                if (!empty($partInfo)) {
+                    $tagCount  = intval($partInfo['tag_count'] ?? 0);
+                    $totalQty  = intval($partInfo['total_qty'] ?? 0);
+                    $partDesc  = $partInfo['part_description'] ?? '';
+                    throw new Exception("\"$barcode\" คือรหัสสินค้า (Part No.) ไม่ใช่หมายเลขแท็ก\nรายละเอียด: $partDesc\nมี $tagCount แท็ก คงเหลือรวม $totalQty ชิ้น\nกรุณาสแกนหมายเลขแท็ก (Serial No.) โดยตรง");
+                }
+
+                throw new Exception("ไม่พบแท็ก \"$barcode\" ในระบบ\nกรุณาตรวจสอบหมายเลขแท็กอีกครั้ง");
             }
 
             if ($tagInfo['total_tags'] <= 1 && empty($tagInfo['master_pallet_no'])) {
