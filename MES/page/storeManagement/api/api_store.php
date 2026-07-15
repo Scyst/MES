@@ -1945,6 +1945,42 @@ try {
             $response = ['success' => true, 'data' => ['tag_info' => $tagInfo, 'history' => $history]];
             break;
 
+        case 'get_trace_dashboard_kpis':
+            $startOfDay = date('Y-m-d 00:00:00');
+            $endOfDay = date('Y-m-d 23:59:59');
+
+            $sql = "SELECT 
+                        COUNT(*) as total_transactions,
+                        SUM(CASE WHEN transaction_type LIKE '%RECEIVE%' OR transaction_type LIKE '%CREATE%' THEN 1 ELSE 0 END) as total_receive,
+                        SUM(CASE WHEN transaction_type LIKE '%ISSUE%' THEN 1 ELSE 0 END) as total_issue,
+                        SUM(CASE WHEN transaction_type LIKE '%WIP%' OR transaction_type LIKE '%TRANSFER%' THEN 1 ELSE 0 END) as total_wip,
+                        SUM(CASE WHEN transaction_type LIKE '%RETURN%' OR transaction_type LIKE '%ADJUST%' THEN 1 ELSE 0 END) as total_return_adjust
+                    FROM dbo.TAG_TRANSACTIONS WITH (NOLOCK)
+                    WHERE transaction_timestamp >= ? AND transaction_timestamp <= ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$startOfDay, $endOfDay]);
+            $kpis = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Fetch newly created tags as they act as 'receive'
+            $sql2 = "SELECT COUNT(*) as tags_created FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE created_at >= ? AND created_at <= ?";
+            $stmt2 = $pdo->prepare($sql2);
+            $stmt2->execute([$startOfDay, $endOfDay]);
+            $createdTags = $stmt2->fetch(PDO::FETCH_ASSOC);
+
+            $receiveCount = (int)($kpis['total_receive'] ?? 0);
+            if ($receiveCount == 0 && isset($createdTags['tags_created'])) {
+                $receiveCount = (int)$createdTags['tags_created'];
+            }
+
+            $response = ['success' => true, 'data' => [
+                'total' => (int)($kpis['total_transactions'] ?? 0) + $receiveCount,
+                'receive' => $receiveCount,
+                'issue' => (int)($kpis['total_issue'] ?? 0),
+                'wip' => (int)($kpis['total_wip'] ?? 0),
+                'return_adjust' => (int)($kpis['total_return_adjust'] ?? 0)
+            ]];
+            break;
+
         case 'get_recent_active_tags':
             // Query for recent distinct tag transactions (limit 50)
             $sqlRecent = "

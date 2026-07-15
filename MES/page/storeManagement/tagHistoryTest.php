@@ -34,80 +34,94 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
     <div class="page-container">
         <div id="main-content">
             
-            <!-- KPI Cards for Tag Info (Always visible, shows dashes initially) -->
+            <!-- Daily KPI Cards (Dashboard) -->
             <div class="px-3 pt-3" id="kpiContainer">
                 <div class="row g-2 mb-1 flex-nowrap overflow-x-auto pb-1" style="-webkit-overflow-scrolling: touch;">
                     
-                    <div class="col" style="min-width: 220px;">
+                    <!-- Total -->
+                    <div class="col" style="min-width: 200px;">
                         <div class="card shadow-sm kpi-card border-primary h-100">
                             <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <div class="text-uppercase text-primary small fw-bold mb-1">หมายเลขแท็ก / ไอเท็ม</div>
-                                        <h5 class="text-dark fw-bold mb-0 text-truncate" id="lblSerialNo">-</h5>
-                                        <div class="small text-muted mt-1 text-truncate" id="lblItemNo">-</div>
+                                        <div class="text-uppercase text-primary small fw-bold mb-1">รายการเคลื่อนไหวทั้งหมด</div>
+                                        <h3 class="text-dark fw-bold mb-0" id="kpiTotal">-</h3>
+                                        <div class="small text-muted mt-1">ประจำวันนี้</div>
                                     </div>
                                     <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-circle d-none d-sm-block">
-                                        <i class="fas fa-barcode fa-lg"></i>
+                                        <i class="fas fa-chart-line fa-lg"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="col" style="min-width: 220px;">
-                        <div class="card shadow-sm kpi-card border-info h-100">
-                            <div class="card-body p-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="w-100">
-                                        <div class="text-uppercase text-info small fw-bold mb-1">รายละเอียด (Description)</div>
-                                        <div class="text-dark fw-bold text-wrap" style="font-size: 0.85rem; line-height: 1.2; height: 35px; overflow: hidden;" id="lblPartDesc">-</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col" style="min-width: 220px;">
+                    <!-- Receive -->
+                    <div class="col" style="min-width: 200px;">
                         <div class="card shadow-sm kpi-card border-success h-100">
                             <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <div class="text-uppercase text-success small fw-bold mb-1">จำนวนปัจจุบัน</div>
-                                        <h3 class="text-success fw-bold mb-0" id="lblQty">-</h3>
+                                        <div class="text-uppercase text-success small fw-bold mb-1">รับเข้า / สร้างแท็ก</div>
+                                        <h3 class="text-success fw-bold mb-0" id="kpiReceive">-</h3>
+                                        <div class="small text-muted mt-1">ประจำวันนี้</div>
                                     </div>
                                     <div class="bg-success bg-opacity-10 text-success p-2 rounded-circle d-none d-sm-block">
-                                        <i class="fas fa-cubes fa-lg"></i>
+                                        <i class="fas fa-box-open fa-lg"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col" style="min-width: 220px;">
+                    <!-- Issue -->
+                    <div class="col" style="min-width: 200px;">
                         <div class="card shadow-sm kpi-card border-warning h-100">
                             <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <div class="text-uppercase text-warning small fw-bold mb-1">สถานะ / โลเคชั่น</div>
-                                        <div class="mb-1"><span class="badge bg-secondary" id="lblStatus">-</span></div>
-                                        <div class="small text-muted mt-1 text-truncate" id="lblLocation">-</div>
+                                        <div class="text-uppercase text-warning small fw-bold mb-1">เบิกจ่าย (Issue)</div>
+                                        <h3 class="text-warning fw-bold mb-0" id="kpiIssue">-</h3>
+                                        <div class="small text-muted mt-1">ประจำวันนี้</div>
                                     </div>
                                     <div class="bg-warning bg-opacity-10 text-warning p-2 rounded-circle d-none d-sm-block">
-                                        <i class="fas fa-map-marker-alt fa-lg"></i>
+                                        <i class="fas fa-truck-loading fa-lg"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col" style="min-width: 220px;">
+                    <!-- WIP Transfer -->
+                    <div class="col" style="min-width: 200px;">
+                        <div class="card shadow-sm kpi-card border-info h-100">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-uppercase text-info small fw-bold mb-1">โอนย้ายเข้า WIP</div>
+                                        <h3 class="text-info fw-bold mb-0" id="kpiWip">-</h3>
+                                        <div class="small text-muted mt-1">ประจำวันนี้</div>
+                                    </div>
+                                    <div class="bg-info bg-opacity-10 text-info p-2 rounded-circle d-none d-sm-block">
+                                        <i class="fas fa-people-carry fa-lg"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Return/Adjust -->
+                    <div class="col" style="min-width: 200px;">
                         <div class="card shadow-sm kpi-card border-secondary h-100">
                             <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <div class="text-uppercase text-secondary small fw-bold mb-1">PO / Ref No.</div>
-                                        <div class="text-dark fw-bold text-truncate mt-2" id="lblPo">-</div>
+                                        <div class="text-uppercase text-secondary small fw-bold mb-1">ปรับปรุง / คืน</div>
+                                        <h3 class="text-secondary fw-bold mb-0" id="kpiReturn">-</h3>
+                                        <div class="small text-muted mt-1">ประจำวันนี้</div>
+                                    </div>
+                                    <div class="bg-secondary bg-opacity-10 text-secondary p-2 rounded-circle d-none d-sm-block">
+                                        <i class="fas fa-undo-alt fa-lg"></i>
                                     </div>
                                 </div>
                             </div>
@@ -200,11 +214,70 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                     </div>
                 </div>
 
-                <!-- Result Container -->
-                <div id="resultContainer" class="d-none h-100 d-flex flex-column">
+                <!-- Result Container / Timeline Table removed from main page, moved to Modal -->
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal for Trace Tag Details -->
+    <div class="modal fade" id="traceTagModal" tabindex="-1" aria-labelledby="traceTagModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-primary text-white py-2">
+                    <h5 class="modal-title fs-6 fw-bold" id="traceTagModalLabel"><i class="fas fa-search-location me-2"></i>รายละเอียดแท็ก (Tag Details)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bg-body-tertiary p-3">
+                    <!-- Tag Info KPI Cards -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <div class="card shadow-sm kpi-card border-primary h-100">
+                                <div class="card-body p-2">
+                                    <div class="text-uppercase text-primary small fw-bold mb-1">หมายเลขแท็ก / ไอเท็ม</div>
+                                    <h6 class="text-dark fw-bold mb-0 text-truncate" id="lblSerialNo">-</h6>
+                                    <div class="small text-muted mt-1 text-truncate" id="lblItemNo">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <div class="card shadow-sm kpi-card border-info h-100">
+                                <div class="card-body p-2">
+                                    <div class="text-uppercase text-info small fw-bold mb-1">รายละเอียด (Description)</div>
+                                    <div class="text-dark fw-bold text-wrap" style="font-size: 0.85rem; line-height: 1.2; height: 35px; overflow: hidden;" id="lblPartDesc">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-2">
+                            <div class="card shadow-sm kpi-card border-success h-100">
+                                <div class="card-body p-2">
+                                    <div class="text-uppercase text-success small fw-bold mb-1">จำนวนปัจจุบัน</div>
+                                    <h5 class="text-success fw-bold mb-0" id="lblQty">-</h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-2">
+                            <div class="card shadow-sm kpi-card border-warning h-100">
+                                <div class="card-body p-2">
+                                    <div class="text-uppercase text-warning small fw-bold mb-1">สถานะ / โลเคชั่น</div>
+                                    <div class="mb-1"><span class="badge bg-secondary" id="lblStatus">-</span></div>
+                                    <div class="small text-muted mt-1 text-truncate" id="lblLocation">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-12 col-lg-2">
+                            <div class="card shadow-sm kpi-card border-secondary h-100">
+                                <div class="card-body p-2">
+                                    <div class="text-uppercase text-secondary small fw-bold mb-1">PO / Ref No.</div>
+                                    <div class="text-dark fw-bold text-truncate mt-1" id="lblPo">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Timeline Table -->
-                    <div class="card shadow-sm border-0 h-100 d-flex flex-column">
-                        <div class="table-responsive flex-grow-1">
+                    <div class="card shadow-sm border-0 flex-grow-1" style="min-height: 300px;">
+                        <div class="table-responsive h-100">
                             <table class="table table-striped table-hover align-middle mb-0 text-nowrap" style="font-size: 0.85rem;">
                                 <thead class="table-light sticky-top shadow-sm">
                                     <tr class="text-secondary small text-uppercase align-middle">
@@ -226,7 +299,6 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 
