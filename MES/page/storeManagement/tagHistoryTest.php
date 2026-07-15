@@ -219,40 +219,50 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                 <div class="modal-body bg-body-tertiary p-3">
                     <!-- Tag Info Summary -->
                     <div class="bg-white p-4 rounded shadow-sm border mb-3">
-                        <div class="row gy-3">
-                            <!-- Column 1: Serial / Item -->
-                            <div class="col-md-6 col-lg-4">
-                                <div class="text-muted small mb-1">หมายเลขแท็ก / ไอเท็ม</div>
-                                <div class="fs-5 fw-bold text-primary text-truncate" id="lblSerialNo">-</div>
-                                <div class="text-secondary small mt-1 text-truncate" id="lblItemNo">-</div>
-                            </div>
-                            
-                            <!-- Column 2: Quantity -->
-                            <div class="col-md-3 col-lg-2">
-                                <div class="text-muted small mb-1">จำนวนปัจจุบัน</div>
-                                <div class="fs-5 fw-bold text-success" id="lblQty">-</div>
-                            </div>
-
-                            <!-- Column 3: Status -->
-                            <div class="col-md-3 col-lg-2">
-                                <div class="text-muted small mb-1">สถานะ</div>
-                                <div class="fs-6 fw-bold mt-1" id="lblStatus">-</div>
-                            </div>
-
-                            <!-- Column 4: Location & PO -->
-                            <div class="col-md-12 col-lg-4">
-                                <div class="text-muted small mb-1">คลัง / โลเคชั่น / PO No.</div>
-                                <div class="fs-6 fw-bold text-dark mt-1">
-                                    <span id="lblLocation"><i class="fas fa-map-marker-alt text-danger me-1"></i> -</span> 
-                                    <span class="text-muted mx-2">|</span> 
-                                    <span id="lblPo">-</span>
+                        <div class="row align-items-center">
+                            <!-- Left: Identity -->
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded p-3 me-3 d-none d-sm-flex justify-content-center align-items-center" style="width: 60px; height: 60px;">
+                                        <i class="fas fa-barcode fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted small fw-bold mb-1">หมายเลขแท็ก / ไอเท็ม</div>
+                                        <h4 class="text-primary fw-bold mb-0 text-truncate" id="lblSerialNo">-</h4>
+                                        <div class="text-secondary small fw-bold mt-1 text-truncate" id="lblItemNo">-</div>
+                                    </div>
+                                </div>
+                                <div class="ms-sm-2">
+                                    <div class="text-muted small fw-bold mb-1">รายละเอียด (Description)</div>
+                                    <div class="text-dark fw-bold" id="lblPartDesc">-</div>
                                 </div>
                             </div>
+                            
+                            <!-- Divider for mobile -->
+                            <div class="col-12 d-block d-md-none my-3">
+                                <hr class="m-0 text-secondary opacity-25">
+                            </div>
 
-                            <!-- Column 5: Description (Full width) -->
-                            <div class="col-12 mt-2 pt-3 border-top">
-                                <div class="text-muted small mb-1">รายละเอียด (Description)</div>
-                                <div class="text-dark fw-bold" id="lblPartDesc">-</div>
+                            <!-- Right: Status & Details -->
+                            <div class="col-md-6 ps-md-5">
+                                <div class="row gy-4">
+                                    <div class="col-6">
+                                        <div class="text-muted small fw-bold mb-1">จำนวนปัจจุบัน (Qty)</div>
+                                        <h4 class="text-success fw-bold mb-0" id="lblQty">-</h4>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small fw-bold mb-1">สถานะ (Status)</div>
+                                        <div class="fs-5 fw-bold" id="lblStatus">-</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small fw-bold mb-1">PO / REF NO.</div>
+                                        <div class="text-dark fw-bold fs-6" id="lblPo">-</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small fw-bold mb-1">คลัง / โลเคชั่น (Location)</div>
+                                        <div class="text-dark fw-bold fs-6"><i class="fas fa-map-marker-alt text-danger me-2"></i><span id="lblLocation">-</span></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
