@@ -5,7 +5,7 @@ import { FiBriefcase, FiPlus, FiClock, FiTrash2, FiEdit2 } from 'react-icons/fi'
 export default function ProjectsTab({ tasks, refreshData }) {
   const [projects, setProjects] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ title: '', description: '', status: 'active' });
+  const [formData, setFormData] = useState({ title: '', description: '', status: 'active', assignee: '', startDate: '', dueDate: '', tags: '', priority: 'normal' });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export default function ProjectsTab({ tasks, refreshData }) {
         await axios.post('/api/projects.php', formData);
       }
       setIsModalOpen(false);
-      setFormData({ title: '', description: '', status: 'active' });
+      setFormData({ title: '', description: '', status: 'active', assignee: '', startDate: '', dueDate: '', tags: '', priority: 'normal' });
       fetchProjects();
     } catch (e) {
       console.error(e);
@@ -87,7 +87,7 @@ export default function ProjectsTab({ tasks, refreshData }) {
           <p className="text-slate-500 text-sm mt-1">จัดการโปรเจ็คระยะยาวและติดตามเวลาที่ใช้</p>
         </div>
         <button 
-          onClick={() => { setFormData({ title: '', description: '', status: 'active' }); setIsModalOpen(true); }}
+          onClick={() => { setFormData({ title: '', description: '', status: 'active', assignee: '', startDate: '', dueDate: '', tags: '', priority: 'normal' }); setIsModalOpen(true); }}
           className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-medium shadow-md transition-all active:scale-95"
         >
           <FiPlus /> สร้างโปรเจ็ค
@@ -114,14 +114,36 @@ export default function ProjectsTab({ tasks, refreshData }) {
                   {p.Status === 'active' ? 'ดำเนินการ' : 'ปิดแล้ว'}
                 </span>
               </div>
+              
+              {/* Added Project Metadata */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {p.Priority && (
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    p.Priority === 'high' ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : 
+                    p.Priority === 'low' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' : 
+                    'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                  }`}>
+                    {p.Priority === 'high' ? 'ด่วน' : p.Priority === 'low' ? 'ต่ำ' : 'ปานกลาง'}
+                  </span>
+                )}
+                {p.Assignee && <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400">👤 {p.Assignee}</span>}
+                {p.StartDate && p.DueDate && <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">📅 {p.StartDate} ถึง {p.DueDate}</span>}
+              </div>
+
               <p className="text-slate-500 text-sm mb-4 line-clamp-2 min-h-[40px]">{p.Description || 'ไม่มีรายละเอียด'}</p>
+              
+              {p.Tags && (
+                <div className="flex flex-wrap gap-1 mb-4">
+                  {p.Tags.split(',').map((t, i) => <span key={i} className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">{t.trim()}</span>)}
+                </div>
+              )}
               
               <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-2 rounded-lg font-medium text-sm mb-4">
                 <FiClock /> ใช้เวลาไปแล้ว: {calculateTimeSpent(p.Id)}
               </div>
               
               <div className="flex justify-end gap-2 border-t border-slate-100 dark:border-slate-700 pt-3">
-                <button onClick={() => { setFormData({ Id: p.Id, title: p.Title, description: p.Description, status: p.Status }); setIsModalOpen(true); }} className="p-2 text-slate-500 hover:text-sky-500 transition-colors">
+                <button onClick={() => { setFormData({ Id: p.Id, title: p.Title, description: p.Description, status: p.Status, assignee: p.Assignee || '', startDate: p.StartDate || '', dueDate: p.DueDate || '', tags: p.Tags || '', priority: p.Priority || 'normal' }); setIsModalOpen(true); }} className="p-2 text-slate-500 hover:text-sky-500 transition-colors">
                   <FiEdit2 />
                 </button>
                 <button onClick={() => handleDelete(p.Id)} className="p-2 text-slate-500 hover:text-rose-500 transition-colors">
@@ -134,8 +156,8 @@ export default function ProjectsTab({ tasks, refreshData }) {
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 animate-slide-up">
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 animate-slide-up my-8">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold">{formData.Id ? 'แก้ไขโปรเจ็ค' : 'สร้างโปรเจ็คใหม่'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
@@ -148,6 +170,37 @@ export default function ProjectsTab({ tasks, refreshData }) {
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">รายละเอียด</label>
                 <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full border dark:border-slate-700 bg-transparent rounded-lg px-3 py-2 outline-none focus:border-indigo-500 h-24 resize-none" />
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ผู้รับผิดชอบ</label>
+                  <input value={formData.assignee} onChange={e => setFormData({...formData, assignee: e.target.value})} placeholder="ชื่อผู้รับผิดชอบ..." className="w-full border dark:border-slate-700 bg-transparent rounded-lg px-3 py-2 outline-none focus:border-indigo-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ความสำคัญ</label>
+                  <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} className="w-full border dark:border-slate-700 bg-transparent rounded-lg px-3 py-2 outline-none focus:border-indigo-500">
+                    <option value="low">ต่ำ (Low)</option>
+                    <option value="normal">ปานกลาง (Normal)</option>
+                    <option value="high">ด่วน (High)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">วันที่เริ่ม</label>
+                  <input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="w-full border dark:border-slate-700 bg-transparent rounded-lg px-3 py-2 outline-none focus:border-indigo-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">วันสิ้นสุด</label>
+                  <input type="date" value={formData.dueDate} onChange={e => setFormData({...formData, dueDate: e.target.value})} className="w-full border dark:border-slate-700 bg-transparent rounded-lg px-3 py-2 outline-none focus:border-indigo-500" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">แท็ก (คั่นด้วยลูกน้ำ ,)</label>
+                <input value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} placeholder="ex. design, frontend" className="w-full border dark:border-slate-700 bg-transparent rounded-lg px-3 py-2 outline-none focus:border-indigo-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">สถานะ</label>

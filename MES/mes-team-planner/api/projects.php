@@ -7,17 +7,28 @@ $id = isset($_GET['id']) ? $_GET['id'] : null;
 try {
     if ($method === 'GET') {
         $stmt = $pdo->query("SELECT * FROM TeamPlanner_Projects ORDER BY CreatedAt DESC");
-        sendJson($stmt->fetchAll(PDO::FETCH_ASSOC));
+        $projects = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            if (!empty($row['StartDate'])) $row['StartDate'] = formatDate($row['StartDate']);
+            if (!empty($row['DueDate'])) $row['DueDate'] = formatDate($row['DueDate']);
+            $projects[] = $row;
+        }
+        sendJson($projects);
     } 
     elseif ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
         
-        $sql = "INSERT INTO TeamPlanner_Projects (Title, Description, Status) OUTPUT INSERTED.* VALUES (?, ?, ?)";
+        $sql = "INSERT INTO TeamPlanner_Projects (Title, Description, Status, Assignee, StartDate, DueDate, Tags, Priority) OUTPUT INSERTED.* VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             $data['title'],
             $data['description'] ?? null,
-            $data['status'] ?? 'active'
+            $data['status'] ?? 'active',
+            $data['assignee'] ?? null,
+            $data['startDate'] ?? null,
+            $data['dueDate'] ?? null,
+            $data['tags'] ?? null,
+            $data['priority'] ?? 'normal'
         ]);
         
         $newProject = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -32,7 +43,9 @@ try {
         $params = [];
         
         $fields = [
-            'status' => 'Status', 'title' => 'Title', 'description' => 'Description'
+            'status' => 'Status', 'title' => 'Title', 'description' => 'Description',
+            'assignee' => 'Assignee', 'startDate' => 'StartDate', 'dueDate' => 'DueDate',
+            'tags' => 'Tags', 'priority' => 'Priority'
         ];
         
         foreach ($fields as $jsonKey => $dbKey) {
