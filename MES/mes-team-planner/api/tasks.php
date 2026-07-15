@@ -64,24 +64,39 @@ try {
         $newTask['projectChecklistId'] = $newTask['ProjectChecklistId'] ?: null;
         
         // Sync checklist if created as done
-        if ($newTask['Status'] === 'done' && !empty($newTask['ProjectChecklistId']) && !empty($newTask['ProjectId'])) {
+        if ($newTask['Status'] === 'done' && !empty($newTask['ProjectId'])) {
             $pStmt = $pdo->prepare("SELECT Checklist FROM TeamPlanner_Projects WHERE Id = ?");
             $pStmt->execute([$newTask['ProjectId']]);
             $project = $pStmt->fetch(PDO::FETCH_ASSOC);
             if ($project && !empty($project['Checklist'])) {
                 $checklist = json_decode($project['Checklist'], true);
                 $changed = false;
-                if (is_array($checklist)) {
-                    foreach ($checklist as &$item) {
-                        if (isset($item['id']) && $item['id'] == $newTask['ProjectChecklistId']) {
-                            if (!$item['isDone']) {
-                                $item['isDone'] = true;
-                                $changed = true;
-                            }
-                            break;
+                
+                $targetIds = [];
+                if (!empty($newTask['ProjectChecklistId'])) {
+                    $targetIds[] = $newTask['ProjectChecklistId'];
+                }
+                
+                $subtasksArr = json_decode($newTask['subtasks'], true);
+                if (is_array($subtasksArr)) {
+                    foreach ($subtasksArr as $st) {
+                        if (!empty($st['projectChecklistId'])) {
+                            $targetIds[] = $st['projectChecklistId'];
                         }
                     }
                 }
+                
+                if (is_array($checklist) && count($targetIds) > 0) {
+                    foreach ($checklist as &$item) {
+                        if (isset($item['id']) && in_array($item['id'], $targetIds)) {
+                            if (empty($item['isDone'])) {
+                                $item['isDone'] = true;
+                                $changed = true;
+                            }
+                        }
+                    }
+                }
+                
                 if ($changed) {
                     $updStmt = $pdo->prepare("UPDATE TeamPlanner_Projects SET Checklist = ? WHERE Id = ?");
                     $updStmt->execute([json_encode($checklist), $newTask['ProjectId']]);
@@ -139,7 +154,7 @@ try {
         $updatedTask['projectId'] = $updatedTask['ProjectId'] ?: null;
         $updatedTask['projectChecklistId'] = $updatedTask['ProjectChecklistId'] ?: null;
         
-        if (array_key_exists('status', $data) && !empty($updatedTask['ProjectChecklistId']) && !empty($updatedTask['ProjectId'])) {
+        if (array_key_exists('status', $data) && !empty($updatedTask['ProjectId'])) {
             $pStmt = $pdo->prepare("SELECT Checklist FROM TeamPlanner_Projects WHERE Id = ?");
             $pStmt->execute([$updatedTask['ProjectId']]);
             $project = $pStmt->fetch(PDO::FETCH_ASSOC);
@@ -147,17 +162,32 @@ try {
                 $checklist = json_decode($project['Checklist'], true);
                 $isDone = ($updatedTask['Status'] === 'done');
                 $changed = false;
-                if (is_array($checklist)) {
+                
+                $targetIds = [];
+                if (!empty($updatedTask['ProjectChecklistId'])) {
+                    $targetIds[] = $updatedTask['ProjectChecklistId'];
+                }
+                
+                $subtasksArr = json_decode($updatedTask['subtasks'], true);
+                if (is_array($subtasksArr)) {
+                    foreach ($subtasksArr as $st) {
+                        if (!empty($st['projectChecklistId'])) {
+                            $targetIds[] = $st['projectChecklistId'];
+                        }
+                    }
+                }
+                
+                if (is_array($checklist) && count($targetIds) > 0) {
                     foreach ($checklist as &$item) {
-                        if (isset($item['id']) && $item['id'] == $updatedTask['ProjectChecklistId']) {
+                        if (isset($item['id']) && in_array($item['id'], $targetIds)) {
                             if (!isset($item['isDone']) || $item['isDone'] !== $isDone) {
                                 $item['isDone'] = $isDone;
                                 $changed = true;
                             }
-                            break;
                         }
                     }
                 }
+                
                 if ($changed) {
                     $updStmt = $pdo->prepare("UPDATE TeamPlanner_Projects SET Checklist = ? WHERE Id = ?");
                     $updStmt->execute([json_encode($checklist), $updatedTask['ProjectId']]);

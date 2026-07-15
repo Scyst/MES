@@ -460,17 +460,35 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
                 {formData.projectId && (
                   <div>
-                    <label className="block text-xs font-medium text-indigo-700 dark:text-indigo-400 mb-1.5">Checklist งานในโปรเจ็ค</label>
-                    <div className="relative">
-                      <select name="projectChecklistId" value={formData.projectChecklistId} onChange={handleChecklistChange} className="w-full bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 text-slate-900 dark:text-white rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
-                        <option value="">-- ไม่ระบุ --</option>
-                        {projectsList.find(p => p.Id == formData.projectId)?.Checklist?.map(c => (
-                          <option key={c.id} value={c.id} disabled={c.isDone}>
-                            {c.isDone ? '✅ ' : '⏳ '} {c.text}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
+                    <label className="block text-xs font-medium text-indigo-700 dark:text-indigo-400 mb-1.5">Checklist ในโปรเจ็คที่ยังไม่เสร็จ</label>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                      {projectsList.find(p => p.Id == formData.projectId)?.Checklist?.filter(c => !c.isDone)?.length > 0 ? (
+                        projectsList.find(p => p.Id == formData.projectId)?.Checklist?.filter(c => !c.isDone)?.map(c => {
+                          const isAdded = subtasksArr.some(st => st.projectChecklistId === c.id);
+                          return (
+                            <div key={c.id} className="flex items-center justify-between bg-white dark:bg-slate-800 p-2 rounded-lg border border-indigo-100 dark:border-indigo-500/20">
+                              <span className="text-sm text-slate-700 dark:text-slate-300 truncate mr-2 flex-1" title={c.text}>{c.text}</span>
+                              <button
+                                type="button"
+                                disabled={isAdded}
+                                onClick={() => {
+                                  setSubtasksArr([...subtasksArr, {
+                                    id: Date.now().toString() + Math.random(),
+                                    text: c.text,
+                                    completed: false,
+                                    projectChecklistId: c.id
+                                  }]);
+                                }}
+                                className={`flex-shrink-0 px-2 py-1 rounded-md text-xs font-medium transition-colors ${isAdded ? 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500 cursor-not-allowed' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-400 dark:hover:bg-indigo-500/40'}`}
+                              >
+                                {isAdded ? 'ดึงแล้ว' : '+ ดึง'}
+                              </button>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-sm text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-800/50 p-2 rounded-lg border border-dashed border-indigo-200 dark:border-indigo-500/20 text-center">ไม่มี Checklist ที่รอทำ</p>
+                      )}
                     </div>
                   </div>
                 )}
