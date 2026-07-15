@@ -217,48 +217,30 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body bg-body-tertiary p-3">
-                    <!-- Tag Info KPI Cards -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <div class="card shadow-sm kpi-card border-primary h-100">
-                                <div class="card-body p-2">
-                                    <div class="text-uppercase text-primary small fw-bold mb-1">หมายเลขแท็ก / ไอเท็ม</div>
-                                    <h6 class="text-dark fw-bold mb-0 text-truncate" id="lblSerialNo">-</h6>
-                                    <div class="small text-muted mt-1 text-truncate" id="lblItemNo">-</div>
-                                </div>
+                    <!-- Tag Info Summary -->
+                    <div class="bg-white p-3 rounded shadow-sm border mb-3">
+                        <div class="row gx-4 gy-3">
+                            <div class="col-6 col-md-4 col-lg-3">
+                                <div class="text-muted small fw-bold text-uppercase mb-1">หมายเลขแท็ก / ไอเท็ม</div>
+                                <h5 class="text-primary fw-bold mb-0 text-truncate" id="lblSerialNo">-</h5>
+                                <div class="text-dark small mt-1 text-truncate" id="lblItemNo">-</div>
                             </div>
-                        </div>
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <div class="card shadow-sm kpi-card border-info h-100">
-                                <div class="card-body p-2">
-                                    <div class="text-uppercase text-info small fw-bold mb-1">รายละเอียด (Description)</div>
-                                    <div class="text-dark fw-bold text-wrap" style="font-size: 0.85rem; line-height: 1.2; height: 35px; overflow: hidden;" id="lblPartDesc">-</div>
-                                </div>
+                            <div class="col-6 col-md-4 col-lg-3">
+                                <div class="text-muted small fw-bold text-uppercase mb-1">รายละเอียด (Description)</div>
+                                <div class="text-dark fw-bold" style="font-size: 0.85rem;" id="lblPartDesc">-</div>
                             </div>
-                        </div>
-                        <div class="col-12 col-md-6 col-lg-2">
-                            <div class="card shadow-sm kpi-card border-success h-100">
-                                <div class="card-body p-2">
-                                    <div class="text-uppercase text-success small fw-bold mb-1">จำนวนปัจจุบัน</div>
-                                    <h5 class="text-success fw-bold mb-0" id="lblQty">-</h5>
-                                </div>
+                            <div class="col-4 col-md-4 col-lg-2">
+                                <div class="text-muted small fw-bold text-uppercase mb-1">จำนวนปัจจุบัน</div>
+                                <h4 class="text-success fw-bold mb-0" id="lblQty">-</h4>
                             </div>
-                        </div>
-                        <div class="col-12 col-md-6 col-lg-2">
-                            <div class="card shadow-sm kpi-card border-warning h-100">
-                                <div class="card-body p-2">
-                                    <div class="text-uppercase text-warning small fw-bold mb-1">สถานะ / โลเคชั่น</div>
-                                    <div class="mb-1"><span class="badge bg-secondary" id="lblStatus">-</span></div>
-                                    <div class="small text-muted mt-1 text-truncate" id="lblLocation">-</div>
-                                </div>
+                            <div class="col-4 col-md-6 col-lg-2">
+                                <div class="text-muted small fw-bold text-uppercase mb-1">สถานะ / โลเคชั่น</div>
+                                <div class="mb-1"><span id="lblStatus"><span class="badge bg-secondary">-</span></span></div>
+                                <div class="text-dark small text-truncate" id="lblLocation">-</div>
                             </div>
-                        </div>
-                        <div class="col-12 col-md-12 col-lg-2">
-                            <div class="card shadow-sm kpi-card border-secondary h-100">
-                                <div class="card-body p-2">
-                                    <div class="text-uppercase text-secondary small fw-bold mb-1">PO / Ref No.</div>
-                                    <div class="text-dark fw-bold text-truncate mt-1" id="lblPo">-</div>
-                                </div>
+                            <div class="col-4 col-md-6 col-lg-2">
+                                <div class="text-muted small fw-bold text-uppercase mb-1">PO / Ref No.</div>
+                                <div class="text-dark fw-bold text-truncate mt-1" id="lblPo">-</div>
                             </div>
                         </div>
                     </div>
