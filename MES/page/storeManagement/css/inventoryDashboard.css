@@ -1,7 +1,7 @@
 /* MES/page/storeManagement/css/inventoryDashboard.css */
 
 /* KPI Card & Table Settings */
-.kpi-card { transition: transform 0.2s; border-left: 4px solid; }
+.kpi-card { transition: transform 0.2s; border-top: none !important; border-right: none !important; border-bottom: none !important; border-left: 4px solid !important; }
 .kpi-card:hover { transform: translateY(-3px); }
 .table-responsive-custom { max-height: calc(100vh - 300px); overflow-y: auto; }
 .row-out-of-stock { background-color: #fff5f5 !important; }

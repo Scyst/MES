@@ -24,7 +24,7 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
         @media (max-width: 991.98px) {
             .dashboard-header-sticky { top: 56px; }
         }
-        .kpi-card { transition: transform 0.2s; border-left: 4px solid; }
+        .kpi-card { transition: transform 0.2s; border-top: none !important; border-right: none !important; border-bottom: none !important; border-left: 4px solid !important; }
     </style>
 </head>
 <body class="layout-top-header bg-body-tertiary">
