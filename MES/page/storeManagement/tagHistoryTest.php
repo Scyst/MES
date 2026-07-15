@@ -173,14 +173,6 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
 
             <!-- Main Content Area -->
             <div class="content-wrapper px-3 pb-3 pt-2">
-                <!-- Loading Spinner -->
-                <div id="loadingIndicator" class="text-center py-5 d-none">
-                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-                        <span class="visually-hidden">กำลังโหลด...</span>
-                    </div>
-                    <p class="text-muted mt-3">กำลังค้นหาข้อมูล...</p>
-                </div>
-
                 <!-- Error Message -->
                 <div id="errorAlert" class="alert alert-danger d-none mt-2 rounded-3 shadow-sm" role="alert">
                     <i class="fas fa-exclamation-triangle me-2"></i><span id="errorMessage">ไม่พบข้อมูล</span>
@@ -189,10 +181,6 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                 <!-- Recent Tags Container -->
                 <div id="recentTagsContainer" class="mt-2 h-100 d-flex flex-column">
                     <div class="card shadow-sm border-0 h-100 d-flex flex-column">
-                        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0 text-dark fw-bold"><i class="fas fa-clock me-2 text-primary"></i>รายการแท็กที่มีความเคลื่อนไหวล่าสุด (Recent Activity)</h6>
-                            <span class="badge bg-secondary rounded-pill" id="recentTagsCount">0 รายการ</span>
-                        </div>
                         <div class="table-responsive flex-grow-1">
                             <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.85rem;">
                                 <thead class="table-light sticky-top shadow-sm">
