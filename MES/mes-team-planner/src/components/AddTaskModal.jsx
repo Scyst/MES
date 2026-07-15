@@ -278,7 +278,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               onClick={() => setActiveTab('checklist')}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'checklist' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
             >
-              <FiList /> Checklist
+              <FiList /> งานย่อย & โปรเจ็ค
               {subtasksArr.length > 0 && (
                 <span className="ml-1 bg-slate-100 dark:bg-slate-800 text-xs px-1.5 py-0.5 rounded-full">{subtasksArr.filter(s=>s.completed).length}/{subtasksArr.length}</span>
               )}
@@ -303,39 +303,6 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
           {activeTab === 'general' && (
             <form id="task-form" onSubmit={handleSubmit} className="p-5 flex flex-col h-full gap-4">
               
-              {/* Projects */}
-              <div className="bg-indigo-50/50 dark:bg-indigo-500/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-500/20 mb-2">
-                <label className="block text-sm font-medium text-indigo-800 dark:text-indigo-300 mb-1.5 flex items-center gap-2">
-                  <FiBriefcase /> ผูกกับโปรเจ็ค (ทางเลือก)
-                </label>
-                <div className="relative mb-3">
-                  <select name="projectId" value={formData.projectId} onChange={handleProjectChange} className="w-full bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
-                    <option value="">-- ไม่ผูกกับโปรเจ็ค --</option>
-                    {projectsList.filter(p => p.Status === 'active' || p.Id == formData.projectId).map(p => (
-                      <option key={p.Id} value={p.Id}>{p.Title}</option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
-                </div>
-
-                {formData.projectId && (
-                  <div>
-                    <label className="block text-xs font-medium text-indigo-700 dark:text-indigo-400 mb-1.5">Checklist งานในโปรเจ็ค</label>
-                    <div className="relative">
-                      <select name="projectChecklistId" value={formData.projectChecklistId} onChange={handleChecklistChange} className="w-full bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 text-slate-900 dark:text-white rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
-                        <option value="">-- ไม่ระบุ --</option>
-                        {projectsList.find(p => p.Id == formData.projectId)?.Checklist?.map(c => (
-                          <option key={c.id} value={c.id} disabled={c.isDone}>
-                            {c.isDone ? '✅ ' : '⏳ '} {c.text}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">ชื่องาน</label>
@@ -474,7 +441,42 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
           {/* CHECKLIST TAB */}
           {activeTab === 'checklist' && (
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-6">
+              
+              {/* Projects Integration */}
+              <div className="bg-indigo-50/50 dark:bg-indigo-500/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-500/20">
+                <label className="block text-sm font-medium text-indigo-800 dark:text-indigo-300 mb-1.5 flex items-center gap-2">
+                  <FiBriefcase /> ผูกกับโปรเจ็ค (ทางเลือก)
+                </label>
+                <div className="relative mb-3">
+                  <select name="projectId" value={formData.projectId} onChange={handleProjectChange} className="w-full bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
+                    <option value="">-- ไม่ผูกกับโปรเจ็ค --</option>
+                    {projectsList.filter(p => p.Status === 'active' || p.Id == formData.projectId).map(p => (
+                      <option key={p.Id} value={p.Id}>{p.Title}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
+                </div>
+
+                {formData.projectId && (
+                  <div>
+                    <label className="block text-xs font-medium text-indigo-700 dark:text-indigo-400 mb-1.5">Checklist งานในโปรเจ็ค</label>
+                    <div className="relative">
+                      <select name="projectChecklistId" value={formData.projectChecklistId} onChange={handleChecklistChange} className="w-full bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 text-slate-900 dark:text-white rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
+                        <option value="">-- ไม่ระบุ --</option>
+                        {projectsList.find(p => p.Id == formData.projectId)?.Checklist?.map(c => (
+                          <option key={c.id} value={c.id} disabled={c.isDone}>
+                            {c.isDone ? '✅ ' : '⏳ '} {c.text}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Internal Subtasks */}
               <div className="bg-slate-100/50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-300/50 dark:border-slate-700/50">
                 <form onSubmit={handleSaveSubtask} className="flex gap-2 mb-4">
                   <input 
