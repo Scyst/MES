@@ -1945,6 +1945,35 @@ try {
             $response = ['success' => true, 'data' => ['tag_info' => $tagInfo, 'history' => $history]];
             break;
 
+        case 'get_recent_active_tags':
+            // Query for recent distinct tag transactions (limit 50)
+            $sqlRecent = "
+                WITH RecentTags AS (
+                    SELECT serial_no, MAX(transaction_date) as max_date
+                    FROM dbo.TAG_TRANSACTIONS WITH (NOLOCK)
+                    GROUP BY serial_no
+                )
+                SELECT TOP 50
+                    t.serial_no,
+                    tt.transaction_type,
+                    FORMAT(tt.transaction_date, 'dd/MM/yyyy HH:mm') as transaction_date,
+                    tt.quantity_changed,
+                    ISNULL(u.fullname, 'System') as actor_name,
+                    i.part_description,
+                    i.part_no,
+                    t.status,
+                    t.warehouse_no as location
+                FROM RecentTags rt
+                JOIN dbo.TAG_TRANSACTIONS tt WITH (NOLOCK) ON rt.serial_no = tt.serial_no AND rt.max_date = tt.transaction_date
+                JOIN dbo.RM_SERIAL_TAGS t WITH (NOLOCK) ON rt.serial_no = t.serial_no
+                LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                LEFT JOIN dbo.USERS u WITH (NOLOCK) ON tt.created_by = u.id
+                ORDER BY rt.max_date DESC
+            ";
+            $stmt = $pdo->query($sqlRecent);
+            $response = ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
+            break;
+
         case 'trace_tag_v2':
             $barcode = isset($_GET['serial_no']) ? trim($_GET['serial_no']) : '';
             if (empty($barcode)) throw new Exception("ระบุ Barcode");

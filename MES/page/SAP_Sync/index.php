@@ -206,6 +206,8 @@ session_start();
         <div class="tabs">
             <button class="tab-btn active" id="btn-ops" onclick="switchTab('operation_slips')">Operation Slips</button>
             <button class="tab-btn" id="btn-stock" onclick="switchTab('sap_stocks')">SAP All Stock</button>
+            <button class="tab-btn" id="btn-recon-inv" onclick="switchTab('recon_inventory')" style="border-left: 2px solid var(--accent-blue); margin-left: 1rem;">Inventory Audit (Recon)</button>
+            <button class="tab-btn" id="btn-recon-yield" onclick="switchTab('recon_production')">Yield Audit (Recon)</button>
         </div>
 
         <div class="card">
@@ -231,8 +233,12 @@ session_start();
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             if(view === 'operation_slips') {
                 document.getElementById('btn-ops').classList.add('active');
-            } else {
+            } else if(view === 'sap_stocks') {
                 document.getElementById('btn-stock').classList.add('active');
+            } else if(view === 'recon_inventory') {
+                document.getElementById('btn-recon-inv').classList.add('active');
+            } else if(view === 'recon_production') {
+                document.getElementById('btn-recon-yield').classList.add('active');
             }
             fetchData(view);
         }
@@ -247,8 +253,13 @@ session_start();
             loading.style.display = 'block';
 
             try {
-                const action = view === 'operation_slips' ? 'get_operation_slips' : 'get_sap_stocks';
-                const response = await fetch(`api/get_sap_data.php?action=${action}`);
+                let url = '';
+                if(view === 'operation_slips') url = 'api/get_sap_data.php?action=get_operation_slips';
+                else if(view === 'sap_stocks') url = 'api/get_sap_data.php?action=get_sap_stocks';
+                else if(view === 'recon_inventory') url = 'api/recon_inventory.php?show_all=1';
+                else if(view === 'recon_production') url = 'api/recon_production.php?show_all=1';
+
+                const response = await fetch(url);
                 const result = await response.json();
 
                 if(result.success && result.data.length > 0) {
@@ -276,8 +287,18 @@ session_start();
                             if (col.toLowerCase().includes('date') && val) {
                                 val = new Date(val).toLocaleString('en-GB');
                             }
-                            // Format numbers
-                            if (typeof val === 'number') {
+                            // Format numbers and status
+                            if (col === 'Status') {
+                                if (val === 'MATCH') {
+                                    td.innerHTML = `<span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #86efac; border-color: rgba(34, 197, 94, 0.3);">MATCH</span>`;
+                                } else if (val === 'EXCESS_IN_MES' || val === 'SAP_AHEAD') {
+                                    td.innerHTML = `<span class="badge" style="background: rgba(234, 179, 8, 0.2); color: #fde047; border-color: rgba(234, 179, 8, 0.3);">${val}</span>`;
+                                } else if (val === 'SHORTAGE_IN_MES' || val === 'UNCONFIRMED_YIELD') {
+                                    td.innerHTML = `<span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3);">${val}</span>`;
+                                } else {
+                                    td.innerHTML = `<span class="badge">${val}</span>`;
+                                }
+                            } else if (typeof val === 'number') {
                                 val = `<span class="badge">${val.toLocaleString()}</span>`;
                                 td.innerHTML = val;
                             } else {

@@ -131,7 +131,7 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                                             <i class="fas fa-search"></i>
                                         </button>
                                     </div>
-                                    <button class="btn btn-outline-danger btn-sm shadow-sm fw-bold px-3 d-flex align-items-center justify-content-center flex-shrink-0" type="button" onclick="document.getElementById('serialNoInput').value = ''; document.getElementById('serialNoInput').focus();" style="height: 32px;" title="Clear">
+                                    <button id="btnClear" class="btn btn-outline-danger btn-sm shadow-sm fw-bold px-3 d-flex align-items-center justify-content-center flex-shrink-0" type="button" style="height: 32px;" title="Clear">
                                         <i class="fas fa-eraser"></i> <small class="d-none d-sm-inline ms-1">Clear</small>
                                     </button>
                                 </div>
@@ -154,6 +154,34 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                 <!-- Error Message -->
                 <div id="errorAlert" class="alert alert-danger d-none mt-2 rounded-3 shadow-sm" role="alert">
                     <i class="fas fa-exclamation-triangle me-2"></i><span id="errorMessage">ไม่พบข้อมูล</span>
+                </div>
+
+                <!-- Recent Tags Container -->
+                <div id="recentTagsContainer" class="mt-2 h-100 d-flex flex-column">
+                    <div class="card shadow-sm border-0 h-100 d-flex flex-column">
+                        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 text-dark fw-bold"><i class="fas fa-clock me-2 text-primary"></i>รายการแท็กที่มีความเคลื่อนไหวล่าสุด (Recent Activity)</h6>
+                            <span class="badge bg-secondary rounded-pill" id="recentTagsCount">0 รายการ</span>
+                        </div>
+                        <div class="table-responsive flex-grow-1">
+                            <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.85rem;">
+                                <thead class="table-light sticky-top shadow-sm">
+                                    <tr class="text-secondary small text-uppercase align-middle">
+                                        <th style="min-width: 140px;">เวลาล่าสุด</th>
+                                        <th style="min-width: 160px;">หมายเลขแท็ก (Serial No)</th>
+                                        <th style="min-width: 150px;">ไอเท็ม (Item)</th>
+                                        <th class="text-center" style="min-width: 120px;">ประเภท (Type)</th>
+                                        <th class="text-end" style="width: 100px;">จำนวน (Qty)</th>
+                                        <th class="text-center" style="min-width: 100px;">สถานะ</th>
+                                        <th style="min-width: 120px;">ผู้ทำรายการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentTagsTableBody">
+                                    <tr><td colspan="7" class="text-center py-4 text-muted">กำลังโหลดข้อมูล...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Result Container -->
@@ -190,6 +218,7 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
     <?php include_once '../components/common_scripts.php'; ?>
 
     <!-- Page Script -->
+    <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
     <script src="script/tagHistoryTest.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
