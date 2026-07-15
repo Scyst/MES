@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiCalendar, FiCheckSquare, FiLink, FiPieChart, FiBarChart2, FiBell, FiMenu, FiX, FiSun, FiMoon, FiLogOut, FiUser } from 'react-icons/fi';
+import { FiCalendar, FiCheckSquare, FiLink, FiPieChart, FiBarChart2, FiBell, FiMenu, FiX, FiSun, FiMoon, FiLogOut, FiUser, FiBriefcase } from 'react-icons/fi';
 import axios from 'axios';
 import CalendarView from './components/CalendarView';
 import TaskBoard from './components/TaskBoard';
 import Dashboard from './components/Dashboard';
 import GanttChart from './components/GanttChart';
 import LinkHub from './components/LinkHub';
+import ProjectsTab from './components/ProjectsTab';
 import NotificationManager from './components/NotificationManager';
 import NotificationWidget from './components/NotificationWidget';
 
@@ -13,6 +14,7 @@ import NotificationWidget from './components/NotificationWidget';
 const navItems = [
   { tab: 'calendar', icon: FiCalendar, label: 'ปฏิทินทีม', sublabel: 'Calendar' },
   { tab: 'tasks', icon: FiCheckSquare, label: 'กระดานงาน', sublabel: 'Task Board' },
+  { tab: 'projects', icon: FiBriefcase, label: 'โปรเจ็ค', sublabel: 'Projects' },
   { tab: 'gantt', icon: FiBarChart2, label: 'ตารางงาน', sublabel: 'Gantt Chart' },
   { tab: 'links', icon: FiLink, label: 'คลังข้อมูล', sublabel: 'Links' },
   { tab: 'dashboard', icon: FiPieChart, label: 'ภาพรวม', sublabel: 'Dashboard' },
@@ -62,6 +64,18 @@ function App() {
 
   // ══════════ Shared Handlers ══════════
   const handleSaveTask = useCallback(async (taskData) => {
+    if (Array.isArray(taskData)) {
+      try {
+        const results = await Promise.all(taskData.map(t => axios.post('/api/tasks', t)));
+        setTasks(prev => [...results.map(r => r.data), ...prev]);
+        return true;
+      } catch (err) {
+        console.error('Failed to bulk save tasks', err);
+        refreshData();
+        return false;
+      }
+    }
+
     // Optimistic UI Update for immediate feedback (crucial for drag & drop)
     if (taskData.Id) {
       setTasks(prev => prev.map(t => {
@@ -201,6 +215,8 @@ function App() {
         return <TaskBoard {...sharedTaskProps} />;
       case 'gantt': 
         return <GanttChart {...sharedTaskProps} />;
+      case 'projects':
+        return <ProjectsTab tasks={tasks} refreshData={refreshData} />;
       case 'links': 
         return <LinkHub />;
       default: 

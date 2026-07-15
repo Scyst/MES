@@ -85,9 +85,9 @@ try {
     elseif ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
         
-        $sql = "INSERT INTO TeamPlanner_Tasks (Title, Status, Visibility, Assignee, DueDate, StartDate, StartTime, EndTime, Priority, Description, Subtasks, Tags, Recurrence) 
+        $sql = "INSERT INTO TeamPlanner_Tasks (Title, Status, Visibility, Assignee, DueDate, StartDate, StartTime, EndTime, Priority, Description, Subtasks, Tags, Recurrence, ProjectId) 
                 OUTPUT INSERTED.* 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([

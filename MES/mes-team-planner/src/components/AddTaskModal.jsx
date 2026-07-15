@@ -15,6 +15,17 @@ const RECURRENCE_OPTIONS = [
   { value: 'daily', label: '📅 ทำซ้ำทุกวัน' },
   { value: 'weekly', label: '📆 ทำซ้ำทุกสัปดาห์' },
   { value: 'monthly', label: '🗓️ ทำซ้ำทุกเดือน' },
+  { value: 'custom', label: '⚙️ กำหนดวันเอง' },
+];
+
+const WEEK_DAYS = [
+  { value: 1, label: 'จ' },
+  { value: 2, label: 'อ' },
+  { value: 3, label: 'พ' },
+  { value: 4, label: 'พฤ' },
+  { value: 5, label: 'ศ' },
+  { value: 6, label: 'ส' },
+  { value: 0, label: 'อา' },
 ];
 
 export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initialData, currentUser, tasks = [] }) {
@@ -27,8 +38,10 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   const [formData, setFormData] = useState({
     title: '', status: 'todo', visibility: 'public', assignee: '',
     startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
-    priority: 'normal', description: '', tags: '', recurrence: 'none'
+    priority: 'normal', description: '', tags: '', recurrence: 'none',
+    recurrenceDays: [], recurrenceEndDate: '', projectId: ''
   });
+  const [projectsList, setProjectsList] = useState([]);
 
   useEffect(() => {
     if (initialData && isOpen) {
@@ -45,6 +58,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         description: initialData.description || initialData.Description || '',
         tags: initialData.tags || initialData.Tags || '',
         recurrence: initialData.recurrence || initialData.Recurrence || 'none',
+        projectId: initialData.projectId || initialData.ProjectId || '',
         Id: initialData.Id
       });
       
@@ -64,7 +78,8 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       setFormData({
         title: '', status: 'todo', visibility: 'public', assignee: currentUser?.fullname || currentUser?.username || '',
         startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
-        priority: 'normal', description: '', tags: '', recurrence: 'none'
+        priority: 'normal', description: '', tags: '', recurrence: 'none',
+        recurrenceDays: [], recurrenceEndDate: '', projectId: ''
       });
       setSubtasksArr([]);
       setComments([]);
@@ -82,6 +97,12 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (isOpen) {
+      axios.get('/api/projects.php').then(res => setProjectsList(res.data)).catch(console.error);
+    }
+  }, [isOpen]);
 
   const fetchComments = async (taskId) => {
     try {
@@ -131,10 +152,58 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave({
-      ...formData,
-      subtasks: JSON.stringify(subtasksArr)
-    });
+    if (!isEditing && formData.recurrence !== 'none' && formData.recurrenceEndDate && formData.startDate) {
+      let tasksToCreate = [];
+      let current = new Date(formData.startDate);
+      const end = new Date(formData.recurrenceEndDate);
+      let safetyCounter = 0;
+      
+      while (current <= end && safetyCounter < 100) {
+        let shouldCreate = false;
+        if (formData.recurrence === 'daily') shouldCreate = true;
+        else if (formData.recurrence === 'weekly') {
+          if (current.getDay() === new Date(formData.startDate).getDay()) shouldCreate = true;
+        }
+        else if (formData.recurrence === 'monthly') {
+          if (current.getDate() === new Date(formData.startDate).getDate()) shouldCreate = true;
+        }
+        else if (formData.recurrence === 'custom') {
+          if ((formData.recurrenceDays || []).includes(current.getDay())) shouldCreate = true;
+        }
+        
+        if (shouldCreate) {
+          const dateStr = current.getFullYear() + '-' + String(current.getMonth()+1).padStart(2, '0') + '-' + String(current.getDate()).padStart(2, '0');
+          let dueDateStr = dateStr;
+          if (formData.dueDate) {
+            const startD = new Date(formData.startDate);
+            const dueD = new Date(formData.dueDate);
+            const diffDays = Math.round((dueD - startD) / (1000 * 3600 * 24));
+            let newDue = new Date(current);
+            newDue.setDate(newDue.getDate() + diffDays);
+            dueDateStr = newDue.getFullYear() + '-' + String(newDue.getMonth()+1).padStart(2, '0') + '-' + String(newDue.getDate()).padStart(2, '0');
+          }
+          tasksToCreate.push({
+            ...formData,
+            startDate: dateStr,
+            dueDate: dueDateStr,
+            subtasks: JSON.stringify(subtasksArr)
+          });
+          safetyCounter++;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      
+      if (tasksToCreate.length > 0) {
+        onSave(tasksToCreate);
+      } else {
+        onSave({ ...formData, subtasks: JSON.stringify(subtasksArr) });
+      }
+    } else {
+      onSave({
+        ...formData,
+        subtasks: JSON.stringify(subtasksArr)
+      });
+    }
   };
 
   const isEditing = !!initialData?.Id;
@@ -251,6 +320,20 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 </div>
               </div>
 
+              {/* Projects */}
+              <div>
+                <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">ผูกกับโปรเจ็ค (ทางเลือก)</label>
+                <div className="relative">
+                  <select name="projectId" value={formData.projectId} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
+                    <option value="">-- ไม่ผูกกับโปรเจ็ค --</option>
+                    {projectsList.filter(p => p.Status === 'active' || p.Id == formData.projectId).map(p => (
+                      <option key={p.Id} value={p.Id}>{p.Title}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
+                </div>
+              </div>
+
               {/* Dates */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -304,6 +387,37 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   </div>
                 </div>
               </div>
+
+              {formData.recurrence !== 'none' && !isEditing && (
+                <div className="bg-indigo-50/50 dark:bg-indigo-500/10 rounded-xl p-4 border border-indigo-100 dark:border-indigo-500/20 space-y-4">
+                  {formData.recurrence === 'custom' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">เลือกวันทำซ้ำ</label>
+                      <div className="flex flex-wrap gap-2">
+                        {WEEK_DAYS.map(day => (
+                          <button
+                            key={day.value}
+                            type="button"
+                            onClick={() => {
+                              const days = formData.recurrenceDays || [];
+                              const newDays = days.includes(day.value) ? days.filter(d => d !== day.value) : [...days, day.value];
+                              setFormData({ ...formData, recurrenceDays: newDays });
+                            }}
+                            className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium transition-all ${(formData.recurrenceDays || []).includes(day.value) ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600 hover:border-indigo-400'}`}
+                          >
+                            {day.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">สิ้นสุดการทำซ้ำ (End Date)</label>
+                    <input type="date" required={formData.recurrence !== 'none' && !isEditing} name="recurrenceEndDate" value={formData.recurrenceEndDate || ''} onChange={handleChange} className="w-full md:w-1/2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+                  </div>
+                </div>
+              )}
+
             </form>
           )}
 
