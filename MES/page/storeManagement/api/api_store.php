@@ -2025,10 +2025,12 @@ try {
                         SUM(t.qty_per_pallet) AS total_qty, MAX(t.pallet_no) AS pallet_no, MAX(t.ctn_number) AS ctn_number,
                         MAX(t.week_no) AS week_no, MAX(t.po_number) AS po_number, MAX(t.received_date) AS received_date,
                         MAX(t.warehouse_no) AS warehouse_no, MAX(t.status) AS status, MAX(t.remark) AS remark,
-                        MAX(u.fullname) AS actor_name, MAX(t.created_at) AS created_at
+                        MAX(u.fullname) AS actor_name, MAX(t.created_at) AS created_at,
+                        MAX(t.location_id) AS location_id, MAX(l.location_name) AS location_name
                     FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
                     LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
                     LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by = u.id
+                    LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON t.location_id = l.location_id
                     WHERE t.serial_no = ? OR (t.master_pallet_no = ? AND ? NOT LIKE 'RM-%') OR t.ctn_number = ?";
             
             $stmtTag = $pdo->prepare($sqlTag);
