@@ -14,8 +14,8 @@ import NotificationWidget from './components/NotificationWidget';
 const navItems = [
   { tab: 'calendar', icon: FiCalendar, label: 'ปฏิทินทีม', sublabel: 'Calendar' },
   { tab: 'tasks', icon: FiCheckSquare, label: 'กระดานงาน', sublabel: 'Task Board' },
-  { tab: 'projects', icon: FiBriefcase, label: 'โปรเจ็ค', sublabel: 'Projects' },
   { tab: 'gantt', icon: FiBarChart2, label: 'ตารางงาน', sublabel: 'Gantt Chart' },
+  { tab: 'projects', icon: FiBriefcase, label: 'โปรเจ็ค', sublabel: 'Projects' },
   { tab: 'links', icon: FiLink, label: 'คลังข้อมูล', sublabel: 'Links' },
   { tab: 'dashboard', icon: FiPieChart, label: 'ภาพรวม', sublabel: 'Dashboard' },
 ];
