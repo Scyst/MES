@@ -235,7 +235,7 @@ function App() {
 
     switch (activeTab) {
       case 'dashboard': 
-        return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} />;
+        return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav} />;
       case 'calendar': 
         return <CalendarView tasks={tasks} events={events} onSaveTask={handleSaveTask} onDeleteTask={handleDeleteTask} onSaveEvent={handleSaveEvent} onDeleteEvent={handleDeleteEvent} loading={dataLoading} />;
       case 'tasks': 
@@ -257,7 +257,7 @@ function App() {
         if (activeTab.startsWith('space-') || activeTab.startsWith('team-')) {
           return <SpaceView activeTab={activeTab} tasks={tasks} projects={projects} currentUser={currentUser} refreshData={refreshData} />;
         }
-        return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} />;
+        return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav} />;
     }
   };
 

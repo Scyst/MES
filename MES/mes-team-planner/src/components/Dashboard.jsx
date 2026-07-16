@@ -3,7 +3,7 @@ import { FiActivity, FiUserCheck, FiAlertCircle, FiCheckCircle, FiClock, FiBarCh
 import { format, subDays } from 'date-fns';
 import axios from 'axios';
 
-export default function Dashboard({ tasks = [], events = [], activities = [], loading }) {
+export default function Dashboard({ tasks = [], events = [], activities = [], loading, onNav }) {
   const [projects, setProjects] = useState([]);
 
   useEffect(() => {
@@ -76,31 +76,31 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
     <div className="space-y-4">
       {/* ═══ Quick Actions ═══ */}
       <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar shrink-0">
-        <button className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
+        <button onClick={() => onNav && onNav('projects')} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
           <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-2 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
             <FiFolderPlus className="text-xl" />
           </div>
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Create Project</span>
         </button>
-        <button className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
+        <button onClick={() => onNav && onNav('tasks')} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
           <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
             <FiFilePlus className="text-xl" />
           </div>
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Create Task</span>
         </button>
-        <button className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
+        <button onClick={() => alert('ฟีเจอร์นี้อยู่ระหว่างการพัฒนา')} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
           <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 group-hover:bg-blue-600 group-hover:text-white transition-colors">
             <FiUserPlus className="text-xl" />
           </div>
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Invite to Team</span>
         </button>
-        <button className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
+        <button onClick={() => onNav && onNav('calendar')} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
           <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2 group-hover:bg-amber-600 group-hover:text-white transition-colors">
             <FiCalendar className="text-xl" />
           </div>
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Schedule</span>
         </button>
-        <button className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
+        <button onClick={() => onNav && onNav('projects')} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
           <div className="w-10 h-10 rounded-full bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center mb-2 group-hover:bg-violet-600 group-hover:text-white transition-colors">
             <FiBriefcase className="text-xl" />
           </div>
