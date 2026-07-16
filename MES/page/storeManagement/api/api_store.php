@@ -2273,14 +2273,24 @@ try {
 
             try {
                 $pdo->beginTransaction();
+                $userId = $currentUser['id'];
 
                 // 3. Insert transaction log
                 $stmtTx = $pdo->prepare("INSERT INTO dbo.STOCK_TRANSACTIONS (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, transaction_timestamp) VALUES (?, ?, 'ADJUSTMENT', NULL, 1008, ?, 'Synced Store Stock with Physical Tags (Legacy Bug Fix)', GETDATE())");
-                $stmtTx->execute([$item_id, $variance, $_SESSION['user_id'] ?? 1]);
+                $stmtTx->execute([$item_id, $variance, $userId]);
 
-                // 4. Update Onhand Balance
-                $stmtSp = $pdo->prepare("EXEC dbo.sp_UpdateOnhandBalance @item_id = ?, @location_id = 1008, @quantity_to_change = ?");
-                $stmtSp->execute([$item_id, $variance]);
+                // 4. Update Onhand Balance (direct MERGE instead of SP to avoid PDO EXEC binding issue)
+                $stmtMerge = $pdo->prepare("
+                    MERGE INTO dbo.INVENTORY_ONHAND AS T
+                    USING (SELECT ? AS item_id, 1008 AS location_id) AS S
+                    ON (T.parameter_id = S.item_id AND T.location_id = S.location_id)
+                    WHEN MATCHED THEN
+                        UPDATE SET T.quantity = T.quantity + ?, T.last_updated = GETDATE()
+                    WHEN NOT MATCHED THEN
+                        INSERT (parameter_id, location_id, quantity)
+                        VALUES (S.item_id, S.location_id, ?);
+                ");
+                $stmtMerge->execute([$item_id, $variance, $variance]);
 
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'Stock synced successfully.', 'adjusted_qty' => $variance]);

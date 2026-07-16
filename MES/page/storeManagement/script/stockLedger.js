@@ -25,7 +25,7 @@ function resetLedgerFilters() {
     document.getElementById('filterStartDate').value = defaultDate.toISOString().split('T')[0];
     
     const typeSelect = document.getElementById('locationTypeFilter');
-    if (typeSelect) typeSelect.value = 'ALL';
+    if (typeSelect) typeSelect.value = 'STORE';
     if (typeof updateLocationFilterDropdown === 'function') updateLocationFilterDropdown();
     
     const locSelect = document.getElementById('locationFilter');
