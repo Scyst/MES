@@ -426,35 +426,60 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
 }
 
 async function syncStoreStockWithTags(itemId) {
+    // Step 1: Pre-fetch variance (dry run) to show in confirmation
+    Swal.fire({ title: 'กำลังตรวจสอบยอดสต็อก...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+    let tagQty = 0, stockQty = 0, variance = 0;
+    try {
+        const res = await fetchAPI(`get_sync_preview&item_id=${itemId}`, 'GET');
+        if (!res || !res.success) { return; } // fetchAPI already shows error Swal
+        tagQty   = res.data.tags_qty;
+        stockQty = res.data.stock_qty;
+        variance = res.data.variance;
+    } catch (e) {
+        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถดึงข้อมูลสต็อกได้', 'error');
+        return;
+    }
+
+    const varianceColor  = variance > 0 ? '#198754' : (variance < 0 ? '#dc3545' : '#6c757d');
+    const varianceSign   = variance > 0 ? '+' : '';
+    const varianceLabel  = variance === 0 ? 'ยอดตรงกันแล้ว ไม่ต้องปรับ' : `${varianceSign}${parseFloat(variance).toLocaleString()} pcs`;
+    const actionLabel    = variance > 0 ? 'เพิ่มสต็อก' : (variance < 0 ? 'ลดสต็อก' : '-');
+
+    // Step 2: Show confirmation with variance details
     const result = await Swal.fire({
         title: 'ยืนยันปรับยอดสต็อก?',
-        html: `ระบบจะปรับยอดสต็อกของ <b>Store (1008)</b> ให้ตรงกับจำนวนแท็กที่พร้อมใช้งานจริง<br><br><small class="text-danger">*แนะนำให้ทำเฉพาะรายการที่เกิดบั๊ก Data Import ย้อนหลังเท่านั้น</small>`,
-        icon: 'warning',
+        html: `
+            <div class="text-start" style="font-size:0.95rem;">
+                <table class="table table-sm table-bordered mb-3">
+                    <tr><td class="text-muted fw-semibold">ยอดแท็กจริง (Tags)</td><td class="fw-bold text-primary">${parseFloat(tagQty).toLocaleString()} pcs</td></tr>
+                    <tr><td class="text-muted fw-semibold">ยอดระบบ (System)</td><td class="fw-bold">${parseFloat(stockQty).toLocaleString()} pcs</td></tr>
+                    <tr><td class="text-muted fw-semibold">ผลต่าง (Variance)</td><td class="fw-bold" style="color:${varianceColor};">${varianceLabel}</td></tr>
+                    ${variance !== 0 ? `<tr><td class="text-muted fw-semibold">การดำเนินการ</td><td class="fw-bold" style="color:${varianceColor};">${actionLabel}</td></tr>` : ''}
+                </table>
+                <div class="alert alert-warning py-2 mb-0 text-start" style="font-size:0.8rem;">
+                    <i class="fas fa-exclamation-triangle me-1"></i> แนะนำให้ทำเฉพาะรายการที่เกิดบั๊ก Data Import ย้อนหลังเท่านั้น
+                </div>
+            </div>`,
+        icon: variance === 0 ? 'info' : 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#198754',
+        confirmButtonColor: variance === 0 ? '#6c757d' : '#198754',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'ยืนยันปรับยอด',
+        confirmButtonText: variance === 0 ? 'รับทราบ' : 'ยืนยันปรับยอด',
         cancelButtonText: 'ยกเลิก'
     });
 
-    if (result.isConfirmed) {
-        try {
-            Swal.fire({ title: 'กำลังปรับยอดสต็อก...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-            
-            const formData = new FormData();
-            formData.append('item_id', itemId);
-            const res = await fetchAPI('sync_store_stock_with_tags', 'POST', formData);
-            
-            if (res.success) {
-                await Swal.fire('สำเร็จ', res.message, 'success');
-                if (detailsModalInstance) detailsModalInstance.hide();
-                loadDashboardData();
-            } else {
-                Swal.fire('ข้อผิดพลาด', res.message || 'ไม่สามารถปรับยอดได้', 'error');
-            }
-        } catch (err) {
-            Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์', 'error');
-        }
+    if (!result.isConfirmed || variance === 0) return;
+
+    // Step 3: Execute sync
+    Swal.fire({ title: 'กำลังปรับยอดสต็อก...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    const formData = new FormData();
+    formData.append('item_id', itemId);
+    const res = await fetchAPI('sync_store_stock_with_tags', 'POST', formData);
+    if (res && res.success) {
+        await Swal.fire('สำเร็จ!', `ปรับยอดสต็อกเรียบร้อย (${varianceSign}${parseFloat(variance).toLocaleString()} pcs)`, 'success');
+        if (detailsModalInstance) detailsModalInstance.hide();
+        loadDashboardData();
     }
 }
 

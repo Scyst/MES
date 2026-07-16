@@ -2247,6 +2247,25 @@ try {
             $response = ['success' => true, 'message' => "ยืนยันรับเข้าสต็อกสำเร็จจำนวน $successCount พาเลท/กล่อง"];
             break;
 
+        case 'get_sync_preview':
+            $item_id = isset($_GET['item_id']) ? (int)$_GET['item_id'] : 0;
+            if (!$item_id) throw new Exception('Missing item_id');
+
+            $stmtTags = $pdo->prepare("SELECT ISNULL(SUM(current_qty), 0) FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE item_id = ? AND location_id = 1008 AND status = 'AVAILABLE'");
+            $stmtTags->execute([$item_id]);
+            $tags_qty = (float)$stmtTags->fetchColumn();
+
+            $stmtStock = $pdo->prepare("SELECT ISNULL(SUM(quantity), 0) FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = ? AND location_id = 1008");
+            $stmtStock->execute([$item_id]);
+            $stock_qty = (float)$stmtStock->fetchColumn();
+
+            $response = ['success' => true, 'data' => [
+                'tags_qty'  => $tags_qty,
+                'stock_qty' => $stock_qty,
+                'variance'  => $tags_qty - $stock_qty
+            ]];
+            break;
+
         case 'sync_store_stock_with_tags':
             $item_id = $_POST['item_id'] ?? 0;
             if (!$item_id) {
