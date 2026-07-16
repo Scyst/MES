@@ -9,6 +9,11 @@ import LinkHub from './components/LinkHub';
 import ProjectsTab from './components/ProjectsTab';
 import NotificationManager from './components/NotificationManager';
 import NotificationWidget from './components/NotificationWidget';
+import SearchModal from './components/SearchModal';
+import NotificationModal from './components/NotificationModal';
+import MyTasks from './components/MyTasks';
+import Resources from './components/Resources';
+import SpaceView from './components/SpaceView';
 
 const mainNav = [
   { tab: 'dashboard', icon: FiPieChart, label: 'Dashboard' },
@@ -34,6 +39,8 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
 
   // ══════════ Centralized State (Single Source of Truth) ══════════
   const [tasks, setTasks] = useState([]);
@@ -229,23 +236,15 @@ function App() {
       case 'links': 
         return <LinkHub />;
       case 'my-tasks':
-        return (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 h-full min-h-[400px]">
-            <FiUser className="text-4xl mb-4 text-slate-300 dark:text-slate-600" />
-            <h2 className="text-lg font-bold text-slate-700 dark:text-slate-300">Assigned to me</h2>
-            <p className="text-sm mt-2">หน้านี้กำลังอยู่ในการพัฒนา (Mockup)</p>
-          </div>
-        );
+        return <MyTasks tasks={tasks} currentUser={currentUser} refreshData={refreshData} />;
+      case 'timeline':
+        return <GanttChart {...sharedTaskProps} />;
+      case 'resources':
+        return <Resources />;
       default: 
         // Fallback for Spaces and mock tabs
         if (activeTab.startsWith('space-') || activeTab.startsWith('team-')) {
-          return (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 h-full min-h-[400px]">
-              <FiUsers className="text-4xl mb-4 text-slate-300 dark:text-slate-600" />
-              <h2 className="text-lg font-bold text-slate-700 dark:text-slate-300 capitalize">{activeTab.replace('-', ' ')}</h2>
-              <p className="text-sm mt-2">พื้นที่สำหรับทีมกำลังอยู่ในการพัฒนา (Mockup)</p>
-            </div>
-          );
+          return <SpaceView activeTab={activeTab} tasks={tasks} projects={projects} currentUser={currentUser} refreshData={refreshData} />;
         }
         return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} />;
     }
@@ -343,24 +342,30 @@ function App() {
 
       <div className="hidden md:flex md:flex-row flex-1 overflow-hidden relative">
         <aside className="w-56 lg:w-[260px] bg-[#f4f9f8] dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-10">
-          <div className="px-4 py-4 shrink-0 flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center font-bold text-lg">
-              <FiBriefcase />
-            </div>
-            <span className="font-bold text-slate-800 dark:text-white text-lg">MES Planner</span>
+          <div className="px-4 py-4 pt-5 shrink-0">
+            <button 
+              onClick={() => setShowSearchModal(true)} 
+              className="w-full flex items-center justify-between px-4 py-2 bg-slate-200/70 dark:bg-slate-800/80 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-300/70 dark:hover:bg-slate-700 transition-colors text-sm font-medium border border-transparent dark:border-slate-700"
+            >
+              <span>Search...</span>
+              <kbd className="hidden lg:inline-block text-[10px] bg-slate-300/50 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 font-mono">⌘K</kbd>
+            </button>
           </div>
 
           <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto pb-4 custom-scrollbar">
-            {/* Mock Search & Notification */}
-            <div className="px-2 mb-2">
-              <button className="w-full flex items-center gap-3 px-2 py-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors">
-                <FiSearch className="text-lg shrink-0" />
-                <span className="text-sm font-medium">Search...</span>
-              </button>
-              <button className="w-full flex items-center gap-3 px-2 py-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors mt-0.5 relative">
-                <FiBell className="text-lg shrink-0" />
-                <span className="text-sm font-medium">Notifications</span>
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-rose-500 rounded-full"></span>
+            {/* Notification */}
+            <div className="px-2 mb-3">
+              <button 
+                onClick={() => setShowNotificationModal(true)}
+                className="w-full flex items-center justify-between px-2 py-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors rounded-lg hover:bg-black/5 dark:hover:bg-white/5 group"
+              >
+                <div className="flex items-center gap-3">
+                  <FiBell className="text-[1.1rem] shrink-0 group-hover:text-rose-500 transition-colors" />
+                  <span className="text-sm font-medium">Notifications</span>
+                </div>
+                <div className="flex items-center justify-center w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full shadow-sm">
+                  3
+                </div>
               </button>
             </div>
 
