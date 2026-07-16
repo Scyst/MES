@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiCalendar, FiCheckSquare, FiLink, FiPieChart, FiBarChart2, FiBell, FiMenu, FiX, FiSun, FiMoon, FiLogOut, FiUser, FiBriefcase } from 'react-icons/fi';
+import { FiCalendar, FiCheckSquare, FiLink, FiPieChart, FiBarChart2, FiBell, FiMenu, FiX, FiSun, FiMoon, FiLogOut, FiUser, FiBriefcase, FiSearch, FiHome, FiUsers, FiPlus } from 'react-icons/fi';
 import axios from 'axios';
 import CalendarView from './components/CalendarView';
 import TaskBoard from './components/TaskBoard';
@@ -10,15 +10,24 @@ import ProjectsTab from './components/ProjectsTab';
 import NotificationManager from './components/NotificationManager';
 import NotificationWidget from './components/NotificationWidget';
 
-// Reordered: Calendar first (default), then by usage importance
-const navItems = [
-  { tab: 'calendar', icon: FiCalendar, label: 'ปฏิทินทีม', sublabel: 'Calendar' },
-  { tab: 'tasks', icon: FiCheckSquare, label: 'กระดานงาน', sublabel: 'Task Board' },
-  { tab: 'gantt', icon: FiBarChart2, label: 'ตารางงาน', sublabel: 'Gantt Chart' },
-  { tab: 'projects', icon: FiBriefcase, label: 'โปรเจ็ค', sublabel: 'Projects' },
-  { tab: 'links', icon: FiLink, label: 'คลังข้อมูล', sublabel: 'Links' },
-  { tab: 'dashboard', icon: FiPieChart, label: 'ภาพรวม', sublabel: 'Dashboard' },
+const mainNav = [
+  { tab: 'dashboard', icon: FiPieChart, label: 'Dashboard' },
+  { tab: 'my-tasks', icon: FiUser, label: 'Assigned to me' },
+  { tab: 'tasks', icon: FiCheckSquare, label: 'Task' },
+  { tab: 'projects', icon: FiBriefcase, label: 'Projects' },
+  { tab: 'calendar', icon: FiCalendar, label: 'Schedule' },
+  { tab: 'gantt', icon: FiBarChart2, label: 'Timeline' },
+  { tab: 'links', icon: FiLink, label: 'Resources' },
 ];
+
+const spacesNav = [
+  { tab: 'space-home', icon: FiHome, label: 'Home', color: 'text-emerald-500 bg-emerald-500/10' },
+  { tab: 'team-engineers', icon: FiUsers, label: 'Engineers', subItem: true },
+  { tab: 'team-design', icon: FiUsers, label: 'Design Team', subItem: true },
+  { tab: 'team-dev', icon: FiUsers, label: 'Developer Team', subItem: true },
+];
+
+const navItems = [...mainNav, ...spacesNav];
 
 function App() {
   const [activeTab, setActiveTab] = useState('calendar');
@@ -315,23 +324,73 @@ function App() {
       </header>
 
       <div className="hidden md:flex md:flex-row flex-1 overflow-hidden relative">
-        <aside className="w-56 lg:w-64 bg-white dark:bg-slate-900 border-r border-transparent dark:border-slate-800 flex flex-col shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
-          <nav className="flex-1 px-3 space-y-1 overflow-y-auto py-4">
-            {navItems.map(item => (
-              <button 
-                key={item.tab}
-                onClick={() => handleNav(item.tab)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all text-sm ${
-                  activeTab === item.tab 
-                    ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold' 
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                <item.icon className="text-base shrink-0" />
-                <span>{item.label}</span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-auto hidden lg:block">{item.sublabel}</span>
+        <aside className="w-56 lg:w-[260px] bg-[#f4f9f8] dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-10">
+          <div className="px-4 py-4 shrink-0 flex items-center gap-2">
+            <div className="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-lg">t.</div>
+            <span className="font-bold text-slate-800 dark:text-white text-lg">trior</span>
+          </div>
+
+          <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto pb-4 custom-scrollbar">
+            {/* Mock Search & Notification */}
+            <div className="px-2 mb-2">
+              <button className="w-full flex items-center gap-3 px-2 py-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors">
+                <FiSearch className="text-lg shrink-0" />
+                <span className="text-sm font-medium">Search...</span>
               </button>
-            ))}
+              <button className="w-full flex items-center gap-3 px-2 py-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors mt-0.5 relative">
+                <FiBell className="text-lg shrink-0" />
+                <span className="text-sm font-medium">Notifications</span>
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-rose-500 rounded-full"></span>
+              </button>
+            </div>
+
+            <div className="space-y-0.5 mt-2">
+              {mainNav.map(item => (
+                <button 
+                  key={item.tab}
+                  onClick={() => handleNav(item.tab)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium ${
+                    activeTab === item.tab 
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' 
+                      : 'text-slate-500 hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <item.icon className={`text-[1.1rem] shrink-0 ${activeTab === item.tab ? 'text-indigo-600' : ''}`} />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-6 px-3">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
+                <span>Spaces</span>
+                <div className="flex gap-2">
+                  <FiSearch className="cursor-pointer hover:text-slate-600" />
+                  <FiPlus className="cursor-pointer hover:text-slate-600" />
+                </div>
+              </div>
+              <div className="space-y-0.5">
+                {spacesNav.map(item => (
+                  <button 
+                    key={item.tab}
+                    onClick={() => handleNav(item.tab)}
+                    className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium ${item.subItem ? 'pl-8 pr-3 text-slate-500 text-[13px]' : 'px-3'} ${
+                      activeTab === item.tab 
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' 
+                        : 'hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {!item.subItem && (
+                      <div className={`p-1 rounded flex items-center justify-center ${item.color || 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
+                        <item.icon className="text-[14px]" />
+                      </div>
+                    )}
+                    {item.subItem && <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>}
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </nav>
         </aside>
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent">
@@ -396,7 +455,7 @@ function App() {
         {/* Mobile Bottom Tab Bar — All 5 tabs */}
         <nav className="bg-white dark:bg-slate-900 border-t border-transparent dark:border-slate-800 shrink-0 safe-area-bottom shadow-[0_-4px_24px_rgba(0,0,0,0.02)]">
           <div className="flex items-stretch">
-            {navItems.map(item => (
+            {mainNav.slice(0, 5).map(item => (
               <button
                 key={item.tab}
                 onClick={() => handleNav(item.tab)}
@@ -407,7 +466,7 @@ function App() {
                 }`}
               >
                 <item.icon className={`text-lg ${activeTab === item.tab ? 'text-indigo-600 dark:text-indigo-400' : ''}`} />
-                <span className="text-[10px] font-medium">{item.sublabel}</span>
+                <span className="text-[10px] font-medium">{item.label}</span>
                 {activeTab === item.tab && (
                   <div className="w-1 h-1 bg-indigo-500 dark:bg-indigo-400 rounded-full mt-0.5"></div>
                 )}
@@ -448,7 +507,6 @@ function App() {
                 >
                   <item.icon className="text-lg shrink-0" />
                   <span>{item.label}</span>
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-auto">{item.sublabel}</span>
                 </button>
               ))}
             </nav>
