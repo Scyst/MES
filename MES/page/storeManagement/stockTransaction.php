@@ -194,8 +194,8 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
                 <div class="mb-3">
                     <label class="form-label fw-bold small text-secondary"><i class="fas fa-layer-group me-1"></i> Location Type</label>
                     <select id="locationTypeFilter" class="form-select form-select-sm border-secondary-subtle fw-bold text-primary">
-                        <option value="ALL">All Types</option>
-                        <option value="STORE" selected>STORE (คลังทั่วไป)</option>
+                        <option value="ALL" selected>All Types</option>
+                        <option value="STORE">STORE (คลังทั่วไป)</option>
                         <option value="RM">RM (Raw Material)</option>
                         <option value="SEMI">SEMI (Semi-Finished)</option>
                         <option value="FG">FG (Finished Goods)</option>
