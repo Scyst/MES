@@ -15,23 +15,26 @@ export default function SearchModal({ onClose, tasks = [], projects = [], onNav 
     return () => window.removeEventListener('keydown', handleEscape);
   }, [onClose]);
 
-  const filteredTasks = tasks.filter(t => 
-    t.Title?.toLowerCase().includes(query.toLowerCase()) || 
-    t.Assignee?.toLowerCase().includes(query.toLowerCase())
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeProjects = Array.isArray(projects) ? projects : [];
+
+  const filteredTasks = safeTasks.filter(t => 
+    String(t?.Title || '').toLowerCase().includes(query.toLowerCase()) || 
+    String(t?.Assignee || '').toLowerCase().includes(query.toLowerCase())
   ).slice(0, 5);
 
-  const filteredProjects = projects.filter(p => 
-    p.Title?.toLowerCase().includes(query.toLowerCase()) || 
-    p.Description?.toLowerCase().includes(query.toLowerCase())
+  const filteredProjects = safeProjects.filter(p => 
+    String(p?.Title || '').toLowerCase().includes(query.toLowerCase()) || 
+    String(p?.Description || '').toLowerCase().includes(query.toLowerCase())
   ).slice(0, 3);
 
   const handleTaskClick = (id) => {
-    onNav('tasks');
+    if (onNav) onNav('tasks');
     onClose();
   };
 
   const handleProjectClick = (id) => {
-    onNav('projects');
+    if (onNav) onNav('projects');
     onClose();
   };
 
@@ -69,18 +72,18 @@ export default function SearchModal({ onClose, tasks = [], projects = [], onNav 
                 <div className="mb-4">
                   <h3 className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Projects</h3>
                   <div className="space-y-1">
-                    {filteredProjects.map(proj => (
+                    {filteredProjects.map((proj, idx) => (
                       <div 
-                        key={proj.Id}
-                        onClick={() => handleProjectClick(proj.Id)}
+                        key={proj?.Id || `proj-${idx}`}
+                        onClick={() => handleProjectClick(proj?.Id)}
                         className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/50 cursor-pointer group transition-colors"
                       >
                         <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 shrink-0 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20">
                           <FiBriefcase className="text-lg" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{proj.Title}</h4>
-                          <p className="text-xs text-slate-500 truncate">{proj.Description || 'ไม่มีรายละเอียด'}</p>
+                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{String(proj?.Title || 'ไม่มีชื่อ')}</h4>
+                          <p className="text-xs text-slate-500 truncate">{String(proj?.Description || 'ไม่มีรายละเอียด')}</p>
                         </div>
                       </div>
                     ))}
@@ -92,29 +95,29 @@ export default function SearchModal({ onClose, tasks = [], projects = [], onNav 
                 <div>
                   <h3 className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Tasks</h3>
                   <div className="space-y-1">
-                    {filteredTasks.map(task => (
+                    {filteredTasks.map((task, idx) => (
                       <div 
-                        key={task.Id}
-                        onClick={() => handleTaskClick(task.Id)}
+                        key={task?.Id || `task-${idx}`}
+                        onClick={() => handleTaskClick(task?.Id)}
                         className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/50 cursor-pointer group transition-colors"
                       >
                         <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20">
                           <FiCheckSquare className="text-lg" />
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
-                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{task.Title}</h4>
+                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{String(task?.Title || 'ไม่มีชื่อ')}</h4>
                           <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
-                            <span className="flex items-center gap-1"><FiClock /> {task.DueDate ? task.DueDate.substring(0, 10) : '-'}</span>
+                            <span className="flex items-center gap-1"><FiClock /> {typeof task?.DueDate === 'string' ? task.DueDate.substring(0, 10) : (task?.DueDate ? String(task.DueDate) : '-')}</span>
                             <span>•</span>
-                            <span className="font-medium text-slate-600 dark:text-slate-400">@{task.Assignee || 'Unassigned'}</span>
+                            <span className="font-medium text-slate-600 dark:text-slate-400">@{String(task?.Assignee || 'Unassigned')}</span>
                           </div>
                         </div>
                         <span className={`px-2 py-1 text-[10px] font-bold rounded-md uppercase shrink-0 ${
-                          task.Status === 'Done' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' :
-                          task.Status === 'In Progress' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                          task?.Status === 'Done' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' :
+                          task?.Status === 'In Progress' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
                           'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                         }`}>
-                          {task.Status}
+                          {String(task?.Status || 'Todo')}
                         </span>
                       </div>
                     ))}

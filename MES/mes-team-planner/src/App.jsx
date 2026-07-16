@@ -57,20 +57,23 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [events, setEvents] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   // Fetch all data once
   const refreshData = useCallback(async (silent = false) => {
     if (!silent) setDataLoading(true);
     try {
-      const [resTasks, resEvents, resAct] = await Promise.all([
+      const [resTasks, resEvents, resAct, resProj] = await Promise.all([
         axios.get('/api/tasks'),
         axios.get('/api/events'),
-        axios.get('/api/activities')
+        axios.get('/api/activities'),
+        axios.get('/api/projects')
       ]);
       setTasks(resTasks.data);
       setEvents(resEvents.data);
       setActivities(resAct.data);
+      setProjects(resProj.data);
     } catch (err) {
       console.error('Failed to fetch data', err);
     } finally {
