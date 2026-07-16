@@ -84,7 +84,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
       {/* ═══ Stats Cards ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
         {/* Total */}
-        <div className="bg-white dark:bg-slate-800 border border-transparent shadow-soft rounded-2xl p-4">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <FiBarChart2 className="text-indigo-400" />
             <span className="text-xs md:text-sm text-slate-600 dark:text-slate-400 font-medium">งานทั้งหมด</span>
@@ -92,7 +92,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
           <div className="text-2xl font-bold text-slate-900 dark:text-white">{totalTasks}</div>
         </div>
         {/* Completion */}
-        <div className="bg-white dark:bg-slate-800 border border-transparent shadow-soft rounded-2xl p-4">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <FiCheckCircle className="text-emerald-400" />
             <span className="text-xs md:text-sm text-slate-600 dark:text-slate-400 font-medium">เสร็จแล้ว</span>
@@ -104,7 +104,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
           <div className="text-[10px] md:text-xs text-slate-500 mt-1">{completionRate}%</div>
         </div>
         {/* Overdue */}
-        <div className={`border-transparent shadow-soft rounded-2xl p-4 ${overdueTasks > 0 ? 'bg-rose-50 dark:bg-rose-500/10' : 'bg-white dark:bg-slate-800'}`}>
+        <div className={`border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 ${overdueTasks > 0 ? 'bg-rose-50 dark:bg-rose-500/10' : 'bg-white dark:bg-slate-800'}`}>
           <div className="flex items-center gap-2 mb-2">
             <FiAlertCircle className={overdueTasks > 0 ? 'text-rose-500' : 'text-slate-500'} />
             <span className="text-xs md:text-sm text-slate-600 dark:text-slate-400 font-medium">เกินกำหนด</span>
@@ -112,7 +112,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
           <div className={`text-2xl font-bold ${overdueTasks > 0 ? 'text-rose-500' : 'text-slate-500'}`}>{overdueTasks}</div>
         </div>
         {/* Urgent */}
-        <div className={`border-transparent shadow-soft rounded-2xl p-4 ${urgentTasks > 0 ? 'bg-red-50 dark:bg-red-500/10' : 'bg-white dark:bg-slate-800'}`}>
+        <div className={`border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 ${urgentTasks > 0 ? 'bg-red-50 dark:bg-red-500/10' : 'bg-white dark:bg-slate-800'}`}>
           <div className="flex items-center gap-2 mb-2">
             <FiClock className={urgentTasks > 0 ? 'text-red-400' : 'text-slate-500'} />
             <span className="text-xs md:text-sm text-slate-600 dark:text-slate-400 font-medium">ด่วน/ด่วนมาก</span>
@@ -123,7 +123,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
       {/* ═══ Row: Today's Leaves + Due Today ═══ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
         {/* Today's Leaves */}
-        <div className="bg-amber-50 dark:bg-amber-500/10 border border-transparent shadow-soft rounded-2xl p-4">
+        <div className="bg-amber-50 dark:bg-amber-500/10 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <FiUserCheck className="text-amber-500" />
             <h3 className="text-sm md:text-base font-bold text-amber-800 dark:text-amber-200">คนลาพักผ่อนวันนี้ ({peopleOnLeaveCount})</h3>
@@ -142,7 +142,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
         </div>
 
         {/* Due Today */}
-        <div className="bg-rose-50 dark:bg-rose-500/10 border border-transparent shadow-soft rounded-2xl p-4">
+        <div className="bg-rose-50 dark:bg-rose-500/10 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <FiAlertCircle className="text-rose-500" />
             <h3 className="text-sm md:text-base font-bold text-rose-800 dark:text-rose-200">งานที่ครบกำหนดวันนี้</h3>
@@ -167,7 +167,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
         
         {/* Status Distribution */}
-        <div className="bg-white dark:bg-slate-800 border border-transparent shadow-soft rounded-2xl p-4">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4">
           <h3 className="text-sm md:text-base font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
             <FiPieChart className="text-indigo-500" /> สถานะงาน
           </h3>
@@ -201,7 +201,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
         </div>
 
         {/* Weekly Trend */}
-        <div className="bg-white dark:bg-slate-800 border border-transparent shadow-soft rounded-2xl p-4">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4">
           <h3 className="text-sm md:text-base font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
             <FiTrendingUp className="text-cyan-500" /> แนวโน้ม 7 วัน
           </h3>
@@ -225,7 +225,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
 
       {/* ═══ Active Projects Summary ═══ */}
       {projects.length > 0 && (
-        <div className="bg-white dark:bg-slate-800 border border-transparent shadow-soft rounded-2xl p-4 shrink-0">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 shrink-0">
           <h3 className="text-sm md:text-base font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
             <FiCheckCircle className="text-emerald-500" /> โปรเจ็คที่กำลังดำเนินการ
           </h3>
@@ -262,7 +262,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
       )}
 
       {/* ═══ Workload Per Person ═══ */}
-      <div className="bg-white dark:bg-slate-800 border border-transparent shadow-soft rounded-2xl p-4 shrink-0">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 shrink-0">
         <h3 className="text-sm md:text-base font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
           <FiUserCheck className="text-violet-500" /> Workload แต่ละคน
         </h3>

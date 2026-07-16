@@ -129,7 +129,7 @@ export default function ProjectsTab({ tasks, refreshData }) {
       {loading ? (
         <div className="text-center text-slate-500 py-10">กำลังโหลด...</div>
       ) : projects.length === 0 ? (
-        <div className="text-center bg-white dark:bg-slate-800 rounded-2xl p-10 border border-transparent shadow-soft">
+        <div className="text-center bg-white dark:bg-slate-800 rounded-2xl p-10 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-soft transition-all">
           <div className="bg-indigo-50 dark:bg-indigo-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <FiBriefcase className="text-2xl text-indigo-500" />
           </div>
@@ -139,7 +139,7 @@ export default function ProjectsTab({ tasks, refreshData }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {projects.map(p => (
-            <div key={p.Id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-soft hover:shadow-soft-lg transition-all flex flex-col h-full border border-transparent">
+            <div key={p.Id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-soft transition-all flex flex-col h-full border border-slate-200 dark:border-slate-700">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base">{p.Title}</h3>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider ${p.Status === 'active' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-slate-50 text-slate-500 dark:bg-slate-700 dark:text-slate-300'}`}>

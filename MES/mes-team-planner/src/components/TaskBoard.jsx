@@ -129,7 +129,7 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
 
       {/* Search & Filter Bar */}
       {showFilters && (
-        <div className="mb-3 p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-soft border border-transparent space-y-3 shrink-0 animate-slide-up">
+        <div className="mb-3 p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-3 shrink-0 animate-slide-up">
           {/* Search */}
           <div className="relative">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -137,7 +137,7 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ค้นหางาน, ชื่อ, ผู้รับผิดชอบ..."
-              className="w-full bg-[#f4f9f8] dark:bg-slate-900 border border-transparent dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-sm placeholder-slate-400"
+              className="w-full bg-[#f4f9f8] dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-sm placeholder-slate-400"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 dark:hover:text-white">
@@ -219,7 +219,7 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
                               style={{ ...provided.draggableProps.style }}
-                              className={`bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-soft hover:shadow-soft-lg transition-all border-l-4 ${pMeta.border} ${snapshot.isDragging ? 'ring-2 ring-emerald-500/20 opacity-90 scale-[1.02]' : ''}`}
+                              className={`bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-soft transition-all border border-slate-200 dark:border-slate-700 border-l-4 ${pMeta.border} ${snapshot.isDragging ? 'ring-2 ring-emerald-500/20 opacity-90 scale-[1.02]' : ''}`}
                             >
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex items-center gap-2 flex-wrap">
