@@ -16,7 +16,7 @@ export default function ProjectsTab({ tasks, refreshData }) {
 
   const fetchProjects = async () => {
     try {
-      const res = await axios.get('/api/projects.php');
+      const res = await axios.get('/api/projects');
       const formattedData = res.data.map(p => ({
         ...p,
         Checklist: p.Checklist ? (typeof p.Checklist === 'string' ? JSON.parse(p.Checklist) : p.Checklist) : []

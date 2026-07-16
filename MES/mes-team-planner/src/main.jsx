@@ -51,14 +51,14 @@ axios.interceptors.request.use(config => {
     }
     
     // e.g., /api/tasks/123 -> /api/tasks.php?id=123
-    const idMatch = url.match(/^\/api\/(tasks|events|links)\/([^/]+)$/);
+    const idMatch = url.match(/^\/api\/(tasks|events|links|projects)\/([^/]+)$/);
     if (idMatch) {
       config.url = `api/${idMatch[1]}.php?id=${idMatch[2]}`;
       return config;
     }
     
     // e.g., /api/tasks -> /api/tasks.php
-    const baseMatch = url.match(/^\/api\/(tasks|events|links|activities)$/);
+    const baseMatch = url.match(/^\/api\/(tasks|events|links|activities|projects)$/);
     if (baseMatch) {
       config.url = `api/${baseMatch[1]}.php`;
       return config;
