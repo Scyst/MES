@@ -75,8 +75,8 @@ export default function SpaceView({ activeTab, tasks = [], projects = [], curren
             {activeProjects.slice(0, 4).map(proj => {
               let checklist = [];
               try { checklist = proj.Checklist ? (typeof proj.Checklist === 'string' ? JSON.parse(proj.Checklist) : proj.Checklist) : []; } catch (e) {}
-              const totalItems = checklist.length;
-              const doneItems = checklist.filter(c => c.isDone).length;
+              const totalItems = Array.isArray(checklist) ? checklist.length : 0;
+              const doneItems = Array.isArray(checklist) ? checklist.filter(c => c.isDone).length : 0;
               const progress = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
               
               return (

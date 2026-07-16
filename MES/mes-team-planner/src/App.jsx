@@ -42,6 +42,17 @@ function App() {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearchModal(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // ══════════ Centralized State (Single Source of Truth) ══════════
   const [tasks, setTasks] = useState([]);
   const [events, setEvents] = useState([]);
@@ -558,6 +569,10 @@ function App() {
           </div>
         </>
       )}
+
+      {/* ══════════ Modals ══════════ */}
+      {showSearchModal && <SearchModal onClose={() => setShowSearchModal(false)} tasks={tasks} projects={projects} onNav={handleNav} />}
+      {showNotificationModal && <NotificationModal onClose={() => setShowNotificationModal(false)} activities={activities} />}
 
       {/* Global Notifications */}
       <NotificationManager />
