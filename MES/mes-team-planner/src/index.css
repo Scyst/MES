@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 antialiased;
+    @apply bg-[#f4f9f8] dark:bg-slate-950 text-slate-800 dark:text-slate-200 antialiased;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
   }

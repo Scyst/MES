@@ -4,9 +4,9 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import AddTaskModal from './AddTaskModal';
 
 const cols = [
-  { id: 'todo', title: 'To Do', color: 'border-slate-500', bg: 'bg-slate-500/10', titleColor: 'text-slate-700 dark:text-slate-300' },
-  { id: 'in-progress', title: 'In Progress', color: 'border-amber-500', bg: 'bg-amber-500/10', titleColor: 'text-amber-400' },
-  { id: 'done', title: 'Done', color: 'border-emerald-500', bg: 'bg-emerald-500/10', titleColor: 'text-emerald-400' }
+  { id: 'todo', title: 'To Do', color: 'border-slate-500', bg: 'bg-transparent', titleColor: 'text-slate-700 dark:text-slate-300' },
+  { id: 'in-progress', title: 'In Progress', color: 'border-amber-500', bg: 'bg-transparent', titleColor: 'text-amber-500 dark:text-amber-400' },
+  { id: 'done', title: 'Done', color: 'border-emerald-500', bg: 'bg-transparent', titleColor: 'text-emerald-500 dark:text-emerald-400' }
 ];
 
 const PRIORITY_META = {
@@ -118,8 +118,8 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
           <button onClick={handleExportCSV} className="bg-emerald-100 dark:bg-emerald-600/20 hover:bg-emerald-200 dark:hover:bg-emerald-600/40 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30 p-2 sm:px-3 sm:py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2" title="ส่งออก CSV">
             <FiDownload /> <span className="hidden sm:inline">ส่งออก CSV</span>
           </button>
-          <button onClick={() => setShowFilters(!showFilters)} className={`bg-slate-100 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-900 dark:text-white p-2 sm:px-3 sm:py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border ${hasActiveFilters ? 'border-indigo-500 text-indigo-400' : 'border-slate-300 dark:border-slate-700'}`} title="กรองข้อมูล">
-            <FiFilter /> <span className="hidden sm:inline">กรองข้อมูล</span> {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-indigo-500"></span>}
+          <button onClick={() => setShowFilters(!showFilters)} className={`bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-900 dark:text-white p-2 sm:px-3 sm:py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border-transparent shadow-soft ${hasActiveFilters ? 'text-emerald-500' : ''}`} title="กรองข้อมูล">
+            <FiFilter /> <span className="hidden sm:inline">กรองข้อมูล</span> {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-emerald-500"></span>}
           </button>
           <button onClick={() => { setEditingTask(null); setIsModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-900/20 flex items-center gap-1.5">
             <FiPlus /> <span className="hidden sm:inline">สร้างงาน</span><span className="sm:hidden">เพิ่ม</span>
@@ -129,7 +129,7 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
 
       {/* Search & Filter Bar */}
       {showFilters && (
-        <div className="mb-3 p-3 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl border border-slate-300/60 dark:border-slate-700/60 space-y-3 shrink-0 animate-slide-up">
+        <div className="mb-3 p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-soft border border-transparent space-y-3 shrink-0 animate-slide-up">
           {/* Search */}
           <div className="relative">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -137,7 +137,7 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ค้นหางาน, ชื่อ, ผู้รับผิดชอบ..."
-              className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm placeholder-slate-500"
+              className="w-full bg-[#f4f9f8] dark:bg-slate-900 border border-transparent dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-sm placeholder-slate-400"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 dark:hover:text-white">
@@ -159,7 +159,7 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
               {allAssignees.map(a => <option key={a} value={a} className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">{a}</option>)}
             </select>
             {hasActiveFilters && (
-              <button onClick={clearFilters} className="text-xs text-indigo-400 hover:text-indigo-300 px-2 py-1 rounded-lg hover:bg-indigo-500/10 transition-all">
+              <button onClick={clearFilters} className="text-xs text-emerald-500 hover:text-emerald-600 px-2 py-1 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all">
                 ล้างตัวกรอง
               </button>
             )}
@@ -184,11 +184,11 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
               colTasks = colTasks.slice(0, 30);
             }
             return (
-              <div key={col.id} className={`snap-center w-[85vw] md:w-auto md:flex-1 shrink-0 min-w-[280px] md:min-w-[300px] flex flex-col bg-white dark:bg-slate-900/50 rounded-2xl border-t-4 ${col.color} border-l border-r border-b border-slate-200 dark:border-slate-800 shadow-lg`}>
-                <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 ${col.bg}`}>
+              <div key={col.id} className={`snap-center w-[85vw] md:w-auto md:flex-1 shrink-0 min-w-[280px] md:min-w-[300px] flex flex-col bg-transparent rounded-2xl border-t-[3px] ${col.color}`}>
+                <div className={`px-2 py-3 flex items-center justify-between ${col.bg}`}>
                   <h3 className={`font-bold ${col.titleColor} flex items-center gap-2 text-sm`}>
                     {col.title}
-                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs px-2 py-0.5 rounded-full border border-slate-300 dark:border-slate-700">
+                    <span className="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs px-2 py-0.5 rounded-full shadow-sm">
                       {colTasks.length}
                     </span>
                   </h3>
@@ -219,16 +219,16 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
                               style={{ ...provided.draggableProps.style }}
-                              className={`bg-slate-100 dark:bg-slate-800 rounded-xl p-4 border-l-[3px] border shadow-sm hover:border-slate-500 transition-colors ${pMeta.border} ${snapshot.isDragging ? 'border-r-emerald-500 ring-2 ring-emerald-500/20 opacity-90' : 'border-r-slate-700 border-t-slate-700 border-b-slate-700'}`}
+                              className={`bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-soft hover:shadow-soft-lg transition-all border-l-4 ${pMeta.border} ${snapshot.isDragging ? 'ring-2 ring-emerald-500/20 opacity-90 scale-[1.02]' : ''}`}
                             >
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   {task.Visibility === 'private' ? (
-                                    <span className="flex items-center gap-1 text-[10px] md:text-[11px] font-bold uppercase tracking-wider text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
+                                    <span className="flex items-center gap-1 text-[10px] md:text-[11px] font-bold tracking-wider text-rose-500 bg-rose-50 dark:bg-rose-500/10 px-2 py-1 rounded-full">
                                       <FiLock /> Private
                                     </span>
                                   ) : (
-                                    <span className="flex items-center gap-1 text-[10px] md:text-[11px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                                    <span className="flex items-center gap-1 text-[10px] md:text-[11px] font-bold tracking-wider text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded-full">
                                       <FiGlobe /> Public
                                     </span>
                                   )}

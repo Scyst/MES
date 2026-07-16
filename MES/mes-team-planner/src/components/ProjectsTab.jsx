@@ -129,8 +129,8 @@ export default function ProjectsTab({ tasks, refreshData }) {
       {loading ? (
         <div className="text-center text-slate-500 py-10">กำลังโหลด...</div>
       ) : projects.length === 0 ? (
-        <div className="text-center bg-white dark:bg-slate-800 rounded-2xl p-10 border border-slate-200 dark:border-slate-700 shadow-sm">
-          <div className="bg-indigo-50 dark:bg-indigo-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="text-center bg-white dark:bg-slate-800 rounded-2xl p-10 border border-transparent shadow-soft">
+          <div className="bg-indigo-50 dark:bg-indigo-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <FiBriefcase className="text-2xl text-indigo-500" />
           </div>
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">ยังไม่มีโปรเจ็ค</h3>
@@ -139,26 +139,26 @@ export default function ProjectsTab({ tasks, refreshData }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {projects.map(p => (
-            <div key={p.Id} className="bg-slate-100/60 dark:bg-slate-800/60 rounded-xl p-4 border border-slate-300/60 dark:border-slate-700/60 shadow-sm hover:shadow-md transition-all flex flex-col h-full">
+            <div key={p.Id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-soft hover:shadow-soft-lg transition-all flex flex-col h-full border border-transparent">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base">{p.Title}</h3>
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium ${p.Status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider ${p.Status === 'active' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-slate-50 text-slate-500 dark:bg-slate-700 dark:text-slate-300'}`}>
                   {p.Status === 'active' ? 'ดำเนินการ' : 'ปิดแล้ว'}
                 </span>
               </div>
               
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {p.Priority && (
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                    p.Priority === 'high' ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : 
-                    p.Priority === 'low' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' : 
-                    'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                    p.Priority === 'high' ? 'bg-rose-50 text-rose-500 dark:bg-rose-500/20 dark:text-rose-400' : 
+                    p.Priority === 'low' ? 'bg-indigo-50 text-indigo-500 dark:bg-indigo-500/20 dark:text-indigo-400' : 
+                    'bg-amber-50 text-amber-500 dark:bg-amber-500/20 dark:text-amber-400'
                   }`}>
                     {p.Priority === 'high' ? 'ด่วน' : p.Priority === 'low' ? 'ต่ำ' : 'ปานกลาง'}
                   </span>
                 )}
-                {p.Assignee && <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400">👤 {p.Assignee}</span>}
-                {p.StartDate && p.DueDate && <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">📅 {p.StartDate} ถึง {p.DueDate}</span>}
+                {p.Assignee && <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-purple-50 text-purple-500 dark:bg-purple-500/20 dark:text-purple-400">👤 {p.Assignee}</span>}
+                {p.StartDate && p.DueDate && <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-slate-50 text-slate-500 dark:bg-slate-700 dark:text-slate-300">📅 {p.StartDate} ถึง {p.DueDate}</span>}
               </div>
 
               <p className="text-slate-500 text-xs mb-3 line-clamp-2">{p.Description || 'ไม่มีรายละเอียด'}</p>
