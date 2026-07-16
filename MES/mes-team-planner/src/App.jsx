@@ -228,7 +228,25 @@ function App() {
         return <ProjectsTab tasks={tasks} refreshData={refreshData} />;
       case 'links': 
         return <LinkHub />;
+      case 'my-tasks':
+        return (
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 h-full min-h-[400px]">
+            <FiUser className="text-4xl mb-4 text-slate-300 dark:text-slate-600" />
+            <h2 className="text-lg font-bold text-slate-700 dark:text-slate-300">Assigned to me</h2>
+            <p className="text-sm mt-2">หน้านี้กำลังอยู่ในการพัฒนา (Mockup)</p>
+          </div>
+        );
       default: 
+        // Fallback for Spaces and mock tabs
+        if (activeTab.startsWith('space-') || activeTab.startsWith('team-')) {
+          return (
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 h-full min-h-[400px]">
+              <FiUsers className="text-4xl mb-4 text-slate-300 dark:text-slate-600" />
+              <h2 className="text-lg font-bold text-slate-700 dark:text-slate-300 capitalize">{activeTab.replace('-', ' ')}</h2>
+              <p className="text-sm mt-2">พื้นที่สำหรับทีมกำลังอยู่ในการพัฒนา (Mockup)</p>
+            </div>
+          );
+        }
         return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} />;
     }
   };
@@ -326,8 +344,10 @@ function App() {
       <div className="hidden md:flex md:flex-row flex-1 overflow-hidden relative">
         <aside className="w-56 lg:w-[260px] bg-[#f4f9f8] dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-10">
           <div className="px-4 py-4 shrink-0 flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-lg">t.</div>
-            <span className="font-bold text-slate-800 dark:text-white text-lg">trior</span>
+            <div className="w-8 h-8 bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center font-bold text-lg">
+              <FiBriefcase />
+            </div>
+            <span className="font-bold text-slate-800 dark:text-white text-lg">MES Planner</span>
           </div>
 
           <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto pb-4 custom-scrollbar">
