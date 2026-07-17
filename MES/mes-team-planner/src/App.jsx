@@ -126,7 +126,7 @@ function App() {
   const handleSaveTask = useCallback(async (taskData) => {
     if (Array.isArray(taskData)) {
       try {
-        const results = await Promise.all(taskData.map(t => axios.post('/api/tasks', t)));
+        const results = await Promise.all(taskData.map(t => axios.post('/api/tasks.php', t)));
         setTasks(prev => [...results.map(r => r.data), ...prev]);
         return true;
       } catch (err) {
@@ -151,13 +151,13 @@ function App() {
 
     try {
       if (taskData.Id) {
-        const res = await axios.put(`/api/tasks/${taskData.Id}`, taskData);
+        const res = await axios.put(`/api/tasks.php?id=${taskData.Id}`, taskData);
         // Only update from response if it's an actual task object
         if (res.data && res.data.Id) {
           setTasks(prev => prev.map(t => String(t.Id) === String(taskData.Id) ? { ...t, ...res.data } : t));
         }
       } else {
-        const res = await axios.post('/api/tasks', taskData);
+        const res = await axios.post('/api/tasks.php', taskData);
         setTasks(prev => [res.data, ...prev]);
       }
       return true;
@@ -203,10 +203,10 @@ function App() {
   const handleSaveEvent = useCallback(async (eventData) => {
     try {
       if (eventData.Id) {
-        const res = await axios.put(`/api/events/${eventData.Id}`, eventData);
+        const res = await axios.put(`/api/events.php?id=${eventData.Id}`, eventData);
         setEvents(prev => prev.map(e => e.Id === eventData.Id ? res.data : e));
       } else {
-        const res = await axios.post('/api/events', eventData);
+        const res = await axios.post('/api/events.php', eventData);
         setEvents(prev => [...prev, res.data]);
       }
       return true;
@@ -234,7 +234,7 @@ function App() {
 
   const handleDeleteEvent = useCallback(async (eventId) => {
     try {
-      await axios.delete(`/api/events/${eventId}`);
+      await axios.delete(`/api/events.php?id=${eventId}`);
       setEvents(prev => prev.filter(e => e.Id !== eventId));
       return true;
     } catch (err) {
