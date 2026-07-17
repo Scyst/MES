@@ -3,7 +3,7 @@ import axios from 'axios';
 import { FiMessageSquare, FiX, FiClock, FiChevronRight } from 'react-icons/fi';
 import AddTaskModal from './AddTaskModal';
 
-export default function NotificationWidget({ currentUser, tasks, onSaveTask, onDeleteTask }) {
+export default function NotificationWidget({ currentUser, tasks, onSaveTask, onDeleteTask, users = [] }) {
   const [recentComments, setRecentComments] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -223,6 +223,7 @@ export default function NotificationWidget({ currentUser, tasks, onSaveTask, onD
           initialData={selectedTask}
           currentUser={currentUser}
           tasks={tasks}
+          users={users}
         />
       )}
     </>

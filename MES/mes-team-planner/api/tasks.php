@@ -6,7 +6,35 @@ $id = isset($_GET['id']) ? $_GET['id'] : null;
 
 try {
     if ($method === 'GET') {
-        $stmt = $pdo->query("SELECT * FROM TeamPlanner_Tasks ORDER BY CreatedAt DESC");
+        $currentUserFullname = $_SESSION['user']['fullname'] ?? '';
+        $currentUsername = $_SESSION['user']['username'] ?? '';
+        $akasStr = isset($_GET['akas']) ? $_GET['akas'] : '';
+        $akas = array_filter(array_map('trim', explode(',', $akasStr)));
+
+        $conditions = ["Visibility = 'public'"];
+        $params = [];
+        
+        if ($currentUsername) {
+            $conditions[] = "CreatedBy = ?";
+            $params[] = $currentUsername;
+            
+            $conditions[] = "Assignee LIKE ?";
+            $params[] = "%$currentUsername%";
+            
+            if ($currentUserFullname) {
+                $conditions[] = "Assignee LIKE ?";
+                $params[] = "%$currentUserFullname%";
+            }
+            
+            foreach ($akas as $aka) {
+                $conditions[] = "Assignee LIKE ?";
+                $params[] = "%$aka%";
+            }
+        }
+        
+        $whereSql = implode(" OR ", $conditions);
+        $stmt = $pdo->prepare("SELECT * FROM TeamPlanner_Tasks WHERE $whereSql ORDER BY CreatedAt DESC");
+        $stmt->execute($params);
         $tasks = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $row['dueDate'] = formatDate($row['DueDate']);
@@ -20,16 +48,18 @@ try {
             $row['recurrence'] = $row['Recurrence'] ?: 'none';
             $row['projectId'] = $row['ProjectId'] ?: null;
             $row['projectChecklistId'] = $row['ProjectChecklistId'] ?: null;
+            $row['spaceId'] = $row['SpaceId'] ?: null;
             $tasks[] = $row;
         }
         sendJson($tasks);
     } 
     elseif ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
+        $createdBy = $_SESSION['user']['username'] ?? 'System';
         
-        $sql = "INSERT INTO TeamPlanner_Tasks (Title, Status, Visibility, Assignee, DueDate, StartDate, StartTime, EndTime, Priority, Description, Subtasks, Tags, Recurrence, ProjectId, ProjectChecklistId) 
+        $sql = "INSERT INTO TeamPlanner_Tasks (Title, Status, Visibility, Assignee, DueDate, StartDate, StartTime, EndTime, Priority, Description, Subtasks, Tags, Recurrence, ProjectId, ProjectChecklistId, SpaceId, CreatedBy) 
                 OUTPUT INSERTED.* 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
@@ -47,7 +77,9 @@ try {
             $data['tags'] ?? '',
             $data['recurrence'] ?? 'none',
             $data['projectId'] ?? null,
-            $data['projectChecklistId'] ?? null
+            $data['projectChecklistId'] ?? null,
+            $data['spaceId'] ?? null,
+            $createdBy
         ]);
         
         $newTask = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -62,6 +94,7 @@ try {
         $newTask['recurrence'] = $newTask['Recurrence'] ?: 'none';
         $newTask['projectId'] = $newTask['ProjectId'] ?: null;
         $newTask['projectChecklistId'] = $newTask['ProjectChecklistId'] ?: null;
+        $newTask['spaceId'] = $newTask['SpaceId'] ?: null;
         
         // Sync checklist if created as done
         if ($newTask['Status'] === 'done' && !empty($newTask['ProjectId'])) {
@@ -114,10 +147,12 @@ try {
         $params = [];
         
         $fields = [
-            'status' => 'Status', 'title' => 'Title', 'assignee' => 'Assignee', 
-            'startDate' => 'StartDate', 'dueDate' => 'DueDate', 'startTime' => 'StartTime', 
-            'endTime' => 'EndTime', 'visibility' => 'Visibility', 'priority' => 'Priority', 
-            'description' => 'Description', 'subtasks' => 'Subtasks', 'tags' => 'Tags', 'recurrence' => 'Recurrence', 'projectId' => 'ProjectId', 'projectChecklistId' => 'ProjectChecklistId'
+            'status' => 'Status', 'title' => 'Title', 'visibility' => 'Visibility',
+            'assignee' => 'Assignee', 'dueDate' => 'DueDate', 'startDate' => 'StartDate',
+            'startTime' => 'StartTime', 'endTime' => 'EndTime', 'priority' => 'Priority',
+            'description' => 'Description', 'subtasks' => 'Subtasks', 'tags' => 'Tags',
+            'recurrence' => 'Recurrence', 'projectId' => 'ProjectId', 'projectChecklistId' => 'ProjectChecklistId',
+            'spaceId' => 'SpaceId'
         ];
         
         foreach ($fields as $jsonKey => $dbKey) {

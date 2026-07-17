@@ -16,7 +16,7 @@ const PRIORITY_META = {
   low: { label: 'ต่ำ', dot: 'bg-green-400', border: 'border-l-green-500' },
 };
 
-export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTask, onDeleteTask, loading }) {
+export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTask, onDeleteTask, loading, users = [] }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
 
@@ -334,6 +334,7 @@ export default function TaskBoard({ currentUser, tasks = [], setTasks, onSaveTas
         initialData={editingTask}
         currentUser={currentUser}
         tasks={tasks}
+        users={users}
       />
     </div>
   );

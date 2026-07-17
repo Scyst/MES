@@ -16,7 +16,7 @@ const PERSON_COLORS = [
   { bg: 'bg-teal-500', text: 'text-teal-500', light: 'bg-teal-500/20', border: 'border-teal-400/40' },
 ];
 
-export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loading, currentUser }) {
+export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loading, currentUser, users = [] }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('daily'); // 'daily' | 'monthly'
   
@@ -717,6 +717,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
         initialData={editingTask}
         tasks={tasks}
         currentUser={currentUser}
+        users={users}
       />
     </div>
   );

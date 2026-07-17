@@ -41,6 +41,10 @@ function App() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [isGlobalTaskModalOpen, setIsGlobalTaskModalOpen] = useState(false);
+  const [isGlobalProjectModalOpen, setIsGlobalProjectModalOpen] = useState(false);
+  const [isAddSpaceModalOpen, setIsAddSpaceModalOpen] = useState(false);
+  const [editingSpace, setEditingSpace] = useState(null);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -58,22 +62,45 @@ function App() {
   const [events, setEvents] = useState([]);
   const [activities, setActivities] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [spaces, setSpaces] = useState([]);
+  const [users, setUsers] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   // Fetch all data once
   const refreshData = useCallback(async (silent = false) => {
     if (!silent) setDataLoading(true);
     try {
-      const [resTasks, resEvents, resAct, resProj] = await Promise.all([
-        axios.get('/api/tasks'),
-        axios.get('/api/events'),
-        axios.get('/api/activities'),
-        axios.get('/api/projects')
+      // 1. Fetch AKA from DB first
+      let storedAkas = localStorage.getItem('user_akas') || '';
+      try {
+        const profileRes = await axios.get('/api/profile.php');
+        if (profileRes.data && profileRes.data.aka !== undefined) {
+          storedAkas = profileRes.data.aka;
+          localStorage.setItem('user_akas', storedAkas);
+        }
+      } catch (e) {
+        // Ignore auth error on profile fetch if not ready
+      }
+
+      let tasksUrl = '/api/tasks.php';
+      if (storedAkas) {
+        tasksUrl += `?akas=${encodeURIComponent(storedAkas)}`;
+      }
+
+      const [resTasks, resEvents, resAct, resProj, resSpaces, resUsers] = await Promise.all([
+        axios.get(tasksUrl),
+        axios.get('/api/events.php'),
+        axios.get('/api/activities.php'),
+        axios.get('/api/projects.php'),
+        axios.get('/api/spaces.php'),
+        axios.get('/api/users.php').catch(() => ({ data: [] }))
       ]);
-      setTasks(resTasks.data);
-      setEvents(resEvents.data);
-      setActivities(resAct.data);
-      setProjects(resProj.data);
+        setTasks(Array.isArray(resTasks.data) ? resTasks.data : []);
+        setEvents(Array.isArray(resEvents.data) ? resEvents.data : []);
+        setActivities(Array.isArray(resAct.data) ? resAct.data : []);
+        setProjects(Array.isArray(resProj.data) ? resProj.data : []);
+        setSpaces(Array.isArray(resSpaces.data) ? resSpaces.data : []);
+        setUsers(Array.isArray(resUsers.data) ? resUsers.data : []);
     } catch (err) {
       console.error('Failed to fetch data', err);
     } finally {
@@ -141,7 +168,7 @@ function App() {
 
   const handleDeleteTask = useCallback(async (taskId) => {
     try {
-      await axios.delete(`/api/tasks/${taskId}`);
+      await axios.delete(`/api/tasks.php?id=${taskId}`);
       setTasks(prev => prev.filter(t => t.Id !== taskId));
       return true;
     } catch (err) {
@@ -149,6 +176,26 @@ function App() {
       return false;
     }
   }, []);
+
+  const handleSaveProject = useCallback(async (projectData) => {
+    try {
+      const payload = {
+        ...projectData,
+        checklist: JSON.stringify(projectData.checklist)
+      };
+      if (projectData.Id) {
+        await axios.put(`/api/projects.php?id=${projectData.Id}`, payload);
+      } else {
+        await axios.post('/api/projects.php', payload);
+      }
+      setIsGlobalProjectModalOpen(false);
+      refreshData();
+      return true;
+    } catch (err) {
+      console.error('Failed to save project', err);
+      return false;
+    }
+  }, [refreshData]);
 
   const handleSaveEvent = useCallback(async (eventData) => {
     try {
@@ -162,6 +209,22 @@ function App() {
       return true;
     } catch (err) {
       console.error('Failed to save event', err);
+      return false;
+    }
+  }, []);
+
+  const handleSaveSpace = useCallback(async (spaceData) => {
+    try {
+      if (spaceData.Id) {
+        const res = await axios.put(`/api/spaces.php?id=${spaceData.Id}`, spaceData);
+        setSpaces(prev => prev.map(s => s.Id === spaceData.Id ? res.data : s));
+      } else {
+        const res = await axios.post('/api/spaces.php', spaceData);
+        setSpaces(prev => [...prev, res.data]);
+      }
+      return true;
+    } catch (err) {
+      console.error('Failed to save space', err);
       return false;
     }
   }, []);
@@ -234,13 +297,13 @@ function App() {
 
   // ══════════ Render Content with Props ══════════
   const renderContent = () => {
-    const sharedTaskProps = { currentUser, tasks, setTasks, onSaveTask: handleSaveTask, onDeleteTask: handleDeleteTask, loading: dataLoading };
+    const sharedTaskProps = { currentUser, tasks, setTasks, onSaveTask: handleSaveTask, onDeleteTask: handleDeleteTask, loading: dataLoading, users };
 
     switch (activeTab) {
       case 'dashboard': 
         return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav} />;
       case 'calendar': 
-        return <CalendarView tasks={tasks} events={events} onSaveTask={handleSaveTask} onDeleteTask={handleDeleteTask} onSaveEvent={handleSaveEvent} onDeleteEvent={handleDeleteEvent} loading={dataLoading} />;
+        return <CalendarView tasks={tasks} events={events} onSaveTask={handleSaveTask} onDeleteTask={handleDeleteTask} onSaveEvent={handleSaveEvent} onDeleteEvent={handleDeleteEvent} loading={dataLoading} users={users} />;
       case 'tasks': 
         return <TaskBoard {...sharedTaskProps} />;
       case 'gantt': 
@@ -258,7 +321,7 @@ function App() {
       default: 
         // Fallback for Spaces and mock tabs
         if (activeTab.startsWith('space-') || activeTab.startsWith('team-')) {
-          return <SpaceView activeTab={activeTab} tasks={tasks} projects={projects} currentUser={currentUser} refreshData={refreshData} />;
+          return <SpaceView activeTab={activeTab} tasks={tasks} projects={projects} currentUser={currentUser} refreshData={refreshData} users={users} />;
         }
         return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav} />;
     }
@@ -316,13 +379,13 @@ function App() {
           
           <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 hidden lg:block"></div>
           
+          <button className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" onClick={() => setShowNotificationModal(true)} title="Notifications">
+            <FiBell className="text-[1.1rem]" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse border-2 border-white dark:border-slate-900"></span>
+          </button>
+          
           <div className="relative">
             <div className="flex items-center gap-3 cursor-pointer p-1 pl-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700" onClick={() => setShowProfileMenu(!showProfileMenu)}>
-              {currentUser && (
-                <div className="hidden lg:flex items-center text-right">
-                  <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{currentUser.fullname || currentUser.username}</span>
-                </div>
-              )}
               <ProfileAvatar size="md" />
             </div>
             
@@ -367,22 +430,6 @@ function App() {
           </div>
 
           <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto pb-4 custom-scrollbar">
-            {/* Notification */}
-            <div className="px-2 mb-3">
-              <button 
-                onClick={() => setShowNotificationModal(true)}
-                className="w-full flex items-center justify-between px-2 py-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors rounded-lg hover:bg-black/5 dark:hover:bg-white/5 group"
-              >
-                <div className="flex items-center gap-3">
-                  <FiBell className="text-[1.1rem] shrink-0 group-hover:text-rose-500 transition-colors" />
-                  <span className="text-sm font-medium">Notifications</span>
-                </div>
-                <div className="flex items-center justify-center w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full shadow-sm">
-                  3
-                </div>
-              </button>
-            </div>
-
             <div className="space-y-0.5 mt-2">
               {mainNav.map(item => (
                 <button 
@@ -456,7 +503,7 @@ function App() {
             <button className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white relative p-1.5" onClick={toggleTheme} title="Toggle Theme">
               {isDarkMode ? <FiSun className="text-lg" /> : <FiMoon className="text-lg" />}
             </button>
-            <button className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white relative p-1.5" onClick={() => handleNav('dashboard')} title="Notifications">
+            <button className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white relative p-1.5" onClick={() => setShowNotificationModal(true)} title="Notifications">
               <FiBell className="text-lg" />
               <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
             </button>
@@ -580,12 +627,35 @@ function App() {
       {/* Global Notifications */}
       <NotificationManager />
       
+      {/* Global Modals */}
+      <AddTaskModal 
+        isOpen={isGlobalTaskModalOpen} 
+        onClose={() => setIsGlobalTaskModalOpen(false)} 
+        onSave={(data) => { handleSaveTask(data); setIsGlobalTaskModalOpen(false); }} 
+        currentUser={currentUser} 
+        tasks={tasks}
+        users={users} 
+      />
+      <AddProjectModal 
+        isOpen={isGlobalProjectModalOpen} 
+        onClose={() => setIsGlobalProjectModalOpen(false)} 
+        onSave={handleSaveProject}
+        spaces={spaces}
+      />
+      <AddSpaceModal
+        isOpen={isAddSpaceModalOpen}
+        onClose={() => { setIsAddSpaceModalOpen(false); setEditingSpace(null); }}
+        onSave={handleSaveSpace}
+        initialData={editingSpace}
+      />
+      
       {/* Chat Notification Widget */}
       <NotificationWidget 
         currentUser={currentUser}
         tasks={tasks}
         onSaveTask={handleSaveTask}
         onDeleteTask={handleDeleteTask}
+        users={users}
       />
     </div>
   );

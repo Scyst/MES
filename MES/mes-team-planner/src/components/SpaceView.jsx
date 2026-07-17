@@ -1,39 +1,45 @@
 import React, { useMemo } from 'react';
-import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder } from 'react-icons/fi';
+import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTrash2 } from 'react-icons/fi';
 
-export default function SpaceView({ activeTab, tasks = [], projects = [], currentUser, refreshData }) {
-  // Determine Space Name
-  const spaceName = useMemo(() => {
-    if (activeTab === 'space-home') return 'Home';
-    if (activeTab === 'team-engineers') return 'Engineers';
-    if (activeTab === 'team-design') return 'Design Team';
-    if (activeTab === 'team-developer') return 'Developer Team';
-    return String(activeTab || '').replace('-', ' ');
-  }, [activeTab]);
+export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], currentUser, refreshData, onEditSpace, onDeleteSpace }) {
+  // Determine Space Name and current Space
+  const currentSpace = useMemo(() => {
+    if (activeTab === 'space-home') return { Id: 'home', Name: 'Home' };
+    if (activeTab.startsWith('space-')) {
+      const spaceId = activeTab.replace('space-', '');
+      const found = spaces.find(s => String(s.Id) === String(spaceId));
+      if (found) return found;
+    }
+    // Fallback for legacy mock tabs
+    if (activeTab === 'team-engineers') return { Id: 'mock', Name: 'Engineers' };
+    if (activeTab === 'team-design') return { Id: 'mock', Name: 'Design Team' };
+    if (activeTab === 'team-developer') return { Id: 'mock', Name: 'Developer Team' };
+    
+    return { Id: 'unknown', Name: String(activeTab || '').replace('-', ' ') };
+  }, [activeTab, spaces]);
+
+  const spaceName = currentSpace?.Name || 'Unknown Space';
 
   const teamProjects = useMemo(() => {
     const safeProjects = Array.isArray(projects) ? projects : [];
-    if (activeTab === 'space-home') return safeProjects;
-    let filtered = safeProjects;
-    if (activeTab === 'team-design') filtered = safeProjects.slice(0, Math.max(1, safeProjects.length / 2));
-    if (activeTab === 'team-developer') filtered = safeProjects.slice(Math.max(0, safeProjects.length / 2 - 1));
-    if (activeTab === 'team-engineers') {
-      filtered = safeProjects.filter(p => String(p?.Title || '').toLowerCase().includes('engine') || (p?.Id && typeof p.Id === 'number' && p.Id % 2 === 0));
-    }
-    return filtered;
-  }, [activeTab, projects]);
+    if (currentSpace.Id === 'home') return safeProjects;
+    if (currentSpace.Id === 'mock') return []; // Clear mock data to prevent confusion
+    
+    return safeProjects.filter(p => String(p.SpaceId) === String(currentSpace.Id));
+  }, [currentSpace, projects]);
 
   const teamTasks = useMemo(() => {
     const safeTasks = Array.isArray(tasks) ? tasks : [];
-    if (activeTab === 'space-home') return safeTasks;
+    if (currentSpace.Id === 'home') return safeTasks;
+    if (currentSpace.Id === 'mock') return [];
+    
     return safeTasks.filter(t => 
-      teamProjects.some(p => p?.Id === t?.ProjectId) || 
-      (t?.Id && typeof t.Id === 'number' && t.Id % 3 === (activeTab === 'team-design' ? 0 : 1))
+      String(t.SpaceId) === String(currentSpace.Id) || teamProjects.some(p => p?.Id && t?.ProjectId && String(p.Id) === String(t.ProjectId))
     );
-  }, [activeTab, tasks, teamProjects]);
+  }, [currentSpace, tasks, teamProjects]);
 
-  const activeProjects = teamProjects.filter(p => p && p.Status !== 'Completed');
-  const doneTasks = teamTasks.filter(t => t && t.Status === 'Done');
+  const activeProjects = teamProjects.filter(p => p && p.Status !== 'Completed' && p.Status !== 'done');
+  const doneTasks = teamTasks.filter(t => t && (t.Status === 'Done' || t.Status === 'done'));
 
   return (
     <div className="space-y-6">
@@ -47,9 +53,25 @@ export default function SpaceView({ activeTab, tasks = [], projects = [], curren
           <h2 className="text-2xl md:text-3xl font-bold capitalize">
             {spaceName}
           </h2>
-          <p className="text-indigo-100 text-sm mt-1">
+          <p className="text-indigo-100 text-sm mt-1 mb-2">
             ยินดีต้อนรับสู่พื้นที่ทำงานของทีม {spaceName}
           </p>
+          {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown' && (
+            <div className="flex gap-2">
+              <button 
+                onClick={() => onEditSpace && onEditSpace(currentSpace)}
+                className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 transition-colors rounded text-xs font-semibold backdrop-blur-sm"
+              >
+                <FiEdit2 /> แก้ไข
+              </button>
+              <button 
+                onClick={() => onDeleteSpace && onDeleteSpace(currentSpace.Id)}
+                className="flex items-center gap-1 px-3 py-1 bg-rose-500/80 hover:bg-rose-500 transition-colors rounded text-xs font-semibold backdrop-blur-sm"
+              >
+                <FiTrash2 /> ลบทีม
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-6 py-3 rounded-xl border border-white/20">
           <div className="text-center">
@@ -131,9 +153,11 @@ export default function SpaceView({ activeTab, tasks = [], projects = [], curren
         </div>
       </div>
       
-      <div className="text-center text-xs text-slate-400 mt-4">
-        * ข้อมูลในหน้านี้เป็นข้อมูลจำลอง (Mock Data) สำหรับการแสดงผลหน้าทีม
-      </div>
+      {currentSpace.Id === 'mock' && (
+        <div className="text-center text-xs text-slate-400 mt-4">
+          * ข้อมูลในหน้านี้เป็นข้อมูลจำลอง (Mock Data) สำหรับการแสดงผลหน้าทีม
+        </div>
+      )}
     </div>
   );
 }

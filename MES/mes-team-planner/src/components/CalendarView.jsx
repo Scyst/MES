@@ -4,7 +4,7 @@ import { getDaysInMonth, startOfMonth, getDay, format, addMonths, subMonths } fr
 import AddTaskModal from './AddTaskModal';
 import AddEventModal from './AddEventModal';
 
-export default function CalendarView({ tasks = [], events = [], onSaveTask, onDeleteTask, onSaveEvent, onDeleteEvent, loading, currentUser }) {
+export default function CalendarView({ tasks = [], events = [], onSaveTask, onDeleteTask, onSaveEvent, onDeleteEvent, loading, currentUser, users = [] }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
@@ -275,6 +275,7 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
         initialData={editingTask}
         tasks={tasks}
         currentUser={currentUser}
+        users={users}
       />
 
       {/* Event Modal (for calendar events like meetings, holidays, leaves) */}

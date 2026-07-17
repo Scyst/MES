@@ -28,7 +28,7 @@ const WEEK_DAYS = [
   { value: 0, label: 'อา' },
 ];
 
-export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initialData, currentUser, tasks = [] }) {
+export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initialData, currentUser, tasks = [], users = [], isProjectTask = false, projectId = null }) {
   const [activeTab, setActiveTab] = useState('general');
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -238,13 +238,20 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
   const isEditing = !!initialData?.Id;
 
-  // Extract unique assignees from tasks array for autocomplete
-  const uniqueAssignees = Array.from(new Set(
-    tasks
-      .flatMap(t => (t.Assignee || t.assignee || '').split(','))
-      .map(a => a.trim())
-      .filter(a => a !== '')
-  )).sort();
+  // Extract unique assignees from tasks array and user database for autocomplete
+  const uniqueAssignees = Array.from(new Set([
+    ...tasks.flatMap(t => (t.Assignee || t.assignee || '').split(',').map(a => a.trim()).filter(a => a !== '')),
+    ...(users || []).flatMap(u => {
+      const names = [];
+      if (u.fullname) names.push(u.fullname.trim());
+      else if (u.username) names.push(u.username.trim());
+      if (u.aka) {
+        const akas = u.aka.split(',').map(a => a.trim()).filter(a => a !== '');
+        names.push(...akas);
+      }
+      return names;
+    })
+  ])).sort();
 
   return (
     <div 

@@ -21,10 +21,11 @@
     "express": "^5.2.1",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
-    "lucide-react": "^1.23.0",
+    "lucide-react": "^1.24.0",
     "mssql": "^12.7.0",
     "puppeteer": "^25.3.0",
     "react": "^19.2.7",
+    "react-circular-progressbar": "^2.2.0",
     "react-dom": "^19.2.7",
     "react-icons": "^5.7.0",
     "react-router-dom": "^7.18.1"
