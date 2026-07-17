@@ -272,6 +272,11 @@ session_start();
                         th.textContent = col.replace(/_/g, ' ');
                         tr.appendChild(th);
                     });
+                    if (view === 'recon_inventory') {
+                        const th = document.createElement('th');
+                        th.textContent = 'Action';
+                        tr.appendChild(th);
+                    }
                     tableHead.appendChild(tr);
 
                     // Generate Rows
@@ -306,6 +311,15 @@ session_start();
                             }
                             trBody.appendChild(td);
                         });
+                        
+                        if (view === 'recon_inventory') {
+                            const tdAction = document.createElement('td');
+                            if (row.Status !== 'MATCH') {
+                                tdAction.innerHTML = `<button class="tab-btn" style="background: rgba(59, 130, 246, 0.1); border: 1px solid var(--accent-blue); padding: 0.25rem 0.5rem; font-size: 0.8rem;" onclick="syncInventory('${row.Mat_No}', ${row.SAP_Qty})">Sync to MES</button>`;
+                            }
+                            trBody.appendChild(tdAction);
+                        }
+                        
                         tableBody.appendChild(trBody);
                     });
                 } else {
@@ -323,6 +337,27 @@ session_start();
         document.addEventListener('DOMContentLoaded', () => {
             fetchData('operation_slips');
         });
+
+        async function syncInventory(matNo, sapQty) {
+            if(!confirm(`Are you sure you want to adjust MES inventory for ${matNo} to match SAP quantity (${sapQty})?`)) return;
+
+            try {
+                const response = await fetch('api/adjust_inventory.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mat_no: matNo, sap_qty: sapQty })
+                });
+                const res = await response.json();
+                if (res.success) {
+                    alert(res.message);
+                    fetchData(currentView);
+                } else {
+                    alert('Error: ' + res.message);
+                }
+            } catch (err) {
+                alert('Connection error');
+            }
+        }
     </script>
 </body>
 </html>

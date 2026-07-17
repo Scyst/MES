@@ -36,6 +36,51 @@ try {
             $stmt->execute([$startDate, $endDate, $line, $model, $machine, $team]);
             $res = $stmt->fetch(PDO::FETCH_ASSOC);
             
+            // Calculate SAP Scrap Cost
+            $sapScrapCost = 0;
+            $actualStartDate = $startDate . ' 08:00:00';
+            $actualEndDate = date('Y-m-d H:i:s', strtotime($endDate . ' +1 day 8 hours'));
+            
+            $partCond = ["t.transaction_timestamp >= ?", "t.transaction_timestamp < ?", "t.transaction_type = 'PRODUCTION_SCRAP'"];
+            $partParams = [$actualStartDate, $actualEndDate];
+            if (!empty($line) && $line !== 'All') { $partCond[] = "l.production_line = ?"; $partParams[] = $line; }
+            if (!empty($model) && $model !== 'All') { $partCond[] = "r.model = ?"; $partParams[] = $model; }
+            if (!empty($machine) && $machine !== 'All') { $partCond[] = "t.machine_id = ?"; $partParams[] = $machine; }
+            if (!empty($team) && $team !== 'All') { 
+                $partCond[] = "(u.team_group = ? OR t.notes LIKE ?)"; 
+                $partParams[] = $team; 
+                $partParams[] = '%[[]TEAM_OVERRIDE: ' . $team . ']%'; 
+            }
+            $partWhere = "WHERE " . implode(" AND ", $partCond);
+
+            $scrapSql = "
+                SELECT i.sap_no, SUM(t.quantity) as scrap_qty
+                FROM " . TRANSACTIONS_TABLE . " t WITH (NOLOCK)
+                JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON t.parameter_id = i.item_id
+                LEFT JOIN " . LOCATIONS_TABLE . " l WITH (NOLOCK) ON t.to_location_id = l.location_id
+                LEFT JOIN " . ROUTES_TABLE . " r WITH (NOLOCK) ON t.parameter_id = r.item_id AND l.production_line = r.line
+                LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                {$partWhere}
+                GROUP BY i.sap_no
+            ";
+            $scrapStmt = $pdo->prepare($scrapSql);
+            $scrapStmt->execute($partParams);
+            $scrapItems = $scrapStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (count($scrapItems) > 0) {
+                require_once __DIR__ . '/../../sap_db.php';
+                foreach ($scrapItems as $sItem) {
+                    $matNo = trim($sItem['sap_no']);
+                    $sq = (float)$sItem['scrap_qty'];
+                    if (empty($matNo) || $sq <= 0) continue;
+                    
+                    $sapPriceStmt = $pdo_sap->prepare("SELECT TOP 1 STD_Cost FROM View_OperationSlip_1820 WHERE Mat_No = ? AND STD_Cost > 0");
+                    $sapPriceStmt->execute([$matNo]);
+                    $stdCost = (float)$sapPriceStmt->fetchColumn();
+                    $sapScrapCost += ($sq * $stdCost);
+                }
+            }
+
             $response['data'] = [
                 "quality" => round((float)($res['Quality'] ?? 0), 1),
                 "availability" => round((float)($res['Availability'] ?? 0), 1),
@@ -45,6 +90,7 @@ try {
                 "defects" => (int)($res['Defects'] ?? 0),
                 "hold" => (int)($res['Hold'] ?? 0),
                 "scrap" => (int)($res['Scrap'] ?? 0),
+                "sap_scrap_cost" => $sapScrapCost,
                 "runtime" => (float)($res['Runtime'] ?? 0),
                 "planned_time" => (float)($res['PlannedTime'] ?? 0),
                 "downtime" => (float)($res['Downtime'] ?? 0),

@@ -9,7 +9,7 @@ header('Content-Type: application/json; charset=utf-8');
 try {
     // 1. Fetch SAP Stock
     $sapQuery = "SELECT Mat_No, Storage_Location, SUM(Quantity) as SAP_Qty FROM View_SAP_ALL_STOCK_1820 GROUP BY Mat_No, Storage_Location";
-    $sapStmt = $sapPdo->query($sapQuery);
+    $sapStmt = $pdo_sap->query($sapQuery);
     $sapStockRaw = $sapStmt->fetchAll(PDO::FETCH_ASSOC);
     
     $sapStock = [];
@@ -28,7 +28,7 @@ try {
             i.part_description,
             SUM(o.quantity) as MES_Qty
         FROM dbo.INVENTORY_ONHAND o
-        JOIN dbo.ITEMS i ON o.parameter_id = i.id
+        JOIN dbo.ITEMS i ON o.parameter_id = i.item_id
         WHERE i.sap_no IS NOT NULL AND i.sap_no != ''
         GROUP BY i.sap_no, i.part_description
     ";

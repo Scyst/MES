@@ -122,6 +122,55 @@ try {
 
         case 'start_job':
             $job_id = $input['job_id'];
+            
+            // === PRE-PRODUCTION READINESS CHECK (SAP) ===
+            $jobStmt = $pdo->prepare("SELECT item_id, target_qty FROM PRODUCTION_JOBS WHERE job_id = ?");
+            $jobStmt->execute([$job_id]);
+            $jobInfo = $jobStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($jobInfo && !isset($input['ignore_sap_warning'])) {
+                // Check BOM for required RM
+                $bomStmt = $pdo->prepare("
+                    SELECT 
+                        b.component_item_id, 
+                        i.sap_no, 
+                        i.part_description,
+                        (b.quantity_required * ?) as total_required
+                    FROM " . BOM_TABLE . " b
+                    JOIN " . ITEMS_TABLE . " i ON b.component_item_id = i.item_id
+                    WHERE b.fg_item_id = ? AND b.bom_status = 'ACTIVE'
+                ");
+                $bomStmt->execute([$jobInfo['target_qty'], $jobInfo['item_id']]);
+                $requiredRMs = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if (count($requiredRMs) > 0) {
+                    require_once __DIR__ . '/../../sap_db.php';
+                    $shortages = [];
+                    foreach ($requiredRMs as $rm) {
+                        $sapNo = trim($rm['sap_no']);
+                        if (empty($sapNo)) continue;
+
+                        $sapStockStmt = $pdo_sap->prepare("SELECT SUM(Quantity) FROM View_SAP_ALL_STOCK_1820 WHERE Mat_No = ?");
+                        $sapStockStmt->execute([$sapNo]);
+                        $sapStock = (float)$sapStockStmt->fetchColumn();
+
+                        if ($sapStock < $rm['total_required']) {
+                            $shortages[] = "- {$sapNo} ({$rm['part_description']}): Require {$rm['total_required']} but SAP has {$sapStock}";
+                        }
+                    }
+
+                    if (count($shortages) > 0) {
+                        echo json_encode([
+                            'success' => false, 
+                            'is_warning' => true, 
+                            'message' => "Warning: Insufficient RM in SAP for this Job:\n" . implode("\n", $shortages) . "\n\nDo you want to start the job anyway?"
+                        ]);
+                        exit;
+                    }
+                }
+            }
+            // ==============================================
+
             $sql = "UPDATE PRODUCTION_JOBS SET status = 'RUNNING', start_time = GETDATE() WHERE job_id = ? AND status IN ('PENDING', 'PAUSED')";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$job_id]);

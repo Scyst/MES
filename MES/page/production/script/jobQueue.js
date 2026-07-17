@@ -520,16 +520,39 @@ function startJob(jobId) {
     }).then(async (result) => {
         if (result.isConfirmed) {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            const response = await fetch(`${JOB_API_URL}?action=start_job`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                body: JSON.stringify({ job_id: jobId })
-            });
-            const res = await response.json();
-            if (res.success) {
-                fetchJobs(true);
-                if(typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
+            
+            async function triggerStart(ignoreWarning = false) {
+                const response = await fetch(`${JOB_API_URL}?action=start_job`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                    body: JSON.stringify({ job_id: jobId, ignore_sap_warning: ignoreWarning ? 1 : 0 })
+                });
+                const res = await response.json();
+                
+                if (res.is_warning) {
+                    Swal.fire({
+                        title: 'SAP Material Shortage',
+                        text: res.message,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Start Anyway',
+                        cancelButtonText: 'Cancel'
+                    }).then((warnResult) => {
+                        if (warnResult.isConfirmed) {
+                            triggerStart(true);
+                        }
+                    });
+                } else if (res.success) {
+                    fetchJobs(true);
+                    if(typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
+                } else {
+                    Swal.fire('Error', res.message || 'Failed to start job', 'error');
+                }
             }
+
+            triggerStart(false);
         }
     });
 }

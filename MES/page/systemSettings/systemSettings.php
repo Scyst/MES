@@ -153,6 +153,7 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                 <li><hr class="dropdown-divider"></li>
                                 <li class="dropdown-header text-success fw-bold"><i class="fas fa-database me-1"></i> Data Actions</li>
                                 
+                                <li class="toolbar-group item-master-pane"><a class="dropdown-item" href="#" id="syncSapItemsBtn"><i class="fas fa-sync me-2 w-15px text-primary"></i> Sync from SAP</a></li>
                                 <li class="toolbar-group item-master-pane"><a class="dropdown-item" href="#" id="importItemsBtn"><i class="fas fa-file-import me-2 w-15px text-info"></i> Import Excel</a></li>
                                 <li class="toolbar-group item-master-pane"><a class="dropdown-item" href="#" id="exportItemsBtn"><i class="fas fa-file-export me-2 w-15px text-primary"></i> Export Excel</a></li>
                                 
@@ -380,5 +381,49 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
     <script src="../components/js/pagination.js"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/systemSettings.js?v=<?php echo filemtime(__DIR__ . '/script/systemSettings.js'); ?>"></script>
+    <script>
+        $(document).ready(function() {
+            if ($('#syncSapItemsBtn').length > 0) {
+                $('#syncSapItemsBtn').on('click', function(e) {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: 'Sync Items from SAP?',
+                        text: 'ระบบจะดึงรหัส Material ใหม่ทั้งหมดจาก SAP มาเพิ่มลงใน Master Data (ใช้เวลาสักครู่)',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Start Sync',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({
+                                title: 'Syncing...',
+                                html: 'กำลังตรวจสอบและนำเข้าข้อมูล...',
+                                allowOutsideClick: false,
+                                didOpen: () => { Swal.showLoading(); }
+                            });
+                            
+                            $.ajax({
+                                url: 'api/sync_sap_items.php',
+                                type: 'GET',
+                                dataType: 'json',
+                                success: function(res) {
+                                    if(res.success) {
+                                        Swal.fire('Success!', res.message, 'success').then(() => {
+                                            if(typeof loadItems === 'function') loadItems();
+                                        });
+                                    } else {
+                                        Swal.fire('Error', res.message, 'error');
+                                    }
+                                },
+                                error: function() {
+                                    Swal.fire('Error', 'Cannot connect to server.', 'error');
+                                }
+                            });
+                        }
+                    });
+                });
+            }
+        });
+    </script>
 </body>
 </html>

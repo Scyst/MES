@@ -108,13 +108,6 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
   // Get unique projects for filter
   const uniqueProjects = [...new Set(myTasks.filter(t => t.ProjectName).map(t => t.ProjectName))];
 
-  const handleSaveAka = () => {
-    const newAkas = akaInput.split(',').map(s => s.trim()).filter(s => s);
-    setAkas(newAkas);
-    localStorage.setItem('user_akas', JSON.stringify(newAkas));
-    setIsEditingAka(false);
-  };
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
       {/* Header & Metrics */}

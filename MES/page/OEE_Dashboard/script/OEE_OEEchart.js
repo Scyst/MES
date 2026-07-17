@@ -115,12 +115,12 @@ async function fetchAndRenderPieCharts() {
                 { label: 'Actual', value: `${(d.oee||0).toFixed(1)}%`, color: 'text-primary' }
             ]);
 
-            // 2. QUALITY (โชว์ FG, Hold, Scrap)
+            // 2. QUALITY (โชว์ FG, Hold, Scrap, and SAP Scrap Cost)
             renderGaugeChart('quality', 'qualityPieChart', d.quality || 0, 99, '#198754');
             document.getElementById("qualityInfo").innerHTML = createMiniMetrics([
                 { label: 'Good (FG)', value: (d.fg||0).toLocaleString(), color: 'text-success' },
                 { label: 'Hold', value: (d.hold||0).toLocaleString(), color: 'text-warning' },
-                { label: 'Scrap', value: (d.scrap||0).toLocaleString(), color: 'text-danger' }
+                { label: 'Scrap', value: `${(d.scrap||0).toLocaleString()} <small class="text-muted">(Cost: ฿${(d.sap_scrap_cost||0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})})</small>`, color: 'text-danger' }
             ]);
 
             // 3. PERFORMANCE

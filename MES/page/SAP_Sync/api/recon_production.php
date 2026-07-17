@@ -7,32 +7,31 @@ require_once __DIR__ . '/../../components/init.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    // 1. Fetch SAP Operation Slips
-    $sapQuery = "SELECT Order_ID, Mat_No, TargetQty, CONFIRMYIELD FROM View_OperationSlip_1820";
-    $sapStmt = $sapPdo->query($sapQuery);
+    // 1. Fetch SAP Operation Slips (Grouped by Mat_No)
+    $sapQuery = "SELECT Mat_No, SUM(TargetQty) as TotalTargetQty, SUM(CONFIRMYIELD) as TotalConfirmYield FROM View_OperationSlip_1820 GROUP BY Mat_No";
+    $sapStmt = $pdo_sap->query($sapQuery);
     $sapOpsRaw = $sapStmt->fetchAll(PDO::FETCH_ASSOC);
     
     $sapOps = [];
     foreach ($sapOpsRaw as $row) {
-        $orderId = trim($row['Order_ID']);
-        $sapOps[$orderId] = [
-            'Mat_No' => trim($row['Mat_No']),
-            'TargetQty' => (float)$row['TargetQty'],
-            'CONFIRMYIELD' => (float)$row['CONFIRMYIELD']
+        $matNo = trim($row['Mat_No']);
+        $sapOps[$matNo] = [
+            'TargetQty' => (float)$row['TotalTargetQty'],
+            'CONFIRMYIELD' => (float)$row['TotalConfirmYield']
         ];
     }
 
-    // 2. Fetch MES Production Jobs
+    // 2. Fetch MES Production Jobs (Grouped by sap_no)
     $mesQuery = "
         SELECT 
-            j.job_no,
             i.sap_no,
-            j.target_qty,
-            ISNULL(j.actual_qty, 0) as MES_Actual_Qty,
-            j.status
+            MAX(i.part_description) as part_description,
+            SUM(j.target_qty) as MES_Total_Target,
+            SUM(ISNULL(j.actual_qty, 0)) as MES_Total_Actual
         FROM dbo.PRODUCTION_JOBS j
-        JOIN dbo.ITEMS i ON j.item_id = i.id
-        WHERE j.job_no IS NOT NULL AND j.job_no != ''
+        JOIN dbo.ITEMS i ON j.item_id = i.item_id
+        WHERE i.sap_no IS NOT NULL AND i.sap_no != ''
+        GROUP BY i.sap_no
     ";
     $mesStmt = $pdo->query($mesQuery);
     $mesJobsRaw = $mesStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -40,13 +39,13 @@ try {
     $reconciliation = [];
     
     foreach ($mesJobsRaw as $row) {
-        $jobNo = trim($row['job_no']);
+        $matNo = trim($row['sap_no']);
         
-        // Match with SAP Order_ID
-        if (isset($sapOps[$jobNo])) {
-            $sapData = $sapOps[$jobNo];
+        // Match with SAP Mat_No
+        if (isset($sapOps[$matNo])) {
+            $sapData = $sapOps[$matNo];
             
-            $mesActual = (float)$row['MES_Actual_Qty'];
+            $mesActual = (float)$row['MES_Total_Actual'];
             $sapConfirm = $sapData['CONFIRMYIELD'];
             
             $diff = $mesActual - $sapConfirm;
@@ -60,15 +59,14 @@ try {
 
             if ($status !== 'MATCH' || isset($_GET['show_all'])) {
                 $reconciliation[] = [
-                    'Order_ID' => $jobNo,
-                    'Mat_No' => $sapData['Mat_No'],
-                    'MES_Target_Qty' => (float)$row['target_qty'],
+                    'Mat_No' => $matNo,
+                    'Description' => $row['part_description'],
+                    'MES_Target_Qty' => (float)$row['MES_Total_Target'],
                     'SAP_Target_Qty' => $sapData['TargetQty'],
                     'MES_Actual_Qty' => $mesActual,
                     'SAP_Confirm_Yield' => $sapConfirm,
                     'Diff' => $diff,
-                    'Status' => $status,
-                    'MES_Job_Status' => $row['status']
+                    'Status' => $status
                 ];
             }
         }
