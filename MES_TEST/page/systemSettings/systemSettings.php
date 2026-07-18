@@ -358,6 +358,9 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                         </div>
                         <div class="modal-footer bg-light py-2">
                             <button type="button" class="btn btn-secondary btn-sm fw-bold shadow-sm" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm px-4" id="saveAllSyncBtn">
+                                <i class="fas fa-save me-1"></i> Save All Changes
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -475,8 +478,16 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                                 const tr = document.createElement('tr');
                                                 tr.innerHTML = `
                                                     <td class="px-3"><span class="badge ${badgeClass}">${item.action}</span></td>
-                                                    <td class="fw-bold text-primary">${escapeHtml(item.sap_no)}</td>
-                                                    <td class="text-truncate" style="max-width: 300px;" title="${escapeHtml(item.part_description)}">${escapeHtml(item.part_description)}</td>
+                                                    <td class="fw-bold">
+                                                        <a href="#" class="text-decoration-none text-primary" onclick="openItemBySapNo('${escapeHtml(item.sap_no)}'); return false;">
+                                                            ${escapeHtml(item.sap_no)}
+                                                        </a>
+                                                    </td>
+                                                    <td class="text-truncate" style="max-width: 300px;" title="${escapeHtml(item.part_description)}">
+                                                        <a href="#" class="text-decoration-none text-dark" onclick="openItemBySapNo('${escapeHtml(item.sap_no)}'); return false;">
+                                                            ${escapeHtml(item.part_description)}
+                                                        </a>
+                                                    </td>
                                                     <td>${selectHtml}</td>
                                                 `;
                                                 tbody.appendChild(tr);
@@ -540,6 +551,47 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                 });
             }
         });
+        
+        // Handler for "Save All Changes" button in Sync Result Modal
+        document.getElementById('saveAllSyncBtn')?.addEventListener('click', function() {
+            Swal.fire({
+                icon: 'success',
+                title: 'Saved Successfully',
+                text: 'All classifications have been saved.',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('sapSyncResultModal'));
+                if (modal) modal.hide();
+                if (typeof fetchItems === 'function') fetchItems(1);
+            });
+        });
+
+        // Function to open full item settings modal by SAP No
+        async function openItemBySapNo(sapNo) {
+            try {
+                Swal.fire({ title: 'Loading details...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                const req = await fetch(`api/itemMasterManage.php?action=get_items&search_query=${encodeURIComponent(sapNo)}&page=1&limit=1`);
+                const res = await req.json();
+                Swal.close();
+                if (res.success && res.data && res.data.length > 0) {
+                    const item = res.data.find(i => i.sap_no === sapNo) || res.data[0];
+                    if (window.openItemModal) {
+                        // Optionally hide the sync modal first so they don't overlap strangely,
+                        // but Bootstrap 5 handles multiple modals decently if they have different z-indexes.
+                        // Let's hide the sync modal for a cleaner UX.
+                        const syncModal = bootstrap.Modal.getInstance(document.getElementById('sapSyncResultModal'));
+                        if (syncModal) syncModal.hide();
+                        
+                        window.openItemModal(item);
+                    }
+                } else {
+                    Swal.fire('Not Found', 'Could not find full details for this item.', 'warning');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Failed to fetch item details.', 'error');
+            }
+        }
     </script>
 </body>
 </html>
