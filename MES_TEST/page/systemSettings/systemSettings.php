@@ -461,7 +461,7 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                                 
                                                 // Create Dropdown for Material Type
                                                 const selectHtml = `
-                                                    <select class="form-select form-select-sm quick-classify-select" data-sap="${escapeHtml(item.sap_no)}" style="width: 150px;">
+                                                    <select id="sync-select-${escapeHtml(item.sap_no)}" class="form-select form-select-sm quick-classify-select" data-sap="${escapeHtml(item.sap_no)}" style="width: 150px;">
                                                         <option value="UNCLASSIFIED" selected>UNCLASSIFIED</option>
                                                         <option value="FG">FG (Finished Good)</option>
                                                         <option value="SEMI">SEMI (Semi-Finished)</option>
@@ -484,7 +484,7 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                                         </a>
                                                     </td>
                                                     <td class="text-truncate" style="max-width: 300px;" title="${escapeHtml(item.part_description)}">
-                                                        <a href="#" class="text-decoration-none text-dark" onclick="openItemBySapNo('${escapeHtml(item.sap_no)}'); return false;">
+                                                        <a href="#" id="sync-desc-${escapeHtml(item.sap_no)}" class="text-decoration-none text-dark" onclick="openItemBySapNo('${escapeHtml(item.sap_no)}'); return false;">
                                                             ${escapeHtml(item.part_description)}
                                                         </a>
                                                     </td>
