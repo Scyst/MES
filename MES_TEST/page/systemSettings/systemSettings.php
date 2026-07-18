@@ -571,18 +571,14 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
         async function openItemBySapNo(sapNo) {
             try {
                 Swal.fire({ title: 'Loading details...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                const req = await fetch(`api/itemMasterManage.php?action=get_items&search_query=${encodeURIComponent(sapNo)}&page=1&limit=1`);
+                // Fix: use 'search' instead of 'search_query'
+                const req = await fetch(`api/itemMasterManage.php?action=get_items&search=${encodeURIComponent(sapNo)}&page=1&limit=1`);
                 const res = await req.json();
                 Swal.close();
                 if (res.success && res.data && res.data.length > 0) {
                     const item = res.data.find(i => i.sap_no === sapNo) || res.data[0];
                     if (window.openItemModal) {
-                        // Optionally hide the sync modal first so they don't overlap strangely,
-                        // but Bootstrap 5 handles multiple modals decently if they have different z-indexes.
-                        // Let's hide the sync modal for a cleaner UX.
-                        const syncModal = bootstrap.Modal.getInstance(document.getElementById('sapSyncResultModal'));
-                        if (syncModal) syncModal.hide();
-                        
+                        // Do NOT hide sapSyncResultModal so it stays underneath
                         window.openItemModal(item);
                     }
                 } else {
