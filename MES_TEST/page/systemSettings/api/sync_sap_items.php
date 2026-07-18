@@ -6,12 +6,12 @@ header('Content-Type: application/json; charset=utf-8');
 
 try {
     // 1. Fetch unique Mat_No from Staging ALL_STOCK
-    $sapQuery = "SELECT DISTINCT Mat_No, MatDesc FROM SAP_STG_ALL_STOCK WHERE Mat_No IS NOT NULL AND Mat_No != ''";
+    $sapQuery = "SELECT DISTINCT Mat_No, MatDesc FROM TOOLBOX_TEMP.dbo.SAP_STG_ALL_STOCK WHERE Mat_No IS NOT NULL AND Mat_No != ''";
     $sapStmt = $pdo->query($sapQuery);
     $sapItemsRaw = $sapStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Combine with Staging OperationSlip for completeness
-    $sapOpsQuery = "SELECT DISTINCT Mat_No, MatDesc FROM SAP_STG_OPERATION_SLIP WHERE Mat_No IS NOT NULL AND Mat_No != ''";
+    $sapOpsQuery = "SELECT DISTINCT Mat_No, MatDesc FROM TOOLBOX_TEMP.dbo.SAP_STG_OPERATION_SLIP WHERE Mat_No IS NOT NULL AND Mat_No != ''";
     $sapOpsStmt = $pdo->query($sapOpsQuery);
     $sapOpsRaw = $sapOpsStmt->fetchAll(PDO::FETCH_ASSOC);
 

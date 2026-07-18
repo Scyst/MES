@@ -18,12 +18,12 @@ try {
     // ========================================================
     // 1. SYNC SAP_STG_ALL_STOCK
     // ========================================================
-    $pdo->exec("TRUNCATE TABLE SAP_STG_ALL_STOCK");
+    $pdo->exec("TRUNCATE TABLE TOOLBOX_TEMP.dbo.SAP_STG_ALL_STOCK");
     
     $sapStockQuery = "SELECT Plant, Mat_No, MatDesc, Storage_Location, Batch, Quantity, Unit, Logdate FROM View_SAP_ALL_STOCK_1820 WHERE Mat_No IS NOT NULL AND Mat_No != ''";
     $sapStockStmt = $pdo_sap->query($sapStockQuery);
     
-    $insertStockStmt = $pdo->prepare("INSERT INTO SAP_STG_ALL_STOCK (Plant, Mat_No, MatDesc, Storage_Location, Batch, Quantity, Unit, Logdate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $insertStockStmt = $pdo->prepare("INSERT INTO TOOLBOX_TEMP.dbo.SAP_STG_ALL_STOCK (Plant, Mat_No, MatDesc, Storage_Location, Batch, Quantity, Unit, Logdate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     
     $pdo->beginTransaction();
     $stockCount = 0;
@@ -45,7 +45,7 @@ try {
     // ========================================================
     // 2. SYNC SAP_STG_OPERATION_SLIP
     // ========================================================
-    $pdo->exec("TRUNCATE TABLE SAP_STG_OPERATION_SLIP");
+    $pdo->exec("TRUNCATE TABLE TOOLBOX_TEMP.dbo.SAP_STG_OPERATION_SLIP");
     
     $sapOpsQuery = "SELECT 
         Plant, Order_ID, Mat_No, MatDesc, BS_StartDate, BS_FinishDate, TargetQty, ScrapQty, Unit, 
@@ -56,7 +56,7 @@ try {
         FROM View_OperationSlip_1820 WHERE Mat_No IS NOT NULL AND Mat_No != ''";
     $sapOpsStmt = $pdo_sap->query($sapOpsQuery);
     
-    $insertOpsStmt = $pdo->prepare("INSERT INTO SAP_STG_OPERATION_SLIP (
+    $insertOpsStmt = $pdo->prepare("INSERT INTO TOOLBOX_TEMP.dbo.SAP_STG_OPERATION_SLIP (
         Plant, Order_ID, Mat_No, MatDesc, BS_StartDate, BS_FinishDate, TargetQty, ScrapQty, Unit, 
         MRP_Controller, ProdSup, Opt_task_list_no, CounterNo, SequenceNo, TaskListNode, GrpRounting, 
         GrpCounter, Activity, OptShortText, ObjectID, WorkCenter, SetTime1, SetTime2, SetTime3, 
