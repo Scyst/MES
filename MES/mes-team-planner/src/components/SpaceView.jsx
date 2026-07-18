@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTrash2, FiPlus } from 'react-icons/fi';
 
-export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], currentUser, refreshData, onEditSpace, onDeleteSpace, onTaskClick, onCreateTask, onCreateProject, onSaveTask }) {
+export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], currentUser, refreshData, onEditSpace, onDeleteSpace, onTaskClick, onCreateTask, onCreateProject, onProjectClick, onSaveTask }) {
   // Determine Space Name and current Space
   const currentSpace = useMemo(() => {
     if (activeTab === 'space-home') return { Id: 'home', Name: 'Home' };
@@ -95,7 +95,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
             </h3>
             <div className="flex items-center gap-2">
               {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && (
-                <button onClick={() => onCreateProject && onCreateProject()} className="text-xs font-bold bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900 transition-colors flex items-center gap-1">
+                <button onClick={() => onCreateProject && onCreateProject({ SpaceId: currentSpace.Id })} className="text-xs font-bold bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900 transition-colors flex items-center gap-1">
                   <FiPlus /> New Project
                 </button>
               )}
@@ -111,7 +111,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
               const progress = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
               
               return (
-                <div key={proj?.Id || `proj-${idx}`} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 hover:shadow-soft transition-all cursor-pointer">
+                <div key={proj?.Id || `proj-${idx}`} onClick={() => onProjectClick && onProjectClick(proj)} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 hover:shadow-soft transition-all cursor-pointer">
                   <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{String(proj?.Title || 'ไม่มีชื่อ')}</h4>
                   <p className="text-xs text-slate-500 mt-1 line-clamp-2 min-h-[32px]">{String(proj?.Description || 'ไม่มีรายละเอียด')}</p>
                   <div className="mt-4">

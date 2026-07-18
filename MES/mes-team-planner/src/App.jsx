@@ -38,6 +38,7 @@ function App() {
   const [isGlobalTaskModalOpen, setIsGlobalTaskModalOpen] = useState(false);
   const [globalEditingTask, setGlobalEditingTask] = useState(null);
   const [isGlobalProjectModalOpen, setIsGlobalProjectModalOpen] = useState(false);
+  const [globalEditingProject, setGlobalEditingProject] = useState(null);
   const [isAddSpaceModalOpen, setIsAddSpaceModalOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState(null);
 
@@ -196,6 +197,7 @@ function App() {
         await axios.post('/api/projects.php', payload);
       }
       setIsGlobalProjectModalOpen(false);
+      setGlobalEditingProject(null);
       refreshData();
       return true;
     } catch (err) {
@@ -315,7 +317,13 @@ function App() {
     setIsGlobalTaskModalOpen(true);
   };
 
-  const handleCreateProject = () => {
+  const handleCreateProject = (initialData = null) => {
+    setGlobalEditingProject(initialData);
+    setIsGlobalProjectModalOpen(true);
+  };
+
+  const handleProjectClick = (project) => {
+    setGlobalEditingProject(project);
     setIsGlobalProjectModalOpen(true);
   };
 
@@ -364,6 +372,7 @@ function App() {
             onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
             onCreateTask={handleCreateTask}
             onCreateProject={handleCreateProject}
+            onProjectClick={handleProjectClick}
             onSaveTask={handleSaveTask}
           />;
         }
@@ -683,8 +692,9 @@ function App() {
       />
       <AddProjectModal 
         isOpen={isGlobalProjectModalOpen} 
-        onClose={() => setIsGlobalProjectModalOpen(false)} 
+        onClose={() => { setIsGlobalProjectModalOpen(false); setGlobalEditingProject(null); }} 
         onSave={handleSaveProject}
+        initialData={globalEditingProject}
         spaces={spaces}
       />
       <AddSpaceModal
