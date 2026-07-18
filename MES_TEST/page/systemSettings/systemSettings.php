@@ -339,28 +339,27 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body bg-light p-3">
-                            <div class="alert alert-info py-2 mb-3">
-                                <i class="fas fa-info-circle me-1"></i> รายการต่อไปนี้คือข้อมูลที่ถูกซิงก์มาจาก SAP กรุณากำหนด Material Type ให้ถูกต้อง ข้อมูลจะถูกบันทึกอัตโนมัติเมื่อเปลี่ยน
+                            <div class="alert alert-info py-2 mb-3 shadow-sm border-0">
+                                <i class="fas fa-info-circle me-1"></i> 
+                                รายการต่อไปนี้คือข้อมูลที่อัปเดตจาก SAP กรุณาคลิก <b>Setup</b> เพื่อเข้าไปตั้งค่า Material Type, Min/Max Stock และข้อมูลอื่นๆ ให้ครบถ้วน
                             </div>
                             <div class="table-responsive bg-white border rounded-3 shadow-sm hide-scrollbar" style="max-height: 50vh;">
-                                <table class="table table-sm table-hover align-middle mb-0 text-nowrap">
-                                    <thead class="table-light sticky-top">
-                                        <tr class="text-secondary">
-                                            <th class="py-2 px-3">Action</th>
-                                            <th class="py-2">SAP No</th>
-                                            <th class="py-2">Description</th>
-                                            <th class="py-2">Classify Type</th>
+                                <table class="table table-hover align-middle mb-0 text-nowrap">
+                                    <thead class="table-light sticky-top shadow-sm">
+                                        <tr class="text-secondary text-uppercase" style="font-size: 0.8rem;">
+                                            <th class="py-3 px-3">Status</th>
+                                            <th class="py-3">SAP No</th>
+                                            <th class="py-3">Description</th>
+                                            <th class="py-3 text-center">Current Type</th>
+                                            <th class="py-3 text-center">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="sapSyncResultTableBody"></tbody>
                                 </table>
                             </div>
                         </div>
-                        <div class="modal-footer bg-light py-2">
-                            <button type="button" class="btn btn-secondary btn-sm fw-bold shadow-sm" data-bs-dismiss="modal">Close</button>
-                            <button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm px-4" id="saveAllSyncBtn">
-                                <i class="fas fa-save me-1"></i> Save All Changes
-                            </button>
+                        <div class="modal-footer bg-light py-2 border-top-0">
+                            <button type="button" class="btn btn-secondary btn-sm fw-bold shadow-sm px-4" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
                 </div>
@@ -459,73 +458,32 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                             res.affected_items.forEach(item => {
                                                 const badgeClass = item.action === 'NEW' ? 'bg-success' : 'bg-info text-dark';
                                                 
-                                                // Create Dropdown for Material Type
-                                                const selectHtml = `
-                                                    <select id="sync-select-${escapeHtml(item.sap_no)}" class="form-select form-select-sm quick-classify-select" data-sap="${escapeHtml(item.sap_no)}" style="width: 150px;">
-                                                        <option value="UNCLASSIFIED" selected>UNCLASSIFIED</option>
-                                                        <option value="FG">FG (Finished Good)</option>
-                                                        <option value="SEMI">SEMI (Semi-Finished)</option>
-                                                        <option value="WIP">WIP (Work in Process)</option>
-                                                        <option value="RM">RM (Raw Material)</option>
-                                                        <option value="PKG">PKG (Packaging)</option>
-                                                        <option value="CON">CON (Consumable)</option>
-                                                        <option value="SP">SP (Spare Part)</option>
-                                                        <option value="TOOL">TOOL (Tools)</option>
-                                                        <option value="OTHER">OTHER</option>
-                                                    </select>
-                                                `;
-
                                                 const tr = document.createElement('tr');
+                                                // Make entire row slightly clickable/hoverable for UX
+                                                tr.style.cursor = 'pointer';
+                                                tr.onclick = function(e) {
+                                                    // don't trigger if they clicked the button directly
+                                                    if(!e.target.closest('button')) {
+                                                        openItemBySapNo(item.sap_no);
+                                                    }
+                                                };
+                                                
                                                 tr.innerHTML = `
                                                     <td class="px-3"><span class="badge ${badgeClass}">${item.action}</span></td>
-                                                    <td class="fw-bold">
-                                                        <a href="#" class="text-decoration-none text-primary" onclick="openItemBySapNo('${escapeHtml(item.sap_no)}'); return false;">
-                                                            ${escapeHtml(item.sap_no)}
-                                                        </a>
-                                                    </td>
+                                                    <td class="fw-bold text-primary">${escapeHtml(item.sap_no)}</td>
                                                     <td class="text-truncate" style="max-width: 300px;" title="${escapeHtml(item.part_description)}">
-                                                        <a href="#" id="sync-desc-${escapeHtml(item.sap_no)}" class="text-decoration-none text-dark" onclick="openItemBySapNo('${escapeHtml(item.sap_no)}'); return false;">
-                                                            ${escapeHtml(item.part_description)}
-                                                        </a>
+                                                        <span id="sync-desc-${escapeHtml(item.sap_no)}">${escapeHtml(item.part_description)}</span>
                                                     </td>
-                                                    <td>${selectHtml}</td>
+                                                    <td class="text-center">
+                                                        <span id="sync-select-${escapeHtml(item.sap_no)}" class="badge bg-warning text-dark shadow-sm">UNCLASSIFIED</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm" onclick="openItemBySapNo('${escapeHtml(item.sap_no)}')">
+                                                            <i class="fas fa-cog"></i> Setup
+                                                        </button>
+                                                    </td>
                                                 `;
                                                 tbody.appendChild(tr);
-                                            });
-
-                                            // Add event listeners to new selects
-                                            document.querySelectorAll('.quick-classify-select').forEach(select => {
-                                                select.addEventListener('change', async function() {
-                                                    const sapNo = this.getAttribute('data-sap');
-                                                    const newType = this.value;
-                                                    
-                                                    // Quick auto-save to API
-                                                    // Use existing itemMasterManage update logic
-                                                    try {
-                                                        const formData = new FormData();
-                                                        formData.append('sap_no', sapNo);
-                                                        formData.append('material_type', newType);
-                                                        
-                                                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-                                                        
-                                                        const req = await fetch('api/itemMasterManage.php?action=quick_classify', {
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'X-CSRF-TOKEN': csrfToken
-                                                            },
-                                                            body: formData
-                                                        });
-                                                        const resData = await req.json();
-                                                        if (resData.success) {
-                                                            this.classList.add('is-valid');
-                                                            setTimeout(() => this.classList.remove('is-valid'), 2000);
-                                                        } else {
-                                                            this.classList.add('is-invalid');
-                                                        }
-                                                    } catch (e) {
-                                                        this.classList.add('is-invalid');
-                                                    }
-                                                });
                                             });
 
                                             const modal = new bootstrap.Modal(document.getElementById('sapSyncResultModal'));
