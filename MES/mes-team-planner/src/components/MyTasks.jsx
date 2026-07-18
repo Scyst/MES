@@ -1,9 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { FiCheckSquare, FiClock, FiAlertCircle, FiCheck, FiPlay, FiMoreHorizontal, FiTarget, FiActivity, FiSearch } from 'react-icons/fi';
+import { FiCheckSquare, FiClock, FiAlertCircle, FiCheck, FiPlay, FiMoreHorizontal, FiTarget, FiActivity, FiSearch, FiPlus } from 'react-icons/fi';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 
-export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTask, onTaskClick }) {
+export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTask, onTaskClick, onCreateTask }) {
   const [filterProject, setFilterProject] = useState('all');
   const [akas, setAkas] = useState([]);
   const [isEditingAka, setIsEditingAka] = useState(false);
@@ -239,6 +239,9 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
             </button>
           ))}
         </div>
+        <button onClick={() => onCreateTask && onCreateTask()} className="shrink-0 flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-md shadow-indigo-500/20 transition-colors">
+          <FiPlus /> Create Task
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

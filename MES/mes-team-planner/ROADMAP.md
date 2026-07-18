@@ -32,9 +32,15 @@ A seamless, modern, and responsive team planning and task management application
 
 ## 🛠️ Current Phase (Phase 2: Backend Integration & Database)
 - [ ] Define MySQL database schemas (tasks, events, links, activities)
+- [x] Fix the UI of `AddTaskModal` (remove Recurrence label, fix tooltip, adjust padding/card layout to be flatter and wider max-w-2xl).
+- [x] Integrate full interactivity to `SpaceView` and `MyTasks`:
+  - Added "New Task" and "New Project" creation buttons.
+  - Allowed clicking on recent tasks to edit them.
+  - Enabled status changes directly from the team view.
 - [ ] Set up PHP RESTful API backend (`/server/api`)
 - [ ] Connect React frontend components to PHP backend
 - [ ] Implement data fetching, creation, updating, and deletion (CRUD)
+- [ ] Implement robust error handling on the backend (e.g. handling missing task IDs gracefully).
 
 ## 🚀 Upcoming Features (Phase 3: Advanced Functionality)
 - [ ] **Authentication & User Roles**: Login system to distinguish Admin vs normal users.

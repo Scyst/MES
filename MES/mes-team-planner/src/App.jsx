@@ -310,6 +310,15 @@ function App() {
   };
 
   // ══════════ Render Content with Props ══════════
+  const handleCreateTask = (initialData = null) => {
+    setGlobalEditingTask(initialData);
+    setIsGlobalTaskModalOpen(true);
+  };
+
+  const handleCreateProject = () => {
+    setIsGlobalProjectModalOpen(true);
+  };
+
   const renderContent = () => {
     const sharedTaskProps = { currentUser, tasks, setTasks, onSaveTask: handleSaveTask, onDeleteTask: handleDeleteTask, loading: dataLoading, users };
 
@@ -333,6 +342,7 @@ function App() {
           refreshData={refreshData} 
           onSaveTask={handleSaveTask}
           onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
+          onCreateTask={handleCreateTask}
         />;
       case 'timeline':
         return <GanttChart {...sharedTaskProps} />;
@@ -341,7 +351,21 @@ function App() {
       default: 
         // Fallback for Spaces and mock tabs
         if (activeTab.startsWith('space-') || activeTab.startsWith('team-')) {
-          return <SpaceView activeTab={activeTab} spaces={spaces} tasks={tasks} projects={projects} currentUser={currentUser} refreshData={refreshData} users={users} onEditSpace={(s) => { setEditingSpace(s); setIsAddSpaceModalOpen(true); }} onDeleteSpace={async (id) => { if(confirm('ต้องการลบทีมนี้ใช่หรือไม่?')) { await axios.delete(`/api/spaces.php?id=${id}`); refreshData(); setActiveTab('space-home'); } }} />;
+          return <SpaceView 
+            activeTab={activeTab} 
+            spaces={spaces} 
+            tasks={tasks} 
+            projects={projects} 
+            currentUser={currentUser} 
+            refreshData={refreshData} 
+            users={users} 
+            onEditSpace={(s) => { setEditingSpace(s); setIsAddSpaceModalOpen(true); }} 
+            onDeleteSpace={async (id) => { if(confirm('ต้องการลบทีมนี้ใช่หรือไม่?')) { await axios.delete(`/api/spaces.php?id=${id}`); refreshData(); setActiveTab('space-home'); } }} 
+            onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
+            onCreateTask={handleCreateTask}
+            onCreateProject={handleCreateProject}
+            onSaveTask={handleSaveTask}
+          />;
         }
         return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav} />;
     }
