@@ -12,6 +12,17 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
 
   useEffect(() => {
     if (initialData && isOpen) {
+      let parsedChecklist = [];
+      try {
+        if (initialData.Checklist) {
+          parsedChecklist = typeof initialData.Checklist === 'string' ? JSON.parse(initialData.Checklist) : initialData.Checklist;
+        } else if (initialData.checklist) {
+          parsedChecklist = typeof initialData.checklist === 'string' ? JSON.parse(initialData.checklist) : initialData.checklist;
+        }
+      } catch (e) {
+        console.error("Failed to parse checklist", e);
+      }
+
       setFormData({
         title: initialData.Title || initialData.title || '',
         description: initialData.Description || initialData.description || '',
@@ -21,7 +32,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
         dueDate: initialData.DueDate || initialData.dueDate || '',
         tags: initialData.Tags || initialData.tags || '',
         priority: initialData.Priority || initialData.priority || 'normal',
-        checklist: initialData.Checklist || initialData.checklist || [],
+        checklist: Array.isArray(parsedChecklist) ? parsedChecklist : [],
         spaceId: initialData.SpaceId || initialData.spaceId || '',
         Id: initialData.Id
       });
