@@ -37,6 +37,7 @@ A seamless, modern, and responsive team planning and task management application
   - Added "New Task" and "New Project" creation buttons.
   - Allowed clicking on recent tasks to edit them.
   - Enabled status changes directly from the team view.
+  - Made project cards clickable to open the project editing modal.
 - [ ] Set up PHP RESTful API backend (`/server/api`)
 - [ ] Connect React frontend components to PHP backend
 - [ ] Implement data fetching, creation, updating, and deletion (CRUD)
