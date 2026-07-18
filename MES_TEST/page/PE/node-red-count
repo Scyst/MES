@@ -1,0 +1,1496 @@
+[
+    {
+        "id": "cc3ed6cb9d327d93",
+        "type": "tab",
+        "label": "Toolbox",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "07cbbf2f519ff7b3",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "?? MASTER SYNC V2: Auto-Run (Supports New Logic)",
+        "style": {
+            "stroke": "#ff0000",
+            "fill": "#e3f2fd",
+            "label": true
+        },
+        "nodes": [
+            "6623dac7d8cea519",
+            "6a94bf953548fa05",
+            "dd71f733a63878f4",
+            "175665be52f15450"
+        ],
+        "x": 114,
+        "y": 179,
+        "w": 932,
+        "h": 82
+    },
+    {
+        "id": "manual_sync_group_v2",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "??? MANUAL RANGE SYNC: 01 Jan - 20 Jan",
+        "style": {
+            "stroke": "#007bff",
+            "fill": "#e3f2fd",
+            "label": true
+        },
+        "nodes": [
+            "inject_manual_range",
+            "func_manual_range",
+            "http_manual_range",
+            "debug_manual_range"
+        ],
+        "x": 114,
+        "y": 279,
+        "w": 932,
+        "h": 82
+    },
+    {
+        "id": "group_auto_co_calc",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "?? AUTO CARRY OVER: 08:30 & 20:30",
+        "style": {
+            "stroke": "#ff9800",
+            "fill": "#fff3e0",
+            "label": true
+        },
+        "nodes": [
+            "inject_schedule_co",
+            "func_prepare_co_req",
+            "http_call_co_api",
+            "debug_co_result"
+        ],
+        "x": 114,
+        "y": 379,
+        "w": 932,
+        "h": 82
+    },
+    {
+        "id": "group_mqtt_utility",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "? UTILITY DATA INGESTION (MQTT -> PHP API)",
+        "style": {
+            "stroke": "#009688",
+            "fill": "#e0f2f1",
+            "label": true
+        },
+        "nodes": [
+            "mqtt_in_utility",
+            "json_parse_utility",
+            "func_prepare_utility",
+            "http_post_utility",
+            "debug_utility_api"
+        ],
+        "x": 114,
+        "y": 479,
+        "w": 982,
+        "h": 82
+    },
+    {
+        "id": "group_utility_cron",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "?? AUTO UTILITY SUMMARY (Aggregate Data Every 15 Mins)",
+        "style": {
+            "stroke": "#9c27b0",
+            "fill": "#f3e5f5",
+            "label": true
+        },
+        "nodes": [
+            "inject_utility_cron",
+            "func_utility_cron",
+            "http_utility_cron",
+            "debug_utility_cron"
+        ],
+        "x": 114,
+        "y": 579,
+        "w": 972,
+        "h": 82
+    },
+    {
+        "id": "group_area_ghost_clear",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "?? AUTO CLEAR GHOST SESSION (Store Area)",
+        "style": {
+            "stroke": "#d32f2f",
+            "fill": "#ffebee",
+            "label": true
+        },
+        "nodes": [
+            "inject_ghost_clear",
+            "func_prep_ghost_api",
+            "http_ghost_api",
+            "debug_ghost_api"
+        ],
+        "x": 114,
+        "y": 679,
+        "w": 962,
+        "h": 82
+    },
+    {
+        "id": "e1db5898a992d342",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "?? REAL-TIME FORKLIFT TRACKING (MQTT -> DB -> WebSocket)",
+        "style": {
+            "stroke": "#e65100",
+            "fill": "#fff3e0",
+            "label": true
+        },
+        "nodes": [
+            "2e469f8318ec5999",
+            "d2be5ca90d33bd69",
+            "0b5aaa3eb1a3058f",
+            "4e1e55ac7b0fb4a1",
+            "aed9057beb046aaa",
+            "6ff816ee41c72df6",
+            "edcc4aa342560bfa",
+            "custom_rate_limiter"
+        ],
+        "x": 114,
+        "y": 779,
+        "w": 1392,
+        "h": 142
+    },
+    {
+        "id": "group-manpower-sync",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "Manpower Auto-Sync to Users",
+        "style": {
+            "stroke": "#92d04f",
+            "fill": "#e3f2d9",
+            "fill-opacity": "0.5",
+            "label": true,
+            "color": "#333333"
+        },
+        "nodes": [
+            "inject-daily-sync",
+            "http-external-sync",
+            "http-internal-sync",
+            "debug-sync-result"
+        ],
+        "x": 114,
+        "y": 79,
+        "w": 992,
+        "h": 82
+    },
+    {
+        "id": "6bc6d90ab4348389",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "style": {
+            "stroke": "#999999",
+            "stroke-opacity": "1",
+            "fill": "none",
+            "fill-opacity": "1",
+            "label": true,
+            "label-position": "nw",
+            "color": "#a4a4a4"
+        },
+        "nodes": [
+            "b1a544d31b4645fd",
+            "257d129b933d4597",
+            "a052080c3eb14546",
+            "ce0faf89eba14712",
+            "e2e3682682be45ef"
+        ],
+        "x": 114,
+        "y": 939,
+        "w": 1112,
+        "h": 82
+    },
+    {
+        "id": "79973c28fe6c3834",
+        "type": "group",
+        "z": "cc3ed6cb9d327d93",
+        "name": "Counter Machine",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "246844758bccb236",
+            "72ee02e5d608a9e6",
+            "b40b8da4ebafbf76",
+            "797785755c7f3f73",
+            "3b06cba13638f8e2",
+            "ef5a33f88bf125c7",
+            "b015bb434d20ed56",
+            "7bacea44643d4285",
+            "ea542d847e47f0b3",
+            "8031534f41353fa7"
+        ],
+        "x": 114,
+        "y": 1039,
+        "w": 1092,
+        "h": 202
+    },
+    {
+        "id": "6623dac7d8cea519",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "g": "07cbbf2f519ff7b3",
+        "name": "Every 30 Mins",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "1800",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 240,
+        "y": 220,
+        "wires": [
+            [
+                "6a94bf953548fa05"
+            ]
+        ]
+    },
+    {
+        "id": "6a94bf953548fa05",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "07cbbf2f519ff7b3",
+        "name": "Set Params & Bypass Headers",
+        "func": "var now = new Date();\nvar yesterday = new Date(now);\nyesterday.setDate(now.getDate() - 1);\n\nfunction fmt(d) {\n    var month = '' + (d.getMonth() + 1);\n    var day = '' + d.getDate();\n    var year = d.getFullYear();\n    if (month.length < 2) month = '0' + month;\n    if (day.length < 2) day = '0' + day;\n    return [year, month, day].join('-');\n}\n\nvar sDate = fmt(yesterday);\nvar eDate = fmt(now);\nvar baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/manpower/api/sync_from_api.php\";\n\nmsg.url = baseUrl + \"?startDate=\" + sDate + \"&endDate=\" + eDate;\nmsg.headers = {\n    \"User-Agent\": \"Node-RED-Scheduler\",\n    \"X-Requested-With\": \"XMLHttpRequest\",\n    \"X-Mode\": \"auto_sync\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 220,
+        "wires": [
+            [
+                "dd71f733a63878f4"
+            ]
+        ]
+    },
+    {
+        "id": "dd71f733a63878f4",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "07cbbf2f519ff7b3",
+        "name": "Call PHP Sync",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 740,
+        "y": 220,
+        "wires": [
+            [
+                "175665be52f15450"
+            ]
+        ]
+    },
+    {
+        "id": "175665be52f15450",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "07cbbf2f519ff7b3",
+        "name": "Sync Result",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 930,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "inject_manual_range",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "g": "manual_sync_group_v2",
+        "name": "Set Date Range",
+        "props": [
+            {
+                "p": "startDate",
+                "v": "2026-05-19",
+                "vt": "str"
+            },
+            {
+                "p": "endDate",
+                "v": "2026-05-20",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 240,
+        "y": 320,
+        "wires": [
+            [
+                "func_manual_range"
+            ]
+        ]
+    },
+    {
+        "id": "func_manual_range",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "manual_sync_group_v2",
+        "name": "Format URL & Headers",
+        "func": "// 1. ????????? Inject Node\nvar sDate = msg.startDate;\nvar eDate = msg.endDate;\n\n// 2. ??????? URL ??????? (PHP API)\nvar baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/manpower/api/sync_from_api.php\";\n\nmsg.url = baseUrl + \"?startDate=\" + sDate + \"&endDate=\" + eDate;\n\n// 3. ??????? Header (X-Mode ???????????????? PHP ?????????????????????)\nmsg.headers = {\n    \"User-Agent\": \"Node-RED-Manual-Backfill\",\n    \"X-Requested-With\": \"XMLHttpRequest\",\n    \"X-Mode\": \"auto_sync\"\n};\n\n// 4. ???????????? Payload ??????? Debug\nmsg.payload = {\n    action: \"Manual Backfill Sync\",\n    range: sDate + \" to \" + eDate,\n    url_called: msg.url\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 320,
+        "wires": [
+            [
+                "http_manual_range"
+            ]
+        ]
+    },
+    {
+        "id": "http_manual_range",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "manual_sync_group_v2",
+        "name": "Call PHP Sync",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 740,
+        "y": 320,
+        "wires": [
+            [
+                "debug_manual_range"
+            ]
+        ]
+    },
+    {
+        "id": "debug_manual_range",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "manual_sync_group_v2",
+        "name": "Sync Result",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 930,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "inject_schedule_co",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_auto_co_calc",
+        "name": "Every 1 hour",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3600",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 240,
+        "y": 420,
+        "wires": [
+            [
+                "func_prepare_co_req"
+            ]
+        ]
+    },
+    {
+        "id": "func_prepare_co_req",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_auto_co_calc",
+        "name": "Set API & Secret Key",
+        "func": "// 1. ????? URL\nvar baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/management/api/planManage.php\".trim();\n\n// 2. ????? Action\nmsg.url = baseUrl + \"?action=calculate_carry_over\";\n\n// 3. ????? Headers\nmsg.headers = {\n    \"X-API-KEY\": \"MESKey2026\",\n    \"User-Agent\": \"Node-RED-AutoCalc\"\n};\n\nmsg.requestTimeout = 300000;\nmsg.payload = {};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 420,
+        "wires": [
+            [
+                "http_call_co_api"
+            ]
+        ]
+    },
+    {
+        "id": "http_call_co_api",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_auto_co_calc",
+        "name": "Call PHP Calc C/O",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 740,
+        "y": 420,
+        "wires": [
+            [
+                "debug_co_result"
+            ]
+        ]
+    },
+    {
+        "id": "debug_co_result",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_auto_co_calc",
+        "name": "C/O Result",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 930,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "mqtt_in_utility",
+        "type": "mqtt in",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_mqtt_utility",
+        "name": "MQTT: /B9/iPSS/#",
+        "topic": "/B9/iPSS/#",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "mqtt_broker_snc",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 230,
+        "y": 520,
+        "wires": [
+            [
+                "json_parse_utility"
+            ]
+        ]
+    },
+    {
+        "id": "json_parse_utility",
+        "type": "json",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_mqtt_utility",
+        "name": "",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 400,
+        "y": 520,
+        "wires": [
+            [
+                "func_prepare_utility"
+            ]
+        ]
+    },
+    {
+        "id": "func_prepare_utility",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_mqtt_utility",
+        "name": "Extract & Format Payload",
+        "func": "var topic = msg.topic;\nvar payload = msg.payload;\n\nif (!Array.isArray(payload) || payload.length === 0) return null;\n\nvar parts = topic.split('/');\nif (parts.length < 4) return null;\nvar meterName = parts[3];\n\nvar utilityType = \"UNKNOWN\";\nif (payload[0].voltage !== undefined) utilityType = \"ELECTRIC\";\nelse if (payload[0].flow !== undefined) utilityType = \"LPG\";\n\nif (utilityType === \"UNKNOWN\") return null;\n\nmsg.payload = {\n    action: \"insert_log\",\n    meter_name: meterName,\n    utility_type: utilityType,\n    data_batch: payload\n};\n\nvar baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/management/api/api_utility.php\";\n\nmsg.url = baseUrl;\nmsg.headers = {\n    \"Content-Type\": \"application/json\",\n    \"X-API-KEY\": \"MESKey2026\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 520,
+        "wires": [
+            [
+                "http_post_utility"
+            ]
+        ]
+    },
+    {
+        "id": "http_post_utility",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_mqtt_utility",
+        "name": "POST to PHP",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 800,
+        "y": 520,
+        "wires": [
+            [
+                "debug_utility_api"
+            ]
+        ]
+    },
+    {
+        "id": "debug_utility_api",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_mqtt_utility",
+        "name": "API Response",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 970,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "59fefd491e1a7249",
+        "type": "comment",
+        "z": "cc3ed6cb9d327d93",
+        "name": "script ?? log manpower ??????????",
+        "info": "USE [IIOT_TOOLBOX]\nGO\n\nDELETE FROM [dbo].[MANPOWER_DAILY_LOGS]\nWHERE log_id IN (\n    45465, 45551, 45485, 45556, 45554, 45505, 45515, 45513, 45550, 45491, \n    45428, 45572, 45560, 45569, 45508, 45446, 45531, 45448, 45526, 45528, \n    45442, 45516, 45462, 45546, 45430, 45478, 45506, 45433, 45455, 45535, \n    45545, 45449, 45450, 45490, 45507, 45511, 45543, 45570, 45542, 45492, \n    45538, 45567, 45498, 45456, 45574, 45580, 45581, 45582, 45585, 45583, 45584\n);",
+        "x": 1200,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "inject_utility_cron",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_utility_cron",
+        "name": "Every 15 Mins",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "900",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "5",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 240,
+        "y": 620,
+        "wires": [
+            [
+                "func_utility_cron"
+            ]
+        ]
+    },
+    {
+        "id": "func_utility_cron",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_utility_cron",
+        "name": "Set API Action (aggregate_summary)",
+        "func": "// ???????? API ?????????????\nvar baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/management/api/api_utility.php\";\n\n// ??? Action ????????????????\nmsg.url = baseUrl + \"?action=aggregate_summary\";\n\n// ??? API Key ??????????????????????\nmsg.headers = {\n    \"X-API-KEY\": \"MESKey2026\",\n    \"User-Agent\": \"Node-RED-Utility-Cron\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 510,
+        "y": 620,
+        "wires": [
+            [
+                "http_utility_cron"
+            ]
+        ]
+    },
+    {
+        "id": "http_utility_cron",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_utility_cron",
+        "name": "Trigger PHP SP",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 780,
+        "y": 620,
+        "wires": [
+            [
+                "debug_utility_cron"
+            ]
+        ]
+    },
+    {
+        "id": "debug_utility_cron",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_utility_cron",
+        "name": "Cron Result",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 970,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "inject_ghost_clear",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_area_ghost_clear",
+        "name": "Every 1 Hour",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3600",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 240,
+        "y": 720,
+        "wires": [
+            [
+                "func_prep_ghost_api"
+            ]
+        ]
+    },
+    {
+        "id": "func_prep_ghost_api",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_area_ghost_clear",
+        "name": "Set POST Params & API Key",
+        "func": "var baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/areaAccess/api/apiAreaAccess.php\";\n\nmsg.url = baseUrl;\n\nmsg.headers = {\n    \"User-Agent\": \"Node-RED-AutoClear\",\n    \"X-Requested-With\": \"XMLHttpRequest\",\n    \"X-Mode\": \"auto_sync\",\n    \"Content-Type\": \"application/x-www-form-urlencoded\"\n};\n\nmsg.payload = \"action=auto_clear_ghost\";\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 720,
+        "wires": [
+            [
+                "http_ghost_api"
+            ]
+        ]
+    },
+    {
+        "id": "http_ghost_api",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_area_ghost_clear",
+        "name": "Call PHP Clear Ghost",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 770,
+        "y": 720,
+        "wires": [
+            [
+                "debug_ghost_api"
+            ]
+        ]
+    },
+    {
+        "id": "debug_ghost_api",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group_area_ghost_clear",
+        "name": "Clear Result",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 960,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "2e469f8318ec5999",
+        "type": "mqtt in",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "MQTT: Forklift Location",
+        "topic": "/B9/Forklift/+/Location",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "mqtt_broker_snc",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 240,
+        "y": 820,
+        "wires": [
+            [
+                "d2be5ca90d33bd69"
+            ]
+        ]
+    },
+    {
+        "id": "d2be5ca90d33bd69",
+        "type": "json",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 410,
+        "y": 820,
+        "wires": [
+            [
+                "custom_rate_limiter"
+            ]
+        ]
+    },
+    {
+        "id": "0b5aaa3eb1a3058f",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "Prep Hardware API",
+        "func": "var baseUrl = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/forkliftCopy/api/hardwareTracking.php\";\n\nmsg.url = baseUrl;\nmsg.headers = {\n    \"Content-Type\": \"application/json\",\n    \"User-Agent\": \"Node-RED-Forklift\",\n    \"X-API-KEY\": \"MESKey2026\"\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 790,
+        "y": 820,
+        "wires": [
+            [
+                "4e1e55ac7b0fb4a1",
+                "edcc4aa342560bfa"
+            ]
+        ]
+    },
+    {
+        "id": "4e1e55ac7b0fb4a1",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "POST to DB",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 970,
+        "y": 820,
+        "wires": [
+            [
+                "aed9057beb046aaa",
+                "edcc4aa342560bfa"
+            ]
+        ]
+    },
+    {
+        "id": "aed9057beb046aaa",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "Format WS Payload",
+        "func": "if (msg.statusCode != 200) {\n    node.error(\"API Request Failed: HTTP \" + msg.statusCode, msg.payload);\n    return null;\n}\n\nif (!msg.payload) {\n    node.error(\"API returned empty payload\", msg);\n    return null;\n}\n\ntry {\n    var response = typeof msg.payload === \"string\" ? JSON.parse(msg.payload) : msg.payload;\n\n    if (response.success == true) {\n        var forkliftData = response.data || { code: \"Unknown\", status: \"Updated\" };\n\n        msg.payload = {\n            action: \"location_update\",\n            data: forkliftData\n        };\n        return msg;\n    } else {\n        var errMsg = response.message ? response.message : \"Unknown API Logic Error\";\n        node.error(\"API Logic Failed: \" + errMsg, response);\n        return null;\n    }\n} catch (e) {\n    node.error(\"API returned invalid JSON: \" + e.message, msg.payload);\n    return null;\n}",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1160,
+        "y": 820,
+        "wires": [
+            [
+                "6ff816ee41c72df6",
+                "edcc4aa342560bfa"
+            ]
+        ]
+    },
+    {
+        "id": "6ff816ee41c72df6",
+        "type": "websocket out",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "Broadcast to Web",
+        "server": "f293631bae2ef4f2",
+        "client": "",
+        "x": 1390,
+        "y": 820,
+        "wires": []
+    },
+    {
+        "id": "edcc4aa342560bfa",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "WS Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1370,
+        "y": 880,
+        "wires": []
+    },
+    {
+        "id": "custom_rate_limiter",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "e1db5898a992d342",
+        "name": "Topic Rate Limiter (5s)",
+        "func": "var lastSeen = context.get('lastSeen') || {};\nvar topic = msg.topic;\nvar now = Date.now();\nvar cooldown = 5000;\n\nif (!topic) return null;\n\nif (!lastSeen[topic] || (now - lastSeen[topic]) >= cooldown) {\n    lastSeen[topic] = now;\n    context.set('lastSeen', lastSeen);\n    return msg;\n} else {\n    return null;\n}",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 820,
+        "wires": [
+            [
+                "0b5aaa3eb1a3058f"
+            ]
+        ]
+    },
+    {
+        "id": "mock_inject_db",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "d": true,
+        "name": "Trigger Every 10s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 250,
+        "y": 880,
+        "wires": [
+            [
+                "mock_logic_db"
+            ]
+        ]
+    },
+    {
+        "id": "mock_logic_db",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "name": "Set Route & POST",
+        "func": "// ????????????????? (??? X, Y ?????????????????????)\n/*var route = [\n    { zone: \"????????????? A\", x: 170, y: 270 },\n    { zone: \"???????????\", x: 188, y: 283 },\n    { zone: \"???????????\", x: 238, y: 317 },\n    { zone: \"???????????\", x: 280, y: 350 },\n    { zone: \"??????????\", x: 278, y: 360 },\n    { zone: \"??????????\", x: 288, y: 380 },\n    { zone: \"??????????\", x: 280, y: 365},\n    { zone: \"???????????\", x: 280, y: 350 },\n    { zone: \"???????????\", x: 238, y: 317 },\n    { zone: \"???????????\", x: 188, y: 283 },\n    { zone: \"????????????? A\", x: 170, y: 250 },\n    { zone: \"???????????\", x: 188, y: 283 },\n    { zone: \"???????????\", x: 238, y: 317 },\n    { zone: \"???????????\", x: 280, y: 350 },\n    { zone: \"??????????\", x: 278, y: 360 },\n    { zone: \"??????????\", x: 288, y: 380 },\n    { zone: \"??????????\", x: 280, y: 365 },\n    { zone: \"???????????\", x: 280, y: 350 },\n    { zone: \"???????????\", x: 238, y: 317 },\n    { zone: \"???????????\", x: 188, y: 283 },\n    { zone: \"????????????? A\", x: 170, y: 250 },\n    { zone: \"???????????\", x: 188, y: 283 },\n    { zone: \"???????????\", x: 238, y: 317 },\n    { zone: \"???????????\", x: 280, y: 350 },\n    { zone: \"??????????\", x: 278, y: 360 },\n    { zone: \"??????????\", x: 288, y: 380 },\n    { zone: \"??????????\", x: 280, y: 365 },\n    { zone: \"???????????\", x: 280, y: 350 },\n    { zone: \"???????????\", x: 238, y: 317 },\n\n    { zone: \"??????????\", x: 250, y: 334 },\n    { zone: \"??????????\", x: 240, y: 300 },\n    { zone: \"??????????\", x: 250, y: 334 },\n    { zone: \"???????????\", x: 238, y: 317 },\n    { zone: \"???????????\", x: 188, y: 283 },\n    { zone: \"????????????? A\", x: 170, y: 250 },\n    { zone: \"???????????\", x: 188, y: 283 },\n    { zone: \"???????????\", x: 238, y: 317 },\n    { zone: \"??????????\", x: 250, y: 334 },\n    { zone: \"??????????\", x: 240, y: 300 },\n    { zone: \"??????????\", x: 250, y: 334 },\n    { zone: \"???????????\", x: 238, y: 317 },\n    { zone: \"???????????\", x: 188, y: 283 },\n    { zone: \"????????????? A\", x: 170, y: 250 },\n    { zone: \"???????????\", x: 188, y: 283 },\n    { zone: \"???????????\", x: 238, y: 317 },\n    { zone: \"??????????\", x: 250, y: 334 },\n    { zone: \"??????????\", x: 240, y: 300 },\n    { zone: \"??????????\", x: 250, y: 334 },\n    { zone: \"???????????\", x: 238, y: 317 },\n    { zone: \"???????????\", x: 188, y: 283 },\n    { zone: \"????????????? A\", x: 170, y: 250 },\n    { zone: \"???????????\", x: 188, y: 283 },\n    { zone: \"???????????\", x: 238, y: 317 },\n];*/\n\nvar route = [\n    { zone: \"???????????\", x: 105, y: 145 },\n];\n\nvar currentIndex = context.get('zoneIndex') || 0;\nvar currentPos = route[currentIndex];\ncontext.set('zoneIndex', (currentIndex + 1) % route.length);\n\n// ??? API ???? Database ?????????? HTTPS\nmsg.url = \"https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/forkliftCopy/api/mockUpdate.php\";\nmsg.method = \"POST\";\nmsg.headers = {\n    \"Content-Type\": \"application/x-www-form-urlencoded\"\n};\n// ??????????????????? POST\nmsg.payload = `x=${currentPos.x}&y=${currentPos.y}&zone=${currentPos.zone}`;\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 880,
+        "wires": [
+            [
+                "mock_http_out"
+            ]
+        ]
+    },
+    {
+        "id": "mock_http_out",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "name": "Update DB",
+        "method": "use",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 670,
+        "y": 880,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "inject-daily-sync",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group-manpower-sync",
+        "name": "Every 60 Minutes",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3600",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "start",
+        "payloadType": "str",
+        "x": 250,
+        "y": 120,
+        "wires": [
+            [
+                "http-external-sync"
+            ]
+        ]
+    },
+    {
+        "id": "http-external-sync",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group-manpower-sync",
+        "name": "Sync External Manpower API",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/manpower/api/sync_from_api.php?actionBy=SYSTEM",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 500,
+        "y": 120,
+        "wires": [
+            [
+                "http-internal-sync"
+            ]
+        ]
+    },
+    {
+        "id": "http-internal-sync",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group-manpower-sync",
+        "name": "Sync to USERS Table",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/userManage/api/userManage.php?action=sync_manpower&actionBy=SYSTEM",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 760,
+        "y": 120,
+        "wires": [
+            [
+                "debug-sync-result"
+            ]
+        ]
+    },
+    {
+        "id": "debug-sync-result",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "group-manpower-sync",
+        "name": "Sync Result Log",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 980,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "b1a544d31b4645fd",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "d": true,
+        "g": "6bc6d90ab4348389",
+        "name": "Poll SNC API",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "",
+        "payload": "{\"start\": null, \"end\": null}",
+        "payloadType": "json",
+        "x": 240,
+        "y": 980,
+        "wires": [
+            [
+                "257d129b933d4597"
+            ]
+        ]
+    },
+    {
+        "id": "257d129b933d4597",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "d": true,
+        "g": "6bc6d90ab4348389",
+        "name": "GET from SNC API",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://api-gateway-v1.sncformer.com/mes/b9/v1/api/open-api/mes/counter/all",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "Content-Type",
+                "valueType": "other",
+                "valueValue": "application/json"
+            }
+        ],
+        "x": 440,
+        "y": 980,
+        "wires": [
+            [
+                "a052080c3eb14546"
+            ]
+        ]
+    },
+    {
+        "id": "a052080c3eb14546",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "d": true,
+        "g": "6bc6d90ab4348389",
+        "name": "Parse & Map payload",
+        "func": "\nvar results = [];\ntry {\n    if (msg.payload && msg.payload.data && msg.payload.data.result) {\n        results = msg.payload.data.result;\n    }\n} catch(e) {\n    node.error(\"Failed to parse SNC API response\");\n    return null;\n}\n\nvar outputMsgs = [];\n\nfor (var i = 0; i < results.length; i++) {\n    var item = results[i];\n    if (item.work_center) {\n        var raw_status = (item.status || \"N/A\").toUpperCase();\n        var st = \"⚪ \" + raw_status;\n        if (raw_status.indexOf(\"RUN\") > -1 || raw_status.indexOf(\"ON\") > -1) {\n            st = \"🟢 \" + raw_status;\n        } else if (raw_status.indexOf(\"STOP\") > -1 || raw_status.indexOf(\"OFF\") > -1) {\n            st = \"🔴 \" + raw_status;\n        }\n        \n        outputMsgs.push({\n            payload: {\n                topic_name: item.work_center,\n                live_status: raw_status,\n                live_counter: item.counter || 0\n            }\n        });\n    }\n}\n\n// Return as an array of messages to the first output\n// Node-RED will send them sequentially\nreturn [outputMsgs];\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 980,
+        "wires": [
+            [
+                "ce0faf89eba14712"
+            ]
+        ]
+    },
+    {
+        "id": "ce0faf89eba14712",
+        "type": "http request",
+        "z": "cc3ed6cb9d327d93",
+        "d": true,
+        "g": "6bc6d90ab4348389",
+        "name": "Push to MES API",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/PE/api/iiotAPI.php?action=update_telemetry",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 890,
+        "y": 980,
+        "wires": [
+            [
+                "e2e3682682be45ef"
+            ]
+        ]
+    },
+    {
+        "id": "e2e3682682be45ef",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "d": true,
+        "g": "6bc6d90ab4348389",
+        "name": "Debug Response",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1090,
+        "y": 980,
+        "wires": []
+    },
+    {
+        "id": "246844758bccb236",
+        "type": "MSSQL",
+        "z": "cc3ed6cb9d327d93",
+        "g": "79973c28fe6c3834",
+        "mssqlCN": "1e08ce352209d18b",
+        "name": "Update PE DB",
+        "query": "",
+        "outField": "payload",
+        "x": 860,
+        "y": 1080,
+        "wires": [
+            [
+                "b015bb434d20ed56"
+            ]
+        ]
+    },
+    {
+        "id": "72ee02e5d608a9e6",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "79973c28fe6c3834",
+        "name": "Format SQL",
+        "func": "\n// 1. ตรวจสอบว่า payload เป็น Array หรือไม่ ถ้าไม่ใช่ให้แปลงเป็น Array\nlet dataArray = [];\nif (Array.isArray(msg.payload)) {\n    dataArray = msg.payload;\n} else if (typeof msg.payload === 'string') {\n    try {\n        let parsed = JSON.parse(msg.payload);\n        dataArray = Array.isArray(parsed) ? parsed : [parsed];\n    } catch(e) {\n        return null;\n    }\n} else {\n    dataArray = [msg.payload];\n}\n\n// 2. สร้าง SQL Query ยาวๆ เพียง 1 ก้อน (Batch Query)\nlet batchSql = \"SET NOCOUNT ON;\\n\";\n\nfor (let i = 0; i < dataArray.length; i++) {\n    let item = dataArray[i];\n    let mc = item.work_center;\n    if (!mc) continue; // ข้ามถ้าไม่มี work_center\n    \n    let status = item.status ? item.status.toUpperCase() : 'UNKNOWN';\n    let counter = item.counter || 0;\n    let total = item.total || 0;\n    let cycle_time = item.cycle_time || 0;\n    \n    // ป้องกัน Single Quote ใน JSON string\n    let safePayload = JSON.stringify(item).replace(/'/g, \"''\");\n    \n    batchSql += `\n    DECLARE @RealMC_${i} VARCHAR(50);\n    SELECT TOP 1 @RealMC_${i} = machine_code FROM PE_MACHINES WHERE mqtt_topic = '${mc}' AND is_active = 1;\n\n    IF @RealMC_${i} IS NOT NULL\n    BEGIN\n        UPDATE PE_IIOT_TELEMETRY \n        SET live_status = '${status}', \n            live_counter = ${counter}, \n            live_total = ${total},\n            cycle_time = ${cycle_time},\n            last_updated = GETDATE()\n        WHERE machine_code = @RealMC_${i};\n\n        IF @@ROWCOUNT = 0\n        BEGIN\n            INSERT INTO PE_IIOT_TELEMETRY (machine_code, live_status, live_counter, shift_baseline_counter, live_total, cycle_time, last_updated)\n            VALUES (@RealMC_${i}, '${status}', ${counter}, ${counter}, ${total}, ${cycle_time}, GETDATE());\n        END;\n    END;\n\n    UPDATE PE_IIOT_DISCOVERY\n    SET last_payload = '${safePayload}', last_seen = GETDATE()\n    WHERE topic_name = '${mc}';\n\n    IF @@ROWCOUNT = 0\n    BEGIN\n        INSERT INTO PE_IIOT_DISCOVERY (topic_name, last_payload, last_seen)\n        VALUES ('${mc}', '${safePayload}', GETDATE());\n    END;\n    `;\n}\n\nif (batchSql === \"SET NOCOUNT ON;\\n\") {\n    return null; // ไม่มีข้อมูลที่ใช้ได้\n}\n\nmsg.payload = batchSql;\nmsg.query = batchSql;\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 1080,
+        "wires": [
+            [
+                "246844758bccb236"
+            ]
+        ]
+    },
+    {
+        "id": "b40b8da4ebafbf76",
+        "type": "json",
+        "z": "cc3ed6cb9d327d93",
+        "g": "79973c28fe6c3834",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 410,
+        "y": 1080,
+        "wires": [
+            [
+                "72ee02e5d608a9e6"
+            ]
+        ]
+    },
+    {
+        "id": "797785755c7f3f73",
+        "type": "mqtt in",
+        "z": "cc3ed6cb9d327d93",
+        "g": "79973c28fe6c3834",
+        "name": "",
+        "topic": "/Counter/B9",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "0a022f572cfd4566",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 210,
+        "y": 1080,
+        "wires": [
+            [
+                "b40b8da4ebafbf76"
+            ]
+        ]
+    },
+    {
+        "id": "3b06cba13638f8e2",
+        "type": "MSSQL",
+        "z": "cc3ed6cb9d327d93",
+        "g": "79973c28fe6c3834",
+        "mssqlCN": "1e08ce352209d18b",
+        "name": "Set Offline",
+        "query": "\nUPDATE PE_IIOT_TELEMETRY\nSET live_status = 'OFFLINE', last_updated = GETDATE()\nWHERE live_status != 'OFFLINE' AND DATEDIFF(SECOND, last_updated, GETDATE()) > 300;\n",
+        "outField": "payload",
+        "x": 430,
+        "y": 1200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ef5a33f88bf125c7",
+        "type": "inject",
+        "z": "cc3ed6cb9d327d93",
+        "g": "79973c28fe6c3834",
+        "name": "IIoT Heartbeat",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 240,
+        "y": 1200,
+        "wires": [
+            [
+                "3b06cba13638f8e2"
+            ]
+        ]
+    },
+    {
+        "id": "b015bb434d20ed56",
+        "type": "debug",
+        "z": "cc3ed6cb9d327d93",
+        "g": "79973c28fe6c3834",
+        "name": "debug 201",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1090,
+        "y": 1080,
+        "wires": []
+    },
+    {
+        "id": "7bacea44643d4285",
+        "type": "catch",
+        "z": "cc3ed6cb9d327d93",
+        "g": "79973c28fe6c3834",
+        "name": "Catch DB Error",
+        "scope": [
+            "246844758bccb236"
+        ],
+        "uncaught": false,
+        "x": 220,
+        "y": 1140,
+        "wires": [
+            [
+                "ea542d847e47f0b3"
+            ]
+        ]
+    },
+    {
+        "id": "ea542d847e47f0b3",
+        "type": "function",
+        "z": "cc3ed6cb9d327d93",
+        "g": "79973c28fe6c3834",
+        "name": "Retry Limit",
+        "func": "msg.retries = (msg.retries || 0) + 1;\nif (msg.retries <= 3) {\n    return msg;\n}\nnode.error('DB Retry limit exceeded', msg);\nreturn null;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 1140,
+        "wires": [
+            [
+                "8031534f41353fa7"
+            ]
+        ]
+    },
+    {
+        "id": "8031534f41353fa7",
+        "type": "delay",
+        "z": "cc3ed6cb9d327d93",
+        "g": "79973c28fe6c3834",
+        "name": "Wait 2s",
+        "pauseType": "delay",
+        "timeout": "2",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 620,
+        "y": 1140,
+        "wires": [
+            [
+                "246844758bccb236"
+            ]
+        ]
+    },
+    {
+        "id": "mqtt_broker_snc",
+        "type": "mqtt-broker",
+        "name": "SNC Utility Broker",
+        "broker": "10.1.68.100",
+        "port": "1884",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "f293631bae2ef4f2",
+        "type": "websocket-listener",
+        "path": "/ws/forklift",
+        "wholemsg": "false"
+    },
+    {
+        "id": "1e08ce352209d18b",
+        "type": "MSSQL-CN",
+        "name": "Toolbox",
+        "server": "10.1.1.31",
+        "encyption": false,
+        "database": "IIOT_TOOLBOX"
+    },
+    {
+        "id": "0a022f572cfd4566",
+        "type": "mqtt-broker",
+        "name": "Auth Broker 1883",
+        "broker": "10.1.68.100",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true
+    }
+]

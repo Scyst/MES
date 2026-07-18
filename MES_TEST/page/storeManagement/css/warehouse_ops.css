@@ -1,0 +1,253 @@
+/* e:\MES\MES\MES\page\storeManagement\css\warehouse_ops.css */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Sarabun', sans-serif;
+    color: #333;
+    transition: background-color 0.5s ease-in-out;
+}
+
+/* Base Theme Variables defined in PHP style block but customized here */
+:root {
+    --receive-glow: rgba(46, 125, 50, 0.4);
+    --sell-glow: rgba(21, 101, 192, 0.4);
+}
+
+/* Main Header */
+.main-header {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    padding-bottom: 10px;
+}
+
+/* Mode Toggles */
+.toggle-container {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    padding: 10px;
+    border-radius: 40px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    display: inline-flex;
+    margin: 0 auto 30px auto;
+}
+
+.btn-mode {
+    border: none;
+    background: transparent;
+    padding: 12px 35px;
+    font-weight: 600;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-mode:hover {
+    color: #333;
+    transform: translateY(-1px);
+}
+
+.mode-receive .active-receive {
+    background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+    border: none;
+    box-shadow: 0 6px 20px var(--receive-glow);
+}
+
+.mode-sell .active-sell {
+    background: linear-gradient(135deg, #1565c0 0%, #2196f3 100%);
+    border: none;
+    box-shadow: 0 6px 20px var(--sell-glow);
+}
+
+/* Select Dropdown */
+.form-select {
+    border-radius: 12px;
+    padding: 12px;
+    font-weight: 500;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    transition: all 0.3s ease;
+}
+
+.form-select:focus {
+    box-shadow: 0 0 0 0.25rem rgba(46, 125, 50, 0.25);
+    border-color: #2e7d32;
+}
+
+/* Tabs */
+.tab-container {
+    gap: 10px;
+    border-bottom: 2px solid #eaeaea;
+    margin-bottom: 30px;
+}
+
+.tab-btn {
+    padding: 12px 25px;
+    border-radius: 12px 12px 0 0;
+    background: transparent;
+    border: none;
+    font-weight: 600;
+    color: #888;
+    position: relative;
+}
+
+.tab-btn::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: transparent;
+    transition: all 0.3s ease;
+    border-radius: 3px 3px 0 0;
+}
+
+.mode-receive .tab-btn.active::after { background: var(--primary-receive); }
+.mode-sell .tab-btn.active::after { background: var(--primary-sell); }
+.tab-btn.active { color: #333; }
+
+/* Scanner Card */
+.scanner-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 24px;
+    padding: 50px 40px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.06);
+    transform: translateY(0);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.scanner-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 45px rgba(0,0,0,0.1);
+}
+
+.barcode-input {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 16px;
+    padding: 20px;
+    font-size: 1.8rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: #333;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.mode-receive .barcode-input:focus {
+    background: white;
+    box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.15);
+    transform: scale(1.02);
+}
+
+.mode-sell .barcode-input:focus {
+    background: white;
+    box-shadow: 0 0 0 4px rgba(21, 101, 192, 0.15);
+    transform: scale(1.02);
+}
+
+/* Status Box */
+.status-box {
+    border-radius: 12px;
+    font-size: 1.1rem;
+    padding: 15px 20px;
+    margin-top: 25px;
+    animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Datatable Custom */
+.list-card {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.03);
+}
+
+table.dataTable {
+    border-collapse: separate !important;
+    border-spacing: 0 8px !important;
+    margin-top: 10px !important;
+}
+
+table.dataTable thead th {
+    border-bottom: none;
+    color: #6c757d;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    padding: 15px;
+}
+
+table.dataTable tbody tr {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border-radius: 10px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+table.dataTable tbody tr:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+}
+
+table.dataTable tbody td {
+    border-top: none;
+    border-bottom: none;
+    padding: 15px;
+    vertical-align: middle;
+}
+
+table.dataTable tbody td:first-child {
+    border-radius: 10px 0 0 10px;
+}
+
+table.dataTable tbody td:last-child {
+    border-radius: 0 10px 10px 0;
+}
+
+.row-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.bulk-action-bar {
+    background: linear-gradient(to right, #f8f9fa, #ffffff);
+    border: 1px solid #e9ecef;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 10px 25px;
+    transition: all 0.3s ease;
+}
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(46, 125, 50, 0.3);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #1565c0 0%, #2196f3 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 10px 25px;
+    transition: all 0.3s ease;
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(21, 101, 192, 0.3);
+}

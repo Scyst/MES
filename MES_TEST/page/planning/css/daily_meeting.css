@@ -1,0 +1,216 @@
+/* MES/page/planning/css/daily_meeting.css */
+
+:root {
+    --bg-dashboard: #f3f4f6;
+    --table-header-bg: #f9fafb;
+    --border-color: #e5e7eb;
+}
+
+body.bg-dashboard {
+    background-color: var(--bg-dashboard);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* --- Card Styles --- */
+.card {
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* --- Command Table (Main) --- */
+.cmd-table thead th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+    padding: 12px 16px;
+}
+.cmd-table tbody td {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border-color);
+    color: #1f2937;
+}
+
+/* --- Editable Cells (Click-to-Edit Mockup) --- */
+.editable-cell {
+    cursor: pointer;
+    border-bottom: 1px dashed #d1d5db;
+    transition: all 0.2s;
+    min-width: 40px;
+    display: inline-block;
+    text-align: right;
+}
+.editable-cell:hover {
+    background-color: #fffbeb; /* Yellow tint on hover */
+    border-bottom: 1px solid #f59e0b;
+}
+.editable-cell:focus {
+    outline: 2px solid #3b82f6;
+    border-bottom: none;
+    background: #fff;
+    padding: 2px 4px;
+}
+
+/* --- Feeder Job Chips --- */
+.job-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background-color: #e0f2fe; /* Light Blue */
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    margin-right: 4px;
+    margin-bottom: 2px;
+}
+.job-chip.urgent {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+
+/* --- Manpower Bar --- */
+.mp-bar-container {
+    height: 6px;
+    width: 100%;
+    background-color: #e5e7eb;
+    border-radius: 3px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+.mp-bar-fill {
+    height: 100%;
+    background-color: #10b981; /* Green */
+}
+.mp-bar-fill.warning { background-color: #f59e0b; }
+.mp-bar-fill.danger { background-color: #ef4444; }
+
+/* --- Loading List --- */
+.loading-item {
+    border-left: 3px solid transparent;
+    transition: background-color 0.2s;
+}
+.loading-item:hover {
+    background-color: #f9fafb;
+}
+.loading-item.status-pending { border-left-color: #9ca3af; }
+.loading-item.status-loading { border-left-color: #f59e0b; background-color: #fff7ed; }
+.loading-item.status-done { border-left-color: #10b981; opacity: 0.6; }
+
+/* --- Utility --- */
+.fs-7 { font-size: 0.85rem !important; }
+
+/* Custom Input Styles for Dashboard */
+.cmd-table input.form-control {
+    box-shadow: none;
+    transition: all 0.2s;
+}
+.cmd-table input.form-control:focus {
+    background-color: #fff !important;
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Job Chips */
+.job-chip {
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.2s;
+}
+.job-chip:hover {
+    filter: brightness(0.95);
+}
+.job-chip.urgent {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-color: #fecaca;
+    animation: pulse 2s infinite;
+}
+.job-chip.done {
+    background-color: #dcfce7;
+    color: #166534;
+    border-color: #bbf7d0;
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+.remove-job-btn {
+    opacity: 0.5;
+    cursor: pointer;
+}
+.remove-job-btn:hover {
+    opacity: 1;
+    color: #dc3545 !important;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+/* เจาะจงตัวไอคอนนาฬิกา (เฉพาะ Chrome/Edge/Safari) */
+.loading-item input[type="time"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    
+    /* 2. ดึงไอคอนให้ชิดขอบมากขึ้น (ตัด margin ที่ browser แถมมา) */
+    margin-left: -5px; 
+    margin-right: 0px; /* ขยับขวาอีกนิด */
+    
+    /* 3. ลบ Background สีเทาๆ ตอนเอาเมาส์ชี้ (ถ้าไม่ชอบ) */
+    background-color: transparent; 
+    padding: 0;
+}
+
+.offcanvas-end {
+    top: 70px !important; /* ความสูงเท่า Header */
+    height: calc(100vh - 70px) !important;
+    border-top: 1px solid #dee2e6; /* เพิ่มเส้นขอบบนนิดนึง */
+}
+
+/* ปรับฉากหลังให้เริ่มใต้ Header เหมือนกัน */
+.offcanvas-backdrop {
+    top: 70px !important;
+}
+
+/* --- FIXED TABLE HEADER & SCROLL --- */
+
+/* 1. กำหนดให้หัวตารางติดหนึบด้านบน (Sticky) */
+.cmd-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10; /* ให้ลอยเหนือเนื้อหา */
+    background-color: #f8f9fa; /* ต้องใส่สีพื้นหลัง ไม่งั้นตัวหนังสือจะทะลุ */
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* เงาบางๆ ให้รู้ว่าเป็นขอบ */
+}
+
+/* 2. ปรับแต่ง Scrollbar ให้สวยงาม (Optional: เฉพาะ Chrome/Edge/Safari) */
+.table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}

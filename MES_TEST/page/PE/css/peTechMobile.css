@@ -1,0 +1,211 @@
+/* e:\MES\MES\MES\page\PE\css\peTechMobile.css */
+body {
+    background-color: #f1f5f9;
+    font-family: 'Inter', 'Prompt', sans-serif;
+    margin: 0;
+    padding: 0;
+    overscroll-behavior-y: none;
+}
+
+/* App Header */
+.tech-header {
+    background: linear-gradient(135deg, var(--pe-primary), var(--pe-primary-dark));
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    padding: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tech-header-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tech-user-info {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+/* Filter / Tabs */
+.tech-tabs {
+    display: flex;
+    background: white;
+    padding: 0.5rem;
+    position: sticky;
+    top: 56px;
+    z-index: 999;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    gap: 0.5rem;
+}
+
+.tech-tab-btn {
+    flex: 1;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tech-tab-btn.active {
+    background: var(--pe-primary);
+    color: white;
+    border-color: var(--pe-primary);
+}
+
+/* Feed Container */
+.tech-feed {
+    padding: 1rem;
+    padding-bottom: 5rem;
+}
+
+/* WO Card */
+.tech-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border: 1px solid #f1f5f9;
+    position: relative;
+    overflow: hidden;
+}
+
+.tech-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #cbd5e1;
+}
+
+.tech-card[data-priority="Critical"]::before { background: var(--pe-danger); }
+.tech-card[data-priority="High"]::before { background: var(--pe-warning); }
+.tech-card[data-priority="Normal"]::before { background: var(--pe-info); }
+.tech-card[data-priority="Low"]::before { background: #94a3b8; }
+
+.tech-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.tech-wo-num {
+    font-weight: 700;
+    color: var(--pe-dark);
+    font-size: 1.05rem;
+}
+
+.tech-status-badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.tech-status-Open { background: #e0f2fe; color: #0284c7; }
+.tech-status-Assigned { background: #ffedd5; color: #ea580c; }
+.tech-status-InProgress { background: #dcfce7; color: #16a34a; }
+
+.tech-machine {
+    font-weight: 600;
+    color: var(--pe-primary-dark);
+    margin-bottom: 0.25rem;
+}
+
+.tech-issue {
+    font-size: 0.9rem;
+    color: #475569;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+.tech-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-bottom: 1rem;
+}
+
+/* Actions */
+.tech-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 1rem;
+}
+
+.tech-actions.two-col {
+    grid-template-columns: 1fr 1fr;
+}
+
+.tech-btn {
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.tech-btn-accept { background: var(--pe-primary); color: white; }
+.tech-btn-start { background: var(--pe-warning); color: white; }
+.tech-btn-close { background: var(--pe-success); color: white; }
+.tech-btn-outline { background: white; border: 1px solid #cbd5e1; color: #475569; }
+
+/* Empty State */
+.tech-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #94a3b8;
+}
+.tech-empty i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #cbd5e1;
+}
+
+/* Floating Action / Refresh */
+.tech-fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 1.5rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+    background: var(--pe-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    border: none;
+    cursor: pointer;
+    z-index: 1000;
+}

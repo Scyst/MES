@@ -1,0 +1,607 @@
+/* MES/page/manpower/css/manpowerUI.css */
+
+/* =================================================================== */
+/* 0. GLOBAL & UTILS */
+/* =================================================================== */
+:root {
+    --mp-primary: #4e73df;
+    --mp-success: #1cc88a;
+    --mp-warning: #f6c23e;
+    --mp-danger:  #e74a3b;
+    --mp-info:    #36b9cc;
+}
+
+body {
+    background-color: #f8f9fa;
+}
+
+/* =================================================================== */
+/* 1. COMPACT KPI CARDS */
+/* =================================================================== */
+
+/* สไตล์พื้นฐานสำหรับการ์ดทุกประเภท */
+.kpi-card, .chart-card, .card {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.1); /* ขอบบางๆ */
+    border-radius: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+
+/* สไตล์เฉพาะ KPI Card */
+.kpi-card {
+    height: 100%;
+    overflow: hidden;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+}
+
+/* เส้นขอบสีด้านซ้ายตามสถานะ */
+.kpi-card.border-primary { border-left: 4px solid var(--mp-primary) !important; }
+.kpi-card.border-success { border-left: 4px solid var(--mp-success) !important; }
+.kpi-card.border-warning { border-left: 4px solid var(--mp-warning) !important; }
+.kpi-card.border-danger  { border-left: 4px solid var(--mp-danger)  !important; }
+
+/* Typography ในการ์ด */
+.kpi-card .text-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.kpi-card h2 {
+    font-size: 1.8rem; /* กำหนดขนาดให้พอดี (ไม่เล็กไม่ใหญ่ไป) */
+    font-weight: 800;
+    margin-bottom: 0;
+    line-height: 1.2;
+    font-family: 'Prompt', sans-serif;
+}
+
+.kpi-card .text-sub {
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 4px;
+}
+
+/* Utility พื้นหลังสีจาง (Soft Colors) */
+.bg-primary-soft { background-color: rgba(78, 115, 223, 0.1); color: var(--mp-primary); }
+.bg-success-soft { background-color: rgba(28, 200, 138, 0.1); color: var(--mp-success); }
+.bg-warning-soft { background-color: rgba(246, 194, 62, 0.1); color: #d39e00; }
+.bg-danger-soft  { background-color: rgba(231, 74, 59, 0.1);  color: var(--mp-danger); }
+.bg-info-soft    { background-color: rgba(54, 185, 204, 0.1);  color: var(--mp-info); }
+
+/* ไอคอนวงกลม */
+.icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50% !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0; /* ป้องกันวงกลมเบี้ยวเวลาจอเล็ก */
+}
+
+/* ปุ่ม Action เล็กๆ (Late/Leave) */
+.btn-kpi-action {
+    font-size: 0.80rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.btn-kpi-action:hover {
+    filter: brightness(0.95);
+    transform: translateY(-1px);
+}
+
+/* Badge % Attendance */
+.badge-soft-success {
+    background-color: #e6f8f0 !important;
+    color: #0f5132 !important;
+    border: 1px solid #c3e6cb !important;
+    border-radius: 6px;
+}
+
+/* =================================================================== */
+/* 2. COMPACT CHARTS */
+/* =================================================================== */
+.chart-card {
+    padding: 1rem;
+}
+
+.chart-card h4, .chart-header-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #495057;
+    text-transform: uppercase;
+}
+
+.chart-container-box {
+    position: relative;
+    width: 100%;
+    height: 240px !important;
+}
+
+/* =================================================================== */
+/* 3. COMPACT TABLE */
+/* =================================================================== */
+.table-responsive {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+}
+
+.table th {
+    font-size: 0.9rem; /* ตามที่คุณจูนมา */
+    text-transform: uppercase;
+    background-color: #f8f9fa !important;
+    color: #6c757d;
+    font-weight: 700;
+    padding: 0.75rem 0.5rem !important;
+}
+
+.table td {
+    font-size: 0.9rem !important;
+    padding: 0.6rem 0.5rem !important;
+    vertical-align: middle;
+}
+
+/* ปุ่ม Group เลือก View Mode */
+.btn-group-sm .btn {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.75rem;
+}
+
+/* =================================================================== */
+/* 5. EXECUTIVE TOOLBAR STYLES (Added) */
+/* =================================================================== */
+
+/* Animation จุดเขียววิบวับ */
+@keyframes ping {
+    75%, 100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+.animate-ping {
+    animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Toolbar Container */
+.dashboard-toolbar {
+    height: 38px;
+    border: 1px solid #e0e0e0;
+    background-color: #fff;
+    padding: 2px;
+    gap: 5px;
+    display: flex;
+    align-items: center;
+}
+
+/* ปรับแต่ง Input Date ให้เนียนไปกับพื้นหลัง */
+.dashboard-toolbar input[type="date"] {
+    border: none;
+    background: transparent;
+    font-weight: 700;
+    color: #495057;
+    font-family: 'Prompt', sans-serif;
+    cursor: pointer;
+}
+.dashboard-toolbar input[type="date"]:hover {
+    background-color: #f1f3f5;
+    border-radius: 4px;
+}
+
+/* ปรับปุ่มให้สูงเท่ากัน */
+.dashboard-toolbar .btn {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animation สำหรับแถวตาราง */
+@keyframes fadeInRow {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Animation สำหรับผลการค้นหา */
+@keyframes softReveal {
+    0% { 
+        opacity: 0; 
+        transform: translateY(10px); /* เริ่มจากต่ำลงนิดนึง */
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateY(0);    /* ลอยขึ้นมาที่เดิม */
+    }
+}
+
+.search-reveal {
+    animation: softReveal 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; /* ใช้ Bezier Curve ให้นุ่มๆ */
+}
+
+.animate-fade-in {
+    animation: fadeInRow 0.3s ease-out forwards;
+}
+
+/* =================================================================== */
+/* 6. ADDITIONAL ADMIN TOOLS UI */
+/* =================================================================== */
+
+/* ปรับแต่งกลุ่มปุ่ม Action ใน Modal ให้ดูเป็นระเบียบ ไม่เบียดกัน */
+#detailModalTable .btn-sm {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50% !important; /* ทำปุ่มให้เป็นวงกลมตามสไตล์เดิมของคุณ */
+    transition: all 0.2s;
+}
+
+/* ปุ่มดูประวัติ (History) */
+.btn-outline-secondary {
+    border-color: #d1d3e2;
+    color: #858796;
+}
+.btn-outline-secondary:hover {
+    background-color: #858796;
+    color: #fff;
+    border-color: #858796;
+    transform: scale(1.1);
+}
+
+/* ปุ่มแจ้งลาออก (Terminate) */
+.btn-outline-dark {
+    border-color: #5a5c69;
+    color: #5a5c69;
+}
+.btn-outline-dark:hover {
+    background-color: #3a3b45;
+    color: #fff;
+    border-color: #3a3b45;
+    transform: scale(1.1);
+}
+
+/* ปรับแต่ง Dropdown Menu ในตาราง (เมนูลา) */
+#detailModalTable .dropdown-menu {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 8px;
+}
+
+#detailModalTable .dropdown-item {
+    padding: 8px 16px;
+    border-radius: 4px;
+    margin: 2px 4px;
+    width: auto;
+    transition: all 0.1s;
+}
+
+#detailModalTable .dropdown-item:hover {
+    background-color: #f0f4ff; /* สีฟ้าจางๆ */
+    color: var(--mp-primary);
+    transform: translateX(3px); /* ขยับนิดนึงให้รู้ว่าเลือก */
+}
+
+#detailModalTable .dropdown-header {
+    color: #b7b9cc;
+    font-weight: 700;
+    font-size: 0.7rem;
+}
+
+#detailModalTable .btn-light:hover {
+    background-color: #eaecf4;
+    color: #4e73df !important;
+}
+
+/* สถานะตัวหนาในตารางรายละเอียด */
+#detailModalTable select.fw-bold {
+    color: var(--mp-primary) !important;
+}
+
+/* Highlight แถวเวลา Hover */
+#detailModalTable tr:hover {
+    background-color: rgba(78, 115, 223, 0.05) !important;
+}
+
+/* =================================================================== */
+/* 7. FINAL DRILLDOWN & HIERARCHY (High Contrast & Soft UI) */
+/* =================================================================== */
+
+/* 1. Base Text Color (แก้ปัญหาตัวหนังสือจางทั้งตาราง) */
+.table {
+    color: #3a3b45 !important; /* เทาเข้มเกือบดำ อ่านง่ายแน่นอน */
+}
+.table td {
+    vertical-align: middle;
+    font-weight: 500; /* เพิ่มน้ำหนักตัวอักษรนิดนึง */
+}
+
+/* 2. Interactive Rows (แถวที่กดได้) */
+tr.cursor-pointer {
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s;
+}
+tr.cursor-pointer:hover {
+    background-color: #ebf2ff !important; /* สีฟ้าจางๆ เวลาเอาเมาส์ชี้ */
+    position: relative;
+    z-index: 1; 
+}
+
+/* 3. Animation ลูกศรหมุน (Chevron) */
+.transition-icon {
+    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: inline-block;
+    color: #4e73df; /* เปลี่ยนจากเทาเป็นสีน้ำเงิน Theme ให้เห็นชัดขึ้น */
+}
+
+/* 4. Level 0: Grand Total (แก้หัวตารางดำมืด -> เป็นน้ำเงินเข้ม) */
+.table-dark {
+    --bs-table-bg: #2c3e50 !important; /* น้ำเงินเข้มทางการ (Corporate Blue-Black) */
+    --bs-table-color: #ffffff !important;
+    border-bottom: 2px solid #ffffff;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15); /* เพิ่มเงาให้ลอยเด่น */
+    z-index: 10;
+    position: relative;
+}
+
+/* 5. Level 1: Line Parent (แก้สีพื้นหลังให้ชัดขึ้น) */
+.table-secondary {
+    --bs-table-bg: #eaecf4 !important; /* เทาอมฟ้า */
+    --bs-table-border-color: #ffffff !important;
+    color: #2e59d9 !important; /* น้ำเงินเข้ม อ่านง่ายกว่าเดิม */
+    font-weight: 700;
+}
+
+/* 6. Level 2: Shift/Sub Group */
+.bg-light.fw-bold.cursor-pointer {
+    background-color: #f8f9fc !important; /* ขาวเกือบเทา */
+    border-bottom: 1px solid #e3e6f0;
+    color: #5a5c69 !important; /* เทาเข้ม */
+}
+
+/* เส้นเชื่อมโยง (Tree Line) */
+div[style*="border-left"] {
+    border-left-color: #4e73df !important; /* สี Primary */
+    border-left-width: 3px !important;
+    opacity: 0.6; /* เพิ่มความเข้มของเส้น */
+}
+
+/* 7. Level 3: Employees (พนักงาน) */
+.bg-white {
+    background-color: #ffffff !important;
+}
+/* Hover แล้วให้ตัวหนังสือพนักงานเป็นสีน้ำเงิน */
+tr.bg-white:hover td {
+    color: #224abe !important; 
+    background-color: #f0f4ff !important;
+}
+
+/* 8. Utility: แก้สีตัวช่วยต่างๆ */
+.text-muted {
+    color: #858796 !important; /* ปรับให้เข้มขึ้นกว่า Default ของ Bootstrap */
+}
+.text-secondary.small {
+    color: #5a5c69 !important; /* Bullet หน้าชื่อพนักงาน เข้มขึ้น */
+}
+#tableBody tr td {
+    border-top: none;
+    border-bottom: 1px solid #e3e6f0; /* เส้นแบ่งบรรทัดบางๆ */
+}
+
+/* =================================================================== */
+/* 9. FINAL FIX: GRAND TOTAL & COLOR CONTRAST */
+/* =================================================================== */
+
+/* 1. บังคับ Grand Total ให้เป็นธีมมืดและตัวหนังสือขาวเสมอ (ชนะ Bootstrap) */
+#tableBody .table-dark,
+#tableBody .table-dark td {
+    background-color: #2c3e50 !important; /* สีน้ำเงินเข้ม */
+    color: #ffffff !important;            /* ตัวหนังสือขาว */
+    border-color: #454d55 !important;     /* เส้นขอบสีเทาเข้ม */
+}
+
+/* 2. แก้ Hover ของ Grand Total ไม่ให้กลายเป็นสีฟ้าอ่อน (ที่ทำให้ตัวหนังสือหาย) */
+#tableBody .table-dark:hover,
+#tableBody .table-dark:hover td {
+    background-color: #1a252f !important; /* เข้มขึ้นอีกนิดเมื่อชี้ (แต่ไม่เปลี่ยนเป็นสีขาว) */
+    color: #ffffff !important;            /* ยังคงตัวหนังสือขาวไว้ */
+}
+
+/* 3. แก้ตัวหนังสือ "สีดำ" หรือ "สีเทา" ให้กลายเป็นสีขาว เมื่ออยู่ใน Grand Total */
+/* อันนี้แก้ปัญหาช่อง Actual หรือช่องอื่นๆ ที่มี class text-dark ติดมา */
+#tableBody .table-dark .text-dark,
+#tableBody .table-dark .text-secondary,
+#tableBody .table-dark .text-muted,
+#tableBody .table-dark .text-body {
+    color: #f8f9fa !important; /* เปลี่ยนเป็นขาวเกือบสุด */
+    opacity: 1 !important;     /* ลบความจางออก */
+}
+
+/* 4. ปรับสีสถานะ (Warning/Success) ใน Grand Total ให้สว่างขึ้นเพื่อให้อ่านออกบนพื้นดำ */
+#tableBody .table-dark .text-warning {
+    color: #ffc107 !important; /* เหลืองทองสว่าง */
+}
+#tableBody .table-dark .text-success {
+    color: #2ecc71 !important; /* เขียวสว่าง */
+}
+#tableBody .table-dark .text-danger {
+    color: #e74a3b !important; /* แดงสว่าง */
+}
+
+/* 5. แก้ช่อง Actual ในแถวปกติ (ไม่ใช่ Grand Total) */
+/* บางที Bootstrap หรือ Theme อาจจะทำให้ช่องที่มีพื้นหลังสีจางๆ (bg-light) อ่านยาก */
+#tableBody .bg-light {
+    background-color: #f8f9fc !important;
+    color: #3a3b45 !important;
+}
+
+/* 6. ตัวเลขในตารางให้อ่านง่ายขึ้น (เพิ่มน้ำหนัก) */
+#tableBody td.text-end, 
+#tableBody td.text-center {
+    font-weight: 600; /* ตัวเลขหนาขึ้นนิดนึง */
+}
+
+/* =================================================================== */
+/* 10. UX IMPROVEMENTS: STICKY HEADER, SKELETON & EMPTY STATE */
+/* =================================================================== */
+
+/* --- A. STICKY HEADER (หัวตารางลอย) --- */
+.table-responsive {
+    max-height: 75vh; /* ปรับความสูงตามต้องการ */
+    overflow-y: auto;
+    box-shadow: 0 0 15px rgba(0,0,0,0.05);
+}
+
+.table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: #eaecf4 !important; /* ต้องมีสีพื้นหลัง ไม่งั้นตัวหนังสือจะซ้อนกัน */
+    box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1);
+}
+
+/* Scrollbar สวยๆ (Webkit) */
+.table-responsive::-webkit-scrollbar { width: 8px; height: 8px; }
+.table-responsive::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+.table-responsive::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+.table-responsive::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+
+/* --- B. SKELETON LOADING (Animation โหลด) --- */
+.skeleton-box {
+    display: inline-block;
+    height: 1em;
+    position: relative;
+    overflow: hidden;
+    background-color: #dddbdd;
+    border-radius: 4px;
+    width: 100%;
+}
+
+.skeleton-box::after {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.2) 20%,
+        rgba(255, 255, 255, 0.5) 60%,
+        rgba(255, 255, 255, 0)
+    );
+    animation: shimmer 2s infinite;
+    content: '';
+}
+
+@keyframes shimmer {
+    100% { transform: translateX(100%); }
+}
+
+
+/* --- C. FIX DROPDOWN CLIPPING (แก้เมนูโดนบังในตาราง) --- */
+/* ปัญหา: เวลาตารางมี overflow:auto เมนู Dropdown มักจะถูกซ่อน */
+.table-responsive {
+    /* ถ้าตารางสูงพอ Dropdown จะไม่โดนบัง แต่ถ้าตารางเตี้ยต้องระวัง */
+    /* วิธีแก้ที่ดีที่สุดคือใช้ JS ย้าย Dropdown ไปที่ Body หรือเพิ่มความสูงขั้นต่ำ */
+    min-height: 300px; 
+}
+
+/* =================================================================== */
+/* FINANCIAL ANALYSIS TAB STYLING */
+/* =================================================================== */
+
+/* 1. Sticky Header สำหรับตารางใน Modal */
+.modal-table-container {
+    max-height: 400px; /* กำหนดความสูงเพื่อให้ Scroll ได้ */
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f8f9fa; /* สีพื้นหลัง Header ต้องทึบ */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* เงาเล็กน้อยให้รู้ว่าลอยอยู่ */
+}
+
+/* 2. จัดระเบียบตัวเลข (Monospace & Alignment) */
+.num-cell {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace; /* ฟอนต์ตัวเลข */
+    font-size: 0.85rem;
+    letter-spacing: -0.3px; /* บีบช่องไฟนิดนึงให้ดูแน่น */
+    text-align: right;
+}
+
+/* 3. Row Highlight & Hover */
+#financialTableBody tr {
+    transition: background-color 0.15s ease;
+}
+
+#financialTableBody tr:hover {
+    background-color: rgba(78, 115, 223, 0.05); /* สีน้ำเงินจางๆ เมื่อเอาเมาส์ชี้ */
+}
+
+/* 4. Variance Badge (ป้าย % ผลต่าง) */
+.badge-var {
+    min-width: 50px;
+    font-weight: 500;
+    font-size: 0.75rem;
+    padding: 0.35em 0.5em;
+    border-radius: 4px;
+}
+
+.badge-var.good {
+    background-color: rgba(28, 200, 138, 0.1);
+    color: #1cc88a;
+    border: 1px solid rgba(28, 200, 138, 0.2);
+}
+
+.badge-var.bad {
+    background-color: rgba(231, 74, 59, 0.1);
+    color: #e74a3b;
+    border: 1px solid rgba(231, 74, 59, 0.2);
+}
+
+/* 5. Summary Card Styling (ให้เหมือนหน้า Dashboard) */
+.fin-card-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.fin-card-value {
+    font-family: 'Prompt', sans-serif; /* ใช้ฟอนต์หลัก */
+    font-weight: 700;
+    font-size: 1.5rem;
+    line-height: 1.2;
+}
+
+/* =================================================================== */
+/* FIX: MASTER SETTINGS TABLE CENTERING */
+/* =================================================================== */
+#v-pills-emp .card-body.overflow-auto { 
+    display: block !important; 
+}
+#v-pills-emp table { 
+    margin-top: 0 !important; 
+    margin-bottom: auto !important; 
+}
+#v-pills-team .card-body.overflow-auto { display: block !important; }
+#v-pills-shift .card-body.overflow-auto { display: block !important; }
+#v-pills-map .card-body.overflow-auto { display: block !important; }

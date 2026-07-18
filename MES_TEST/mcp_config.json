@@ -1,0 +1,62 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "e:/MES/MES/MES"
+      ]
+    },
+    "mssql": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-mssql-server"
+      ],
+      "env": {
+        "DB_SERVER": "10.1.1.31",
+        "DB_DATABASE_NAME": "IIOT_TOOLBOX",
+        "DB_USER": "TOOLBOX",
+        "DB_PASSWORD": "I1o1@T@#1boX",
+        "DB_ENCRYPT": "false",
+        "DB_TRUST_SERVER_CERTIFICATE": "true"
+      }
+    },
+    "sap-mssql": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-mssql-server"
+      ],
+      "env": {
+        "DB_SERVER": "10.0.0.4",
+        "DB_DATABASE_NAME": "SNC-SAP",
+        "DB_USER": "SNC-IIoT-Toolbox",
+        "DB_PASSWORD": "SnC@11oT#TOOlbOX",
+        "DB_ENCRYPT": "false",
+        "DB_TRUST_SERVER_CERTIFICATE": "true"
+      }
+    },
+    "mes-custom-mcp": {
+      "command": "node",
+      "args": [
+        "e:/MES/MES/MES/mcp_server/index.mjs"
+      ]
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ]
+    }
+  }
+}

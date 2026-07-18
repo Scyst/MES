@@ -1,0 +1,134 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800;900&family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Fonts */
+  --font-sans: 'Sarabun', sans-serif;
+  --font-heading: 'Outfit', 'Sarabun', sans-serif;
+
+  /* Colors */
+  --color-primary: #8b5cf6;
+  --color-primary-light: #a78bfa;
+  --color-accent: #06b6d4;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #f43f5e;
+
+  /* Theme Surfaces (Light mode default - High Contrast) */
+  --color-bg-base: #f1f5f9;
+  --color-surface-glass: rgba(255, 255, 255, 0.95);
+  --color-surface-glass-hover: #ffffff;
+  --color-border-glass: rgba(0, 0, 0, 0.08);
+  --color-text-main: #0f172a;
+  --color-text-muted: #475569;
+  
+  --shadow-glow: 0 10px 25px rgba(139, 92, 246, 0.2);
+}
+
+/* Dark Mode Overrides (Factory Grade) */
+.dark {
+  --color-bg-base: #0f172a;
+  --color-surface-glass: #1e293b;
+  --color-surface-glass-hover: #334155;
+  --color-border-glass: rgba(255, 255, 255, 0.1);
+  --color-text-main: #f8fafc;
+  --color-text-muted: #94a3b8;
+  
+  --shadow-glow: 0 10px 25px rgba(139, 92, 246, 0.4);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg-base);
+    color: var(--color-text-main);
+    font-family: var(--font-sans);
+    transition: background-color 0.4s ease, color 0.4s ease;
+    
+    /* Modern Light/Dark background pattern */
+    background-image: 
+      radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.05), transparent 25%),
+      radial-gradient(circle at 85% 30%, rgba(6, 182, 212, 0.05), transparent 25%);
+    background-attachment: fixed;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+}
+
+@layer utilities {
+  .factory-card {
+    background-color: var(--color-surface-glass);
+    border: 1px solid var(--color-border-glass);
+    border-radius: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  
+  .dark .factory-card {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .glass-card {
+    background: var(--color-surface-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--color-border-glass);
+    border-radius: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  
+  .dark .glass-card {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .glass-card:hover {
+    transform: translateY(-4px);
+    background: var(--color-surface-glass-hover);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  }
+  
+  .dark .glass-card:hover {
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  .btn-glow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255,255,255,0.3);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    cursor: pointer;
+  }
+  
+  .btn-glow:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 15px 35px rgba(6,182,212,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  
+  .text-gradient {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .dark .text-gradient {
+    background: linear-gradient(135deg, #ffffff 20%, var(--color-primary-light) 50%, var(--color-accent) 80%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}

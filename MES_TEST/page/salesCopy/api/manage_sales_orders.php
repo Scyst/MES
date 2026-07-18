@@ -1,0 +1,404 @@
+<?php
+// MES/page/managementCopy/api/manage_sales_orders.php
+define('SYSTEM_INJECTION_LOADED', true);
+
+header('Content-Type: application/json');
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
+require_once __DIR__ . '/../../components/init.php'; 
+
+if (!isset($_SESSION['user'])) {
+    http_response_code(401); 
+    echo json_encode(['success'=>false, 'message'=>'Unauthorized']); 
+    exit;
+}
+
+// 🔴 แก้ไข: ชี้ชื่อตารางตรงๆ ไปยังตารางทดสอบ (Sandbox)
+$table = 'SALES_ORDERS_TEST';
+$itemsTable = 'ITEMS'; // อ่าน Master Data จากของจริง
+
+$action = $_REQUEST['action'] ?? 'read';
+
+try {
+    if (!isset($pdo)) {
+        $pdo = new PDO("sqlsrv:Server=".DB_HOST.";Database=".DB_DATABASE, DB_USER, DB_PASSWORD);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    }
+
+    // --- Helper Functions ---
+    $fnDate = function($val) {
+        if (empty($val) || $val === 'null' || $val === 'NULL') return null;
+        $val = trim($val);
+        $val = explode(' ', $val)[0]; 
+
+        if (is_numeric($val)) {
+            if ($val > 40000) return gmdate("Y-m-d", ($val - 25569) * 86400);
+            return null; 
+        }
+
+        $d = DateTime::createFromFormat('d/m/Y', $val);
+        if ($d && $d->format('d/m/Y') === $val) {
+            return $d->format('Y-m-d');
+        }
+
+        $ts = strtotime(str_replace('/', '-', $val));
+        if ($ts !== false) return date('Y-m-d', $ts);
+        
+        return null; 
+    };
+
+    $isYes = function($val) {
+        if (empty($val)) return false;
+        $v = strtolower(trim($val));
+        return in_array($v, ['yes', 'done', 'shipped', 'ok', '1', 'true', 'y', 'pass']);
+    };
+
+    // =========================================================
+    // SWITCH ACTION
+    // =========================================================
+    switch ($action) {
+        
+        // 1. READ
+        case 'read':
+            $filter = $_GET['status'] ?? 'ACTIVE'; 
+            $startDate = $_GET['start_date'] ?? '';
+            $endDate   = $_GET['end_date'] ?? '';
+            
+            $dateType  = $_GET['date_type'] ?? 'loading_date';
+            $allowedDateCols = ['loading_date', 'production_date', 'production_end_date', 'inspection_date']; // [ADDED] production_end_date
+            if (!in_array($dateType, $allowedDateCols)) {
+                $dateType = 'loading_date';
+            }
+
+            $dateCondition = "";
+            $dateParams = [];
+
+            if (!empty($startDate)) {
+                $dateCondition .= " AND s.$dateType >= ? ";
+                $dateParams[] = $startDate;
+            }
+            if (!empty($endDate)) {
+                $dateCondition .= " AND s.$dateType <= ? ";
+                $dateParams[] = $endDate;
+            }
+
+            // [ADDED] s.production_end_date
+            $columns = "
+                s.id, s.po_number, s.sku, s.quantity, 
+                s.order_date, s.description, s.color,
+                s.dc_location, s.loading_week, s.shipping_week, s.remark,
+                s.production_status, s.loading_status, 
+                s.is_loading_done, s.is_production_done, 
+                s.is_confirmed, s.custom_order, s.created_at,
+                s.production_date, s.production_end_date, s.loading_date, s.inspection_date,
+                s.inspection_status, s.ticket_number, s.team
+            ";
+
+            $sql = "SELECT $columns, 
+                    (COALESCE(i.Price_USD, i.StandardPrice, 0) * ISNULL(s.quantity, 0)) as price 
+                    FROM $table s WITH (NOLOCK)
+                    LEFT JOIN $itemsTable i WITH (NOLOCK) ON s.sku = i.sku 
+                    WHERE 1=1";
+            
+            if ($filter === 'ACTIVE') $sql .= " AND (ISNULL(is_confirmed, 0) = 0 AND ISNULL(is_loading_done, 0) = 0)";
+            if ($filter === 'WAIT_PROD') $sql .= " AND ISNULL(is_production_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0";
+            if ($filter === 'WAIT_LOAD') $sql .= " AND is_production_done = 1 AND ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0";
+            if ($filter === 'PROD_DONE') $sql .= " AND is_loading_done = 1"; 
+
+            $sql .= $dateCondition;
+            $sql .= " ORDER BY ISNULL(custom_order, 999999) ASC, id DESC";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($dateParams);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $sumSql = "SELECT 
+                       COUNT(*) as total_all,
+                       SUM(CASE WHEN ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as total_active,
+                       SUM(CASE WHEN ISNULL(is_production_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as wait_prod,
+                       SUM(CASE WHEN is_production_done = 1 AND ISNULL(is_loading_done, 0) = 0 AND ISNULL(is_confirmed, 0) = 0 THEN 1 ELSE 0 END) as wait_load,
+                       SUM(CASE WHEN is_loading_done = 1 THEN 1 ELSE 0 END) as prod_done
+                       FROM $table s WITH (NOLOCK)
+                       WHERE 1=1 " . $dateCondition;
+
+            $stmtSum = $pdo->prepare($sumSql);
+            $stmtSum->execute($dateParams);
+            $summary = $stmtSum->fetch(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success'=>true, 'data'=>$data, 'summary'=>$summary]);
+            break;
+
+        // 2. IMPORT
+        case 'import':
+            if (!isset($_FILES['file'])) throw new Exception("No file uploaded");
+            
+            $file = $_FILES['file']['tmp_name'];
+            $content = file_get_contents($file);
+            $bom = pack("CCC", 0xef, 0xbb, 0xbf);
+            if (0 === strncmp($content, $bom, 3)) file_put_contents($file, substr($content, 3));
+            
+            $handle = fopen($file, "r");
+            $firstLine = fgets($handle);
+            fclose($handle);
+            $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+
+            $csv = new SplFileObject($file);
+            $csv->setFlags(SplFileObject::READ_CSV | SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
+            $csv->setCsvControl($delimiter);
+            
+            $pdo->beginTransaction();
+            $count = 0; $skippedCount = 0; $errorLogs = [];
+            
+            $csv->rewind();
+            $headers = $csv->current(); 
+            
+            $headerMap = [];
+            if ($headers) {
+                foreach ($headers as $index => $colName) {
+                    $cleanName = strtolower(trim(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $colName))); 
+                    $headerMap[$cleanName] = $index;
+                }
+            }
+
+            $getCol = function($row, $names) use ($headerMap) {
+                foreach ($names as $name) {
+                    $n = strtolower($name);
+                    if (isset($headerMap[$n]) && isset($row[$headerMap[$n]])) return trim($row[$headerMap[$n]]);
+                }
+                return '';
+            };
+
+            $sqlMax = "SELECT MAX(custom_order) FROM $table WITH (NOLOCK)";
+            $maxOrder = $pdo->query($sqlMax)->fetchColumn();
+            $currentOrder = ($maxOrder) ? (int)$maxOrder : 0; 
+
+            // [MODIFIED] Added pend (production_end_date) to MERGE
+            $sql = "MERGE INTO $table AS T 
+                    USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)) 
+                    AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, pend, pdone, ldate, ldone, ticket, idate, istat, rem, iconf, corder, team)
+                    ON T.po_number = S.po 
+                    WHEN MATCHED THEN UPDATE SET 
+                        T.sku = S.sku,
+                        T.description = S.descr, 
+                        T.color = S.color, 
+                        T.quantity = S.qty, 
+                        T.dc_location = S.dc,
+                        T.loading_week = S.lweek, 
+                        T.shipping_week = S.sweek,
+                        T.team = ISNULL(NULLIF(S.team, ''), T.team), 
+                        T.production_date = CASE 
+                            WHEN T.production_date IS NOT NULL AND T.production_date < CAST(GETDATE() AS DATE) THEN T.production_date 
+                            ELSE S.pdate 
+                        END,
+                        T.production_end_date = CASE 
+                            WHEN T.production_end_date IS NOT NULL AND T.production_end_date < CAST(GETDATE() AS DATE) THEN T.production_end_date 
+                            ELSE S.pend 
+                        END,
+                        T.is_production_done = S.pdone,
+                        T.loading_date = CASE 
+                            WHEN T.loading_date IS NOT NULL AND T.loading_date < CAST(GETDATE() AS DATE) THEN T.loading_date 
+                            ELSE S.ldate 
+                        END,
+                        T.is_loading_done = S.ldone,
+                        T.ticket_number = S.ticket, 
+                        T.inspection_date = S.idate, 
+                        T.inspection_status = S.istat, 
+                        T.remark = S.rem, 
+                        T.is_confirmed = S.iconf,
+                        T.custom_order = S.corder, 
+                        T.updated_at = GETDATE()
+                    WHEN NOT MATCHED THEN INSERT 
+                        (order_date, description, color, sku, po_number, quantity, dc_location, 
+                        loading_week, shipping_week, production_date, production_end_date, is_production_done, 
+                        loading_date, is_loading_done, ticket_number, inspection_date, inspection_status, remark, is_confirmed, custom_order, team)
+                    VALUES (S.odate, S.descr, S.color, S.sku, S.po, S.qty, S.dc, S.lweek, S.sweek, S.pdate, S.pend, S.pdone, S.ldate, S.ldone, S.ticket, S.idate, S.istat, S.rem, S.iconf, S.corder, ISNULL(NULLIF(S.team, ''), 'Team1'));";
+
+            $stmt = $pdo->prepare($sql);
+
+            foreach ($csv as $index => $row) {
+                if ($index === 0) continue; 
+                if (empty($row) || count($row) < 2) continue; 
+
+                $po = $getCol($row, ['po', 'po number', 'po_number', 'p.o.']);
+                $sku = $getCol($row, ['sku', 'item code', 'material']);
+                $team = $getCol($row, ['team', 'team group', 'group']); 
+                
+                if (empty($po)) { 
+                    if (implode('', $row) !== '') $skippedCount++; 
+                    continue; 
+                }
+
+                if (empty($sku)) {
+                    $skippedCount++;
+                    $errorLogs[] = "แถวที่ " . ($index + 1) . " (PO: $po): ข้ามการนำเข้าเนื่องจากข้อมูลบกพร่อง (ไม่มีการระบุรหัส SKU/รหัสสินค้า)";
+                    continue;
+                }
+
+                try {
+                    $currentOrder++; 
+
+                    // รองรับทั้ง Start Date และ End Date จาก Excel
+                    $rawPrdDate = $getCol($row, ['prd start date', 'production date', 'pdate']);
+                    $rawPrdEndDate = $getCol($row, ['prd end date', 'prd completed date']);
+                    $rawLoadDate = $getCol($row, ['load', 'loading date', 'ldate']);
+                    $rawInspDate = $getCol($row, ['inspection date', 'insp date']);
+                    $txtPrdStatus = $getCol($row, ['production status', 'prd status']);
+                    $txtLoadStatus = $getCol($row, ['loading status', 'load status']);
+                    $txtConfirm = $getCol($row, ['confirmed', 'is_confirmed']);
+                    $txtInspStatus = $getCol($row, ['inspection status', 'inspection result']);
+
+                    $prdStatus = ($isYes($txtPrdStatus) || $isYes($rawPrdEndDate)) ? 1 : 0;
+                    $loadStatus = ($isYes($txtLoadStatus) || $isYes($rawLoadDate)) ? 1 : 0;
+                    $isConf = $isYes($txtConfirm) ? 1 : 0;
+
+                    $finalInspStatus = $txtInspStatus; 
+                    if ($isYes($txtInspStatus)) $finalInspStatus = 'Pass';
+
+                    $rawQty = $getCol($row, ['qty', 'quantity', 'amount']);
+                    $qty = null; 
+                    if ($rawQty !== '') {
+                        $cleanQty = str_replace(',', '', $rawQty);
+                        if (is_numeric($cleanQty)) {
+                            $qty = (float)$cleanQty; 
+                        }
+                    }
+
+                    $stmt->execute([
+                        $fnDate($getCol($row, ['order date', 'date', 'odate'])),
+                        $getCol($row, ['description', 'desc']),
+                        $getCol($row, ['color', 'colour']),
+                        $sku, $po, $qty, 
+                        $getCol($row, ['dc', 'dc location']),
+                        $getCol($row, ['original loading week', 'loading week']), 
+                        $getCol($row, ['original shipping week', 'shipping week']),
+                        $fnDate($rawPrdDate),
+                        $fnDate($rawPrdEndDate), // [ADDED]
+                        $prdStatus,
+                        $fnDate($rawLoadDate), $loadStatus,
+                        $getCol($row, ['ticket number', 'ticket']),
+                        $fnDate($rawInspDate),
+                        $finalInspStatus, 
+                        $getCol($row, ['remark', 'comment']),
+                        $isConf, $currentOrder,
+                        $team 
+                    ]);
+                    $count++;
+                } catch (Exception $ex) {
+                    $skippedCount++;
+                    $errorLogs[] = "PO $po: " . $ex->getMessage();
+                }
+            }
+            $pdo->commit();
+            echo json_encode([
+                'success' => true, 'imported_count' => $count > 0 ? $count-1 : 0, 'skipped_count' => $skippedCount,
+                'errors' => array_slice($errorLogs, 0, 10)
+            ]);
+            break;
+
+        // 3. REORDER
+        case 'reorder_items':
+            $in = json_decode(file_get_contents('php://input'), true);
+            if (!empty($in['orderedIds'])) {
+                $pdo->beginTransaction();
+                $sql = "UPDATE $table SET custom_order = ?, updated_at = GETDATE() WHERE id = ?";
+                $stmt = $pdo->prepare($sql);
+                foreach ($in['orderedIds'] as $idx => $id) $stmt->execute([$idx + 1, $id]);
+                $pdo->commit();
+            }
+            echo json_encode(['success' => true]);
+            break;
+
+        // 4. UPDATE CHECKBOX/BUTTON
+        case 'update_check':
+            $in = json_decode(file_get_contents('php://input'), true);
+            $val = $in['checked'] ? 1 : 0;
+            if ($in['field'] == 'insp') {
+                $txtVal = $in['checked'] ? 'Pass' : null;
+                $pdo->prepare("UPDATE $table SET inspection_status = ?, updated_at = GETDATE() WHERE id = ?")->execute([$txtVal, $in['id']]);
+            } else {
+                $col = ($in['field']=='prod')?'is_production_done':(($in['field']=='load')?'is_loading_done':(($in['field']=='confirm')?'is_confirmed':''));
+                if($col) {
+                    if ($col === 'is_loading_done' && $val == 1) {
+                        $pdo->prepare("UPDATE $table SET is_loading_done = 1, loading_date = COALESCE(loading_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
+                    } else if ($col === 'is_production_done' && $val == 1) {
+                        // [MODIFIED] Timestamp in production_end_date instead of production_date
+                        $pdo->prepare("UPDATE $table SET is_production_done = 1, production_end_date = COALESCE(production_end_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
+                    } else {
+                        $pdo->prepare("UPDATE $table SET $col = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $in['id']]);
+                    }
+                }
+            }
+            echo json_encode(['success'=>true]); 
+            break;
+
+        // 5. UPDATE CELL
+        case 'update_cell':
+            $in = json_decode(file_get_contents('php://input'), true);
+            // [ADDED] 'production_end_date' into allowed fields
+            $allowed = ['quantity', 'loading_week', 'shipping_week', 'remark', 'dc_location', 'order_date', 'production_date', 'production_end_date', 'loading_date', 'inspection_date', 'ticket_number', 'team'];
+            if (in_array($in['field'], $allowed)) {
+                $val = $in['value'] ?: null;
+                if ($val && strpos($in['field'], 'date') !== false) $val = $fnDate($val);
+
+                $pdo->prepare("UPDATE $table SET {$in['field']} = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $in['id']]);
+
+                echo json_encode(['success'=>true]);
+            } else {
+                echo json_encode(['success'=>false, 'message'=>'Field not allowed']); 
+            }
+            break;
+
+        // 6. CREATE SINGLE
+        case 'create_single':
+            $in = json_decode(file_get_contents('php://input'), true);
+            if (empty(trim($in['sku'] ?? ''))) {
+                echo json_encode(['success' => false, 'message' => 'ไม่สามารถบันทึกได้: กรุณาระบุรหัส SKU หรือรหัสสินค้า']);
+                break;
+            }
+            $maxOrder = $pdo->query("SELECT MAX(custom_order) FROM $table WITH (NOLOCK)")->fetchColumn();
+            $nextOrder = $maxOrder ? $maxOrder + 1 : 1;
+            $oDate = $fnDate($in['order_date'] ?: null);
+            $team = !empty($in['team']) ? $in['team'] : 'Team1'; 
+
+            $sql = "INSERT INTO $table (po_number, sku, order_date, description, color, quantity, dc_location, loading_week, shipping_week, remark, custom_order, team, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
+            $pdo->prepare($sql)->execute([
+                $in['po_number'], $in['sku'], $oDate, $in['description']??'', $in['color']??'', $in['quantity']??0, 
+                $in['dc_location']??'', $in['loading_week']??'', $in['shipping_week']??'', $in['remark']??'', $nextOrder, $team
+            ]);
+            echo json_encode(['success'=>true]); 
+            break;
+
+        // 7. DELETE SINGLE
+        case 'delete_single':
+            $in = json_decode(file_get_contents('php://input'), true);
+            $id = $in['id'] ?? 0;
+            if ($id) {
+                $stmt = $pdo->prepare("DELETE FROM $table WHERE id = ?");
+                $stmt->execute([$id]);
+                echo json_encode(['success'=>true]);
+            } else {
+                echo json_encode(['success'=>false, 'message'=>'Invalid ID']);
+            }
+            break;
+
+        case 'clear_all_orders':
+            $method = $_SERVER['REQUEST_METHOD'];
+            if ($method !== 'POST') throw new Exception("Invalid method");
+            
+            $stmt = $pdo->prepare("DELETE FROM $table"); 
+            $stmt->execute();
+            echo json_encode(['success' => true, 'message' => 'ล้างข้อมูลออเดอร์ทั้งหมดในระบบจำลองเรียบร้อยแล้ว']);
+            break;
+
+        default:
+            echo json_encode(['success'=>false, 'message'=>'Invalid Action']);
+            break;
+    }
+
+} catch (Exception $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    http_response_code(500); 
+    echo json_encode(['success'=>false, 'message'=>$e->getMessage()]);
+}
+?>

@@ -1,0 +1,113 @@
+<?php
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/../../core/init.php';
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit(0); }
+
+if (!isset($_SESSION['user']) || !hasPermission('manage_manpower')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Permission Denied: You do not have permission to manage holiday settings.']);
+    exit;
+}
+
+$input = json_decode(file_get_contents('php://input'), true);
+$action = $_GET['action'] ?? ($input['action'] ?? 'read');
+
+try {
+    switch ($action) {
+        case 'read':
+            $startRaw = $_GET['start'] ?? date('Y-m-01');
+            $endRaw   = $_GET['end']   ?? date('Y-m-t');
+            
+            // Repair space back to plus if it was unencoded
+            $startRaw = str_replace(' ', '+', $startRaw);
+            $endRaw   = str_replace(' ', '+', $endRaw);
+
+            $start = date('Y-m-d', strtotime($startRaw));
+            $end   = date('Y-m-d', strtotime($endRaw));
+
+            $sql = "SELECT 
+                        calendar_date, 
+                        day_type, 
+                        description, 
+                        work_rate_holiday, 
+                        ot_rate_holiday 
+                    FROM dbo.MANPOWER_CALENDAR 
+                    WHERE calendar_date BETWEEN ? AND ?";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$start, $end]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $events = [];
+            foreach ($rows as $row) {
+                $color = ($row['day_type'] === 'HOLIDAY') ? '#e74a3b' : '#f6c23e';
+                if (stripos($row['description'], 'Sunday') !== false) $color = '#858796';
+
+                $events[] = [
+                    'id'    => $row['calendar_date'],
+                    'title' => $row['description'],
+                    'start' => $row['calendar_date'],
+                    'allDay'=> true,
+                    'backgroundColor' => $color,
+                    'borderColor' => $color,
+                    'extendedProps' => [
+                        'day_type' => $row['day_type'],
+                        'work_rate' => $row['work_rate_holiday'],
+                        'ot_rate' => $row['ot_rate_holiday']
+                    ]
+                ];
+            }
+
+            echo json_encode([
+                'success' => true, 
+                'data' => $events,
+                'message' => 'Fetched holiday calendar successfully'
+            ]);
+            break;
+
+        case 'save':
+            $date = $input['date'];
+            $desc = $input['description'] ?? '';
+            $type = $input['day_type'] ?? 'HOLIDAY';
+            $workRate = $input['work_rate'] ?? 2.0;
+            $otRate = $input['ot_rate'] ?? 3.0;
+            $user_name = $_SESSION['user']['username'] ?? 'System';
+
+            if (!$date) throw new Exception("Date is required");
+
+            $stmt = $pdo->prepare("EXEC dbo." . SP_SAVE_CALENDAR . " :date, :type, :desc, :wRate, :oRate, :user");
+            $stmt->execute([
+                ':date'  => $date,
+                ':type'  => $type,
+                ':desc'  => $desc,
+                ':wRate' => floatval($workRate),
+                ':oRate' => floatval($otRate),
+                ':user'  => $user_name
+            ]);
+
+            echo json_encode(['success' => true]);
+            break;
+
+        case 'delete':
+            $date = $input['date'];
+            if (!$date) throw new Exception("Date required");
+
+            $stmt = $pdo->prepare("DELETE FROM dbo.MANPOWER_CALENDAR WHERE calendar_date = ?");
+            $stmt->execute([$date]);
+
+            echo json_encode(['success' => true]);
+            break;
+
+        default:
+            throw new Exception("Invalid Action");
+    }
+
+} catch (Exception $e) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+}
+?>
