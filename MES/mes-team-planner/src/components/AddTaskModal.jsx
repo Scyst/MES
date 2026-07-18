@@ -222,7 +222,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     <div 
       className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4"
     >
-      <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-slide-up">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-slide-up">
         
         {/* Header */}
         <div className="flex flex-col shrink-0">
@@ -277,43 +277,53 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               
               {/* Title */}
               <div>
-                <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">ชื่องาน</label>
-                <input required name="title" value={formData.title} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder-slate-500 text-sm" placeholder="เช่น ตรวจสอบเครื่องจักร Line A..." />
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                  <FiType className="text-indigo-500" /> ชื่องาน
+                </label>
+                <input required name="title" value={formData.title} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder-slate-400 text-sm" placeholder="เช่น ตรวจสอบเครื่องจักร Line A..." />
               </div>
 
               {/* Description */}
-              <div className="flex flex-col flex-1 min-h-[120px]">
-                <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">รายละเอียด</label>
-                <textarea name="description" value={formData.description} onChange={handleChange} className="flex-1 w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm resize-none placeholder-slate-500" placeholder="หมายเหตุ, ขั้นตอน..." />
+              <div className="flex flex-col flex-1 min-h-[100px]">
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                  <FiAlignLeft className="text-indigo-500" /> รายละเอียด
+                </label>
+                <textarea name="description" value={formData.description} onChange={handleChange} className="flex-1 w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm resize-none placeholder-slate-400" placeholder="หมายเหตุ, ขั้นตอนการปฏิบัติงาน..." />
               </div>
 
               {/* Status, Priority, Assignee */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">สถานะ</label>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                    <FiCheckCircle className="text-emerald-500" /> สถานะ
+                  </label>
                   <div className="relative">
-                    <select name="status" value={formData.status} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
+                    <select name="status" value={formData.status} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all text-sm appearance-none cursor-pointer">
                       <option value="todo">To Do</option>
                       <option value="in-progress">In Progress</option>
                       <option value="done">Done</option>
                     </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">ความสำคัญ</label>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                    <FiFlag className="text-orange-500" /> ความสำคัญ
+                  </label>
                   <div className="relative">
-                    <select name="priority" value={formData.priority} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
+                    <select name="priority" value={formData.priority} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all text-sm appearance-none cursor-pointer">
                       <option value="urgent">🔴 ด่วนมาก</option>
                       <option value="high">🟠 ด่วน</option>
                       <option value="normal">🟡 ปกติ</option>
                       <option value="low">🟢 ต่ำ</option>
                     </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">ผู้รับผิดชอบ</label>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                    <FiUser className="text-sky-500" /> ผู้รับผิดชอบ
+                  </label>
                   <MultiSelectInput 
                     value={formData.assignee}
                     onChange={(val) => setFormData(prev => ({ ...prev, assignee: val }))}
@@ -323,71 +333,84 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 </div>
               </div>
 
-
               {/* Dates */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">เริ่มต้น</label>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                    <FiCalendar className="text-indigo-500" /> เริ่มต้น
+                  </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="date" name="startDate" value={formData.startDate || ''} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
-                    <input type="time" name="startTime" value={formData.startTime || '09:00'} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+                    <input type="date" name="startDate" value={formData.startDate || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm" />
+                    <input type="time" name="startTime" value={formData.startTime || '09:00'} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">สิ้นสุด</label>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                    <FiClock className="text-rose-500" /> สิ้นสุด
+                  </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="date" name="dueDate" value={formData.dueDate || ''} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
-                    <input type="time" name="endTime" value={formData.endTime || '18:00'} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+                    <input type="date" name="dueDate" value={formData.dueDate || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all text-sm" />
+                    <input type="time" name="endTime" value={formData.endTime || '18:00'} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all text-sm" />
                   </div>
                 </div>
               </div>
 
               <div className="border-t border-slate-200 dark:border-slate-800"></div>
 
-              {/* Tags, Visibility, Recurrence */}
+              {/* Tags, Visibility, Recurrence Mode */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-1">
-                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">แท็ก (Tags)</label>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                    <FiTag className="text-indigo-500" /> แท็ก (Tags)
+                  </label>
                   <MultiSelectInput 
                     value={formData.tags || ''}
                     onChange={(val) => setFormData(prev => ({ ...prev, tags: val }))}
                     suggestions={['ด่วน', 'ประชุม', 'โปรเจกต์', 'ปัญหา', 'ออกแบบ', 'พัฒนาระบบ']}
-                    placeholder="ค้นหาหรือพิมพ์แท็ก..."
+                    placeholder="พิมพ์แท็ก..."
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">สิทธิ์</label>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                    <FiEye className="text-slate-500" /> สิทธิ์การมองเห็น
+                  </label>
                   <div className="relative">
-                    <select name="visibility" value={formData.visibility} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
+                    <select name="visibility" value={formData.visibility} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all text-sm appearance-none cursor-pointer">
                       <option value="public">🌐 Public</option>
                       <option value="private">🔒 Private</option>
                     </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">งานทำซ้ำ (Recurrence)</label>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                    <FiRefreshCw className="text-indigo-500" /> งานทำซ้ำ
+                    {isEditing && (
+                      <div className="group relative flex items-center ml-1">
+                        <FiInfo className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help transition-colors" />
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 dark:bg-slate-700 text-white text-[11px] font-normal text-center rounded-lg px-2 py-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 shadow-lg pointer-events-none">
+                          ไม่สามารถเปลี่ยนรูปแบบการทำซ้ำของงานที่ถูกสร้างไปแล้ว
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
+                        </div>
+                      </div>
+                    )}
+                  </label>
                   <div className="relative">
-                    <select name="recurrence" disabled={isEditing} value={formData.recurrence} onChange={handleChange} className={`w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none transition-all text-sm appearance-none ${isEditing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer focus:ring-2 focus:ring-indigo-500'}`}>
+                    <select name="recurrence" disabled={isEditing} value={formData.recurrence} onChange={handleChange} className={`w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none transition-all text-sm appearance-none ${isEditing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10'}`}>
                       {RECURRENCE_OPTIONS.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
                   </div>
-                  {isEditing && (
-                    <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                      * ไม่สามารถเปลี่ยนรูปแบบการทำซ้ำของงานที่สร้างแล้วได้
-                    </p>
-                  )}
                   {formData.recurrence === 'weekly' && !isEditing && (
-                    <p className="mt-1.5 text-xs text-indigo-500 dark:text-indigo-400 font-medium">
-                      ✨ ระบบจะใช้วันในสัปดาห์ตาม <strong>"วันที่เริ่ม"</strong> อัตโนมัติ
+                    <p className="mt-2 text-xs text-indigo-500 dark:text-indigo-400">
+                      ✨ ตามวันในสัปดาห์ของ <strong>"วันที่เริ่ม"</strong>
                     </p>
                   )}
                   {formData.recurrence === 'monthly' && !isEditing && (
-                    <p className="mt-1.5 text-xs text-indigo-500 dark:text-indigo-400 font-medium">
-                      ✨ ระบบจะใช้วันที่ตาม <strong>"วันที่เริ่ม"</strong> อัตโนมัติ
+                    <p className="mt-2 text-xs text-indigo-500 dark:text-indigo-400">
+                      ✨ ตามวันที่ของ <strong>"วันที่เริ่ม"</strong>
                     </p>
                   )}
                 </div>

@@ -25,6 +25,9 @@ A seamless, modern, and responsive team planning and task management application
 - [x] **Link Hub (คลังข้อมูล) Tab**:
   - Centralized categorized link management
   - Clean grid layout for easy access
+- [x] **UI/UX Refinements**:
+  - Improved form layout density and typography (AddTaskModal)
+  - Implemented intuitive tooltips for complex form rules
 - [x] Layout optimizations for PC & Mobile across all tabs
 
 ## 🛠️ Current Phase (Phase 2: Backend Integration & Database)

@@ -170,7 +170,10 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
 
       {/* Focus Mode Panel */}
       {focusTask && (
-        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 p-1 rounded-3xl shadow-lg">
+        <div 
+          onClick={() => onTaskClick && onTaskClick(focusTask)}
+          className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 p-1 rounded-3xl shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+        >
           <div className="bg-white dark:bg-slate-900 rounded-[22px] p-6 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
@@ -187,14 +190,21 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
               <p className="text-slate-500 text-sm line-clamp-2 mb-4">{focusTask.Description || 'No description provided.'}</p>
               
               <div className="flex flex-wrap items-center gap-3">
+                {focusTask.Status !== 'In Progress' && focusTask.Status !== 'in-progress' && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleStatusChange(focusTask, 'in-progress'); }}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md shadow-indigo-500/30 transition-all flex items-center gap-2"
+                  >
+                    <FiPlay /> Start Working
+                  </button>
+                )}
+                {(focusTask.Status === 'In Progress' || focusTask.Status === 'in-progress') && (
+                  <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 border border-indigo-200 dark:border-indigo-700">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div> In Progress
+                  </span>
+                )}
                 <button 
-                  onClick={() => handleStatusChange(focusTask, 'in-progress')}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md shadow-indigo-500/30 transition-all flex items-center gap-2"
-                >
-                  <FiPlay /> Start Working
-                </button>
-                <button 
-                  onClick={() => handleStatusChange(focusTask, 'done')}
+                  onClick={(e) => { e.stopPropagation(); handleStatusChange(focusTask, 'done'); }}
                   className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2"
                 >
                   <FiCheck /> Mark as Done

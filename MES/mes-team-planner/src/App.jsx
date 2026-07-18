@@ -28,15 +28,6 @@ const mainNav = [
   { tab: 'links', icon: FiLink, label: 'Resources' },
 ];
 
-const spacesNav = [
-  { tab: 'space-home', icon: FiHome, label: 'Home', color: 'text-emerald-500 bg-emerald-500/10' },
-  { tab: 'team-engineers', icon: FiUsers, label: 'Engineers', subItem: true },
-  { tab: 'team-design', icon: FiUsers, label: 'Design Team', subItem: true },
-  { tab: 'team-dev', icon: FiUsers, label: 'Developer Team', subItem: true },
-];
-
-const navItems = [...mainNav, ...spacesNav];
-
 function App() {
   const [activeTab, setActiveTab] = useState('calendar');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -45,6 +36,7 @@ function App() {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [isGlobalTaskModalOpen, setIsGlobalTaskModalOpen] = useState(false);
+  const [globalEditingTask, setGlobalEditingTask] = useState(null);
   const [isGlobalProjectModalOpen, setIsGlobalProjectModalOpen] = useState(false);
   const [isAddSpaceModalOpen, setIsAddSpaceModalOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState(null);
@@ -126,8 +118,8 @@ function App() {
   const handleSaveTask = useCallback(async (taskData) => {
     if (Array.isArray(taskData)) {
       try {
-        const results = await Promise.all(taskData.map(t => axios.post('/api/tasks.php', t)));
-        setTasks(prev => [...results.map(r => r.data), ...prev]);
+        await Promise.all(taskData.map(t => axios.post('/api/tasks.php', t)));
+        refreshData();
         return true;
       } catch (err) {
         console.error('Failed to bulk save tasks', err);
@@ -136,12 +128,11 @@ function App() {
       }
     }
 
-    // Optimistic UI Update for immediate feedback (crucial for drag & drop)
-    if (taskData.Id) {
+    // Optimistic UI Update (only for single tasks)
+    if (taskData.Id && !taskData.updateSeries) {
       setTasks(prev => prev.map(t => {
         if (String(t.Id) === String(taskData.Id)) {
           const updated = { ...t, ...taskData };
-          // Ensure casing matches backend for TaskBoard filtering
           if (taskData.status) updated.Status = taskData.status;
           return updated;
         }
@@ -152,13 +143,22 @@ function App() {
     try {
       if (taskData.Id) {
         const res = await axios.put(`/api/tasks.php?id=${taskData.Id}`, taskData);
-        // Only update from response if it's an actual task object
-        if (res.data && res.data.Id) {
+        if (Array.isArray(res.data) || taskData.updateSeries) {
+          refreshData(); // bulk update or series update
+        } else if (res.data && res.data.Id) {
           setTasks(prev => prev.map(t => String(t.Id) === String(taskData.Id) ? { ...t, ...res.data } : t));
         }
       } else {
         const res = await axios.post('/api/tasks.php', taskData);
-        setTasks(prev => [res.data, ...prev]);
+        if (Array.isArray(res.data) && res.data.length > 1) {
+          refreshData(); // Multiple tasks created (recurrence)
+        } else if (Array.isArray(res.data) && res.data.length === 1) {
+          setTasks(prev => [res.data[0], ...prev]);
+        } else if (res.data && res.data.Id) {
+          setTasks(prev => [res.data, ...prev]);
+        } else {
+          refreshData();
+        }
       }
       return true;
     } catch (err) {
@@ -169,16 +169,20 @@ function App() {
     }
   }, [refreshData]);
 
-  const handleDeleteTask = useCallback(async (taskId) => {
+  const handleDeleteTask = useCallback(async (taskId, deleteSeries = false) => {
     try {
-      await axios.delete(`/api/tasks.php?id=${taskId}`);
-      setTasks(prev => prev.filter(t => t.Id !== taskId));
+      await axios.delete(`/api/tasks.php?id=${taskId}${deleteSeries ? '&deleteSeries=true' : ''}`);
+      if (deleteSeries) {
+        refreshData();
+      } else {
+        setTasks(prev => prev.filter(t => t.Id !== taskId));
+      }
       return true;
     } catch (err) {
       console.error('Failed to delete task', err);
       return false;
     }
-  }, []);
+  }, [refreshData]);
 
   const handleSaveProject = useCallback(async (projectData) => {
     try {
@@ -260,6 +264,13 @@ function App() {
     });
   };
 
+  // ══════════ Computed Nav ══════════
+  const dynamicSpacesNav = [
+    { tab: 'space-home', icon: FiHome, label: 'Home', color: 'text-emerald-500 bg-emerald-500/10' },
+    ...spaces.map(s => ({ tab: `space-${s.Id}`, icon: FiUsers, label: s.Name, subItem: true }))
+  ];
+  const dynamicNavItems = [...mainNav, ...dynamicSpacesNav];
+
   // ══════════ Theme ══════════
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
@@ -316,7 +327,13 @@ function App() {
       case 'links': 
         return <LinkHub />;
       case 'my-tasks':
-        return <MyTasks tasks={tasks} currentUser={currentUser} refreshData={refreshData} />;
+        return <MyTasks 
+          tasks={tasks} 
+          currentUser={currentUser} 
+          refreshData={refreshData} 
+          onSaveTask={handleSaveTask}
+          onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
+        />;
       case 'timeline':
         return <GanttChart {...sharedTaskProps} />;
       case 'resources':
@@ -324,7 +341,7 @@ function App() {
       default: 
         // Fallback for Spaces and mock tabs
         if (activeTab.startsWith('space-') || activeTab.startsWith('team-')) {
-          return <SpaceView activeTab={activeTab} tasks={tasks} projects={projects} currentUser={currentUser} refreshData={refreshData} users={users} />;
+          return <SpaceView activeTab={activeTab} spaces={spaces} tasks={tasks} projects={projects} currentUser={currentUser} refreshData={refreshData} users={users} onEditSpace={(s) => { setEditingSpace(s); setIsAddSpaceModalOpen(true); }} onDeleteSpace={async (id) => { if(confirm('ต้องการลบทีมนี้ใช่หรือไม่?')) { await axios.delete(`/api/spaces.php?id=${id}`); refreshData(); setActiveTab('space-home'); } }} />;
         }
         return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav} />;
     }
@@ -454,13 +471,13 @@ function App() {
               <div className="flex items-center justify-between text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
                 <span>Spaces</span>
                 <div className="flex gap-2">
-                  <FiSearch className="cursor-pointer hover:text-slate-600" />
-                  <FiPlus className="cursor-pointer hover:text-slate-600" />
+                  <FiSearch className="cursor-pointer hover:text-slate-600" onClick={() => setShowSearchModal(true)} title="Search Teams" />
+                  <FiPlus className="cursor-pointer hover:text-slate-600" onClick={() => { setEditingSpace(null); setIsAddSpaceModalOpen(true); }} title="Create Team Space" />
                 </div>
               </div>
               <div className="space-y-0.5">
-                {spacesNav.map(item => (
-                  <button 
+                  {dynamicSpacesNav.map(item => (
+                    <button 
                     key={item.tab}
                     onClick={() => handleNav(item.tab)}
                     className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium ${item.subItem ? 'pl-8 pr-3 text-slate-500 text-[13px]' : 'px-3'} ${
@@ -475,10 +492,10 @@ function App() {
                       </div>
                     )}
                     {item.subItem && <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>}
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-              </div>
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
             </div>
           </nav>
         </aside>
@@ -499,7 +516,7 @@ function App() {
               <FiMenu className="text-xl" />
             </button>
             <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              {navItems.find(n => n.tab === activeTab)?.label || 'MES Planner'}
+              {dynamicNavItems.find(n => n.tab === activeTab)?.label || 'MES Planner'}
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -584,7 +601,7 @@ function App() {
             </div>
             
             <nav className="flex-1 px-3 space-y-2 overflow-y-auto pt-4">
-              {navItems.map(item => (
+              {dynamicNavItems.map(item => (
                 <button 
                   key={item.tab}
                   onClick={() => { handleNav(item.tab); setIsSidebarOpen(false); }}
@@ -633,11 +650,12 @@ function App() {
       {/* Global Modals */}
       <AddTaskModal 
         isOpen={isGlobalTaskModalOpen} 
-        onClose={() => setIsGlobalTaskModalOpen(false)} 
-        onSave={(data) => { handleSaveTask(data); setIsGlobalTaskModalOpen(false); }} 
+        onClose={() => { setIsGlobalTaskModalOpen(false); setGlobalEditingTask(null); }} 
+        onSave={(data) => { handleSaveTask(data); setIsGlobalTaskModalOpen(false); setGlobalEditingTask(null); }} 
         currentUser={currentUser} 
         tasks={tasks}
-        users={users} 
+        users={users}
+        initialData={globalEditingTask}
       />
       <AddProjectModal 
         isOpen={isGlobalProjectModalOpen} 

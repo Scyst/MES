@@ -37,6 +37,16 @@ try {
         BEGIN
             ALTER TABLE TeamPlanner_Tasks ADD SpaceId INT NULL;
         END
+
+        IF COL_LENGTH('TeamPlanner_Tasks', 'GroupId') IS NULL
+        BEGIN
+            ALTER TABLE TeamPlanner_Tasks ADD GroupId NVARCHAR(50) NULL;
+        END
+
+        IF COL_LENGTH('TeamPlanner_Tasks', 'RecurrenceSettings') IS NULL
+        BEGIN
+            ALTER TABLE TeamPlanner_Tasks ADD RecurrenceSettings NVARCHAR(MAX) NULL;
+        END
     ";
     $pdo->exec($sqlAlterTasks);
 
