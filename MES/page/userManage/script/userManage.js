@@ -226,12 +226,12 @@ async function loadPermissionsForModal(mode, userId, roleCode) {
 
             let html = `
                 <div class="table-responsive border rounded bg-white w-100 shadow-sm" style="max-height: 60vh;">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light sticky-top" style="z-index: 2;">
+                    <table class="table table-hover table-custom align-middle mb-0">
+                        <thead class="position-sticky top-0" style="z-index: 2; background-color: var(--bs-tertiary-bg);">
                             <tr>
-                                <th class="ps-3">Code</th>
-                                <th>Description</th>
-                                <th class="text-center pe-3" style="width: 140px;">Access</th>
+                                <th class="ps-3 border-bottom-0">Code</th>
+                                <th class="border-bottom-0">Description</th>
+                                <th class="text-center pe-3 border-bottom-0" style="width: 140px;">Access</th>
                             </tr>
                         </thead>
             `;

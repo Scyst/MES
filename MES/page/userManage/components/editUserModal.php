@@ -16,30 +16,30 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-muted mb-1">Employee ID</label>
-                                    <div class="input-group input-group-sm shadow-sm">
-                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-id-badge"></i></span>
-                                        <input type="text" name="emp_id" id="edit_emp_id" class="form-control text-uppercase" autocomplete="off">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-id-badge"></i></span>
+                                        <input type="text" name="emp_id" id="edit_emp_id" class="form-control border-start-0 ps-0 text-uppercase" autocomplete="off">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-muted mb-1">Username</label>
-                                    <div class="input-group input-group-sm shadow-sm">
-                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-user"></i></span>
-                                        <input type="text" name="username" id="edit_username" class="form-control bg-light" readonly>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-user"></i></span>
+                                        <input type="text" name="username" id="edit_username" class="form-control border-start-0 ps-0 bg-light" readonly>
                                     </div>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label small fw-bold text-muted mb-1">Full Name</label>
-                                    <div class="input-group input-group-sm shadow-sm">
-                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-font"></i></span>
-                                        <input type="text" name="fullname" id="edit_fullname" class="form-control">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-font"></i></span>
+                                        <input type="text" name="fullname" id="edit_fullname" class="form-control border-start-0 ps-0">
                                     </div>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label small fw-bold text-muted mb-1">Reset Password <span class="fw-normal" style="font-size: 0.7rem;">(Leave blank to keep)</span></label>
-                                    <div class="input-group input-group-sm shadow-sm">
-                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-key"></i></span>
-                                        <input type="password" name="password" id="edit_password" class="form-control" autocomplete="new-password">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-key"></i></span>
+                                        <input type="password" name="password" id="edit_password" class="form-control border-start-0 ps-0" autocomplete="new-password">
                                     </div>
                                 </div>
                                 
@@ -49,9 +49,9 @@
                                 
                                 <div class="col-12">
                                     <label class="form-label small fw-bold text-muted mb-1">Role <span class="text-danger">*</span></label>
-                                    <div class="input-group input-group-sm shadow-sm">
-                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-user-tag"></i></span>
-                                        <select class="form-select" name="role" id="edit_role" required>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-user-tag"></i></span>
+                                        <select class="form-select border-start-0 ps-0" name="role" id="edit_role" required>
                                             <option value="">Select...</option>
                                             <option value="admin" <?= (!hasRole('creator')) ? 'disabled' : '' ?>>Admin</option>
                                             <option value="manager">Manager</option>
@@ -65,16 +65,16 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-muted mb-1">Team / Group</label>
-                                    <div class="input-group input-group-sm shadow-sm">
-                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-users"></i></span>
-                                        <input type="text" name="team_group" id="edit_team" class="form-control text-uppercase">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-users"></i></span>
+                                        <input type="text" name="team_group" id="edit_team" class="form-control border-start-0 ps-0 text-uppercase">
                                     </div>
                                 </div>
                                 <div class="col-md-6" id="editUserLineWrapper">
                                     <label class="form-label small fw-bold text-muted mb-1">Line / Area</label>
-                                    <div class="input-group input-group-sm shadow-sm">
-                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-industry"></i></span>
-                                        <input type="text" name="line" id="edit_line" class="form-control text-uppercase">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-industry"></i></span>
+                                        <input type="text" name="line" id="edit_line" class="form-control border-start-0 ps-0 text-uppercase">
                                     </div>
                                 </div>
                             </div>
