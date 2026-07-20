@@ -328,6 +328,43 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
 
             </div>
 
+            <!-- SAP Sync Result Modal -->
+            <div class="modal fade" id="sapSyncResultModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+                <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content shadow-lg border-0">
+                        <div class="modal-header bg-success text-white py-3">
+                            <h5 class="modal-title fw-bold">
+                                <i class="fas fa-check-circle me-2"></i>SAP Sync Results
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body bg-light p-3">
+                            <div class="alert alert-info py-2 mb-3 shadow-sm border-0">
+                                <i class="fas fa-info-circle me-1"></i> 
+                                รายการต่อไปนี้คือข้อมูลที่อัปเดตจาก SAP กรุณาคลิก <b>Setup</b> เพื่อเข้าไปตั้งค่า Material Type, Min/Max Stock และข้อมูลอื่นๆ ให้ครบถ้วน
+                            </div>
+                            <div class="table-responsive bg-white border rounded-3 shadow-sm hide-scrollbar" style="max-height: 50vh;">
+                                <table class="table table-hover align-middle mb-0 text-nowrap">
+                                    <thead class="table-light sticky-top shadow-sm">
+                                        <tr class="text-secondary text-uppercase" style="font-size: 0.8rem;">
+                                            <th class="py-3 px-3">Status</th>
+                                            <th class="py-3">SAP No</th>
+                                            <th class="py-3">Description</th>
+                                            <th class="py-3 text-center">Current Type</th>
+                                            <th class="py-3 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sapSyncResultTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light py-2 border-top-0">
+                            <button type="button" class="btn btn-secondary btn-sm fw-bold shadow-sm px-4" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="modal fade" id="catalogModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content shadow-lg border-0">
@@ -383,9 +420,16 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/systemSettings.js?v=<?php echo filemtime(__DIR__ . '/script/systemSettings.js'); ?>"></script>
     <script>
-        $(document).ready(function() {
-            if ($('#syncSapItemsBtn').length > 0) {
-                $('#syncSapItemsBtn').on('click', function(e) {
+        document.addEventListener('DOMContentLoaded', function() {
+            const syncBtn = document.getElementById('syncSapItemsBtn');
+            function escapeHtml(text) {
+                if (text === null || text === undefined) return '';
+                const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+                return String(text).replace(/[&<>"']/g, m => map[m]);
+            }
+
+            if (syncBtn) {
+                syncBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     Swal.fire({
                         title: 'Sync Items from SAP?',
@@ -403,28 +447,105 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                 didOpen: () => { Swal.showLoading(); }
                             });
                             
-                            $.ajax({
-                                url: 'api/sync_sap_items.php',
-                                type: 'GET',
-                                dataType: 'json',
-                                success: function(res) {
+                            fetch('api/sync_sap_items.php?t=' + Date.now(), { method: 'POST', cache: 'no-store' })
+                                .then(response => response.json())
+                                .then(res => {
                                     if(res.success) {
-                                        Swal.fire('Success!', res.message, 'success').then(() => {
-                                            if(typeof loadItems === 'function') loadItems();
-                                        });
+                                        Swal.close();
+                                        if (res.affected_items && res.affected_items.length > 0) {
+                                            const tbody = document.getElementById('sapSyncResultTableBody');
+                                            tbody.innerHTML = '';
+                                            res.affected_items.forEach(item => {
+                                                const badgeClass = item.action === 'NEW' ? 'bg-success' : 'bg-info text-dark';
+                                                
+                                                const tr = document.createElement('tr');
+                                                // Make entire row slightly clickable/hoverable for UX
+                                                tr.style.cursor = 'pointer';
+                                                tr.onclick = function(e) {
+                                                    // don't trigger if they clicked the button directly
+                                                    if(!e.target.closest('button')) {
+                                                        openItemBySapNo(item.sap_no);
+                                                    }
+                                                };
+                                                
+                                                tr.innerHTML = `
+                                                    <td class="px-3"><span class="badge ${badgeClass}">${item.action}</span></td>
+                                                    <td class="fw-bold text-primary">${escapeHtml(item.sap_no)}</td>
+                                                    <td class="text-truncate" style="max-width: 300px;" title="${escapeHtml(item.part_description)}">
+                                                        <span id="sync-desc-${escapeHtml(item.sap_no)}">${escapeHtml(item.part_description)}</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span id="sync-select-${escapeHtml(item.sap_no)}" class="badge bg-warning text-dark shadow-sm">UNCLASSIFIED</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm" onclick="openItemBySapNo('${escapeHtml(item.sap_no)}')">
+                                                            <i class="fas fa-cog"></i> Setup
+                                                        </button>
+                                                    </td>
+                                                `;
+                                                tbody.appendChild(tr);
+                                            });
+
+                                            const modal = new bootstrap.Modal(document.getElementById('sapSyncResultModal'));
+                                            modal.show();
+                                            
+                                            // Ensure background lists are refreshed
+                                            if(typeof fetchItems === 'function') fetchItems(1);
+                                        } else {
+                                            Swal.fire('Success!', res.message, 'success').then(() => {
+                                                if(typeof fetchItems === 'function') fetchItems(1);
+                                            });
+                                        }
                                     } else {
                                         Swal.fire('Error', res.message, 'error');
                                     }
-                                },
-                                error: function() {
-                                    Swal.fire('Error', 'Cannot connect to server.', 'error');
-                                }
-                            });
+                                })
+                                .catch(err => {
+                                    Swal.fire('Error', err.message, 'error');
+                                });
+
                         }
                     });
                 });
             }
         });
+        
+        // Handler for "Save All Changes" button in Sync Result Modal
+        document.getElementById('saveAllSyncBtn')?.addEventListener('click', function() {
+            Swal.fire({
+                icon: 'success',
+                title: 'Saved Successfully',
+                text: 'All classifications have been saved.',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('sapSyncResultModal'));
+                if (modal) modal.hide();
+                if (typeof fetchItems === 'function') fetchItems(1);
+            });
+        });
+
+        // Function to open full item settings modal by SAP No
+        async function openItemBySapNo(sapNo) {
+            try {
+                Swal.fire({ title: 'Loading details...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                // Fix: use 'search' instead of 'search_query'
+                const req = await fetch(`api/itemMasterManage.php?action=get_items&search=${encodeURIComponent(sapNo)}&page=1&limit=1`);
+                const res = await req.json();
+                Swal.close();
+                if (res.success && res.data && res.data.length > 0) {
+                    const item = res.data.find(i => i.sap_no === sapNo) || res.data[0];
+                    if (window.openItemModal) {
+                        // Do NOT hide sapSyncResultModal so it stays underneath
+                        window.openItemModal(item);
+                    }
+                } else {
+                    Swal.fire('Not Found', 'Could not find full details for this item.', 'warning');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Failed to fetch item details.', 'error');
+            }
+        }
     </script>
 </body>
 </html>
