@@ -101,7 +101,8 @@ const materialSubTypes = {
     'FG': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
     'SEMI': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
     'WIP': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
-    'OTHER': [{val: 'OTHER', text: 'OTHER (อื่นๆ)'}]
+    'OTHER': [{val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
+    'UNCLASSIFIED': [{val: 'UNCLASSIFIED', text: 'UNCLASSIFIED (รอจัดหมวดหมู่)'}]
 };
 
 function updateSubTypeOptions(selectedType, defaultVal = '') {
@@ -338,6 +339,7 @@ function renderItemsTable(items, totalItems, page) {
         else if (item.material_type === 'CON') typeBadgeClass = 'bg-danger';
         else if (item.material_type === 'SP') typeBadgeClass = 'bg-dark text-white';
         else if (item.material_type === 'TOOL') typeBadgeClass = 'bg-primary bg-opacity-50 text-dark';
+        else if (item.material_type === 'UNCLASSIFIED') typeBadgeClass = 'bg-danger';
 
         const subTypeBadge = item.material_sub_type 
             ? `<span class="badge border border-secondary text-secondary bg-white" style="font-size: 0.6rem;">${escapeHtml(item.material_sub_type)}</span>` 

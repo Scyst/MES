@@ -56,6 +56,7 @@
                                         <option value="SP">SP (Spare Part)</option>
                                         <option value="TOOL">TOOL (Tools)</option>
                                         <option value="OTHER">OTHER (อื่นๆ)</option>
+                                        <option value="UNCLASSIFIED" class="text-danger fw-bold">UNCLASSIFIED (รอจัดหมวดหมู่)</option>
                                     </select>
                                 </div>
                                 <div class="col-md-3">
