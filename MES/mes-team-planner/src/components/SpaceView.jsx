@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTrash2, FiPlus } from 'react-icons/fi';
+import { canManageSpace } from '../utils/permissions';
 
 export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], currentUser, refreshData, onEditSpace, onDeleteSpace, onTaskClick, onCreateTask, onCreateProject, onProjectClick, onSaveTask }) {
   // Determine Space Name and current Space
@@ -56,7 +57,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
           <p className="text-indigo-100 text-sm mt-1 mb-2">
             ยินดีต้อนรับสู่พื้นที่ทำงานของทีม {spaceName}
           </p>
-          {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown' && (
+          {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown' && canManageSpace(currentUser) && (
             <div className="flex gap-2">
               <button 
                 onClick={() => onEditSpace && onEditSpace(currentSpace)}

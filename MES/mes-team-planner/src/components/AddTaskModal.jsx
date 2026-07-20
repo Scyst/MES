@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiX, FiTrash2, FiCalendar, FiClock, FiUser, FiEye, FiCheckCircle, FiCheckSquare, FiType, FiFlag, FiAlignLeft, FiList, FiMessageSquare, FiTag, FiRefreshCw, FiPlus, FiSend, FiInfo, FiBriefcase } from 'react-icons/fi';
 import MultiSelectInput from './common/MultiSelectInput';
 import axios from 'axios';
+import { canEditTask, canDeleteTask } from '../utils/permissions';
 
 const PRIORITY_OPTIONS = [
   { value: 'urgent', label: '🔴 ด่วนมาก', color: 'bg-red-500', dot: 'bg-red-400', ring: 'ring-red-500/30' },
@@ -42,6 +43,8 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     recurrenceDays: [], recurrenceDates: [], recurrenceEndDate: '', recurrenceDuration: '1m', projectId: '', projectChecklistId: '', groupId: '', updateSeries: false
   });
   const [projectsList, setProjectsList] = useState([]);
+  const isEditable = canEditTask(currentUser, initialData);
+  const canDelete = canDeleteTask(currentUser, initialData);
 
   useEffect(() => {
     if (initialData && isOpen) {
@@ -267,6 +270,12 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
             )}
           </div>
         </div>
+        
+        {!isEditable && (
+          <div className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 p-2 text-xs text-center border-b border-amber-200 dark:border-amber-500/20 font-medium">
+            คุณไม่มีสิทธิ์แก้ไขงานนี้ (View Only)
+          </div>
+        )}
 
         {/* Scrollable Form Body */}
         <div className="flex-1 overflow-y-auto overscroll-contain">
@@ -280,7 +289,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
                   <FiType className="text-indigo-500" /> ชื่องาน
                 </label>
-                <input required name="title" value={formData.title} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder-slate-400 text-sm" placeholder="เช่น ตรวจสอบเครื่องจักร Line A..." />
+                <input disabled={!isEditable} required name="title" value={formData.title} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder-slate-400 text-sm" placeholder="เช่น ตรวจสอบเครื่องจักร Line A..." />
               </div>
 
               {/* Description */}
@@ -288,7 +297,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
                   <FiAlignLeft className="text-indigo-500" /> รายละเอียด
                 </label>
-                <textarea name="description" value={formData.description} onChange={handleChange} className="flex-1 w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm resize-none placeholder-slate-400" placeholder="หมายเหตุ, ขั้นตอนการปฏิบัติงาน..." />
+                <textarea disabled={!isEditable} name="description" value={formData.description} onChange={handleChange} className="flex-1 w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm resize-none placeholder-slate-400" placeholder="หมายเหตุ, ขั้นตอนการปฏิบัติงาน..." />
               </div>
 
               {/* Status, Priority, Assignee */}
@@ -298,7 +307,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     <FiCheckCircle className="text-emerald-500" /> สถานะ
                   </label>
                   <div className="relative">
-                    <select name="status" value={formData.status} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all text-sm appearance-none cursor-pointer">
+                    <select disabled={!isEditable} name="status" value={formData.status} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all text-sm appearance-none cursor-pointer">
                       <option value="todo">To Do</option>
                       <option value="in-progress">In Progress</option>
                       <option value="done">Done</option>
@@ -311,7 +320,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     <FiFlag className="text-orange-500" /> ความสำคัญ
                   </label>
                   <div className="relative">
-                    <select name="priority" value={formData.priority} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all text-sm appearance-none cursor-pointer">
+                    <select disabled={!isEditable} name="priority" value={formData.priority} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all text-sm appearance-none cursor-pointer">
                       <option value="urgent">🔴 ด่วนมาก</option>
                       <option value="high">🟠 ด่วน</option>
                       <option value="normal">🟡 ปกติ</option>
@@ -325,6 +334,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     <FiUser className="text-sky-500" /> ผู้รับผิดชอบ
                   </label>
                   <MultiSelectInput 
+                    disabled={!isEditable}
                     value={formData.assignee}
                     onChange={(val) => setFormData(prev => ({ ...prev, assignee: val }))}
                     suggestions={uniqueAssignees}
@@ -340,8 +350,8 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     <FiCalendar className="text-indigo-500" /> เริ่มต้น
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="date" name="startDate" value={formData.startDate || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm" />
-                    <input type="time" name="startTime" value={formData.startTime || '09:00'} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm" />
+                    <input disabled={!isEditable} type="date" name="startDate" value={formData.startDate || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm" />
+                    <input disabled={!isEditable} type="time" name="startTime" value={formData.startTime || '09:00'} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm" />
                   </div>
                 </div>
                 <div>
@@ -349,8 +359,8 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     <FiClock className="text-rose-500" /> สิ้นสุด
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="date" name="dueDate" value={formData.dueDate || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all text-sm" />
-                    <input type="time" name="endTime" value={formData.endTime || '18:00'} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all text-sm" />
+                    <input disabled={!isEditable} type="date" name="dueDate" value={formData.dueDate || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all text-sm" />
+                    <input disabled={!isEditable} type="time" name="endTime" value={formData.endTime || '18:00'} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all text-sm" />
                   </div>
                 </div>
               </div>
@@ -364,6 +374,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     <FiTag className="text-indigo-500" /> แท็ก (Tags)
                   </label>
                   <MultiSelectInput 
+                    disabled={!isEditable}
                     value={formData.tags || ''}
                     onChange={(val) => setFormData(prev => ({ ...prev, tags: val }))}
                     suggestions={['ด่วน', 'ประชุม', 'โปรเจกต์', 'ปัญหา', 'ออกแบบ', 'พัฒนาระบบ']}
@@ -375,7 +386,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     <FiEye className="text-slate-500" /> สิทธิ์การมองเห็น
                   </label>
                   <div className="relative">
-                    <select name="visibility" value={formData.visibility} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all text-sm appearance-none cursor-pointer">
+                    <select disabled={!isEditable} name="visibility" value={formData.visibility} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all text-sm appearance-none cursor-pointer">
                       <option value="public">🌐 Public</option>
                       <option value="private">🔒 Private</option>
                     </select>
@@ -396,7 +407,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     )}
                   </label>
                   <div className="relative">
-                    <select name="recurrence" disabled={isEditing} value={formData.recurrence} onChange={handleChange} className={`w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none transition-all text-sm appearance-none ${isEditing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10'}`}>
+                    <select disabled={!isEditable || isEditing} name="recurrence" value={formData.recurrence} onChange={handleChange} className={`w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none transition-all text-sm appearance-none ${!isEditable || isEditing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10'}`}>
                       {RECURRENCE_OPTIONS.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
@@ -416,7 +427,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 </div>
               </div>
 
-              {formData.recurrence !== 'none' && !isEditing && (
+              {formData.recurrence !== 'none' && !isEditing && isEditable && (
                 <div className="bg-indigo-50/30 dark:bg-indigo-500/5 rounded-2xl p-5 border border-indigo-100 dark:border-indigo-500/10 space-y-6 shadow-inner">
                   {formData.recurrence === 'custom' && (
                     <div className="space-y-6">
@@ -511,6 +522,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 <div className="bg-amber-50/50 dark:bg-amber-500/10 p-4 rounded-xl border border-amber-100 dark:border-amber-500/20 mt-2">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input 
+                      disabled={!isEditable}
                       type="checkbox" 
                       name="updateSeries"
                       checked={formData.updateSeries || false}
@@ -538,7 +550,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   <FiBriefcase className="text-indigo-500" /> นำเข้าจากโปรเจ็ค (ทางเลือก)
                 </label>
                 <div className="relative mb-3">
-                  <select name="projectId" value={formData.projectId} onChange={handleProjectChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
+                  <select disabled={!isEditable} name="projectId" value={formData.projectId} onChange={handleProjectChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
                     <option value="">-- ไม่ผูกกับโปรเจ็ค --</option>
                     {projectsList.filter(p => p.Status === 'active' || p.Id == formData.projectId).map(p => (
                       <option key={p.Id} value={p.Id}>{p.Title}</option>
@@ -547,9 +559,9 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
                 </div>
 
-                {formData.projectId && projectsList.find(p => p.Id == formData.projectId)?.Checklist?.filter(c => !c.isDone && !subtasksArr.some(st => st.projectChecklistId === c.id))?.length > 0 && (
+                {formData.projectId && isEditable && projectsList.find(p => p.Id == formData.projectId)?.Checklist?.filter(c => !c.isDone && !subtasksArr.some(st => st.projectChecklistId === c.id))?.length > 0 && (
                   <div className="bg-indigo-50/50 dark:bg-indigo-500/10 p-3 rounded-xl border border-indigo-100 dark:border-indigo-500/20 mb-4">
-                    <label className="block text-xs font-semibold text-indigo-700 dark:text-indigo-400 mb-2 uppercase tracking-wide">
+                    <label className="block text-xs font-semibold text-indigo-700 dark:indigo-400 mb-2 uppercase tracking-wide">
                       ดึง Checklist จากโปรเจ็คมาทำ
                     </label>
                     <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
@@ -561,7 +573,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                             onClick={() => {
                               setSubtasksArr([...subtasksArr, {
                                 id: Date.now().toString() + Math.random(),
-                                title: c.text, // Fixed from text to title
+                                title: c.text,
                                 completed: false,
                                 projectChecklistId: c.id
                               }]);
@@ -580,17 +592,19 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
               {/* Internal Subtasks */}
               <div className="border-t border-slate-100 dark:border-slate-800 pt-5">
-                <form onSubmit={handleSaveSubtask} className="flex gap-2 mb-4">
-                  <input 
-                    value={newSubtask}
-                    onChange={(e) => setNewSubtask(e.target.value)}
-                    className="flex-1 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
-                    placeholder="เพิ่มงานย่อยใหม่..."
-                  />
-                  <button type="submit" className="bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-1 transition-colors">
-                    <FiPlus /> เพิ่ม
-                  </button>
-                </form>
+                {isEditable && (
+                  <form onSubmit={handleSaveSubtask} className="flex gap-2 mb-4">
+                    <input 
+                      value={newSubtask}
+                      onChange={(e) => setNewSubtask(e.target.value)}
+                      className="flex-1 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                      placeholder="เพิ่มงานย่อยใหม่..."
+                    />
+                    <button type="submit" className="bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-1 transition-colors">
+                      <FiPlus /> เพิ่ม
+                    </button>
+                  </form>
+                )}
 
                 {subtasksArr.length === 0 ? (
                   <div className="text-center text-slate-400 dark:text-slate-500 text-sm py-8 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl">
@@ -601,10 +615,11 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     {subtasksArr.map((st) => (
                       <div key={st.id} className={`group flex items-center gap-3 p-3 rounded-xl border transition-all ${st.completed ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm hover:border-slate-300 dark:hover:border-slate-600'}`}>
                         <button 
+                          disabled={!isEditable}
                           onClick={() => toggleSubtask(st.id)}
                           className={`shrink-0 w-5 h-5 rounded flex items-center justify-center transition-all ${st.completed ? 'bg-emerald-500 text-white' : 'border-2 border-slate-300 dark:border-slate-600 text-transparent hover:border-emerald-400'}`}
                         >
-                          <FiCheckSquare className="w-3.5 h-3.5" />
+                          {st.completed && <FiCheckSquare className="w-3.5 h-3.5" />}
                         </button>
                         <span className={`flex-1 text-sm transition-all ${st.completed ? 'text-emerald-500/70 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
                           {st.title}
@@ -614,9 +629,11 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                             </span>
                           )}
                         </span>
-                        <button onClick={() => deleteSubtask(st.id)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 transition-all p-1">
-                          <FiTrash2 />
-                        </button>
+                        {isEditable && (
+                          <button onClick={() => deleteSubtask(st.id)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 transition-all p-1">
+                            <FiTrash2 />
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>

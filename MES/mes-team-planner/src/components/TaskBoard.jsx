@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { FiPlus, FiMoreVertical, FiLock, FiGlobe, FiClock, FiSearch, FiFilter, FiX, FiDownload, FiTag, FiCheckSquare, FiRefreshCw } from 'react-icons/fi';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import AddTaskModal from './AddTaskModal';
+import { canEditTask } from '../utils/permissions';
 
 const cols = [
   { id: 'todo', title: 'To Do', color: 'border-slate-500', bg: 'bg-transparent', titleColor: 'text-slate-700 dark:text-slate-300' },
@@ -210,9 +211,10 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
                         const completedSubtasks = subtasks.filter(s => s.completed).length;
                         
                         const tagsList = (task.tags || '').split(',').map(t => t.trim()).filter(Boolean);
-
+                        const isEditable = canEditTask(currentUser, task);
+                        
                         return (
-                        <Draggable key={task.Id} draggableId={task.Id.toString()} index={index}>
+                        <Draggable key={task.Id} draggableId={task.Id.toString()} index={index} isDragDisabled={!isEditable}>
                           {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}
@@ -244,9 +246,11 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
                                     </span>
                                   )}
                                 </div>
-                                <button className="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all" onClick={() => { setEditingTask(task); setIsModalOpen(true); }}>
-                                  <FiMoreVertical />
-                                </button>
+                                {isEditable && (
+                                  <button className="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all" onClick={() => { setEditingTask(task); setIsModalOpen(true); }}>
+                                    <FiMoreVertical />
+                                  </button>
+                                )}
                               </div>
                               
                               <h4 className="text-slate-800 dark:text-slate-200 font-medium text-sm md:text-base mb-1 leading-snug">

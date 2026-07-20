@@ -4,6 +4,25 @@ require_once 'db_helper.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $id = isset($_GET['id']) ? $_GET['id'] : null;
 
+function isAdminOrManager() {
+    if (!isset($_SESSION['user_role'])) return false;
+    $role = strtolower($_SESSION['user_role']);
+    return in_array($role, ['admin', 'manager', 'supervisor', 'creator']);
+}
+
+function isProjectOwner($projectAssignee) {
+    if (!isset($_SESSION['username']) && !isset($_SESSION['fullname']) && !isset($_SESSION['user_aka'])) return false;
+    $assigneeStr = strtolower($projectAssignee ?? '');
+    
+    $uname = strtolower($_SESSION['username'] ?? '');
+    $fname = strtolower($_SESSION['fullname'] ?? '');
+    $aka = strtolower($_SESSION['user_aka'] ?? '');
+    
+    return ($uname && strpos($assigneeStr, $uname) !== false) || 
+           ($fname && strpos($assigneeStr, $fname) !== false) || 
+           ($aka && strpos($assigneeStr, $aka) !== false);
+}
+
 try {
     if ($method === 'GET') {
         $stmt = $pdo->query("SELECT * FROM TeamPlanner_Projects ORDER BY CreatedAt DESC");
@@ -40,6 +59,15 @@ try {
         sendJson($newProject, 201);
     }
     elseif ($method === 'PUT' && $id) {
+        $stmtCheck = $pdo->prepare("SELECT Assignee FROM TeamPlanner_Projects WHERE Id = ?");
+        $stmtCheck->execute([$id]);
+        $project = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+        
+        if ($project && !isAdminOrManager() && !isProjectOwner($project['Assignee'])) {
+            http_response_code(403);
+            sendJson(['error' => 'Permission denied: Only Admin/Manager or the Project Owner can edit this project.']);
+        }
+
         $data = json_decode(file_get_contents('php://input'), true);
         
         $updateFields = [];
@@ -78,6 +106,10 @@ try {
         sendJson($updatedProject);
     } 
     elseif ($method === 'DELETE' && $id) {
+        if (!isAdminOrManager()) {
+            http_response_code(403);
+            sendJson(['error' => 'Permission denied: Only Admin/Manager can delete projects.']);
+        }
         $stmt = $pdo->prepare("DELETE FROM TeamPlanner_Projects WHERE Id = ?");
         $stmt->execute([$id]);
         

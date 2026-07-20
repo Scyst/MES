@@ -4,6 +4,25 @@ require_once 'db_helper.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $id = isset($_GET['id']) ? $_GET['id'] : null;
 
+function isAdminOrManager() {
+    if (!isset($_SESSION['user_role'])) return false;
+    $role = strtolower($_SESSION['user_role']);
+    return in_array($role, ['admin', 'manager', 'supervisor', 'creator']);
+}
+
+function isTaskOwner($taskAssignee) {
+    if (!isset($_SESSION['username']) && !isset($_SESSION['fullname']) && !isset($_SESSION['user_aka'])) return false;
+    $assigneeStr = strtolower($taskAssignee ?? '');
+    
+    $uname = strtolower($_SESSION['username'] ?? '');
+    $fname = strtolower($_SESSION['fullname'] ?? '');
+    $aka = strtolower($_SESSION['user_aka'] ?? '');
+    
+    return ($uname && strpos($assigneeStr, $uname) !== false) || 
+           ($fname && strpos($assigneeStr, $fname) !== false) || 
+           ($aka && strpos($assigneeStr, $aka) !== false);
+}
+
 function formatTaskOutput($row) {
     $row['dueDate'] = formatDate($row['DueDate'] ?? null);
     $row['startDate'] = formatDate($row['StartDate'] ?? null);
@@ -218,11 +237,16 @@ try {
         sendJson($createdTasks, 201);
     } 
     elseif ($method === 'PUT' && $id) {
-        $data = json_decode(file_get_contents('php://input'), true);
-        
-        $chkStmt = $pdo->prepare("SELECT GroupId, StartDate FROM TeamPlanner_Tasks WHERE Id = ?");
+        $chkStmt = $pdo->prepare("SELECT GroupId, StartDate, Assignee FROM TeamPlanner_Tasks WHERE Id = ?");
         $chkStmt->execute([$id]);
         $targetTask = $chkStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($targetTask && !isAdminOrManager() && !isTaskOwner($targetTask['Assignee'])) {
+            http_response_code(403);
+            sendJson(['error' => 'Permission denied: Only Admin/Manager or the Task Owner can edit this task.']);
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true);
         
         $updateSeries = !empty($data['updateSeries']) && !empty($targetTask['GroupId']);
         
@@ -317,12 +341,18 @@ try {
         sendJson($updateSeries ? $updatedTasks : $updatedTasks[0]);
     } 
     elseif ($method === 'DELETE' && $id) {
+        $chkStmt = $pdo->prepare("SELECT GroupId, StartDate, Assignee FROM TeamPlanner_Tasks WHERE Id = ?");
+        $chkStmt->execute([$id]);
+        $targetTask = $chkStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($targetTask && !isAdminOrManager() && !isTaskOwner($targetTask['Assignee'])) {
+            http_response_code(403);
+            sendJson(['error' => 'Permission denied: Only Admin/Manager or the Task Owner can delete this task.']);
+        }
+
         $deleteSeries = isset($_GET['deleteSeries']) && $_GET['deleteSeries'] === 'true';
         
         if ($deleteSeries) {
-            $chkStmt = $pdo->prepare("SELECT GroupId, StartDate FROM TeamPlanner_Tasks WHERE Id = ?");
-            $chkStmt->execute([$id]);
-            $targetTask = $chkStmt->fetch(PDO::FETCH_ASSOC);
             
             if ($targetTask && $targetTask['GroupId']) {
                 $stmt = $pdo->prepare("DELETE FROM TeamPlanner_Tasks WHERE GroupId = ? AND StartDate >= ?");

@@ -340,7 +340,7 @@ function App() {
       case 'gantt': 
         return <GanttChart {...sharedTaskProps} />;
       case 'projects':
-        return <ProjectsTab tasks={tasks} refreshData={refreshData} />;
+        return <ProjectsTab currentUser={currentUser} tasks={tasks} refreshData={refreshData} />;
       case 'links': 
         return <LinkHub />;
       case 'my-tasks':

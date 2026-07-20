@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FiBriefcase, FiPlus, FiClock, FiTrash2, FiEdit2, FiCheckSquare, FiTrash, FiCheckCircle } from 'react-icons/fi';
 import AddProjectModal from './AddProjectModal';
+import { canEditProject, canDeleteProject } from '../utils/permissions';
 
-export default function ProjectsTab({ tasks, spaces = [], refreshData }) {
+export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshData }) {
   const [projects, setProjects] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
@@ -179,8 +180,9 @@ export default function ProjectsTab({ tasks, spaces = [], refreshData }) {
                     {p.Checklist.map((item, idx) => (
                       <div key={item.id} className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
                         <button 
+                          disabled={!canEditProject(currentUser, p)}
                           onClick={() => handleToggleChecklistInTab(p, idx)}
-                          className={`flex-shrink-0 w-4 h-4 rounded flex items-center justify-center border transition-colors ${item.isDone ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 dark:border-slate-600 text-transparent hover:border-indigo-400'}`}
+                          className={`flex-shrink-0 w-4 h-4 rounded flex items-center justify-center border transition-colors ${item.isDone ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 dark:border-slate-600 text-transparent hover:border-indigo-400'} ${!canEditProject(currentUser, p) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           <FiCheckSquare className="w-3 h-3" />
                         </button>
@@ -197,12 +199,16 @@ export default function ProjectsTab({ tasks, spaces = [], refreshData }) {
                 </div>
                 
                 <div className="flex gap-2">
-                  <button onClick={() => { setEditingProject(p); setIsModalOpen(true); }} className="flex-1 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 px-2 py-1.5 rounded-md text-xs font-medium transition-colors">
-                    แก้ไขโปรเจ็ค
-                  </button>
-                  <button onClick={() => handleDeleteProject(p.Id)} className="flex-none bg-white hover:bg-rose-50 dark:bg-slate-700 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 border border-slate-300 dark:border-slate-600 px-2 py-1.5 rounded-md transition-colors" title="ลบโปรเจ็ค">
-                    <FiTrash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {canEditProject(currentUser, p) && (
+                    <button onClick={() => { setEditingProject(p); setIsModalOpen(true); }} className="flex-1 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 px-2 py-1.5 rounded-md text-xs font-medium transition-colors">
+                      แก้ไขโปรเจ็ค
+                    </button>
+                  )}
+                  {canDeleteProject(currentUser, p) && (
+                    <button onClick={() => handleDeleteProject(p.Id)} className="flex-none bg-white hover:bg-rose-50 dark:bg-slate-700 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 border border-slate-300 dark:border-slate-600 px-2 py-1.5 rounded-md transition-colors" title="ลบโปรเจ็ค">
+                      <FiTrash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
