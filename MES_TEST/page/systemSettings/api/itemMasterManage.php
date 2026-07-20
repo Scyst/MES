@@ -65,12 +65,15 @@ try {
             } else if ($currentUser['role'] === 'supervisor' || !empty($currentUser['line'])) {
                 $user_line = $currentUser['line'];
                 $conditions[] = "
-                    i.item_id IN (
-                        SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?
-                        UNION
-                        SELECT DISTINCT b.component_item_id
-                        FROM " . BOM_TABLE . " b WITH (NOLOCK)
-                        WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?)
+                    (
+                        i.material_type = 'UNCLASSIFIED' OR 
+                        i.item_id IN (
+                            SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?
+                            UNION
+                            SELECT DISTINCT b.component_item_id
+                            FROM " . BOM_TABLE . " b WITH (NOLOCK)
+                            WHERE b.fg_item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?)
+                        )
                     )
                 ";
                 $params[] = $user_line;

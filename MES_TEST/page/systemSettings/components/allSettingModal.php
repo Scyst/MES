@@ -47,7 +47,6 @@
                                 <div class="col-md-3">
                                     <label class="form-label fw-bold small text-muted mb-1">Type (หมวดหลัก)</label>
                                     <select class="form-select form-select-sm fw-bold text-primary" id="material_type">
-                                        <option value="UNCLASSIFIED">UNCLASSIFIED (รอจัดหมวดหมู่)</option>
                                         <option value="FG">FG (Finished Good)</option>
                                         <option value="SEMI">SEMI (Semi-Finished)</option>
                                         <option value="WIP">WIP (Work in Process)</option>
@@ -57,6 +56,7 @@
                                         <option value="SP">SP (Spare Part)</option>
                                         <option value="TOOL">TOOL (Tools)</option>
                                         <option value="OTHER">OTHER (อื่นๆ)</option>
+                                        <option value="UNCLASSIFIED" class="text-danger fw-bold">UNCLASSIFIED (รอจัดหมวดหมู่)</option>
                                     </select>
                                 </div>
                                 <div class="col-md-3">
