@@ -14,6 +14,9 @@ import NotificationModal from './components/NotificationModal';
 import MyTasks from './components/MyTasks';
 import Resources from './components/Resources';
 import SpaceView from './components/SpaceView';
+import AddTaskModal from './components/AddTaskModal';
+import AddProjectModal from './components/AddProjectModal';
+import AddSpaceModal from './components/AddSpaceModal';
 
 const mainNav = [
   { tab: 'dashboard', icon: FiPieChart, label: 'Dashboard' },
