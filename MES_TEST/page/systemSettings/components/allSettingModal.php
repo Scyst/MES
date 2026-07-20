@@ -417,11 +417,11 @@
                 <div class="table-responsive bg-white m-3 border rounded shadow-sm hide-scrollbar" style="max-height: 400px;">
                     <table class="table table-sm table-hover align-middle mb-0 text-nowrap table-settings">
                         <thead class="table-light sticky-top">
-                            <tr class="text-secondary">
-                                <th class="px-3 py-2" style="width: 140px;">วัน-เวลา (Date/Time)</th>
-                                <th class="py-2" style="width: 120px;">ผู้ใช้งาน (User)</th>
-                                <th class="py-2">การกระทำ (Action)</th>
-                                <th class="py-2 px-3">รายละเอียด (Details)</th>
+                            <tr class="text-secondary text-center text-sm">
+                                <th class="py-2" style="width: 160px;">วัน-เวลา (Date/Time)</th>
+                                <th class="py-2" style="width: 140px;">ผู้ใช้งาน (User)</th>
+                                <th class="py-2" style="width: 160px;">การกระทำ (Action)</th>
+                                <th class="py-2 px-3 text-start">รายละเอียด (Details)</th>
                             </tr>
                         </thead>
                         <tbody id="auditTrailTbody">

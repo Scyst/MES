@@ -2182,10 +2182,10 @@ async function viewItemHistory(itemId, sapNo) {
                 const remark = log.details ? escapeHtml(log.details) : '-';
                 
                 tr.innerHTML = `
-                    <td class="text-muted small"><i class="far fa-clock me-1"></i>${escapeHtml(log.log_time)}</td>
-                    <td class="fw-bold text-primary"><i class="far fa-user me-1"></i>${escapeHtml(log.username)}</td>
-                    <td>${actionBadge}</td>
-                    <td class="text-wrap" style="max-width: 300px;"><small>${remark}</small></td>
+                    <td class="text-muted small text-center"><i class="far fa-clock me-1"></i>${escapeHtml(log.log_time)}</td>
+                    <td class="fw-bold text-primary text-center"><i class="far fa-user me-1"></i>${escapeHtml(log.username)}</td>
+                    <td class="text-center">${actionBadge}</td>
+                    <td class="text-wrap px-3 text-start" style="max-width: 300px;"><small>${remark}</small></td>
                 `;
                 tbody.appendChild(tr);
             });
