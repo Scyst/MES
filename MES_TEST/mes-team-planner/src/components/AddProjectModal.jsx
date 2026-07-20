@@ -138,7 +138,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
                 <select value={formData.spaceId} onChange={e => setFormData({...formData, spaceId: e.target.value})} className="w-full border dark:border-slate-700 bg-transparent rounded-lg px-3 py-2 outline-none focus:border-indigo-500">
                   <option value="">-- ไม่ระบุ (อยู่ในหน้า Dashboard รวม) --</option>
                   {spaces.map(s => (
-                    <option key={s.Id} value={s.Id}>{s.Name}</option>
+                    <option key={s.Id || s.id} value={s.Id || s.id}>{s.Name || s.name || 'Unnamed Space'}</option>
                   ))}
                 </select>
               </div>
