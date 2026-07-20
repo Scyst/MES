@@ -7,8 +7,14 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
     if (activeTab === 'space-home') return { Id: 'home', Name: 'Home' };
     if (activeTab.startsWith('space-')) {
       const spaceId = activeTab.replace('space-', '');
-      const found = spaces.find(s => String(s.Id) === String(spaceId));
-      if (found) return found;
+      const found = spaces.find(s => String(s.Id || s.id) === String(spaceId));
+      if (found) {
+        return {
+          ...found,
+          Id: found.Id || found.id,
+          Name: found.Name || found.name
+        };
+      }
     }
     // Fallback for legacy mock tabs
     if (activeTab === 'team-engineers') return { Id: 'mock', Name: 'Engineers' };
@@ -25,7 +31,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
     if (currentSpace.Id === 'home') return safeProjects;
     if (currentSpace.Id === 'mock') return []; // Clear mock data to prevent confusion
     
-    return safeProjects.filter(p => String(p.SpaceId) === String(currentSpace.Id));
+    return safeProjects.filter(p => String(p.SpaceId || p.spaceId) === String(currentSpace.Id));
   }, [currentSpace, projects]);
 
   const teamTasks = useMemo(() => {
@@ -34,7 +40,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
     if (currentSpace.Id === 'mock') return [];
     
     return safeTasks.filter(t => 
-      String(t.SpaceId) === String(currentSpace.Id) || teamProjects.some(p => p?.Id && t?.ProjectId && String(p.Id) === String(t.ProjectId))
+      String(t.SpaceId || t.spaceId) === String(currentSpace.Id) || teamProjects.some(p => (p?.Id || p?.id) && (t?.ProjectId || t?.projectId) && String(p.Id || p.id) === String(t.ProjectId || t.projectId))
     );
   }, [currentSpace, tasks, teamProjects]);
 
