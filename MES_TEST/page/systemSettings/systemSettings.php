@@ -71,13 +71,13 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                     <div class="col-12 col-md-5 d-flex align-items-center gap-2">
                         
                         <div class="toolbar-group item-master-pane w-100 d-flex gap-2">
-                            <div class="input-group input-group-sm w-100 shadow-sm">
+                            <div class="input-group input-group-sm flex-grow-1" style="max-width: 300px; min-width: 150px;">
                                 <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                                <input type="text" class="form-control border-start-0" id="itemMasterSearch" placeholder="ค้นหา SAP No., Part No..." autocomplete="off">
+                                <input type="text" class="form-control border-start-0" id="itemMasterSearch" placeholder="ค้นหา..." autocomplete="off">
                             </div>
                             
-                            <select id="materialTypeFilter" class="form-select form-select-sm w-auto shadow-sm fw-bold text-primary border-primary">
-                                <option value="">-- ทุกประเภท (All Types) --</option>
+                            <select id="materialTypeFilter" class="form-select form-select-sm w-auto shadow-sm">
+                                <option value="">-- All Types --</option>
                                 <option value="FG">FG (Finished Good)</option>
                                 <option value="SEMI">SEMI (Semi-Finished)</option>
                                 <option value="WIP">WIP (Work in Process)</option>
@@ -90,8 +90,8 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                 <option value="UNCLASSIFIED" class="text-danger fw-bold">UNCLASSIFIED (รอจัดหมวดหมู่)</option>
                             </select>
 
-                            <select id="materialSubTypeFilter" class="form-select form-select-sm w-auto shadow-sm fw-bold text-info border-info">
-                                <option value="">-- ทุกกลุ่มย่อย (All Sub) --</option>
+                            <select id="materialSubTypeFilter" class="form-select form-select-sm w-auto shadow-sm">
+                                <option value="">-- All Sub-Types --</option>
                             </select>
 
                             <select id="modelFilterValue" class="form-select form-select-sm w-auto shadow-sm d-none">
