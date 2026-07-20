@@ -216,6 +216,14 @@ async function loadPermissionsForModal(mode, userId, roleCode) {
                 return;
             }
             
+            // Group by module_name
+            const grouped = {};
+            all.forEach(p => {
+                const mod = p.module_name || 'General';
+                if (!grouped[mod]) grouped[mod] = [];
+                grouped[mod].push(p);
+            });
+
             let html = `
                 <div class="table-responsive border rounded bg-white w-100 shadow-sm" style="max-height: 60vh;">
                     <table class="table table-hover align-middle mb-0">
