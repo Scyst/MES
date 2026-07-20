@@ -406,13 +406,19 @@ async function openItemModal(item = null) {
     if (deleteBtn) deleteBtn.style.display = 'none';
 
     const btnWhereUsed = document.getElementById('btnWhereUsed');
+    const btnItemHistory = document.getElementById('btnItemHistory');
     if (item && item.item_id !== '0') {
         if (btnWhereUsed) {
             btnWhereUsed.style.display = 'inline-block';
             btnWhereUsed.onclick = () => openWhereUsedModal(item.item_id, item.sap_no);
         }
+        if (btnItemHistory) {
+            btnItemHistory.style.display = 'inline-block';
+            btnItemHistory.onclick = () => viewItemHistory(item.item_id, item.sap_no);
+        }
     } else {
         if (btnWhereUsed) btnWhereUsed.style.display = 'none';
+        if (btnItemHistory) btnItemHistory.style.display = 'none';
     }
 
     const triggerEl = document.querySelector('#itemFormTabs button[data-bs-target="#basic-pane"]');
@@ -2119,3 +2125,74 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+// ==========================================
+// ACTIVITY LOG / AUDIT TRAIL
+// ==========================================
+async function viewItemHistory(itemId, sapNo) {
+    if (!itemId) return;
+    
+    const tbody = document.getElementById('auditTrailTbody');
+    const titleName = document.getElementById('auditTargetName');
+    if (titleName) titleName.textContent = sapNo;
+    
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center p-5"><i class="fas fa-spinner fa-spin fa-2x text-secondary mb-2"></i><br>กำลังดึงข้อมูลประวัติ...</td></tr>';
+    }
+    
+    openModal('auditTrailModal');
+
+    try {
+        const res = await fetchAPI(API_ENDPOINT, 'get_audit_trail', 'GET', null, {
+            target_id: itemId,
+            target_sap: sapNo
+        });
+
+        if (res.success && res.data) {
+            if (res.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-muted">ไม่พบประวัติการแก้ไข</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            res.data.forEach(log => {
+                const tr = document.createElement('tr');
+                let actionBadge = '';
+                
+                switch(log.action) {
+                    case 'CREATE_ITEM': 
+                    case 'NEW_BOM':
+                        actionBadge = `<span class="badge bg-success shadow-sm"><i class="fas fa-plus me-1"></i>${log.action}</span>`; 
+                        break;
+                    case 'UPDATE_ITEM': 
+                    case 'EDIT_BOM':
+                        actionBadge = `<span class="badge bg-warning text-dark shadow-sm"><i class="fas fa-edit me-1"></i>${log.action}</span>`; 
+                        break;
+                    case 'DEACTIVATE_ITEM': 
+                    case 'ARCHIVE_BOM':
+                        actionBadge = `<span class="badge bg-danger shadow-sm"><i class="fas fa-archive me-1"></i>${log.action}</span>`; 
+                        break;
+                    case 'RESTORE_ITEM':
+                        actionBadge = `<span class="badge bg-info text-dark shadow-sm"><i class="fas fa-trash-restore me-1"></i>${log.action}</span>`; 
+                        break;
+                    default: 
+                        actionBadge = `<span class="badge bg-secondary shadow-sm">${log.action}</span>`;
+                }
+
+                const remark = log.details ? escapeHtml(log.details) : '-';
+                
+                tr.innerHTML = `
+                    <td class="text-muted small"><i class="far fa-clock me-1"></i>${escapeHtml(log.log_time)}</td>
+                    <td class="fw-bold text-primary"><i class="far fa-user me-1"></i>${escapeHtml(log.username)}</td>
+                    <td>${actionBadge}</td>
+                    <td class="text-wrap" style="max-width: 300px;"><small>${remark}</small></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-danger">Error: ${escapeHtml(res.message || 'Unknown error')}</td></tr>`;
+        }
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-danger">Error fetching audit trail</td></tr>`;
+    }
+}

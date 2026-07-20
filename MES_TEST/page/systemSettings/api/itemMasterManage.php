@@ -21,18 +21,34 @@ $action = $_REQUEST['action'] ?? '';
 $input = json_decode(file_get_contents("php://input"), true);
 $currentUser = $_SESSION['user'];
 
-set_error_handler(function($errno, $errstr, $errfile, $errline) {
-    if (!(error_reporting() & $errno)) {
-        return false;
-    }
-    throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
-});
-
 try {
     switch ($action) {
         // =====================================================================
         // [1] ITEM MASTER DATA
         // =====================================================================
+        case 'get_audit_trail':
+            $target_id = $input['target_id'] ?? $_GET['target_id'] ?? '';
+            $target_sap = $input['target_sap'] ?? $_GET['target_sap'] ?? '';
+            
+            if (!$target_id && !$target_sap) throw new Exception("Required target ID");
+            
+            $sql = "
+                SELECT TOP 50 
+                    username, 
+                    action, 
+                    remark AS details, 
+                    FORMAT(created_at, 'yyyy-MM-dd HH:mm:ss') AS log_time
+                FROM SYSTEM_LOGS WITH (NOLOCK) 
+                WHERE ref_id = ? OR ref_id = ?
+                ORDER BY created_at DESC
+            ";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([(string)$target_id, (string)$target_sap]);
+            
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
         case 'get_items':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) && intval($_GET['limit']) === -1 ? 999999 : 50;
@@ -160,45 +176,6 @@ try {
             $items = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $items, 'total' => $total, 'page' => $page]);
-            break;
-
-        case 'test_sync':
-            $sapQuery = "SELECT DISTINCT Mat_No, MatDesc FROM SAP_STG_ALL_STOCK WHERE Mat_No = '10011635'";
-            $sapStmt = $pdo->query($sapQuery);
-            $sapItemsRaw = $sapStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $sapItemsMap = [];
-            foreach ($sapItemsRaw as $row) {
-                $sapItemsMap[trim($row['Mat_No'])] = trim($row['MatDesc'] ?? '');
-            }
-
-            $checkStmt = $pdo->prepare("SELECT item_id, part_description, material_type FROM dbo.ITEMS WHERE sap_no = ?");
-            $checkStmt->execute(['10011635']);
-            $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
-
-            $result = [
-                'map' => $sapItemsMap,
-                'existing' => $existing,
-                'trim_mat_type' => trim($existing['material_type']),
-                'mat_desc_diff' => trim($existing['part_description']) !== $sapItemsMap['10011635']
-            ];
-            echo json_encode(['success' => true, 'data' => $result]);
-            break;
-
-        case 'quick_classify':
-            $sap_no = $_POST['sap_no'] ?? '';
-            $material_type = $_POST['material_type'] ?? '';
-            if (!$sap_no || !$material_type) throw new Exception("Missing parameters.");
-            
-            $sql = "UPDATE " . ITEMS_TABLE . " SET material_type = ? WHERE sap_no = ?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$material_type, $sap_no]);
-            
-            if ($stmt->rowCount() > 0) {
-                echo json_encode(['success' => true, 'message' => 'Classified successfully.']);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'No changes made.']);
-            }
             break;
 
         case 'delete_item':

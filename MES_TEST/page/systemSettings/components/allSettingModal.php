@@ -193,9 +193,14 @@
             </div>
             
             <div class="modal-footer bg-white border-top d-flex justify-content-between">
-                <button type="button" class="btn btn-sm btn-info fw-bold px-3 shadow-sm" id="btnWhereUsed" style="display: none;">
-                    <i class="fas fa-search-location me-1"></i> Where-Used
-                </button>
+                <div>
+                    <button type="button" class="btn btn-sm btn-info fw-bold px-3 shadow-sm me-2" id="btnWhereUsed" style="display: none;">
+                        <i class="fas fa-search-location me-1"></i> Where-Used
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary fw-bold px-3 shadow-sm" id="btnItemHistory" style="display: none;">
+                        <i class="fas fa-history me-1"></i> Activity Log
+                    </button>
+                </div>
                 
                 <div>
                     <button type="button" class="btn btn-sm btn-danger fw-bold px-3 me-2" id="deleteItemBtn" style="display:none;"><i class="fas fa-trash-alt"></i> Deactivate</button>

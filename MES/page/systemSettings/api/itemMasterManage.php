@@ -26,6 +26,29 @@ try {
         // =====================================================================
         // [1] ITEM MASTER DATA
         // =====================================================================
+        case 'get_audit_trail':
+            $target_id = $input['target_id'] ?? $_GET['target_id'] ?? '';
+            $target_sap = $input['target_sap'] ?? $_GET['target_sap'] ?? '';
+            
+            if (!$target_id && !$target_sap) throw new Exception("Required target ID");
+            
+            $sql = "
+                SELECT TOP 50 
+                    username, 
+                    action, 
+                    remark AS details, 
+                    FORMAT(created_at, 'yyyy-MM-dd HH:mm:ss') AS log_time
+                FROM SYSTEM_LOGS WITH (NOLOCK) 
+                WHERE ref_id = ? OR ref_id = ?
+                ORDER BY created_at DESC
+            ";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([(string)$target_id, (string)$target_sap]);
+            
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
         case 'get_items':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) && intval($_GET['limit']) === -1 ? 999999 : 50;
