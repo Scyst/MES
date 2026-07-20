@@ -42,10 +42,14 @@ try {
         FROM UniqueSAP s
         LEFT JOIN dbo.ITEMS i ON RTRIM(LTRIM(i.sap_no)) = s.Mat_No
         GROUP BY s.Mat_No, s.MatDesc
+        OPTION (RECOMPILE)  -- Force fresh plan every time to avoid cold-cache 0-row bug
     ";
 
-    $diffStmt = $pdo->query($diffQuery);
+    // Use prepare()->execute() instead of query() to avoid pdo_sqlsrv first-run empty result
+    $diffStmt = $pdo->prepare($diffQuery);
+    $diffStmt->execute();
     $diffRows = $diffStmt->fetchAll(PDO::FETCH_ASSOC);
+    $diffStmt->closeCursor(); // Release result set before starting transaction
 
     $inserted     = 0;
     $updated      = 0;
@@ -71,8 +75,8 @@ try {
     ");
 
     foreach ($diffRows as $row) {
-        $matNo   = $row['Mat_No'];
-        $matDesc = $row['MatDesc'];
+        $matNo   = trim($row['Mat_No']);
+        $matDesc = trim($row['MatDesc']); // Trim for safety despite SQL RTRIM/LTRIM
         $count   = (int)$row['item_count'];
 
         if ($count === 0) {
