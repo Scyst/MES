@@ -229,14 +229,14 @@ $pageIcon = "fas fa-users-cog";
                             </div>
                         </form>
                     </div>
-                    <div class="table-responsive" style="max-height: 400px;">
+                    <div class="table-responsive px-3 pb-3" style="max-height: 400px;">
                         <table class="table table-sm table-hover align-middle mb-0">
                             <thead class="table-light sticky-top">
                                 <tr>
-                                    <th>Code</th>
+                                    <th class="ps-2">Code</th>
                                     <th>Description</th>
                                     <th>Module</th>
-                                    <th class="text-end">Action</th>
+                                    <th class="text-end pe-2">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="permissionMasterList">
