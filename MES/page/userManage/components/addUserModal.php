@@ -45,6 +45,13 @@
                             <label class="form-label">Line / Area</label>
                             <input type="text" name="line" id="add_line" class="form-control text-uppercase" placeholder="e.g. PRESS, ALL">
                         </div>
+                        <div class="col-12 mt-4">
+                            <h6 class="border-bottom pb-2 mb-3"><i class="fas fa-shield-alt text-primary me-2"></i> Individual Permissions</h6>
+                            <div id="addPermissionsContainer" class="row g-2">
+                                <!-- Permissions will be loaded here via JS -->
+                                <div class="col-12 text-muted small"><i class="fas fa-spinner fa-spin me-1"></i> Loading permissions...</div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>

@@ -143,6 +143,19 @@ try {
                 $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
                 $stmt = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='ADD', @Username=?, @PasswordHash=?, @Role=?, @Line=?, @EmpId=?, @Fullname=?, @TeamGroup=?, @ActionBy=?");
                 $stmt->execute([$username, $hashedPassword, $role, $line, $emp_id, $fullname, $team_group, $actionBy]);
+                
+                // Fetch the new user's ID
+                $newIdStmt = $pdo->prepare("SELECT id FROM " . USERS_TABLE . " WHERE username = ?");
+                $newIdStmt->execute([$username]);
+                $targetId = $newIdStmt->fetchColumn();
+
+                if (isset($input['permissions']) && is_array($input['permissions']) && $targetId) {
+                    $insertPerm = $pdo->prepare("INSERT INTO dbo.SYS_USER_PERMISSIONS (user_id, perm_code, granted_by) VALUES (?, ?, ?)");
+                    foreach ($input['permissions'] as $perm) {
+                        $insertPerm->execute([$targetId, $perm, $actionBy]);
+                    }
+                }
+
                 echo json_encode(['success' => true, 'message' => 'User created successfully.']);
             } else {
                 if (!$targetId) throw new Exception("Target user ID is required.");
@@ -155,6 +168,19 @@ try {
                     $stmtPwd = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='RESET_PWD', @UserId=?, @PasswordHash=?, @ActionBy=?");
                     $stmtPwd->execute([$targetId, $hashedPassword, $actionBy]);
                 }
+
+                if (isset($input['permissions']) && is_array($input['permissions'])) {
+                    // Delete old permissions
+                    $delStmt = $pdo->prepare("DELETE FROM dbo.SYS_USER_PERMISSIONS WHERE user_id = ?");
+                    $delStmt->execute([$targetId]);
+                    
+                    // Insert new permissions
+                    $insertPerm = $pdo->prepare("INSERT INTO dbo.SYS_USER_PERMISSIONS (user_id, perm_code, granted_by) VALUES (?, ?, ?)");
+                    foreach ($input['permissions'] as $perm) {
+                        $insertPerm->execute([$targetId, $perm, $actionBy]);
+                    }
+                }
+
                 echo json_encode(['success' => true, 'message' => 'User updated successfully.']);
             }
             break;
@@ -167,6 +193,37 @@ try {
             $stmtToggle = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='TOGGLE_STATUS', @UserId=?, @ActionBy=?");
             $stmtToggle->execute([$targetId, $actionBy]);
             echo json_encode(['success' => true, 'message' => 'User status updated.']);
+            break;
+            
+        case 'get_permissions':
+            $targetId = (int)($_GET['id'] ?? 0);
+            $roleCode = $_GET['role'] ?? '';
+            
+            // All available permissions
+            $allPerms = $pdo->query("SELECT perm_code, description, module_name FROM dbo.SYS_PERMISSIONS")->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Permissions from the role
+            $rolePerms = [];
+            if ($roleCode) {
+                $stmtRole = $pdo->prepare("SELECT perm_code FROM dbo.SYS_ROLE_PERMISSIONS WHERE role_code = ?");
+                $stmtRole->execute([$roleCode]);
+                $rolePerms = $stmtRole->fetchAll(PDO::FETCH_COLUMN);
+            }
+            
+            // Individual user permissions
+            $userPerms = [];
+            if ($targetId) {
+                $stmtUser = $pdo->prepare("SELECT perm_code FROM dbo.SYS_USER_PERMISSIONS WHERE user_id = ?");
+                $stmtUser->execute([$targetId]);
+                $userPerms = $stmtUser->fetchAll(PDO::FETCH_COLUMN);
+            }
+            
+            echo json_encode([
+                'success' => true, 
+                'all' => $allPerms, 
+                'role_perms' => $rolePerms, 
+                'user_perms' => $userPerms
+            ]);
             break;
             
         case 'logs':

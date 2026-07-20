@@ -41,7 +41,15 @@ try {
         // 🔥 [NEW PBAC] ดึง Permission ของ Role นี้จากฐานข้อมูล
         $permStmt = $pdo->prepare("SELECT perm_code FROM dbo.SYS_ROLE_PERMISSIONS WHERE role_code = ?");
         $permStmt->execute([$user['role']]);
-        $permissions = $permStmt->fetchAll(PDO::FETCH_COLUMN); 
+        $rolePermissions = $permStmt->fetchAll(PDO::FETCH_COLUMN); 
+        
+        // ดึง Permission แบบรายบุคคล
+        $userPermStmt = $pdo->prepare("SELECT perm_code FROM dbo.SYS_USER_PERMISSIONS WHERE user_id = ?");
+        $userPermStmt->execute([$user['id']]);
+        $userPermissions = $userPermStmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        // รวม Permission ทั้งหมดเข้าด้วยกัน (ตัดตัวซ้ำ)
+        $permissions = array_values(array_unique(array_merge($rolePermissions, $userPermissions)));
 
         // สร้างข้อมูลผู้ใช้ใน Session
         $_SESSION['user'] = [

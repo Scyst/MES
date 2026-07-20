@@ -195,7 +195,61 @@ function openEdit(user) {
         }
     }
     
+    
     openModal('editUserModal');
+    loadPermissionsForModal('edit', user.id, user.role);
+}
+
+async function loadPermissionsForModal(mode, userId, roleCode) {
+    const containerId = mode === 'edit' ? 'permissionsContainer' : 'addPermissionsContainer';
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    container.innerHTML = '<div class="col-12 text-muted small"><i class="fas fa-spinner fa-spin me-1"></i> Loading permissions...</div>';
+    
+    try {
+        const res = await sendUserRequest(`get_permissions&id=${userId || 0}&role=${roleCode || ''}`, 'GET');
+        if (res.success) {
+            const { all, role_perms, user_perms } = res;
+            if (all.length === 0) {
+                container.innerHTML = '<div class="col-12 text-muted small">No permissions found in the system.</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            // Group by module_name
+            const grouped = {};
+            all.forEach(p => {
+                const mod = p.module_name || 'General';
+                if (!grouped[mod]) grouped[mod] = [];
+                grouped[mod].push(p);
+            });
+            
+            for (const [mod, perms] of Object.entries(grouped)) {
+                let html = `<div class="col-12 mt-2"><div class="fw-bold text-dark border-bottom mb-1" style="font-size:0.85rem;">${mod}</div></div>`;
+                perms.forEach(p => {
+                    const hasRolePerm = role_perms.includes(p.perm_code);
+                    const hasUserPerm = user_perms.includes(p.perm_code);
+                    
+                    html += `
+                        <div class="col-md-6 col-lg-4">
+                            <div class="form-check">
+                                <input class="form-check-input permission-checkbox" type="checkbox" name="permissions[]" value="${p.perm_code}" 
+                                    id="${mode}_perm_${p.perm_code}" 
+                                    ${hasRolePerm ? 'checked disabled title="Granted by Role"' : (hasUserPerm ? 'checked' : '')}>
+                                <label class="form-check-label small" for="${mode}_perm_${p.perm_code}">
+                                    ${p.description || p.perm_code}
+                                </label>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML += html;
+            }
+        }
+    } catch (e) {
+        container.innerHTML = '<div class="col-12 text-danger small">Error loading permissions.</div>';
+    }
 }
 
 async function toggleStatus(id, isActive) {
@@ -229,6 +283,30 @@ document.addEventListener('DOMContentLoaded', () => {
     handleRoleChange('add_role', 'addUserLineWrapper');
     handleRoleChange('edit_role', 'editUserLineWrapper');
     
+    // Auto load permissions on Add Modal open or role change
+    const addRoleSelect = document.getElementById('add_role');
+    if (addRoleSelect) {
+        addRoleSelect.addEventListener('change', (e) => {
+            loadPermissionsForModal('add', 0, e.target.value);
+        });
+    }
+    const addUserModalEl = document.getElementById('addUserModal');
+    if (addUserModalEl) {
+        addUserModalEl.addEventListener('show.bs.modal', () => {
+            const role = document.getElementById('add_role').value;
+            loadPermissionsForModal('add', 0, role);
+        });
+    }
+    
+    // Auto load permissions on Edit Modal role change
+    const editRoleSelect = document.getElementById('edit_role');
+    if (editRoleSelect) {
+        editRoleSelect.addEventListener('change', (e) => {
+            const userId = document.getElementById('edit_id').value;
+            loadPermissionsForModal('edit', userId, e.target.value);
+        });
+    }
+    
     document.getElementById('searchUserInput')?.addEventListener('input', applyFilters);
     document.getElementById('filterRole')?.addEventListener('change', applyFilters);
     document.getElementById('filterLine')?.addEventListener('change', applyFilters);
@@ -239,7 +317,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = e.target.querySelector('button[type="submit"]');
         setBtnLoading(btn, true);
         try {
-            const data = Object.fromEntries(new FormData(e.target));
+            const formData = new FormData(e.target);
+            
+            // Gather multiple checkbox values
+            const data = Object.fromEntries(formData);
+            data.permissions = formData.getAll('permissions[]');
+
             const res = await sendUserRequest('create', 'POST', data);
             showToast(res.message, res.success ? '#198754' : '#dc3545');
             if(res.success) {
@@ -255,7 +338,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = e.target.querySelector('button[type="submit"]');
         setBtnLoading(btn, true);
         try {
-            const data = Object.fromEntries(new FormData(e.target));
+            const formData = new FormData(e.target);
+            
+            // Gather multiple checkbox values
+            const data = Object.fromEntries(formData);
+            data.permissions = formData.getAll('permissions[]');
+
             const res = await sendUserRequest('update', 'POST', data);
             showToast(res.message, res.success ? '#ffc107' : '#dc3545');
             if(res.success) {
