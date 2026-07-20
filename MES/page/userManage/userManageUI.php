@@ -103,11 +103,12 @@ $pageIcon = "fas fa-users-cog";
                 </div>
 
                 <div class="tab-pane fade" id="tab-roles" role="tabpanel">
-                    <div class="card user-card border-primary mb-3">
-                        <div class="card-header bg-primary bg-opacity-10 text-primary fw-bold">
-                            <i class="fas fa-shield-alt me-2"></i> Permission Matrix (PBAC)
-                        </div>
-                        <div class="card-body p-0">
+                      <div class="card user-card border-primary mb-3">
+                          <div class="card-header bg-primary bg-opacity-10 text-primary fw-bold d-flex justify-content-between align-items-center">
+                              <div><i class="fas fa-shield-alt me-2"></i> Permission Matrix (PBAC)</div>
+                              <button class="btn btn-sm btn-primary" onclick="openPermissionMasterModal()"><i class="fas fa-cog me-1"></i> Manage Permissions</button>
+                          </div>
+                          <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table table-bordered table-hover align-middle mb-0" id="matrixTable">
                                     <thead class="table-light text-center" id="matrixThead">
@@ -200,7 +201,56 @@ $pageIcon = "fas fa-users-cog";
             </div>
         </div>
 
-        <?php 
+        <!-- Permission Master Modal -->
+    <div class="modal fade" id="permissionMasterModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title"><i class="fas fa-cogs me-2 text-primary"></i>Manage Permissions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="p-3 border-bottom bg-white">
+                        <form id="addPermissionForm" class="row g-2 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label small mb-1">Code (e.g. view_reports)</label>
+                                <input type="text" name="perm_code" class="form-control form-control-sm" required pattern="[a-z0-9_]+">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small mb-1">Description</label>
+                                <input type="text" name="description" class="form-control form-control-sm" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small mb-1">Module</label>
+                                <input type="text" name="module_name" class="form-control form-control-sm" placeholder="e.g. General" required>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-sm btn-primary w-100"><i class="fas fa-plus me-1"></i> Add</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="table-responsive" style="max-height: 400px;">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Description</th>
+                                    <th>Module</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="permissionMasterList">
+                                <tr><td colspan="4" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <?php 
             include_once('components/addUserModal.php'); 
             include_once('components/editUserModal.php'); 
         ?>

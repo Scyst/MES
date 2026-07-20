@@ -216,7 +216,6 @@ async function loadPermissionsForModal(mode, userId, roleCode) {
                 return;
             }
             
-            container.innerHTML = '';
             // Group by module_name
             const grouped = {};
             all.forEach(p => {
@@ -225,32 +224,77 @@ async function loadPermissionsForModal(mode, userId, roleCode) {
                 grouped[mod].push(p);
             });
             
+            let html = `<div class="accordion accordion-flush border rounded" id="accordion_${mode}">`;
+            let idx = 0;
+            
             for (const [mod, perms] of Object.entries(grouped)) {
-                let html = `<div class="col-12 mt-2"><div class="fw-bold text-dark border-bottom mb-1" style="font-size:0.85rem;">${mod}</div></div>`;
+                idx++;
+                const accId = `acc_${mode}_${idx}`;
+                const headingId = `head_${mode}_${idx}`;
+                
+                // Check if any user_perms belong to this module to expand it by default
+                const hasActiveUserPerms = perms.some(p => user_perms.includes(p.perm_code));
+                const expandedClass = hasActiveUserPerms ? 'show' : '';
+                const btnCollapsed = hasActiveUserPerms ? '' : 'collapsed';
+
+                html += `
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="${headingId}">
+                            <button class="accordion-button ${btnCollapsed} py-2 fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#${accId}">
+                                <i class="fas fa-layer-group text-primary me-2"></i> ${mod} 
+                                <span class="badge bg-secondary ms-2 rounded-pill">${perms.length}</span>
+                            </button>
+                        </h2>
+                        <div id="${accId}" class="accordion-collapse collapse ${expandedClass}" data-bs-parent="#accordion_${mode}">
+                            <div class="accordion-body p-3 bg-light">
+                                <div class="d-flex justify-content-end mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill" onclick="toggleAllPerms('${accId}', true)"><i class="fas fa-check-double"></i> Select All</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill ms-2" onclick="toggleAllPerms('${accId}', false)"><i class="fas fa-eraser"></i> Clear</button>
+                                </div>
+                                <div class="row g-3">
+                `;
+                
                 perms.forEach(p => {
                     const hasRolePerm = role_perms.includes(p.perm_code);
                     const hasUserPerm = user_perms.includes(p.perm_code);
                     
                     html += `
-                        <div class="col-md-6 col-lg-4">
-                            <div class="form-check">
-                                <input class="form-check-input permission-checkbox" type="checkbox" name="permissions[]" value="${p.perm_code}" 
-                                    id="${mode}_perm_${p.perm_code}" 
-                                    ${hasRolePerm ? 'checked disabled title="Granted by Role"' : (hasUserPerm ? 'checked' : '')}>
-                                <label class="form-check-label small" for="${mode}_perm_${p.perm_code}">
-                                    ${p.description || p.perm_code}
-                                </label>
-                            </div>
-                        </div>
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="form-check form-switch bg-white border p-2 rounded shadow-sm d-flex align-items-center h-100">
+                                            <input class="form-check-input ms-0 mt-0 me-2 flex-shrink-0" type="checkbox" role="switch" name="permissions[]" value="${p.perm_code}" 
+                                                id="${mode}_perm_${p.perm_code}" 
+                                                ${hasRolePerm ? 'checked disabled' : (hasUserPerm ? 'checked' : '')}>
+                                            <label class="form-check-label small mb-0 w-100" for="${mode}_perm_${p.perm_code}">
+                                                <div class="fw-bold text-dark lh-sm">${p.perm_code}</div>
+                                                <div class="text-muted" style="font-size:0.75rem;">${p.description || p.perm_code}</div>
+                                                ${hasRolePerm ? '<div class="text-success mt-1 fw-bold" style="font-size:0.7rem;"><i class="fas fa-lock"></i> Granted by Role</div>' : ''}
+                                            </label>
+                                        </div>
+                                    </div>
                     `;
                 });
-                container.innerHTML += html;
+                
+                html += `
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
+            html += `</div>`;
+            container.innerHTML = html;
         }
     } catch (e) {
         container.innerHTML = '<div class="col-12 text-danger small">Error loading permissions.</div>';
     }
 }
+
+window.toggleAllPerms = function(containerId, state) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]:not(:disabled)');
+    checkboxes.forEach(cb => cb.checked = state);
+};
 
 async function toggleStatus(id, isActive) {
     const act = isActive ? 'disable' : 'enable';
@@ -367,6 +411,30 @@ document.addEventListener('DOMContentLoaded', () => {
             setBtnLoading(btn, false);
         }
     });
+
+    // Permission Master Add Form Submit
+    const addPermForm = document.getElementById('addPermissionForm');
+    if (addPermForm) {
+        addPermForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            setBtnLoading(btn, true);
+            try {
+                const data = Object.fromEntries(new FormData(e.target));
+                const res = await sendUserRequest('add_permission', 'POST', data);
+                showToast(res.message, res.success ? '#198754' : '#dc3545');
+                if (res.success) {
+                    e.target.reset();
+                    loadPermissionMasterList();
+                    loadRolesMatrix(); // Refresh matrix if it exists
+                }
+            } catch (err) {
+                showToast('Failed to add permission.', '#dc3545');
+            } finally {
+                setBtnLoading(btn, false);
+            }
+        });
+    }
 
     async function fetchEmpInfoAndFill(empId, prefix) {
         const cleanId = empId.trim();
@@ -630,3 +698,59 @@ document.addEventListener('DOMContentLoaded', () => {
         new bootstrap.Modal(document.getElementById('rawLogModal')).show();
     };
 });
+
+// --- Permission Master Management ---
+function openPermissionMasterModal() {
+    openModal('permissionMasterModal');
+    loadPermissionMasterList();
+}
+
+async function loadPermissionMasterList() {
+    const tbody = document.getElementById('permissionMasterList');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+    
+    try {
+        const res = await sendUserRequest('get_permissions', 'GET');
+        if (res.success && res.all) {
+            if (res.all.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">No permissions found.</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            res.all.forEach(p => {
+                html += `
+                    <tr>
+                        <td class="font-monospace small text-primary fw-bold">${p.perm_code}</td>
+                        <td class="small">${p.description}</td>
+                        <td><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary">${p.module_name || 'General'}</span></td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deletePermission('${p.perm_code}')" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger">Failed to load permissions.</td></tr>';
+    }
+}
+
+async function deletePermission(permCode) {
+    if (!confirm(`Are you sure you want to delete permission '${permCode}'?\nThis will remove it from ALL roles and users!`)) return;
+    
+    try {
+        const res = await sendUserRequest('delete_permission', 'POST', { perm_code: permCode });
+        showToast(res.message, res.success ? '#198754' : '#dc3545');
+        if (res.success) {
+            loadPermissionMasterList();
+            if (typeof loadRolesMatrix === 'function') loadRolesMatrix();
+        }
+    } catch (err) {
+        showToast('Failed to delete permission.', '#dc3545');
+    }
+}

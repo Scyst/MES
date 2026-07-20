@@ -226,6 +226,33 @@ try {
             ]);
             break;
             
+        case 'add_permission':
+            $permCode = trim($input['perm_code'] ?? '');
+            $desc = trim($input['description'] ?? '');
+            $module = trim($input['module_name'] ?? 'General');
+            
+            if (empty($permCode)) throw new Exception("Permission code is required.");
+            if (!preg_match('/^[a-z0-9_]+$/', $permCode)) throw new Exception("Permission code can only contain lowercase letters, numbers, and underscores.");
+            
+            // Check if exists
+            $check = $pdo->prepare("SELECT COUNT(*) FROM dbo.SYS_PERMISSIONS WHERE perm_code = ?");
+            $check->execute([$permCode]);
+            if ($check->fetchColumn() > 0) throw new Exception("Permission code already exists.");
+            
+            $stmt = $pdo->prepare("INSERT INTO dbo.SYS_PERMISSIONS (perm_code, description, module_name) VALUES (?, ?, ?)");
+            $stmt->execute([$permCode, $desc, $module]);
+            echo json_encode(['success' => true, 'message' => 'Permission added successfully.']);
+            break;
+            
+        case 'delete_permission':
+            $permCode = trim($input['perm_code'] ?? '');
+            if (empty($permCode)) throw new Exception("Permission code is required.");
+            
+            $stmt = $pdo->prepare("DELETE FROM dbo.SYS_PERMISSIONS WHERE perm_code = ?");
+            $stmt->execute([$permCode]);
+            echo json_encode(['success' => true, 'message' => 'Permission deleted successfully.']);
+            break;
+            
         case 'logs':
             $page = max(1, intval($_GET['page'] ?? 1));
             $limit = max(1, intval($_GET['limit'] ?? 50));
