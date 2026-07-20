@@ -216,42 +216,37 @@ async function loadPermissionsForModal(mode, userId, roleCode) {
                 return;
             }
             
-            // Group by module_name
-            const grouped = {};
-            all.forEach(p => {
-                const mod = p.module_name || 'General';
-                if (!grouped[mod]) grouped[mod] = [];
-                grouped[mod].push(p);
-            });
-            
-            let html = `<div class="accordion accordion-flush border rounded" id="accordion_${mode}">`;
+            let html = `
+                <div class="table-responsive border rounded bg-white w-100 shadow-sm" style="max-height: 60vh;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top" style="z-index: 2;">
+                            <tr>
+                                <th class="ps-3">Code</th>
+                                <th>Description</th>
+                                <th class="text-center pe-3" style="width: 140px;">Access</th>
+                            </tr>
+                        </thead>
+            `;
             let idx = 0;
             
             for (const [mod, perms] of Object.entries(grouped)) {
                 idx++;
-                const accId = `acc_${mode}_${idx}`;
-                const headingId = `head_${mode}_${idx}`;
+                const tbId = `tb_${mode}_${idx}`;
                 
-                // Check if any user_perms belong to this module to expand it by default
-                const hasActiveUserPerms = perms.some(p => user_perms.includes(p.perm_code));
-                const expandedClass = hasActiveUserPerms ? 'show' : '';
-                const btnCollapsed = hasActiveUserPerms ? '' : 'collapsed';
-
                 html += `
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="${headingId}">
-                            <button class="accordion-button ${btnCollapsed} py-2 fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#${accId}">
-                                <i class="fas fa-layer-group text-primary me-2"></i> ${mod} 
-                                <span class="badge bg-secondary ms-2 rounded-pill">${perms.length}</span>
-                            </button>
-                        </h2>
-                        <div id="${accId}" class="accordion-collapse collapse ${expandedClass}" data-bs-parent="#accordion_${mode}">
-                            <div class="accordion-body p-3 bg-light">
-                                <div class="d-flex justify-content-end mb-2">
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill" onclick="toggleAllPerms('${accId}', true)"><i class="fas fa-check-double"></i> Select All</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill ms-2" onclick="toggleAllPerms('${accId}', false)"><i class="fas fa-eraser"></i> Clear</button>
-                                </div>
-                                <div class="row g-3">
+                        <tbody id="${tbId}">
+                            <tr class="table-secondary">
+                                <td colspan="2" class="fw-bold ps-3 py-2 text-dark">
+                                    <i class="fas fa-folder-open text-primary me-2"></i> ${mod} 
+                                    <span class="badge bg-white text-secondary ms-2 rounded-pill border">${perms.length}</span>
+                                </td>
+                                <td class="text-center pe-3 py-2">
+                                    <div class="btn-group w-100 shadow-sm">
+                                        <button type="button" class="btn btn-sm btn-light border" style="font-size: 0.75rem;" onclick="toggleAllPerms('${tbId}', true)" title="Select All"><i class="fas fa-check-double text-primary"></i></button>
+                                        <button type="button" class="btn btn-sm btn-light border" style="font-size: 0.75rem;" onclick="toggleAllPerms('${tbId}', false)" title="Clear All"><i class="fas fa-eraser text-danger"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
                 `;
                 
                 perms.forEach(p => {
@@ -259,32 +254,31 @@ async function loadPermissionsForModal(mode, userId, roleCode) {
                     const hasUserPerm = user_perms.includes(p.perm_code);
                     
                     html += `
-                                    <div class="col-md-6 col-lg-6">
-                                        <label class="border rounded p-3 d-flex align-items-start bg-white shadow-sm h-100 cursor-pointer" for="${mode}_perm_${p.perm_code}" style="cursor:pointer; transition: 0.2s;">
-                                            <div class="form-check form-switch me-3 mb-0" style="min-width: 2.5em;">
-                                                <input class="form-check-input" type="checkbox" role="switch" style="width: 2.5em; height: 1.25em; cursor:pointer; margin-top: 2px;"
-                                                    name="permissions[]" value="${p.perm_code}" 
-                                                    id="${mode}_perm_${p.perm_code}" 
-                                                    ${hasRolePerm ? 'checked disabled' : (hasUserPerm ? 'checked' : '')}>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <div class="fw-bold text-dark lh-1 mb-2">${p.perm_code}</div>
-                                                <div class="text-secondary lh-sm" style="font-size: 0.8rem;">${p.description || p.perm_code}</div>
-                                                ${hasRolePerm ? '<div class="text-success mt-2 fw-bold bg-success bg-opacity-10 px-2 py-1 rounded d-inline-block" style="font-size:0.7rem;"><i class="fas fa-lock me-1"></i> Granted by Role</div>' : ''}
-                                            </div>
-                                        </label>
-                                    </div>
+                            <tr>
+                                <td class="ps-3">
+                                    <label class="font-monospace small fw-bold text-dark cursor-pointer mb-0" for="${mode}_perm_${p.perm_code}">${p.perm_code}</label>
+                                </td>
+                                <td>
+                                    <label class="small text-secondary cursor-pointer mb-0 w-100" for="${mode}_perm_${p.perm_code}">${p.description || p.perm_code}</label>
+                                </td>
+                                <td class="text-center pe-3">
+                                    ${hasRolePerm 
+                                        ? '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1"><i class="fas fa-lock me-1"></i> Role</span>' 
+                                        : `<div class="form-check form-switch d-flex justify-content-center mb-0">
+                                             <input class="form-check-input cursor-pointer m-0" type="checkbox" role="switch" style="width: 2.5em; height: 1.25em;"
+                                                name="permissions[]" value="${p.perm_code}" 
+                                                id="${mode}_perm_${p.perm_code}" 
+                                                ${hasUserPerm ? 'checked' : ''}>
+                                           </div>`
+                                    }
+                                </td>
+                            </tr>
                     `;
                 });
                 
-                html += `
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                html += `</tbody>`;
             }
-            html += `</div>`;
+            html += `</table></div>`;
             container.innerHTML = html;
         }
     } catch (e) {
