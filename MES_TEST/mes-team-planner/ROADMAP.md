@@ -27,15 +27,15 @@ A seamless, modern, and responsive team planning and task management application
   - Clean grid layout for easy access
 - [x] Layout optimizations for PC & Mobile across all tabs
 
-## 🛠️ Current Phase (Phase 2: Backend Integration & Database)
-- [ ] Define MySQL database schemas (tasks, events, links, activities)
-- [ ] Set up PHP RESTful API backend (`/server/api`)
-- [ ] Connect React frontend components to PHP backend
-- [ ] Implement data fetching, creation, updating, and deletion (CRUD)
+## ✅ Completed (Phase 2: Backend Integration & Database)
+- [x] Define MSSQL database schemas (Tasks, Events, Links, Activities, Projects, Spaces)
+- [x] Set up PHP RESTful API backend (CRUD for all modules)
+- [x] Connect React frontend components to PHP backend via Axios
+- [x] Implement dynamic Workspaces (Team Spaces) sidebar & views
+- [x] Deployment scripts for DEV (`PlannerDev`) and PRD (`Planner`) environments
 
 ## 🚀 Upcoming Features (Phase 3: Advanced Functionality)
-- [ ] **Authentication & User Roles**: Login system to distinguish Admin vs normal users.
 - [ ] **Real-time Notifications**: WebSockets or polling for live updates on task changes.
 - [ ] **File Attachments**: Ability to upload images/documents to tasks.
 - [ ] **Reporting & Export**: Export task boards to PDF or Excel.
-- [ ] **Dark/Light Mode Toggle**: Allow users to switch themes if necessary.
+- [ ] **Enhanced Access Control**: Fine-grained permissions for specific Team Spaces.
