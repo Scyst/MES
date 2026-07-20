@@ -51,11 +51,15 @@ try {
     $diffRows = $diffStmt->fetchAll(PDO::FETCH_ASSOC);
     $diffStmt->closeCursor(); // Release result set before starting transaction
 
+    $isDryRun = isset($_GET['dry_run']) && $_GET['dry_run'] == '1';
+
     $inserted     = 0;
     $updated      = 0;
     $affectedItems = [];
 
-    $pdo->beginTransaction();
+    if (!$isDryRun) {
+        $pdo->beginTransaction();
+    }
 
     $insertStmt = $pdo->prepare("
         INSERT INTO dbo.ITEMS (
@@ -81,7 +85,9 @@ try {
 
         if ($count === 0) {
             // Not in ITEMS at all — insert it
-            $insertStmt->execute([$matNo, $matNo, $matDesc]);
+            if (!$isDryRun) {
+                $insertStmt->execute([$matNo, $matNo, $matDesc]);
+            }
             $inserted++;
 
             $affectedItems[] = [
@@ -97,7 +103,9 @@ try {
             $existingDesc = trim($row['existing_desc'] ?? '');
 
             if ($existingType === 'UNCLASSIFIED' && $existingDesc !== $matDesc) {
-                $updateStmt->execute([$matDesc, $matNo]);
+                if (!$isDryRun) {
+                    $updateStmt->execute([$matDesc, $matNo]);
+                }
                 $updated++;
 
                 $affectedItems[] = [
@@ -111,14 +119,19 @@ try {
         }
     }
 
-    $pdo->commit();
+    if (!$isDryRun) {
+        $pdo->commit();
+    }
+
+    $actionMsg = $isDryRun ? "Preview generated" : "Sync completed successfully";
 
     echo json_encode([
         'success'        => true,
-        'message'        => "Sync complete. Inserted: $inserted, Updated: $updated.",
+        'message'        => "$actionMsg. $inserted new items, $updated items updated.",
         'inserted'       => $inserted,
         'updated'        => $updated,
         'affected_items' => $affectedItems,
+        'is_dry_run'     => $isDryRun
     ]);
 
 } catch (Exception $e) {

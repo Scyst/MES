@@ -332,8 +332,8 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
             <div class="modal fade" id="sapSyncResultModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content shadow-lg border-0">
-                        <div class="modal-header bg-success text-white py-3">
-                            <h5 class="modal-title fw-bold">
+                        <div class="modal-header bg-success text-white py-3" id="sapSyncResultModalHeader">
+                            <h5 class="modal-title fw-bold" id="sapSyncResultModalTitle">
                                 <i class="fas fa-check-circle me-2"></i>SAP Sync Results
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -360,6 +360,9 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                         </div>
                         <div class="modal-footer bg-light py-2 border-top-0">
                             <button type="button" class="btn btn-secondary btn-sm fw-bold shadow-sm px-4" data-bs-dismiss="modal">Close</button>
+                            <button type="button" id="confirmSyncDataBtn" class="btn btn-primary btn-sm fw-bold shadow-sm px-4 d-none">
+                                <i class="fas fa-cloud-download-alt me-1"></i> Confirm & Sync Data
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -432,22 +435,22 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                 syncBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     Swal.fire({
-                        title: 'Sync Items from SAP?',
-                        text: 'ระบบจะดึงรหัส Material ใหม่ทั้งหมดจาก SAP มาเพิ่มลงใน Master Data (ใช้เวลาสักครู่)',
+                        title: 'Preview Sync Items from SAP?',
+                        text: 'ระบบจะดึงข้อมูลจาก SAP มาแสดงให้ดูก่อนว่ามีรายการใดบ้างที่จะถูกเพิ่มหรือแก้ไข โดยยังไม่มีการบันทึกลงระบบจริง',
                         icon: 'question',
                         showCancelButton: true,
-                        confirmButtonText: 'Start Sync',
+                        confirmButtonText: 'Preview',
                         cancelButtonText: 'Cancel'
                     }).then((result) => {
                         if (result.isConfirmed) {
                             Swal.fire({
-                                title: 'Syncing...',
-                                html: 'กำลังตรวจสอบและนำเข้าข้อมูล...',
+                                title: 'Checking SAP Data...',
+                                html: 'กำลังตรวจสอบข้อมูล...',
                                 allowOutsideClick: false,
                                 didOpen: () => { Swal.showLoading(); }
                             });
                             
-                            fetch('api/sync_sap_items.php?t=' + Date.now(), { method: 'POST', cache: 'no-store' })
+                            fetch('api/sync_sap_items.php?dry_run=1&t=' + Date.now(), { method: 'POST', cache: 'no-store' })
                                 .then(response => response.json())
                                 .then(res => {
                                     if(res.success) {
@@ -459,15 +462,6 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                                 const badgeClass = item.action === 'NEW' ? 'bg-success' : 'bg-info text-dark';
                                                 
                                                 const tr = document.createElement('tr');
-                                                // Make entire row slightly clickable/hoverable for UX
-                                                tr.style.cursor = 'pointer';
-                                                tr.onclick = function(e) {
-                                                    // don't trigger if they clicked the button directly
-                                                    if(!e.target.closest('button')) {
-                                                        openItemBySapNo(item.sap_no);
-                                                    }
-                                                };
-                                                
                                                 tr.innerHTML = `
                                                     <td class="px-3"><span class="badge ${badgeClass}">${item.action}</span></td>
                                                     <td class="fw-bold text-primary">${escapeHtml(item.sap_no)}</td>
@@ -478,23 +472,23 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                                         <span id="sync-select-${escapeHtml(item.sap_no)}" class="badge bg-warning text-dark shadow-sm">UNCLASSIFIED</span>
                                                     </td>
                                                     <td class="text-center">
-                                                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm" onclick="openItemBySapNo('${escapeHtml(item.sap_no)}')">
-                                                            <i class="fas fa-cog"></i> Setup
-                                                        </button>
+                                                        <span class="text-muted small"><i class="fas fa-clock"></i> Pending...</span>
                                                     </td>
                                                 `;
                                                 tbody.appendChild(tr);
                                             });
 
+                                            // Set modal to Preview Mode
+                                            document.getElementById('sapSyncResultModalHeader').className = 'modal-header bg-warning text-dark py-3';
+                                            document.getElementById('sapSyncResultModalTitle').innerHTML = '<i class="fas fa-eye me-2"></i>Preview Pending SAP Sync';
+                                            document.getElementById('sapSyncResultModalAlert').innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> รายการต่อไปนี้คือข้อมูลที่จะถูกเพิ่มหรือแก้ไข กรุณากดปุ่ม <b>Confirm & Sync Data</b> เพื่อยืนยันการบันทึกจริง';
+                                            document.getElementById('sapSyncResultModalAlert').className = 'alert alert-warning py-2 mb-3 shadow-sm border-0';
+                                            document.getElementById('confirmSyncDataBtn').classList.remove('d-none');
+
                                             const modal = new bootstrap.Modal(document.getElementById('sapSyncResultModal'));
                                             modal.show();
-                                            
-                                            // Ensure background lists are refreshed
-                                            if(typeof fetchItems === 'function') fetchItems(1);
                                         } else {
-                                            Swal.fire('Success!', res.message, 'success').then(() => {
-                                                if(typeof fetchItems === 'function') fetchItems(1);
-                                            });
+                                            Swal.fire('Up to date!', 'ไม่มีรายการใหม่หรือรายการที่ต้องอัปเดตจาก SAP', 'info');
                                         }
                                     } else {
                                         Swal.fire('Error', res.message, 'error');
@@ -506,6 +500,67 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
 
                         }
                     });
+                });
+            }
+
+            const confirmBtn = document.getElementById('confirmSyncDataBtn');
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', function(e) {
+                    Swal.fire({
+                        title: 'Syncing Data...',
+                        html: 'กำลังบันทึกข้อมูลลงฐานข้อมูลจริง...',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+
+                    fetch('api/sync_sap_items.php?t=' + Date.now(), { method: 'POST', cache: 'no-store' })
+                        .then(response => response.json())
+                        .then(res => {
+                            if(res.success) {
+                                Swal.close();
+                                document.getElementById('confirmSyncDataBtn').classList.add('d-none');
+                                document.getElementById('sapSyncResultModalHeader').className = 'modal-header bg-success text-white py-3';
+                                document.getElementById('sapSyncResultModalTitle').innerHTML = '<i class="fas fa-check-circle me-2"></i>SAP Sync Results';
+                                document.getElementById('sapSyncResultModalAlert').innerHTML = '<i class="fas fa-info-circle me-1"></i> ข้อมูลถูกบันทึกสำเร็จแล้ว กรุณาคลิก <b>Setup</b> เพื่อตั้งค่ารายการ';
+                                document.getElementById('sapSyncResultModalAlert').className = 'alert alert-info py-2 mb-3 shadow-sm border-0';
+                                
+                                // Re-render table with Setup buttons
+                                const tbody = document.getElementById('sapSyncResultTableBody');
+                                tbody.innerHTML = '';
+                                res.affected_items.forEach(item => {
+                                    const badgeClass = item.action === 'NEW' ? 'bg-success' : 'bg-info text-dark';
+                                    const tr = document.createElement('tr');
+                                    tr.style.cursor = 'pointer';
+                                    tr.onclick = function(e) {
+                                        if(!e.target.closest('button')) {
+                                            openItemBySapNo(item.sap_no);
+                                        }
+                                    };
+                                    tr.innerHTML = `
+                                        <td class="px-3"><span class="badge ${badgeClass}">${item.action}</span></td>
+                                        <td class="fw-bold text-primary">${escapeHtml(item.sap_no)}</td>
+                                        <td class="text-truncate" style="max-width: 300px;" title="${escapeHtml(item.part_description)}">
+                                            <span id="sync-desc-${escapeHtml(item.sap_no)}">${escapeHtml(item.part_description)}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span id="sync-select-${escapeHtml(item.sap_no)}" class="badge bg-warning text-dark shadow-sm">UNCLASSIFIED</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm" onclick="openItemBySapNo('${escapeHtml(item.sap_no)}')">
+                                                <i class="fas fa-cog"></i> Setup
+                                            </button>
+                                        </td>
+                                    `;
+                                    tbody.appendChild(tr);
+                                });
+
+                                if(typeof fetchItems === 'function') fetchItems(1);
+                                Swal.fire('Success!', res.message, 'success');
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        })
+                        .catch(err => Swal.fire('Error', err.message, 'error'));
                 });
             }
         });
