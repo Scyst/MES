@@ -208,7 +208,7 @@ async function loadPermissionsForModal(mode, userId, roleCode) {
     container.innerHTML = '<div class="col-12 text-muted small"><i class="fas fa-spinner fa-spin me-1"></i> Loading permissions...</div>';
     
     try {
-        const res = await sendUserRequest(`get_permissions&id=${userId || 0}&role=${roleCode || ''}`, 'GET');
+        const res = await sendUserRequest(`get_permissions&id=${userId || 0}&role=${roleCode || ''}&_t=${Date.now()}`, 'GET');
         if (res.success) {
             const { all, role_perms, user_perms } = res;
             if (all.length === 0) {
@@ -259,17 +259,20 @@ async function loadPermissionsForModal(mode, userId, roleCode) {
                     const hasUserPerm = user_perms.includes(p.perm_code);
                     
                     html += `
-                                    <div class="col-md-6 col-lg-4">
-                                        <div class="form-check form-switch bg-white border p-2 rounded shadow-sm d-flex align-items-center h-100">
-                                            <input class="form-check-input ms-0 mt-0 me-2 flex-shrink-0" type="checkbox" role="switch" name="permissions[]" value="${p.perm_code}" 
-                                                id="${mode}_perm_${p.perm_code}" 
-                                                ${hasRolePerm ? 'checked disabled' : (hasUserPerm ? 'checked' : '')}>
-                                            <label class="form-check-label small mb-0 w-100" for="${mode}_perm_${p.perm_code}">
-                                                <div class="fw-bold text-dark lh-sm">${p.perm_code}</div>
-                                                <div class="text-muted" style="font-size:0.75rem;">${p.description || p.perm_code}</div>
-                                                ${hasRolePerm ? '<div class="text-success mt-1 fw-bold" style="font-size:0.7rem;"><i class="fas fa-lock"></i> Granted by Role</div>' : ''}
-                                            </label>
-                                        </div>
+                                    <div class="col-md-6 col-lg-6">
+                                        <label class="border rounded p-3 d-flex align-items-start bg-white shadow-sm h-100 cursor-pointer" for="${mode}_perm_${p.perm_code}" style="cursor:pointer; transition: 0.2s;">
+                                            <div class="form-check form-switch me-3 mb-0" style="min-width: 2.5em;">
+                                                <input class="form-check-input" type="checkbox" role="switch" style="width: 2.5em; height: 1.25em; cursor:pointer; margin-top: 2px;"
+                                                    name="permissions[]" value="${p.perm_code}" 
+                                                    id="${mode}_perm_${p.perm_code}" 
+                                                    ${hasRolePerm ? 'checked disabled' : (hasUserPerm ? 'checked' : '')}>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold text-dark lh-1 mb-2">${p.perm_code}</div>
+                                                <div class="text-secondary lh-sm" style="font-size: 0.8rem;">${p.description || p.perm_code}</div>
+                                                ${hasRolePerm ? '<div class="text-success mt-2 fw-bold bg-success bg-opacity-10 px-2 py-1 rounded d-inline-block" style="font-size:0.7rem;"><i class="fas fa-lock me-1"></i> Granted by Role</div>' : ''}
+                                            </div>
+                                        </label>
                                     </div>
                     `;
                 });
@@ -711,7 +714,7 @@ async function loadPermissionMasterList() {
     tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
     
     try {
-        const res = await sendUserRequest('get_permissions', 'GET');
+        const res = await sendUserRequest(`get_permissions&_t=${Date.now()}`, 'GET');
         if (res.success && res.all) {
             if (res.all.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">No permissions found.</td></tr>';
