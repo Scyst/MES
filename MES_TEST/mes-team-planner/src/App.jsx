@@ -28,14 +28,7 @@ const mainNav = [
   { tab: 'links', icon: FiLink, label: 'Resources' },
 ];
 
-const spacesNav = [
-  { tab: 'space-home', icon: FiHome, label: 'Home', color: 'text-emerald-500 bg-emerald-500/10' },
-  { tab: 'team-engineers', icon: FiUsers, label: 'Engineers', subItem: true },
-  { tab: 'team-design', icon: FiUsers, label: 'Design Team', subItem: true },
-  { tab: 'team-dev', icon: FiUsers, label: 'Developer Team', subItem: true },
-];
-
-const navItems = [...mainNav, ...spacesNav];
+const navItems = [...mainNav];
 
 function App() {
   const [activeTab, setActiveTab] = useState('calendar');
@@ -469,23 +462,31 @@ function App() {
                 </div>
               </div>
               <div className="space-y-0.5">
-                {spacesNav.map(item => (
+                <button 
+                  onClick={() => handleNav('space-home')}
+                  className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium px-3 ${
+                    activeTab === 'space-home'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' 
+                      : 'hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-200 text-slate-600'
+                  }`}
+                >
+                  <div className="p-1 rounded flex items-center justify-center text-emerald-500 bg-emerald-500/10">
+                    <FiHome className="text-[14px]" />
+                  </div>
+                  <span>Home</span>
+                </button>
+                {spaces.map(s => (
                   <button 
-                    key={item.tab}
-                    onClick={() => handleNav(item.tab)}
-                    className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium ${item.subItem ? 'pl-8 pr-3 text-slate-500 text-[13px]' : 'px-3'} ${
-                      activeTab === item.tab 
+                    key={s.Id || s.id}
+                    onClick={() => handleNav(`space-${s.Id || s.id}`)}
+                    className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium pl-8 pr-3 text-slate-500 text-[13px] ${
+                      activeTab === `space-${s.Id || s.id}`
                         ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' 
                         : 'hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-200 text-slate-600'
                     }`}
                   >
-                    {!item.subItem && (
-                      <div className={`p-1 rounded flex items-center justify-center ${item.color || 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
-                        <item.icon className="text-[14px]" />
-                      </div>
-                    )}
-                    {item.subItem && <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>}
-                    <span>{item.label}</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>
+                    <span>{s.Name || s.name || 'Unnamed Space'}</span>
                   </button>
                 ))}
               </div>
@@ -509,7 +510,11 @@ function App() {
               <FiMenu className="text-xl" />
             </button>
             <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              {navItems.find(n => n.tab === activeTab)?.label || 'MES Planner'}
+              {mainNav.find(n => n.tab === activeTab)?.label || 
+               (activeTab === 'space-home' ? 'Home' : 
+                (activeTab.startsWith('space-') ? 
+                  (spaces.find(s => `space-${s.Id || s.id}` === activeTab)?.Name || spaces.find(s => `space-${s.Id || s.id}` === activeTab)?.name || 'Team Space') 
+                  : 'MES Planner'))}
             </h2>
           </div>
           <div className="flex items-center gap-2">
