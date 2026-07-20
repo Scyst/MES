@@ -339,7 +339,7 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body bg-light p-3">
-                            <div class="alert alert-info py-2 mb-3 shadow-sm border-0">
+                            <div class="alert alert-info py-2 mb-3 shadow-sm border-0" id="sapSyncResultModalAlert">
                                 <i class="fas fa-info-circle me-1"></i> 
                                 รายการต่อไปนี้คือข้อมูลที่อัปเดตจาก SAP กรุณาคลิก <b>Setup</b> เพื่อเข้าไปตั้งค่า Material Type, Min/Max Stock และข้อมูลอื่นๆ ให้ครบถ้วน
                             </div>
