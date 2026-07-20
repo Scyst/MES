@@ -14,41 +14,67 @@
                             <h6 class="border-bottom pb-2 mb-3"><i class="fas fa-id-card text-secondary me-2"></i> User Information</h6>
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">Employee ID</label>
-                                    <input type="text" name="emp_id" id="add_emp_id" class="form-control text-uppercase" placeholder="e.g. 1096...">
+                                    <label class="form-label small fw-bold text-muted mb-1">Employee ID</label>
+                                    <div class="input-group input-group-sm shadow-sm">
+                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-id-badge"></i></span>
+                                        <input type="text" name="emp_id" id="add_emp_id" class="form-control text-uppercase" placeholder="e.g. 1096...">
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Username <span class="text-danger">*</span></label>
-                                    <input type="text" name="username" id="add_username" class="form-control" required>
+                                    <label class="form-label small fw-bold text-muted mb-1">Username <span class="text-danger">*</span></label>
+                                    <div class="input-group input-group-sm shadow-sm">
+                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-user"></i></span>
+                                        <input type="text" name="username" id="add_username" class="form-control" required>
+                                    </div>
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label">Full Name</label>
-                                    <input type="text" name="fullname" id="add_fullname" class="form-control" placeholder="Name - Surname">
+                                    <label class="form-label small fw-bold text-muted mb-1">Full Name</label>
+                                    <div class="input-group input-group-sm shadow-sm">
+                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-font"></i></span>
+                                        <input type="text" name="fullname" id="add_fullname" class="form-control" placeholder="Name - Surname">
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-muted mb-1">Password <span class="text-danger">*</span></label>
+                                    <div class="input-group input-group-sm shadow-sm">
+                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-key"></i></span>
+                                        <input type="password" name="password" class="form-control" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-12 mt-4 pt-2 border-top">
+                                    <h6 class="mb-3 text-dark" style="font-size: 0.85rem;"><i class="fas fa-sitemap text-secondary me-2"></i> Role & Assignment</h6>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-muted mb-1">Role <span class="text-danger">*</span></label>
+                                    <div class="input-group input-group-sm shadow-sm">
+                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-user-tag"></i></span>
+                                        <select class="form-select" name="role" id="add_role" required>
+                                            <option value="">Select...</option>
+                                            <option value="admin" <?= (!hasRole('creator')) ? 'disabled' : '' ?>>Admin</option>
+                                            <option value="manager">Manager</option>
+                                            <option value="planner">Planner</option>
+                                            <option value="supervisor">Supervisor</option>
+                                            <option value="qc">QA / QC</option>
+                                            <option value="maintenance">Maintenance</option>
+                                            <option value="operator">Operator</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Password <span class="text-danger">*</span></label>
-                                    <input type="password" name="password" class="form-control" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Role <span class="text-danger">*</span></label>
-                                    <select class="form-select" name="role" id="add_role" required>
-                                        <option value="">Select...</option>
-                                        <option value="admin" <?= (!hasRole('creator')) ? 'disabled' : '' ?>>Admin</option>
-                                        <option value="manager">Manager</option>
-                                        <option value="planner">Planner</option>
-                                        <option value="supervisor">Supervisor</option>
-                                        <option value="qc">QA / QC</option>
-                                        <option value="maintenance">Maintenance</option>
-                                        <option value="operator">Operator</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Team / Group</label>
-                                    <input type="text" name="team_group" id="add_team" class="form-control text-uppercase" placeholder="e.g. A, B">
+                                    <label class="form-label small fw-bold text-muted mb-1">Team / Group</label>
+                                    <div class="input-group input-group-sm shadow-sm">
+                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-users"></i></span>
+                                        <input type="text" name="team_group" id="add_team" class="form-control text-uppercase" placeholder="e.g. A, B">
+                                    </div>
                                 </div>
                                 <div class="col-md-6 d-none" id="addUserLineWrapper">
-                                    <label class="form-label">Line / Area</label>
-                                    <input type="text" name="line" id="add_line" class="form-control text-uppercase" placeholder="e.g. PRESS, ALL">
+                                    <label class="form-label small fw-bold text-muted mb-1">Line / Area</label>
+                                    <div class="input-group input-group-sm shadow-sm">
+                                        <span class="input-group-text bg-light text-secondary"><i class="fas fa-industry"></i></span>
+                                        <input type="text" name="line" id="add_line" class="form-control text-uppercase" placeholder="e.g. PRESS, ALL">
+                                    </div>
                                 </div>
                             </div>
                         </div>
