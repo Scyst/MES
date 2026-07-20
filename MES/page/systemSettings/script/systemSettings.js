@@ -2143,7 +2143,7 @@ async function viewItemHistory(itemId, sapNo) {
     openModal('auditTrailModal');
 
     try {
-        const res = await fetchAPI(API_ENDPOINT, 'get_audit_trail', 'GET', null, {
+        const res = await fetchAPI(ITEM_MASTER_API, 'get_audit_trail', 'GET', null, {
             target_id: itemId,
             target_sap: sapNo
         });
