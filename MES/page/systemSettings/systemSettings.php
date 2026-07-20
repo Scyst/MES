@@ -87,6 +87,7 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                 <option value="SP">SP (Spare Part)</option>
                                 <option value="TOOL">TOOL (Tools)</option>
                                 <option value="OTHER">OTHER (อื่นๆ)</option>
+                                <option value="UNCLASSIFIED" class="text-danger fw-bold">UNCLASSIFIED (รอจัดหมวดหมู่)</option>
                             </select>
 
                             <select id="materialSubTypeFilter" class="form-select form-select-sm w-auto shadow-sm fw-bold text-info border-info">
