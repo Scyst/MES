@@ -289,15 +289,12 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                         </div>
 
                         <div class="toolbar-group sap-valuation-pane d-flex gap-2 d-none align-items-center">
-                            <div class="d-flex gap-2 align-items-center bg-light border rounded-pill px-2 py-1 me-1 shadow-sm" style="font-size: 0.95rem;">
+                            <div class="d-flex gap-2 align-items-center bg-light border rounded-pill px-2 py-1 me-1 shadow-sm" style="font-size: 0.85rem;">
                                 <span class="text-secondary fw-bold"><i class="fas fa-heartbeat"></i> Health:</span>
-                                <span class="badge bg-white text-dark border rounded-pill fs-6"><i class="fas fa-sync-alt text-warning me-1"></i> <span id="sapValSyncRequiredCount" class="fw-bold text-warning">0</span></span>
-                                <span class="badge bg-white text-dark border rounded-pill fs-6"><i class="fas fa-exclamation-triangle text-danger me-1"></i> <span id="sapValMissingCostCount" class="fw-bold text-danger">0</span></span>
-                                <span class="badge bg-white text-dark border rounded-pill fs-6"><i class="fas fa-question-circle text-secondary me-1"></i> <span id="sapValUnregisteredCount" class="fw-bold text-secondary">0</span></span>
+                                <span class="badge bg-white text-dark border rounded-pill" style="font-size: 0.85rem;"><i class="fas fa-sync-alt text-warning me-1"></i> <span id="sapValSyncRequiredCount" class="fw-bold text-warning">0</span></span>
+                                <span class="badge bg-white text-dark border rounded-pill" style="font-size: 0.85rem;"><i class="fas fa-exclamation-triangle text-danger me-1"></i> <span id="sapValMissingCostCount" class="fw-bold text-danger">0</span></span>
+                                <span class="badge bg-white text-dark border rounded-pill" style="font-size: 0.85rem;"><i class="fas fa-question-circle text-secondary me-1"></i> <span id="sapValUnregisteredCount" class="fw-bold text-secondary">0</span></span>
                             </div>
-                            <button class="btn btn-sm btn-outline-success shadow-sm" onclick="bulkSyncSapCosts()" title="Sync Costs to MES">
-                                <i class="fas fa-sync me-1"></i> Sync Costs
-                            </button>
                         </div>
 
                         <div class="dropdown ms-1">
@@ -326,6 +323,7 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                 <li class="toolbar-group bom-manager-pane d-none"><a class="dropdown-item" href="#" id="importCreateBomsBtn"><i class="fas fa-file-import me-2 w-15px text-success"></i> Import BOM (New)</a></li>
                                 <li class="toolbar-group bom-manager-pane d-none"><a class="dropdown-item" href="#" id="importUpdateBomsBtn"><i class="fas fa-edit me-2 w-15px text-warning"></i> Import BOM (Update)</a></li>
                                 <li class="toolbar-group bom-manager-pane d-none"><a class="dropdown-item" href="#" id="exportAllConsolidatedBtn"><i class="fas fa-file-export me-2 w-15px text-primary"></i> Export All BOMs</a></li>
+                                <li class="toolbar-group sap-valuation-pane d-none"><a class="dropdown-item" href="#" onclick="bulkSyncSapCosts(); return false;"><i class="fas fa-sync text-success me-2 w-15px"></i> Sync Costs to MES</a></li>
                             </ul>
                         </div>
                     </div>
