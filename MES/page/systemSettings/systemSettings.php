@@ -69,14 +69,14 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                 <div class="toolbar-group sap-valuation-pane d-none w-100 mb-3">
                     <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-xl-5">
                         <div class="col">
-                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #0d6efd !important;">
+                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #0d6efd !important; background: linear-gradient(135deg, #f8f9fa 0%, #f0f6ff 100%);">
                                 <div class="card-body py-3 px-3">
                                     <h6 class="text-secondary fw-bold text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 0.5px;"><i class="fas fa-box text-primary me-2"></i> RM (10-xx)</h6>
                                     
                                     <div class="d-flex flex-column gap-2" style="font-size: 0.8rem;">
                                         <div class="d-flex justify-content-between border-bottom pb-1">
                                             <span class="text-muted fw-bold">SAP Value (THB):</span>
-                                            <span class="fw-bold text-dark fs-6" id="sapValRmThb">0.00</span>
+                                            <span class="fw-bold fs-6" style="color: #0d6efd;" id="sapValRmThb">0.00</span>
                                         </div>
                                         <div class="d-flex justify-content-between border-bottom pb-1">
                                             <span class="text-muted">MES Value (THB):</span>
@@ -95,14 +95,14 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                             </div>
                         </div>
                         <div class="col">
-                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #0dcaf0 !important;">
+                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #0dcaf0 !important; background: linear-gradient(135deg, #f8f9fa 0%, #ebfaff 100%);">
                                 <div class="card-body py-3 px-3">
                                     <h6 class="text-secondary fw-bold text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 0.5px;"><i class="fas fa-box-open text-info me-2"></i> PKG (20-xx)</h6>
                                     
                                     <div class="d-flex flex-column gap-2" style="font-size: 0.8rem;">
                                         <div class="d-flex justify-content-between border-bottom pb-1">
                                             <span class="text-muted fw-bold">SAP Value (THB):</span>
-                                            <span class="fw-bold text-dark fs-6" id="sapValPkgThb">0.00</span>
+                                            <span class="fw-bold fs-6" style="color: #0dcaf0;" id="sapValPkgThb">0.00</span>
                                         </div>
                                         <div class="d-flex justify-content-between border-bottom pb-1">
                                             <span class="text-muted">MES Value (THB):</span>
@@ -147,14 +147,14 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                             </div>
                         </div>
                         <div class="col">
-                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #fd7e14 !important;">
+                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #fd7e14 !important; background: linear-gradient(135deg, #f8f9fa 0%, #fff6ec 100%);">
                                 <div class="card-body py-3 px-3">
                                     <h6 class="text-secondary fw-bold text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 0.5px;"><i class="fas fa-cogs text-warning me-2"></i> WIP (30-xx)</h6>
                                     
                                     <div class="d-flex flex-column gap-2" style="font-size: 0.8rem;">
                                         <div class="d-flex justify-content-between border-bottom pb-1">
                                             <span class="text-muted fw-bold">SAP Value (THB):</span>
-                                            <span class="fw-bold text-dark fs-6" id="sapValWipThb">0.00</span>
+                                            <span class="fw-bold fs-6" style="color: #fd7e14;" id="sapValWipThb">0.00</span>
                                         </div>
                                         <div class="d-flex justify-content-between border-bottom pb-1">
                                             <span class="text-muted">MES Value (THB):</span>
@@ -173,14 +173,14 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                             </div>
                         </div>
                         <div class="col">
-                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #198754 !important;">
+                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #198754 !important; background: linear-gradient(135deg, #f8f9fa 0%, #edf7f1 100%);">
                                 <div class="card-body py-3 px-3">
                                     <h6 class="text-secondary fw-bold text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 0.5px;"><i class="fas fa-check-circle text-success me-2"></i> FG (40-xx)</h6>
                                     
                                     <div class="d-flex flex-column gap-2" style="font-size: 0.8rem;">
                                         <div class="d-flex justify-content-between border-bottom pb-1">
                                             <span class="text-muted fw-bold">SAP Value (THB):</span>
-                                            <span class="fw-bold text-dark fs-6" id="sapValFgThb">0.00</span>
+                                            <span class="fw-bold fs-6" style="color: #198754;" id="sapValFgThb">0.00</span>
                                         </div>
                                         <div class="d-flex justify-content-between border-bottom pb-1">
                                             <span class="text-muted">MES Value (THB):</span>
@@ -289,11 +289,11 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                         </div>
 
                         <div class="toolbar-group sap-valuation-pane d-flex gap-2 d-none align-items-center">
-                            <div class="d-flex gap-2 align-items-center bg-light border rounded-pill px-2 py-1 me-1 shadow-sm" style="font-size: 0.85rem;">
+                            <div class="d-flex gap-2 align-items-center bg-light border rounded-pill px-2 py-1 me-1 shadow-sm" style="font-size: 0.95rem;">
                                 <span class="text-secondary fw-bold"><i class="fas fa-heartbeat"></i> Health:</span>
-                                <span class="badge bg-white text-dark border rounded-pill"><i class="fas fa-sync-alt text-warning me-1"></i> <span id="sapValSyncRequiredCount" class="fw-bold text-warning">0</span></span>
-                                <span class="badge bg-white text-dark border rounded-pill"><i class="fas fa-exclamation-triangle text-danger me-1"></i> <span id="sapValMissingCostCount" class="fw-bold text-danger">0</span></span>
-                                <span class="badge bg-white text-dark border rounded-pill"><i class="fas fa-question-circle text-danger me-1"></i> <span id="sapValUnregisteredCount" class="fw-bold text-danger">0</span></span>
+                                <span class="badge bg-white text-dark border rounded-pill fs-6"><i class="fas fa-sync-alt text-warning me-1"></i> <span id="sapValSyncRequiredCount" class="fw-bold text-warning">0</span></span>
+                                <span class="badge bg-white text-dark border rounded-pill fs-6"><i class="fas fa-exclamation-triangle text-danger me-1"></i> <span id="sapValMissingCostCount" class="fw-bold text-danger">0</span></span>
+                                <span class="badge bg-white text-dark border rounded-pill fs-6"><i class="fas fa-question-circle text-secondary me-1"></i> <span id="sapValUnregisteredCount" class="fw-bold text-secondary">0</span></span>
                             </div>
                             <button class="btn btn-sm btn-outline-success shadow-sm" onclick="bulkSyncSapCosts()" title="Sync Costs to MES">
                                 <i class="fas fa-sync me-1"></i> Sync Costs

@@ -2253,19 +2253,19 @@ async function loadSapValuation() {
                 if (item.MES_Category === 'UNREGISTERED') unregisteredCount++;
             });
             
-            // Helper to render variance badge
+            // Helper to render variance text
             const renderVariance = (sap, mes, elId) => {
                 const diff = mes - sap;
                 const el = document.getElementById(elId);
                 if (!el) return;
                 
                 if (diff === 0) {
-                    el.className = 'badge bg-success bg-opacity-10 text-success border border-success border-opacity-25';
+                    el.className = 'text-success fw-bold';
                     el.textContent = 'Match';
                 } else {
                     const sign = diff > 0 ? '+' : '';
-                    const colorClass = diff > 0 ? 'text-danger border-danger bg-danger' : 'text-warning border-warning bg-warning';
-                    el.className = `badge ${colorClass} bg-opacity-10 border border-opacity-25`;
+                    const colorClass = diff > 0 ? 'text-danger' : 'text-warning';
+                    el.className = `${colorClass} fw-bold`;
                     el.textContent = sign + formatThb(diff);
                 }
             };
