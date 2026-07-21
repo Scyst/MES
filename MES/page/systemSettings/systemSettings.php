@@ -66,6 +66,141 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
             
             <div class="bg-white border rounded-3 shadow-sm p-3 mb-3">
                 
+                <div class="toolbar-group sap-valuation-pane d-none w-100 mb-3">
+                    <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-xl-5">
+                        <div class="col">
+                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #0d6efd !important;">
+                                <div class="card-body py-3 px-3">
+                                    <h6 class="text-secondary fw-bold text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 0.5px;"><i class="fas fa-box text-primary me-2"></i> RM (10-xx)</h6>
+                                    
+                                    <div class="d-flex flex-column gap-2" style="font-size: 0.8rem;">
+                                        <div class="d-flex justify-content-between border-bottom pb-1">
+                                            <span class="text-muted fw-bold">SAP Value (THB):</span>
+                                            <span class="fw-bold text-dark fs-6" id="sapValRmThb">0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-bottom pb-1">
+                                            <span class="text-muted">MES Value (THB):</span>
+                                            <span class="fw-bold text-dark" id="sapValRmThbMes">0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-bottom pb-1">
+                                            <span class="text-muted">Variance:</span>
+                                            <span id="sapValRmDiff" class="fw-bold">-</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between pb-0">
+                                            <span class="text-muted">Quantity (pcs):</span>
+                                            <span class="fw-bold text-dark" id="sapValRmQty">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #0dcaf0 !important;">
+                                <div class="card-body py-3 px-3">
+                                    <h6 class="text-secondary fw-bold text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 0.5px;"><i class="fas fa-box-open text-info me-2"></i> PKG (20-xx)</h6>
+                                    
+                                    <div class="d-flex flex-column gap-2" style="font-size: 0.8rem;">
+                                        <div class="d-flex justify-content-between border-bottom pb-1">
+                                            <span class="text-muted fw-bold">SAP Value (THB):</span>
+                                            <span class="fw-bold text-dark fs-6" id="sapValPkgThb">0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-bottom pb-1">
+                                            <span class="text-muted">MES Value (THB):</span>
+                                            <span class="fw-bold text-dark" id="sapValPkgThbMes">0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-bottom pb-1">
+                                            <span class="text-muted">Variance:</span>
+                                            <span id="sapValPkgDiff" class="fw-bold">-</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between pb-0">
+                                            <span class="text-muted">Quantity (pcs):</span>
+                                            <span class="fw-bold text-dark" id="sapValPkgQty">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #6610f2 !important; background: linear-gradient(135deg, #f8f9fa 0%, #f3ebff 100%);">
+                                <div class="card-body py-3 px-3">
+                                    <h6 class="text-secondary fw-bold text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 0.5px;"><i class="fas fa-boxes text-purple me-2" style="color: #6610f2;"></i> RM + PKG</h6>
+                                    
+                                    <div class="d-flex flex-column gap-2" style="font-size: 0.8rem;">
+                                        <div class="d-flex justify-content-between border-bottom pb-1" style="border-color: rgba(102, 16, 242, 0.1) !important;">
+                                            <span class="text-muted fw-bold">SAP Value (THB):</span>
+                                            <span class="fw-bold fs-6" style="color: #6610f2;" id="sapValRmPkgThb">0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-bottom pb-1" style="border-color: rgba(102, 16, 242, 0.1) !important;">
+                                            <span class="text-muted">MES Value (THB):</span>
+                                            <span class="fw-bold text-dark" id="sapValRmPkgThbMes">0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-bottom pb-1" style="border-color: rgba(102, 16, 242, 0.1) !important;">
+                                            <span class="text-muted">Variance:</span>
+                                            <span id="sapValRmPkgDiff" class="fw-bold">-</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between pb-0">
+                                            <span class="text-muted">Quantity (pcs):</span>
+                                            <span class="fw-bold text-dark" id="sapValRmPkgQty">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #fd7e14 !important;">
+                                <div class="card-body py-3 px-3">
+                                    <h6 class="text-secondary fw-bold text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 0.5px;"><i class="fas fa-cogs text-warning me-2"></i> WIP (30-xx)</h6>
+                                    
+                                    <div class="d-flex flex-column gap-2" style="font-size: 0.8rem;">
+                                        <div class="d-flex justify-content-between border-bottom pb-1">
+                                            <span class="text-muted fw-bold">SAP Value (THB):</span>
+                                            <span class="fw-bold text-dark fs-6" id="sapValWipThb">0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-bottom pb-1">
+                                            <span class="text-muted">MES Value (THB):</span>
+                                            <span class="fw-bold text-dark" id="sapValWipThbMes">0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-bottom pb-1">
+                                            <span class="text-muted">Variance:</span>
+                                            <span id="sapValWipDiff" class="fw-bold">-</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between pb-0">
+                                            <span class="text-muted">Quantity (pcs):</span>
+                                            <span class="fw-bold text-dark" id="sapValWipQty">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card shadow-sm border-0 h-100 rounded-3" style="border-left: 4px solid #198754 !important;">
+                                <div class="card-body py-3 px-3">
+                                    <h6 class="text-secondary fw-bold text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 0.5px;"><i class="fas fa-check-circle text-success me-2"></i> FG (40-xx)</h6>
+                                    
+                                    <div class="d-flex flex-column gap-2" style="font-size: 0.8rem;">
+                                        <div class="d-flex justify-content-between border-bottom pb-1">
+                                            <span class="text-muted fw-bold">SAP Value (THB):</span>
+                                            <span class="fw-bold text-dark fs-6" id="sapValFgThb">0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-bottom pb-1">
+                                            <span class="text-muted">MES Value (THB):</span>
+                                            <span class="fw-bold text-dark" id="sapValFgThbMes">0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-bottom pb-1">
+                                            <span class="text-muted">Variance:</span>
+                                            <span id="sapValFgDiff" class="fw-bold">-</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between pb-0">
+                                            <span class="text-muted">Quantity (pcs):</span>
+                                            <span class="fw-bold text-dark" id="sapValFgQty">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row g-2 align-items-center mb-3 pb-2 border-bottom">
                     
                     <div class="col-12 col-md-5 d-flex align-items-center gap-2">
@@ -111,6 +246,21 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                             <h6 class="fw-bold text-secondary mb-0 m-0"><i class="fas fa-map-marker-alt me-2"></i> Locations (จุดจัดเก็บ)</h6>
                         </div>
 
+                        <div class="toolbar-group sap-valuation-pane w-100 d-flex gap-2 d-none">
+                            <div class="input-group input-group-sm flex-grow-1" style="max-width: 300px; min-width: 150px;">
+                                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0" id="sapValSearch" placeholder="Search Material..." autocomplete="off">
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary shadow-sm position-relative" onclick="openModal('sapValFilterModal')" title="Filter Data">
+                                <i class="fas fa-filter"></i>
+                                <span id="sapValFilterBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
+                                    0
+                                </span>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary shadow-sm" onclick="loadSapValuation()" title="Refresh Data">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="col-12 col-md-7 text-md-end d-flex justify-content-end align-items-center gap-2">
@@ -138,6 +288,18 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                             </button>
                         </div>
 
+                        <div class="toolbar-group sap-valuation-pane d-flex gap-2 d-none align-items-center">
+                            <div class="d-flex gap-2 align-items-center bg-light border rounded-pill px-2 py-1 me-1 shadow-sm" style="font-size: 0.85rem;">
+                                <span class="text-secondary fw-bold"><i class="fas fa-heartbeat"></i> Health:</span>
+                                <span class="badge bg-white text-dark border rounded-pill"><i class="fas fa-sync-alt text-warning me-1"></i> <span id="sapValSyncRequiredCount" class="fw-bold text-warning">0</span></span>
+                                <span class="badge bg-white text-dark border rounded-pill"><i class="fas fa-exclamation-triangle text-danger me-1"></i> <span id="sapValMissingCostCount" class="fw-bold text-danger">0</span></span>
+                                <span class="badge bg-white text-dark border rounded-pill"><i class="fas fa-question-circle text-danger me-1"></i> <span id="sapValUnregisteredCount" class="fw-bold text-danger">0</span></span>
+                            </div>
+                            <button class="btn btn-sm btn-outline-success shadow-sm" onclick="bulkSyncSapCosts()" title="Sync Costs to MES">
+                                <i class="fas fa-sync me-1"></i> Sync Costs
+                            </button>
+                        </div>
+
                         <div class="dropdown ms-1">
                             <button class="btn btn-sm btn-light border shadow-sm px-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-ellipsis-v fa-fw text-secondary"></i>
@@ -149,6 +311,7 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                                 <li><a class="dropdown-item module-switch" href="#" data-target="lineSchedulesPane"><i class="fas fa-clock me-2 w-15px text-muted"></i> Line Schedules</a></li>
                                 <?php if($canManage): ?>
                                 <li><a class="dropdown-item module-switch" href="#" data-target="locations-pane"><i class="fas fa-map-marker-alt me-2 w-15px text-muted"></i> Locations</a></li>
+                                <li><a class="dropdown-item module-switch" href="#" data-target="sap-valuation-pane"><i class="fas fa-chart-line me-2 w-15px text-muted"></i> SAP Valuation</a></li>
                                 <?php endif; ?>
                                 
                                 <li><hr class="dropdown-divider"></li>
@@ -326,6 +489,85 @@ $pageHeaderSubtitle = "ตั้งค่า Master Data และ Configuration
                     </div>
                 </div>
 
+                <div class="module-pane" id="sap-valuation-pane">
+
+                    <div class="table-responsive bg-white border rounded-3 shadow-sm hide-scrollbar" style="max-height: calc(100vh - 250px);">
+                        <table class="table table-sm table-hover align-middle mb-0 text-nowrap table-settings" id="sapValuationTable">
+                            <thead class="table-light text-secondary" style="position: sticky; top: 0; z-index: 2;">
+                                <tr>
+                                    <th class="py-2 px-3 sortable-header" data-sort="Mat_No" style="cursor: pointer;">SAP No. <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th class="py-2 sortable-header" data-sort="MatDesc" style="cursor: pointer;">Description <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th class="py-2 text-center sortable-header" data-sort="MES_Category" style="cursor: pointer;">Type (MES) <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th class="py-2 text-center sortable-header" data-sort="Category" style="cursor: pointer;">Group (SAP) <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th class="py-2 text-center sortable-header" data-sort="Storage_Location" style="cursor: pointer;">Loc <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th class="py-2 text-end sortable-header" data-sort="Quantity" style="cursor: pointer;">Quantity <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th class="py-2 text-center">Unit</th>
+                                    <th class="py-2 text-end sortable-header" data-sort="SAP_Cost" style="cursor: pointer;">SAP Cost (THB) <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th class="py-2 text-end sortable-header" data-sort="MES_Cost" style="cursor: pointer;">MES Cost (THB) <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th class="py-2 text-end sortable-header" data-sort="SAP_Value" style="cursor: pointer;">SAP Value (THB) <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th class="py-2 text-end px-3 sortable-header" data-sort="MES_Value" style="cursor: pointer;">MES Value (THB) <i class="fas fa-sort text-muted ms-1"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="sapValuationTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- SAP Valuation Filter Modal -->
+            <div class="modal fade" id="sapValFilterModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content shadow-lg border-0">
+                        <div class="modal-header bg-light py-3">
+                            <h5 class="modal-title fw-bold">
+                                <i class="fas fa-filter text-muted me-2"></i>Filter Valuation Data
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body bg-white p-4">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-secondary text-uppercase" style="font-size: 0.8rem;">Category</label>
+                                <div class="row g-2" id="sapFilterCategories" style="max-height: 150px; overflow-y: auto;">
+                                    <!-- Populated dynamically via JS -->
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-secondary text-uppercase" style="font-size: 0.8rem;">Pricing Status</label>
+                                <div class="d-flex flex-column gap-2" id="sapFilterPricing">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="price_no_sap" value="no_sap">
+                                        <label class="form-check-label" for="price_no_sap">Missing SAP Cost (0 THB)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="price_no_mes" value="no_mes">
+                                        <label class="form-check-label" for="price_no_mes">Missing MES Cost (0 THB)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="price_mismatch" value="mismatch">
+                                        <label class="form-check-label" for="price_mismatch">Cost Mismatch (Needs Sync)</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label fw-bold text-secondary text-uppercase" style="font-size: 0.8rem;">Storage Location</label>
+                                <div class="row g-2" id="sapFilterLocations" style="max-height: 150px; overflow-y: auto;">
+                                    <!-- Populated dynamically via JS -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light py-2">
+                            <button type="button" class="btn btn-light btn-sm fw-bold border shadow-sm px-4 me-auto" onclick="clearSapValFilters()">Clear</button>
+                            <button type="button" class="btn btn-secondary btn-sm fw-bold shadow-sm px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm px-4" onclick="applySapValFiltersBtn()">
+                                <i class="fas fa-check me-1"></i> Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- SAP Sync Result Modal -->

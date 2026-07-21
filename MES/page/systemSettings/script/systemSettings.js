@@ -1940,6 +1940,9 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'lineSchedulesPane': 
                 if (typeof canManage !== 'undefined' && canManage) loadSchedules(); 
                 break;
+            case 'sap-valuation-pane': 
+                loadSapValuation(); 
+                break;
         }
         tabLoadedState[targetTabId] = true;
     }
@@ -2194,5 +2197,424 @@ async function viewItemHistory(itemId, sapNo) {
         }
     } catch (e) {
         tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-danger">Error fetching audit trail</td></tr>`;
+    }
+}
+
+// ==========================================
+// SAP VALUATION DASHBOARD
+// ==========================================
+let sapValuationData = [];
+let sapValuationTableInstance = null;
+
+async function loadSapValuation() {
+    const tbody = document.getElementById('sapValuationTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-5 text-muted"><div class="spinner-border text-primary" role="status"></div><div class="mt-2">Loading data...</div></td></tr>';
+    
+    try {
+        const req = await fetch('api/sapValuationManage.php?action=get_valuation');
+        const res = await req.json();
+        
+        if (res.success) {
+            sapValuationData = res.items;
+            
+            // Calculate new summary metrics
+            let syncRequiredCount = 0;
+            let missingSapCostCount = 0;
+            let missingMesCostCount = 0;
+            let unregisteredCount = 0;
+            
+            const groupTotals = {
+                RM: { sapVal: 0, mesVal: 0, qty: 0 },
+                PKG: { sapVal: 0, mesVal: 0, qty: 0 },
+                WIP: { sapVal: 0, mesVal: 0, qty: 0 },
+                FG: { sapVal: 0, mesVal: 0, qty: 0 }
+            };
+            
+            sapValuationData.forEach(item => {
+                const sapCost = parseFloat(item.SAP_Cost) || 0;
+                const mesCost = parseFloat(item.MES_Cost) || 0;
+                const sapVal = parseFloat(item.SAP_Value) || 0;
+                const qty = parseFloat(item.Quantity) || 0;
+                const mesVal = mesCost * qty;
+                
+                // Categorize based on SAP Category prefix
+                const cat = item.Category;
+                if (groupTotals[cat]) {
+                    groupTotals[cat].sapVal += sapVal;
+                    groupTotals[cat].mesVal += mesVal;
+                    groupTotals[cat].qty += qty;
+                }
+                
+                if (sapCost > 0 && sapCost !== mesCost) syncRequiredCount++;
+                if (sapCost === 0) missingSapCostCount++;
+                if (mesCost === 0) missingMesCostCount++;
+                if (item.MES_Category === 'UNREGISTERED') unregisteredCount++;
+            });
+            
+            // Helper to render variance badge
+            const renderVariance = (sap, mes, elId) => {
+                const diff = mes - sap;
+                const el = document.getElementById(elId);
+                if (!el) return;
+                
+                if (diff === 0) {
+                    el.className = 'badge bg-success bg-opacity-10 text-success border border-success border-opacity-25';
+                    el.textContent = 'Match';
+                } else {
+                    const sign = diff > 0 ? '+' : '';
+                    const colorClass = diff > 0 ? 'text-danger border-danger bg-danger' : 'text-warning border-warning bg-warning';
+                    el.className = `badge ${colorClass} bg-opacity-10 border border-opacity-25`;
+                    el.textContent = sign + formatThb(diff);
+                }
+            };
+            
+            // Render Cards
+            document.getElementById('sapValRmThb').textContent = formatThb(groupTotals.RM.sapVal);
+            document.getElementById('sapValRmThbMes').textContent = formatThb(groupTotals.RM.mesVal);
+            document.getElementById('sapValRmQty').textContent = formatQty(groupTotals.RM.qty);
+            renderVariance(groupTotals.RM.sapVal, groupTotals.RM.mesVal, 'sapValRmDiff');
+            
+            document.getElementById('sapValPkgThb').textContent = formatThb(groupTotals.PKG.sapVal);
+            document.getElementById('sapValPkgThbMes').textContent = formatThb(groupTotals.PKG.mesVal);
+            document.getElementById('sapValPkgQty').textContent = formatQty(groupTotals.PKG.qty);
+            renderVariance(groupTotals.PKG.sapVal, groupTotals.PKG.mesVal, 'sapValPkgDiff');
+            
+            const rmPkgSap = groupTotals.RM.sapVal + groupTotals.PKG.sapVal;
+            const rmPkgMes = groupTotals.RM.mesVal + groupTotals.PKG.mesVal;
+            const rmPkgQty = groupTotals.RM.qty + groupTotals.PKG.qty;
+            document.getElementById('sapValRmPkgThb').textContent = formatThb(rmPkgSap);
+            document.getElementById('sapValRmPkgThbMes').textContent = formatThb(rmPkgMes);
+            document.getElementById('sapValRmPkgQty').textContent = formatQty(rmPkgQty);
+            renderVariance(rmPkgSap, rmPkgMes, 'sapValRmPkgDiff');
+            
+            document.getElementById('sapValWipThb').textContent = formatThb(groupTotals.WIP.sapVal);
+            document.getElementById('sapValWipThbMes').textContent = formatThb(groupTotals.WIP.mesVal);
+            document.getElementById('sapValWipQty').textContent = formatQty(groupTotals.WIP.qty);
+            renderVariance(groupTotals.WIP.sapVal, groupTotals.WIP.mesVal, 'sapValWipDiff');
+            
+            document.getElementById('sapValFgThb').textContent = formatThb(groupTotals.FG.sapVal);
+            document.getElementById('sapValFgThbMes').textContent = formatThb(groupTotals.FG.mesVal);
+            document.getElementById('sapValFgQty').textContent = formatQty(groupTotals.FG.qty);
+            renderVariance(groupTotals.FG.sapVal, groupTotals.FG.mesVal, 'sapValFgDiff');
+            
+            const elSyncReq = document.getElementById('sapValSyncRequiredCount');
+            if (elSyncReq) elSyncReq.textContent = formatQty(syncRequiredCount);
+            
+            const elMissCost = document.getElementById('sapValMissingCostCount');
+            if (elMissCost) elMissCost.textContent = formatQty(missingSapCostCount + missingMesCostCount);
+            
+            const elUnreg = document.getElementById('sapValUnregisteredCount');
+            if (elUnreg) elUnreg.textContent = formatQty(unregisteredCount);
+            // Populate Category Filter dynamically
+            const catContainer = document.getElementById('sapFilterCategories');
+            if (catContainer) {
+                const uniqueCats = [...new Set(sapValuationData.map(item => item.MES_Category))].filter(Boolean).sort();
+                catContainer.innerHTML = uniqueCats.map(cat => `
+                    <div class="col-6 col-md-4">
+                        <div class="form-check m-0">
+                            <input class="form-check-input" type="checkbox" id="cat_${cat}" value="${cat}">
+                            <label class="form-check-label text-truncate w-100" style="font-size: 0.85rem;" for="cat_${cat}" title="${cat}">${cat}</label>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // Populate Storage Locations Filter dynamically
+            const locContainer = document.getElementById('sapFilterLocations');
+            if (locContainer) {
+                const uniqueLocs = [...new Set(sapValuationData.map(item => item.Storage_Location))].filter(Boolean).sort();
+                locContainer.innerHTML = uniqueLocs.map(loc => `
+                    <div class="col-6 col-md-4">
+                        <div class="form-check m-0">
+                            <input class="form-check-input" type="checkbox" id="loc_${loc}" value="${loc}">
+                            <label class="form-check-label text-truncate w-100" style="font-size: 0.85rem;" for="loc_${loc}" title="${loc}">${loc}</label>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            applySapValFilters();
+        } else {
+            tbody.innerHTML = `<tr><td colspan="11" class="text-center py-5 text-danger">Error: ${escapeHtml(res.message || 'Unknown error')}</td></tr>`;
+        }
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-5 text-danger">Error fetching SAP Valuation Data</td></tr>`;
+    }
+}
+
+function formatThb(num) {
+    if (!num) return '0.00';
+    return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatQty(num) {
+    if (!num) return '0';
+    return Number(num).toLocaleString('en-US');
+}
+
+function renderSapValuationTable(data) {
+    const tbody = document.getElementById('sapValuationTableBody');
+    tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center py-5 text-muted">No data found</td></tr>';
+        return;
+    }
+    
+    data.forEach(item => {
+        let badgeClass = 'bg-secondary';
+        if (item.Category === 'RM') badgeClass = 'bg-primary';
+        else if (item.Category === 'PKG') badgeClass = 'bg-info text-dark';
+        else if (item.Category === 'WIP') badgeClass = 'bg-warning text-dark';
+        else if (item.Category === 'FG') badgeClass = 'bg-success';
+        
+        let mesBadgeClass = 'bg-secondary';
+        if (item.MES_Category === 'UNREGISTERED') mesBadgeClass = 'bg-danger';
+        else if (item.MES_Category === 'RM') mesBadgeClass = 'bg-primary';
+        else if (item.MES_Category === 'PKG') mesBadgeClass = 'bg-info text-dark';
+        else if (item.MES_Category === 'FG') mesBadgeClass = 'bg-success';
+        else if (item.MES_Category === 'WIP') mesBadgeClass = 'bg-warning text-dark';
+        
+        let syncBtnHtml = '';
+        let mismatchBg = '';
+        if (parseFloat(item.SAP_Cost) > 0 && parseFloat(item.SAP_Cost) != parseFloat(item.MES_Cost)) {
+            syncBtnHtml = `<button class="btn btn-sm btn-link text-success p-0 ms-2" onclick="syncSingleCost(event, '${item.Mat_No}')" title="Sync from SAP"><i class="fas fa-arrow-circle-down"></i></button>`;
+            mismatchBg = 'bg-warning bg-opacity-10';
+        }
+        
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.onclick = (e) => handleSapRowClick(e, item);
+        tr.innerHTML = `
+            <td class="px-3 fw-bold text-primary">${escapeHtml(item.Mat_No)}</td>
+            <td class="text-truncate" style="max-width:300px;" title="${escapeHtml(item.MatDesc)}">${escapeHtml(item.MatDesc)}</td>
+            <td class="text-center"><span class="badge ${mesBadgeClass}">${escapeHtml(item.MES_Category)}</span></td>
+            <td class="text-center"><span class="badge ${badgeClass}">${item.Category}</span></td>
+            <td class="text-center">${escapeHtml(item.Storage_Location)}</td>
+            <td class="text-end fw-bold">${formatQty(item.Quantity)}</td>
+            <td class="text-center">${escapeHtml(item.Unit)}</td>
+            <td class="text-end">${formatThb(item.SAP_Cost)}</td>
+            <td class="text-end text-success ${mismatchBg}">${formatThb(item.MES_Cost)}${syncBtnHtml}</td>
+            <td class="text-end fw-bold text-secondary">${formatThb(item.SAP_Value)}</td>
+            <td class="text-end px-3 fw-bold text-success ${mismatchBg}">${formatThb(item.MES_Value)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Table Sorting Logic
+let currentSortColumn = null;
+let currentSortDirection = 'asc';
+
+document.querySelectorAll('.sortable-header').forEach(header => {
+    header.addEventListener('click', function() {
+        const column = this.getAttribute('data-sort');
+        if (!column) return;
+        
+        if (currentSortColumn === column) {
+            currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSortColumn = column;
+            currentSortDirection = 'asc';
+        }
+        
+        document.querySelectorAll('.sortable-header i').forEach(icon => {
+            icon.className = 'fas fa-sort text-muted ms-1';
+        });
+        
+        const icon = this.querySelector('i');
+        if (icon) {
+            icon.className = currentSortDirection === 'asc' ? 'fas fa-sort-up text-primary ms-1' : 'fas fa-sort-down text-primary ms-1';
+        }
+        
+        const sortedData = [...sapValuationData].sort((a, b) => {
+            let valA = a[column];
+            let valB = b[column];
+            
+            // Numeric sort for specific columns
+            if (['Quantity', 'SAP_Cost', 'SAP_Value', 'MES_Cost', 'MES_Value'].includes(column)) {
+                valA = parseFloat(valA) || 0;
+                valB = parseFloat(valB) || 0;
+                return currentSortDirection === 'asc' ? valA - valB : valB - valA;
+            }
+            
+            // String sort
+            valA = (valA || '').toString().toLowerCase();
+            valB = (valB || '').toString().toLowerCase();
+            if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+        
+        applySapValFilters();
+    });
+});
+
+document.getElementById('sapValSearch')?.addEventListener('input', function(e) {
+    applySapValFilters();
+});
+
+// Filter State & Unified Filter Logic
+let currentSapFilters = {
+    categories: [],
+    pricing: [],
+    locations: []
+};
+
+function applySapValFilters() {
+    let dataToFilter = [...sapValuationData];
+    
+    // 1. Sort
+    if (currentSortColumn) {
+        dataToFilter.sort((a, b) => {
+            let valA = a[currentSortColumn];
+            let valB = b[currentSortColumn];
+            if (['Quantity', 'SAP_Cost', 'SAP_Value', 'MES_Cost', 'MES_Value'].includes(currentSortColumn)) {
+                valA = parseFloat(valA) || 0;
+                valB = parseFloat(valB) || 0;
+                return currentSortDirection === 'asc' ? valA - valB : valB - valA;
+            }
+            valA = (valA || '').toString().toLowerCase();
+            valB = (valB || '').toString().toLowerCase();
+            if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    // 2. Text Search
+    const q = document.getElementById('sapValSearch')?.value.toLowerCase();
+    if (q) {
+        dataToFilter = dataToFilter.filter(item => 
+            (item.Mat_No && item.Mat_No.toLowerCase().includes(q)) || 
+            (item.MatDesc && item.MatDesc.toLowerCase().includes(q))
+        );
+    }
+
+    // 3. Category Filter
+    if (currentSapFilters.categories.length > 0) {
+        dataToFilter = dataToFilter.filter(item => currentSapFilters.categories.includes(item.MES_Category));
+    }
+
+    // 4. Pricing Status Filter
+    if (currentSapFilters.pricing.length > 0) {
+        dataToFilter = dataToFilter.filter(item => {
+            let match = false;
+            if (currentSapFilters.pricing.includes('no_sap') && parseFloat(item.SAP_Cost) === 0) match = true;
+            if (currentSapFilters.pricing.includes('no_mes') && parseFloat(item.MES_Cost) === 0) match = true;
+            if (currentSapFilters.pricing.includes('mismatch') && parseFloat(item.SAP_Cost) > 0 && parseFloat(item.SAP_Cost) != parseFloat(item.MES_Cost)) match = true;
+            return match;
+        });
+    }
+
+    // 5. Storage Location Filter
+    if (currentSapFilters.locations.length > 0) {
+        dataToFilter = dataToFilter.filter(item => currentSapFilters.locations.includes(item.Storage_Location));
+    }
+
+    renderSapValuationTable(dataToFilter);
+}
+
+function applySapValFiltersBtn() {
+    currentSapFilters.categories = Array.from(document.querySelectorAll('#sapFilterCategories input:checked')).map(cb => cb.value);
+    currentSapFilters.pricing = Array.from(document.querySelectorAll('#sapFilterPricing input:checked')).map(cb => cb.value);
+    currentSapFilters.locations = Array.from(document.querySelectorAll('#sapFilterLocations input:checked')).map(cb => cb.value);
+    
+    // Update Badge
+    let totalFilters = currentSapFilters.categories.length + currentSapFilters.pricing.length + currentSapFilters.locations.length;
+    let badge = document.getElementById('sapValFilterBadge');
+    if (badge) {
+        badge.textContent = totalFilters;
+        if (totalFilters > 0) badge.classList.remove('d-none');
+        else badge.classList.add('d-none');
+    }
+    
+    applySapValFilters();
+    closeModal('sapValFilterModal');
+}
+
+function clearSapValFilters() {
+    document.querySelectorAll('#sapFilterCategories input').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#sapFilterPricing input').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#sapFilterLocations input').forEach(cb => cb.checked = false);
+    applySapValFiltersBtn(); // applies empty filters
+}
+
+// Helper Functions for SAP Valuation
+async function handleSapRowClick(event, item) {
+    if (event.target.closest('button')) return; // Ignore if clicked on a button
+    
+    showSpinner();
+    try {
+        const result = await fetchAPI(ITEM_MASTER_API, 'get_item_by_sap', 'GET', null, { sap_no: item.Mat_No });
+        if (result.success && result.data) {
+            openItemModal(result.data);
+        } else {
+            // Ask to register
+            if (confirm(`Item ${item.Mat_No} is not registered in MES. Do you want to register it now?`)) {
+                openItemModal({
+                    item_id: '0',
+                    sap_no: item.Mat_No,
+                    part_description: item.MatDesc,
+                    material_type: item.Category === 'OTHER' ? '' : item.Category,
+                    is_active: 1
+                });
+            }
+        }
+    } catch (e) {
+        showToast('Error fetching item details', 'var(--bs-danger)');
+    } finally {
+        hideSpinner();
+    }
+}
+
+async function syncSingleCost(event, sapNo) {
+    event.stopPropagation();
+    if (!confirm(`Are you sure you want to sync the cost for ${sapNo} from SAP?`)) return;
+    
+    showSpinner();
+    try {
+        const result = await fetchAPI('../api/sapValuationManage.php', 'sync_costs', 'POST', { sap_nos: [sapNo] });
+        if (result.success) {
+            showToast(result.message, 'var(--bs-success)');
+            loadSapValuation(); // Reload to see the new MES Cost
+        } else {
+            showToast(result.message || 'Sync failed', 'var(--bs-danger)');
+        }
+    } catch (e) {
+        showToast('Error syncing cost', 'var(--bs-danger)');
+    } finally {
+        hideSpinner();
+    }
+}
+
+async function bulkSyncSapCosts() {
+    // Get all rows with syncable costs
+    const syncableItems = sapValuationData.filter(item => parseFloat(item.SAP_Cost) > 0 && parseFloat(item.SAP_Cost) != parseFloat(item.MES_Cost));
+    
+    if (syncableItems.length === 0) {
+        showToast('No items require cost synchronization.', 'var(--bs-info)');
+        return;
+    }
+    
+    if (!confirm(`Found ${syncableItems.length} items with different costs (where SAP Cost > 0).\nAre you sure you want to sync all of them to MES?`)) return;
+    
+    const sapNos = syncableItems.map(item => item.Mat_No);
+    
+    showSpinner();
+    try {
+        const result = await fetchAPI('../api/sapValuationManage.php', 'sync_costs', 'POST', { sap_nos: sapNos });
+        if (result.success) {
+            showToast(result.message, 'var(--bs-success)');
+            loadSapValuation(); // Reload to see the new MES Cost
+        } else {
+            showToast(result.message || 'Bulk sync failed', 'var(--bs-danger)');
+        }
+    } catch (e) {
+        showToast('Error syncing bulk costs', 'var(--bs-danger)');
+    } finally {
+        hideSpinner();
     }
 }
