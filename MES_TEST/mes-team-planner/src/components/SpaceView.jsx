@@ -114,8 +114,8 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
             <div className="hidden md:flex items-center mr-4">
               <div className="flex -space-x-3">
                 {spaceMembers.slice(0, 4).map((member, idx) => (
-                  <div key={member.Id || idx} className="w-10 h-10 rounded-full border-2 border-indigo-600 bg-white flex items-center justify-center text-indigo-600 font-bold text-sm uppercase shadow-sm" title={`${member.FirstName} ${member.LastName} (${member.Role})`}>
-                    {member.FirstName ? member.FirstName.charAt(0) : <FiUser />}
+                  <div key={member.Id || idx} className="w-10 h-10 rounded-full border-2 border-indigo-600 bg-white flex items-center justify-center text-indigo-600 font-bold text-sm uppercase shadow-sm" title={`${member.Name || member.fullname || member.UserId} (${member.Role})`}>
+                    {(member.Name || member.fullname) ? (member.Name || member.fullname).charAt(0) : <FiUser />}
                   </div>
                 ))}
                 {spaceMembers.length > 4 && (

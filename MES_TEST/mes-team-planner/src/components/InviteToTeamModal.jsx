@@ -73,13 +73,13 @@ export default function InviteToTeamModal({ isOpen, onClose, space, members = []
   if (!isOpen || !space) return null;
 
   // Filter users not in team yet
-  const memberIds = members.map(m => String(m.UserId || m.user_id));
-  const availableUsers = users.filter(u => !memberIds.includes(String(u.EmpNo || u.user_id)));
+  const memberIds = members.map(m => String(m.UserId || m.user_id || m.username));
+  const availableUsers = users.filter(u => !memberIds.includes(String(u.username || u.user_id)));
   
   const searchResults = availableUsers.filter(u => 
-    (u.FirstName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (u.LastName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (u.EmpNo || u.user_id || '').toLowerCase().includes(searchQuery.toLowerCase())
+    (u.fullname || u.Name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (u.username || u.user_id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.aka || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -136,18 +136,18 @@ export default function InviteToTeamModal({ isOpen, onClose, space, members = []
                   <div className="p-4 text-center text-sm text-slate-500">ไม่พบข้อมูลผู้ใช้ที่ตรงกัน หรือผู้ใช้นี้อยู่ในทีมแล้ว</div>
                 ) : (
                   searchResults.map(u => (
-                    <div key={u.EmpNo || u.user_id} className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <div key={u.username || u.user_id} className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-slate-500 font-bold text-xs uppercase">
-                          {u.FirstName ? u.FirstName.charAt(0) : <FiUser />}
+                          {(u.fullname || u.Name) ? (u.fullname || u.Name).charAt(0) : <FiUser />}
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-slate-800 dark:text-slate-200">{u.FirstName} {u.LastName}</div>
-                          <div className="text-xs text-slate-500">{u.EmpNo || u.user_id}</div>
+                          <div className="text-sm font-medium text-slate-800 dark:text-slate-200">{u.fullname || u.Name}</div>
+                          <div className="text-xs text-slate-500">{u.username || u.user_id} {u.aka && `(${u.aka})`}</div>
                         </div>
                       </div>
                       <button 
-                        onClick={() => handleAddMember(u.EmpNo || u.user_id)}
+                        onClick={() => handleAddMember(u.username || u.user_id)}
                         className="px-3 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-400 rounded text-xs font-bold transition-colors"
                       >
                         เพิ่มเข้าทีม
@@ -173,15 +173,15 @@ export default function InviteToTeamModal({ isOpen, onClose, space, members = []
                     <div key={member.Id} className="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-sm uppercase border border-indigo-200 dark:border-indigo-700">
-                          {member.FirstName ? member.FirstName.charAt(0) : <FiUser />}
+                          {(member.Name || member.fullname) ? (member.Name || member.fullname).charAt(0) : <FiUser />}
                         </div>
                         <div>
                           <div className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                            {member.FirstName} {member.LastName}
+                            {member.Name || member.fullname}
                             {member.Role === 'Admin' && <span className="px-1.5 py-0.5 bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 rounded text-[10px] uppercase font-bold flex items-center gap-1"><FiShield /> Admin</span>}
                           </div>
                           <div className="text-xs text-slate-500">
-                            {member.UserId || member.user_id} • เข้าร่วมเมื่อ {member.JoinedAt ? member.JoinedAt.substring(0, 10) : '-'}
+                            {member.UserId || member.user_id || member.username} • เข้าร่วมเมื่อ {member.JoinedAt ? member.JoinedAt.substring(0, 10) : '-'}
                           </div>
                         </div>
                       </div>

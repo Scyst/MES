@@ -78,9 +78,9 @@ try {
     $action = isset($_GET['action']) ? $_GET['action'] : '';
 
     if ($action === 'members' && $method === 'GET' && $id) {
-        $stmt = $pdo->prepare("SELECT sm.*, u.FirstName, u.LastName, u.EmpNo as user_id 
+        $stmt = $pdo->prepare("SELECT sm.*, u.fullname as Name, u.username as user_id 
                                FROM TeamPlanner_SpaceMembers sm
-                               LEFT JOIN USERS u ON sm.UserId = u.EmpNo
+                               LEFT JOIN USERS u ON sm.UserId = u.username
                                WHERE sm.SpaceId = ?");
         $stmt->execute([$id]);
         sendJson($stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -93,7 +93,7 @@ try {
         $inserted = $stmt->fetch(PDO::FETCH_ASSOC);
         
         // Fetch user details to append
-        $uStmt = $pdo->prepare("SELECT FirstName, LastName, EmpNo as user_id FROM USERS WHERE EmpNo = ?");
+        $uStmt = $pdo->prepare("SELECT fullname as Name, username as user_id FROM USERS WHERE username = ?");
         $uStmt->execute([$data['user_id']]);
         $uData = $uStmt->fetch(PDO::FETCH_ASSOC);
         
