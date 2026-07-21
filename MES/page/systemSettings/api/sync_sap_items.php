@@ -15,11 +15,11 @@ try {
     $diffQuery = "
         WITH SAPItems AS (
             SELECT Mat_No, MatDesc, 1 AS src_priority
-            FROM TOOLBOX_TEMP.dbo.SAP_STG_ALL_STOCK
+            FROM SAP_STG_ALL_STOCK
             WHERE Mat_No IS NOT NULL AND RTRIM(LTRIM(Mat_No)) != ''
             UNION ALL
             SELECT Mat_No, MatDesc, 2 AS src_priority
-            FROM TOOLBOX_TEMP.dbo.SAP_STG_OPERATION_SLIP
+            FROM SAP_STG_OPERATION_SLIP
             WHERE Mat_No IS NOT NULL AND RTRIM(LTRIM(Mat_No)) != ''
         ),
         RankedSAP AS (

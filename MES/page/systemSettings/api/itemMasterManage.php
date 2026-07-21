@@ -49,6 +49,22 @@ try {
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
+        case 'get_item_by_sap':
+            $sap_no = $_GET['sap_no'] ?? '';
+            if (empty($sap_no)) {
+                echo json_encode(['success' => false, 'message' => 'SAP No is required']);
+                break;
+            }
+            $stmt = $pdo->prepare("SELECT * FROM ITEMS WHERE sap_no = ?");
+            $stmt->execute([$sap_no]);
+            $item = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($item) {
+                echo json_encode(['success' => true, 'data' => $item]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Item not found']);
+            }
+            break;
+
         case 'get_items':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) && intval($_GET['limit']) === -1 ? 999999 : 50;
