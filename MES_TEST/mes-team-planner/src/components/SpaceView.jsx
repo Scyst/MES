@@ -1,5 +1,7 @@
-import React, { useMemo } from 'react';
-import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTrash2, FiUserPlus, FiUser } from 'react-icons/fi';
+import axios from 'axios';
+import InviteToTeamModal from './InviteToTeamModal';
 
 export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], currentUser, refreshData, onEditSpace, onDeleteSpace }) {
   // Determine Space Name and current Space
@@ -47,6 +49,26 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
   const activeProjects = teamProjects.filter(p => p && p.Status !== 'Completed' && p.Status !== 'done');
   const doneTasks = teamTasks.filter(t => t && (t.Status === 'Done' || t.Status === 'done'));
 
+  const [spaceMembers, setSpaceMembers] = useState([]);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+
+  const fetchMembers = useCallback(async () => {
+    if (!currentSpace || currentSpace.Id === 'home' || currentSpace.Id === 'mock' || currentSpace.Id === 'unknown') {
+      setSpaceMembers([]);
+      return;
+    }
+    try {
+      const res = await axios.get(`/api/spaces.php?action=members&space_id=${currentSpace.Id}`);
+      if (res.data) setSpaceMembers(res.data);
+    } catch (err) {
+      console.error('Failed to fetch space members', err);
+    }
+  }, [currentSpace]);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -65,6 +87,12 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
           {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown' && (
             <div className="flex gap-2">
               <button 
+                onClick={() => setIsInviteModalOpen(true)}
+                className="flex items-center gap-1 px-3 py-1 bg-indigo-600/80 hover:bg-indigo-600 transition-colors rounded text-xs font-semibold backdrop-blur-sm shadow-sm"
+              >
+                <FiUserPlus /> Invite to Team
+              </button>
+              <button 
                 onClick={() => onEditSpace && onEditSpace(currentSpace)}
                 className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 transition-colors rounded text-xs font-semibold backdrop-blur-sm"
               >
@@ -80,6 +108,25 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
           )}
         </div>
         <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-6 py-3 rounded-xl border border-white/20">
+          
+          {/* Member Avatars */}
+          {spaceMembers.length > 0 && (
+            <div className="hidden md:flex items-center mr-4">
+              <div className="flex -space-x-3">
+                {spaceMembers.slice(0, 4).map((member, idx) => (
+                  <div key={member.Id || idx} className="w-10 h-10 rounded-full border-2 border-indigo-600 bg-white flex items-center justify-center text-indigo-600 font-bold text-sm uppercase shadow-sm" title={`${member.FirstName} ${member.LastName} (${member.Role})`}>
+                    {member.FirstName ? member.FirstName.charAt(0) : <FiUser />}
+                  </div>
+                ))}
+                {spaceMembers.length > 4 && (
+                  <div className="w-10 h-10 rounded-full border-2 border-indigo-600 bg-indigo-900/50 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                    +{spaceMembers.length - 4}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="text-center">
             <div className="text-2xl font-bold">{activeProjects.length}</div>
             <div className="text-[10px] text-indigo-100 uppercase tracking-wide">Active Projects</div>
@@ -164,6 +211,14 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
           * ข้อมูลในหน้านี้เป็นข้อมูลจำลอง (Mock Data) สำหรับการแสดงผลหน้าทีม
         </div>
       )}
+
+      <InviteToTeamModal 
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        space={currentSpace}
+        members={spaceMembers}
+        onMemberUpdate={fetchMembers}
+      />
     </div>
   );
 }

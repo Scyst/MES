@@ -88,7 +88,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
           </div>
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Create Task</span>
         </button>
-        <button onClick={() => alert('ฟีเจอร์นี้อยู่ระหว่างการพัฒนา')} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
+        <button onClick={() => alert('กรุณาเลือกพื้นที่ทำงาน (Space) จากเมนูด้านซ้ายก่อน เพื่อทำการเชิญคนเข้าทีม')} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
           <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 group-hover:bg-blue-600 group-hover:text-white transition-colors">
             <FiUserPlus className="text-xl" />
           </div>

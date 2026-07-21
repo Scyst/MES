@@ -225,6 +225,23 @@ function App() {
     }
   }, []);
 
+  const handleEditSpace = useCallback((space) => {
+    setEditingSpace(space);
+    setIsAddSpaceModalOpen(true);
+  }, []);
+
+  const handleDeleteSpace = useCallback(async (spaceId) => {
+    if (!window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบพื้นที่ทำงานนี้? ข้อมูลโปรเจ็กต์และงานที่เกี่ยวข้องอาจได้รับผลกระทบ')) return;
+    try {
+      await axios.delete(`/api/spaces.php?id=${spaceId}`);
+      setSpaces(prev => prev.filter(s => String(s.Id) !== String(spaceId)));
+      setActiveTab('space-home');
+    } catch (err) {
+      console.error('Failed to delete space', err);
+      alert('ไม่สามารถลบพื้นที่ทำงานได้');
+    }
+  }, []);
+
   const handleDeleteEvent = useCallback(async (eventId) => {
     try {
       await axios.delete(`/api/events/${eventId}`);
@@ -322,7 +339,7 @@ function App() {
       default: 
         // Fallback for Spaces and mock tabs
         if (activeTab.startsWith('space-') || activeTab.startsWith('team-')) {
-          return <SpaceView activeTab={activeTab} spaces={spaces} tasks={tasks} projects={projects} currentUser={currentUser} refreshData={refreshData} users={users} />;
+          return <SpaceView activeTab={activeTab} spaces={spaces} tasks={tasks} projects={projects} currentUser={currentUser} refreshData={refreshData} users={users} onEditSpace={handleEditSpace} onDeleteSpace={handleDeleteSpace} />;
         }
         return <Dashboard 
           tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav}

@@ -21,6 +21,22 @@ function ensureSpacesTable($pdo) {
         ";
         $pdo->exec($sqlCreateSpaces);
 
+        // Create SpaceMembers table
+        $sqlCreateSpaceMembers = "
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='TeamPlanner_SpaceMembers' and xtype='U')
+            BEGIN
+                CREATE TABLE TeamPlanner_SpaceMembers (
+                    Id INT IDENTITY(1,1) PRIMARY KEY,
+                    SpaceId INT NOT NULL,
+                    UserId NVARCHAR(255) NOT NULL,
+                    Role NVARCHAR(50) DEFAULT 'Member',
+                    JoinedAt DATETIME DEFAULT GETDATE(),
+                    FOREIGN KEY (SpaceId) REFERENCES TeamPlanner_Spaces(Id) ON DELETE CASCADE
+                )
+            END
+        ";
+        $pdo->exec($sqlCreateSpaceMembers);
+
         // Alter Projects
         $sqlAlterProjects = "
             IF COL_LENGTH('TeamPlanner_Projects', 'SpaceId') IS NULL
@@ -59,7 +75,46 @@ function ensureSpacesTable($pdo) {
 try {
     ensureSpacesTable($pdo);
 
-    if ($method === 'GET') {
+    $action = isset($_GET['action']) ? $_GET['action'] : '';
+
+    if ($action === 'members' && $method === 'GET' && $id) {
+        $stmt = $pdo->prepare("SELECT sm.*, u.FirstName, u.LastName, u.EmpNo as user_id 
+                               FROM TeamPlanner_SpaceMembers sm
+                               LEFT JOIN USERS u ON sm.UserId = u.EmpNo
+                               WHERE sm.SpaceId = ?");
+        $stmt->execute([$id]);
+        sendJson($stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+    elseif ($action === 'add_member' && $method === 'POST') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $stmt = $pdo->prepare("INSERT INTO TeamPlanner_SpaceMembers (SpaceId, UserId, Role) OUTPUT INSERTED.* VALUES (?, ?, ?)");
+        $stmt->execute([$data['space_id'], $data['user_id'], $data['role'] ?? 'Member']);
+        
+        $inserted = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Fetch user details to append
+        $uStmt = $pdo->prepare("SELECT FirstName, LastName, EmpNo as user_id FROM USERS WHERE EmpNo = ?");
+        $uStmt->execute([$data['user_id']]);
+        $uData = $uStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($uData) {
+            $inserted = array_merge($inserted, $uData);
+        }
+        
+        sendJson($inserted);
+    }
+    elseif ($action === 'update_member' && $method === 'PUT' && $id) {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $stmt = $pdo->prepare("UPDATE TeamPlanner_SpaceMembers SET Role = ? WHERE Id = ?");
+        $stmt->execute([$data['role'], $id]);
+        sendJson(['success' => true]);
+    }
+    elseif ($action === 'remove_member' && $method === 'DELETE' && $id) {
+        $stmt = $pdo->prepare("DELETE FROM TeamPlanner_SpaceMembers WHERE Id = ?");
+        $stmt->execute([$id]);
+        sendJson(['success' => true]);
+    }
+    elseif ($method === 'GET') {
         $stmt = $pdo->query("SELECT * FROM TeamPlanner_Spaces ORDER BY CreatedAt ASC");
         $spaces = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {

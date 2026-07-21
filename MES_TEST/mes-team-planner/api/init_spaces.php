@@ -22,6 +22,22 @@ try {
     ";
     $pdo->exec($sqlCreateSpaces);
 
+    // 1.5 Create TeamPlanner_SpaceMembers table
+    $sqlCreateSpaceMembers = "
+        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='TeamPlanner_SpaceMembers' and xtype='U')
+        BEGIN
+            CREATE TABLE TeamPlanner_SpaceMembers (
+                Id INT IDENTITY(1,1) PRIMARY KEY,
+                SpaceId INT NOT NULL,
+                UserId NVARCHAR(255) NOT NULL,
+                Role NVARCHAR(50) DEFAULT 'Member', -- Admin, Member, Viewer
+                JoinedAt DATETIME DEFAULT GETDATE(),
+                FOREIGN KEY (SpaceId) REFERENCES TeamPlanner_Spaces(Id) ON DELETE CASCADE
+            )
+        END
+    ";
+    $pdo->exec($sqlCreateSpaceMembers);
+
     // 2. Add SpaceId to TeamPlanner_Projects
     $sqlAlterProjects = "
         IF COL_LENGTH('TeamPlanner_Projects', 'SpaceId') IS NULL
