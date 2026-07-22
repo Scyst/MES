@@ -12,7 +12,7 @@
                     <div class="col-12">
                           <div class="mb-3">
                               <label class="pe-form-label">อะไหล่ (Item) <span class="pe-text-danger">*</span></label>
-                              <input type="text" class="pe-form-input" id="spTxItemInput" list="spTxItemList" placeholder="-- พิมพ์เพื่อค้นหาอะไหล่ --" oninput="SparePartsModule.onItemInput()" required>
+                              <input type="text" class="pe-form-input" id="spTxItemInput" list="spTxItemList" placeholder="-- พิมพ์เพื่อค้นหาอะไหล่ --" onchange="SparePartsModule.onItemInput()" required>
                               <datalist id="spTxItemList"></datalist>
                               <input type="hidden" id="spTxItem" required>
                           </div>

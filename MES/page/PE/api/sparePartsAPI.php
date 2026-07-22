@@ -67,15 +67,34 @@ try {
             $locationId = $input['location_id'] ?? null;
             $quantity = (float)($input['quantity'] ?? 0);
             $type = $input['transaction_type'] ?? '';
-            $refJobId = !empty($input['ref_job_id']) ? $input['ref_job_id'] : null;
+            $peWoId = !empty($input['ref_job_id']) ? $input['ref_job_id'] : null;
             $notes = $input['notes'] ?? '';
 
             if (!$itemId || !$locationId || $quantity == 0 || !in_array($type, ['RECEIVE', 'ISSUE', 'ADJUST'])) {
                 throw new Exception("ข้อมูลไม่ครบถ้วน");
             }
 
-            $stmt = $pdo->prepare("EXEC sp_MT_ProcessTransaction @item_id=?, @location_id=?, @quantity=?, @transaction_type=?, @ref_job_id=?, @notes=?, @user_id=?");
-            $stmt->execute([$itemId, $locationId, $quantity, $type, $refJobId, $notes, $userId]);
+            $pdo->beginTransaction();
+            
+            $stmt = $pdo->prepare("EXEC sp_MT_ProcessTransaction @item_id=?, @location_id=?, @quantity=?, @transaction_type=?, @ref_job_id=NULL, @notes=?, @user_id=?, @pe_wo_id=?");
+            $stmt->execute([$itemId, $locationId, $quantity, $type, $notes, $userId, $peWoId]);
+            
+            if ($type === 'ISSUE' && $peWoId) {
+                // Recalculate total cost for this Work Order
+                $costSql = "SELECT ISNULL(SUM(ABS(t.quantity) * i.unit_price), 0) AS total_cost
+                            FROM dbo.MT_TRANSACTIONS t WITH (NOLOCK)
+                            JOIN dbo.MT_ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                            WHERE (t.pe_wo_id = ? OR t.ref_job_id = ?) AND t.transaction_type = 'ISSUE'";
+                $costStmt = $pdo->prepare($costSql);
+                $costStmt->execute([$peWoId, $peWoId]);
+                $totalCost = (float)$costStmt->fetchColumn();
+
+                // Update PE_WORK_ORDERS
+                $updateWoStmt = $pdo->prepare("UPDATE dbo.PE_WORK_ORDERS SET total_cost = ? WHERE wo_id = ?");
+                $updateWoStmt->execute([$totalCost, $peWoId]);
+            }
+            
+            $pdo->commit();
 
             echo json_encode(['success' => true, 'message' => "ทำรายการ $type สำเร็จ"]);
             break;
