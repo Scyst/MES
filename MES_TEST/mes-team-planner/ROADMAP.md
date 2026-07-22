@@ -32,6 +32,8 @@ A seamless, modern, and responsive team planning and task management application
 - [x] Set up PHP RESTful API backend (CRUD for all modules)
 - [x] Connect React frontend components to PHP backend via Axios
 - [x] Implement dynamic Workspaces (Team Spaces) sidebar & views
+- [x] Integrate Project and Task Management natively inside Team Space View (SpaceView.jsx)
+- [x] Resolve Checklist loading and task status update bugs across Project Modals and Team Space View
 - [x] Deployment scripts for DEV (`PlannerDev`) and PRD (`Planner`) environments
 
 ## 🚀 Upcoming Features (Phase 3: Advanced Functionality)
