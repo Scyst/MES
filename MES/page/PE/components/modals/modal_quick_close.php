@@ -13,14 +13,14 @@
                 <div class="pe-form-group mb-4">
                     <label class="pe-form-label">After <span class="required">*</span></label>
                     <input type="file" id="qcFrmImageAfter" accept="image/jpeg, image/png, image/webp" style="display:none;">
-                    <div class="pe-dropzone mx-auto mt-2 mb-2" id="qcDropzoneAfter" style="aspect-ratio: 4/3; width: 100%; max-width: 400px; height: auto; min-height: 120px;">
-                        <div class="pe-dropzone-content">
-                            <i class="fas fa-camera"></i>
-                            <p>ถ่ายรูปหรือเลือกรูปภาพหลังซ่อม</p>
-                            <div class="pe-dropzone-hint">บังคับใส่รูปภาพยืนยันการซ่อม</div>
+                    <div class="pe-dropzone mx-auto mt-2 mb-2" id="qcDropzoneAfter" style="width: 100%; max-width: 400px; height: auto; min-height: 120px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f8f9fa;">
+                        <div class="pe-dropzone-content text-center" style="padding: 20px;">
+                            <i class="fas fa-camera mb-2" style="font-size: 2rem;"></i>
+                            <p class="mb-1">ถ่ายรูปหรือเลือกรูปภาพหลังซ่อม</p>
+                            <div class="pe-dropzone-hint pe-text-xs">บังคับใส่รูปภาพยืนยันการซ่อม</div>
                         </div>
-                        <div id="qcImageAfterPreview" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:2; align-items:center; justify-content:center;">
-                            <img src="" alt="Preview After" style="max-width:100%; border-radius:var(--pe-radius-sm); object-fit:contain; cursor:pointer; width:100%; height:100%; display:block;" onclick="event.stopPropagation(); window.open(this.src, '_blank')">
+                        <div id="qcImageAfterPreview" style="display:none; width: 100%; align-items:center; justify-content:center;">
+                            <img src="" alt="Preview After" style="max-width:100%; max-height:400px; border-radius:var(--pe-radius-sm); object-fit:contain; cursor:pointer; display:block; margin: 0 auto;" onclick="event.stopPropagation(); window.open(this.src, '_blank')">
                         </div>
                     </div>
                 </div>

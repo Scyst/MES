@@ -58,6 +58,21 @@ window.TechModule = (function() {
             const isMine = (wo.assigned_to === myName);
             const statusClass = 'tech-status-' + wo.status.replace(' ', '');
             
+            const detailsId = `wo-details-${wo.wo_id}`;
+            let detailsHtml = `<div class="tech-wo-details" id="${detailsId}" style="display:none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--pe-border-color); animation: fadeIn 0.2s ease;">`;
+            
+            if (wo.issue_image_path) {
+                detailsHtml += `
+                <div style="margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: #f0f0f0; text-align: center;">
+                    <img src="../../${wo.issue_image_path}" style="width: 100%; height: auto; max-height: 200px; object-fit: contain; display: block;" onclick="window.open(this.src, '_blank')">
+                </div>`;
+            }
+            
+            detailsHtml += `
+                <div style="font-size: 0.85rem; color: var(--pe-text-color); white-space: pre-wrap;"><strong>รายละเอียด:</strong><br>${PEApp.escapeHtml(wo.issue_description || 'ไม่มีรายละเอียดเพิ่มเติม')}</div>
+                <div style="font-size: 0.8rem; color: var(--pe-text-muted); margin-top: 8px;"><strong>ผู้แจ้ง:</strong> ${PEApp.escapeHtml(wo.requested_by_name || '-')}</div>
+            </div>`;
+
             html += `
             <div class="tech-card" id="wo-card-${wo.wo_id}" data-priority="${wo.priority}">
                 <div class="tech-card-header">
@@ -72,6 +87,14 @@ window.TechModule = (function() {
                     <div><i class="fas fa-clock"></i> ${wo.requested_at ? wo.requested_at.substring(11, 16) : '-'}</div>
                     ${wo.assigned_to ? `<div><i class="fas fa-user"></i> ${wo.assigned_to}</div>` : ''}
                 </div>
+                
+                <div class="text-center mt-2 mb-3">
+                    <button class="btn btn-sm btn-link text-decoration-none pe-text-sm" style="color: var(--pe-primary);" onclick="const d = document.getElementById('${detailsId}'); const i = this.querySelector('i'); if(d.style.display==='none'){ d.style.display='block'; i.classList.replace('fa-chevron-down', 'fa-chevron-up'); } else { d.style.display='none'; i.classList.replace('fa-chevron-up', 'fa-chevron-down'); }">
+                        <i class="fas fa-chevron-down me-1"></i> ดูรายละเอียดและรูปภาพ
+                    </button>
+                    ${detailsHtml}
+                </div>
+
                 <div class="tech-actions ${wo.status === 'Assigned' && isMine ? 'two-col' : ''}">
                     ${renderButtons(wo, isMine)}
                 </div>

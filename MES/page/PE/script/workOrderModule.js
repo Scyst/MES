@@ -665,7 +665,7 @@ const WorkOrderModule = (() => {
                     modal.removeEventListener('shown.bs.modal', onShown);
                     if (cropper) cropper.destroy();
                     cropper = new Cropper(imageToCrop, {
-                        aspectRatio: 4 / 3,
+                        aspectRatio: NaN,
                         viewMode: 1,
                         autoCropArea: 1,
                         responsive: true

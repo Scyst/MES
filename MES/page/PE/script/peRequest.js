@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Timeout to allow modal rendering
                 setTimeout(() => {
                     cropper = new Cropper(imageToCrop, {
-                        aspectRatio: 4 / 3, // Lock aspect ratio to match standard document image placeholder
+                        aspectRatio: NaN,
                         viewMode: 1,
                         dragMode: 'move',
                         autoCropArea: 1,
