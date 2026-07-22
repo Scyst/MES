@@ -44,9 +44,22 @@ const SparePartsModule = (() => {
         renderTable(q);
     }
 
+    let currentView = 'grid'; // default view
+    let currentMasterView = 'grid';
+
+    function toggleView(view) {
+        currentView = view;
+        document.getElementById('spGridBody').style.display = view === 'grid' ? 'flex' : 'none';
+        document.getElementById('spTableContainer').style.display = view === 'table' ? 'block' : 'none';
+        
+        document.getElementById('btnViewGrid').classList.toggle('active', view === 'grid');
+        document.getElementById('btnViewTable').classList.toggle('active', view === 'table');
+    }
+
     function renderTable(searchQuery = '') {
         const gridBody = document.getElementById('spGridBody');
-        if (!gridBody) return;
+        const tableBody = document.getElementById('spTableBody');
+        if (!gridBody || !tableBody) return;
         const locFilter = document.getElementById('spFilterLocation')?.value || '';
 
         let filtered = allData;
@@ -60,22 +73,25 @@ const SparePartsModule = (() => {
 
         if (!filtered.length) {
             gridBody.innerHTML = `<div class="col-12 text-center text-muted py-5">No items found</div>`;
+            tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5">No items found</td></tr>`;
             return;
         }
 
-        gridBody.innerHTML = filtered.map(r => {
+        let gridHtml = '';
+        let tableHtml = '';
+
+        filtered.forEach(r => {
             const minStock = parseFloat(r.min_stock) || 0;
             const onHand = parseFloat(r.onhand_qty) || 0;
             const isLow = minStock > 0 && onHand <= minStock;
             
-            // Note: Currently `allData` from 'get_onhand' does not return `image_path` directly. 
-            // We need to match it with `allMasterData` if it exists, or just use `r.image_path` if the backend is updated.
+            // Grid HTML
             let imagePath = r.image_path || (allMasterData && allMasterData.find(x => x.item_id == r.item_id)?.image_path) || null;
             const imgHtml = imagePath 
                 ? `<img src="../../../${imagePath}" style="width:100%; height:180px; object-fit:cover;" class="card-img-top" alt="Item">` 
                 : `<div class="d-flex align-items-center justify-content-center bg-light text-muted" style="width:100%; height:180px; font-size:3rem;"><i class="fas fa-box-open"></i></div>`;
 
-            return `
+            gridHtml += `
             <div class="col">
                 <div class="card h-100 shadow-sm border-0 position-relative ${isLow ? 'border border-danger' : ''}">
                     ${isLow ? '<span class="badge bg-danger position-absolute top-0 start-0 m-2 shadow" style="z-index:2;"><i class="fas fa-exclamation-triangle"></i> Low Stock</span>' : ''}
@@ -103,7 +119,25 @@ const SparePartsModule = (() => {
                     </div>
                 </div>
             </div>`;
-        }).join('');
+
+            // Table HTML
+            tableHtml += `
+            <tr ${isLow ? 'style="background:var(--pe-danger-light);"' : ''}>
+                <td class="pe-fw-bold">${PEApp.escapeHtml(r.item_code)}</td>
+                <td>${PEApp.escapeHtml(r.item_name)}</td>
+                <td class="pe-text-sm pe-text-muted">${PEApp.escapeHtml(r.description || '-')}</td>
+                <td class="pe-text-sm">${PEApp.escapeHtml(r.location_name || '-')}</td>
+                <td class="pe-text-center pe-text-sm">${PEApp.formatNumber(r.min_stock)} / ${PEApp.formatNumber(r.max_stock)}</td>
+                <td class="pe-text-end pe-fw-bold ${isLow ? 'pe-text-danger' : ''}">${PEApp.formatNumber(r.onhand_qty)}</td>
+                <td class="pe-text-center pe-text-sm">${PEApp.escapeHtml(r.uom || '-')}</td>
+                <td class="pe-text-center">
+                    ${isLow ? '<span class="pe-badge pe-priority-high" style="font-size:10px;"><i class="fas fa-exclamation-triangle me-1"></i>Low</span>' : '<span class="pe-badge pe-status-active" style="font-size:10px;">OK</span>'}
+                </td>
+            </tr>`;
+        });
+
+        gridBody.innerHTML = gridHtml;
+        tableBody.innerHTML = tableHtml;
     }
 
     async function loadMasterData() {
@@ -390,9 +424,19 @@ const SparePartsModule = (() => {
         renderMasterTable(q);
     }
 
+    function toggleMasterView(view) {
+        currentMasterView = view;
+        document.getElementById('spMasterGridBody').style.display = view === 'grid' ? 'flex' : 'none';
+        document.getElementById('spMasterTableContainer').style.display = view === 'table' ? 'block' : 'none';
+        
+        document.getElementById('btnMasterViewGrid').classList.toggle('active', view === 'grid');
+        document.getElementById('btnMasterViewTable').classList.toggle('active', view === 'table');
+    }
+
     function renderMasterTable(searchQuery = '') {
         const gridBody = document.getElementById('spMasterGridBody');
-        if (!gridBody) return;
+        const tableBody = document.getElementById('spMasterTableBody');
+        if (!gridBody || !tableBody) return;
 
         let filtered = allMasterData;
         if (searchQuery) {
@@ -405,16 +449,21 @@ const SparePartsModule = (() => {
 
         if (!filtered.length) {
             gridBody.innerHTML = `<div class="col-12 text-center text-muted py-5">No items found</div>`;
+            tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5">No items found</td></tr>`;
             return;
         }
 
-        gridBody.innerHTML = filtered.map(r => {
+        let gridHtml = '';
+        let tableHtml = '';
+
+        filtered.forEach(r => {
             const isActive = parseInt(r.is_active) === 1;
             const imgHtml = r.image_path 
                 ? `<img src="../../../${r.image_path}" style="width:100%; height:180px; object-fit:cover;" class="card-img-top" alt="Item">` 
                 : `<div class="d-flex align-items-center justify-content-center bg-light text-muted" style="width:100%; height:180px; font-size:3rem;"><i class="fas fa-image"></i></div>`;
             
-            return `
+            // Grid HTML
+            gridHtml += `
             <div class="col">
                 <div class="card h-100 shadow-sm border-0 position-relative ${!isActive ? 'opacity-50' : ''}">
                     ${!isActive ? '<span class="badge bg-secondary position-absolute top-0 start-0 m-2 shadow" style="z-index:2;">Inactive</span>' : ''}
@@ -443,7 +492,33 @@ const SparePartsModule = (() => {
                     </div>
                 </div>
             </div>`;
-        }).join('');
+
+            // Table HTML
+            const statusBadge = isActive ? '<span class="pe-badge pe-status-active">Active</span>' : '<span class="pe-badge pe-status-inactive">Inactive</span>';
+            const tableImgHtml = r.image_path ? `<img src="../../../${r.image_path}" class="rounded me-2" style="width:40px;height:40px;object-fit:cover;border:1px solid #ddd;">` : `<div class="rounded me-2 d-inline-flex align-items-center justify-content-center text-muted" style="width:40px;height:40px;background:#f8f9fa;border:1px dashed #ddd;"><i class="fas fa-image"></i></div>`;
+            tableHtml += `
+            <tr>
+                <td class="pe-fw-bold">${PEApp.escapeHtml(r.item_code)}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        ${tableImgHtml}
+                        <span>${PEApp.escapeHtml(r.item_name)}</span>
+                    </div>
+                </td>
+                <td class="pe-text-sm pe-text-muted">${PEApp.escapeHtml(r.description || '-')}</td>
+                <td class="pe-text-sm">${PEApp.escapeHtml(r.supplier || '-')}</td>
+                <td class="pe-text-end">${PEApp.formatCurrency(r.unit_price || 0)}</td>
+                <td class="pe-text-center pe-text-sm">${PEApp.formatNumber(r.min_stock)} / ${PEApp.formatNumber(r.max_stock)}</td>
+                <td class="pe-text-center">${statusBadge}</td>
+                <td class="pe-text-center">
+                    <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.openItemModal('${r.item_id}')" title="Edit"><i class="fas fa-edit pe-text-primary"></i></button>
+                    <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.toggleItemStatus('${r.item_id}')" title="Toggle Status"><i class="fas fa-power-off ${isActive ? 'pe-text-danger' : 'pe-text-success'}"></i></button>
+                </td>
+            </tr>`;
+        });
+
+        gridBody.innerHTML = gridHtml;
+        tableBody.innerHTML = tableHtml;
     }
 
     function openItemModal(id = null) {

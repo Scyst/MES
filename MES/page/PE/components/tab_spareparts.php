@@ -99,7 +99,11 @@
                         <option value="">ทุกคลัง</option>
                     </select>
                     <div class="pe-filter-spacer"></div>
-                    <div class="d-flex gap-2 flex-wrap">
+                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary active" id="btnViewGrid" onclick="SparePartsModule.toggleView('grid')"><i class="fas fa-th-large"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnViewTable" onclick="SparePartsModule.toggleView('table')"><i class="fas fa-list"></i></button>
+                        </div>
                         <button class="pe-btn pe-btn-success pe-btn-sm" onclick="SparePartsModule.openReceiveModal()">
                             <i class="fas fa-arrow-down"></i> Receive
                         </button>
@@ -111,8 +115,29 @@
                         </button>
                     </div>
                 </div>
+                <!-- Grid View -->
                 <div id="spGridBody" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 mt-1 px-2 pb-3" style="max-height: 550px; overflow-y: auto;">
                     <div class="col-12 text-center text-muted py-5">Loading...</div>
+                </div>
+                <!-- Table View -->
+                <div id="spTableContainer" style="overflow-x:auto; max-height:550px; display: none;">
+                    <table class="pe-table" id="spTable">
+                        <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-secondary);">
+                            <tr>
+                                <th style="width:12%;">Item Code</th>
+                                <th style="width:20%;">Item Name</th>
+                                <th style="width:18%;">Description</th>
+                                <th style="width:12%;">Location</th>
+                                <th style="width:10%;" class="pe-text-center">Min / Max</th>
+                                <th style="width:10%;" class="pe-text-end">On-Hand</th>
+                                <th style="width:8%;" class="pe-text-center">Unit</th>
+                                <th style="width:10%;" class="pe-text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spTableBody">
+                            <tr><td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">Loading...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -124,7 +149,11 @@
                         <input type="text" id="spMasterSearchInput" placeholder="ค้นหา Item Code, ชื่อ, Supplier..." oninput="SparePartsModule.filterMasterTable()">
                     </div>
                     <div class="pe-filter-spacer"></div>
-                    <div class="d-flex gap-2 flex-wrap">
+                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary active" id="btnMasterViewGrid" onclick="SparePartsModule.toggleMasterView('grid')"><i class="fas fa-th-large"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnMasterViewTable" onclick="SparePartsModule.toggleMasterView('table')"><i class="fas fa-list"></i></button>
+                        </div>
                         <button class="pe-btn pe-btn-primary pe-btn-sm" onclick="SparePartsModule.openItemModal()">
                             <i class="fas fa-plus"></i> Add Item
                         </button>
@@ -137,8 +166,29 @@
                         </button>
                     </div>
                 </div>
+                <!-- Grid View -->
                 <div id="spMasterGridBody" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 mt-1 px-2 pb-3" style="max-height: 550px; overflow-y: auto;">
                     <div class="col-12 text-center text-muted py-5">Loading...</div>
+                </div>
+                <!-- Table View -->
+                <div id="spMasterTableContainer" style="overflow-x:auto; max-height:550px; display: none;">
+                    <table class="pe-table" id="spMasterTable">
+                        <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-secondary);">
+                            <tr>
+                                <th style="width:12%;">Item Code</th>
+                                <th style="width:20%;">Item Name</th>
+                                <th style="width:20%;">Description</th>
+                                <th style="width:12%;">Supplier</th>
+                                <th style="width:10%;" class="pe-text-end">Price (฿)</th>
+                                <th style="width:10%;" class="pe-text-center">Min / Max</th>
+                                <th style="width:8%;" class="pe-text-center">Status</th>
+                                <th style="width:8%;" class="pe-text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spMasterTableBody">
+                            <tr><td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">Loading...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
