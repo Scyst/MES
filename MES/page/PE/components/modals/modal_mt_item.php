@@ -12,7 +12,7 @@
                     <div class="col-12 text-center mb-2">
                         <div class="d-inline-block position-relative">
                             <img id="mt_image_preview" src="" alt="Item Image" class="rounded shadow-sm" style="width: 120px; height: 120px; object-fit: cover; display: none; background: #f8f9fa; border: 1px solid #dee2e6;">
-                            <div id="mt_image_placeholder" class="rounded shadow-sm d-flex align-items-center justify-content-center text-muted" style="width: 120px; height: 120px; background: #f8f9fa; border: 1px dashed #dee2e6;">
+                            <div id="mt_image_placeholder" class="rounded shadow-sm align-items-center justify-content-center text-muted" style="width: 120px; height: 120px; background: #f8f9fa; border: 1px dashed #dee2e6; display: flex;">
                                 <i class="fas fa-image fa-3x"></i>
                             </div>
                         </div>

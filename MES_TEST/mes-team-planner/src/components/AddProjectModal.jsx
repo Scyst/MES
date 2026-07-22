@@ -12,6 +12,12 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
 
   useEffect(() => {
     if (initialData && isOpen) {
+      let parsedChecklist = [];
+      try {
+        const cl = initialData.Checklist || initialData.checklist;
+        parsedChecklist = typeof cl === 'string' ? JSON.parse(cl) : (cl || []);
+      } catch(e) {}
+
       setFormData({
         title: initialData.Title || initialData.title || '',
         description: initialData.Description || initialData.description || '',
@@ -21,7 +27,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
         dueDate: initialData.DueDate || initialData.dueDate || '',
         tags: initialData.Tags || initialData.tags || '',
         priority: initialData.Priority || initialData.priority || 'normal',
-        checklist: initialData.Checklist || initialData.checklist || [],
+        checklist: parsedChecklist,
         spaceId: initialData.SpaceId || initialData.spaceId || '',
         Id: initialData.Id
       });
