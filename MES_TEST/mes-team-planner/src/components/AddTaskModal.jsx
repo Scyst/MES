@@ -28,7 +28,7 @@ const WEEK_DAYS = [
   { value: 0, label: 'อา' },
 ];
 
-export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initialData, currentUser, tasks = [], users = [], isProjectTask = false, projectId = null }) {
+export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initialData, currentUser, tasks = [], users = [], isProjectTask = false, projectId = null, spaces = [] }) {
   const [activeTab, setActiveTab] = useState('general');
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -38,9 +38,8 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   const [formData, setFormData] = useState({
     title: '', status: 'todo', visibility: 'public', assignee: '',
     startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
-    startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
     priority: 'normal', description: '', tags: '', recurrence: 'none',
-    recurrenceDays: [], recurrenceEndDate: '', projectId: '', projectChecklistId: ''
+    recurrenceDays: [], recurrenceEndDate: '', projectId: '', projectChecklistId: '', spaceId: ''
   });
   const [projectsList, setProjectsList] = useState([]);
 
@@ -61,6 +60,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         recurrence: initialData.recurrence || initialData.Recurrence || 'none',
         projectId: initialData.projectId || initialData.ProjectId || '',
         projectChecklistId: initialData.projectChecklistId || initialData.ProjectChecklistId || '',
+        spaceId: initialData.spaceId || initialData.SpaceId || '',
         Id: initialData.Id
       });
       
@@ -81,7 +81,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         title: '', status: 'todo', visibility: 'public', assignee: currentUser?.fullname || currentUser?.username || '',
         startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
         priority: 'normal', description: '', tags: '', recurrence: 'none',
-        recurrenceDays: [], recurrenceEndDate: '', projectId: '', projectChecklistId: ''
+        recurrenceDays: [], recurrenceEndDate: '', projectId: '', projectChecklistId: '', spaceId: ''
       });
       setSubtasksArr([]);
       setComments([]);
@@ -379,9 +379,9 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
               <div className="border-t border-slate-200 dark:border-slate-800"></div>
 
-              {/* Tags, Visibility, Recurrence */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-1">
+              {/* Tags, Visibility, Recurrence, Space */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="sm:col-span-1">
                   <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">แท็ก (Tags)</label>
                   <MultiSelectInput 
                     value={formData.tags || ''}
@@ -389,6 +389,18 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     suggestions={['ด่วน', 'ประชุม', 'โปรเจกต์', 'ปัญหา', 'ออกแบบ', 'พัฒนาระบบ']}
                     placeholder="ค้นหาหรือพิมพ์แท็ก..."
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">พื้นที่ทำงาน (Space)</label>
+                  <div className="relative">
+                    <select name="spaceId" value={formData.spaceId || ''} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
+                      <option value="">-- ส่วนตัว (ไม่ระบุ) --</option>
+                      {spaces.map(s => (
+                        <option key={s.Id || s.id} value={s.Id || s.id}>{s.Name || s.name}</option>
+                      ))}
+                    </select>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">สิทธิ์</label>

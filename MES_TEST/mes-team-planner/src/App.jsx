@@ -339,7 +339,19 @@ function App() {
       default: 
         // Fallback for Spaces and mock tabs
         if (activeTab.startsWith('space-') || activeTab.startsWith('team-')) {
-          return <SpaceView activeTab={activeTab} spaces={spaces} tasks={tasks} projects={projects} currentUser={currentUser} refreshData={refreshData} users={users} onEditSpace={handleEditSpace} onDeleteSpace={handleDeleteSpace} />;
+          return <SpaceView 
+            activeTab={activeTab} 
+            spaces={spaces} 
+            tasks={tasks} 
+            projects={projects} 
+            currentUser={currentUser} 
+            refreshData={refreshData} 
+            users={users} 
+            onEditSpace={handleEditSpace} 
+            onDeleteSpace={handleDeleteSpace} 
+            onSaveProject={handleSaveProject}
+            onSaveTask={handleSaveTask}
+          />;
         }
         return <Dashboard 
           tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav}
