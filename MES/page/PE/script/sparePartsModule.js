@@ -45,8 +45,8 @@ const SparePartsModule = (() => {
     }
 
     function renderTable(searchQuery = '') {
-        const tbody = document.getElementById('spTableBody');
-        if (!tbody) return;
+        const gridBody = document.getElementById('spGridBody');
+        if (!gridBody) return;
         const locFilter = document.getElementById('spFilterLocation')?.value || '';
 
         let filtered = allData;
@@ -59,27 +59,50 @@ const SparePartsModule = (() => {
         }
 
         if (!filtered.length) {
-            tbody.innerHTML = `<tr><td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">No items found</td></tr>`;
+            gridBody.innerHTML = `<div class="col-12 text-center text-muted py-5">No items found</div>`;
             return;
         }
 
-        tbody.innerHTML = filtered.map(r => {
+        gridBody.innerHTML = filtered.map(r => {
             const minStock = parseFloat(r.min_stock) || 0;
             const onHand = parseFloat(r.onhand_qty) || 0;
             const isLow = minStock > 0 && onHand <= minStock;
+            
+            // Note: Currently `allData` from 'get_onhand' does not return `image_path` directly. 
+            // We need to match it with `allMasterData` if it exists, or just use `r.image_path` if the backend is updated.
+            let imagePath = r.image_path || (allMasterData && allMasterData.find(x => x.item_id == r.item_id)?.image_path) || null;
+            const imgHtml = imagePath 
+                ? `<img src="../../../${imagePath}" style="width:100%; height:180px; object-fit:cover;" class="card-img-top" alt="Item">` 
+                : `<div class="d-flex align-items-center justify-content-center bg-light text-muted" style="width:100%; height:180px; font-size:3rem;"><i class="fas fa-box-open"></i></div>`;
+
             return `
-            <tr ${isLow ? 'style="background:var(--pe-danger-light);"' : ''}>
-                <td class="pe-fw-bold">${PEApp.escapeHtml(r.item_code)}</td>
-                <td>${PEApp.escapeHtml(r.item_name)}</td>
-                <td class="pe-text-sm pe-text-muted">${PEApp.escapeHtml(r.description || '-')}</td>
-                <td class="pe-text-sm">${PEApp.escapeHtml(r.location_name || '-')}</td>
-                <td class="pe-text-center pe-text-sm">${PEApp.formatNumber(r.min_stock)} / ${PEApp.formatNumber(r.max_stock)}</td>
-                <td class="pe-text-end pe-fw-bold ${isLow ? 'pe-text-danger' : ''}">${PEApp.formatNumber(r.onhand_qty)}</td>
-                <td class="pe-text-center pe-text-sm">${PEApp.escapeHtml(r.uom || '-')}</td>
-                <td class="pe-text-center">
-                    ${isLow ? '<span class="pe-badge pe-priority-high" style="font-size:10px;"><i class="fas fa-exclamation-triangle me-1"></i>Low</span>' : '<span class="pe-badge pe-status-active" style="font-size:10px;">OK</span>'}
-                </td>
-            </tr>`;
+            <div class="col">
+                <div class="card h-100 shadow-sm border-0 position-relative ${isLow ? 'border border-danger' : ''}">
+                    ${isLow ? '<span class="badge bg-danger position-absolute top-0 start-0 m-2 shadow" style="z-index:2;"><i class="fas fa-exclamation-triangle"></i> Low Stock</span>' : ''}
+                    ${imgHtml}
+                    <div class="card-body d-flex flex-column p-3">
+                        <div class="text-muted pe-text-xs fw-bold mb-1">${PEApp.escapeHtml(r.item_code)}</div>
+                        <h6 class="card-title fw-bold text-dark text-truncate mb-1" title="${PEApp.escapeHtml(r.item_name)}">${PEApp.escapeHtml(r.item_name)}</h6>
+                        <p class="card-text pe-text-xs text-muted mb-2 text-truncate" title="${PEApp.escapeHtml(r.description || '')}">${PEApp.escapeHtml(r.description || '-')}</p>
+                        
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between align-items-end mb-2">
+                                <div class="pe-text-xs text-muted">
+                                    <i class="fas fa-map-marker-alt text-primary"></i> ${PEApp.escapeHtml(r.location_name || '-')}
+                                </div>
+                                <div class="text-end">
+                                    <span class="fs-5 fw-bold ${isLow ? 'text-danger' : 'text-success'}">${PEApp.formatNumber(r.onhand_qty)}</span>
+                                    <span class="pe-text-xs text-muted">${PEApp.escapeHtml(r.uom || '')}</span>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-sm btn-outline-success w-50" onclick="SparePartsModule.openReceiveModal('${r.item_id}', '${r.location_id}')"><i class="fas fa-arrow-down"></i> รับ</button>
+                                <button class="btn btn-sm btn-outline-danger w-50" onclick="SparePartsModule.openIssueModal('${r.item_id}', '${r.location_id}')"><i class="fas fa-arrow-up"></i> เบิก</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
         }).join('');
     }
 
@@ -119,7 +142,7 @@ const SparePartsModule = (() => {
         }
     }
 
-    async function openModal(type) {
+    async function openModal(type, initialItemId = null, initialLocationId = null) {
         document.getElementById('spTxType').value = type;
         document.getElementById('spTxModalTitle').innerHTML = type === 'RECEIVE' ? '<i class="fas fa-arrow-down pe-text-success"></i> รับอะไหล่เข้าคลัง (Receive)' : '<i class="fas fa-arrow-up pe-text-danger"></i> เบิกอะไหล่ (Issue)';
         document.getElementById('spTxSaveBtn').innerHTML = type === 'RECEIVE' ? '<i class="fas fa-check-circle me-1"></i> ยืนยันรับเข้า (Receive)' : '<i class="fas fa-check-circle me-1"></i> ยืนยันการเบิก (Issue)';
@@ -135,6 +158,19 @@ const SparePartsModule = (() => {
         
         await loadMasterData();
         if (type === 'ISSUE') await loadActiveWorkOrders();
+        
+        if (initialItemId) {
+            const itemObj = allMasterData.find(x => x.item_id == initialItemId);
+            if (itemObj) {
+                document.getElementById('spTxItemInput').value = `[${itemObj.item_code}] ${itemObj.item_name}`;
+                document.getElementById('spTxItem').value = initialItemId;
+                await onItemInput();
+                
+                if (initialLocationId) {
+                    document.getElementById('spTxLocation').value = initialLocationId;
+                }
+            }
+        }
         
         PEApp.showModal('spTxModal');
     }
@@ -211,12 +247,12 @@ const SparePartsModule = (() => {
         }
     }
 
-    function openReceiveModal() {
-        openModal('RECEIVE');
+    function openReceiveModal(itemId = null, locationId = null) {
+        openModal('RECEIVE', itemId, locationId);
     }
 
-    function openIssueModal() {
-        openModal('ISSUE');
+    function openIssueModal(itemId = null, locationId = null) {
+        openModal('ISSUE', itemId, locationId);
     }
     
     function addToCart() {
@@ -355,8 +391,8 @@ const SparePartsModule = (() => {
     }
 
     function renderMasterTable(searchQuery = '') {
-        const tbody = document.getElementById('spMasterTableBody');
-        if (!tbody) return;
+        const gridBody = document.getElementById('spMasterGridBody');
+        if (!gridBody) return;
 
         let filtered = allMasterData;
         if (searchQuery) {
@@ -368,33 +404,45 @@ const SparePartsModule = (() => {
         }
 
         if (!filtered.length) {
-            tbody.innerHTML = `<tr><td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">No items found</td></tr>`;
+            gridBody.innerHTML = `<div class="col-12 text-center text-muted py-5">No items found</div>`;
             return;
         }
 
-        tbody.innerHTML = filtered.map(r => {
+        gridBody.innerHTML = filtered.map(r => {
             const isActive = parseInt(r.is_active) === 1;
-            const statusBadge = isActive ? '<span class="pe-badge pe-status-active">Active</span>' : '<span class="pe-badge pe-status-inactive">Inactive</span>';
-            const imgHtml = r.image_path ? `<img src="../../../${r.image_path}" class="rounded me-2" style="width:40px;height:40px;object-fit:cover;border:1px solid #ddd;">` : `<div class="rounded me-2 d-inline-flex align-items-center justify-content-center text-muted" style="width:40px;height:40px;background:#f8f9fa;border:1px dashed #ddd;"><i class="fas fa-image"></i></div>`;
+            const imgHtml = r.image_path 
+                ? `<img src="../../../${r.image_path}" style="width:100%; height:180px; object-fit:cover;" class="card-img-top" alt="Item">` 
+                : `<div class="d-flex align-items-center justify-content-center bg-light text-muted" style="width:100%; height:180px; font-size:3rem;"><i class="fas fa-image"></i></div>`;
+            
             return `
-            <tr>
-                <td class="pe-fw-bold">${PEApp.escapeHtml(r.item_code)}</td>
-                <td>
-                    <div class="d-flex align-items-center">
-                        ${imgHtml}
-                        <span>${PEApp.escapeHtml(r.item_name)}</span>
+            <div class="col">
+                <div class="card h-100 shadow-sm border-0 position-relative ${!isActive ? 'opacity-50' : ''}">
+                    ${!isActive ? '<span class="badge bg-secondary position-absolute top-0 start-0 m-2 shadow" style="z-index:2;">Inactive</span>' : ''}
+                    ${imgHtml}
+                    <div class="card-body d-flex flex-column p-3">
+                        <div class="text-muted pe-text-xs fw-bold mb-1">${PEApp.escapeHtml(r.item_code)}</div>
+                        <h6 class="card-title fw-bold text-dark text-truncate mb-1" title="${PEApp.escapeHtml(r.item_name)}">${PEApp.escapeHtml(r.item_name)}</h6>
+                        <p class="card-text pe-text-xs text-muted mb-2 text-truncate" title="${PEApp.escapeHtml(r.description || '')}">${PEApp.escapeHtml(r.description || '-')}</p>
+                        
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between align-items-end mb-2">
+                                <div class="text-primary fw-bold pe-text-sm">
+                                    ฿${PEApp.formatCurrency(r.unit_price || 0)}
+                                </div>
+                                <div class="pe-text-xs text-muted">
+                                    Min: ${PEApp.formatNumber(r.min_stock)}
+                                </div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-sm btn-outline-primary w-50" onclick="SparePartsModule.openItemModal('${r.item_id}')"><i class="fas fa-edit"></i> Edit</button>
+                                <button class="btn btn-sm ${isActive ? 'btn-outline-danger' : 'btn-outline-success'} w-50" onclick="SparePartsModule.toggleItemStatus('${r.item_id}')">
+                                    <i class="fas fa-power-off"></i> ${isActive ? 'Disable' : 'Enable'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                </td>
-                <td class="pe-text-sm pe-text-muted">${PEApp.escapeHtml(r.description || '-')}</td>
-                <td class="pe-text-sm">${PEApp.escapeHtml(r.supplier || '-')}</td>
-                <td class="pe-text-end">${PEApp.formatCurrency(r.unit_price || 0)}</td>
-                <td class="pe-text-center pe-text-sm">${PEApp.formatNumber(r.min_stock)} / ${PEApp.formatNumber(r.max_stock)}</td>
-                <td class="pe-text-center">${statusBadge}</td>
-                <td class="pe-text-center">
-                    <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.openItemModal('${r.item_id}')" title="Edit"><i class="fas fa-edit pe-text-primary"></i></button>
-                    <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.toggleItemStatus('${r.item_id}')" title="Toggle Status"><i class="fas fa-power-off ${isActive ? 'pe-text-danger' : 'pe-text-success'}"></i></button>
-                </td>
-            </tr>`;
+                </div>
+            </div>`;
         }).join('');
     }
 

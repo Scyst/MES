@@ -111,24 +111,8 @@
                         </button>
                     </div>
                 </div>
-                <div style="overflow-x:auto; max-height:550px;">
-                    <table class="pe-table" id="spTable">
-                        <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-secondary);">
-                            <tr>
-                                <th style="width:12%;">Item Code</th>
-                                <th style="width:20%;">Item Name</th>
-                                <th style="width:18%;">Description</th>
-                                <th style="width:12%;">Location</th>
-                                <th style="width:10%;" class="pe-text-center">Min / Max</th>
-                                <th style="width:10%;" class="pe-text-end">On-Hand</th>
-                                <th style="width:8%;" class="pe-text-center">Unit</th>
-                                <th style="width:10%;" class="pe-text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="spTableBody">
-                            <tr><td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">Loading...</td></tr>
-                        </tbody>
-                    </table>
+                <div id="spGridBody" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 mt-1 px-2 pb-3" style="max-height: 550px; overflow-y: auto;">
+                    <div class="col-12 text-center text-muted py-5">Loading...</div>
                 </div>
             </div>
 
@@ -153,24 +137,8 @@
                         </button>
                     </div>
                 </div>
-                <div style="overflow-x:auto; max-height:550px;">
-                    <table class="pe-table" id="spMasterTable">
-                        <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-secondary);">
-                            <tr>
-                                <th style="width:12%;">Item Code</th>
-                                <th style="width:20%;">Item Name</th>
-                                <th style="width:20%;">Description</th>
-                                <th style="width:12%;">Supplier</th>
-                                <th style="width:10%;" class="pe-text-end">Price (฿)</th>
-                                <th style="width:10%;" class="pe-text-center">Min / Max</th>
-                                <th style="width:8%;" class="pe-text-center">Status</th>
-                                <th style="width:8%;" class="pe-text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="spMasterTableBody">
-                            <tr><td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">Loading...</td></tr>
-                        </tbody>
-                    </table>
+                <div id="spMasterGridBody" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 mt-1 px-2 pb-3" style="max-height: 550px; overflow-y: auto;">
+                    <div class="col-12 text-center text-muted py-5">Loading...</div>
                 </div>
             </div>
 
