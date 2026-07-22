@@ -100,10 +100,6 @@
                     </select>
                     <div class="pe-filter-spacer"></div>
                     <div class="d-flex gap-2 flex-wrap align-items-center">
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-secondary active" id="btnViewGrid" onclick="SparePartsModule.toggleView('grid')"><i class="fas fa-th-large"></i></button>
-                            <button type="button" class="btn btn-outline-secondary" id="btnViewTable" onclick="SparePartsModule.toggleView('table')"><i class="fas fa-list"></i></button>
-                        </div>
                         <button class="pe-btn pe-btn-success pe-btn-sm" onclick="SparePartsModule.openReceiveModal()">
                             <i class="fas fa-arrow-down"></i> Receive
                         </button>
@@ -113,6 +109,10 @@
                         <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.exportExcel()" title="Export">
                             <i class="fas fa-file-excel" style="color:var(--pe-success);"></i> Export
                         </button>
+                        <div class="btn-group btn-group-sm ms-2" role="group">
+                            <button type="button" class="btn btn-outline-secondary active" id="btnViewGrid" onclick="SparePartsModule.toggleView('grid')"><i class="fas fa-th-large"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnViewTable" onclick="SparePartsModule.toggleView('table')"><i class="fas fa-list"></i></button>
+                        </div>
                     </div>
                 </div>
                 <!-- Grid View -->
@@ -150,10 +150,6 @@
                     </div>
                     <div class="pe-filter-spacer"></div>
                     <div class="d-flex gap-2 flex-wrap align-items-center">
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-secondary active" id="btnMasterViewGrid" onclick="SparePartsModule.toggleMasterView('grid')"><i class="fas fa-th-large"></i></button>
-                            <button type="button" class="btn btn-outline-secondary" id="btnMasterViewTable" onclick="SparePartsModule.toggleMasterView('table')"><i class="fas fa-list"></i></button>
-                        </div>
                         <button class="pe-btn pe-btn-primary pe-btn-sm" onclick="SparePartsModule.openItemModal()">
                             <i class="fas fa-plus"></i> Add Item
                         </button>
@@ -164,6 +160,10 @@
                         <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.exportMasterExcel()" title="Export Master Data">
                             <i class="fas fa-file-excel" style="color:var(--pe-success);"></i> Export
                         </button>
+                        <div class="btn-group btn-group-sm ms-2" role="group">
+                            <button type="button" class="btn btn-outline-secondary active" id="btnMasterViewGrid" onclick="SparePartsModule.toggleMasterView('grid')"><i class="fas fa-th-large"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnMasterViewTable" onclick="SparePartsModule.toggleMasterView('table')"><i class="fas fa-list"></i></button>
+                        </div>
                     </div>
                 </div>
                 <!-- Grid View -->

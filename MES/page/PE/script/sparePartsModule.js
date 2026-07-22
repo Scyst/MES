@@ -526,6 +526,7 @@ const SparePartsModule = (() => {
         form.reset();
         
         const preview = document.getElementById('mt_image_preview');
+        const previewContainer = document.getElementById('mt_image_preview_container');
         const placeholder = document.getElementById('mt_image_placeholder');
         
         if (id) {
@@ -543,18 +544,18 @@ const SparePartsModule = (() => {
                 
                 if (item.image_path) {
                     preview.src = '../../' + item.image_path;
-                    preview.style.display = 'block';
+                    previewContainer.style.display = 'block';
                     placeholder.style.display = 'none';
                 } else {
                     preview.src = '';
-                    preview.style.display = 'none';
+                    previewContainer.style.display = 'none';
                     placeholder.style.display = 'flex';
                 }
             }
         } else {
             document.getElementById('mt_item_id').value = '';
             preview.src = '';
-            preview.style.display = 'none';
+            previewContainer.style.display = 'none';
             placeholder.style.display = 'flex';
         }
 
@@ -567,13 +568,25 @@ const SparePartsModule = (() => {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const preview = document.getElementById('mt_image_preview');
+                const previewContainer = document.getElementById('mt_image_preview_container');
                 const placeholder = document.getElementById('mt_image_placeholder');
                 preview.src = e.target.result;
-                preview.style.display = 'block';
+                previewContainer.style.display = 'block';
                 placeholder.style.display = 'none';
             }
             reader.readAsDataURL(input.files[0]);
         }
+    }
+
+    function removeImage(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        document.getElementById('mt_image').value = '';
+        document.getElementById('mt_image_preview').src = '';
+        document.getElementById('mt_image_preview_container').style.display = 'none';
+        document.getElementById('mt_image_placeholder').style.display = 'flex';
     }
 
     async function saveItem(e) {
@@ -742,7 +755,7 @@ const SparePartsModule = (() => {
     return { 
         loadData, filterTable, toggleView, openReceiveModal, openIssueModal, submitTransaction, exportExcel, onItemInput,
         switchTab, loadMasterList, filterMasterTable, toggleMasterView, renderMasterTable, openItemModal, saveItem, toggleItemStatus, exportMasterExcel, importMasterExcel,
-        loadHistory, filterHistoryTable, renderHistoryTable, previewImage, addToCart, removeCartItem
+        loadHistory, filterHistoryTable, renderHistoryTable, previewImage, removeImage, addToCart, removeCartItem
     };
 })();
 

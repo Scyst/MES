@@ -9,18 +9,26 @@
             <div class="modal-body p-4">
                 <input type="hidden" name="item_id" id="mt_item_id">
                 <div class="row g-3">
-                    <div class="col-12 text-center mb-2">
-                        <div class="d-inline-block position-relative">
-                            <img id="mt_image_preview" src="" alt="Item Image" class="rounded shadow-sm" style="width: 120px; height: 120px; object-fit: cover; display: none; background: #f8f9fa; border: 1px solid #dee2e6;">
-                            <div id="mt_image_placeholder" class="rounded shadow-sm align-items-center justify-content-center text-muted" style="width: 120px; height: 120px; background: #f8f9fa; border: 1px dashed #dee2e6; display: flex;">
-                                <i class="fas fa-image fa-3x"></i>
+                    <div class="col-12 text-center mb-3">
+                        <label class="form-label pe-text-xs fw-bold text-muted mb-2">Item Image</label>
+                        <div id="mt_image_dropzone" class="border rounded position-relative overflow-hidden" style="border: 2px dashed var(--pe-primary) !important; background: #f8f9fa; cursor: pointer; transition: all 0.3s ease;">
+                            <input type="file" id="mt_image" name="image" class="position-absolute w-100 h-100 top-0 start-0 opacity-0" accept="image/*" onchange="SparePartsModule.previewImage(this)" style="cursor: pointer; z-index: 2;">
+                            
+                            <div class="d-flex flex-column align-items-center justify-content-center p-4" style="min-height: 180px;">
+                                <div id="mt_image_placeholder" class="text-muted d-flex flex-column align-items-center">
+                                    <div class="bg-white p-3 rounded-circle shadow-sm mb-3">
+                                        <i class="fas fa-cloud-upload-alt fa-2x text-primary"></i>
+                                    </div>
+                                    <span class="fw-bold pe-text-sm text-dark">Drag & Drop Image Here</span>
+                                    <span class="pe-text-xs text-muted mt-1">or click to browse (Max: 2MB)</span>
+                                </div>
+                                <div id="mt_image_preview_container" style="display: none; position: relative; z-index: 3; width: 100%; height: 100%;">
+                                    <img id="mt_image_preview" src="" alt="Item Image" class="rounded shadow-sm" style="max-width: 100%; max-height: 160px; object-fit: contain;">
+                                    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle shadow" onclick="SparePartsModule.removeImage(event)" style="width:30px; height:30px; padding:0; display:flex; align-items:center; justify-content:center;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                        <div class="mt-2">
-                            <label for="mt_image" class="btn btn-sm btn-outline-primary" style="cursor:pointer;">
-                                <i class="fas fa-upload me-1"></i> Upload Image
-                            </label>
-                            <input type="file" id="mt_image" name="image" class="d-none" accept="image/*" onchange="SparePartsModule.previewImage(this)">
                         </div>
                     </div>
                     <div class="col-md-4">
