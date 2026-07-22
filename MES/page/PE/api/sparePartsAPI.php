@@ -63,21 +63,30 @@ try {
             break;
 
         case 'process_transaction':
-            $itemId = $input['item_id'] ?? null;
-            $locationId = $input['location_id'] ?? null;
-            $quantity = (float)($input['quantity'] ?? 0);
+            $items = $input['items'] ?? [];
             $type = $input['transaction_type'] ?? '';
             $peWoId = !empty($input['ref_job_id']) ? $input['ref_job_id'] : null;
             $notes = $input['notes'] ?? '';
 
-            if (!$itemId || !$locationId || $quantity == 0 || !in_array($type, ['RECEIVE', 'ISSUE', 'ADJUST'])) {
+            if (empty($items) || !is_array($items) || !in_array($type, ['RECEIVE', 'ISSUE', 'ADJUST'])) {
                 throw new Exception("ข้อมูลไม่ครบถ้วน");
             }
 
             $pdo->beginTransaction();
             
             $stmt = $pdo->prepare("EXEC sp_MT_ProcessTransaction @item_id=?, @location_id=?, @quantity=?, @transaction_type=?, @ref_job_id=NULL, @notes=?, @user_id=?, @pe_wo_id=?");
-            $stmt->execute([$itemId, $locationId, $quantity, $type, $notes, $userId, $peWoId]);
+            
+            foreach ($items as $item) {
+                $itemId = $item['item_id'] ?? null;
+                $locationId = $item['location_id'] ?? null;
+                $quantity = (float)($item['quantity'] ?? 0);
+                
+                if (!$itemId || !$locationId || $quantity == 0) {
+                    throw new Exception("ข้อมูลการทำรายการไม่สมบูรณ์");
+                }
+                
+                $stmt->execute([$itemId, $locationId, $quantity, $type, $notes, $userId, $peWoId]);
+            }
             
             if ($type === 'ISSUE' && $peWoId) {
                 // Recalculate total cost for this Work Order
@@ -300,6 +309,24 @@ try {
                 throw new Exception("กรุณากรอกรหัสและชื่ออะไหล่ให้ครบถ้วน");
             }
 
+            // Image Upload Handling
+            $imagePath = null;
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = __DIR__ . '/../../../uploads/spare_parts/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+                // Safe filename
+                $safeCode = preg_replace('/[^a-zA-Z0-9_-]/', '_', $itemCode);
+                $filename = 'item_' . $safeCode . '_' . time() . '.' . $ext;
+                $targetFile = $uploadDir . $filename;
+                
+                if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {
+                    $imagePath = 'uploads/spare_parts/' . $filename;
+                }
+            }
+
             $desc = trim($input['description'] ?? '');
             $supplier = trim($input['supplier'] ?? '');
             $uom = trim($input['uom'] ?? 'PCS');
@@ -315,22 +342,31 @@ try {
             if (empty($itemId)) {
                 if ($existing) throw new Exception("รหัสอะไหล่นี้ ($itemCode) มีในระบบแล้ว");
                 
-                $sql = "INSERT INTO dbo.MT_ITEMS (item_code, item_name, description, supplier, unit_price, uom, min_stock, max_stock, created_at) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
+                $sql = "INSERT INTO dbo.MT_ITEMS (item_code, item_name, description, supplier, unit_price, uom, min_stock, max_stock, image_path, created_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$itemCode, $itemName, $desc, $supplier, $unitPrice, $uom, $minStock, $maxStock]);
+                $stmt->execute([$itemCode, $itemName, $desc, $supplier, $unitPrice, $uom, $minStock, $maxStock, $imagePath]);
                 $msg = "เพิ่มรายการอะไหล่ใหม่สำเร็จ";
             } else {
                 if ($existing && $existing['item_id'] != $itemId) {
                     throw new Exception("รหัสอะไหล่นี้ ($itemCode) ถูกใช้ไปแล้วโดยรายการอื่น");
                 }
 
-                $sql = "UPDATE dbo.MT_ITEMS 
-                        SET item_code = ?, item_name = ?, description = ?, supplier = ?, 
-                            unit_price = ?, uom = ?, min_stock = ?, max_stock = ?, last_updated = GETDATE()
-                        WHERE item_id = ?";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$itemCode, $itemName, $desc, $supplier, $unitPrice, $uom, $minStock, $maxStock, $itemId]);
+                if ($imagePath) {
+                    $sql = "UPDATE dbo.MT_ITEMS 
+                            SET item_code = ?, item_name = ?, description = ?, supplier = ?, 
+                                unit_price = ?, uom = ?, min_stock = ?, max_stock = ?, image_path = ?, last_updated = GETDATE()
+                            WHERE item_id = ?";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([$itemCode, $itemName, $desc, $supplier, $unitPrice, $uom, $minStock, $maxStock, $imagePath, $itemId]);
+                } else {
+                    $sql = "UPDATE dbo.MT_ITEMS 
+                            SET item_code = ?, item_name = ?, description = ?, supplier = ?, 
+                                unit_price = ?, uom = ?, min_stock = ?, max_stock = ?, last_updated = GETDATE()
+                            WHERE item_id = ?";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([$itemCode, $itemName, $desc, $supplier, $unitPrice, $uom, $minStock, $maxStock, $itemId]);
+                }
                 $msg = "อัปเดตข้อมูลอะไหล่สำเร็จ";
             }
             echo json_encode(['success' => true, 'message' => $msg]);

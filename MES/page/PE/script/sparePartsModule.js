@@ -3,6 +3,7 @@ const SparePartsModule = (() => {
     let allData = [];
     let allMasterData = [];
     let allHistoryData = [];
+    let txCart = [];
 
     async function loadData() {
         try {
@@ -121,15 +122,14 @@ const SparePartsModule = (() => {
     async function openModal(type) {
         document.getElementById('spTxType').value = type;
         document.getElementById('spTxModalTitle').innerHTML = type === 'RECEIVE' ? '<i class="fas fa-arrow-down pe-text-success"></i> รับอะไหล่เข้าคลัง (Receive)' : '<i class="fas fa-arrow-up pe-text-danger"></i> เบิกอะไหล่ (Issue)';
-        document.getElementById('spTxSaveBtn').innerHTML = type === 'RECEIVE' ? '<i class="fas fa-plus me-1"></i> ยืนยันรับเข้า' : '<i class="fas fa-minus me-1"></i> ยืนยันการเบิก';
+        document.getElementById('spTxSaveBtn').innerHTML = type === 'RECEIVE' ? '<i class="fas fa-check-circle me-1"></i> ยืนยันรับเข้า (Receive)' : '<i class="fas fa-check-circle me-1"></i> ยืนยันการเบิก (Issue)';
         
-        // Reset form
-        document.getElementById('spTxItemInput').value = '';
-        document.getElementById('spTxItem').value = '';
-        document.getElementById('spTxLocation').value = '';
-        document.getElementById('spTxQty').value = '';
+        // Reset form & cart
+        txCart = [];
+        resetAddItemForm();
         document.getElementById('spTxNotes').value = '';
         document.getElementById('spTxWoId').value = '';
+        renderCart();
         
         document.getElementById('spTxWoGroup').style.display = type === 'ISSUE' ? 'block' : 'none';
         
@@ -137,6 +137,13 @@ const SparePartsModule = (() => {
         if (type === 'ISSUE') await loadActiveWorkOrders();
         
         PEApp.showModal('spTxModal');
+    }
+
+    function resetAddItemForm() {
+        document.getElementById('spTxItemInput').value = '';
+        document.getElementById('spTxItem').value = '';
+        document.getElementById('spTxLocation').value = '';
+        document.getElementById('spTxQty').value = '';
     }
 
     async function onItemInput() {
@@ -198,28 +205,88 @@ const SparePartsModule = (() => {
         openModal('ISSUE');
     }
     
-    async function submitTransaction() {
-        const payload = {
-            action: 'process_transaction',
-            transaction_type: document.getElementById('spTxType').value,
-            item_id: document.getElementById('spTxItem').value,
-            location_id: document.getElementById('spTxLocation').value,
-            quantity: document.getElementById('spTxQty').value,
-            notes: document.getElementById('spTxNotes').value,
-            ref_job_id: document.getElementById('spTxWoId').value || null
-        };
+    function addToCart() {
+        const itemId = document.getElementById('spTxItem').value;
+        const locationId = document.getElementById('spTxLocation').value;
+        let qty = parseFloat(document.getElementById('spTxQty').value);
         
-        if (!payload.item_id || !payload.location_id || !payload.quantity || payload.quantity <= 0) {
+        if (!itemId || !locationId || !qty || qty <= 0) {
             PEApp.showToast('กรุณากรอกข้อมูลให้ครบถ้วน (Item, Location, Quantity)', 'warning');
             return;
         }
 
+        const itemObj = allMasterData.find(x => x.item_id == itemId);
+        const locObj = window.spMasterLocations.find(x => x.location_id == locationId);
+        
+        const itemName = itemObj ? itemObj.item_name : document.getElementById('spTxItemInput').value;
+        const locName = locObj ? locObj.location_name : 'Unknown Location';
+
+        // Check if exists in cart
+        const existingIdx = txCart.findIndex(x => x.item_id == itemId && x.location_id == locationId);
+        if (existingIdx !== -1) {
+            txCart[existingIdx].quantity += qty;
+        } else {
+            txCart.push({
+                item_id: itemId,
+                item_name: itemName,
+                location_id: locationId,
+                location_name: locName,
+                quantity: qty
+            });
+        }
+        
+        renderCart();
+        resetAddItemForm();
+    }
+
+    function renderCart() {
+        const tbody = document.getElementById('spTxCartBody');
+        const countSpan = document.getElementById('spTxCartCount');
+        
+        countSpan.textContent = txCart.length;
+        
+        if (txCart.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">No items added yet</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = txCart.map((item, index) => `
+            <tr>
+                <td class="text-truncate" style="max-width: 150px;" title="${PEApp.escapeHtml(item.item_name)}">${PEApp.escapeHtml(item.item_name)}</td>
+                <td>${PEApp.escapeHtml(item.location_name)}</td>
+                <td class="text-end fw-bold">${PEApp.formatNumber(item.quantity)}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-danger" onclick="SparePartsModule.removeCartItem(${index})"><i class="fas fa-times"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function removeCartItem(index) {
+        txCart.splice(index, 1);
+        renderCart();
+    }
+    
+    async function submitTransaction() {
+        if (txCart.length === 0) {
+            PEApp.showToast('รายการเบิก/รับว่างเปล่า กรุณาเพิ่มอะไหล่อย่างน้อย 1 รายการ', 'warning');
+            return;
+        }
+
+        const payload = {
+            action: 'process_transaction',
+            transaction_type: document.getElementById('spTxType').value,
+            items: txCart,
+            notes: document.getElementById('spTxNotes').value,
+            ref_job_id: document.getElementById('spTxWoId').value || null
+        };
+        
         const btn = document.getElementById('spTxSaveBtn');
         btn.disabled = true;
         
         try {
             await PEApp.apiCall('sparePartsAPI.php', {}, 'POST', payload);
-            PEApp.showToast(`ทำรายการ ${payload.transaction_type} สำเร็จ`, 'success');
+            PEApp.showToast(`ทำรายการ ${payload.transaction_type} สำเร็จ (${txCart.length} รายการ)`, 'success');
             PEApp.hideModal('spTxModal');
             loadData();
         } catch (e) {
@@ -287,10 +354,16 @@ const SparePartsModule = (() => {
         tbody.innerHTML = filtered.map(r => {
             const isActive = parseInt(r.is_active) === 1;
             const statusBadge = isActive ? '<span class="pe-badge pe-status-active">Active</span>' : '<span class="pe-badge pe-status-inactive">Inactive</span>';
+            const imgHtml = r.image_path ? `<img src="../../../${r.image_path}" class="rounded me-2" style="width:40px;height:40px;object-fit:cover;border:1px solid #ddd;">` : `<div class="rounded me-2 d-inline-flex align-items-center justify-content-center text-muted" style="width:40px;height:40px;background:#f8f9fa;border:1px dashed #ddd;"><i class="fas fa-image"></i></div>`;
             return `
             <tr>
                 <td class="pe-fw-bold">${PEApp.escapeHtml(r.item_code)}</td>
-                <td>${PEApp.escapeHtml(r.item_name)}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        ${imgHtml}
+                        <span>${PEApp.escapeHtml(r.item_name)}</span>
+                    </div>
+                </td>
                 <td class="pe-text-sm pe-text-muted">${PEApp.escapeHtml(r.description || '-')}</td>
                 <td class="pe-text-sm">${PEApp.escapeHtml(r.supplier || '-')}</td>
                 <td class="pe-text-end">${PEApp.formatCurrency(r.unit_price || 0)}</td>
@@ -308,6 +381,9 @@ const SparePartsModule = (() => {
         const form = document.getElementById('formMtItem');
         form.reset();
         
+        const preview = document.getElementById('mt_image_preview');
+        const placeholder = document.getElementById('mt_image_placeholder');
+        
         if (id) {
             const item = allMasterData.find(x => x.item_id == id);
             if (item) {
@@ -320,34 +396,61 @@ const SparePartsModule = (() => {
                 document.getElementById('mt_uom').value = item.uom || 'PCS';
                 document.getElementById('mt_min_stock').value = item.min_stock || 0;
                 document.getElementById('mt_max_stock').value = item.max_stock || 0;
+                
+                if (item.image_path) {
+                    preview.src = '../../../' + item.image_path;
+                    preview.style.display = 'block';
+                    placeholder.style.display = 'none';
+                } else {
+                    preview.src = '';
+                    preview.style.display = 'none';
+                    placeholder.style.display = 'flex';
+                }
             }
         } else {
             document.getElementById('mt_item_id').value = '';
+            preview.src = '';
+            preview.style.display = 'none';
+            placeholder.style.display = 'flex';
         }
 
         form.onsubmit = saveItem;
         PEApp.showModal('modalMtItem');
     }
 
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('mt_image_preview');
+                const placeholder = document.getElementById('mt_image_placeholder');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                placeholder.style.display = 'none';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
     async function saveItem(e) {
         e.preventDefault();
         
-        const payload = {
-            action: 'save_mt_item',
-            item_id: document.getElementById('mt_item_id').value,
-            item_code: document.getElementById('mt_item_code').value,
-            item_name: document.getElementById('mt_item_name').value,
-            description: document.getElementById('mt_description').value,
-            supplier: document.getElementById('mt_supplier').value,
-            unit_price: document.getElementById('mt_unit_price').value,
-            uom: document.getElementById('mt_uom').value,
-            min_stock: document.getElementById('mt_min_stock').value,
-            max_stock: document.getElementById('mt_max_stock').value
-        };
+        const form = document.getElementById('formMtItem');
+        const formData = new FormData(form);
+        formData.append('action', 'save_mt_item');
 
         try {
-            await PEApp.apiCall('sparePartsAPI.php', {}, 'POST', payload);
-            PEApp.showToast('บันทึกข้อมูลสำเร็จ', 'success');
+            const response = await fetch('api/sparePartsAPI.php', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await response.json();
+            
+            if (!res.success) {
+                throw new Error(res.message || 'Unknown error');
+            }
+            
+            PEApp.showToast(res.message || 'บันทึกข้อมูลสำเร็จ', 'success');
             PEApp.hideModal('modalMtItem');
             loadMasterList();
             loadData(); 
@@ -495,7 +598,7 @@ const SparePartsModule = (() => {
     return { 
         loadData, filterTable, openReceiveModal, openIssueModal, submitTransaction, exportExcel, onItemInput,
         switchTab, loadMasterList, filterMasterTable, renderMasterTable, openItemModal, saveItem, toggleItemStatus, exportMasterExcel, importMasterExcel,
-        loadHistory, filterHistoryTable, renderHistoryTable
+        loadHistory, filterHistoryTable, renderHistoryTable, previewImage, addToCart, removeCartItem
     };
 })();
 
