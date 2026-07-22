@@ -102,8 +102,8 @@ export default function SpaceView({
 
   const handleToggleTaskStatusLocal = async (task) => {
     try {
-      const newStatus = (task.Status === 'Done' || task.Status === 'done') ? 'To Do' : 'Done';
-      const updatedTask = { ...task, Status: newStatus };
+      const newStatus = (task.Status === 'Done' || task.Status === 'done') ? 'todo' : 'done';
+      const updatedTask = { ...task, Status: newStatus, status: newStatus };
       if (onSaveTask) {
         await onSaveTask(updatedTask);
       }

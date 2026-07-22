@@ -14,8 +14,8 @@
                         <div id="mt_image_dropzone" class="border rounded position-relative overflow-hidden" style="border: 2px dashed var(--pe-primary) !important; background: #f8f9fa; cursor: pointer; transition: all 0.3s ease;">
                             <input type="file" id="mt_image" name="image" class="position-absolute w-100 h-100 top-0 start-0 opacity-0" accept="image/*" onchange="SparePartsModule.previewImage(this)" style="cursor: pointer; z-index: 2;">
                             
-                            <div class="d-flex flex-column align-items-center justify-content-center p-4" style="min-height: 180px;">
-                                <div id="mt_image_placeholder" class="text-muted d-flex flex-column align-items-center">
+                            <div class="d-flex flex-column align-items-center justify-content-center p-2" style="min-height: 180px;">
+                                <div id="mt_image_placeholder" class="text-muted flex-column align-items-center" style="display: flex;">
                                     <div class="bg-white p-3 rounded-circle shadow-sm mb-3">
                                         <i class="fas fa-cloud-upload-alt fa-2x text-primary"></i>
                                     </div>
@@ -23,7 +23,7 @@
                                     <span class="pe-text-xs text-muted mt-1">or click to browse (Max: 2MB)</span>
                                 </div>
                                 <div id="mt_image_preview_container" style="display: none; position: relative; z-index: 3; width: 100%; height: 100%;">
-                                    <img id="mt_image_preview" src="" alt="Item Image" class="rounded shadow-sm" style="max-width: 100%; max-height: 160px; object-fit: contain;">
+                                    <img id="mt_image_preview" src="" alt="Item Image" class="rounded shadow-sm w-100" style="max-height: 180px; object-fit: contain;">
                                     <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle shadow" onclick="SparePartsModule.removeImage(event)" style="width:30px; height:30px; padding:0; display:flex; align-items:center; justify-content:center;">
                                         <i class="fas fa-times"></i>
                                     </button>
