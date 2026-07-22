@@ -134,9 +134,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     if (btnRotateRight) {
-        btnRotateRight.addEventListener('click', () => {
+        document.getElementById('btnRotateRight')?.addEventListener('click', () => {
             if (cropper) cropper.rotate(90);
         });
+
+        // Aspect Ratio buttons
+        document.querySelectorAll('.btn-aspect').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (!cropper) return;
+                document.querySelectorAll('.btn-aspect').forEach(b => b.classList.remove('active', 'btn-light'));
+                document.querySelectorAll('.btn-aspect').forEach(b => b.classList.add('btn-outline-light'));
+                this.classList.remove('btn-outline-light');
+                this.classList.add('active', 'btn-light');
+                
+                const ratio = parseFloat(this.getAttribute('data-ratio'));
+                cropper.setAspectRatio(ratio);
+            });
+        });
+
+        // Confirm Crop
     }
     
     if (btnCancelCrop) {

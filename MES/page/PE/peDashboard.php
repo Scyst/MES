@@ -206,10 +206,18 @@ $pageTitle = "PE Enterprise";
         <h5 class="modal-title" id="cropImageModalLabel"><i class="fas fa-crop-alt"></i> จัดการรูปภาพ</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btnCancelCrop"></button>
         </div>
-        <div class="modal-body p-2 text-center" style="background-color: #000; overflow: hidden; max-height: 70vh;">
-        <div style="max-height: 100%; max-width: 100%;">
-            <img id="imageToCrop" src="" alt="Picture to crop" style="max-width: 100%; display: block;">
-        </div>
+        <div class="modal-body p-2 text-center d-flex flex-column" style="background-color: #000; overflow: hidden; max-height: 70vh;">
+          <div style="flex-grow: 1; max-height: calc(100% - 40px); max-width: 100%; display: flex; align-items: center; justify-content: center;">
+              <img id="imageToCrop" src="" alt="Picture to crop" style="max-width: 100%; max-height: 100%; display: block;">
+          </div>
+          <div class="mt-2">
+              <div class="btn-group" role="group" aria-label="Aspect Ratio">
+                  <button type="button" class="btn btn-outline-light btn-sm btn-aspect" data-ratio="1">1:1</button>
+                  <button type="button" class="btn btn-outline-light btn-sm btn-aspect" data-ratio="1.3333333333333333">4:3</button>
+                  <button type="button" class="btn btn-outline-light btn-sm btn-aspect" data-ratio="0.75">3:4</button>
+                  <button type="button" class="btn btn-outline-light btn-sm btn-aspect active" data-ratio="NaN">อิสระ</button>
+              </div>
+          </div>
         </div>
         <div class="modal-footer d-flex justify-content-between bg-light">
         <div>

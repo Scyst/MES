@@ -716,6 +716,21 @@ const WorkOrderModule = (() => {
         document.getElementById('btnRotateLeft')?.addEventListener('click', () => { if (cropper) cropper.rotate(-90); });
         document.getElementById('btnRotateRight')?.addEventListener('click', () => { if (cropper) cropper.rotate(90); });
         
+        // Aspect Ratio buttons
+        document.querySelectorAll('.btn-aspect').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (!cropper) return;
+                // Update active state
+                document.querySelectorAll('.btn-aspect').forEach(b => b.classList.remove('active', 'btn-light'));
+                document.querySelectorAll('.btn-aspect').forEach(b => b.classList.add('btn-outline-light'));
+                this.classList.remove('btn-outline-light');
+                this.classList.add('active', 'btn-light');
+                
+                const ratio = parseFloat(this.getAttribute('data-ratio'));
+                cropper.setAspectRatio(ratio);
+            });
+        });
+
         document.getElementById('btnCancelCrop')?.addEventListener('click', () => {
             cropModal.hide();
             if (cropper) { cropper.destroy(); cropper = null; }
