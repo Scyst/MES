@@ -20,7 +20,7 @@ try {
         case 'get_onhand':
             $sql = "SELECT 
                         i.item_id, i.item_code, i.item_name, i.description, i.uom, 
-                        i.unit_price, l.location_id, l.location_name, 
+                        i.unit_price, i.image_path, l.location_id, l.location_name, 
                         i.min_stock, i.max_stock, 
                         ISNULL(o.quantity, 0) AS onhand_qty
                     FROM dbo.MT_ITEMS i WITH (NOLOCK)
@@ -111,7 +111,7 @@ try {
         case 'get_available_parts':
             // Fetch available spare parts and their onhand quantity
             $sql = "SELECT 
-                        i.item_id, i.item_code, i.item_name, i.uom, i.unit_price,
+                        i.item_id, i.item_code, i.item_name, i.uom, i.unit_price, i.image_path,
                         l.location_id, l.location_name,
                         ISNULL(o.quantity, 0) AS onhand_qty
                     FROM dbo.MT_ITEMS i WITH (NOLOCK)
@@ -135,6 +135,7 @@ try {
                         i.item_name, 
                         i.uom, 
                         i.unit_price,
+                        i.image_path,
                         (ABS(t.quantity) * i.unit_price) AS total_cost,
                         u.fullname AS issued_by
                     FROM dbo.MT_TRANSACTIONS t WITH (NOLOCK)
