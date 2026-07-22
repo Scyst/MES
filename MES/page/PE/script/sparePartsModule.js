@@ -542,7 +542,7 @@ const SparePartsModule = (() => {
                 document.getElementById('mt_max_stock').value = item.max_stock || 0;
                 
                 if (item.image_path) {
-                    preview.src = '../../../' + item.image_path;
+                    preview.src = '../../' + item.image_path;
                     preview.style.display = 'block';
                     placeholder.style.display = 'none';
                 } else {
