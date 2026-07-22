@@ -4,6 +4,7 @@ const SparePartsModule = (() => {
     let allMasterData = [];
     let allHistoryData = [];
     let txCart = [];
+    let compressedImageBlob = null;
 
     async function loadData() {
         try {
@@ -525,6 +526,8 @@ const SparePartsModule = (() => {
         const form = document.getElementById('formMtItem');
         form.reset();
         
+        compressedImageBlob = null;
+        
         const preview = document.getElementById('mt_image_preview');
         const previewContainer = document.getElementById('mt_image_preview_container');
         const placeholder = document.getElementById('mt_image_placeholder');
@@ -565,16 +568,47 @@ const SparePartsModule = (() => {
 
     function previewImage(input) {
         if (input.files && input.files[0]) {
+            const file = input.files[0];
             const reader = new FileReader();
             reader.onload = function(e) {
-                const preview = document.getElementById('mt_image_preview');
-                const previewContainer = document.getElementById('mt_image_preview_container');
-                const placeholder = document.getElementById('mt_image_placeholder');
-                preview.src = e.target.result;
-                previewContainer.style.display = 'block';
-                placeholder.style.display = 'none';
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800;
+                    const MAX_HEIGHT = 800;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    canvas.toBlob((blob) => {
+                        compressedImageBlob = blob;
+                    }, 'image/jpeg', 0.8);
+
+                    const preview = document.getElementById('mt_image_preview');
+                    const previewContainer = document.getElementById('mt_image_preview_container');
+                    const placeholder = document.getElementById('mt_image_placeholder');
+                    preview.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                    placeholder.style.display = 'none';
+                }
+                img.src = e.target.result;
             }
-            reader.readAsDataURL(input.files[0]);
+            reader.readAsDataURL(file);
         }
     }
 
@@ -583,6 +617,7 @@ const SparePartsModule = (() => {
             e.preventDefault();
             e.stopPropagation();
         }
+        compressedImageBlob = null;
         document.getElementById('mt_image').value = '';
         document.getElementById('mt_image_preview').src = '';
         document.getElementById('mt_image_preview_container').style.display = 'none';
@@ -595,6 +630,10 @@ const SparePartsModule = (() => {
         const form = document.getElementById('formMtItem');
         const formData = new FormData(form);
         formData.append('action', 'save_mt_item');
+        
+        if (compressedImageBlob) {
+            formData.set('image', compressedImageBlob, 'image.jpg');
+        }
 
         try {
             const response = await fetch('api/sparePartsAPI.php', {
