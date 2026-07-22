@@ -17,8 +17,15 @@
                                 <h6 class="text-primary mb-3"><i class="fas fa-plus-circle me-1"></i> Add Item</h6>
                                 <div class="mb-3">
                                     <label class="pe-form-label">อะไหล่ (Item) <span class="pe-text-danger">*</span></label>
-                                    <input type="text" class="pe-form-input" id="spTxItemInput" list="spTxItemList" placeholder="-- พิมพ์เพื่อค้นหาอะไหล่ --" onchange="SparePartsModule.onItemInput()">
-                                    <datalist id="spTxItemList"></datalist>
+                                    <div class="d-flex gap-2 mb-2 align-items-center">
+                                        <div id="spTxItemImageWrapper" style="width: 50px; height: 50px; flex-shrink: 0; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid #ddd;">
+                                            <i class="fas fa-image text-muted"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <input type="text" class="pe-form-input" id="spTxItemInput" list="spTxItemList" placeholder="-- พิมพ์เพื่อค้นหาอะไหล่ --" onchange="SparePartsModule.onItemInput()">
+                                            <datalist id="spTxItemList"></datalist>
+                                        </div>
+                                    </div>
                                     <input type="hidden" id="spTxItem">
                                 </div>
                                 <div class="mb-3">
@@ -47,6 +54,7 @@
                                     <table class="table pe-table pe-table-sm align-middle">
                                         <thead>
                                             <tr>
+                                                <th width="50">Img</th>
                                                 <th>Item</th>
                                                 <th>Location</th>
                                                 <th class="text-end">Qty</th>
@@ -54,7 +62,7 @@
                                             </tr>
                                         </thead>
                                         <tbody id="spTxCartBody">
-                                            <tr><td colspan="4" class="text-center text-muted py-4">No items added yet</td></tr>
+                                            <tr><td colspan="5" class="text-center text-muted py-4">No items added yet</td></tr>
                                         </tbody>
                                     </table>
                                 </div>

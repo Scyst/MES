@@ -142,14 +142,28 @@ const SparePartsModule = (() => {
     function resetAddItemForm() {
         document.getElementById('spTxItemInput').value = '';
         document.getElementById('spTxItem').value = '';
-        document.getElementById('spTxLocation').value = '';
+        document.getElementById('spTxLocation').innerHTML = '<option value="">-- เลือกคลังจัดเก็บ --</option>';
         document.getElementById('spTxQty').value = '';
+        const imgWrapper = document.getElementById('spTxItemImageWrapper');
+        if (imgWrapper) imgWrapper.innerHTML = '<i class="fas fa-image text-muted"></i>';
     }
 
     async function onItemInput() {
         const text = document.getElementById('spTxItemInput').value;
         const itemId = window.spTextToIdMap?.get(text) || '';
         document.getElementById('spTxItem').value = itemId;
+
+        const imgWrapper = document.getElementById('spTxItemImageWrapper');
+        if (itemId) {
+            const itemObj = allMasterData.find(x => x.item_id == itemId);
+            if (itemObj && itemObj.image_path) {
+                imgWrapper.innerHTML = `<img src="${itemObj.image_path}" style="width:100%; height:100%; object-fit:cover; border-radius:4px;">`;
+            } else {
+                imgWrapper.innerHTML = '<i class="fas fa-image text-muted"></i>';
+            }
+        } else {
+            imgWrapper.innerHTML = '<i class="fas fa-image text-muted"></i>';
+        }
 
         const txType = document.getElementById('spTxType').value;
         const locSel = document.getElementById('spTxLocation');
@@ -220,6 +234,7 @@ const SparePartsModule = (() => {
         
         const itemName = itemObj ? itemObj.item_name : document.getElementById('spTxItemInput').value;
         const locName = locObj ? locObj.location_name : 'Unknown Location';
+        const imagePath = itemObj ? itemObj.image_path : null;
 
         // Check if exists in cart
         const existingIdx = txCart.findIndex(x => x.item_id == itemId && x.location_id == locationId);
@@ -229,6 +244,7 @@ const SparePartsModule = (() => {
             txCart.push({
                 item_id: itemId,
                 item_name: itemName,
+                image_path: imagePath,
                 location_id: locationId,
                 location_name: locName,
                 quantity: qty
@@ -246,20 +262,25 @@ const SparePartsModule = (() => {
         countSpan.textContent = txCart.length;
         
         if (txCart.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">No items added yet</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No items added yet</td></tr>';
             return;
         }
         
-        tbody.innerHTML = txCart.map((item, index) => `
+        tbody.innerHTML = txCart.map((item, index) => {
+            const imgHtml = item.image_path 
+                ? `<img src="${item.image_path}" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px;">` 
+                : `<div style="width: 32px; height: 32px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-image text-muted" style="font-size:12px;"></i></div>`;
+            return `
             <tr>
+                <td>${imgHtml}</td>
                 <td class="text-truncate" style="max-width: 150px;" title="${PEApp.escapeHtml(item.item_name)}">${PEApp.escapeHtml(item.item_name)}</td>
                 <td>${PEApp.escapeHtml(item.location_name)}</td>
                 <td class="text-end fw-bold">${PEApp.formatNumber(item.quantity)}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-danger" onclick="SparePartsModule.removeCartItem(${index})"><i class="fas fa-times"></i></button>
                 </td>
-            </tr>
-        `).join('');
+            </tr>`;
+        }).join('');
     }
 
     function removeCartItem(index) {
