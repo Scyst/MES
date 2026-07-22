@@ -7,6 +7,7 @@ export default function InviteToTeamModal({ isOpen, onClose, space, members = []
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState('Member');
+  const [addingUserId, setAddingUserId] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -33,6 +34,7 @@ export default function InviteToTeamModal({ isOpen, onClose, space, members = []
   };
 
   const handleAddMember = async (userId) => {
+    setAddingUserId(userId);
     try {
       const res = await axios.post('/api/spaces.php?action=add_member', {
         space_id: space.Id || space.id,
@@ -45,7 +47,9 @@ export default function InviteToTeamModal({ isOpen, onClose, space, members = []
       }
     } catch (err) {
       console.error('Add member failed', err);
-      alert('Failed to add member.');
+      // alert('Failed to add member.'); // Silently ignore duplicate error if caught
+    } finally {
+      setAddingUserId(null);
     }
   };
 
@@ -148,9 +152,14 @@ export default function InviteToTeamModal({ isOpen, onClose, space, members = []
                       </div>
                       <button 
                         onClick={() => handleAddMember(u.username || u.user_id)}
-                        className="px-3 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-400 rounded text-xs font-bold transition-colors"
+                        disabled={addingUserId === (u.username || u.user_id)}
+                        className={`px-3 py-1 rounded text-xs font-bold transition-colors ${
+                          addingUserId === (u.username || u.user_id)
+                            ? 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed'
+                            : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-400'
+                        }`}
                       >
-                        เพิ่มเข้าทีม
+                        {addingUserId === (u.username || u.user_id) ? 'กำลังเพิ่ม...' : 'เพิ่มเข้าทีม'}
                       </button>
                     </div>
                   ))

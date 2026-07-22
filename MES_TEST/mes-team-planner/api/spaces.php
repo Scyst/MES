@@ -87,6 +87,14 @@ try {
     }
     elseif ($action === 'add_member' && $method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
+        
+        $checkStmt = $pdo->prepare("SELECT Id FROM TeamPlanner_SpaceMembers WHERE SpaceId = ? AND UserId = ?");
+        $checkStmt->execute([$data['space_id'], $data['user_id']]);
+        if ($checkStmt->fetch()) {
+            sendJson(['error' => 'User is already a member of this space.'], 400);
+            exit;
+        }
+
         $stmt = $pdo->prepare("INSERT INTO TeamPlanner_SpaceMembers (SpaceId, UserId, Role) OUTPUT INSERTED.* VALUES (?, ?, ?)");
         $stmt->execute([$data['space_id'], $data['user_id'], $data['role'] ?? 'Member']);
         
