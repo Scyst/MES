@@ -117,7 +117,10 @@
                 </div>
                 <!-- Grid View -->
                 <div id="spGridBody" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 mt-1 px-2 pb-3" style="max-height: 550px; overflow-y: auto;">
-                    <div class="col-12 text-center text-muted py-5">Loading...</div>
+                    <div class="col-12 text-center text-muted py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="mt-2">กำลังโหลดข้อมูล...</div>
+                    </div>
                 </div>
                 <!-- Table View -->
                 <div id="spTableContainer" style="overflow-x:auto; max-height:550px; display: none;">
@@ -135,7 +138,12 @@
                             </tr>
                         </thead>
                         <tbody id="spTableBody">
-                            <tr><td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">Loading...</td></tr>
+                            <tr>
+                                <td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                    <div class="mt-2">กำลังโหลดข้อมูล...</div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -168,7 +176,10 @@
                 </div>
                 <!-- Grid View -->
                 <div id="spMasterGridBody" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 mt-1 px-2 pb-3" style="max-height: 550px; overflow-y: auto;">
-                    <div class="col-12 text-center text-muted py-5">Loading...</div>
+                    <div class="col-12 text-center text-muted py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="mt-2">กำลังโหลดข้อมูล...</div>
+                    </div>
                 </div>
                 <!-- Table View -->
                 <div id="spMasterTableContainer" style="overflow-x:auto; max-height:550px; display: none;">
@@ -186,7 +197,12 @@
                             </tr>
                         </thead>
                         <tbody id="spMasterTableBody">
-                            <tr><td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">Loading...</td></tr>
+                            <tr>
+                                <td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                    <div class="mt-2">กำลังโหลดข้อมูล...</div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -220,7 +236,12 @@
                             </tr>
                         </thead>
                         <tbody id="spHistoryTableBody">
-                            <tr><td colspan="7" class="pe-text-center pe-text-muted" style="padding:60px;">Loading...</td></tr>
+                            <tr>
+                                <td colspan="7" class="pe-text-center pe-text-muted" style="padding:60px;">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                    <div class="mt-2">กำลังโหลดข้อมูล...</div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>

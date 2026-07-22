@@ -89,7 +89,7 @@ const SparePartsModule = (() => {
             // Grid HTML
             let imagePath = r.image_path || (allMasterData && allMasterData.find(x => x.item_id == r.item_id)?.image_path) || null;
             const imgHtml = imagePath 
-                ? `<div class="bg-light d-flex align-items-center justify-content-center" style="width:100%; height:250px; background: #f8f9fa;"><img src="../../${imagePath}" style="width:100%; height:100%; object-fit:contain;" class="card-img-top" alt="Item"></div>` 
+                ? `<div class="bg-light d-flex align-items-center justify-content-center" style="width:100%; height:250px; background: #f8f9fa;"><img src="../../${imagePath}" loading="lazy" style="width:100%; height:100%; object-fit:contain;" class="card-img-top" alt="Item"></div>` 
                 : `<div class="d-flex align-items-center justify-content-center bg-light text-muted" style="width:100%; height:250px; font-size:4rem;"><i class="fas fa-box-open"></i></div>`;
 
             gridHtml += `
@@ -460,7 +460,7 @@ const SparePartsModule = (() => {
         filtered.forEach(r => {
             const isActive = parseInt(r.is_active) === 1;
             const imgHtml = r.image_path 
-                ? `<div class="bg-light d-flex align-items-center justify-content-center" style="width:100%; height:250px; background: #f8f9fa;"><img src="../../${r.image_path}" style="width:100%; height:100%; object-fit:contain;" class="card-img-top" alt="Item"></div>` 
+                ? `<div class="bg-light d-flex align-items-center justify-content-center" style="width:100%; height:250px; background: #f8f9fa;"><img src="../../${r.image_path}" loading="lazy" style="width:100%; height:100%; object-fit:contain;" class="card-img-top" alt="Item"></div>` 
                 : `<div class="d-flex align-items-center justify-content-center bg-light text-muted" style="width:100%; height:250px; font-size:4rem;"><i class="fas fa-image"></i></div>`;
             
             // Grid HTML
