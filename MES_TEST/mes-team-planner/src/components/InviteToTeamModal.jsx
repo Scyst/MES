@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiX, FiSearch, FiUserPlus, FiUser, FiTrash2, FiShield } from 'react-icons/fi';
 import axios from 'axios';
 
-export default function InviteToTeamModal({ isOpen, onClose, space, members = [], onMemberUpdate }) {
+export default function InviteToTeamModal({ isOpen, onClose, space, members = [], onMemberUpdate, currentUser }) {
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,6 +76,12 @@ export default function InviteToTeamModal({ isOpen, onClose, space, members = []
 
   if (!isOpen || !space) return null;
 
+  // Determine if current user is an Admin
+  const isCurrentUserAdmin = members.some(m => 
+    String(m.UserId || m.user_id || m.username) === String(currentUser?.username || currentUser?.user_id) && 
+    m.Role === 'Admin'
+  );
+
   // Filter users not in team yet
   const memberIds = members.map(m => String(m.UserId || m.user_id || m.username));
   const availableUsers = users.filter(u => !memberIds.includes(String(u.username || u.user_id)));
@@ -109,36 +115,37 @@ export default function InviteToTeamModal({ isOpen, onClose, space, members = []
         {/* Content */}
         <div className="p-6 overflow-y-auto flex-1 space-y-8">
           
-          {/* Invite Section */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">เชิญสมาชิกใหม่</h3>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input 
-                  type="text" 
-                  className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"
-                  placeholder="ค้นหาชื่อผู้ใช้ หรือรหัสพนักงาน..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+          {/* Invite Section (Only for Admins) */}
+          {isCurrentUserAdmin && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">เชิญสมาชิกใหม่</h3>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text" 
+                    className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"
+                    placeholder="ค้นหาชื่อผู้ใช้ หรือรหัสพนักงาน..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <select 
+                  className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm outline-none dark:text-white"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                >
+                  <option value="Admin">Admin</option>
+                  <option value="Member">Member</option>
+                  <option value="Viewer">Viewer</option>
+                </select>
               </div>
-              <select 
-                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm outline-none dark:text-white"
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-              >
-                <option value="Admin">Admin</option>
-                <option value="Member">Member</option>
-                <option value="Viewer">Viewer</option>
-              </select>
-            </div>
-            
-            {searchQuery && (
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm overflow-hidden max-h-48 overflow-y-auto">
-                {searchResults.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-slate-500">ไม่พบข้อมูลผู้ใช้ที่ตรงกัน หรือผู้ใช้นี้อยู่ในทีมแล้ว</div>
-                ) : (
+              
+              {searchQuery && (
+                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm overflow-hidden max-h-48 overflow-y-auto">
+                  {searchResults.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-slate-500">ไม่พบข้อมูลผู้ใช้ที่ตรงกัน หรือผู้ใช้นี้อยู่ในทีมแล้ว</div>
+                  ) : (
                   searchResults.map(u => (
                     <div key={u.username || u.user_id} className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                       <div className="flex items-center gap-3">
@@ -164,11 +171,15 @@ export default function InviteToTeamModal({ isOpen, onClose, space, members = []
                     </div>
                   ))
                 )}
+                {searchResults.length > 0 && (
+                  <div className="p-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-xs text-center text-slate-500">
+                    แสดงผลลัพธ์ {searchResults.length} รายการ
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Current Members Section */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
               สมาชิกในทีมปัจจุบัน ({members.length})
@@ -195,23 +206,26 @@ export default function InviteToTeamModal({ isOpen, onClose, space, members = []
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <select 
-                          className="px-2 py-1 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded bg-transparent hover:bg-white dark:hover:bg-slate-800 text-xs text-slate-600 dark:text-slate-300 outline-none cursor-pointer transition-colors"
+                          className="px-2 py-1 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded bg-transparent hover:bg-white dark:hover:bg-slate-800 text-xs text-slate-600 dark:text-slate-300 outline-none cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           value={member.Role}
                           onChange={(e) => handleUpdateRole(member.Id, e.target.value)}
+                          disabled={!isCurrentUserAdmin}
                         >
                           <option value="Admin">Admin</option>
                           <option value="Member">Member</option>
                           <option value="Viewer">Viewer</option>
                         </select>
-                        <button 
-                          onClick={() => handleRemoveMember(member.Id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded transition-colors"
-                          title="นำออกจากทีม"
-                        >
-                          <FiTrash2 />
-                        </button>
+                        {isCurrentUserAdmin && (
+                          <button 
+                            onClick={() => handleRemoveMember(member.Id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded transition-colors"
+                            title="นำออกจากทีม"
+                          >
+                            <FiTrash2 />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

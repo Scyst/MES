@@ -72,6 +72,14 @@ function ensureSpacesTable($pdo) {
     }
 }
 
+function isSpaceAdmin($pdo, $spaceId, $userId) {
+    if (!$userId) return false;
+    $stmt = $pdo->prepare("SELECT Role FROM TeamPlanner_SpaceMembers WHERE SpaceId = ? AND UserId = ?");
+    $stmt->execute([$spaceId, $userId]);
+    $role = $stmt->fetchColumn();
+    return $role === 'Admin';
+}
+
 try {
     ensureSpacesTable($pdo);
 
@@ -86,8 +94,14 @@ try {
         sendJson($stmt->fetchAll(PDO::FETCH_ASSOC));
     }
     elseif ($action === 'add_member' && $method === 'POST') {
+        $currentUser = $_SESSION['user']['username'] ?? null;
         $data = json_decode(file_get_contents('php://input'), true);
         
+        if (!isSpaceAdmin($pdo, $data['space_id'], $currentUser)) {
+            sendJson(['error' => 'Unauthorized: Only Space Admins can add members.'], 403);
+            exit;
+        }
+
         $checkStmt = $pdo->prepare("SELECT Id FROM TeamPlanner_SpaceMembers WHERE SpaceId = ? AND UserId = ?");
         $checkStmt->execute([$data['space_id'], $data['user_id']]);
         if ($checkStmt->fetch()) {
@@ -112,12 +126,45 @@ try {
         sendJson($inserted);
     }
     elseif ($action === 'update_member' && $method === 'PUT' && $id) {
+        $currentUser = $_SESSION['user']['username'] ?? null;
         $data = json_decode(file_get_contents('php://input'), true);
+        
+        // Get SpaceId for this member
+        $sStmt = $pdo->prepare("SELECT SpaceId FROM TeamPlanner_SpaceMembers WHERE Id = ?");
+        $sStmt->execute([$id]);
+        $spaceId = $sStmt->fetchColumn();
+
+        if (!$spaceId || !isSpaceAdmin($pdo, $spaceId, $currentUser)) {
+            sendJson(['error' => 'Unauthorized: Only Space Admins can update roles.'], 403);
+            exit;
+        }
+
         $stmt = $pdo->prepare("UPDATE TeamPlanner_SpaceMembers SET Role = ? WHERE Id = ?");
         $stmt->execute([$data['role'], $id]);
         sendJson(['success' => true]);
     }
     elseif ($action === 'remove_member' && $method === 'DELETE' && $id) {
+        $currentUser = $_SESSION['user']['username'] ?? null;
+        
+        // Get SpaceId and UserId for this member
+        $sStmt = $pdo->prepare("SELECT SpaceId, UserId FROM TeamPlanner_SpaceMembers WHERE Id = ?");
+        $sStmt->execute([$id]);
+        $member = $sStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$member) {
+            sendJson(['error' => 'Member not found.'], 404);
+            exit;
+        }
+
+        $spaceId = $member['SpaceId'];
+        $memberUserId = $member['UserId'];
+
+        // Allow if user is an Admin, OR if the user is removing themselves
+        if (!isSpaceAdmin($pdo, $spaceId, $currentUser) && $memberUserId !== $currentUser) {
+            sendJson(['error' => 'Unauthorized: Only Space Admins can remove other members.'], 403);
+            exit;
+        }
+
         $stmt = $pdo->prepare("DELETE FROM TeamPlanner_SpaceMembers WHERE Id = ?");
         $stmt->execute([$id]);
         sendJson(['success' => true]);
@@ -131,6 +178,7 @@ try {
         sendJson($spaces);
     } 
     elseif ($method === 'POST') {
+        $currentUser = $_SESSION['user']['username'] ?? null;
         $data = json_decode(file_get_contents('php://input'), true);
         $sql = "INSERT INTO TeamPlanner_Spaces (Name, Icon, Color) OUTPUT INSERTED.* VALUES (?, ?, ?)";
         $stmt = $pdo->prepare($sql);
@@ -139,9 +187,23 @@ try {
             $data['icon'] ?? 'FiFolder',
             $data['color'] ?? 'text-indigo-500 bg-indigo-500/10'
         ]);
-        sendJson($stmt->fetch(PDO::FETCH_ASSOC));
+        $inserted = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Make the creator an Admin
+        if ($currentUser && $inserted) {
+            $adminStmt = $pdo->prepare("INSERT INTO TeamPlanner_SpaceMembers (SpaceId, UserId, Role) VALUES (?, ?, 'Admin')");
+            $adminStmt->execute([$inserted['Id'], $currentUser]);
+        }
+
+        sendJson($inserted);
     }
     elseif ($method === 'PUT' && $id) {
+        $currentUser = $_SESSION['user']['username'] ?? null;
+        if (!isSpaceAdmin($pdo, $id, $currentUser)) {
+            sendJson(['error' => 'Unauthorized: Only Space Admins can edit space details.'], 403);
+            exit;
+        }
+
         $data = json_decode(file_get_contents('php://input'), true);
         $sql = "UPDATE TeamPlanner_Spaces SET Name = ?, Icon = ?, Color = ? WHERE Id = ?";
         $stmt = $pdo->prepare($sql);
@@ -157,6 +219,12 @@ try {
         sendJson($stmt->fetch(PDO::FETCH_ASSOC));
     }
     elseif ($method === 'DELETE' && $id) {
+        $currentUser = $_SESSION['user']['username'] ?? null;
+        if (!isSpaceAdmin($pdo, $id, $currentUser)) {
+            sendJson(['error' => 'Unauthorized: Only Space Admins can delete spaces.'], 403);
+            exit;
+        }
+
         $stmt = $pdo->prepare("DELETE FROM TeamPlanner_Spaces WHERE Id = ?");
         $stmt->execute([$id]);
         sendJson(['success' => true]);

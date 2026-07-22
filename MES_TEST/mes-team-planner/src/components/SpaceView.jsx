@@ -220,6 +220,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
         space={currentSpace}
         members={spaceMembers}
         onMemberUpdate={fetchMembers}
+        currentUser={currentUser}
       />
     </div>
   );
