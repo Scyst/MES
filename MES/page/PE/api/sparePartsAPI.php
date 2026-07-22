@@ -112,11 +112,11 @@ try {
                     FROM dbo.MT_TRANSACTIONS t WITH (NOLOCK)
                     JOIN dbo.MT_ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
                     LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
-                    WHERE t.pe_wo_id = ? AND t.transaction_type = 'ISSUE'
+                    WHERE (t.pe_wo_id = ? OR t.ref_job_id = ?) AND t.transaction_type = 'ISSUE'
                     ORDER BY t.created_at ASC";
             
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$woId]);
+            $stmt->execute([$woId, $woId]);
             $parts = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $grandTotal = array_sum(array_column($parts, 'total_cost'));
 
@@ -159,9 +159,9 @@ try {
             $costSql = "SELECT ISNULL(SUM(ABS(t.quantity) * i.unit_price), 0) AS total_cost
                         FROM dbo.MT_TRANSACTIONS t WITH (NOLOCK)
                         JOIN dbo.MT_ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
-                        WHERE t.pe_wo_id = ? AND t.transaction_type = 'ISSUE'";
+                        WHERE (t.pe_wo_id = ? OR t.ref_job_id = ?) AND t.transaction_type = 'ISSUE'";
             $costStmt = $pdo->prepare($costSql);
-            $costStmt->execute([$woId]);
+            $costStmt->execute([$woId, $woId]);
             $totalCost = (float)$costStmt->fetchColumn();
 
             // 3. Update PE_WORK_ORDERS
@@ -184,8 +184,8 @@ try {
             $pdo->beginTransaction();
 
             // 1. Get transaction info
-            $stmt = $pdo->prepare("SELECT item_id, location_id, quantity FROM dbo.MT_TRANSACTIONS WITH (UPDLOCK) WHERE transaction_id = ? AND pe_wo_id = ? AND transaction_type = 'ISSUE'");
-            $stmt->execute([$txId, $woId]);
+            $stmt = $pdo->prepare("SELECT item_id, location_id, quantity FROM dbo.MT_TRANSACTIONS WITH (UPDLOCK) WHERE transaction_id = ? AND (pe_wo_id = ? OR ref_job_id = ?) AND transaction_type = 'ISSUE'");
+            $stmt->execute([$txId, $woId, $woId]);
             $tx = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$tx) {
@@ -207,9 +207,9 @@ try {
             $costSql = "SELECT ISNULL(SUM(ABS(t.quantity) * i.unit_price), 0) AS total_cost
                         FROM dbo.MT_TRANSACTIONS t WITH (NOLOCK)
                         JOIN dbo.MT_ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
-                        WHERE t.pe_wo_id = ? AND t.transaction_type = 'ISSUE'";
+                        WHERE (t.pe_wo_id = ? OR t.ref_job_id = ?) AND t.transaction_type = 'ISSUE'";
             $costStmt = $pdo->prepare($costSql);
-            $costStmt->execute([$woId]);
+            $costStmt->execute([$woId, $woId]);
             $totalCost = (float)$costStmt->fetchColumn();
 
             // 5. Update PE_WORK_ORDERS
@@ -360,9 +360,17 @@ try {
     }
 } catch (Throwable $e) {
     if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
+        try {
+            $pdo->rollBack();
+        } catch (Exception $ex) {
+            // Ignore rollback exception since SP might have already rolled back
+        }
     }
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    $msg = $e->getMessage();
+    if (preg_match('/\[SQL Server\](.*)/', $msg, $matches)) {
+        $msg = trim($matches[1]);
+    }
+    echo json_encode(['success' => false, 'message' => $msg]);
 }
 ?>

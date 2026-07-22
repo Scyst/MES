@@ -955,21 +955,23 @@ const WorkOrderModule = (() => {
             const datalist = document.getElementById('woIssueItemList');
             datalist.innerHTML = '';
             
-            // Group locations by item to easily populate location dropdown
-            const uniqueItems = [];
             const itemMap = new Map();
             availableParts.forEach(p => {
                 if (!itemMap.has(p.item_id)) {
                     itemMap.set(p.item_id, true);
-                    uniqueItems.push(p);
                 }
             });
             
             window.woTextToIdMap = new Map();
-            uniqueItems.forEach(p => {
-                const text = `[${p.item_code}] ${p.item_name}`;
-                window.woTextToIdMap.set(text, p.item_id);
-                datalist.innerHTML += `<option value="${text}"></option>`;
+            availableParts.forEach(p => {
+                if (itemMap.get(p.item_id)) {
+                    const text = `[${p.item_code}] ${p.item_name}`;
+                    window.woTextToIdMap.set(text, p.item_id);
+                    const opt = document.createElement('option');
+                    opt.value = text;
+                    datalist.appendChild(opt);
+                    itemMap.set(p.item_id, false); // prevent duplicates
+                }
             });
 
             document.getElementById('woIssueQty').value = '';
@@ -1007,11 +1009,12 @@ const WorkOrderModule = (() => {
         const parts = availableParts.filter(p => p.item_id == itemId);
         if (parts.length > 0) {
             const p = parts[0];
-            descDiv.textContent = `หน่วย: ${p.uom}`;
+            const totalQty = parts.reduce((sum, loc) => sum + parseFloat(loc.onhand_qty || 0), 0);
+            descDiv.textContent = `สต๊อกคงเหลือรวมทุกคลัง: ${totalQty} ${p.uom || ''}`;
             priceInput.value = parseFloat(p.unit_price).toLocaleString('en-US', {minimumFractionDigits: 2});
             
             parts.forEach(loc => {
-                locSel.add(new Option(`${loc.location_name} (คงเหลือ: ${parseFloat(loc.onhand_qty)})`, loc.location_id));
+                locSel.add(new Option(`${loc.location_name} (คงเหลือ: ${parseFloat(loc.onhand_qty)} ${p.uom || ''})`, loc.location_id));
             });
 
             // Auto select if only one location

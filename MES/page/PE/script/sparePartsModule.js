@@ -85,19 +85,22 @@ const SparePartsModule = (() => {
     async function loadMasterData() {
         try {
             const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_master_data' });
+            window.spMasterLocations = res.data.locations || [];
             
             const datalist = document.getElementById('spTxItemList');
             datalist.innerHTML = '';
             window.spTextToIdMap = new Map();
             (res.data.items || []).forEach(i => {
-                const text = `[${i.item_code}] ${i.item_name} (${i.uom})`;
+                const text = `[${i.item_code}] ${i.item_name}`;
                 window.spTextToIdMap.set(text, i.item_id);
-                datalist.innerHTML += `<option value="${text}"></option>`;
+                const opt = document.createElement('option');
+                    opt.value = text;
+                    datalist.appendChild(opt);
             });
                 
             const locSel = document.getElementById('spTxLocation');
             locSel.innerHTML = '<option value="">-- เลือกคลังจัดเก็บ --</option>' + 
-                (res.data.locations || []).map(l => `<option value="${l.location_id}">${l.location_name}</option>`).join('');
+                window.spMasterLocations.map(l => `<option value="${l.location_id}">${l.location_name}</option>`).join('');
                 
         } catch (e) {
             console.error('Error loading master data:', e);
@@ -136,10 +139,55 @@ const SparePartsModule = (() => {
         PEApp.showModal('spTxModal');
     }
 
-    function onItemInput() {
+    async function onItemInput() {
         const text = document.getElementById('spTxItemInput').value;
         const itemId = window.spTextToIdMap?.get(text) || '';
         document.getElementById('spTxItem').value = itemId;
+
+        const txType = document.getElementById('spTxType').value;
+        const locSel = document.getElementById('spTxLocation');
+        
+        if (!itemId) {
+            locSel.innerHTML = '<option value="">-- เลือกคลังจัดเก็บ --</option>' + 
+                (window.spMasterLocations || []).map(l => `<option value="${l.location_id}">${l.location_name}</option>`).join('');
+            return;
+        }
+
+        if (txType === 'ISSUE') {
+            try {
+                const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_available_parts' });
+                const parts = (res.data || []).filter(p => p.item_id == itemId);
+                
+                locSel.innerHTML = '<option value="">-- เลือกคลังจัดเก็บ --</option>';
+                if (parts.length > 0) {
+                    parts.forEach(loc => {
+                        locSel.add(new Option(`${loc.location_name} (คงเหลือ: ${parseFloat(loc.onhand_qty)} ${loc.uom || ''})`, loc.location_id));
+                    });
+                    if (parts.length === 1) {
+                        locSel.value = parts[0].location_id;
+                    }
+                } else {
+                    locSel.innerHTML += '<option value="" disabled>-- ไม่มีสต๊อกในทุกคลัง --</option>';
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        } else {
+            // RECEIVE - Show all locations, optionally fetch current stock to display
+            try {
+                const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_available_parts' });
+                const parts = (res.data || []).filter(p => p.item_id == itemId);
+                
+                locSel.innerHTML = '<option value="">-- เลือกคลังจัดเก็บ --</option>';
+                (window.spMasterLocations || []).forEach(l => {
+                    const stock = parts.find(p => p.location_id == l.location_id);
+                    const qtyStr = stock ? ` (คงเหลือ: ${parseFloat(stock.onhand_qty)} ${stock.uom || ''})` : '';
+                    locSel.add(new Option(`${l.location_name}${qtyStr}`, l.location_id));
+                });
+            } catch(e) {
+                console.error(e);
+            }
+        }
     }
 
     function openReceiveModal() {

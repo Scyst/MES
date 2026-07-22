@@ -333,7 +333,8 @@ window.TechModule = (function() {
     }
 
     function onSparePartChange() {
-        const input = document.getElementById('woIssueItemInput').value.trim().toUpperCase();
+        const itemCode = document.getElementById('woIssueItemInput').value.trim().toUpperCase();
+        
         const locSelect = document.getElementById('woIssueLocation');
         locSelect.innerHTML = '<option value="">-- เลือกคลังจัดเก็บ --</option>';
         document.getElementById('woIssueMaxQty').textContent = 'ยอดคงเหลือ: 0';
@@ -342,18 +343,19 @@ window.TechModule = (function() {
         document.getElementById('woIssueItemDesc').textContent = '';
         document.getElementById('woIssuePrice').value = '';
         
-        if (!input) return;
+        if (!itemCode) return;
 
-        const parts = availableParts.filter(p => p.item_code.toUpperCase() === input);
+        const parts = availableParts.filter(p => p.item_code === itemCode);
         if (parts.length > 0) {
             document.getElementById('woIssueItem').value = parts[0].item_code;
-            document.getElementById('woIssueItemDesc').textContent = parts[0].item_name;
+            const totalQty = parts.reduce((sum, loc) => sum + parseFloat(loc.onhand_qty || 0), 0);
+            document.getElementById('woIssueItemDesc').textContent = `ชื่อ: ${parts[0].item_name} | สต๊อกคงเหลือรวมทุกคลัง: ${totalQty} ${parts[0].uom || ''}`;
             
             parts.forEach(p => {
                 const opt = document.createElement('option');
                 opt.value = p.location_id;
                 const qtyNum = Number(p.onhand_qty);
-                opt.textContent = `${p.location_name} (คงเหลือ: ${qtyNum} ${p.uom})`;
+                opt.textContent = `${p.location_name} (คงเหลือ: ${qtyNum} ${p.uom || ''})`;
                 opt.dataset.qty = p.onhand_qty;
                 opt.dataset.price = p.unit_price;
                 locSelect.appendChild(opt);
@@ -407,12 +409,9 @@ window.TechModule = (function() {
             if (!part) throw new Error("Item not found");
 
             const payload = {
-                action: 'process_transaction',
-                transaction_type: 'ISSUE',
-                ref_job_id: woId,
-                item_id: part.item_id,
-                location_id: location,
-                quantity: qty,
+                action: 'issue_parts',
+                wo_id: woId,
+                parts: [{ item_id: part.item_id, location_id: location, quantity: qty }],
                 notes: notes
             };
             
