@@ -58,8 +58,10 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
       return;
     }
     try {
-      const res = await axios.get(`/api/spaces.php?action=members&space_id=${currentSpace.Id}`);
-      if (res.data) setSpaceMembers(res.data);
+      const res = await axios.get(`/api/spaces.php?action=members&id=${currentSpace.Id}`);
+      if (res.data && Array.isArray(res.data)) {
+        setSpaceMembers(res.data);
+      }
     } catch (err) {
       console.error('Failed to fetch space members', err);
     }
