@@ -740,8 +740,8 @@ const SparePartsModule = (() => {
     }
 
     return { 
-        loadData, filterTable, openReceiveModal, openIssueModal, submitTransaction, exportExcel, onItemInput,
-        switchTab, loadMasterList, filterMasterTable, renderMasterTable, openItemModal, saveItem, toggleItemStatus, exportMasterExcel, importMasterExcel,
+        loadData, filterTable, toggleView, openReceiveModal, openIssueModal, submitTransaction, exportExcel, onItemInput,
+        switchTab, loadMasterList, filterMasterTable, toggleMasterView, renderMasterTable, openItemModal, saveItem, toggleItemStatus, exportMasterExcel, importMasterExcel,
         loadHistory, filterHistoryTable, renderHistoryTable, previewImage, addToCart, removeCartItem
     };
 })();

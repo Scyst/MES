@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { FiX, FiTrash2, FiCalendar, FiClock, FiUser, FiEye, FiCheckCircle, FiCheckSquare, FiType, FiFlag, FiAlignLeft, FiList, FiMessageSquare, FiTag, FiRefreshCw, FiPlus, FiSend, FiInfo, FiBriefcase } from 'react-icons/fi';
 import MultiSelectInput from './common/MultiSelectInput';
 import axios from 'axios';
-import { canEditTask, canDeleteTask } from '../utils/permissions';
 
 const PRIORITY_OPTIONS = [
   { value: 'urgent', label: '🔴 ด่วนมาก', color: 'bg-red-500', dot: 'bg-red-400', ring: 'ring-red-500/30' },
@@ -39,12 +38,11 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   const [formData, setFormData] = useState({
     title: '', status: 'todo', visibility: 'public', assignee: '',
     startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
+    startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
     priority: 'normal', description: '', tags: '', recurrence: 'none',
-    recurrenceDays: [], recurrenceDates: [], recurrenceEndDate: '', recurrenceDuration: '1m', projectId: '', projectChecklistId: '', groupId: '', updateSeries: false
+    recurrenceDays: [], recurrenceEndDate: '', projectId: '', projectChecklistId: ''
   });
   const [projectsList, setProjectsList] = useState([]);
-  const isEditable = canEditTask(currentUser, initialData);
-  const canDelete = canDeleteTask(currentUser, initialData);
 
   useEffect(() => {
     if (initialData && isOpen) {
@@ -63,8 +61,6 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         recurrence: initialData.recurrence || initialData.Recurrence || 'none',
         projectId: initialData.projectId || initialData.ProjectId || '',
         projectChecklistId: initialData.projectChecklistId || initialData.ProjectChecklistId || '',
-        groupId: initialData.groupId || initialData.GroupId || '',
-        updateSeries: false,
         Id: initialData.Id
       });
       
@@ -85,7 +81,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         title: '', status: 'todo', visibility: 'public', assignee: currentUser?.fullname || currentUser?.username || '',
         startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
         priority: 'normal', description: '', tags: '', recurrence: 'none',
-        recurrenceDays: [], recurrenceDates: [], recurrenceEndDate: '', recurrenceDuration: '1m', projectId: '', projectChecklistId: '', groupId: '', updateSeries: false
+        recurrenceDays: [], recurrenceEndDate: '', projectId: '', projectChecklistId: ''
       });
       setSubtasksArr([]);
       setComments([]);
@@ -186,22 +182,58 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    let computedEndDate = formData.recurrenceEndDate;
-    if (!isEditing && formData.recurrence !== 'none') {
-        const d = new Date(formData.startDate || new Date());
-        if (formData.recurrenceDuration === '1m') d.setMonth(d.getMonth() + 1);
-        else if (formData.recurrenceDuration === '3m') d.setMonth(d.getMonth() + 3);
-        else if (formData.recurrenceDuration === '6m') d.setMonth(d.getMonth() + 6);
-        else if (formData.recurrenceDuration === '1y') d.setFullYear(d.getFullYear() + 1);
-        computedEndDate = d.toISOString().split('T')[0];
+    if (!isEditing && formData.recurrence !== 'none' && formData.recurrenceEndDate && formData.startDate) {
+      let tasksToCreate = [];
+      let current = new Date(formData.startDate);
+      const end = new Date(formData.recurrenceEndDate);
+      let safetyCounter = 0;
+      
+      while (current <= end && safetyCounter < 100) {
+        let shouldCreate = false;
+        if (formData.recurrence === 'daily') shouldCreate = true;
+        else if (formData.recurrence === 'weekly') {
+          if (current.getDay() === new Date(formData.startDate).getDay()) shouldCreate = true;
+        }
+        else if (formData.recurrence === 'monthly') {
+          if (current.getDate() === new Date(formData.startDate).getDate()) shouldCreate = true;
+        }
+        else if (formData.recurrence === 'custom') {
+          if ((formData.recurrenceDays || []).includes(current.getDay())) shouldCreate = true;
+        }
+        
+        if (shouldCreate) {
+          const dateStr = current.getFullYear() + '-' + String(current.getMonth()+1).padStart(2, '0') + '-' + String(current.getDate()).padStart(2, '0');
+          let dueDateStr = dateStr;
+          if (formData.dueDate) {
+            const startD = new Date(formData.startDate);
+            const dueD = new Date(formData.dueDate);
+            const diffDays = Math.round((dueD - startD) / (1000 * 3600 * 24));
+            let newDue = new Date(current);
+            newDue.setDate(newDue.getDate() + diffDays);
+            dueDateStr = newDue.getFullYear() + '-' + String(newDue.getMonth()+1).padStart(2, '0') + '-' + String(newDue.getDate()).padStart(2, '0');
+          }
+          tasksToCreate.push({
+            ...formData,
+            startDate: dateStr,
+            dueDate: dueDateStr,
+            subtasks: JSON.stringify(subtasksArr)
+          });
+          safetyCounter++;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      
+      if (tasksToCreate.length > 0) {
+        onSave(tasksToCreate);
+      } else {
+        onSave({ ...formData, subtasks: JSON.stringify(subtasksArr) });
+      }
+    } else {
+      onSave({
+        ...formData,
+        subtasks: JSON.stringify(subtasksArr)
+      });
     }
-    
-    onSave({
-      ...formData,
-      recurrenceEndDate: computedEndDate,
-      subtasks: JSON.stringify(subtasksArr)
-    });
   };
 
   const isEditing = !!initialData?.Id;
@@ -225,7 +257,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     <div 
       className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4"
     >
-      <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-slide-up">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-slide-up">
         
         {/* Header */}
         <div className="flex flex-col shrink-0">
@@ -270,12 +302,6 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
             )}
           </div>
         </div>
-        
-        {!isEditable && (
-          <div className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 p-2 text-xs text-center border-b border-amber-200 dark:border-amber-500/20 font-medium">
-            คุณไม่มีสิทธิ์แก้ไขงานนี้ (View Only)
-          </div>
-        )}
 
         {/* Scrollable Form Body */}
         <div className="flex-1 overflow-y-auto overscroll-contain">
@@ -286,55 +312,44 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               
               {/* Title */}
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                  <FiType className="text-indigo-500" /> ชื่องาน
-                </label>
-                <input disabled={!isEditable} required name="title" value={formData.title} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder-slate-400 text-sm" placeholder="เช่น ตรวจสอบเครื่องจักร Line A..." />
+                <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">ชื่องาน</label>
+                <input required name="title" value={formData.title} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder-slate-500 text-sm" placeholder="เช่น ตรวจสอบเครื่องจักร Line A..." />
               </div>
 
               {/* Description */}
-              <div className="flex flex-col flex-1 min-h-[100px]">
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                  <FiAlignLeft className="text-indigo-500" /> รายละเอียด
-                </label>
-                <textarea disabled={!isEditable} name="description" value={formData.description} onChange={handleChange} className="flex-1 w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm resize-none placeholder-slate-400" placeholder="หมายเหตุ, ขั้นตอนการปฏิบัติงาน..." />
+              <div className="flex flex-col flex-1 min-h-[120px]">
+                <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">รายละเอียด</label>
+                <textarea name="description" value={formData.description} onChange={handleChange} className="flex-1 w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm resize-none placeholder-slate-500" placeholder="หมายเหตุ, ขั้นตอน..." />
               </div>
 
               {/* Status, Priority, Assignee */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiCheckCircle className="text-emerald-500" /> สถานะ
-                  </label>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">สถานะ</label>
                   <div className="relative">
-                    <select disabled={!isEditable} name="status" value={formData.status} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all text-sm appearance-none cursor-pointer">
+                    <select name="status" value={formData.status} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
                       <option value="todo">To Do</option>
                       <option value="in-progress">In Progress</option>
                       <option value="done">Done</option>
                     </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiFlag className="text-orange-500" /> ความสำคัญ
-                  </label>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">ความสำคัญ</label>
                   <div className="relative">
-                    <select disabled={!isEditable} name="priority" value={formData.priority} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all text-sm appearance-none cursor-pointer">
+                    <select name="priority" value={formData.priority} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
                       <option value="urgent">🔴 ด่วนมาก</option>
                       <option value="high">🟠 ด่วน</option>
                       <option value="normal">🟡 ปกติ</option>
                       <option value="low">🟢 ต่ำ</option>
                     </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiUser className="text-sky-500" /> ผู้รับผิดชอบ
-                  </label>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">ผู้รับผิดชอบ</label>
                   <MultiSelectInput 
-                    disabled={!isEditable}
                     value={formData.assignee}
                     onChange={(val) => setFormData(prev => ({ ...prev, assignee: val }))}
                     suggestions={uniqueAssignees}
@@ -343,197 +358,88 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 </div>
               </div>
 
+
               {/* Dates */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiCalendar className="text-indigo-500" /> เริ่มต้น
-                  </label>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">เริ่มต้น</label>
                   <div className="grid grid-cols-2 gap-2">
-                    <input disabled={!isEditable} type="date" name="startDate" value={formData.startDate || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm" />
-                    <input disabled={!isEditable} type="time" name="startTime" value={formData.startTime || '09:00'} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm" />
+                    <input type="date" name="startDate" value={formData.startDate || ''} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+                    <input type="time" name="startTime" value={formData.startTime || '09:00'} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiClock className="text-rose-500" /> สิ้นสุด
-                  </label>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">สิ้นสุด</label>
                   <div className="grid grid-cols-2 gap-2">
-                    <input disabled={!isEditable} type="date" name="dueDate" value={formData.dueDate || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all text-sm" />
-                    <input disabled={!isEditable} type="time" name="endTime" value={formData.endTime || '18:00'} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all text-sm" />
+                    <input type="date" name="dueDate" value={formData.dueDate || ''} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+                    <input type="time" name="endTime" value={formData.endTime || '18:00'} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
                   </div>
                 </div>
               </div>
 
               <div className="border-t border-slate-200 dark:border-slate-800"></div>
 
-              {/* Tags, Visibility, Recurrence Mode */}
+              {/* Tags, Visibility, Recurrence */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-1">
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiTag className="text-indigo-500" /> แท็ก (Tags)
-                  </label>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">แท็ก (Tags)</label>
                   <MultiSelectInput 
-                    disabled={!isEditable}
                     value={formData.tags || ''}
                     onChange={(val) => setFormData(prev => ({ ...prev, tags: val }))}
                     suggestions={['ด่วน', 'ประชุม', 'โปรเจกต์', 'ปัญหา', 'ออกแบบ', 'พัฒนาระบบ']}
-                    placeholder="พิมพ์แท็ก..."
+                    placeholder="ค้นหาหรือพิมพ์แท็ก..."
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiEye className="text-slate-500" /> สิทธิ์การมองเห็น
-                  </label>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">สิทธิ์</label>
                   <div className="relative">
-                    <select disabled={!isEditable} name="visibility" value={formData.visibility} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all text-sm appearance-none cursor-pointer">
+                    <select name="visibility" value={formData.visibility} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
                       <option value="public">🌐 Public</option>
                       <option value="private">🔒 Private</option>
                     </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiRefreshCw className="text-indigo-500" /> งานทำซ้ำ
-                    {isEditing && (
-                      <div className="group relative flex items-center ml-1">
-                        <FiInfo className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help transition-colors" />
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 dark:bg-slate-700 text-white text-[11px] font-normal text-center rounded-lg px-2 py-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 shadow-lg pointer-events-none">
-                          ไม่สามารถเปลี่ยนรูปแบบการทำซ้ำของงานที่ถูกสร้างไปแล้ว
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
-                        </div>
-                      </div>
-                    )}
-                  </label>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1.5">งานทำซ้ำ</label>
                   <div className="relative">
-                    <select disabled={!isEditable || isEditing} name="recurrence" value={formData.recurrence} onChange={handleChange} className={`w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none transition-all text-sm appearance-none ${!isEditable || isEditing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10'}`}>
+                    <select name="recurrence" value={formData.recurrence} onChange={handleChange} className="w-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
                       {RECURRENCE_OPTIONS.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
                   </div>
-                  {formData.recurrence === 'weekly' && !isEditing && (
-                    <p className="mt-2 text-xs text-indigo-500 dark:text-indigo-400">
-                      ✨ ตามวันในสัปดาห์ของ <strong>"วันที่เริ่ม"</strong>
-                    </p>
-                  )}
-                  {formData.recurrence === 'monthly' && !isEditing && (
-                    <p className="mt-2 text-xs text-indigo-500 dark:text-indigo-400">
-                      ✨ ตามวันที่ของ <strong>"วันที่เริ่ม"</strong>
-                    </p>
-                  )}
                 </div>
               </div>
 
-              {formData.recurrence !== 'none' && !isEditing && isEditable && (
-                <div className="bg-indigo-50/30 dark:bg-indigo-500/5 rounded-2xl p-5 border border-indigo-100 dark:border-indigo-500/10 space-y-6 shadow-inner">
+              {formData.recurrence !== 'none' && !isEditing && (
+                <div className="bg-indigo-50/50 dark:bg-indigo-500/10 rounded-xl p-4 border border-indigo-100 dark:border-indigo-500/20 space-y-4">
                   {formData.recurrence === 'custom' && (
-                    <div className="space-y-6">
-                      <div>
-                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">
-                          1. เลือกวันในสัปดาห์
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          {WEEK_DAYS.map(day => {
-                            const isSelected = (formData.recurrenceDays || []).includes(day.value);
-                            return (
-                              <button
-                                key={day.value}
-                                type="button"
-                                onClick={() => {
-                                  const days = formData.recurrenceDays || [];
-                                  const newDays = isSelected ? days.filter(d => d !== day.value) : [...days, day.value];
-                                  setFormData({ ...formData, recurrenceDays: newDays });
-                                }}
-                                className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-200 ${isSelected ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/40 scale-105' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'}`}
-                              >
-                                {day.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      <div className="h-px bg-slate-200 dark:bg-slate-700/50 w-full"></div>
-                      <div>
-                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">
-                          2. เลือกวันที่ของเดือน (1-31)
-                        </label>
-                        <div className="grid grid-cols-7 sm:grid-cols-10 gap-1.5">
-                          {Array.from({ length: 31 }, (_, i) => i + 1).map(date => {
-                            const isSelected = (formData.recurrenceDates || []).includes(date);
-                            return (
-                              <button
-                                key={date}
-                                type="button"
-                                onClick={() => {
-                                  const dates = formData.recurrenceDates || [];
-                                  const newDates = isSelected ? dates.filter(d => d !== date) : [...dates, date];
-                                  setFormData({ ...formData, recurrenceDates: newDates });
-                                }}
-                                className={`aspect-square rounded-xl flex items-center justify-center text-sm font-semibold transition-all duration-200 ${isSelected ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/40 scale-105' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'}`}
-                              >
-                                {date}
-                              </button>
-                            );
-                          })}
-                        </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">เลือกวันทำซ้ำ</label>
+                      <div className="flex flex-wrap gap-2">
+                        {WEEK_DAYS.map(day => (
+                          <button
+                            key={day.value}
+                            type="button"
+                            onClick={() => {
+                              const days = formData.recurrenceDays || [];
+                              const newDays = days.includes(day.value) ? days.filter(d => d !== day.value) : [...days, day.value];
+                              setFormData({ ...formData, recurrenceDays: newDays });
+                            }}
+                            className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium transition-all ${(formData.recurrenceDays || []).includes(day.value) ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600 hover:border-indigo-400'}`}
+                          >
+                            {day.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   )}
-
-                  {(formData.recurrence === 'custom') && <div className="h-px bg-slate-200 dark:bg-slate-700/50 w-full my-2"></div>}
-                  
-                  <div className="pt-2">
-                    <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
-                      <FiRefreshCw className="text-indigo-500" />
-                      ต้องการทำซ้ำไปนานแค่ไหน?
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {[
-                        { value: '1m', label: '1 เดือน' },
-                        { value: '3m', label: '3 เดือน' },
-                        { value: '6m', label: '6 เดือน' },
-                        { value: '1y', label: '1 ปี' }
-                      ].map(opt => {
-                        const isSelected = (formData.recurrenceDuration || '1m') === opt.value;
-                        return (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => setFormData({ ...formData, recurrenceDuration: opt.value })}
-                            className={`flex flex-col items-center justify-center px-4 py-3.5 rounded-xl border-2 transition-all duration-200 ${isSelected ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-indigo-600/50 hover:bg-slate-50 dark:hover:bg-slate-800/80'}`}
-                          >
-                            <span className="font-bold">{opt.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="mt-3 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                      <FiInfo className="shrink-0" />
-                      ระบบจะสร้างตารางงานล่วงหน้าให้ตามระยะเวลาที่คุณเลือก (นับจากวันที่เริ่ม)
-                    </p>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">สิ้นสุดการทำซ้ำ (End Date)</label>
+                    <input type="date" required={formData.recurrence !== 'none' && !isEditing} name="recurrenceEndDate" value={formData.recurrenceEndDate || ''} onChange={handleChange} className="w-full md:w-1/2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
                   </div>
-                </div>
-              )}
-
-              {isEditing && formData.groupId && (
-                <div className="bg-amber-50/50 dark:bg-amber-500/10 p-4 rounded-xl border border-amber-100 dark:border-amber-500/20 mt-2">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input 
-                      disabled={!isEditable}
-                      type="checkbox" 
-                      name="updateSeries"
-                      checked={formData.updateSeries || false}
-                      onChange={(e) => setFormData({ ...formData, updateSeries: e.target.checked })}
-                      className="mt-1 w-4 h-4 text-amber-500 bg-white border-slate-300 rounded focus:ring-amber-500"
-                    />
-                    <div>
-                      <div className="text-sm font-bold text-amber-700 dark:text-amber-400">อัปเดตงานในอนาคตทั้งหมด</div>
-                      <div className="text-xs text-amber-600 dark:text-amber-500/70 mt-1">หากติ๊กเลือก จะอัปเดตงานอื่นๆ ในซีรีส์นี้ที่มีกำหนดการหลังจากงานนี้ด้วย (การเปลี่ยนวันที่จะไม่ถูกนำไปอัปเดตกับงานอื่น)</div>
-                    </div>
-                  </label>
                 </div>
               )}
 
@@ -550,7 +456,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   <FiBriefcase className="text-indigo-500" /> นำเข้าจากโปรเจ็ค (ทางเลือก)
                 </label>
                 <div className="relative mb-3">
-                  <select disabled={!isEditable} name="projectId" value={formData.projectId} onChange={handleProjectChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
+                  <select name="projectId" value={formData.projectId} onChange={handleProjectChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
                     <option value="">-- ไม่ผูกกับโปรเจ็ค --</option>
                     {projectsList.filter(p => p.Status === 'active' || p.Id == formData.projectId).map(p => (
                       <option key={p.Id} value={p.Id}>{p.Title}</option>
@@ -559,9 +465,9 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
                 </div>
 
-                {formData.projectId && isEditable && projectsList.find(p => p.Id == formData.projectId)?.Checklist?.filter(c => !c.isDone && !subtasksArr.some(st => st.projectChecklistId === c.id))?.length > 0 && (
+                {formData.projectId && projectsList.find(p => p.Id == formData.projectId)?.Checklist?.filter(c => !c.isDone && !subtasksArr.some(st => st.projectChecklistId === c.id))?.length > 0 && (
                   <div className="bg-indigo-50/50 dark:bg-indigo-500/10 p-3 rounded-xl border border-indigo-100 dark:border-indigo-500/20 mb-4">
-                    <label className="block text-xs font-semibold text-indigo-700 dark:indigo-400 mb-2 uppercase tracking-wide">
+                    <label className="block text-xs font-semibold text-indigo-700 dark:text-indigo-400 mb-2 uppercase tracking-wide">
                       ดึง Checklist จากโปรเจ็คมาทำ
                     </label>
                     <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
@@ -573,7 +479,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                             onClick={() => {
                               setSubtasksArr([...subtasksArr, {
                                 id: Date.now().toString() + Math.random(),
-                                title: c.text,
+                                title: c.text, // Fixed from text to title
                                 completed: false,
                                 projectChecklistId: c.id
                               }]);
@@ -592,19 +498,17 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
               {/* Internal Subtasks */}
               <div className="border-t border-slate-100 dark:border-slate-800 pt-5">
-                {isEditable && (
-                  <form onSubmit={handleSaveSubtask} className="flex gap-2 mb-4">
-                    <input 
-                      value={newSubtask}
-                      onChange={(e) => setNewSubtask(e.target.value)}
-                      className="flex-1 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
-                      placeholder="เพิ่มงานย่อยใหม่..."
-                    />
-                    <button type="submit" className="bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-1 transition-colors">
-                      <FiPlus /> เพิ่ม
-                    </button>
-                  </form>
-                )}
+                <form onSubmit={handleSaveSubtask} className="flex gap-2 mb-4">
+                  <input 
+                    value={newSubtask}
+                    onChange={(e) => setNewSubtask(e.target.value)}
+                    className="flex-1 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                    placeholder="เพิ่มงานย่อยใหม่..."
+                  />
+                  <button type="submit" className="bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-1 transition-colors">
+                    <FiPlus /> เพิ่ม
+                  </button>
+                </form>
 
                 {subtasksArr.length === 0 ? (
                   <div className="text-center text-slate-400 dark:text-slate-500 text-sm py-8 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl">
@@ -615,11 +519,10 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     {subtasksArr.map((st) => (
                       <div key={st.id} className={`group flex items-center gap-3 p-3 rounded-xl border transition-all ${st.completed ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm hover:border-slate-300 dark:hover:border-slate-600'}`}>
                         <button 
-                          disabled={!isEditable}
                           onClick={() => toggleSubtask(st.id)}
                           className={`shrink-0 w-5 h-5 rounded flex items-center justify-center transition-all ${st.completed ? 'bg-emerald-500 text-white' : 'border-2 border-slate-300 dark:border-slate-600 text-transparent hover:border-emerald-400'}`}
                         >
-                          {st.completed && <FiCheckSquare className="w-3.5 h-3.5" />}
+                          <FiCheckSquare className="w-3.5 h-3.5" />
                         </button>
                         <span className={`flex-1 text-sm transition-all ${st.completed ? 'text-emerald-500/70 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
                           {st.title}
@@ -629,11 +532,9 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                             </span>
                           )}
                         </span>
-                        {isEditable && (
-                          <button onClick={() => deleteSubtask(st.id)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 transition-all p-1">
-                            <FiTrash2 />
-                          </button>
-                        )}
+                        <button onClick={() => deleteSubtask(st.id)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 transition-all p-1">
+                          <FiTrash2 />
+                        </button>
                       </div>
                     ))}
                   </div>

@@ -12,17 +12,6 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
 
   useEffect(() => {
     if (initialData && isOpen) {
-      let parsedChecklist = [];
-      try {
-        if (initialData.Checklist) {
-          parsedChecklist = typeof initialData.Checklist === 'string' ? JSON.parse(initialData.Checklist) : initialData.Checklist;
-        } else if (initialData.checklist) {
-          parsedChecklist = typeof initialData.checklist === 'string' ? JSON.parse(initialData.checklist) : initialData.checklist;
-        }
-      } catch (e) {
-        console.error("Failed to parse checklist", e);
-      }
-
       setFormData({
         title: initialData.Title || initialData.title || '',
         description: initialData.Description || initialData.description || '',
@@ -32,7 +21,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
         dueDate: initialData.DueDate || initialData.dueDate || '',
         tags: initialData.Tags || initialData.tags || '',
         priority: initialData.Priority || initialData.priority || 'normal',
-        checklist: Array.isArray(parsedChecklist) ? parsedChecklist : [],
+        checklist: initialData.Checklist || initialData.checklist || [],
         spaceId: initialData.SpaceId || initialData.spaceId || '',
         Id: initialData.Id
       });
@@ -149,7 +138,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
                 <select value={formData.spaceId} onChange={e => setFormData({...formData, spaceId: e.target.value})} className="w-full border dark:border-slate-700 bg-transparent rounded-lg px-3 py-2 outline-none focus:border-indigo-500">
                   <option value="">-- ไม่ระบุ (อยู่ในหน้า Dashboard รวม) --</option>
                   {spaces.map(s => (
-                    <option key={s.Id} value={s.Id}>{s.Name}</option>
+                    <option key={s.Id || s.id} value={s.Id || s.id}>{s.Name || s.name || 'Unnamed Space'}</option>
                   ))}
                 </select>
               </div>

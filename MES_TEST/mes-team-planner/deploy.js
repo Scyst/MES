@@ -12,9 +12,9 @@ async function deploy() {
         });
         console.log("Connected to FTP server.");
         
-        await client.ensureDir("/Toolbox/PlannerDev");
+        await client.ensureDir("/Toolbox/plannerDev");
         await client.clearWorkingDir();
-        console.log("Uploading files to /Toolbox/PlannerDev...");
+        console.log("Uploading files to /Toolbox/plannerDev...");
         
         await client.uploadFromDir("dist");
         
@@ -23,7 +23,7 @@ async function deploy() {
         await client.uploadFromDir("api");
         await client.cd("..");
         
-        console.log("Deployment to PlannerDev successful!");
+        console.log("Deployment to plannerDev successful!");
     }
     catch(err) {
         console.error("Deployment failed:", err);

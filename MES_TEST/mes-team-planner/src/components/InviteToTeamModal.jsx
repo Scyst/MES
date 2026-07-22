@@ -179,6 +179,7 @@ export default function InviteToTeamModal({ isOpen, onClose, space, members = []
               </div>
             )}
           </div>
+          )}
 
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">

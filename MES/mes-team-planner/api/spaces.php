@@ -4,12 +4,6 @@ require_once 'db_helper.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $id = isset($_GET['id']) ? $_GET['id'] : null;
 
-function isAdminOrManager() {
-    if (!isset($_SESSION['user_role'])) return false;
-    $role = strtolower($_SESSION['user_role']);
-    return in_array($role, ['admin', 'manager', 'supervisor', 'creator']);
-}
-
 function ensureSpacesTable($pdo) {
     try {
         // Create table if not exists
@@ -74,10 +68,6 @@ try {
         sendJson($spaces);
     } 
     elseif ($method === 'POST') {
-        if (!isAdminOrManager()) {
-            http_response_code(403);
-            sendJson(['error' => 'Permission denied: Only Admin/Manager can create spaces.']);
-        }
         $data = json_decode(file_get_contents('php://input'), true);
         $sql = "INSERT INTO TeamPlanner_Spaces (Name, Icon, Color) OUTPUT INSERTED.* VALUES (?, ?, ?)";
         $stmt = $pdo->prepare($sql);
@@ -89,10 +79,6 @@ try {
         sendJson($stmt->fetch(PDO::FETCH_ASSOC));
     }
     elseif ($method === 'PUT' && $id) {
-        if (!isAdminOrManager()) {
-            http_response_code(403);
-            sendJson(['error' => 'Permission denied: Only Admin/Manager can edit spaces.']);
-        }
         $data = json_decode(file_get_contents('php://input'), true);
         $sql = "UPDATE TeamPlanner_Spaces SET Name = ?, Icon = ?, Color = ? WHERE Id = ?";
         $stmt = $pdo->prepare($sql);
@@ -108,10 +94,6 @@ try {
         sendJson($stmt->fetch(PDO::FETCH_ASSOC));
     }
     elseif ($method === 'DELETE' && $id) {
-        if (!isAdminOrManager()) {
-            http_response_code(403);
-            sendJson(['error' => 'Permission denied: Only Admin/Manager can delete spaces.']);
-        }
         $stmt = $pdo->prepare("DELETE FROM TeamPlanner_Spaces WHERE Id = ?");
         $stmt->execute([$id]);
         sendJson(['success' => true]);

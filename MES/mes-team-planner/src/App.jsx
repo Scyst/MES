@@ -11,12 +11,12 @@ import NotificationManager from './components/NotificationManager';
 import NotificationWidget from './components/NotificationWidget';
 import SearchModal from './components/SearchModal';
 import NotificationModal from './components/NotificationModal';
-import AddTaskModal from './components/AddTaskModal';
-import AddProjectModal from './components/AddProjectModal';
-import AddSpaceModal from './components/AddSpaceModal';
 import MyTasks from './components/MyTasks';
 import Resources from './components/Resources';
 import SpaceView from './components/SpaceView';
+import AddTaskModal from './components/AddTaskModal';
+import AddProjectModal from './components/AddProjectModal';
+import AddSpaceModal from './components/AddSpaceModal';
 
 const mainNav = [
   { tab: 'dashboard', icon: FiPieChart, label: 'Dashboard' },
@@ -28,6 +28,8 @@ const mainNav = [
   { tab: 'links', icon: FiLink, label: 'Resources' },
 ];
 
+const navItems = [...mainNav];
+
 function App() {
   const [activeTab, setActiveTab] = useState('calendar');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -36,9 +38,7 @@ function App() {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [isGlobalTaskModalOpen, setIsGlobalTaskModalOpen] = useState(false);
-  const [globalEditingTask, setGlobalEditingTask] = useState(null);
   const [isGlobalProjectModalOpen, setIsGlobalProjectModalOpen] = useState(false);
-  const [globalEditingProject, setGlobalEditingProject] = useState(null);
   const [isAddSpaceModalOpen, setIsAddSpaceModalOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState(null);
 
@@ -119,8 +119,8 @@ function App() {
   const handleSaveTask = useCallback(async (taskData) => {
     if (Array.isArray(taskData)) {
       try {
-        await Promise.all(taskData.map(t => axios.post('/api/tasks.php', t)));
-        refreshData();
+        const results = await Promise.all(taskData.map(t => axios.post('/api/tasks', t)));
+        setTasks(prev => [...results.map(r => r.data), ...prev]);
         return true;
       } catch (err) {
         console.error('Failed to bulk save tasks', err);
@@ -129,11 +129,12 @@ function App() {
       }
     }
 
-    // Optimistic UI Update (only for single tasks)
-    if (taskData.Id && !taskData.updateSeries) {
+    // Optimistic UI Update for immediate feedback (crucial for drag & drop)
+    if (taskData.Id) {
       setTasks(prev => prev.map(t => {
         if (String(t.Id) === String(taskData.Id)) {
           const updated = { ...t, ...taskData };
+          // Ensure casing matches backend for TaskBoard filtering
           if (taskData.status) updated.Status = taskData.status;
           return updated;
         }
@@ -143,23 +144,14 @@ function App() {
 
     try {
       if (taskData.Id) {
-        const res = await axios.put(`/api/tasks.php?id=${taskData.Id}`, taskData);
-        if (Array.isArray(res.data) || taskData.updateSeries) {
-          refreshData(); // bulk update or series update
-        } else if (res.data && res.data.Id) {
+        const res = await axios.put(`/api/tasks/${taskData.Id}`, taskData);
+        // Only update from response if it's an actual task object
+        if (res.data && res.data.Id) {
           setTasks(prev => prev.map(t => String(t.Id) === String(taskData.Id) ? { ...t, ...res.data } : t));
         }
       } else {
-        const res = await axios.post('/api/tasks.php', taskData);
-        if (Array.isArray(res.data) && res.data.length > 1) {
-          refreshData(); // Multiple tasks created (recurrence)
-        } else if (Array.isArray(res.data) && res.data.length === 1) {
-          setTasks(prev => [res.data[0], ...prev]);
-        } else if (res.data && res.data.Id) {
-          setTasks(prev => [res.data, ...prev]);
-        } else {
-          refreshData();
-        }
+        const res = await axios.post('/api/tasks', taskData);
+        setTasks(prev => [res.data, ...prev]);
       }
       return true;
     } catch (err) {
@@ -170,20 +162,16 @@ function App() {
     }
   }, [refreshData]);
 
-  const handleDeleteTask = useCallback(async (taskId, deleteSeries = false) => {
+  const handleDeleteTask = useCallback(async (taskId) => {
     try {
-      await axios.delete(`/api/tasks.php?id=${taskId}${deleteSeries ? '&deleteSeries=true' : ''}`);
-      if (deleteSeries) {
-        refreshData();
-      } else {
-        setTasks(prev => prev.filter(t => t.Id !== taskId));
-      }
+      await axios.delete(`/api/tasks.php?id=${taskId}`);
+      setTasks(prev => prev.filter(t => t.Id !== taskId));
       return true;
     } catch (err) {
       console.error('Failed to delete task', err);
       return false;
     }
-  }, [refreshData]);
+  }, []);
 
   const handleSaveProject = useCallback(async (projectData) => {
     try {
@@ -197,7 +185,6 @@ function App() {
         await axios.post('/api/projects.php', payload);
       }
       setIsGlobalProjectModalOpen(false);
-      setGlobalEditingProject(null);
       refreshData();
       return true;
     } catch (err) {
@@ -209,10 +196,10 @@ function App() {
   const handleSaveEvent = useCallback(async (eventData) => {
     try {
       if (eventData.Id) {
-        const res = await axios.put(`/api/events.php?id=${eventData.Id}`, eventData);
+        const res = await axios.put(`/api/events/${eventData.Id}`, eventData);
         setEvents(prev => prev.map(e => e.Id === eventData.Id ? res.data : e));
       } else {
-        const res = await axios.post('/api/events.php', eventData);
+        const res = await axios.post('/api/events', eventData);
         setEvents(prev => [...prev, res.data]);
       }
       return true;
@@ -240,7 +227,7 @@ function App() {
 
   const handleDeleteEvent = useCallback(async (eventId) => {
     try {
-      await axios.delete(`/api/events.php?id=${eventId}`);
+      await axios.delete(`/api/events/${eventId}`);
       setEvents(prev => prev.filter(e => e.Id !== eventId));
       return true;
     } catch (err) {
@@ -265,13 +252,6 @@ function App() {
       window.location.href = '../../MES/MES/auth/login_form.php';
     });
   };
-
-  // ══════════ Computed Nav ══════════
-  const dynamicSpacesNav = [
-    { tab: 'space-home', icon: FiHome, label: 'Home', color: 'text-emerald-500 bg-emerald-500/10' },
-    ...spaces.map(s => ({ tab: `space-${s.Id}`, icon: FiUsers, label: s.Name, subItem: true }))
-  ];
-  const dynamicNavItems = [...mainNav, ...dynamicSpacesNav];
 
   // ══════════ Theme ══════════
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -312,27 +292,17 @@ function App() {
   };
 
   // ══════════ Render Content with Props ══════════
-  const handleCreateTask = (initialData = null) => {
-    setGlobalEditingTask(initialData);
-    setIsGlobalTaskModalOpen(true);
-  };
-
-  const handleCreateProject = (initialData = null) => {
-    setGlobalEditingProject(initialData);
-    setIsGlobalProjectModalOpen(true);
-  };
-
-  const handleProjectClick = (project) => {
-    setGlobalEditingProject(project);
-    setIsGlobalProjectModalOpen(true);
-  };
-
   const renderContent = () => {
     const sharedTaskProps = { currentUser, tasks, setTasks, onSaveTask: handleSaveTask, onDeleteTask: handleDeleteTask, loading: dataLoading, users };
 
     switch (activeTab) {
       case 'dashboard': 
-        return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav} />;
+        return <Dashboard 
+          tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav}
+          openProjectModal={() => setIsGlobalProjectModalOpen(true)}
+          openTaskModal={() => setIsGlobalTaskModalOpen(true)}
+          openSpaceModal={() => setIsAddSpaceModalOpen(true)}
+        />;
       case 'calendar': 
         return <CalendarView tasks={tasks} events={events} onSaveTask={handleSaveTask} onDeleteTask={handleDeleteTask} onSaveEvent={handleSaveEvent} onDeleteEvent={handleDeleteEvent} loading={dataLoading} users={users} />;
       case 'tasks': 
@@ -340,18 +310,11 @@ function App() {
       case 'gantt': 
         return <GanttChart {...sharedTaskProps} />;
       case 'projects':
-        return <ProjectsTab currentUser={currentUser} tasks={tasks} refreshData={refreshData} />;
+        return <ProjectsTab tasks={tasks} spaces={spaces} refreshData={refreshData} />;
       case 'links': 
         return <LinkHub />;
       case 'my-tasks':
-        return <MyTasks 
-          tasks={tasks} 
-          currentUser={currentUser} 
-          refreshData={refreshData} 
-          onSaveTask={handleSaveTask}
-          onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
-          onCreateTask={handleCreateTask}
-        />;
+        return <MyTasks tasks={tasks} currentUser={currentUser} refreshData={refreshData} />;
       case 'timeline':
         return <GanttChart {...sharedTaskProps} />;
       case 'resources':
@@ -359,24 +322,14 @@ function App() {
       default: 
         // Fallback for Spaces and mock tabs
         if (activeTab.startsWith('space-') || activeTab.startsWith('team-')) {
-          return <SpaceView 
-            activeTab={activeTab} 
-            spaces={spaces} 
-            tasks={tasks} 
-            projects={projects} 
-            currentUser={currentUser} 
-            refreshData={refreshData} 
-            users={users} 
-            onEditSpace={(s) => { setEditingSpace(s); setIsAddSpaceModalOpen(true); }} 
-            onDeleteSpace={async (id) => { if(confirm('ต้องการลบทีมนี้ใช่หรือไม่?')) { await axios.delete(`/api/spaces.php?id=${id}`); refreshData(); setActiveTab('space-home'); } }} 
-            onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
-            onCreateTask={handleCreateTask}
-            onCreateProject={handleCreateProject}
-            onProjectClick={handleProjectClick}
-            onSaveTask={handleSaveTask}
-          />;
+          return <SpaceView activeTab={activeTab} spaces={spaces} tasks={tasks} projects={projects} currentUser={currentUser} refreshData={refreshData} users={users} />;
         }
-        return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav} />;
+        return <Dashboard 
+          tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav}
+          openProjectModal={() => setIsGlobalProjectModalOpen(true)}
+          openTaskModal={() => setIsGlobalTaskModalOpen(true)}
+          openSpaceModal={() => setIsAddSpaceModalOpen(true)}
+        />;
     }
   };
 
@@ -504,31 +457,39 @@ function App() {
               <div className="flex items-center justify-between text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
                 <span>Spaces</span>
                 <div className="flex gap-2">
-                  <FiSearch className="cursor-pointer hover:text-slate-600" onClick={() => setShowSearchModal(true)} title="Search Teams" />
-                  <FiPlus className="cursor-pointer hover:text-slate-600" onClick={() => { setEditingSpace(null); setIsAddSpaceModalOpen(true); }} title="Create Team Space" />
+                  <FiSearch className="cursor-pointer hover:text-slate-600" />
+                  <FiPlus className="cursor-pointer hover:text-slate-600" />
                 </div>
               </div>
               <div className="space-y-0.5">
-                  {dynamicSpacesNav.map(item => (
-                    <button 
-                    key={item.tab}
-                    onClick={() => handleNav(item.tab)}
-                    className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium ${item.subItem ? 'pl-8 pr-3 text-slate-500 text-[13px]' : 'px-3'} ${
-                      activeTab === item.tab 
+                <button 
+                  onClick={() => handleNav('space-home')}
+                  className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium px-3 ${
+                    activeTab === 'space-home'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' 
+                      : 'hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-200 text-slate-600'
+                  }`}
+                >
+                  <div className="p-1 rounded flex items-center justify-center text-emerald-500 bg-emerald-500/10">
+                    <FiHome className="text-[14px]" />
+                  </div>
+                  <span>Home</span>
+                </button>
+                {spaces.map(s => (
+                  <button 
+                    key={s.Id || s.id}
+                    onClick={() => handleNav(`space-${s.Id || s.id}`)}
+                    className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium pl-8 pr-3 text-slate-500 text-[13px] ${
+                      activeTab === `space-${s.Id || s.id}`
                         ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' 
                         : 'hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-200 text-slate-600'
                     }`}
                   >
-                    {!item.subItem && (
-                      <div className={`p-1 rounded flex items-center justify-center ${item.color || 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
-                        <item.icon className="text-[14px]" />
-                      </div>
-                    )}
-                    {item.subItem && <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>}
-                      <span>{item.label}</span>
-                    </button>
-                  ))}
-                </div>
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>
+                    <span>{s.Name || s.name || 'Unnamed Space'}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </nav>
         </aside>
@@ -549,7 +510,11 @@ function App() {
               <FiMenu className="text-xl" />
             </button>
             <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              {dynamicNavItems.find(n => n.tab === activeTab)?.label || 'MES Planner'}
+              {mainNav.find(n => n.tab === activeTab)?.label || 
+               (activeTab === 'space-home' ? 'Home' : 
+                (activeTab.startsWith('space-') ? 
+                  (spaces.find(s => `space-${s.Id || s.id}` === activeTab)?.Name || spaces.find(s => `space-${s.Id || s.id}` === activeTab)?.name || 'Team Space') 
+                  : 'MES Planner'))}
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -634,7 +599,7 @@ function App() {
             </div>
             
             <nav className="flex-1 px-3 space-y-2 overflow-y-auto pt-4">
-              {dynamicNavItems.map(item => (
+              {navItems.map(item => (
                 <button 
                   key={item.tab}
                   onClick={() => { handleNav(item.tab); setIsSidebarOpen(false); }}
@@ -683,18 +648,16 @@ function App() {
       {/* Global Modals */}
       <AddTaskModal 
         isOpen={isGlobalTaskModalOpen} 
-        onClose={() => { setIsGlobalTaskModalOpen(false); setGlobalEditingTask(null); }} 
-        onSave={(data) => { handleSaveTask(data); setIsGlobalTaskModalOpen(false); setGlobalEditingTask(null); }} 
+        onClose={() => setIsGlobalTaskModalOpen(false)} 
+        onSave={(data) => { handleSaveTask(data); setIsGlobalTaskModalOpen(false); }} 
         currentUser={currentUser} 
         tasks={tasks}
-        users={users}
-        initialData={globalEditingTask}
+        users={users} 
       />
       <AddProjectModal 
         isOpen={isGlobalProjectModalOpen} 
-        onClose={() => { setIsGlobalProjectModalOpen(false); setGlobalEditingProject(null); }} 
+        onClose={() => setIsGlobalProjectModalOpen(false)} 
         onSave={handleSaveProject}
-        initialData={globalEditingProject}
         spaces={spaces}
       />
       <AddSpaceModal
