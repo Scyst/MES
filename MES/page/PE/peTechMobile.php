@@ -111,24 +111,61 @@ $pageTitle = "Technician Portal";
       </div>
     </div>
 
-    <!-- Image Preview Modal -->
-    <div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <!-- Issue Details Modal -->
+    <div class="modal fade pe-modal" id="issueDetailsModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
         <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
-            <div class="modal-content bg-transparent border-0">
-                <div class="modal-header border-0 d-flex justify-content-end p-2 position-absolute w-100" style="z-index: 1;">
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="background-color: rgba(0,0,0,0.5); border-radius: 50%; padding: 0.5rem;"></button>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-info-circle text-primary me-2"></i> รายละเอียดงานซ่อม</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-0 text-center d-flex align-items-center justify-content-center" style="min-height: 50vh;">
-                    <img id="imagePreviewSrc" src="" alt="Preview" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+                <div class="modal-body p-3">
+                    <div id="detailsModalImageContainer" class="mb-3 text-center" style="display:none; background: #000; border-radius: 8px; overflow: hidden; padding: 10px;">
+                        <img id="detailsModalImage" src="" alt="Issue Image" style="max-width: 100%; max-height: 40vh; object-fit: contain;">
+                    </div>
+                    
+                    <h6 class="border-bottom pb-2 mb-2 text-primary"><i class="fas fa-user-edit me-1"></i> ข้อมูลจากผู้แจ้ง</h6>
+                    <div class="mb-3" style="font-size: 0.9rem; white-space: pre-wrap; color: var(--pe-text-color);" id="detailsModalIssue"></div>
+                    
+                    <h6 class="border-bottom pb-2 mb-2 text-success"><i class="fas fa-tools me-1"></i> อัปเดตจากช่าง</h6>
+                    <div class="mb-2">
+                        <strong style="font-size: 0.85rem; color: var(--pe-text-muted);">สาเหตุของปัญหา (Root Cause):</strong>
+                        <div style="font-size: 0.9rem; white-space: pre-wrap; color: var(--pe-text-color);" id="detailsModalRootCause">-</div>
+                    </div>
+                    <div>
+                        <strong style="font-size: 0.85rem; color: var(--pe-text-muted);">การแก้ไข (Action Taken):</strong>
+                        <div style="font-size: 0.9rem; white-space: pre-wrap; color: var(--pe-text-color);" id="detailsModalAction">-</div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-2">
+                    <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">ปิด</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        window.openImageViewer = function(src) {
-            document.getElementById('imagePreviewSrc').src = src;
-            const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+        window.openIssueDetails = function(woId) {
+            if (!window.TechModule) return;
+            const wo = window.TechModule.getWorkOrder(woId);
+            if (!wo) return;
+            
+            const imgContainer = document.getElementById('detailsModalImageContainer');
+            const img = document.getElementById('detailsModalImage');
+            
+            if (wo.image_path) {
+                img.src = '../../' + wo.image_path;
+                imgContainer.style.display = 'block';
+            } else {
+                img.src = '';
+                imgContainer.style.display = 'none';
+            }
+            
+            document.getElementById('detailsModalIssue').innerText = wo.issue_detail || 'ไม่มีรายละเอียดเพิ่มเติม';
+            document.getElementById('detailsModalRootCause').innerText = wo.root_cause || '-';
+            document.getElementById('detailsModalAction').innerText = wo.action_taken || '-';
+            
+            const modal = new bootstrap.Modal(document.getElementById('issueDetailsModal'));
             modal.show();
         };
     </script>

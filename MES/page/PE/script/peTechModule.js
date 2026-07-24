@@ -64,13 +64,16 @@ const TechModule = (function() {
             if (wo.image_path) {
                 detailsHtml += `
                 <div style="margin-bottom: 12px; border-radius: 6px; overflow: hidden; background: #e0e0e0; text-align: center; border: 1px solid var(--pe-border-color);">
-                    <img src="../../${wo.image_path}" style="width: 100%; height: 120px; object-fit: cover; display: block; cursor: pointer;" onclick="window.openImageViewer(this.src)" alt="Issue Image">
+                    <img src="../../${wo.image_path}" style="width: 100%; height: 120px; object-fit: cover; display: block; cursor: pointer;" onclick="window.openIssueDetails(${wo.wo_id})" alt="Issue Image">
                 </div>`;
             }
             
             detailsHtml += `
                 <div style="font-size: 0.85rem; color: var(--pe-text-color); white-space: pre-wrap;"><strong>รายละเอียด:</strong><br>${PEApp.escapeHtml(wo.issue_detail || 'ไม่มีรายละเอียดเพิ่มเติม')}</div>
                 <div style="font-size: 0.8rem; color: var(--pe-text-muted); margin-top: 8px;"><strong>ผู้แจ้ง:</strong> ${PEApp.escapeHtml(wo.requested_by_name || '-')}</div>
+                <button type="button" class="btn btn-sm btn-light border w-100 mt-2 text-primary" onclick="window.openIssueDetails(${wo.wo_id})">
+                    <i class="fas fa-file-alt me-1"></i> ดูรายละเอียดงานทั้งหมด
+                </button>
             </div>`;
 
             html += `
@@ -571,6 +574,7 @@ const TechModule = (function() {
     return {
         loadData,
         setFilter,
+        getWorkOrder: (id) => allData.find(w => w.wo_id == id),
         acceptJob,
         startJob,
         revertStart,
