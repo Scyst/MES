@@ -1,5 +1,5 @@
 // e:\MES\MES\MES\page\PE\script\peTechModule.js
-window.TechModule = (function() {
+const TechModule = (function() {
     let allData = [];
     let currentFilter = 'my'; // 'my' or 'all'
     let autoRefreshTimer = null;
@@ -471,6 +471,63 @@ window.TechModule = (function() {
             submitBtn.onclick = submitQuickClose;
         }
 
+        // Cropper Logic for peTechMobile
+        let cropper = null;
+        const cropModalEl = document.getElementById('cropImageModal');
+        let cropModalInstance = null;
+        if (cropModalEl) {
+            cropModalInstance = new bootstrap.Modal(cropModalEl);
+            
+            document.getElementById('btnRotateLeft')?.addEventListener('click', () => { if (cropper) cropper.rotate(-90); });
+            document.getElementById('btnRotateRight')?.addEventListener('click', () => { if (cropper) cropper.rotate(90); });
+
+            // Aspect Ratio buttons
+            document.querySelectorAll('#cropImageModal .btn-aspect').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (!cropper) return;
+                    document.querySelectorAll('#cropImageModal .btn-aspect').forEach(b => b.classList.remove('active', 'btn-light'));
+                    document.querySelectorAll('#cropImageModal .btn-aspect').forEach(b => b.classList.add('btn-outline-light'));
+                    this.classList.remove('btn-outline-light');
+                    this.classList.add('active', 'btn-light');
+                    
+                    const ratio = parseFloat(this.getAttribute('data-ratio'));
+                    cropper.setAspectRatio(ratio);
+                });
+            });
+
+            document.getElementById('btnCancelCrop')?.addEventListener('click', () => {
+                cropModalInstance.hide();
+                if (cropper) { cropper.destroy(); cropper = null; }
+            });
+
+            document.getElementById('btnConfirmCrop')?.addEventListener('click', () => {
+                if (!cropper) return;
+                const canvas = cropper.getCroppedCanvas({ maxWidth: 1920, maxHeight: 1920 });
+                if (canvas) {
+                    canvas.toBlob((blob) => {
+                        window.croppedImageAfterBlob = blob;
+                    }, 'image/webp', 0.8);
+                    const base64 = canvas.toDataURL('image/jpeg', 0.8);
+                    const preview = document.getElementById('qcImageAfterPreview');
+                    if (preview) {
+                        const img = preview.querySelector('img');
+                        if (img) img.src = base64;
+                        preview.style.display = 'flex';
+                        const qcDropzone = document.getElementById('qcDropzoneAfter');
+                        if (qcDropzone) qcDropzone.classList.add('has-image');
+                    }
+                    cropModalInstance.hide();
+                    if (cropper) { cropper.destroy(); cropper = null; }
+                }
+            });
+            
+            // Clean up when hidden
+            cropModalEl.addEventListener('hidden.bs.modal', function () {
+                if (cropper) { cropper.destroy(); cropper = null; }
+                document.getElementById('qcFrmImageAfter').value = '';
+            });
+        }
+
         // Hook up image input handlers for Quick Close
         const qcDropzone = document.getElementById('qcDropzoneAfter');
         const qcInput = document.getElementById('qcFrmImageAfter');
@@ -478,14 +535,39 @@ window.TechModule = (function() {
             qcDropzone.addEventListener('click', () => qcInput.click());
             qcInput.addEventListener('change', (e) => {
                 if (e.target.files && e.target.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = function(evt) {
-                        const preview = document.getElementById('qcImageAfterPreview');
-                        preview.querySelector('img').src = evt.target.result;
-                        preview.style.display = 'flex';
-                        qcDropzone.classList.add('has-image');
-                    };
-                    reader.readAsDataURL(e.target.files[0]);
+                    if (cropModalInstance && cropModalEl) {
+                        const reader = new FileReader();
+                        reader.onload = function(evt) {
+                            const imageToCrop = document.getElementById('imageToCrop');
+                            if (imageToCrop) {
+                                imageToCrop.src = evt.target.result;
+                                cropModalInstance.show();
+                                
+                                const initCropperInstance = function () {
+                                    if (cropper) cropper.destroy();
+                                    cropper = new Cropper(imageToCrop, {
+                                        aspectRatio: NaN,
+                                        viewMode: 2,
+                                        autoCropArea: 1,
+                                        responsive: true
+                                    });
+                                    cropModalEl.removeEventListener('shown.bs.modal', initCropperInstance);
+                                };
+                                cropModalEl.addEventListener('shown.bs.modal', initCropperInstance);
+                            }
+                        };
+                        reader.readAsDataURL(e.target.files[0]);
+                    } else {
+                        // Fallback if no crop modal
+                        const reader = new FileReader();
+                        reader.onload = function(evt) {
+                            const preview = document.getElementById('qcImageAfterPreview');
+                            preview.querySelector('img').src = evt.target.result;
+                            preview.style.display = 'flex';
+                            qcDropzone.classList.add('has-image');
+                        };
+                        reader.readAsDataURL(e.target.files[0]);
+                    }
                 }
             });
         }
@@ -505,5 +587,5 @@ window.TechModule = (function() {
     };
 })();
 
-window.PeTechModule = PeTechModule;
-export default PeTechModule;
+window.TechModule = TechModule;
+export default TechModule;
