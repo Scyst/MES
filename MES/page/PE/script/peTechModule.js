@@ -64,7 +64,7 @@ const TechModule = (function() {
             if (wo.image_path) {
                 detailsHtml += `
                 <div style="margin-bottom: 12px; border-radius: 6px; overflow: hidden; background: #e0e0e0; text-align: center; border: 1px solid var(--pe-border-color);">
-                    <img src="../../${wo.image_path}" style="width: 100%; height: 120px; object-fit: cover; display: block; cursor: pointer;" onclick="window.open(this.src, '_blank')" alt="Issue Image">
+                    <img src="../../${wo.image_path}" style="width: 100%; height: 120px; object-fit: cover; display: block; cursor: pointer;" onclick="window.openImageViewer(this.src)" alt="Issue Image">
                 </div>`;
             }
             
