@@ -1135,7 +1135,7 @@ const WorkOrderModule = (() => {
         
         let imgHtml = '';
         if (wo.image_path) {
-            const imgUrl = `http://10.0.0.2/MES/MES/uploads/WO/${wo.image_path}`;
+            const imgUrl = `../../${wo.image_path}`;
             imgHtml = `<div style="text-align:center; margin-bottom: 10px;">
                 <img src="${imgUrl}" alt="Issue Image" style="max-height: 150px; border-radius: 8px; object-fit: cover;">
             </div>`;
