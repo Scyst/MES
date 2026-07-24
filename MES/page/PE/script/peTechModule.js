@@ -61,10 +61,10 @@ const TechModule = (function() {
             const detailsId = `wo-details-${wo.wo_id}`;
             let detailsHtml = `<div class="tech-wo-details text-start" id="${detailsId}" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--pe-border-color);">`;
             
-            if (wo.issue_image_path) {
+            if (wo.image_path) {
                 detailsHtml += `
-                <div style="margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: #f0f0f0; text-align: center;">
-                    <img src="../../${wo.issue_image_path}" style="width: 100%; height: auto; max-height: 200px; object-fit: contain; display: block;" onclick="window.open(this.src, '_blank')">
+                <div style="margin-bottom: 12px; border-radius: 6px; overflow: hidden; background: #e0e0e0; text-align: center; border: 1px solid var(--pe-border-color);">
+                    <img src="../../${wo.image_path}" style="width: 100%; height: 120px; object-fit: cover; display: block; cursor: pointer;" onclick="window.open(this.src, '_blank')" alt="Issue Image">
                 </div>`;
             }
             
