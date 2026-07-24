@@ -131,10 +131,23 @@ const TechModule = (function() {
         return '';
     }
 
+    function getJobSummaryHtml(woId, mainText) {
+        const wo = allData.find(w => w.wo_id == woId);
+        if (!wo) return mainText;
+        return `
+            <div style="font-size: 1rem; margin-bottom: 15px;">${mainText}</div>
+            <div style="text-align: left; background: #f8f9fa; padding: 10px; border-radius: 8px; font-size: 0.9rem; border: 1px solid #dee2e6;">
+                <strong>ใบงาน:</strong> ${wo.wo_number}<br>
+                <strong>เครื่องจักร:</strong> ${wo.machine_display_name || wo.machine_name || '-'}<br>
+                <strong>อาการเสีย:</strong> <span style="color: var(--pe-primary);">${PEApp.escapeHtml(wo.issue_title)}</span>
+            </div>
+        `;
+    }
+
     async function acceptJob(woId) {
         const result = await Swal.fire({
             title: 'ยืนยันการรับงาน?',
-            text: "คุณต้องการรับผิดชอบงานซ่อมนี้ใช่หรือไม่?",
+            html: getJobSummaryHtml(woId, "คุณต้องการรับผิดชอบงานซ่อมนี้ใช่หรือไม่?"),
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'รับงาน',
@@ -161,7 +174,18 @@ const TechModule = (function() {
     }
 
     async function startJob(woId) {
-        try {
+        const result = await Swal.fire({
+            title: 'เริ่มงานซ่อม?',
+            html: getJobSummaryHtml(woId, "คุณต้องการเริ่มบันทึกเวลาการซ่อมแซมใช่หรือไม่?"),
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-play"></i> เริ่มซ่อม',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#28a745'
+        });
+
+        if (result.isConfirmed) {
+            try {
             const res = await PEApp.apiCall('workOrderAPI.php', {}, 'POST', { action: 'quick_start', wo_id: woId });
             if (res.success || res.status === 'success') {
                 PEApp.showToast('เริ่มงานแล้ว', 'success');
@@ -173,15 +197,16 @@ const TechModule = (function() {
                 }
                 loadData();
             }
-        } catch (e) {
-            PEApp.showToast(e.message || 'Error starting job', 'error');
+            } catch (e) {
+                PEApp.showToast(e.message || 'Error starting job', 'error');
+            }
         }
     }
 
     async function unassignJob(woId) {
         const result = await Swal.fire({
             title: 'ยกเลิกการรับงาน?',
-            text: "ระบบจะเปลี่ยนสถานะกลับเป็น Open",
+            html: getJobSummaryHtml(woId, "ระบบจะเปลี่ยนสถานะกลับเป็น Open"),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'ยืนยันยกเลิก',
@@ -218,7 +243,7 @@ const TechModule = (function() {
     async function revertStart(woId) {
         const result = await Swal.fire({
             title: 'ย้อนกลับสถานะ?',
-            text: "ระบบจะเปลี่ยนสถานะกลับเป็น Assigned (รอเริ่มซ่อม)",
+            html: getJobSummaryHtml(woId, "ระบบจะเปลี่ยนสถานะกลับเป็น Assigned (รอเริ่มซ่อม)"),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'ยืนยัน',
