@@ -69,7 +69,7 @@ const TechModule = (function() {
             }
             
             detailsHtml += `
-                <div style="font-size: 0.85rem; color: var(--pe-text-color); white-space: pre-wrap;"><strong>รายละเอียด:</strong><br>${PEApp.escapeHtml(wo.issue_description || 'ไม่มีรายละเอียดเพิ่มเติม')}</div>
+                <div style="font-size: 0.85rem; color: var(--pe-text-color); white-space: pre-wrap;"><strong>รายละเอียด:</strong><br>${PEApp.escapeHtml(wo.issue_detail || 'ไม่มีรายละเอียดเพิ่มเติม')}</div>
                 <div style="font-size: 0.8rem; color: var(--pe-text-muted); margin-top: 8px;"><strong>ผู้แจ้ง:</strong> ${PEApp.escapeHtml(wo.requested_by_name || '-')}</div>
             </div>`;
 
