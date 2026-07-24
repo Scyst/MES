@@ -59,7 +59,7 @@ const TechModule = (function() {
             const statusClass = 'tech-status-' + wo.status.replace(' ', '');
             
             const detailsId = `wo-details-${wo.wo_id}`;
-            let detailsHtml = `<div class="tech-wo-details" id="${detailsId}" style="display:none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--pe-border-color); animation: fadeIn 0.2s ease;">`;
+            let detailsHtml = `<div class="tech-wo-details text-start" id="${detailsId}" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--pe-border-color);">`;
             
             if (wo.issue_image_path) {
                 detailsHtml += `
@@ -83,19 +83,14 @@ const TechModule = (function() {
                     <i class="fas fa-industry me-1"></i> ${wo.machine_display_name || wo.machine_name || '-'}
                 </div>
                 <div class="tech-issue">${PEApp.escapeHtml(wo.issue_title)}</div>
-                <div class="tech-meta">
+                <div class="tech-meta mb-2">
                     <div><i class="fas fa-clock"></i> ${wo.requested_at ? wo.requested_at.substring(11, 16) : '-'}</div>
                     ${wo.assigned_to ? `<div><i class="fas fa-user"></i> ${wo.assigned_to}</div>` : ''}
                 </div>
                 
-                <div class="text-center mt-2 mb-3">
-                    <button class="btn btn-sm btn-link text-decoration-none pe-text-sm" style="color: var(--pe-primary);" onclick="const d = document.getElementById('${detailsId}'); const i = this.querySelector('i'); if(d.style.display==='none'){ d.style.display='block'; i.classList.replace('fa-chevron-down', 'fa-chevron-up'); } else { d.style.display='none'; i.classList.replace('fa-chevron-up', 'fa-chevron-down'); }">
-                        <i class="fas fa-chevron-down me-1"></i> ดูรายละเอียดและรูปภาพ
-                    </button>
-                    ${detailsHtml}
-                </div>
+                ${detailsHtml}
 
-                <div class="tech-actions ${wo.status === 'Assigned' && isMine ? 'two-col' : ''}">
+                <div class="tech-actions mt-3 ${wo.status === 'Assigned' && isMine ? 'two-col' : ''}">
                     ${renderButtons(wo, isMine)}
                 </div>
             </div>`;
