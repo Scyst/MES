@@ -7,8 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
 
     document.getElementById('dt_start_date').value = todayStr;
+    document.getElementById('dt_end_date').value = todayStr; // Auto-fill End Date
     document.getElementById('dt_start_time').value = timeStr;
-    // document.getElementById('dt_end_time').value = timeStr; // Default to empty for ongoing downtime
 
     // Set display for request date
     const reqDisplay = document.getElementById('req_requested_at_display');
@@ -502,10 +502,16 @@ function renderDTHistory(items) {
 
     let html = '';
     items.forEach(item => {
-        const startDate = item.start_time ? item.start_time.substring(0, 16) : '-';
-        const endDate = item.end_time ? item.end_time.substring(0, 16) : '-';
-        const duration = item.duration_min ? `${item.duration_min} นาที` : 'กำลังหยุด';
-        const badgeColor = item.duration_min ? 'bg-secondary' : 'bg-danger';
+        const formatDt = (dtStr) => {
+            if (!dtStr) return '-';
+            const d = new Date(dtStr);
+            if (isNaN(d)) return dtStr.substring(0, 16);
+            return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        };
+        const startDate = formatDt(item.start_time);
+        const endDate = formatDt(item.end_time);
+        const duration = item.end_time ? `${item.duration_min || 0} นาที` : 'กำลังหยุด';
+        const badgeColor = item.end_time ? 'bg-secondary' : 'bg-danger';
         let endBtnHtml = '';
         if (!item.end_time) {
             endBtnHtml = `

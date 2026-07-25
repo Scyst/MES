@@ -24,21 +24,27 @@
                             <input list="woLineList" class="pe-form-input" id="dtFrmLine" placeholder="Auto-fill from machine or select">
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="pe-form-group">
-                            <label class="pe-form-label">Date <span class="required">*</span></label>
-                            <input type="date" class="pe-form-input" id="dtFrmDate">
+                            <label class="pe-form-label">Start Date <span class="required">*</span></label>
+                            <input type="date" class="pe-form-input" id="dtFrmDate" onchange="DowntimeModule.calcDuration()">
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Start Time <span class="required">*</span></label>
                             <input type="time" class="pe-form-input" id="dtFrmStartTime" onchange="DowntimeModule.calcDuration()">
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="pe-form-group">
-                            <label class="pe-form-label">End Time <span class="required">*</span></label>
+                            <label class="pe-form-label">End Date</label>
+                            <input type="date" class="pe-form-input" id="dtFrmEndDate" onchange="DowntimeModule.calcDuration()">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="pe-form-group">
+                            <label class="pe-form-label">End Time</label>
                             <input type="time" class="pe-form-input" id="dtFrmEndTime" onchange="DowntimeModule.calcDuration()">
                         </div>
                     </div>

@@ -123,12 +123,16 @@ try {
             $endDt = null;
 
             if (!empty($endTime)) {
-                $endDt = $logDate . ' ' . $endTime;
-                // Handle overnight
-                $startTs = strtotime($startDt);
-                $endTs = strtotime($endDt);
-                if ($endTs < $startTs) {
-                    $endDt = date('Y-m-d', strtotime($logDate . ' +1 day')) . ' ' . $endTime;
+                $endDate = !empty($input['end_date']) ? $input['end_date'] : $logDate;
+                $endDt = $endDate . ' ' . $endTime;
+                
+                // Handle overnight if end_date wasn't explicitly provided
+                if (empty($input['end_date'])) {
+                    $startTs = strtotime($startDt);
+                    $endTs = strtotime($endDt);
+                    if ($endTs < $startTs) {
+                        $endDt = date('Y-m-d', strtotime($logDate . ' +1 day')) . ' ' . $endTime;
+                    }
                 }
             }
 
@@ -200,8 +204,10 @@ try {
             $startDt = $logDate . ' ' . $startTime;
             $endDt = null;
             if (!empty($endTime)) {
-                $endDt = $logDate . ' ' . $endTime;
-                if (strtotime($endDt) < strtotime($startDt)) {
+                $endDate = !empty($input['end_date']) ? $input['end_date'] : $logDate;
+                $endDt = $endDate . ' ' . $endTime;
+                
+                if (empty($input['end_date']) && strtotime($endDt) < strtotime($startDt)) {
                     $endDt = date('Y-m-d', strtotime($logDate . ' +1 day')) . ' ' . $endTime;
                 }
             }
@@ -236,7 +242,6 @@ try {
 
         case 'end_downtime':
             $id = $input['downtime_id'] ?? null;
-            $endTime = $input['end_time'] ?? date('H:i'); // default to current time
             if (!$id) throw new Exception("Downtime ID is required");
 
             $stmt = $pdo->prepare("SELECT log_date, start_time FROM " . PE_DOWNTIME_LOG_TABLE . " WHERE downtime_id = ?");
@@ -244,9 +249,17 @@ try {
             $dt = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$dt) throw new Exception("Downtime record not found");
 
-            $endDt = $dt['log_date'] . ' ' . $endTime;
-            if (strtotime($endDt) < strtotime($dt['start_time'])) {
-                $endDt = date('Y-m-d', strtotime($dt['log_date'] . ' +1 day')) . ' ' . $endTime;
+            if (!empty($input['end_time'])) {
+                $endTime = $input['end_time'];
+                $endDate = !empty($input['end_date']) ? $input['end_date'] : $dt['log_date'];
+                $endDt = $endDate . ' ' . $endTime;
+                
+                if (empty($input['end_date']) && strtotime($endDt) < strtotime($dt['start_time'])) {
+                    $endDt = date('Y-m-d', strtotime($dt['log_date'] . ' +1 day')) . ' ' . $endTime;
+                }
+            } else {
+                // If ending right now, use the actual current datetime
+                $endDt = date('Y-m-d H:i:s');
             }
 
             $pdo->prepare("UPDATE " . PE_DOWNTIME_LOG_TABLE . " SET end_time = ? WHERE downtime_id = ?")->execute([$endDt, $id]);

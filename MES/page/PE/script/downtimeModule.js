@@ -124,7 +124,10 @@ const DowntimeModule = (() => {
             if (el) el.value = '';
         });
         document.getElementById('dtFrmMachine').value = '';
-        document.getElementById('dtFrmDate').value = new Date().toISOString().slice(0, 10);
+        const todayStr = new Date().toISOString().slice(0, 10);
+        document.getElementById('dtFrmDate').value = todayStr;
+        const endDateEl = document.getElementById('dtFrmEndDate');
+        if (endDateEl) endDateEl.value = todayStr;
         document.getElementById('dtFrmStartTime').value = '';
         document.getElementById('dtFrmEndTime').value = '';
         document.getElementById('dtFrmCauseCategory').value = '';
@@ -146,6 +149,8 @@ const DowntimeModule = (() => {
         document.getElementById('dtFrmMachine').value = row.machine_id || '';
         document.getElementById('dtFrmLine').value = row.line || '';
         document.getElementById('dtFrmDate').value = row.log_date ? row.log_date.substring(0, 10) : '';
+        const endDateEl = document.getElementById('dtFrmEndDate');
+        if (endDateEl) endDateEl.value = row.end_time ? row.end_time.substring(0, 10) : '';
         document.getElementById('dtFrmStartTime').value = row.start_time ? new Date(row.start_time).toTimeString().substring(0, 5) : '';
         document.getElementById('dtFrmEndTime').value = row.end_time ? new Date(row.end_time).toTimeString().substring(0, 5) : '';
         document.getElementById('dtFrmCauseCategory').value = row.cause_category || '';
@@ -201,23 +206,29 @@ const DowntimeModule = (() => {
     }
 
     function calcDuration() {
-        const start = document.getElementById('dtFrmStartTime')?.value;
-        const end = document.getElementById('dtFrmEndTime')?.value;
+        const startDate = document.getElementById('dtFrmDate')?.value;
+        const startTime = document.getElementById('dtFrmStartTime')?.value;
+        const endDate = document.getElementById('dtFrmEndDate')?.value;
+        const endTime = document.getElementById('dtFrmEndTime')?.value;
         const el = document.getElementById('dtCalcDuration');
-        if (!start || !end || !el) return;
+        if (!startDate || !startTime || !endTime || !el) return;
 
-        let startMin = parseInt(start.split(':')[0]) * 60 + parseInt(start.split(':')[1]);
-        let endMin = parseInt(end.split(':')[0]) * 60 + parseInt(end.split(':')[1]);
-        if (endMin < startMin) endMin += 1440; // Overnight
+        const startDt = new Date(`${startDate}T${startTime}`);
+        let endDt = new Date(`${endDate || startDate}T${endTime}`);
+        
+        if (!endDate && endDt < startDt) {
+            endDt.setDate(endDt.getDate() + 1); // Overnight fallback
+        }
 
-        const duration = endMin - startMin;
-        el.textContent = `${duration} min (${(duration / 60).toFixed(1)} hrs)`;
+        const durationMin = Math.round((endDt - startDt) / 60000);
+        el.textContent = durationMin >= 0 ? `${durationMin} min (${(durationMin / 60).toFixed(1)} hrs)` : 'Invalid Time';
     }
 
     async function save() {
         const causeCategory = document.getElementById('dtFrmCauseCategory')?.value;
         const causeDetail = document.getElementById('dtFrmCauseDetail')?.value?.trim();
         const date = document.getElementById('dtFrmDate')?.value;
+        const endDate = document.getElementById('dtFrmEndDate')?.value;
         const startTime = document.getElementById('dtFrmStartTime')?.value;
         const endTime = document.getElementById('dtFrmEndTime')?.value;
 
@@ -240,6 +251,7 @@ const DowntimeModule = (() => {
                 machine_name: machine ? machine.machine_name : '',
                 line: document.getElementById('dtFrmLine')?.value || '',
                 log_date: date,
+                end_date: endDate || '',
                 start_time: startTime,
                 end_time: endTime,
                 cause_category: causeCategory,

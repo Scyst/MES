@@ -184,17 +184,23 @@ try {
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="pe-form-label">วันที่ <span class="required">*</span></label>
-                    <input type="date" class="pe-form-input" id="dt_start_date" name="log_date" required>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="pe-form-label">วันที่เริ่ม <span class="required">*</span></label>
+                        <input type="date" class="pe-form-input" id="dt_start_date" name="log_date" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="pe-form-label">เวลาเริ่ม <span class="required">*</span></label>
+                        <input type="time" class="pe-form-input" id="dt_start_time" name="start_time" required>
+                    </div>
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <label class="pe-form-label">เริ่มหยุด <span class="required">*</span></label>
-                        <input type="time" class="pe-form-input" id="dt_start_time" name="start_time" required>
+                        <label class="pe-form-label">วันที่สิ้นสุด <small class="text-muted fw-normal" style="font-size:0.75rem;">(เว้นว่างได้)</small></label>
+                        <input type="date" class="pe-form-input" id="dt_end_date" name="end_date">
                     </div>
                     <div class="col-6">
-                        <label class="pe-form-label">กลับมาเดิน <small class="text-muted fw-normal" style="font-size:0.75rem;">(เว้นว่างได้)</small></label>
+                        <label class="pe-form-label">เวลาสิ้นสุด <small class="text-muted fw-normal" style="font-size:0.75rem;">(เว้นว่างได้)</small></label>
                         <input type="time" class="pe-form-input" id="dt_end_time" name="end_time">
                     </div>
                 </div>
