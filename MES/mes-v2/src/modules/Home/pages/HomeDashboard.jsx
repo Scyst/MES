@@ -3,7 +3,7 @@ import {
   LineChart, ShoppingCart, Truck, FolderOpen, Boxes, 
   Smartphone, ListOrdered, Barcode, Printer, Ban, 
   Store, Warehouse, Package, MapPin, ShieldCheck, 
-  ShieldAlert, Wrench, Sun, HeartPulse
+  ShieldAlert, Wrench, Sun, HeartPulse, ChevronRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { dailyLogApi } from '../../../shared/services/dailyLogApi';
@@ -14,18 +14,27 @@ import NotificationMenu from '../components/NotificationMenu';
 import LogModal from '../components/LogModal';
 
 const ServiceCard = ({ title, desc, icon: Icon, colorClass, to }) => (
-  <Link 
-    to={to} 
-    className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all flex items-start gap-4 group"
+  <Link
+    to={to}
+    className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-3 px-4 py-3 min-h-[60px]"
   >
-    <div className={`p-3 rounded-lg ${colorClass} group-hover:scale-105 transition-transform`}>
-      <Icon size={24} />
+    <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${colorClass} group-hover:scale-110 transition-transform duration-200`}>
+      <Icon size={18} strokeWidth={2} />
     </div>
-    <div className="flex-1">
-      <h4 className="font-bold text-gray-800 text-sm md:text-base">{title}</h4>
-      <p className="text-xs md:text-sm text-gray-500 mt-1">{desc}</p>
+    <div className="flex-1 min-w-0">
+      <p className="font-bold text-gray-800 text-sm leading-snug group-hover:text-blue-600 transition-colors">{title}</p>
+      <p className="text-sm text-gray-500 mt-0.5 leading-tight">{desc}</p>
     </div>
+    <ChevronRight size={14} className="flex-shrink-0 text-gray-300 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
   </Link>
+);
+
+const SectionLabel = ({ label, subLabel, borderColor, textColor }) => (
+  <div className="flex items-center gap-2 mb-3">
+    <span className={`inline-block w-1 h-4 rounded-full ${borderColor}`}></span>
+    <span className={`text-xs font-extrabold tracking-widest uppercase ${textColor}`}>{label}</span>
+    <span className="text-[11px] text-gray-400 font-normal">{subLabel}</span>
+  </div>
 );
 
 export default function HomeDashboard() {
@@ -156,51 +165,52 @@ export default function HomeDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
-      {/* Welcome Box */}
-      <div className="relative bg-gradient-to-r from-blue-900 to-slate-800 rounded-2xl p-5 md:p-8 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
-        {/* Background elements (with overflow hidden) */}
-        <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-40 w-48 h-48 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 translate-y-1/2"></div>
-        </div>
+    <div className="w-full grid grid-cols-1 lg:grid-cols-12 items-start gap-6 md:gap-8 lg:px-4 pb-12">
+      
+      {/* LEFT COLUMN: Personal & Daily Widgets */}
+      <div className="flex flex-col gap-4 lg:col-span-5">
         
-        <div className="relative z-10 w-full md:w-auto">
-          <h1 className="text-xl md:text-3xl font-bold mb-3">สวัสดี คุณ {user.fullname} 👋</h1>
-          <div className="flex flex-wrap gap-2 text-xs md:text-sm">
-            <span className="bg-white/20 px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm flex items-center gap-1.5">
-              <span className="opacity-70">ID:</span> {user.emp_id}
-            </span>
-            <span className="bg-white/20 px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm flex items-center gap-1.5">
-              <span className="opacity-70">Line:</span> {user.line}
-            </span>
-            <span className="bg-blue-500/50 px-3 py-1.5 rounded-full border border-blue-400/50 backdrop-blur-sm font-semibold">
-              {user.position}
-            </span>
+        {/* Welcome Box */}
+        <div className="flex flex-col gap-4 p-6 bg-gradient-to-br from-[#f6f8fd] to-[#f1f5f9] border border-gray-200 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] border-l-4 border-l-blue-500">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-extrabold text-gray-800 mb-3 drop-shadow-sm">สวัสดี คุณ {user.fullname} 👋</h1>
+              <div className="flex flex-wrap gap-2 text-sm font-medium text-gray-600">
+                <span className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">ID: {user.emp_id}</span>
+                <span className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">Line: {user.line}</span>
+                <span className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-200 shadow-sm">{user.position}</span>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <NotificationMenu 
+                unreadDates={data.unreadDates} 
+                monthlyData={data.monthlyData} 
+                onOpenLog={handleOpenStandaloneLog} 
+              />
+            </div>
           </div>
-        </div>
-        
-        <div className="flex gap-3 relative z-10 w-full md:w-auto justify-end mt-2 md:mt-0">
-          <button onClick={() => setBriefModalOpen(true)} className="bg-white/10 hover:bg-white/20 p-3 md:p-3 rounded-full backdrop-blur-sm transition-colors flex items-center justify-center flex-1 md:flex-none" title="ดูสรุปประจำวัน">
-            <Sun size={24} className="md:w-6 md:h-6 w-5 h-5" />
+          
+          <button 
+            onClick={() => setBriefModalOpen(true)} 
+            className="w-full mt-2 bg-[#6b48d6] hover:bg-purple-700 text-white p-3 rounded-xl transition-all shadow-[0_4px_10px_rgba(107,72,214,0.3)] hover:shadow-[0_6px_15px_rgba(107,72,214,0.4)] hover:-translate-y-0.5 flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3 text-base font-bold tracking-wide drop-shadow-sm">
+              <Sun size={20} />
+              <span>ภาพรวมทีมงาน (Dashboard)</span>
+            </div>
+            <span className="text-xl leading-none">&rsaquo;</span>
           </button>
-          <div className="flex-1 md:flex-none">
-            <NotificationMenu 
-              unreadDates={data.unreadDates} 
-              monthlyData={data.monthlyData} 
-              onOpenLog={handleOpenStandaloneLog} 
-            />
-          </div>
         </div>
-      </div>
 
-      {/* Daily Widgets Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Daily Pulse */}
         <DailyPulseWidget 
           todayLogs={data.todayLogs} 
           todayDate={todayStr}
           onLogSaved={loadInitialData}
         />
+        
+        {/* Calendar */}
         <CalendarWidget 
           monthlyData={data.monthlyData}
           unreadDates={data.unreadDates}
@@ -209,39 +219,46 @@ export default function HomeDashboard() {
         />
       </div>
 
-      {/* Service Grids */}
-      <div className="space-y-8">
+      {/* RIGHT COLUMN: Service Modules */}
+      <div className="flex flex-col gap-6 lg:col-span-7 lg:pl-6 lg:border-l lg:border-gray-100">
+
+        {/* Right column header */}
+        <div className="pb-3 border-b border-gray-100">
+          <h2 className="font-extrabold text-gray-700 text-base">เว็บไซต์บริการ <span className="text-gray-400 font-normal text-sm">(Service Modules)</span></h2>
+          <p className="text-xs text-gray-400 mt-0.5">เลือกระบบที่ต้องการใช้งาน — กดการ์ดเพื่อเข้าใช้งาน</p>
+        </div>
+
         <section>
-          <h3 className="text-lg font-bold text-gray-800 border-b pb-2 mb-4">COMMON SERVICES (บริการส่วนกลาง & แจ้งเรื่อง)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <SectionLabel label="COMMON SERVICES" subLabel="บริการส่วนกลาง & แจ้งเรื่อง" borderColor="bg-gray-400" textColor="text-gray-500" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {commonServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
           </div>
         </section>
 
         <section>
-          <h3 className="text-lg font-bold text-blue-700 border-b border-blue-100 pb-2 mb-4">PRODUCTION (ปฏิบัติการผลิต)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <SectionLabel label="PRODUCTION" subLabel="ปฏิบัติการผลิต" borderColor="bg-blue-500" textColor="text-blue-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {productionServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
           </div>
         </section>
 
         <section>
-          <h3 className="text-lg font-bold text-orange-600 border-b border-orange-100 pb-2 mb-4">WAREHOUSE & LOGISTICS (คลังสินค้าและจัดส่ง)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <SectionLabel label="WAREHOUSE & LOGISTICS" subLabel="คลังสินค้าและจัดส่ง" borderColor="bg-orange-500" textColor="text-orange-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {warehouseServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
           </div>
         </section>
 
         <section>
-          <h3 className="text-lg font-bold text-red-600 border-b border-red-100 pb-2 mb-4">QUALITY & MAINTENANCE (คุณภาพและซ่อมบำรุง)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <SectionLabel label="QUALITY & MAINTENANCE" subLabel="คุณภาพและซ่อมบำรุง" borderColor="bg-red-500" textColor="text-red-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {qualityServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
           </div>
         </section>
 
         <section>
-          <h3 className="text-lg font-bold text-green-600 border-b border-green-100 pb-2 mb-4">EXECUTIVE & MANAGEMENT (บริหารจัดการ)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <SectionLabel label="EXECUTIVE & MANAGEMENT" subLabel="บริหารจัดการ" borderColor="bg-green-500" textColor="text-green-700" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {executiveServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
           </div>
         </section>

@@ -2,16 +2,34 @@
 // config/config.php
 
 // =========================================================
-// MES-V2 Standalone Config
+// LOAD .env FILE (ถ้ามี)
 // =========================================================
+$envFile = __DIR__ . '/.env';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (str_starts_with(trim($line), '#')) continue;
+        if (strpos($line, '=') === false) continue;
+        [$key, $value] = explode('=', $line, 2);
+        $key = trim($key);
+        $value = trim($value);
+        if (!getenv($key)) {
+            putenv("$key=$value");
+        }
+    }
+}
 
-define('IS_DEVELOPMENT', false); 
+// --- DEVELOPMENT SWITCH ---
+// true = ชี้ไปที่ MESToolbox_Dev (URL: Clone/MES)
+// false = ชี้ไปที่ IIOT_TOOLBOX (URL: MES/MES) 
+define('IS_DEVELOPMENT', false); // เปลี่ยนเป็น true เมื่อพัฒนาในเครื่อง local หรือ staging server
 
-// --- DATABASE CREDENTIALS ---
-define('DB_HOST', '10.1.1.31');
-define('DB_DATABASE', 'IIOT_TOOLBOX');
-define('DB_USER', 'TOOLBOX');
-define('DB_PASSWORD', 'I1o1@T@#1boX');
+// --- DATABASE CREDENTIALS (อ่านจาก .env) ---
+define('DB_HOST', getenv('DB_SERVER') ?: '10.1.1.31');
+$target_db = IS_DEVELOPMENT ? 'MESToolbox_Dev' : 'IIOT_TOOLBOX';
+define('DB_DATABASE', getenv('DB_DATABASE') ?: $target_db);
+define('DB_USER', getenv('DB_USER') ?: 'TOOLBOX');
+define('DB_PASSWORD', getenv('DB_PASSWORD') ?: '');
 
 // --- Production & Core Tables ---
 define('LOCATIONS_TABLE', 'LOCATIONS');
