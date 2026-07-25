@@ -1,0 +1,17 @@
+DirectoryIndex dashboard.html
+Options -MultiViews
+RewriteEngine On
+RewriteBase /iot-toolbox/sandbox-b9/Toolbox2/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ dashboard.html [QSA,L]
+
+# Prevent caching for the entry HTML
+<FilesMatch "\.(html)$">
+  FileETag None
+  <IfModule mod_headers.c>
+    Header unset ETag
+    Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
+  </IfModule>
+</FilesMatch>

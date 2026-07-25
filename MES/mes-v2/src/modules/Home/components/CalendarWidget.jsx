@@ -1,0 +1,146 @@
+import React, { useState } from 'react';
+import LogModal from './LogModal';
+
+const periodInfo = {
+  1: { label: 'เริ่มงาน (Start)' },
+  2: { label: 'พักเบรก (Break)' },
+  3: { label: 'เลิกงาน (End)' }
+};
+
+export default function CalendarWidget({ monthlyData = {}, unreadDates = [], todayDate, onLogSaved }) {
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [logModalOpen, setLogModalOpen] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState(null);
+
+  // Parse todayDate to ensure we use the shifted date
+  const [yearStr, monthStr, dayStr] = todayDate ? todayDate.split('-') : [];
+  const year = yearStr ? parseInt(yearStr, 10) : new Date().getFullYear();
+  const month = monthStr ? parseInt(monthStr, 10) - 1 : new Date().getMonth();
+  
+  const todayForCal = new Date(year, month, parseInt(dayStr || new Date().getDate(), 10));
+  
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
+  const monthName = todayForCal.toLocaleDateString('th-TH', { month: 'short', year: 'numeric' });
+
+  // Generate blank days
+  const blankDays = Array.from({ length: firstDayOfWeek });
+  const actualDays = Array.from({ length: daysInMonth }).map((_, i) => {
+    const day = i + 1;
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return { day, dateStr };
+  });
+
+  const todayStr = todayDate;
+
+  const openDayManager = (dateStr) => {
+    setSelectedDate(dateStr);
+    setModalOpen(true);
+  };
+
+  const openLog = (pid) => {
+    setSelectedPeriod(pid);
+    setModalOpen(false);
+    setLogModalOpen(true);
+  };
+
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col h-full">
+      <div className="flex justify-between items-center mb-4 border-b pb-2">
+        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          ปฏิทินงาน ({monthName})
+        </h3>
+      </div>
+
+      <div className="flex-1">
+        <div className="grid grid-cols-7 text-center text-xs font-bold text-gray-500 mb-2">
+          <div className="text-red-500">อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div className="text-blue-500">ส</div>
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {blankDays.map((_, i) => (
+            <div key={`blank-${i}`} className="h-10 md:h-12 border border-transparent"></div>
+          ))}
+          {actualDays.map(({ day, dateStr }) => {
+            const isToday = dateStr === todayStr;
+            const hasUnread = unreadDates.includes(dateStr);
+            const dayData = monthlyData[dateStr] || {};
+
+            return (
+              <div 
+                key={dateStr}
+                onClick={() => openDayManager(dateStr)}
+                className={`relative flex flex-col p-1 border rounded-lg cursor-pointer transition-all h-12 md:h-14
+                  ${isToday ? 'border-blue-400 bg-blue-50/30' : 'border-gray-100 hover:border-blue-300 hover:bg-gray-50'}
+                  ${hasUnread ? 'ring-2 ring-red-400 animate-pulse' : ''}
+                `}
+              >
+                <div className="flex justify-between items-start">
+                  <span className={`text-xs font-semibold ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{day}</span>
+                  {hasUnread && <span className="w-2 h-2 rounded-full bg-red-500"></span>}
+                </div>
+                <div className="flex gap-0.5 mt-auto justify-center">
+                  {[1, 2, 3].map(pid => (
+                    <div 
+                      key={pid} 
+                      className={`w-1.5 h-1.5 rounded-full ${dayData[pid] ? 'bg-green-500' : 'bg-gray-200'}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Day Manager Modal */}
+      {modalOpen && selectedDate && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+              <h5 className="font-bold text-lg">วันที่ {selectedDate}</h5>
+              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
+            </div>
+            <div className="p-4 space-y-2">
+              {[1, 2, 3].map(pid => {
+                const logData = (monthlyData[selectedDate] && monthlyData[selectedDate][pid]) || null;
+                const isDone = !!logData;
+                
+                return (
+                  <div 
+                    key={pid}
+                    onClick={() => openLog(pid)}
+                    className="flex justify-between items-center p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${isDone ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                      <span className="font-medium text-gray-700">{periodInfo[pid].label}</span>
+                      {logData?.reply_message && (
+                        <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200">ตอบกลับ</span>
+                      )}
+                    </div>
+                    <span className="text-gray-400 text-xl">&rsaquo;</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Log Modal (Recycled from DailyPulseWidget) */}
+      {logModalOpen && selectedDate && selectedPeriod && (
+        <LogModal
+          isOpen={logModalOpen}
+          onClose={() => setLogModalOpen(false)}
+          periodId={selectedPeriod}
+          periodInfo={periodInfo[selectedPeriod]}
+          logDate={selectedDate}
+          existingData={(monthlyData[selectedDate] && monthlyData[selectedDate][selectedPeriod]) || null}
+          onSaved={onLogSaved}
+        />
+      )}
+    </div>
+  );
+}
