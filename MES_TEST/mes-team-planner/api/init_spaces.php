@@ -56,6 +56,22 @@ try {
     ";
     $pdo->exec($sqlAlterTasks);
 
+    // 3.5 Create TeamPlanner_Comments table
+    $sqlCreateComments = "
+        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='TeamPlanner_Comments' and xtype='U')
+        BEGIN
+            CREATE TABLE TeamPlanner_Comments (
+                Id INT IDENTITY(1,1) PRIMARY KEY,
+                TaskId INT NOT NULL,
+                Author NVARCHAR(255) NOT NULL,
+                Message NVARCHAR(MAX) NOT NULL,
+                CreatedAt DATETIME DEFAULT GETDATE(),
+                FOREIGN KEY (TaskId) REFERENCES TeamPlanner_Tasks(Id) ON DELETE CASCADE
+            )
+        END
+    ";
+    $pdo->exec($sqlCreateComments);
+
     // 4. Insert Default Spaces if table is empty
     $sqlCheckEmpty = "SELECT COUNT(*) FROM TeamPlanner_Spaces";
     $count = $pdo->query($sqlCheckEmpty)->fetchColumn();

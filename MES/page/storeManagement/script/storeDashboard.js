@@ -1,0 +1,1213 @@
+//MES/page/storeManagement/script/storeDashboard.js
+"use strict";
+
+let currentItems = [];
+let chartTrendInst = null;
+let chartCatInst = null;
+let chartItemsInst = null;
+let chartUsersInst = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    let d = new Date(); d.setDate(d.getDate() - 30);
+    const startFilter = document.getElementById('global_start');
+    const endFilter = document.getElementById('global_end');
+    
+    if (startFilter) startFilter.value = d.toISOString().split('T')[0];
+    if (endFilter) endFilter.value = new Date().toISOString().split('T')[0];
+
+    loadActiveQueue();
+    
+    setInterval(() => { 
+        if (!document.hidden) {
+            const filterStatus = document.getElementById('filter_status')?.value;
+            if (filterStatus === 'ACTIVE' || filterStatus === 'WAITING') {
+                loadActiveQueue(true); 
+            }
+        }
+    }, 60000);
+
+    window.addEventListener('resize', () => {
+        const reqId = document.getElementById('current_req_id')?.value;
+        switchView(reqId !== '' ? 'form' : 'list');
+    });
+});
+
+function getIconPlaceholder(category) {
+    let icon = 'fa-box'; let color = '#6c757d'; 
+    const cat = category ? category.toUpperCase() : '';
+    if (cat.includes('PALLET')) { icon = 'fa-pallet'; color = '#8B4513'; }
+    else if (cat.includes('PAINT') || cat.includes('CHEMICAL')) { icon = 'fa-fill-drip'; color = '#e83e8c'; }
+    else if (cat.includes('RM')) { icon = 'fa-cubes'; color = '#0d6efd'; } 
+    else if (cat.includes('CON')) { icon = 'fa-pump-soap'; color = '#198754'; } 
+    else if (cat.includes('SP')) { icon = 'fa-cogs'; color = '#dc3545'; } 
+    else if (cat.includes('PKG')) { icon = 'fa-box-open'; color = '#ffc107'; } 
+    else if (cat.includes('TOOL')) { icon = 'fa-wrench'; color = '#0dcaf0'; }
+    return `<div class="ph-small"><i class="fas ${icon}" style="color:${color}; opacity:0.5; font-size: 1.5rem;"></i></div>`;
+}
+
+window.handleDashboardImageError = function(imgElement, category) {
+    imgElement.outerHTML = getIconPlaceholder(category);
+};
+
+window.triggerGlobalReload = function() {
+    const mode = document.getElementById('current_dashboard_mode').value;
+    if (mode === 'ANALYTICS') loadAnalytics();
+    else if (mode === 'FULFILLMENT') loadFulfillmentData();
+    else loadActiveQueue();
+};
+
+window.toggleDateFilter = function() {
+    const dp = document.getElementById('global-date-filter');
+    dp.style.opacity = '1'; 
+    dp.style.pointerEvents = 'auto';
+};
+
+window.switchDashboardMode = function(mode) {
+    document.getElementById('current_dashboard_mode').value = mode;
+    document.getElementById('current_req_id').value = ''; 
+    document.querySelectorAll('.mode-tab').forEach(tab => tab.classList.remove('active'));
+    
+    const layoutOrder = document.getElementById('order-layout');
+    const layoutAnalytics = document.getElementById('analytics-layout');
+    const layoutFulfill = document.getElementById('fulfillment-layout');
+    const btnExport = document.getElementById('btnExportData');
+    const dp = document.getElementById('global-date-filter');
+
+    layoutOrder.classList.add('d-none');
+    layoutAnalytics.classList.add('d-none');
+    if(layoutFulfill) layoutFulfill.classList.add('d-none');
+    btnExport.classList.add('d-none');
+
+    dp.style.opacity = '1'; 
+    dp.style.pointerEvents = 'auto';
+
+    if (mode === 'STOCK') {
+        document.getElementById('tab-stock').classList.add('active');
+        layoutOrder.classList.remove('d-none');
+        document.querySelectorAll('.opt-k2').forEach(el => el.classList.add('d-none')); 
+        document.querySelectorAll('.opt-stock').forEach(el => el.classList.remove('d-none'));
+        document.getElementById('filter_status').value = 'ACTIVE'; 
+        switchView('list'); loadActiveQueue();
+    } 
+    else if (mode === 'K2') {
+        document.getElementById('tab-k2').classList.add('active');
+        layoutOrder.classList.remove('d-none');
+        document.querySelectorAll('.opt-stock').forEach(el => el.classList.add('d-none')); 
+        document.querySelectorAll('.opt-k2').forEach(el => el.classList.remove('d-none'));
+        document.getElementById('filter_status').value = 'WAITING';
+        switchView('list'); loadActiveQueue();
+    }
+    else if (mode === 'ANALYTICS') {
+        document.getElementById('tab-analytics').classList.add('active');
+        layoutAnalytics.classList.remove('d-none');
+        btnExport.classList.remove('d-none');
+        loadAnalytics();
+    }
+    else if (mode === 'FULFILLMENT') {
+        document.getElementById('tab-fulfillment').classList.add('active');
+        if(layoutFulfill) layoutFulfill.classList.remove('d-none');
+        dp.style.opacity = '0.3'; 
+        dp.style.pointerEvents = 'none';
+        
+        const lineSelect = document.getElementById('fulfill_line');
+        if (lineSelect && lineSelect.options.length <= 1) {
+            fetchAPI('get_master_data', 'GET').then(res => {
+                if (res.success && res.data.locations) {
+                    const lines = [...new Set(res.data.locations.filter(l => l.production_line).map(l => l.production_line))].sort();
+                    lines.forEach(line => {
+                        const opt = document.createElement('option');
+                        opt.value = line; opt.textContent = line;
+                        lineSelect.appendChild(opt);
+                    });
+                }
+                loadActiveJobsForFulfillment();
+            }).catch(e => {
+                console.error(e);
+                loadActiveJobsForFulfillment();
+            });
+        } else {
+            loadActiveJobsForFulfillment();
+        }
+    }
+};
+
+window.loadActiveQueue = function(isSilent = false) {
+    const mode = document.getElementById('current_dashboard_mode').value;
+    if (mode === 'STOCK') loadStockOrders(isSilent);
+    else loadK2Summary(isSilent);
+};
+
+async function loadStockOrders(isSilent) {
+    const container = document.getElementById('orderListContainer');
+    if (!isSilent) container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary spinner-border-sm"></div></div>';
+    
+    try {
+        const qs = new URLSearchParams({
+            status: document.getElementById('filter_status').value,
+            start_date: document.getElementById('global_start').value,
+            end_date: document.getElementById('global_end').value
+        }).toString();
+
+        const res = await fetchAPI(`get_orders&${qs}`, 'GET');
+        let html = '';
+        
+        if (res.data.length === 0) {
+            let emptyText = document.getElementById('filter_status').value === 'ACTIVE' ? 'ไม่มีออเดอร์ค้างจัด' : 'ไม่มีประวัติการเบิกในช่วงนี้';
+            html = `<div class="text-center text-muted py-5 mt-4"><i class="fas fa-clipboard-check fa-3x mb-2 opacity-25"></i><br><small>${emptyText}</small></div>`;
+        } else {
+            const currentReqId = document.getElementById('current_req_id').value;
+            res.data.forEach(order => {
+                let sClass = '', sBadge = '', isPulse = '';
+                if (order.status === 'NEW ORDER') { sClass = 'status-new'; sBadge = '<span class="badge bg-primary">NEW</span>'; isPulse = 'pulse-alert'; }
+                else if (order.status === 'PREPARING') { sClass = 'status-prep'; sBadge = '<span class="badge bg-warning text-dark">PREPARING</span>'; }
+                else if (order.status === 'PARTIAL') { sClass = 'status-prep'; sBadge = '<span class="badge bg-info text-dark">PARTIAL</span>'; }
+                else if (order.status === 'COMPLETED') { sClass = 'status-comp'; sBadge = '<span class="badge bg-success">COMPLETED</span>'; }
+                else { sClass = 'status-rej'; sBadge = '<span class="badge bg-secondary">REJECTED</span>'; }
+                const isActive = (currentReqId == order.id) ? 'active' : '';
+
+                const safeReqNumber = escapeHTML(order.req_number);
+                const safeRequester = escapeHTML(order.requester_name || 'Unknown');
+                const safeReqTime = escapeHTML(order.req_time);
+                const safeTotalItems = escapeHTML(order.total_items);
+
+                html += `
+                <div class="order-card ${sClass} ${isActive} ${isPulse} w-100 p-3 mb-2" id="order-card-${order.id}" onclick="openStockOrder(${order.id})">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="fw-bold text-dark mb-0" style="font-size: 0.95rem;">${safeReqNumber}</span><div>${sBadge}</div>
+                    </div>
+                    <div class="text-muted mb-2 text-truncate" style="font-size:0.85rem;"><i class="fas fa-user me-1 text-primary"></i> ${safeRequester}</div>
+                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.85rem;">
+                        <span><i class="far fa-clock me-1"></i> ${safeReqTime}</span>
+                        <span class="fw-bold text-secondary">${safeTotalItems} Items</span>
+                    </div>
+                </div>`;
+            });
+        }
+        container.innerHTML = html;
+    } catch (error) {}
+}
+
+window.openStockOrder = async function(reqId) {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    document.querySelectorAll('.order-card').forEach(el => el.classList.remove('active'));
+    
+    const activeCard = document.getElementById(`order-card-${reqId}`);
+    if (activeCard) { activeCard.classList.add('active'); activeCard.classList.remove('pulse-alert'); }
+    document.getElementById('current_req_id').value = reqId;
+
+    try {
+        const res = await fetchAPI(`get_order_details&req_id=${reqId}`, 'GET');
+        document.getElementById('loadingOverlay').style.display = 'none';
+        
+        const h = res.header; currentItems = res.items;
+
+        document.getElementById('disp_req_no').innerText = h.req_number;
+        document.getElementById('disp_time').innerHTML = `<i class="far fa-clock"></i> ${escapeHTML(h.req_time)}`;
+        document.getElementById('disp_requester').innerText = h.requester_name || '-';
+        document.getElementById('disp_remark').innerText = h.remark || '-';
+        
+        const dispInternalJob = document.getElementById('disp_internal_job');
+        if (dispInternalJob) {
+            dispInternalJob.innerText = h.internal_job_no || '-';
+        }
+        
+        let headerColor = 'bg-dark', statusText = h.status;
+        if (h.status === 'NEW ORDER') headerColor = 'bg-primary';
+        else if (h.status === 'PREPARING') headerColor = 'bg-warning text-dark';
+        else if (h.status === 'PARTIAL') headerColor = 'bg-info text-dark';
+        else if (h.status === 'COMPLETED') headerColor = 'bg-success';
+        
+        const headerBg = document.getElementById('header-bg');
+        headerBg.classList.remove('bg-dark', 'bg-danger', 'bg-warning', 'bg-success', 'text-dark', 'text-white');
+        headerBg.classList.add(...headerColor.split(' '));
+        if(h.status !== 'PREPARING' && h.status !== 'PARTIAL') headerBg.classList.add('text-white');
+        
+        const dispStatus = document.getElementById('disp_status');
+        dispStatus.innerText = statusText;
+        dispStatus.classList.remove('text-dark', 'text-white', 'text-primary');
+        dispStatus.classList.add((h.status === 'PREPARING' || h.status === 'PARTIAL') ? 'text-dark' : 'text-primary');
+
+        let itemsHtml = ''; const isEditable = (h.status === 'PREPARING' || h.status === 'PARTIAL'); 
+
+        currentItems.forEach(item => {
+            const reqQty = parseFloat(item.qty_requested); const onHand = parseFloat(item.onhand_qty);
+            const previouslyIssued = parseFloat(item.qty_issued || 0);
+            const remainingReqQty = Math.max(0, reqQty - previouslyIssued);
+            const isStockShort = onHand < remainingReqQty; 
+            const isItemEditable = isEditable && remainingReqQty > 0;
+            const defaultIssueQty = Math.max(0, Math.min(remainingReqQty, onHand));
+            
+            let issueClass = 'text-success';
+            if (!isItemEditable && previouslyIssued < reqQty) issueClass = 'text-warning text-dark';
+            if (!isItemEditable && previouslyIssued === 0) issueClass = 'text-danger';
+            if (!isItemEditable && previouslyIssued >= reqQty) issueClass = 'text-success';
+            
+            const safeCategory = escapeHTML(item.material_sub_type || 'OTHER');
+            const safeDesc = escapeHTML(item.description || '-');
+            const safeItemCode = escapeHTML(item.item_code);
+
+            const imgHtml = item.image_path 
+                ? `<img src="../../uploads/items/${item.image_path}" class="item-img-small" onerror="handleDashboardImageError(this, '${safeCategory}')">` 
+                : getIconPlaceholder(safeCategory);
+
+            let reqTags = [];
+            if (item.requested_tags) {
+                try { reqTags = JSON.parse(item.requested_tags); } catch(e){}
+            }
+            const initialTagsJson = escapeHTML(JSON.stringify(reqTags));
+
+            let inputId = `qty_input_${item.row_id}`;
+
+            const checkboxHtml = isItemEditable ? `
+                <div class="form-check me-2 mb-2 mb-md-0 d-flex align-items-center">
+                    <input class="form-check-input issue-item-checkbox" type="checkbox" data-rowid="${item.row_id}" checked style="transform: scale(1.3); cursor: pointer;" onchange="document.getElementById('issue_row_${item.row_id}').style.backgroundColor = this.checked ? '#d1e7dd' : '';">
+                </div>
+            ` : '';
+
+            itemsHtml += `
+            <div id="issue_row_${item.row_id}" class="card border border-light shadow-sm mb-2" style="transition: background-color 0.2s ease-in-out; ${isItemEditable ? 'background-color: #d1e7dd;' : ''}">
+                <div class="card-body p-2 d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2">
+                    ${checkboxHtml}
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0 w-100">
+                        <div class="flex-shrink-0">${imgHtml}</div>
+                        <div class="min-w-0 flex-grow-1">
+                            <div class="fw-bold text-dark text-truncate mb-1 small" title="${safeDesc}">${safeDesc}</div>
+                            <div class="small text-muted" style="font-size:0.75rem;">
+                                SAP: ${safeItemCode} ${isItemEditable ? `<span class="mx-1">|</span><span class="${isStockShort ? 'text-danger fw-bold' : 'text-success'}">คลังรวม: ${onHand}</span>` : ''}
+                            </div>
+                            ${reqTags.length > 0 ? `<div class="small text-success mt-1 fw-bold" style="font-size: 0.75rem;"><i class="fas fa-tags"></i> ลูกค้าระบุแท็ก: ${reqTags.join(', ')}</div>` : ''}
+                            ${previouslyIssued > 0 ? `<div class="small text-primary mt-1 fw-bold" style="font-size: 0.75rem;"><i class="fas fa-check"></i> จ่ายไปแล้ว: ${previouslyIssued}</div>` : ''}
+                            ${isItemEditable ? `
+                            <div class="mt-1">
+                                <span id="tag_display_${item.row_id}" 
+                                      class="badge bg-secondary cursor-pointer" 
+                                      onclick="openSelectTagModal('${item.row_id}', '${safeItemCode}')"
+                                      style="font-size: 0.75rem;">
+                                      <i class="fas fa-magic"></i> Auto FIFO (ยังไม่ผูก Tag)
+                                </span>
+                                <input type="hidden" class="issue-tags-hidden" data-rowid="${item.row_id}" value="${initialTagsJson}">
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-end gap-2 flex-shrink-0 ms-auto mt-2 mt-md-0 w-auto">
+                        
+                        <div class="bg-light border rounded d-flex flex-column align-items-center justify-content-center" style="width: 70px; height: 60px;">
+                            <span class="text-muted fw-bold d-block" style="font-size:0.65rem; margin-bottom: 2px; line-height: 1;">ขอเบิก</span>
+                            <div class="fw-bold text-primary d-flex align-items-center justify-content-center w-100" style="font-size: 1.25rem; height: 26px; line-height: 1;">
+                                ${reqQty}
+                            </div>
+                        </div>
+                        
+                        <div class="border rounded d-flex flex-column align-items-center justify-content-center ${isItemEditable ? 'border-success bg-success bg-opacity-10' : 'bg-light'}" style="width: 70px; height: 60px;">
+                            <span class="text-muted fw-bold d-block" style="font-size:0.65rem; margin-bottom: 2px; line-height: 1; ${isItemEditable ? 'color: #198754 !important;' : ''}">${isItemEditable ? 'รอบนี้' : 'จ่ายรวม'}</span>
+                            <div class="d-flex align-items-center justify-content-center w-100" style="height: 26px;">
+                                <input type="number" id="${inputId}"
+                                    class="text-center fw-bold ${isItemEditable ? 'text-success' : issueClass} issue-qty-input p-0 m-0 border-0 bg-transparent w-100" 
+                                    data-rowid="${item.row_id}" data-itemid="${item.item_id}" data-itemcode="${safeItemCode}" data-category="${safeCategory}" data-requested="${reqQty}" value="${isItemEditable ? defaultIssueQty : previouslyIssued}" min="0" max="${remainingReqQty}" ${!isItemEditable ? 'readonly' : ''} 
+                                    style="font-size: 1.25rem; line-height: 1; outline: none; box-shadow: none; -moz-appearance: textfield;">
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>`;
+        });
+        document.getElementById('itemsContainer').innerHTML = itemsHtml;
+        const issuerContainer = document.getElementById('issuerContainer');
+        if ((h.status === 'COMPLETED' || h.status === 'PARTIAL') && h.issuer_name) {
+            document.getElementById('disp_issuer').innerText = h.issuer_name; document.getElementById('disp_issue_time').innerText = h.issue_time; 
+            issuerContainer.classList.remove('d-none');
+        } else { issuerContainer.classList.add('d-none'); }
+
+        const actionBar = document.getElementById('action-bar-mobile');
+        let btnHtml = '';
+        if (h.status === 'NEW ORDER') {
+            btnHtml = `
+                <button id="btnRejectOrder" class="btn btn-outline-danger fw-bold px-4 rounded-pill" onclick="rejectOrder(${reqId})"><i class="fas fa-times me-1"></i> ปฏิเสธ</button>
+                <button id="btnAcceptOrder" class="btn btn-warning text-dark fw-bold px-5 rounded-pill shadow-sm" onclick="acceptOrder(${reqId})"><i class="fas fa-hand-paper me-1"></i> รับออเดอร์</button>
+            `;
+            actionBar.classList.remove('d-none'); actionBar.innerHTML = btnHtml;
+        } else if (h.status === 'PREPARING' || h.status === 'PARTIAL') {
+            btnHtml = `
+                  <button id="btnRejectOrder" class="btn btn-outline-danger fw-bold px-3 rounded-pill" onclick="rejectOrder(${reqId})"><i class="fas fa-times me-1"></i> ปฏิเสธ</button>
+                  <button id="btnConfirmIssueSelected" class="btn btn-success fw-bold px-3 rounded-pill shadow-sm" onclick="confirmIssue(${reqId}, 'selected')"><i class="fas fa-check-circle me-1"></i> ยืนยันการจ่ายของ</button>
+              `;
+            actionBar.classList.remove('d-none'); actionBar.innerHTML = btnHtml;
+            document.getElementById('globalScannerContainer').classList.remove('d-none');
+            setTimeout(() => { const gsi = document.getElementById('globalScannerInput'); if(gsi) gsi.focus(); }, 500);
+        } else { 
+            actionBar.classList.add('d-none'); 
+            document.getElementById('globalScannerContainer').classList.add('d-none');
+        }
+        if (h.status !== 'PREPARING' && h.status !== 'PARTIAL') document.getElementById('globalScannerContainer').classList.add('d-none');
+        switchView('form-stock');
+    } catch (error) { document.getElementById('loadingOverlay').style.display = 'none'; }
+};
+
+window.acceptOrder = async function(reqId) {
+    try {
+        await fetchAPI('accept_order', 'POST', { req_id: reqId }, 'btnAcceptOrder');
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'รับออเดอร์แล้ว!', showConfirmButton: false, timer: 1500 }); 
+        loadActiveQueue(true); openStockOrder(reqId); 
+    } catch (error) {}
+};
+
+window.rejectOrder = function(reqId) {
+    Swal.fire({ title: 'ปฏิเสธคำขอเบิก?', input: 'text', inputPlaceholder: 'ระบุเหตุผล...', icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'ยืนยัน Reject', showLoaderOnConfirm: true,
+        preConfirm: async (reason) => {
+            try {
+                const res = await fetchAPI('reject_order', 'POST', { req_id: reqId, reason: reason }, 'btnRejectOrder');
+                if (!res) { Swal.showValidationMessage('เกิดข้อผิดพลาด'); return false; }
+                return res;
+            } catch (error) {
+                Swal.showValidationMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                return false;
+            }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            Swal.fire('Rejected', 'ยกเลิกออเดอร์เรียบร้อย', 'success').then(() => { loadActiveQueue(true); switchView('list'); }); 
+        }
+    });
+};
+
+window.confirmIssue = async function(reqId, mode = 'all') {
+    let issueData = []; let hasError = false; let hasAutoDeduct = false; let selectedCount = 0;
+    const inputs = document.querySelectorAll('.issue-qty-input:not([readonly])');
+    for (const input of inputs) {
+        const rowId = input.dataset.rowid; 
+        if (mode === 'selected') {
+            const cb = document.querySelector(`.issue-item-checkbox[data-rowid="${rowId}"]`);
+            if (!cb || !cb.checked) continue;
+        }
+        
+        selectedCount++;
+        const itemId = input.dataset.itemid; const itemCode = input.dataset.itemcode;
+        const category = input.dataset.category;
+        const issueQty = parseFloat(input.value); 
+        const reqQty = parseFloat(input.dataset.requested);
+        
+        if (isNaN(issueQty) || issueQty <= 0) { hasError = `กรุณากรอกจำนวนให้มากกว่า 0 (SAP: ${itemCode})`; break; }
+        
+        let scannedTags = [];
+        const hiddenTags = document.querySelector(`.issue-tags-hidden[data-rowid="${rowId}"]`);
+        if (hiddenTags && hiddenTags.value) {
+            try { scannedTags = JSON.parse(hiddenTags.value); } catch(e){}
+        }
+        
+        if (scannedTags.length === 0) {
+            hasAutoDeduct = true;
+        }
+        
+        issueData.push({ row_id: rowId, item_id: itemId, item_code: itemCode, qty_issued: issueQty, scanned_tags: scannedTags });
+    }
+    
+    if (hasError) { Swal.fire('ข้อมูลไม่ถูกต้อง', hasError, 'warning'); return; }
+    if (selectedCount === 0) { Swal.fire('ไม่ได้เลือกรายการ', 'กรุณาเลือกอย่างน้อย 1 รายการเพื่อจ่ายของ', 'warning'); return; }
+    if (issueData.length === 0) { Swal.fire('ไม่มีข้อมูล', 'ไม่พบรายการที่สามารถจ่ายได้', 'warning'); return; }
+    let confirmTitle = 'ยืนยันการจ่ายของ?';
+    
+    let summaryHtml = `<div class="text-start mb-2" style="max-height: 250px; overflow-y: auto;">
+        <p class="mb-2 text-muted fw-bold" style="font-size: 0.85rem;"><i class="fas fa-list-check"></i> สรุปรายการที่กำลังจะจ่าย:</p>
+        <ul class="list-group list-group-flush mb-0 border rounded">`;
+
+    issueData.forEach(item => {
+        const inputEl = document.querySelector(`.issue-qty-input[data-rowid="${item.row_id}"]`);
+        let desc = '-';
+        if (inputEl) {
+            const descEl = inputEl.closest('.card-body')?.querySelector('.fw-bold.text-dark');
+            if (descEl) desc = descEl.innerText;
+        }
+        
+        summaryHtml += `
+            <li class="list-group-item d-flex justify-content-between align-items-center p-2" style="font-size: 0.85rem;">
+                <div class="text-truncate pe-2" style="max-width: 75%; text-align: left;" title="${desc}">
+                    <b class="text-primary">${item.item_code}</b><br>
+                    <span class="text-muted" style="font-size: 0.75rem;">${desc}</span>
+                </div>
+                <span class="badge bg-success rounded-pill px-2 py-1" style="font-size: 0.85rem; box-shadow: 0 2px 4px rgba(25,135,84,0.2);">${item.qty_issued}</span>
+            </li>
+        `;
+    });
+    summaryHtml += `</ul></div>`;
+
+    if (hasAutoDeduct) {
+        summaryHtml += `<div class="alert alert-warning py-2 px-3 mt-3 mb-0 text-start" style="font-size: 0.8rem; border-left: 4px solid #ffc107;">
+            <i class="fas fa-exclamation-triangle"></i> มีบางรายการที่คุณไม่ได้ระบุแท็ก ระบบจะทำการหักยอดจาก <b>แท็กที่เก่าที่สุด</b> ให้อัตโนมัติ (Auto-FIFO)
+        </div>`;
+    }
+    
+    Swal.fire({ 
+        title: confirmTitle, 
+        html: summaryHtml, 
+        icon: 'question', 
+        showCancelButton: true, 
+        confirmButtonColor: '#198754', 
+        confirmButtonText: 'ยืนยันจ่ายของ!', 
+        cancelButtonText: 'กลับไปแก้ไข',
+        showLoaderOnConfirm: true,
+        customClass: { popup: 'rounded-4 shadow-lg' },
+        preConfirm: async () => {
+            try {
+                const reqNumber = document.getElementById('disp_req_no').innerText;
+                const btnId = mode === 'selected' ? 'btnConfirmIssueSelected' : 'btnConfirmIssueAll';
+                const res = await fetchAPI('confirm_issue', 'POST', { req_id: reqId, req_number: reqNumber, items: JSON.stringify(issueData) }, btnId);
+                if (!res) { Swal.showValidationMessage('เกิดข้อผิดพลาด'); return false; }
+                return res;
+            } catch (error) {
+                Swal.showValidationMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                return false;
+            }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            Swal.fire('Success', 'จ่ายของและตัดสต๊อกสำเร็จ!', 'success').then(() => { loadActiveQueue(true); switchView('list'); }); 
+        }
+    });
+};
+
+window.openSelectTagModal = async function(rowId, itemCode) {
+    let tagHtml5QrCode = null;
+    try {
+        const res = await fetchAPI(`get_available_tags_for_item&item_code=${encodeURIComponent(itemCode)}`, 'GET');
+        const tags = res.data;
+        if (!tags || tags.length === 0) {
+            Swal.fire('ไม่มีสินค้า', `ไม่พบแท็กที่พร้อมจ่ายสำหรับ SAP: ${itemCode}`, 'warning');
+            return;
+        }
+        let html = `<div class="text-start mb-2 small text-muted">เลือกแท็กสินค้าที่ต้องการเบิก (SAP: ${itemCode}):</div>`;
+        html += `<div class="mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-outline-primary shadow-sm rounded d-flex align-items-center justify-content-center" type="button" id="btnToggleTagCamera" style="width:38px; height:38px; padding:0; flex-shrink:0;" title="สแกนด้วยกล้อง">
+                    <i class="fas fa-camera"></i>
+                </button>
+                <div class="input-group shadow-sm flex-grow-1" style="border-radius:8px; overflow:hidden;">
+                    <span class="input-group-text bg-light border-0"><i class="fas fa-barcode text-primary"></i></span>
+                    <input type="text" id="modalScannerInput" class="form-control border-0 fw-bold" placeholder="สแกน QR Code/Barcode ที่นี่..." autocomplete="off">
+                </div>
+            </div>
+            <div id="tag-camera-reader" style="width: 100%; display: none;" class="mt-2 border rounded overflow-hidden"></div>
+            <div id="modalScannerFeedback" class="small mt-1 text-end" style="min-height: 18px;"></div>
+        </div>`;
+        html += `<div class="list-group list-group-flush border rounded overflow-auto" style="max-height: 300px; text-align: left;">`;
+        tags.forEach(t => {
+            const dateStr = t.received_date ? t.received_date.substring(0, 10) : '-';
+            html += `
+            <label class="list-group-item d-flex justify-content-between align-items-center list-group-item-action cursor-pointer py-1 px-2">
+                <div class="d-flex align-items-center gap-2">
+                    <input class="form-check-input me-1 tag-checkbox" type="checkbox" value="${t.serial_no}" data-qty="${t.current_qty}" style="transform: scale(0.85);">
+                    <div style="font-size: 0.85rem;">
+                        <div class="fw-bold text-dark" style="font-size: 0.9rem;">${t.serial_no}</div>
+                        <small class="text-muted" style="font-size: 0.75rem;">Loc: ${t.warehouse_no || '-'} | In: ${dateStr}</small>
+                    </div>
+                </div>
+                <span class="badge bg-primary rounded-pill" style="font-size: 0.8rem;">${parseInt(t.current_qty, 10).toLocaleString()} ชิ้น</span>
+            </label>`;
+        });
+        html += `</div>`;
+
+        const hiddenInput = document.querySelector(`.issue-tags-hidden[data-rowid="${rowId}"]`);
+        let selectedTags = JSON.parse(hiddenInput.value || '[]');
+        
+        let tagHtml5QrCode = null;
+
+        const { value: confirmed } = await Swal.fire({
+            title: `เลือกแท็ก (SAP: ${itemCode})`,
+            html: html,
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันการเลือก',
+            cancelButtonText: 'ยกเลิก',
+            didOpen: () => {
+                const checkboxes = document.querySelectorAll('.tag-checkbox');
+                checkboxes.forEach(cb => {
+                    if (selectedTags.includes(cb.value)) cb.checked = true;
+                });
+                
+                function processScannedTag(scannedVal) {
+                    if (!scannedVal) return;
+                    
+                    let foundCb = null;
+                    document.querySelectorAll('.tag-checkbox').forEach(cb => {
+                        if (cb.value.toUpperCase() === scannedVal) foundCb = cb;
+                    });
+                    
+                    const feedback = document.getElementById('modalScannerFeedback');
+                    if (foundCb) {
+                        if (!foundCb.checked) {
+                            foundCb.checked = true;
+                            feedback.innerHTML = `<span class="text-success fw-bold"><i class="fas fa-check-circle"></i> ติ๊กเลือกแท็ก ${scannedVal} สำเร็จ</span>`;
+                        } else {
+                            feedback.innerHTML = `<span class="text-warning fw-bold"><i class="fas fa-exclamation-triangle"></i> แท็ก ${scannedVal} ถูกเลือกไว้แล้ว</span>`;
+                        }
+                    } else {
+                        feedback.innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-times-circle"></i> ไม่พบแท็ก ${scannedVal} ในลิสต์</span>`;
+                    }
+                }
+
+                const btnToggleCamera = document.getElementById('btnToggleTagCamera');
+                const readerDiv = document.getElementById('tag-camera-reader');
+                if (btnToggleCamera && typeof Html5Qrcode !== 'undefined') {
+                    btnToggleCamera.addEventListener('click', async () => {
+                        if (tagHtml5QrCode && tagHtml5QrCode.isScanning) {
+                            await tagHtml5QrCode.stop().catch(e => console.error(e));
+                            tagHtml5QrCode.clear();
+                            tagHtml5QrCode = null;
+                            readerDiv.style.display = 'none';
+                            btnToggleCamera.innerHTML = '<i class="fas fa-camera"></i> สแกนกล้อง';
+                            btnToggleCamera.classList.replace('btn-danger', 'btn-outline-primary');
+                        } else {
+                            readerDiv.style.display = 'block';
+                            btnToggleCamera.innerHTML = '<i class="fas fa-stop"></i> ปิดกล้อง';
+                            btnToggleCamera.classList.replace('btn-outline-primary', 'btn-danger');
+                            
+                            tagHtml5QrCode = new Html5Qrcode("tag-camera-reader", { verbose: false });
+                            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                            
+                            try {
+                                await tagHtml5QrCode.start(
+                                    { facingMode: "environment" },
+                                    config,
+                                    (decodedText) => {
+                                        processScannedTag(decodedText.trim().toUpperCase());
+                                    },
+                                    (errorMessage) => {}
+                                );
+                            } catch (err) {
+                                document.getElementById('modalScannerFeedback').innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> ไม่สามารถเปิดกล้องได้: ${err}</span>`;
+                                readerDiv.style.display = 'none';
+                                btnToggleCamera.innerHTML = '<i class="fas fa-camera"></i> สแกนกล้อง';
+                                btnToggleCamera.classList.replace('btn-danger', 'btn-outline-primary');
+                            }
+                        }
+                    });
+                }
+                
+                const scannerInput = document.getElementById('modalScannerInput');
+                if (scannerInput) {
+                    setTimeout(() => scannerInput.focus(), 500);
+                    scannerInput.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            processScannedTag(this.value.trim().toUpperCase());
+                            this.value = '';
+                        }
+                    });
+                }
+            },
+            preConfirm: () => {
+                const checkboxes = document.querySelectorAll('.tag-checkbox:checked');
+                let newSelectedTags = [];
+                let totalQty = 0;
+                checkboxes.forEach(cb => {
+                    newSelectedTags.push(cb.value);
+                    totalQty += parseInt(cb.dataset.qty, 10);
+                });
+                return { tags: newSelectedTags, totalQty: totalQty };
+            }
+        });
+
+        if (tagHtml5QrCode && tagHtml5QrCode.isScanning) {
+            tagHtml5QrCode.stop().catch(e => console.error(e));
+            tagHtml5QrCode.clear();
+        }
+
+        if (confirmed) {
+            hiddenInput.value = JSON.stringify(confirmed.tags);
+            const qtyInput = document.getElementById(`qty_input_${rowId}`);
+            if (qtyInput) qtyInput.value = confirmed.totalQty;
+            
+            const tagDisplay = document.getElementById(`tag_display_${rowId}`);
+            if (tagDisplay) {
+                if (confirmed.tags.length > 0) {
+                    tagDisplay.className = 'badge bg-primary cursor-pointer';
+                    tagDisplay.innerHTML = `<i class="fas fa-cut"></i> ตัดออกจาก: ${confirmed.tags.join(', ')}`;
+                } else {
+                    tagDisplay.className = 'badge bg-secondary cursor-pointer';
+                    tagDisplay.innerHTML = `<i class="fas fa-magic"></i> Auto FIFO (ยังไม่ผูก Tag)`;
+                }
+            }
+            
+            if (confirmed.tags.length > 0) {
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `เลือก ${confirmed.tags.length} แท็ก รวม ${confirmed.totalQty} ชิ้น`, showConfirmButton: false, timer: 1500 });
+            }
+        }
+    } catch (err) {
+        Swal.fire('Error', 'ไม่สามารถดึงข้อมูลแท็กสินค้าได้', 'error');
+    }
+};
+
+async function loadK2Summary(isSilent) {
+    const container = document.getElementById('orderListContainer');
+    if (!isSilent) container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-warning spinner-border-sm"></div></div>';
+    try {
+        const qs = new URLSearchParams({
+            status: document.getElementById('filter_status').value,
+            start_date: document.getElementById('global_start').value,
+            end_date: document.getElementById('global_end').value
+        }).toString();
+
+        const res = await fetchAPI(`get_k2_summary&${qs}`, 'GET');
+        let html = '';
+        if (res.data.length === 0) {
+            html = `<div class="text-center text-muted py-5 mt-4"><i class="fas fa-shopping-basket fa-3x mb-2 opacity-25"></i><br><small>ไม่มีรายการรอเปิด K2</small></div>`;
+        } else {
+            const currentReqId = document.getElementById('current_req_id').value;
+            const filterStatus = document.getElementById('filter_status').value;
+            res.data.forEach(item => {
+                const isActive = (currentReqId === item.item_code) ? 'active' : '';
+                const isPulse = (filterStatus === 'WAITING') ? 'pulse-alert border-warning' : '';
+                const safeK2Ref = escapeHTML(item.k2_ref || '');
+                const safeDesc = escapeHTML(item.description || '-');
+                const safeDescJS = safeDesc.replace(/&#39;/g, "\\'");
+                const safeItemCode = escapeHTML(item.item_code);
+                const safeCategory = escapeHTML(item.material_sub_type || 'OTHER');
+                const safeReqCount = escapeHTML(item.request_count);
+                const safeTotalQty = escapeHTML(item.total_qty);
+                const safeImgPath = item.image_path ? escapeHTML(item.image_path) : 'null';
+
+                let badge = filterStatus === 'WAITING' 
+                            ? `<span class="badge bg-warning text-dark">รอเปิด K2</span>`
+                            : `<span class="badge bg-success"><i class="fas fa-check"></i> ${safeK2Ref}</span>`;
+
+                html += `
+                <div class="order-card ${isActive} ${isPulse} w-100 p-3 mb-2" id="k2-card-${safeItemCode}" onclick="openK2Detail('${safeItemCode}', '${safeDescJS}', '${safeCategory}', '${safeImgPath}')">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="pe-2 text-truncate" style="max-width: 70%;"><span class="fw-bold text-dark mb-0 text-truncate" style="font-size: 0.95rem;" title="${safeDesc}">${safeDesc}</span></div><div>${badge}</div>
+                    </div>
+                    <div class="text-primary mb-2 fw-bold" style="font-size:0.85rem;">SAP: ${safeItemCode}</div>
+                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.85rem;">
+                        <span><i class="fas fa-users me-1 text-info"></i> ${safeReqCount} ใบเบิก</span><span class="fw-bold text-warning-emphasis">รวม: ${safeTotalQty}</span>
+                    </div>
+                </div>`;
+            });
+        }
+        container.innerHTML = html;
+    } catch (error) {}
+}
+
+window.openK2Detail = async function(itemCode, description, category, imgPath) {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    document.querySelectorAll('.order-card').forEach(el => el.classList.remove('active'));
+    const activeCard = document.getElementById(`k2-card-${itemCode}`);
+    if (activeCard) { activeCard.classList.add('active'); activeCard.classList.remove('pulse-alert'); }
+    document.getElementById('current_req_id').value = itemCode;
+
+    const safeCategory = escapeHTML(category || 'OTHER');
+    const safeImgPath = escapeHTML(imgPath || '');
+    const imgHtml = safeImgPath && safeImgPath !== 'null' 
+        ? `<img src="../../uploads/items/${safeImgPath}" class="item-img-small" onerror="handleDashboardImageError(this, '${safeCategory}')">` 
+        : getIconPlaceholder(safeCategory);
+        
+    document.getElementById('k2_disp_img').innerHTML = imgHtml;
+    document.getElementById('k2_disp_desc').innerText = description;
+    document.getElementById('k2_disp_sap').innerText = itemCode;
+    document.getElementById('input_k2_pr').value = '';
+
+    try {
+        const qs = new URLSearchParams({
+            item_code: itemCode,
+            status: document.getElementById('filter_status').value,
+            start_date: document.getElementById('global_start').value,
+            end_date: document.getElementById('global_end').value
+        }).toString();
+
+        const res = await fetchAPI(`get_k2_item_details&${qs}`, 'GET');
+        document.getElementById('loadingOverlay').style.display = 'none';
+
+        let html = ''; let totalQty = 0;
+        res.data.forEach(u => {
+            totalQty += parseFloat(u.qty_requested);
+            html += `
+            <tr style="border-bottom: 1px solid #f0f2f5;">
+                <td class="text-muted ps-4 py-3">${escapeHTML(u.req_date)}</td>
+                <td class="fw-bold text-dark py-3">${escapeHTML(u.req_number)}</td>
+                <td class="py-3"><i class="fas fa-user text-primary me-2"></i>${escapeHTML(u.fullname || 'Unknown')}</td>
+                <td class="text-end fw-bold text-warning-emphasis pe-4 py-3 fs-5">${parseFloat(u.qty_requested)}</td>
+            </tr>`;
+        });
+        document.getElementById('k2UsersList').innerHTML = html;
+        document.getElementById('k2_disp_total').innerText = totalQty;
+
+        const k2ActionBar = document.getElementById('k2-action-bar');
+        if (document.getElementById('filter_status').value === 'WAITING') k2ActionBar.classList.remove('d-none');
+        else k2ActionBar.classList.add('d-none');
+        switchView('form-k2');
+    } catch (error) { document.getElementById('loadingOverlay').style.display = 'none'; }
+};
+
+window.submitK2Batch = function() {
+    const prNumber = document.getElementById('input_k2_pr').value.trim();
+    const itemCode = document.getElementById('current_req_id').value;
+    if (!prNumber) { Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกเลขที่ K2 PR เพื่อใช้อ้างอิง', 'warning'); return; }
+    Swal.fire({
+        title: 'ยืนยันการเปิด K2?', text: `สร้างใบขอซื้อในระบบด้วยเลข: ${prNumber} ใช่หรือไม่?`,
+        icon: 'question', showCancelButton: true, confirmButtonColor: '#ffc107', confirmButtonText: 'อัปเดตเลย!', showLoaderOnConfirm: true,
+        preConfirm: async () => {
+            try {
+                const res = await fetchAPI('submit_k2_pr', 'POST', { item_code: itemCode, k2_pr_no: prNumber }, 'btnSubmitK2');
+                if (!res) { Swal.showValidationMessage('เกิดข้อผิดพลาด'); return false; }
+                return res;
+            } catch (error) {
+                Swal.showValidationMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                return false;
+            }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            Swal.fire('Success', 'อัปเดตสถานะสำเร็จ', 'success').then(() => { loadActiveQueue(true); switchView('list'); });
+        }
+    });
+};
+
+function switchView(view) {
+    const mode = document.getElementById('current_dashboard_mode').value;
+    const targetForm = document.querySelector(mode === 'STOCK' ? '#form-stock' : '#form-k2');
+    const hideForm = document.querySelector(mode === 'STOCK' ? '#form-k2' : '#form-stock');
+    const leftPane = document.getElementById('left-pane'); const rightPane = document.getElementById('right-pane'); const emptyState = document.getElementById('empty-state');
+
+    if (hideForm) { hideForm.classList.add('d-none'); hideForm.classList.remove('d-flex'); }
+
+    if (window.innerWidth < 992) { 
+        if (view === 'list') {
+            leftPane.classList.remove('d-none'); leftPane.classList.add('d-flex');
+            rightPane.classList.remove('d-flex'); rightPane.classList.add('d-none');
+            document.querySelectorAll('.order-card').forEach(el => el.classList.remove('active')); document.getElementById('current_req_id').value = '';
+        } else {
+            leftPane.classList.remove('d-flex'); leftPane.classList.add('d-none');
+            rightPane.classList.remove('d-none'); rightPane.classList.add('d-flex');
+            window.scrollTo(0,0);
+        }
+    } else { 
+        leftPane.classList.remove('d-none'); leftPane.classList.add('d-flex');
+        rightPane.classList.remove('d-none'); rightPane.classList.add('d-flex');
+        if(view === 'list') {
+            emptyState.classList.remove('d-none'); emptyState.classList.add('d-flex');
+            if (targetForm) { targetForm.classList.add('d-none'); targetForm.classList.remove('d-flex'); }
+            document.querySelectorAll('.order-card').forEach(el => el.classList.remove('active')); document.getElementById('current_req_id').value = '';
+        }
+    }
+
+    if (view !== 'list' || document.getElementById('current_req_id').value !== '') {
+        emptyState.classList.add('d-none'); emptyState.classList.remove('d-flex');
+        if (targetForm) { targetForm.classList.remove('d-none'); targetForm.classList.add('d-flex'); }
+    }
+}
+
+window.loadAnalytics = async function() {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    
+    try {
+        const start = document.getElementById('global_start').value;
+        const end = document.getElementById('global_end').value;
+        const res = await fetchAPI(`get_analytics&start_date=${start}&end_date=${end}`, 'GET');
+
+        document.getElementById('loadingOverlay').style.display = 'none';
+
+        document.getElementById('stat_total_reqs').innerText = res.summary.total_reqs;
+        document.getElementById('stat_total_issued').innerText = parseFloat(res.summary.total_issued_qty).toLocaleString();
+        document.getElementById('stat_waiting_k2').innerText = res.summary.waiting_k2;
+        document.getElementById('stat_total_rejects').innerText = res.summary.total_rejects;
+
+        if(document.getElementById('adv_sla')) document.getElementById('adv_sla').innerText = parseFloat(res.summary.avg_sla_minutes || 0).toFixed(0) + ' นาที';
+        if(document.getElementById('adv_fill_rate')) document.getElementById('adv_fill_rate').innerText = parseFloat(res.summary.fill_rate_percent || 0).toFixed(1) + '%';
+        if(document.getElementById('adv_ira')) document.getElementById('adv_ira').innerText = parseFloat(res.summary.ira_percent || 100).toFixed(1) + '%';
+        if(document.getElementById('adv_reject_rate')) {
+            let reqs = Number(res.summary.total_reqs) || 0;
+            let rejs = Number(res.summary.total_rejects) || 0;
+            document.getElementById('adv_reject_rate').innerText = (reqs > 0 ? ((rejs / reqs) * 100).toFixed(1) : '0.0') + '%';
+        }
+        if(document.getElementById('adv_dead_stock')) document.getElementById('adv_dead_stock').innerText = '฿' + parseFloat(res.summary.dead_stock_value || 0).toLocaleString();
+        if(document.getElementById('adv_turnover')) document.getElementById('adv_turnover').innerText = parseFloat(res.summary.turnover_ratio || 0).toFixed(2);
+        
+        if(chartTrendInst) chartTrendInst.destroy();
+        chartTrendInst = new Chart(document.getElementById('chartTrend').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: res.trendData.map(d => d.req_date),
+                datasets: [{ 
+                    label: 'จำนวนบิลเบิกสำเร็จ', data: res.trendData.map(d => Number(d.req_count) || 0), 
+                    borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.15)', borderWidth: 2.5, 
+                    pointBackgroundColor: '#ffffff', pointBorderColor: '#0d6efd', pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6, fill: true, tension: 0.3 
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { display: false } }, interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } } } }
+        });
+
+        if(chartCatInst) chartCatInst.destroy();
+        chartCatInst = new Chart(document.getElementById('chartCategory').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: res.categoryData.map(c => c.category),
+                datasets: [{ data: res.categoryData.map(c => Number(c.total_qty) || 0), backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d', '#0dcaf0'], borderWidth: 2, borderColor: '#ffffff' }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { datalabels: { display: false }, legend: { position: 'right' } } }
+        });
+
+        if(chartItemsInst) chartItemsInst.destroy();
+        chartItemsInst = new Chart(document.getElementById('chartTopItems').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: res.topItems.map(i => (i.part_description || '').substring(0, 25) + '...'),
+                datasets: [{ label: 'จำนวนชิ้นที่จ่าย', data: res.topItems.map(i => Number(i.total_qty) || 0), backgroundColor: 'rgba(255, 193, 7, 0.85)', borderColor: '#ffc107', borderWidth: 1, borderRadius: 4 }]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { display: false } }, scales: { x: { beginAtZero: true }, y: { grid: { display: false } } } }
+        });
+
+        if(chartUsersInst) chartUsersInst.destroy();
+        chartUsersInst = new Chart(document.getElementById('chartTopUsers').getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: res.topUsers.map(u => u.fullname.split(' ')[0]),
+                datasets: [{ data: res.topUsers.map(u => Number(u.req_count) || 0), backgroundColor: ['#0dcaf0', '#6610f2', '#d63384', '#fd7e14', '#20c997'], borderWidth: 2, borderColor: '#ffffff' }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'right' } } }
+        });
+
+    } catch (error) { 
+        document.getElementById('loadingOverlay').style.display = 'none'; 
+        console.error('Analytics Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Analytics Load Error',
+            text: error.message,
+            footer: '<pre style="text-align:left; font-size:10px;">' + error.stack + '</pre>'
+        });
+    }
+};
+
+window.exportToExcel = async function() {
+    const btn = document.getElementById('btnExportData');
+    const start = document.getElementById('global_start').value;
+    const end = document.getElementById('global_end').value;
+
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> กำลังโหลด...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetchAPI(`export_analytics&start_date=${start}&end_date=${end}`, 'GET');
+        
+        if (!res.success || !res.exportData || res.exportData.length === 0) { 
+            Swal.fire('ไม่มีข้อมูล', 'ไม่พบข้อมูลในช่วงเวลาที่เลือก', 'info'); 
+            return; 
+        }
+
+        const ws_data = [
+            ["วันที่เบิก", "เลขที่บิล", "ผู้เบิก", "รหัส SAP", "ชื่อวัสดุ", "จำนวนขอเบิก", "จำนวนจ่ายจริง", "ประเภทคำขอ", "สถานะ"]
+        ];
+
+        res.exportData.forEach(r => {
+            ws_data.push([
+                r.date_req || '',
+                r.req_number || '',
+                r.requester || '',
+                r.sap_no || '',
+                r.part_description || '',
+                r.qty_requested || 0,
+                r.qty_issued || 0,
+                r.request_type || '',
+                r.status || ''
+            ]);
+        });
+        
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(ws_data);
+        
+        // Auto-width for columns
+        const colWidths = [
+            { wch: 15 }, // วันที่เบิก
+            { wch: 20 }, // เลขที่บิล
+            { wch: 15 }, // ผู้เบิก
+            { wch: 15 }, // รหัส SAP
+            { wch: 40 }, // ชื่อวัสดุ
+            { wch: 15 }, // จำนวนขอเบิก
+            { wch: 15 }, // จำนวนจ่ายจริง
+            { wch: 15 }, // ประเภทคำขอ
+            { wch: 15 }  // สถานะ
+        ];
+        ws['!cols'] = colWidths;
+
+        XLSX.utils.book_append_sheet(wb, ws, "Analytics");
+        
+        const fileName = `Store_Export_${start}_to_${end}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        
+    } catch (error) {
+        Swal.fire('Error', error.message, 'error');
+    } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    }
+};
+
+window.loadActiveJobsForFulfillment = function() {
+    const line = document.getElementById('fulfill_line').value;
+    const jobList = document.getElementById('fulfillJobList');
+    const container = document.getElementById('fulfillmentListContainer');
+    const jobNameLabel = document.getElementById('fulfillSelectedJobName');
+
+    jobList.innerHTML = `<div class="p-3 text-center"><i class="fas fa-spinner fa-spin text-primary"></i> โหลดข้อมูล...</div>`;
+    
+    fetchAPI(`get_active_jobs_for_fulfillment&line=${encodeURIComponent(line)}`, 'GET')
+    .then(res => {
+        if (!res.success) throw new Error(res.message);
+        
+        if (!res.data || res.data.length === 0) {
+            jobList.innerHTML = `<div class="p-3 text-center text-muted small"><i class="fas fa-info-circle mb-2 fa-2x"></i><br>ไม่มีงานที่กำลังผลิตหรือรอผลิตในไลน์นี้</div>`;
+            return;
+        }
+
+        let html = '';
+        res.data.forEach(job => {
+            let statusColor = job.status === 'RUNNING' ? 'success' : (job.status === 'PAUSED' ? 'warning' : 'secondary');
+            let statusIcon = job.status === 'RUNNING' ? 'play-circle' : (job.status === 'PAUSED' ? 'pause-circle' : 'clock');
+            
+            html += `
+                <div class="order-card ff-job-item w-100 p-3 mb-2" data-jobid="${job.job_id}" onclick="loadFulfillmentData(${job.job_id}, '${job.job_no}', ${parseInt(job.target_qty)})">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="fw-bold text-dark mb-0" style="font-size: 0.95rem;">${job.job_no}</span>
+                        <div><span class="badge bg-${statusColor} text-${statusColor === 'warning' ? 'dark' : 'white'} shadow-sm"><i class="fas fa-${statusIcon} me-1"></i>${job.status}</span></div>
+                    </div>
+                    <div class="text-muted mb-2 text-truncate" style="font-size:0.85rem;"><i class="fas fa-clipboard-list me-1 text-primary"></i> ${job.part_no}</div>
+                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.85rem;">
+                        <span class="fw-bold text-secondary">เป้า: ${parseInt(job.target_qty)} ชิ้น</span>
+                        <i class="fas fa-arrow-right text-primary opacity-50"></i>
+                    </div>
+                </div>
+            `;
+        });
+        jobList.innerHTML = html;
+        container.innerHTML = `<tr><td colspan="4" class="text-muted py-4"><i class="fas fa-hand-pointer me-1"></i> คลิกเลือกงานจากรายการด้านซ้ายเพื่อดูรายละเอียด</td></tr>`;
+        jobNameLabel.textContent = '-';
+    })
+    .catch(err => {
+        jobList.innerHTML = `<div class="p-3 text-center text-danger small">เกิดข้อผิดพลาด: ${err.message}</div>`;
+    });
+};
+
+window.loadFulfillmentData = function(job_id, job_no, target_qty) {
+    const container = document.getElementById('fulfillmentListContainer');
+    const jobItems = document.querySelectorAll('#fulfillJobList .ff-job-item');
+    jobItems.forEach(el => el.classList.remove('active'));
+    const activeItem = document.querySelector(`#fulfillJobList .ff-job-item[data-jobid="${job_id}"]`);
+    if (activeItem) activeItem.classList.add('active');
+
+    document.getElementById('fulfillSelectedJobName').innerHTML = `Job: <b class="text-primary ms-1">${job_no}</b> <span class="badge bg-secondary ms-2 shadow-sm rounded-pill">เป้า ${target_qty}</span>`;
+
+    container.innerHTML = `<tr><td colspan="4" class="text-center py-5 border-0"><div class="spinner-border text-primary" role="status"></div><div class="mt-2 text-muted fw-bold">กำลังประมวลผลยอดเบิกจ่าย...</div></td></tr>`;
+
+    fetchAPI(`get_plan_fulfillment&job_id=${job_id}`, 'GET')
+    .then(res => {
+        if (!res.success) throw new Error(res.message || 'Error loading fulfillment');
+        
+        const data = res.data;
+        if (!data || data.length === 0) {
+            container.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">ไม่พบข้อมูลสูตรการผลิต (BOM) สำหรับชิ้นงานนี้</td></tr>`;
+            return;
+        }
+
+        let html = '';
+        data.forEach(item => {
+            const pct = item.percent;
+            const pending = item.pending_qty;
+            
+            let statusBadge = '';
+            let progressBar = '';
+            
+            if (pct >= 100) {
+                statusBadge = `<span class="badge bg-success shadow-sm px-2 py-1 w-100"><i class="fas fa-check-circle me-1"></i>ครบถ้วน (100%)</span>`;
+                progressBar = `<div class="ff-progress mt-2"><div class="ff-progress-bar bg-success" style="width: 100%"></div></div>`;
+            } else if (pct > 0) {
+                statusBadge = `<span class="badge bg-warning text-dark shadow-sm px-2 py-1 w-100"><i class="fas fa-spinner fa-spin me-1"></i>กำลังจ่าย (${pct}%)</span>`;
+                progressBar = `<div class="ff-progress mt-2"><div class="ff-progress-bar bg-warning" style="width: ${pct}%"></div></div>`;
+            } else {
+                statusBadge = `<span class="badge bg-secondary shadow-sm px-2 py-1 w-100"><i class="fas fa-hourglass-start me-1"></i>รอเบิกจ่าย (0%)</span>`;
+                progressBar = `<div class="ff-progress mt-2"><div class="ff-progress-bar bg-secondary" style="width: 0%"></div></div>`;
+            }
+
+            html += `
+                <tr>
+                    <td class="text-start ps-3">
+                        <div class="d-flex align-items-center gap-3">
+                            ${getIconPlaceholder(item.sap_no)}
+                            <div>
+                                <div class="fw-bold text-dark fs-6">${item.sap_no || '-'}</div>
+                                <div class="text-muted small">${item.part_no || '-'}</div>
+                                <div class="text-secondary small text-truncate" style="max-width:220px;" title="${item.part_description}">${item.part_description || '-'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><div class="fs-5 fw-bold text-dark">${parseFloat(item.target_qty).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 4})}</div></td>
+                    <td><div class="fs-5 fw-bold text-primary">${parseFloat(item.issued_qty).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 4})}</div></td>
+                    <td class="pe-3">
+                        <div class="d-flex flex-column align-items-stretch gap-1 w-100" style="max-width: 180px; margin: 0 auto;">
+                            ${statusBadge}
+                            ${progressBar}
+                            <small class="text-muted text-center" style="font-size:0.7rem;">ขาด ${pending} ชิ้น</small>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        container.innerHTML = html;
+    })
+    .catch(err => {
+        console.error(err);
+        container.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>เกิดข้อผิดพลาด: ${err.message}</td></tr>`;
+    });
+};
+
+// --- Global Scanner Setup ---
+document.addEventListener('DOMContentLoaded', () => {
+    const globalScanner = document.getElementById('globalScannerInput');
+    if (globalScanner) {
+        globalScanner.addEventListener('keypress', async function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const scannedVal = this.value.trim().toUpperCase();
+                this.value = '';
+                if (!scannedVal) return;
+                
+                try {
+                    // Call API to get tag info
+                    const res = await fetchAPI(`trace_tag&serial_no=${encodeURIComponent(scannedVal)}`, 'GET');
+                    const tagInfo = res.data || res; // depending on how trace_tag returns data
+                    
+                    if (!tagInfo || !tagInfo.item_no) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `ไม่พบข้อมูลแท็ก: ${scannedVal}`, showConfirmButton: false, timer: 2500 });
+                        return;
+                    }
+                    
+                    const itemCode = tagInfo.item_no;
+                    const qty = parseInt(tagInfo.current_qty || 0, 10);
+                    
+                    // Find the input field for this itemCode in the current active picklist
+                    const targetInput = document.querySelector(`.issue-qty-input[data-itemcode="${itemCode}"]`);
+                    
+                    if (!targetInput) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: `แท็ก ${scannedVal} (SAP: ${itemCode}) ไม่ได้อยู่ในบิลนี้!`, showConfirmButton: false, timer: 3000 });
+                        return;
+                    }
+                    
+                    const rowId = targetInput.dataset.rowid;
+                    const hiddenInput = document.querySelector(`.issue-tags-hidden[data-rowid="${rowId}"]`);
+                    let selectedTags = JSON.parse(hiddenInput.value || '[]');
+                    
+                    if (selectedTags.includes(tagInfo.serial_no)) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: `แท็ก ${tagInfo.serial_no} ถูกสแกนไปแล้ว!`, showConfirmButton: false, timer: 2000 });
+                        return;
+                    }
+                    
+                    // Add tag and update quantity
+                    selectedTags.push(tagInfo.serial_no);
+                    hiddenInput.value = JSON.stringify(selectedTags);
+                    
+                    let currentInputVal = parseInt(targetInput.value || '0', 10);
+                    targetInput.value = currentInputVal + qty;
+                    
+                    // Update Tag Badge UI
+                    const tagDisplay = document.getElementById(`tag_display_${rowId}`);
+                    if (tagDisplay) {
+                        tagDisplay.className = 'badge bg-primary cursor-pointer';
+                        tagDisplay.innerHTML = `<i class="fas fa-cut"></i> ตัดออกจาก: ${selectedTags.join(', ')}`;
+                    }
+                    
+                    // Highlight the row briefly to show success
+                    const rowItem = targetInput.closest('.ff-job-item');
+                    if (rowItem) {
+                        rowItem.classList.add('pulse-alert');
+                        setTimeout(() => rowItem.classList.remove('pulse-alert'), 1500);
+                    }
+                    
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `เพิ่มแท็ก ${tagInfo.serial_no} (${qty} ชิ้น) สำเร็จ!`, showConfirmButton: false, timer: 2000 });
+                    
+                } catch (err) {
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: `Error: ไม่สามารถตรวจสอบแท็กได้`, showConfirmButton: false, timer: 2500 });
+                }
+            }
+        });
+    }
+});
+
+// --- Camera Scanner Logic ---
+let html5QrCodeOrder = null;
+let currentCameraTargetId = 'globalScannerInput';
+
+window.openOrderCameraScanner = function(targetId = 'globalScannerInput') {
+    currentCameraTargetId = targetId;
+    const modalEl = document.getElementById('orderCameraModal');
+    if (!modalEl) return;
+    
+    // Temporarily hide the SweetAlert modal if the target is modalScannerInput
+    if (targetId === 'modalScannerInput') {
+        const swalContainer = document.querySelector('.swal2-container');
+        if (swalContainer) swalContainer.style.display = 'none';
+    }
+    
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+    
+    modalEl.addEventListener('shown.bs.modal', startOrderCamera, { once: true });
+    modalEl.addEventListener('hidden.bs.modal', stopOrderCamera, { once: true });
+};
+
+function startOrderCamera() {
+    const qrContainer = document.getElementById("order-qr-reader");
+    if (!qrContainer) return;
+
+    if (html5QrCodeOrder) {
+        html5QrCodeOrder.clear();
+        html5QrCodeOrder = null;
+    }
+
+    const formats = typeof Html5QrcodeSupportedFormats !== 'undefined' ? [
+        Html5QrcodeSupportedFormats.QR_CODE, 
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.EAN_13
+    ] : undefined;
+    
+    html5QrCodeOrder = new Html5Qrcode("order-qr-reader", { verbose: false, formatsToSupport: formats });
+
+    html5QrCodeOrder.start(
+        { facingMode: "environment" },
+        { fps: 10 },
+        (decodedText) => {
+            stopOrderCamera();
+            const modalEl = document.getElementById('orderCameraModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if(modal) modal.hide();
+            
+            const scanInput = document.getElementById(currentCameraTargetId);
+            if (scanInput) {
+                scanInput.value = decodedText.trim();
+                const enterEvent = new KeyboardEvent('keypress', { key: 'Enter' });
+                scanInput.dispatchEvent(enterEvent);
+            }
+        }
+    ).catch(err => {
+        console.warn("Camera start failed:", err);
+        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'ไม่สามารถเปิดกล้องได้', showConfirmButton: false, timer: 3000 });
+    });
+}
+
+function stopOrderCamera() {
+    if (html5QrCodeOrder && html5QrCodeOrder.isScanning) {
+        html5QrCodeOrder.stop().catch(err => console.log("Stop camera error:", err));
+    }
+    
+    // Restore the SweetAlert modal if we were scanning from the modal
+    if (currentCameraTargetId === 'modalScannerInput') {
+        const swalContainer = document.querySelector('.swal2-container');
+        if (swalContainer) swalContainer.style.display = 'flex';
+        // Refocus the input
+        setTimeout(() => {
+            const scanInput = document.getElementById('modalScannerInput');
+            if (scanInput) scanInput.focus();
+        }, 300);
+    }
+}

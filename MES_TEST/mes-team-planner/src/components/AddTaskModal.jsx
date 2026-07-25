@@ -34,12 +34,13 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   const [newComment, setNewComment] = useState('');
   const [subtasksArr, setSubtasksArr] = useState([]);
   const [newSubtask, setNewSubtask] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '', status: 'todo', visibility: 'public', assignee: '',
     startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
     priority: 'normal', description: '', tags: '', recurrence: 'none',
-    recurrenceDays: [], recurrenceEndDate: '', projectId: '', projectChecklistId: '', spaceId: ''
+    recurrenceDays: [], recurrenceDates: [], recurrenceDuration: '1_month', projectId: '', projectChecklistId: '', spaceId: ''
   });
   const [projectsList, setProjectsList] = useState([]);
 
@@ -81,7 +82,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         title: '', status: 'todo', visibility: 'public', assignee: currentUser?.fullname || currentUser?.username || '',
         startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
         priority: 'normal', description: '', tags: '', recurrence: 'none',
-        recurrenceDays: [], recurrenceEndDate: '', projectId: '', projectChecklistId: '', spaceId: ''
+        recurrenceDays: [], recurrenceDates: [], recurrenceDuration: '1_month', projectId: '', projectChecklistId: '', spaceId: ''
       });
       setSubtasksArr([]);
       setComments([]);
@@ -89,6 +90,19 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       setActiveTab('general');
     }
   }, [isOpen, initialData]);
+
+  // Polling for comments
+  useEffect(() => {
+    let interval;
+    if (isOpen && activeTab === 'comments' && formData.Id) {
+      interval = setInterval(() => {
+        fetchComments(formData.Id);
+      }, 5000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isOpen, activeTab, formData.Id]);
 
   React.useEffect(() => {
     const handleKeyDown = (e) => {
@@ -114,10 +128,10 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
   const fetchComments = async (taskId) => {
     try {
-      const res = await axios.get(`/api/tasks/${taskId}/comments`);
+      const res = await axios.get(`/api/comments.php?taskId=${taskId}`);
       setComments(res.data);
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -169,23 +183,31 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     e.preventDefault();
     if (!newComment.trim() || !formData.Id) return;
     try {
-      const res = await axios.post(`/api/tasks/${formData.Id}/comments`, {
-        author: currentUser?.fullname || currentUser?.username || 'Unknown',
+      const res = await axios.post(`/api/comments.php?taskId=${formData.Id}`, {
+        author: currentUser?.fullname || currentUser?.username || 'User',
         message: newComment
       });
       setComments([...comments, res.data]);
       setNewComment('');
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!isEditing && formData.recurrence !== 'none' && formData.recurrenceEndDate && formData.startDate) {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    if (!isEditing && formData.recurrence !== 'none' && formData.startDate) {
       let tasksToCreate = [];
       let current = new Date(formData.startDate);
-      const end = new Date(formData.recurrenceEndDate);
+      const end = new Date(formData.startDate);
+      if (formData.recurrenceDuration === '1_month') end.setMonth(end.getMonth() + 1);
+      else if (formData.recurrenceDuration === '3_months') end.setMonth(end.getMonth() + 3);
+      else if (formData.recurrenceDuration === '6_months') end.setMonth(end.getMonth() + 6);
+      else if (formData.recurrenceDuration === '1_year') end.setFullYear(end.getFullYear() + 1);
+      else end.setMonth(end.getMonth() + 1); // default 1 month
       let safetyCounter = 0;
       
       while (current <= end && safetyCounter < 100) {
@@ -198,7 +220,9 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
           if (current.getDate() === new Date(formData.startDate).getDate()) shouldCreate = true;
         }
         else if (formData.recurrence === 'custom') {
-          if ((formData.recurrenceDays || []).includes(current.getDay())) shouldCreate = true;
+          const matchDay = (formData.recurrenceDays || []).includes(current.getDay());
+          const matchDate = (formData.recurrenceDates || []).includes(current.getDate());
+          if (matchDay || matchDate) shouldCreate = true;
         }
         
         if (shouldCreate) {
@@ -234,6 +258,9 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         subtasks: JSON.stringify(subtasksArr)
       });
     }
+    
+    // reset isSubmitting if modal doesn't unmount (fallback)
+    setTimeout(() => setIsSubmitting(false), 2000);
   };
 
   const isEditing = !!initialData?.Id;
@@ -426,31 +453,68 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               </div>
 
               {formData.recurrence !== 'none' && !isEditing && (
-                <div className="bg-indigo-50/50 dark:bg-indigo-500/10 rounded-xl p-4 border border-indigo-100 dark:border-indigo-500/20 space-y-4">
+                <div className="bg-indigo-50/50 dark:bg-indigo-500/10 rounded-xl p-4 border border-indigo-100 dark:border-indigo-500/20 space-y-5">
                   {formData.recurrence === 'custom' && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">เลือกวันทำซ้ำ</label>
-                      <div className="flex flex-wrap gap-2">
-                        {WEEK_DAYS.map(day => (
-                          <button
-                            key={day.value}
-                            type="button"
-                            onClick={() => {
-                              const days = formData.recurrenceDays || [];
-                              const newDays = days.includes(day.value) ? days.filter(d => d !== day.value) : [...days, day.value];
-                              setFormData({ ...formData, recurrenceDays: newDays });
-                            }}
-                            className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium transition-all ${(formData.recurrenceDays || []).includes(day.value) ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600 hover:border-indigo-400'}`}
-                          >
-                            {day.label}
-                          </button>
-                        ))}
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">เลือกวันในสัปดาห์</label>
+                        <div className="flex flex-wrap gap-2">
+                          {WEEK_DAYS.map(day => (
+                            <button
+                              key={day.value}
+                              type="button"
+                              onClick={() => {
+                                const days = formData.recurrenceDays || [];
+                                const newDays = days.includes(day.value) ? days.filter(d => d !== day.value) : [...days, day.value];
+                                setFormData({ ...formData, recurrenceDays: newDays });
+                              }}
+                              className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium transition-all ${(formData.recurrenceDays || []).includes(day.value) ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600 hover:border-indigo-400'}`}
+                            >
+                              {day.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">เลือกวันที่ในเดือน</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {Array.from({length: 31}, (_, i) => i + 1).map(dateNum => (
+                            <button
+                              key={`date-${dateNum}`}
+                              type="button"
+                              onClick={() => {
+                                const dates = formData.recurrenceDates || [];
+                                const newDates = dates.includes(dateNum) ? dates.filter(d => d !== dateNum) : [...dates, dateNum];
+                                setFormData({ ...formData, recurrenceDates: newDates });
+                              }}
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium transition-all ${(formData.recurrenceDates || []).includes(dateNum) ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600 hover:border-indigo-400'}`}
+                            >
+                              {dateNum}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
                   )}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">สิ้นสุดการทำซ้ำ (End Date)</label>
-                    <input type="date" required={formData.recurrence !== 'none' && !isEditing} name="recurrenceEndDate" value={formData.recurrenceEndDate || ''} onChange={handleChange} className="w-full md:w-1/2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+                  <div className="border-t border-indigo-200/50 dark:border-indigo-500/20 pt-4">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">ระยะเวลาทำซ้ำต่อเนื่อง</label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { value: '1_month', label: '1 เดือน' },
+                        { value: '3_months', label: '3 เดือน' },
+                        { value: '6_months', label: '6 เดือน' },
+                        { value: '1_year', label: '1 ปี' }
+                      ].map(dur => (
+                        <button
+                          key={dur.value}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, recurrenceDuration: dur.value })}
+                          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${(formData.recurrenceDuration || '1_month') === dur.value ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600 hover:border-indigo-400'}`}
+                        >
+                          {dur.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -613,8 +677,8 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 ยกเลิก
               </button>
               {/* Only submit the form if we are on general tab, or just use a button that triggers handleSubmit directly */}
-              <button type="button" onClick={handleSubmit} className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl font-semibold shadow-lg shadow-indigo-900/30 transition-all active:scale-95 text-sm flex items-center gap-2">
-                {isEditing ? '💾 บันทึกทั้งหมด' : '✨ สร้างงาน'}
+              <button type="button" onClick={handleSubmit} disabled={isSubmitting} className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl font-semibold shadow-lg shadow-indigo-900/30 transition-all active:scale-95 text-sm flex items-center gap-2 disabled:opacity-50 disabled:active:scale-100">
+                {isSubmitting ? 'กำลังบันทึก...' : (isEditing ? '💾 บันทึกทั้งหมด' : '✨ สร้างงาน')}
               </button>
             </div>
           </div>

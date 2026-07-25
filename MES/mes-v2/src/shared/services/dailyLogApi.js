@@ -1,16 +1,17 @@
 import axios from 'axios';
 
-// The real PHP API path is at /iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/api/dailyLogManage.php
-// We use an absolute path from the domain root to ensure it always hits the correct endpoint regardless of the React app's base path.
 const API_URL = '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/api/dailyLogManage.php';
 
-const apiClient = axios.create({
-  baseURL: '/',
-  headers: {
-    'Content-Type': 'application/x-www-form-urlencoded' // The old PHP script expects form data or x-www-form-urlencoded
-  },
-  withCredentials: true // Ensure PHP session cookies are sent
-});
+// Configure defaults for this specific URL instead of creating a new instance
+// so that global interceptors from AuthContext will apply.
+const postApi = async (url, params) => {
+  return await axios.post(url, params, {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    withCredentials: true
+  });
+};
 
 export const dailyLogApi = {
   /**
@@ -20,7 +21,7 @@ export const dailyLogApi = {
     const params = new URLSearchParams();
     params.append('action', 'get_initial_data');
     
-    const response = await apiClient.post(API_URL, params);
+    const response = await postApi(API_URL, params);
     return response.data;
   },
 
@@ -33,7 +34,7 @@ export const dailyLogApi = {
     params.append('action', 'get_morning_brief');
     params.append('team', team);
     
-    const response = await apiClient.post(API_URL, params);
+    const response = await postApi(API_URL, params);
     return response.data;
   },
 
@@ -48,7 +49,7 @@ export const dailyLogApi = {
     params.append('log_date', logDate);
     params.append('period_id', periodId);
     
-    const response = await apiClient.post(API_URL, params);
+    const response = await postApi(API_URL, params);
     return response.data;
   },
 
@@ -68,7 +69,7 @@ export const dailyLogApi = {
       params.append(key, data[key]);
     });
     
-    const response = await apiClient.post(API_URL, params);
+    const response = await postApi(API_URL, params);
     return response.data;
   }
 };

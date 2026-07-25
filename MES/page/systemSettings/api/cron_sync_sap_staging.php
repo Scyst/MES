@@ -1,5 +1,5 @@
 <?php
-// e:\MES\MES\MES_TEST\page\systemSettings\api\cron_sync_sap_staging.php
+// e:\MES\MES\MES\page\systemSettings\api\cron_sync_sap_staging.php
 // This script is meant to be run via Windows Task Scheduler or Cron Job periodically.
 // It pulls data from SAP and stages it locally.
 

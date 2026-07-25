@@ -156,37 +156,41 @@ export default function HomeDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
       {/* Welcome Box */}
-      <div className="bg-gradient-to-r from-blue-900 to-slate-800 rounded-2xl p-6 md:p-8 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
-        {/* Background elements */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 translate-x-1/2 -translate-y-1/2"></div>
-        <div className="absolute bottom-0 right-40 w-48 h-48 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 translate-y-1/2"></div>
+      <div className="relative bg-gradient-to-r from-blue-900 to-slate-800 rounded-2xl p-5 md:p-8 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
+        {/* Background elements (with overflow hidden) */}
+        <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute bottom-0 right-40 w-48 h-48 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 translate-y-1/2"></div>
+        </div>
         
-        <div className="relative z-10">
-          <h1 className="text-2xl md:text-3xl font-bold mb-3">สวัสดี คุณ {user.fullname} 👋</h1>
-          <div className="flex flex-wrap gap-2 text-sm">
-            <span className="bg-white/20 px-3 py-1 rounded-full border border-white/30 backdrop-blur-sm flex items-center gap-2">
+        <div className="relative z-10 w-full md:w-auto">
+          <h1 className="text-xl md:text-3xl font-bold mb-3">สวัสดี คุณ {user.fullname} 👋</h1>
+          <div className="flex flex-wrap gap-2 text-xs md:text-sm">
+            <span className="bg-white/20 px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm flex items-center gap-1.5">
               <span className="opacity-70">ID:</span> {user.emp_id}
             </span>
-            <span className="bg-white/20 px-3 py-1 rounded-full border border-white/30 backdrop-blur-sm flex items-center gap-2">
+            <span className="bg-white/20 px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm flex items-center gap-1.5">
               <span className="opacity-70">Line:</span> {user.line}
             </span>
-            <span className="bg-blue-500/50 px-3 py-1 rounded-full border border-blue-400/50 backdrop-blur-sm font-semibold">
+            <span className="bg-blue-500/50 px-3 py-1.5 rounded-full border border-blue-400/50 backdrop-blur-sm font-semibold">
               {user.position}
             </span>
           </div>
         </div>
         
-        <div className="flex gap-3 relative z-10">
-          <button onClick={() => setBriefModalOpen(true)} className="bg-white/10 hover:bg-white/20 p-3 rounded-full backdrop-blur-sm transition-colors" title="ดูสรุปประจำวัน">
-            <Sun size={24} />
+        <div className="flex gap-3 relative z-10 w-full md:w-auto justify-end mt-2 md:mt-0">
+          <button onClick={() => setBriefModalOpen(true)} className="bg-white/10 hover:bg-white/20 p-3 md:p-3 rounded-full backdrop-blur-sm transition-colors flex items-center justify-center flex-1 md:flex-none" title="ดูสรุปประจำวัน">
+            <Sun size={24} className="md:w-6 md:h-6 w-5 h-5" />
           </button>
-          <NotificationMenu 
-            unreadDates={data.unreadDates} 
-            monthlyData={data.monthlyData} 
-            onOpenLog={handleOpenStandaloneLog} 
-          />
+          <div className="flex-1 md:flex-none">
+            <NotificationMenu 
+              unreadDates={data.unreadDates} 
+              monthlyData={data.monthlyData} 
+              onOpenLog={handleOpenStandaloneLog} 
+            />
+          </div>
         </div>
       </div>
 

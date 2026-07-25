@@ -4,11 +4,21 @@ require_once 'db_helper.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $taskId = isset($_GET['taskId']) ? $_GET['taskId'] : null;
 
+$action = isset($_GET['action']) ? $_GET['action'] : null;
+
 try {
-    if ($method === 'GET' && $taskId) {
-        $stmt = $pdo->prepare("SELECT * FROM TeamPlanner_Comments WHERE TaskId = ? ORDER BY CreatedAt ASC");
-        $stmt->execute([$taskId]);
-        sendJson($stmt->fetchAll(PDO::FETCH_ASSOC));
+    if ($method === 'GET') {
+        if ($action === 'recent') {
+            $stmt = $pdo->prepare("SELECT TOP 100 * FROM TeamPlanner_Comments ORDER BY CreatedAt DESC");
+            $stmt->execute();
+            sendJson($stmt->fetchAll(PDO::FETCH_ASSOC));
+        } elseif ($taskId) {
+            $stmt = $pdo->prepare("SELECT * FROM TeamPlanner_Comments WHERE TaskId = ? ORDER BY CreatedAt ASC");
+            $stmt->execute([$taskId]);
+            sendJson($stmt->fetchAll(PDO::FETCH_ASSOC));
+        } else {
+            sendJson([]);
+        }
     } 
     elseif ($method === 'POST' && $taskId) {
         $data = json_decode(file_get_contents('php://input'), true);

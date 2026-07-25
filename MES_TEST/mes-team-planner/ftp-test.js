@@ -1,0 +1,1 @@
+﻿import * as ftp from "basic-ftp"; async function run() { const client = new ftp.Client(); try { await client.access({host: "10.0.0.2", user: "Naphat", password: "O@m11o1toolBox", secure: false}); console.log(await client.list("/MES_TEST")); } catch(e) {console.log(e);} client.close(); } run();
