@@ -283,12 +283,17 @@ function App() {
     }
   };
 
-  const toggleTheme = () => {
-    if (document.startViewTransition) {
-      document.startViewTransition(switchTheme);
-    } else {
-      switchTheme();
+  const toggleTheme = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
+    
+    document.documentElement.classList.add('theme-transitioning');
+    switchTheme();
+    setTimeout(() => {
+      document.documentElement.classList.remove('theme-transitioning');
+    }, 400);
   };
 
   // ══════════ Render Content with Props ══════════
@@ -370,7 +375,7 @@ function App() {
       
       {/* ══════════ Desktop Top Header ══════════ */}
       <header className="hidden md:flex h-16 bg-white dark:bg-slate-900 border-b border-transparent dark:border-slate-800 shrink-0 px-5 items-center justify-between shadow-soft z-20">
-        <div className="flex items-center gap-3">
+        <a href="/iot-toolbox/sandbox-b9/Toolbox2/#/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
             <FiCalendar className="text-xl" />
           </div>
@@ -378,7 +383,7 @@ function App() {
             <h1 className="text-base font-bold text-slate-900 dark:text-white leading-tight">MES Planner</h1>
             <p className="text-[11px] text-slate-500">Team Collaboration</p>
           </div>
-        </div>
+        </a>
 
         <div className="flex items-center gap-3 md:gap-4">
           <RealTimeClock />
@@ -406,6 +411,12 @@ function App() {
                     </div>
                   )}
                   <div className="p-2">
+                    <a href="/iot-toolbox/sandbox-b9/Toolbox2/#/" className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
+                      <FiHome className="text-[1.1rem]" /> Home (ระบบใหม่)
+                    </a>
+                    <a href="/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php" className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
+                      <FiHome className="text-[1.1rem]" /> Home (ระบบเก่า)
+                    </a>
                     <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
                       <div className="flex items-center gap-3">
                         {isDarkMode ? <FiSun className="text-[1.1rem]" /> : <FiMoon className="text-[1.1rem]" />} 
@@ -509,13 +520,13 @@ function App() {
             <button onClick={() => setIsSidebarOpen(true)} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-90">
               <FiMenu className="text-xl" />
             </button>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            <a href="/iot-toolbox/sandbox-b9/Toolbox2/#/" className="text-base font-bold text-slate-900 dark:text-white hover:opacity-80 transition-opacity">
               {mainNav.find(n => n.tab === activeTab)?.label || 
                (activeTab === 'space-home' ? 'Home' : 
                 (activeTab.startsWith('space-') ? 
                   (spaces.find(s => `space-${s.Id || s.id}` === activeTab)?.Name || spaces.find(s => `space-${s.Id || s.id}` === activeTab)?.name || 'Team Space') 
                   : 'MES Planner'))}
-            </h2>
+            </a>
           </div>
           <div className="flex items-center gap-2">
             <button className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white relative p-1.5" onClick={toggleTheme} title="Toggle Theme">
@@ -542,9 +553,14 @@ function App() {
                 </div>
               )}
               <div className="p-2">
-                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors">
-                  <FiLogOut className="text-base" />
-                  ออกจากระบบ
+                <a href="/iot-toolbox/sandbox-b9/Toolbox2/#/" className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
+                  <FiHome className="text-base" /> Home (ระบบใหม่)
+                </a>
+                <a href="/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php" className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
+                  <FiHome className="text-base" /> Home (ระบบเก่า)
+                </a>
+                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors">
+                  <FiLogOut className="text-base" /> ออกจากระบบ
                 </button>
               </div>
             </div>
@@ -589,10 +605,10 @@ function App() {
           ></div>
           <div className="fixed inset-y-0 left-0 z-50 w-72 bg-[#f4f9f8] dark:bg-slate-900 border-r border-transparent dark:border-slate-800 flex flex-col md:hidden shadow-[4px_0_24px_rgba(0,0,0,0.02)] animate-slide-right">
             <div className="p-5 flex justify-between items-center bg-white dark:bg-slate-900 shadow-soft z-10 rounded-b-3xl">
-              <div>
+              <a href="/iot-toolbox/sandbox-b9/Toolbox2/#/" className="block hover:opacity-80 transition-opacity">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">MES Planner</h2>
                 <p className="text-xs text-slate-500 mt-0.5">Team Collaboration</p>
-              </div>
+              </a>
               <button onClick={() => setIsSidebarOpen(false)} className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-90">
                 <FiX className="text-xl" />
               </button>

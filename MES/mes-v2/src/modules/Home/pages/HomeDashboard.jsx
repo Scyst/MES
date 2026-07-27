@@ -3,7 +3,8 @@ import {
   LineChart, ShoppingCart, Truck, FolderOpen, Boxes, 
   Smartphone, ListOrdered, Barcode, Printer, Ban, 
   Store, Warehouse, Package, MapPin, ShieldCheck, 
-  ShieldAlert, Wrench, Sun, HeartPulse, ChevronRight
+  ShieldAlert, Wrench, HeartPulse, ChevronRight,
+  Settings, Users, DollarSign, FileText, Zap, Sun, Calendar, Rocket
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { dailyLogApi } from '../../../shared/services/dailyLogApi';
@@ -12,28 +13,44 @@ import CalendarWidget from '../components/CalendarWidget';
 import MorningBriefModal from '../components/MorningBriefModal';
 import NotificationMenu from '../components/NotificationMenu';
 import LogModal from '../components/LogModal';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 
-const ServiceCard = ({ title, desc, icon: Icon, colorClass, to }) => (
-  <Link
-    to={to}
-    className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-3 px-4 py-3 min-h-[60px]"
-  >
-    <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${colorClass} group-hover:scale-110 transition-transform duration-200`}>
-      <Icon size={18} strokeWidth={2} />
-    </div>
-    <div className="flex-1 min-w-0">
-      <p className="font-bold text-gray-800 text-sm leading-snug group-hover:text-blue-600 transition-colors">{title}</p>
-      <p className="text-sm text-gray-500 mt-0.5 leading-tight">{desc}</p>
-    </div>
-    <ChevronRight size={14} className="flex-shrink-0 text-gray-300 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
-  </Link>
-);
+const ServiceCard = ({ title, desc, icon: Icon, colorClass, to }) => {
+  const isLegacy = to.includes('.php') || to.includes('.html') || to.startsWith('http');
+  const className = "group bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-[0_8px_16px_rgba(0,0,0,0.06)] hover:border-transparent hover:ring-1 hover:ring-blue-400/50 hover:-translate-y-1 transition-transform transition-shadow duration-300 flex items-center gap-4 px-4 py-3 min-h-[64px] relative overflow-hidden";
+  
+  const content = (
+    <>
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent group-hover:from-blue-50/50 dark:group-hover:from-blue-900/20 group-hover:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <div className={`relative flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center shadow-sm ${colorClass} group-hover:scale-110 group-hover:shadow-md transition-all duration-300`}>
+        <Icon size={20} strokeWidth={2} />
+      </div>
+      <div className="flex-1 min-w-0 relative z-10">
+        <p className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-snug group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
+          {title}
+          {isLegacy && <span className="ml-1.5 inline-block text-[9px] font-bold tracking-wider uppercase text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 px-1 py-0.5 rounded shadow-sm">Legacy</span>}
+        </p>
+        <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">{desc}</p>
+      </div>
+      <div className="relative z-10 w-6 h-6 rounded-full bg-gray-50 dark:bg-gray-700 flex items-center justify-center group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors flex-shrink-0">
+        <ChevronRight size={14} className="text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
+      </div>
+    </>
+  );
+
+  return isLegacy ? (
+    <a href={to} className={className}>{content}</a>
+  ) : (
+    <Link to={to} className={className}>{content}</Link>
+  );
+};
 
 const SectionLabel = ({ label, subLabel, borderColor, textColor }) => (
   <div className="flex items-center gap-2 mb-3">
     <span className={`inline-block w-1 h-4 rounded-full ${borderColor}`}></span>
     <span className={`text-xs font-extrabold tracking-widest uppercase ${textColor}`}>{label}</span>
-    <span className="text-[11px] text-gray-400 font-normal">{subLabel}</span>
+    <span className="text-[11px] text-gray-400 dark:text-gray-500 font-normal">{subLabel}</span>
   </div>
 );
 
@@ -88,6 +105,11 @@ export default function HomeDashboard() {
 
   useEffect(() => {
     loadInitialData();
+
+    // Listen for custom event from AppLayout
+    const handleOpenBrief = () => setBriefModalOpen(true);
+    window.addEventListener('openMorningBrief', handleOpenBrief);
+    return () => window.removeEventListener('openMorningBrief', handleOpenBrief);
   }, []);
 
   const handleOpenStandaloneLog = async (dateStr, pid) => {
@@ -116,48 +138,77 @@ export default function HomeDashboard() {
     setStandaloneLogModal({ isOpen: true, dateStr, pid });
   };
 
-  // Mock User (In a real app, you would get this from Context/Redux)
-  const user = {
-    fullname: 'Admin User',
-    emp_id: 'EMP-001',
-    line: 'Line A',
-    position: 'Supervisor'
+  const { user: authUser } = useAuth();
+  
+  // Use real user from context, fallback to safe defaults if undefined
+  const user = authUser || {
+    fullname: 'Guest User',
+    emp_id: '-',
+    line: '-',
+    position: '-'
   };
 
   const commonServices = [
-    { title: 'OEE Dashboard', desc: 'ดูประสิทธิภาพ (ภาพรวม)', icon: LineChart, color: 'bg-gray-100 text-gray-700', to: '#' },
-    { title: 'Material Request', desc: 'ระบบขอเบิกพัสดุ/อุปกรณ์', icon: ShoppingCart, color: 'bg-gray-100 text-gray-700', to: '#' },
-    { title: 'Forklift Booking', desc: 'จองรถและติดตามสถานะโฟร์คลิฟต์', icon: Truck, color: 'bg-gray-100 text-gray-700', to: '#' },
-    { title: 'Document Center', desc: 'คู่มือและเอกสาร', icon: FolderOpen, color: 'bg-gray-100 text-gray-700', to: '#' },
+    { title: 'OEE Dashboard', desc: 'ดูประสิทธิภาพ (ภาพรวม)', icon: LineChart, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php' },
+    { title: 'Material Request', desc: 'ระบบขอเบิกพัสดุ/อุปกรณ์', icon: ShoppingCart, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php' },
+    { title: 'Forklift Booking', desc: 'จองรถและติดตามสถานะโฟร์คลิฟต์', icon: Truck, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/forklift/forkliftUI.php' },
+    { title: 'Document Center', desc: 'คู่มือและเอกสาร', icon: FolderOpen, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/documentCenter/documentCenterUI.php' },
   ];
 
   const productionServices = [
-    { title: 'Production Entry', desc: 'บันทึกผลผลิตประจำวัน', icon: Boxes, color: 'bg-blue-100 text-blue-600', to: '#' },
-    { title: 'Mobile Entry', desc: 'ลงยอดผ่านมือถือ (New)', icon: Smartphone, color: 'bg-blue-100 text-blue-600', to: '#' },
-    { title: 'Live Job Queue', desc: 'ระบบจัดการคิวงานหน้าไลน์ (KDS)', icon: ListOrdered, color: 'bg-blue-100 text-blue-600', to: '#' },
-    { title: 'Scan Barcode', desc: 'ระบบสแกนบาร์โค้ด', icon: Barcode, color: 'bg-blue-100 text-blue-600', to: '#' },
-    { title: 'Tag Printer', desc: 'พิมพ์แท็กส่งงาน (WIP/FG)', icon: Printer, color: 'bg-blue-100 text-blue-600', to: '#' },
-    { title: 'Stop Causes', desc: 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', icon: Ban, color: 'bg-blue-100 text-blue-600', to: '#' },
+    { title: 'Production Entry', desc: 'บันทึกผลผลิตประจำวัน', icon: Boxes, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/production/productionUI.php' },
+    { title: 'Mobile Entry', desc: 'ลงยอดผ่านมือถือ (New)', icon: Smartphone, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MobileApp/index.html' },
+    { title: 'Live Job Queue', desc: 'ระบบจัดการคิวงานหน้าไลน์ (KDS)', icon: ListOrdered, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/production/jobQueueUI.php' },
+    { title: 'Scan Barcode', desc: 'ระบบสแกนบาร์โค้ด', icon: Barcode, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/scanBarcode/scanBarcodeUI.php' },
+    { title: 'Tag Printer', desc: 'พิมพ์แท็กส่งงาน (WIP/FG)', icon: Printer, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/production/label_printer.php' },
+    { title: 'Stop Causes', desc: 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', icon: Ban, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/PE/peRequest.php' },
   ];
 
   const warehouseServices = [
-    { title: 'Store Dashboard', desc: 'ศูนย์ควบคุมและคิวจ่ายสโตร์', icon: Store, color: 'bg-orange-100 text-orange-600', to: '#' },
-    { title: 'Inventory Stock', desc: 'ตรวจสอบสต็อกและพิกัดแท็กสินค้า', icon: Boxes, color: 'bg-orange-100 text-orange-600', to: '#' },
-    { title: 'Warehouse Operations', desc: 'จัดการคลังสินค้า (รับเข้า/โหลดขาย)', icon: Warehouse, color: 'bg-orange-100 text-orange-600', to: '#' },
-    { title: 'RM Receiving', desc: 'รับวัตถุดิบเข้าคลัง', icon: Package, color: 'bg-orange-100 text-orange-600', to: '#' },
-    { title: 'Scrap & Replacement', desc: 'เบิก/คืน วัตถุดิบ', icon: Truck, color: 'bg-orange-100 text-orange-600', to: '#' },
-    { title: 'Loading Report', desc: 'ตรวจสอบตู้สินค้า (C-TPAT)', icon: Truck, color: 'bg-orange-100 text-orange-600', to: '#' },
-    { title: 'Customer Tracking', desc: 'ระบบค้นหาเอกสารสำหรับลูกค้า', icon: MapPin, color: 'bg-orange-100 text-orange-600', to: '#' },
-    { title: 'Area Access', desc: 'บันทึกเข้า-ออกพื้นที่หวงห้าม', icon: ShieldCheck, color: 'bg-orange-100 text-orange-600', to: '#' },
+    { title: 'Store Dashboard', desc: 'ศูนย์ควบคุมและคิวจ่ายสโตร์', icon: Store, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/storeDashboard.php' },
+    { title: 'Inventory Stock', desc: 'ตรวจสอบสต็อกและพิกัดแท็กสินค้า', icon: Boxes, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/inventoryDashboard.php' },
+    { title: 'Warehouse Operations', desc: 'จัดการคลังสินค้า (รับเข้า/โหลดขาย)', icon: Warehouse, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/warehouse_operations.php' },
+    { title: 'RM Receiving', desc: 'รับวัตถุดิบเข้าคลัง', icon: Package, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/rmReceiving.php' },
+    { title: 'Scrap & Replacement', desc: 'เบิก/คืน วัตถุดิบ', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/storeRequest.php' },
+    { title: 'Loading Report', desc: 'ตรวจสอบตู้สินค้า (C-TPAT)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/loadingReport/loading_report.php' },
+    { title: 'Customer Tracking', desc: 'ระบบค้นหาเอกสารสำหรับลูกค้า (Public)', icon: MapPin, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/loadingReport/customerPortal.php' },
+    { title: 'Transport & Logistics', desc: 'บัญชีเที่ยวรถและค่าขนส่ง', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/fleetLog/fleetLog.php' },
+    { title: 'Area Access', desc: 'บันทึกเข้า-ออกพื้นที่หวงห้าม', icon: ShieldCheck, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/areaAccess/areaAccess.php' },
   ];
 
   const qualityServices = [
-    { title: 'QMS Dashboard', desc: 'จัดการคุณภาพสินค้า', icon: ShieldAlert, color: 'bg-red-100 text-red-600', to: '/qms' },
-    { title: 'Maintenance (PE)', desc: 'ระบบแจ้งซ่อมบำรุง', icon: Wrench, color: 'bg-red-100 text-red-600', to: '#' },
+    { title: 'iQMS Dashboard', desc: 'ระบบจัดการคุณภาพ (NCR/CAR)', icon: ShieldAlert, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/QMS/qmsDashboard.php' },
+    { title: 'Accessories Inspection', desc: 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', icon: ShieldCheck, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/AccessoriesInspection/accessoriesInspectionUI.php' },
+    { title: 'PE Enterprise', desc: 'ศูนย์กลางจัดการเครื่องจักรและซ่อมบำรุง', icon: Wrench, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/PE/peDashboard.php' },
+    { title: 'PE Tech (Mobile)', desc: 'ระบบรับงานและจัดการซ่อมสำหรับช่าง', icon: Smartphone, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/PE/peTechMobile.php' },
   ];
 
   const executiveServices = [
-    { title: 'Mood Insight Report', desc: 'รายงานวิเคราะห์ภาพรวมความรู้สึก', icon: HeartPulse, color: 'bg-green-100 text-green-600', to: '/mood-insight' }
+    { title: 'Management Dashboard', desc: 'แดชบอร์ดผู้บริหารระดับสูง', icon: LineChart, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/management/managementDashboard.php' },
+    { title: 'Daily Command Center', desc: 'ศูนย์สั่งการและติดตามสถานะ', icon: ListOrdered, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/planning/daily_meeting.php' },
+    { title: 'Manpower', desc: 'จัดการกำลังคนประจำวัน', icon: Users, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/manpower/manpowerUI.php' },
+    { title: 'Mood Insight Report', desc: 'รายงานวิเคราะห์ภาพรวมความรู้สึก', icon: HeartPulse, colorClass: 'bg-green-100 text-green-600', to: '/mood-insight' },
+    { title: 'Daily P&L', desc: 'บันทึกและวิเคราะห์งบกำไรขาดทุน', icon: DollarSign, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyPL/pl_entry.php' },
+    { title: 'Invoice Management', desc: 'ระบบออกบิลและจัดการเวอร์ชัน', icon: FileText, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/autoInvoice/finance_dashboard.php' },
+    { title: 'Sales Tracking', desc: 'ติดตามสถานะ PO', icon: Truck, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/salesDashboard.php' },
+    { title: 'Utility & Energy', desc: 'ติดตามพลังงานและค่าไฟ', icon: Zap, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/management/utilityDashboard.php' },
+  ];
+
+  const systemAdminServices = [
+    { title: 'System Settings', desc: 'ตั้งค่าระบบหลัก', icon: Settings, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/systemSettings/systemSettings.php' },
+    { title: 'User Manager', desc: 'จัดการผู้ใช้งานและสิทธิ์', icon: Users, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/userManage/userManageUI.php' },
+  ];
+
+  const sandboxServices = [
+    { title: 'Plan Dashboard (Test)', desc: 'ระบบวางแผนการผลิต (ทดสอบ)', icon: LineChart, colorClass: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400', to: '/iot-toolbox/sandbox-b9/MES/MES/page/managementCopy/managementDashboard.php' },
+    { title: 'Production (Test)', desc: 'ระบบบันทึกผลผลิต (ทดสอบ)', icon: Boxes, colorClass: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400', to: '/iot-toolbox/sandbox-b9/MES/MES/page/productionCopy/productionUI.php' },
+    { title: 'Sales Tracking (Test)', desc: 'ติดตามสถานะออเดอร์ (ทดสอบ)', icon: Truck, colorClass: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400', to: '/iot-toolbox/sandbox-b9/MES/MES/page/salesCopy/salesDashboard.php' },
+  ];
+
+  const prototypeServices = [
+    { title: 'New MES Toolbox (SPA)', desc: 'ระบบเวอร์ชันใหม่ (ทดลองใช้งาน)', icon: Rocket, colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', to: '/iot-toolbox/sandbox-b9/Toolbox2/#/' },
+    { title: 'Learning Hub', desc: 'ศูนย์การเรียนรู้และคู่มือออนไลน์', icon: FolderOpen, colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', to: '/iot-toolbox/sandbox-b9/LearningHub/index.html' },
+    { title: 'Team Planner', desc: 'กระดานแผนงานและปฏิทินทีม (New)', icon: Calendar, colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', to: '/iot-toolbox/sandbox-b9/Toolbox/planner/index.html' },
   ];
 
   if (loading) {
@@ -165,20 +216,20 @@ export default function HomeDashboard() {
   }
 
   return (
-    <div className="w-full grid grid-cols-1 lg:grid-cols-12 items-start gap-6 md:gap-8 lg:px-4 pb-12">
+    <div className="w-full lg:h-full grid grid-cols-1 lg:grid-cols-12 items-start lg:items-stretch gap-6 md:gap-8 pb-12 lg:pb-0 lg:overflow-hidden">
       
       {/* LEFT COLUMN: Personal & Daily Widgets */}
-      <div className="flex flex-col gap-4 lg:col-span-5">
+      <div className="flex flex-col gap-4 lg:col-span-5 lg:h-full lg:overflow-y-auto hidden-scrollbar pb-6 lg:pb-0 lg:-ml-6 lg:pl-6">
         
         {/* Welcome Box */}
-        <div className="flex flex-col gap-4 p-6 bg-gradient-to-br from-[#f6f8fd] to-[#f1f5f9] border border-gray-200 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] border-l-4 border-l-blue-500">
+        <div className="flex flex-col gap-4 p-6 bg-gradient-to-br from-[#f6f8fd] to-[#f1f5f9] dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] border-l-4 border-l-blue-500">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-2xl font-extrabold text-gray-800 mb-3 drop-shadow-sm">สวัสดี คุณ {user.fullname} 👋</h1>
-              <div className="flex flex-wrap gap-2 text-sm font-medium text-gray-600">
-                <span className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">ID: {user.emp_id}</span>
-                <span className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">Line: {user.line}</span>
-                <span className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-200 shadow-sm">{user.position}</span>
+              <h1 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100 mb-3 drop-shadow-sm">สวัสดี คุณ {user.fullname} 👋</h1>
+              <div className="flex flex-wrap gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+                <span className="bg-white dark:bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">ID: {user.emp_id}</span>
+                <span className="bg-white dark:bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">Line: {user.line}</span>
+                <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800 shadow-sm">{user.position}</span>
               </div>
             </div>
             
@@ -220,46 +271,61 @@ export default function HomeDashboard() {
       </div>
 
       {/* RIGHT COLUMN: Service Modules */}
-      <div className="flex flex-col gap-6 lg:col-span-7 lg:pl-6 lg:border-l lg:border-gray-100">
-
-        {/* Right column header */}
-        <div className="pb-3 border-b border-gray-100">
-          <h2 className="font-extrabold text-gray-700 text-base">เว็บไซต์บริการ <span className="text-gray-400 font-normal text-sm">(Service Modules)</span></h2>
-          <p className="text-xs text-gray-400 mt-0.5">เลือกระบบที่ต้องการใช้งาน — กดการ์ดเพื่อเข้าใช้งาน</p>
-        </div>
+      <div className="flex flex-col gap-6 lg:col-span-7 lg:pl-6 lg:border-l lg:border-gray-100 dark:lg:border-gray-800 lg:h-full lg:overflow-y-auto custom-scrollbar pb-24 lg:pb-8 lg:-mr-6 lg:pr-8">
 
         <section>
-          <SectionLabel label="COMMON SERVICES" subLabel="บริการส่วนกลาง & แจ้งเรื่อง" borderColor="bg-gray-400" textColor="text-gray-500" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <SectionLabel label="COMMON SERVICES" subLabel="บริการส่วนกลาง & แจ้งเรื่อง" borderColor="bg-gray-400" textColor="text-gray-600 dark:text-gray-400" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {commonServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
           </div>
         </section>
 
         <section>
           <SectionLabel label="PRODUCTION" subLabel="ปฏิบัติการผลิต" borderColor="bg-blue-500" textColor="text-blue-600" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {productionServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
           </div>
         </section>
 
         <section>
           <SectionLabel label="WAREHOUSE & LOGISTICS" subLabel="คลังสินค้าและจัดส่ง" borderColor="bg-orange-500" textColor="text-orange-600" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {warehouseServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
           </div>
         </section>
 
         <section>
           <SectionLabel label="QUALITY & MAINTENANCE" subLabel="คุณภาพและซ่อมบำรุง" borderColor="bg-red-500" textColor="text-red-600" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {qualityServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
           </div>
         </section>
 
         <section>
           <SectionLabel label="EXECUTIVE & MANAGEMENT" subLabel="บริหารจัดการ" borderColor="bg-green-500" textColor="text-green-700" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {executiveServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
+          </div>
+        </section>
+
+        <section>
+          <SectionLabel label="SYSTEM ADMINISTRATION" subLabel="จัดการระบบ" borderColor="bg-gray-500" textColor="text-gray-700 dark:text-gray-400" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {systemAdminServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
+          </div>
+        </section>
+
+        <section>
+          <SectionLabel label="SANDBOX (TEST ENVIRONMENT)" subLabel="ระบบทดสอบ" borderColor="bg-yellow-500" textColor="text-yellow-600 dark:text-yellow-500" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {sandboxServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
+          </div>
+        </section>
+
+        <section>
+          <SectionLabel label="✨ NEW SYSTEM PROTOTYPE ✨" subLabel="ต้นแบบระบบใหม่" borderColor="bg-purple-500" textColor="text-purple-600 dark:text-purple-400" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {prototypeServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
           </div>
         </section>
       </div>
