@@ -69,12 +69,34 @@ try {
         $id = $_GET['id'] ?? '';
         if (!$id) throw new Exception("Missing ID");
 
-        $sql = "SELECT * FROM QMS_CONCESSION WITH (NOLOCK) WHERE id = ?";
+        $sql = "
+            SELECT c.*,
+                   COALESCE(m1.name_th, u1.fullname, c.approver_1_name) as approver_1_realname,
+                   COALESCE(m2.name_th, u2.fullname, c.approver_2_name) as approver_2_realname,
+                   COALESCE(m3.name_th, u3.fullname, c.approver_3_name) as approver_3_realname,
+                   COALESCE(m4.name_th, u4.fullname, c.approver_4_name) as approver_4_realname
+            FROM QMS_CONCESSION c WITH (NOLOCK)
+            LEFT JOIN USERS u1 ON c.approver_1_name = u1.username
+            LEFT JOIN MANPOWER_EMPLOYEES m1 ON u1.username = m1.emp_id
+            LEFT JOIN USERS u2 ON c.approver_2_name = u2.username
+            LEFT JOIN MANPOWER_EMPLOYEES m2 ON u2.username = m2.emp_id
+            LEFT JOIN USERS u3 ON c.approver_3_name = u3.username
+            LEFT JOIN MANPOWER_EMPLOYEES m3 ON u3.username = m3.emp_id
+            LEFT JOIN USERS u4 ON c.approver_4_name = u4.username
+            LEFT JOIN MANPOWER_EMPLOYEES m4 ON u4.username = m4.emp_id
+            WHERE c.id = ?
+        ";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$id]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$data) throw new Exception("Request not found");
+
+        // Override the names with realnames
+        $data['approver_1_name'] = $data['approver_1_realname'] ?? $data['approver_1_name'];
+        $data['approver_2_name'] = $data['approver_2_realname'] ?? $data['approver_2_name'];
+        $data['approver_3_name'] = $data['approver_3_realname'] ?? $data['approver_3_name'];
+        $data['approver_4_name'] = $data['approver_4_realname'] ?? $data['approver_4_name'];
 
         echo json_encode(['success' => true, 'data' => $data]);
     }
