@@ -147,9 +147,10 @@ $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Ne
         }
 
         /* === CUSTOM STYLES === */
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        .table-bordered th, .table-bordered td { border: 1px solid #000; padding: 6px; vertical-align: top; }
-        .table-noborder th, .table-noborder td { border: none; padding: 4px; vertical-align: top; }
+        body { font-family: 'Sarabun', 'TH Sarabun New', Arial, Helvetica, sans-serif; font-size: 13px; color: #000; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        .table-bordered th, .table-bordered td { border: 1px solid #000; padding: 4px 5px; vertical-align: top; }
+        .table-noborder th, .table-noborder td { border: none; padding: 3px 4px; vertical-align: top; }
         
         .text-center { text-align: center; }
         .text-left { text-align: left; }
@@ -158,26 +159,28 @@ $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Ne
         
         .font-bold { font-weight: 700; }
         .text-red { color: #dc2626; }
-        .text-blue { color: #1d4ed8; }
+        /* Removed text-blue to match TCPDF standard black ink */
         
         .text-xs { font-size: 10px; }
-        .text-sm { font-size: 12px; }
-        .text-base { font-size: 14px; }
-        .text-lg { font-size: 18px; }
-        .text-xl { font-size: 24px; }
+        .text-sm { font-size: 11px; }
+        .text-base { font-size: 13px; }
+        .text-lg { font-size: 16px; }
+        .text-xl { font-size: 20px; }
         
-        .font-helvetica { font-family: Arial, Helvetica, sans-serif; }
+        .bg-header { background-color: #eaeaea; font-weight: bold; }
+        .bg-label { background-color: #f2f2f2; font-weight: bold; }
         
-        .bg-gray { background-color: #f3f4f6; }
+        .mb-1 { margin-bottom: 4px; }
+        .mb-2 { margin-bottom: 8px; }
         
         .whitespace-pre-wrap { white-space: pre-wrap; }
         
         /* Signatures */
-        .signature-box { text-align: center; margin-top: 5px; }
-        .sig-space { height: 60px; }
-        .sig-line { margin-bottom: 5px; }
-        .sig-date { margin-bottom: 15px; }
-        .sig-status { font-size: 13px; font-weight: bold; }
+        .signature-box { text-align: center; margin-top: 2px; }
+        .sig-space { height: 50px; }
+        .sig-line { margin-bottom: 3px; }
+        .sig-date { margin-bottom: 5px; }
+        .sig-status { font-size: 12px; font-weight: bold; }
 
         /* Hide injected inactivity modal */
         .modal { display: none !important; }
@@ -232,83 +235,87 @@ $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Ne
 
         <!-- Main Info -->
         <table class="table-bordered">
+            <tr class="bg-header">
+                <td colspan="4">1. General Information (ข้อมูลทั่วไป)</td>
+            </tr>
             <tr>
-                <td width="50%">
-                    <span class="font-bold">ISSUED BY :</span> <span class="text-blue"><?php echo htmlspecialchars($data['issued_by_dept']); ?></span>
-                </td>
-                <td width="50%">
-                    <span class="font-bold">REQUEST TO :</span> <span class="text-blue"><?php echo htmlspecialchars($data['request_to']); ?></span>
+                <td width="15%" class="bg-label">ISSUED BY :</td>
+                <td width="35%"><?php echo htmlspecialchars($data['issued_by_dept']); ?></td>
+                <td width="15%" class="bg-label">REQUEST TO :</td>
+                <td width="35%"><?php echo htmlspecialchars($data['request_to']); ?></td>
+            </tr>
+            <tr>
+                <td class="bg-label">PERSON :</td>
+                <td><?php echo htmlspecialchars($person_name); ?></td>
+                <td class="bg-label">SUBJECT :</td>
+                <td><?php echo htmlspecialchars($data['subject']); ?></td>
+            </tr>
+        </table>
+
+        <table class="table-bordered">
+            <tr class="bg-header">
+                <td colspan="4">2. Product Information (ข้อมูลผลิตภัณฑ์)</td>
+            </tr>
+            <tr>
+                <td width="15%" class="bg-label">Part Name :</td>
+                <td width="35%"><?php echo htmlspecialchars($data['part_name']); ?></td>
+                <td width="15%" class="bg-label">Order No. :</td>
+                <td width="35%"><?php echo htmlspecialchars($data['order_no']); ?></td>
+            </tr>
+            <tr>
+                <td class="bg-label">Part No. :</td>
+                <td><?php echo htmlspecialchars($data['part_no']); ?></td>
+                <td class="bg-label">Quantity :</td>
+                <td><?php echo $show_qty; ?></td>
+            </tr>
+            <tr>
+                <td class="bg-label">Lot No. :</td>
+                <td><?php echo htmlspecialchars($data['lot_no']); ?></td>
+                <td class="bg-label">Model Name :</td>
+                <td><?php echo htmlspecialchars($data['model_name']); ?></td>
+            </tr>
+            <tr>
+                <td class="bg-label">Serial No. :</td>
+                <td><?php echo htmlspecialchars($data['serial_no']); ?></td>
+                <td class="bg-label">MFG Date :</td>
+                <td><?php echo $show_mfg_date; ?></td>
+            </tr>
+        </table>
+        <table class="table-bordered">
+            <tr class="bg-header">
+                <td>3. Details (รายละเอียด)</td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="font-bold mb-1">Difference Regular Part and special adopt part (ข้อแตกต่าง) :</div>
+                    <div class="whitespace-pre-wrap"><?php echo htmlspecialchars($data['difference_detail']); ?></div>
                 </td>
             </tr>
             <tr>
-                <td width="50%">
-                    <span class="font-bold">PERSON :</span> <span class="text-blue"><?php echo htmlspecialchars($person_name); ?></span>
-                </td>
-                <td width="50%">
-                    <span class="font-bold">SUBJECT :</span> <span class="text-blue"><?php echo htmlspecialchars($data['subject']); ?></span>
+                <td>
+                    <div class="font-bold mb-1">REASON FOR SPECIAL ADOPT (เหตุผลในการขอใช้) :</div>
+                    <div class="whitespace-pre-wrap"><?php echo htmlspecialchars($data['reason_for_adopt']); ?></div>
                 </td>
             </tr>
             <tr>
-                <td colspan="2" style="padding: 0;">
-                    <table class="table-noborder" style="margin-bottom: 0;">
-                        <tr>
-                            <td width="15%" class="font-bold">Part Name :</td>
-                            <td width="35%" class="text-blue"><?php echo htmlspecialchars($data['part_name']); ?></td>
-                            <td width="15%" class="font-bold">Order No. :</td>
-                            <td width="35%" class="text-blue"><?php echo htmlspecialchars($data['order_no']); ?></td>
-                        </tr>
-                        <tr>
-                            <td class="font-bold">Part No. :</td>
-                            <td class="text-blue"><?php echo htmlspecialchars($data['part_no']); ?></td>
-                            <td class="font-bold">Quantity :</td>
-                            <td class="text-blue"><?php echo $show_qty; ?></td>
-                        </tr>
-                        <tr>
-                            <td class="font-bold">Lot No. :</td>
-                            <td class="text-blue"><?php echo htmlspecialchars($data['lot_no']); ?></td>
-                            <td class="font-bold">Model Name :</td>
-                            <td class="text-blue"><?php echo htmlspecialchars($data['model_name']); ?></td>
-                        </tr>
-                        <tr>
-                            <td class="font-bold">Serial No. :</td>
-                            <td class="text-blue"><?php echo htmlspecialchars($data['serial_no']); ?></td>
-                            <td class="font-bold">MFG Date :</td>
-                            <td class="text-blue"><?php echo $show_mfg_date; ?></td>
-                        </tr>
-                    </table>
+                <td>
+                    <div class="font-bold mb-1">CAUSE (สาเหตุของปัญหา) :</div>
+                    <div class="whitespace-pre-wrap"><?php echo htmlspecialchars($data['root_cause']); ?></div>
                 </td>
             </tr>
             <tr>
-                <td colspan="2">
-                    <div class="font-bold">Difference Regular Part and special adopt part (ข้อแตกต่าง) :</div>
-                    <div class="text-blue whitespace-pre-wrap"><?php echo htmlspecialchars($data['difference_detail']); ?></div>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <div class="font-bold">REASON FOR SPECIAL ADOPT (เหตุผลในการขอใช้) :</div>
-                    <div class="text-blue whitespace-pre-wrap"><?php echo htmlspecialchars($data['reason_for_adopt']); ?></div>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <div class="font-bold">CAUSE (สาเหตุของปัญหา) :</div>
-                    <div class="text-blue whitespace-pre-wrap"><?php echo htmlspecialchars($data['root_cause']); ?></div>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <div class="font-bold" style="margin-bottom: 10px;">HOW TO TAKE MEASURE IN THE FUTURE (การจัดการในอนาคต) :</div>
+                <td>
+                    <div class="font-bold mb-2">HOW TO TAKE MEASURE IN THE FUTURE (การจัดการในอนาคต) :</div>
                     
                     <div class="font-bold">TENTATIVE (ชั่วคราว):</div>
-                    <div class="text-blue whitespace-pre-wrap" style="margin-bottom: 10px;"><?php echo htmlspecialchars($data['measure_tentative']); ?></div>
+                    <div class="whitespace-pre-wrap mb-2"><?php echo htmlspecialchars($data['measure_tentative']); ?></div>
                     
                     <div class="font-bold">PERMANENT (ถาวร):</div>
-                    <div class="text-blue whitespace-pre-wrap"><?php echo htmlspecialchars($data['measure_permanent']); ?></div>
+                    <div class="whitespace-pre-wrap"><?php echo htmlspecialchars($data['measure_permanent']); ?></div>
                 </td>
             </tr>
             <tr>
-                <td colspan="2">
+                <td>
                     <span class="font-bold">Submit Report (เอกสารสนับสนุน) :</span> &nbsp;&nbsp;&nbsp;
                     <?php echo $chkReportNeed; ?> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <?php echo $chkReportNotNeed; ?>
                 </td>
@@ -317,10 +324,10 @@ $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Ne
 
         <!-- Signatures -->
         <table class="table-bordered text-center" style="margin-bottom: 0;">
-            <tr>
-                <td colspan="4" class="text-left bg-gray">
-                    <div class="font-bold">Approver's Comments / Signatures</div>
-                    <div class="text-xs">By Signing this approval, it is agreed that OTI will take full responsibility for any claims and damages arise from this adaptation</div>
+            <tr class="bg-header">
+                <td colspan="4">
+                    4. Approver's Comments / Signatures<br>
+                    <span style="font-weight:normal; font-size:11px;">By Signing this approval, it is agreed that OTI will take full responsibility for any claims and damages arise from this adaptation</span>
                 </td>
             </tr>
             <tr>
