@@ -208,8 +208,8 @@ function renderTable() {
 
         tableHTML += `
             <tr onclick="openCaseDetail(${c.case_id})">
-                <td><span class="fw-bold text-primary">${escapeHTML(c.car_no)}</span></td>
-                <td class="text-muted small">${c.case_date ? new Date(c.case_date).toLocaleDateString('th-TH') : '-'}</td>
+                <td class="text-center"><span class="fw-bold text-primary">${escapeHTML(c.car_no)}</span></td>
+                <td class="text-muted small text-center">${c.case_date ? new Date(c.case_date).toLocaleDateString('th-TH') : '-'}</td>
                 <td>
                     <div class="fw-bold text-dark">${escapeHTML(c.customer_name)}</div>
                     <div class="small text-muted">${escapeHTML(c.product_name)}</div>
@@ -219,7 +219,7 @@ function renderTable() {
                     <div class="small text-danger">Defect Qty: ${c.defect_qty ? Number(c.defect_qty).toLocaleString() : 0}</div>
                 </td>
                 <td class="text-center"><span class="badge badge-status ${badgeClass}">${statusText}</span></td>
-                <td><div class="small fw-bold text-secondary"><i class="fas fa-user-circle me-1"></i>${escapeHTML(c.created_by_name) || '-'}</div></td>
+                <td class="text-center"><div class="small fw-bold text-secondary"><i class="fas fa-user-circle me-1"></i>${escapeHTML(c.created_by_name) || '-'}</div></td>
             </tr>
         `;
 

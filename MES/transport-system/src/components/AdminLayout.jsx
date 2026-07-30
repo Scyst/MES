@@ -1,16 +1,17 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Bus, Route, Menu, X, Hexagon, Sun, Moon, LogOut, UserCircle, CalendarDays } from 'lucide-react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Bus, Route, Menu, X, Hexagon, Sun, Moon, LogOut, CalendarDays, ExternalLink, Settings } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Close sidebar on mobile when navigating
   useEffect(() => {
     setIsSidebarOpen(false);
-  }, []);
+  }, [location]);
 
   // Handle Theme
   useEffect(() => {
@@ -28,13 +29,8 @@ const AdminLayout = () => {
       e.preventDefault();
       e.stopPropagation();
     }
-    
-    // Add smooth transition class temporarily
     document.documentElement.classList.add('theme-transitioning');
-    
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
-    
-    // Remove class after transition completes
     setTimeout(() => {
       document.documentElement.classList.remove('theme-transitioning');
     }, 400);
@@ -44,129 +40,119 @@ const AdminLayout = () => {
     navigate('/checkin');
   };
 
+  const getPageTitle = () => {
+    if (location.pathname.includes('dashboard')) return 'ภาพรวมการเดินรถ (Operations Center)';
+    if (location.pathname.includes('schedules')) return 'จัดการรอบรถล่วงหน้า';
+    if (location.pathname.includes('vehicles')) return 'ฐานข้อมูลยานพาหนะ';
+    return 'Admin Control';
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden text-gray-900 dark:text-gray-100 transition-colors">
       
-      {/* Top Navbar */}
-      <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-8 z-30 shadow-sm flex-shrink-0">
+      {/* Top Navbar - Clean & Compact */}
+      <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 z-30 shadow-sm flex-shrink-0 transition-colors">
         
-        {/* Left: Logo & Title */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Hexagon size={24} className="text-blue-600 dark:text-blue-500 fill-blue-100 dark:fill-blue-900/50" />
-            <div className="hidden sm:block">
-              <h1 className="text-lg font-bold leading-tight">SNC Transport</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">MES SYSTEM</p>
-            </div>
+        {/* Left: Logo & Breadcrumb Title */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white">
+            <Bus size={18} />
+          </div>
+          <div className="hidden sm:flex items-center gap-2 text-sm">
+            <span className="font-bold text-gray-900 dark:text-white tracking-tight">SNC Transport</span>
+            <span className="text-gray-300 dark:text-gray-600">/</span>
+            <span className="font-medium text-gray-500 dark:text-gray-400">{getPageTitle()}</span>
           </div>
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2">
-          {/* Theme Toggle */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          
+          <button 
+            onClick={() => navigate('/booking')}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors mr-2"
+          >
+            แอปพนักงาน <ExternalLink size={14} />
+          </button>
+
           <button 
             onClick={toggleTheme}
-            className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors border border-transparent"
-            title="สลับโหมดการแสดงผล"
+            className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
-            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           
-          <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-2 hidden sm:block"></div>
+          <div className="h-5 w-px bg-gray-200 dark:bg-gray-700 mx-1 hidden sm:block"></div>
 
-          {/* Profile Mockup (Desktop) */}
-          <div className="hidden sm:flex items-center gap-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-full py-1 pl-1 pr-3">
-             <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 flex items-center justify-center font-bold text-sm">
+          {/* Profile Minimal */}
+          <div className="hidden sm:flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors">
+             <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
                 AD
              </div>
-             <div className="text-sm text-left">
-                <p className="font-bold leading-none">System Admin</p>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">Administrator</p>
-             </div>
+             <span className="text-xs font-bold hidden md:block">Admin</span>
           </div>
 
-          {/* Mobile Menu Toggle */}
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
             className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
           >
-            {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 top-16' : '-translate-x-full lg:top-0'}`}>
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-            <NavLink
-              to="/admin/dashboard"
-              onClick={() => setIsSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                  isActive 
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' 
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200'
-                }`
-              }
-            >
-              <LayoutDashboard className="mr-3" size={20} />
-              ภาพรวมระบบ
-            </NavLink>
-            
-            <NavLink
-              to="/admin/vehicles"
-              onClick={() => setIsSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                  isActive 
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' 
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200'
-                }`
-              }
-            >
-              <Bus className="mr-3" size={20} />
-              จัดการรถ (Vehicles)
-            </NavLink>
-            
-            <NavLink
-              to="/admin/trips"
-              onClick={() => setIsSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                  isActive 
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' 
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200'
-                }`
-              }
-            >
-              <Route className="mr-3" size={20} />
-              ค่าใช้จ่ายรอบรถ (Walk-in)
-            </NavLink>
-            
-            <NavLink
-              to="/admin/schedules"
-              onClick={() => setIsSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                  isActive 
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' 
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200'
-                }`
-              }
-            >
-              <CalendarDays className="mr-3" size={20} />
-              จัดรอบรถล่วงหน้า (Pre-book)
-            </NavLink>
-          </nav>
+        <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 top-14' : '-translate-x-full lg:top-0'}`}>
           
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="p-4">
+            <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 px-2">Menu</p>
+            <nav className="space-y-1">
+              <NavLink
+                to="/admin/dashboard"
+                className={({ isActive }) =>
+                  `flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                    isActive 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' 
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                  }`
+                }
+              >
+                <LayoutDashboard className="mr-3" size={18} />
+                ภาพรวมระบบ
+              </NavLink>
+              
+              <NavLink
+                to="/admin/schedules"
+                className={({ isActive }) =>
+                  `flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                    isActive 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' 
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                  }`
+                }
+              >
+                <CalendarDays className="mr-3" size={18} />
+                จัดการรอบรถล่วงหน้า
+              </NavLink>
+            </nav>
+          </div>
+
+          <div className="p-4 mt-auto border-t border-gray-200 dark:border-gray-700">
+             <button 
+                onClick={() => navigate('/booking')}
+                className="flex lg:hidden items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors mb-2"
+             >
+                <ExternalLink size={18} />
+                <span>ไปหน้าแอปพนักงาน</span>
+             </button>
+
              <button 
                 onClick={handleLogout}
-                className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
              >
-                <LogOut size={20} />
-                <span>จำลองการออกจากระบบ</span>
+                <LogOut size={18} />
+                <span>ออกจากระบบ</span>
              </button>
           </div>
         </aside>
@@ -174,14 +160,14 @@ const AdminLayout = () => {
         {/* Mobile sidebar overlay */}
         {isSidebarOpen && (
           <div 
-            className="fixed inset-0 top-16 bg-black/20 dark:bg-black/40 z-30 lg:hidden backdrop-blur-sm"
+            className="fixed inset-0 top-14 bg-gray-900/20 dark:bg-gray-900/60 z-30 lg:hidden backdrop-blur-sm"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-auto custom-scrollbar relative z-0">
-          <div className="p-4 md:p-8 max-w-7xl mx-auto min-h-full">
+        <main className="flex-1 overflow-auto custom-scrollbar relative z-0 bg-gray-50/50 dark:bg-gray-900/50">
+          <div className="p-4 md:p-6 w-full mx-auto min-h-full">
             <Outlet />
           </div>
         </main>

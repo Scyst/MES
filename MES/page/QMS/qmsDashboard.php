@@ -27,7 +27,7 @@ $pageIcon = "fas fa-shield-alt";
 
             <!-- Sub Navbar for QMS Modules (Compact) -->
             <div class="bg-white border-bottom shadow-sm mb-1">
-                <div class="container-fluid px-3 d-flex justify-content-between align-items-center">
+                <div class="container-fluid px-3 pt-2 d-flex justify-content-between align-items-center">
                     <ul class="nav nav-tabs border-0 qms-subnav" id="qmsTabs" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active fw-bold border-0" id="cases-tab" data-bs-toggle="tab" data-bs-target="#cases" type="button" role="tab">
@@ -52,7 +52,7 @@ $pageIcon = "fas fa-shield-alt";
                 <div class="tab-content" id="qmsTabsContent">
                     <!-- Tab 1: NCR / CAR Cases -->
                     <div class="tab-pane fade show active" id="cases" role="tabpanel">
-                        <div class="mobile-swipe-row mb-2">
+                        <div class="mobile-swipe-row mb-3">
                             <div class="swipe-card-wrapper">
                                 <div class="kpi-card active p-3 h-100" id="card-all" onclick="setFilter('ALL')">
                                     <div class="text-secondary fw-bold small text-uppercase mb-1"><i class="fas fa-clipboard-list me-1"></i> Total</div>
@@ -91,11 +91,8 @@ $pageIcon = "fas fa-shield-alt";
                                 <input type="text" id="searchInput" class="form-control border-0 bg-white" placeholder="ค้นหา CAR No, ลูกค้า, สินค้า..." style="font-size: 0.95rem;">
                             </div>
                             <div class="d-flex gap-2">
-                                <button class="btn btn-sm btn-danger fw-bold shadow-sm d-none d-lg-block" onclick="openNCRModal()">
-                                    <i class="fas fa-plus-circle me-1"></i> แจ้งปัญหา (New NCR)
-                                </button>
                                 <div class="dropdown d-none d-lg-block">
-                                    <button class="btn btn-sm btn-secondary fw-bold shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Print Blank">
+                                    <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Print Blank">
                                         <i class="fas fa-print"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow" style="z-index: 1050;">
@@ -104,6 +101,9 @@ $pageIcon = "fas fa-shield-alt";
                                         <li><a class="dropdown-item fw-bold text-secondary" href="print_claim.php?mode=blank" target="_blank"><i class="fas fa-clipboard-check me-2 text-success"></i> Blank Claim</a></li>
                                     </ul>
                                 </div>
+                                <button class="btn btn-sm btn-primary fw-bold shadow-sm d-none d-lg-block" onclick="openNCRModal()">
+                                    <i class="fas fa-plus-circle me-1"></i> แจ้งปัญหา (New NCR)
+                                </button>
                             </div>
                         </div>
 
@@ -117,7 +117,7 @@ $pageIcon = "fas fa-shield-alt";
                                     <th class="text-start">Customer / Product</th>
                                     <th class="text-start">Defect Details</th>
                                     <th class="text-center" style="width: 160px;">Status</th>
-                                    <th class="text-start" style="width: 150px;">Issuer</th>
+                                    <th class="text-center" style="width: 150px;">Issuer</th>
                                 </tr>
                             </thead>
                             <tbody>

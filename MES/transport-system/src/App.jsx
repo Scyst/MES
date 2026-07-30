@@ -10,6 +10,9 @@ import ManageSchedules from './pages/admin/ManageSchedules';
 import ScheduleDetails from './pages/admin/ScheduleDetails';
 import BookingHome from './pages/employee/BookingHome';
 import MyTicket from './pages/employee/MyTicket';
+import { initializeSeedData } from './utils/seedData';
+
+initializeSeedData();
 
 function App() {
   return (
