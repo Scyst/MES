@@ -326,9 +326,6 @@ function openCaseDetail(caseId) {
             setText('view_root_cause', data.customer_root_cause);
             setText('view_action_plan', data.customer_action_plan);
             
-            setText('view_disposition', data.disposition);
-            setText('view_final_qty', data.final_qty ? Number(data.final_qty).toLocaleString() : '-');
-            setText('view_cost', data.cost_estimation > 0 ? Number(data.cost_estimation).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' THB' : '-');
             if (data.closed_at) setText('claim_closed_date', new Date(data.closed_at).toLocaleString('th-TH'));
 
             // Populate formCloseClaim inputs for view-only when CLOSED
