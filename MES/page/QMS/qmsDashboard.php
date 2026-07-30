@@ -93,7 +93,7 @@ $pageIcon = "fas fa-shield-alt";
                             <div class="d-flex gap-2">
                                 <div class="dropdown d-none d-lg-block">
                                     <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Print Blank">
-                                        <i class="fas fa-print"></i>
+                                        <i class="fas fa-print me-1"></i> Print Blank
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow" style="z-index: 1050;">
                                         <li><a class="dropdown-item fw-bold text-secondary" href="print_ncr.php?mode=blank" target="_blank"><i class="fas fa-file-alt me-2 text-danger"></i> Blank NCR</a></li>
@@ -102,7 +102,7 @@ $pageIcon = "fas fa-shield-alt";
                                     </ul>
                                 </div>
                                 <button class="btn btn-sm btn-primary fw-bold shadow-sm d-none d-lg-block" onclick="openNCRModal()">
-                                    <i class="fas fa-plus-circle me-1"></i> แจ้งปัญหา (New NCR)
+                                    <i class="fas fa-plus-circle me-1"></i> New NCR
                                 </button>
                             </div>
                         </div>

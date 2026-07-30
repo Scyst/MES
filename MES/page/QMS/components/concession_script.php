@@ -1,14 +1,14 @@
 <script>
 function loadConcessionList() {
     const tbody = document.getElementById('concessionBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
     
     fetch('./api/concession_api.php?action=list')
         .then(r => r.json())
         .then(res => {
             if(res.success) {
                 if(res.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No records found.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No records found.</td></tr>';
                     return;
                 }
                 
@@ -20,7 +20,7 @@ function loadConcessionList() {
                     if (req.status === 'REJECTED') statusBadge = '<span class="badge bg-danger">REJECTED</span>';
 
                     html += `
-                        <tr>
+                        <tr onclick="viewConcession(${req.id})" style="cursor: pointer;" title="View & Print">
                             <td class="px-3 fw-bold text-primary">${req.request_no}</td>
                             <td>${req.request_date}</td>
                             <td>
@@ -29,23 +29,15 @@ function loadConcessionList() {
                             </td>
                             <td class="fw-bold">${req.qty ? Number(req.qty).toLocaleString() : '-'}</td>
                             <td>${statusBadge}</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewConcession(${req.id})" title="View Details">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                                <a class="btn btn-sm btn-outline-secondary ms-1" href="print_concession.php?id=${req.id}" target="_blank" title="Print PDF">
-                                    <i class="fas fa-print"></i>
-                                </a>
-                            </td>
                         </tr>
                     `;
                 });
                 tbody.innerHTML = html;
             } else {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">${res.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${res.message}</td></tr>`;
             }
         }).catch(err => {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Network Error</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Network Error</td></tr>';
         });
 }
 

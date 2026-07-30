@@ -10,6 +10,7 @@ import ManageSchedules from './pages/admin/ManageSchedules';
 import ScheduleDetails from './pages/admin/ScheduleDetails';
 import BookingHome from './pages/employee/BookingHome';
 import MyTicket from './pages/employee/MyTicket';
+import MasterData from './pages/admin/MasterData';
 import { initializeSeedData } from './utils/seedData';
 
 initializeSeedData();
@@ -35,6 +36,8 @@ function App() {
           
           <Route path="schedules" element={<ManageSchedules />} />
           <Route path="schedules/:scheduleId" element={<ScheduleDetails />} />
+          
+          <Route path="master" element={<MasterData />} />
         </Route>
         
         {/* Redirect root to admin for this prototype */}

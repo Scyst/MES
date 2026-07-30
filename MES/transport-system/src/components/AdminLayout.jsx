@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Bus, Route, Menu, X, Hexagon, Sun, Moon, LogOut, CalendarDays, ExternalLink, Settings } from 'lucide-react';
+import { LayoutDashboard, Bus, Route, Menu, X, Hexagon, Sun, Moon, LogOut, CalendarDays, ExternalLink, Settings, Database } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const AdminLayout = () => {
@@ -134,6 +134,20 @@ const AdminLayout = () => {
               >
                 <CalendarDays className="mr-3" size={18} />
                 จัดการรอบรถล่วงหน้า
+              </NavLink>
+
+              <NavLink
+                to="/admin/master"
+                className={({ isActive }) =>
+                  `flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors mt-2 ${
+                    isActive 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' 
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                  }`
+                }
+              >
+                <Database className="mr-3" size={18} />
+                ตั้งค่าข้อมูลหลัก
               </NavLink>
             </nav>
           </div>

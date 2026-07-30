@@ -24,11 +24,10 @@
                         <th>Subject / Part Name</th>
                         <th>Qty</th>
                         <th>Status</th>
-                        <th class="text-center">Action</th>
                     </tr>
                 </thead>
                 <tbody id="concessionBody">
-                    <tr><td colspan="6" class="text-center py-4 text-muted">Loading requests...</td></tr>
+                    <tr><td colspan="5" class="text-center py-4 text-muted">Loading requests...</td></tr>
                 </tbody>
             </table>
         </div>
