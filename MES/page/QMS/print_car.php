@@ -44,7 +44,7 @@ if ($is_blank) {
                    n.lot_no, n.production_date,
                    n.product_model, n.production_line,
                    n.invoice_no, n.issuer_position, n.found_by_type, -- [NEW]
-                   car.*, u.username as issuer_name,
+                   car.*, COALESCE(u.fullname, u.username) as issuer_name,
                    cl.verify_date_1, cl.verify_result_1, cl.verify_date_2, cl.verify_result_2, -- [NEW]
                    cl.verify_date_3, cl.verify_result_3, cl.std_fmea, cl.std_control_plan, -- [NEW]
                    cl.std_wi, cl.std_others -- [NEW]

@@ -83,7 +83,7 @@ try {
                 $_POST['product_model'] ?? null, 
                 $_POST['production_line'] ?? null, 
                 $user_id, 
-                $_POST['issue_by_name'] ?? $_SESSION['user']['username'],
+                $_POST['issue_by_name'] ?? ($_SESSION['user']['fullname'] ?? $_SESSION['user']['username']),
                 empty(trim($_POST['invoice_no'] ?? '')) ? null : trim($_POST['invoice_no']),
                 empty(trim($_POST['issuer_position'] ?? '')) ? null : trim($_POST['issuer_position']),
                 empty(trim($_POST['found_by_type'] ?? '')) ? null : trim($_POST['found_by_type']),

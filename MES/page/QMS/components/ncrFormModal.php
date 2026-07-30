@@ -111,7 +111,7 @@
                                     <div class="row bg-primary bg-opacity-10 p-2 mx-0 rounded">
                                         <div class="col-md-6 mb-1">
                                             <label class="form-label small fw-bold text-primary mb-1">ชื่อผู้แจ้ง <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control form-control-sm border-primary fw-bold" name="issue_by_name" required value="<?php echo $_SESSION['user']['username'] ?? ''; ?>">
+                                            <input type="text" class="form-control form-control-sm border-primary fw-bold" name="issue_by_name" required value="<?php echo $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? ''; ?>">
                                         </div>
                                         <div class="col-md-6 mb-1">
                                             <label class="form-label small fw-bold text-primary mb-1">ตำแหน่ง</label>

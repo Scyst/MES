@@ -1,0 +1,185 @@
+<script>
+function loadQASchedule() {
+    const date = document.getElementById('scheduleDateFilter').value;
+    const tbody = document.getElementById('qaScheduleBody');
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
+    
+    fetch(`./api/qa_schedule_api.php?action=get_schedule&date=${date}`)
+        .then(r => r.json())
+        .then(res => {
+            if(res.success) {
+                if(res.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
+                    return;
+                }
+                
+                let html = '';
+                res.data.forEach(po => {
+                    let statusBadge = '<span class="badge bg-secondary">WAITING</span>';
+                    if (po.inspection_status === 'IN_PROGRESS') statusBadge = '<span class="badge bg-warning text-dark">IN PROGRESS</span>';
+                    if (po.inspection_status === 'DONE') statusBadge = '<span class="badge bg-success">DONE</span>';
+                    
+                    let resultBadge = '';
+                    if (po.inspection_result === 'PASS') resultBadge = '<span class="badge bg-success ms-1">PASS</span>';
+                    if (po.inspection_result === 'FAIL') resultBadge = '<span class="badge bg-danger ms-1">FAIL</span>';
+
+                    html += `
+                        <tr>
+                            <td class="px-3 fw-bold text-primary">${po.po_number}</td>
+                            <td>
+                                <div><strong>${po.sku}</strong></div>
+                                <div class="small text-muted">${po.description} (${po.color})</div>
+                            </td>
+                            <td class="fw-bold">${po.quantity ? Number(po.quantity).toLocaleString() : '-'}</td>
+                            <td>${po.dc_location || '-'}</td>
+                            <td>${po.loading_date ? po.loading_date : '-'}</td>
+                            <td>${statusBadge} ${resultBadge}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-warning" onclick='openUpdateModal(${JSON.stringify(po).replace(/'/g, "&#39;")})' title="Update Result">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger ms-1" onclick="removeSchedule(${po.id})" title="Remove from schedule">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+            } else {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">${res.message}</td></tr>`;
+            }
+        }).catch(err => {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Network Error</td></tr>';
+        });
+}
+
+function openAddScheduleModal() {
+    document.getElementById('searchPoInput').value = '';
+    document.getElementById('poSearchResult').innerHTML = '';
+    const modal = new bootstrap.Modal(document.getElementById('addScheduleModal'));
+    modal.show();
+}
+
+function searchPO() {
+    const term = document.getElementById('searchPoInput').value.trim();
+    if (!term) return;
+    
+    const resultDiv = document.getElementById('poSearchResult');
+    resultDiv.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin text-primary"></i> Searching...</div>';
+    
+    fetch(`./api/qa_schedule_api.php?action=search_po&search=${encodeURIComponent(term)}`)
+        .then(r => r.json())
+        .then(res => {
+            if(res.success) {
+                if(res.data.length === 0) {
+                    resultDiv.innerHTML = '<div class="text-center py-3 text-muted">No PO found.</div>';
+                    return;
+                }
+                
+                let html = '';
+                res.data.forEach(po => {
+                    html += `
+                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1 fw-bold text-primary">${po.po_number} <span class="badge bg-info ms-2">${po.sku}</span></h6>
+                                <small class="text-muted">Qty: ${po.quantity} | Loading: ${po.loading_date || '-'}</small>
+                                ${po.inspection_date ? `<br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Already scheduled on ${po.inspection_date}</small>` : ''}
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="schedulePO(${po.id})">
+                                <i class="fas fa-calendar-plus me-1"></i> Add
+                            </button>
+                        </div>
+                    `;
+                });
+                resultDiv.innerHTML = html;
+            }
+        });
+}
+
+function schedulePO(id) {
+    const date = document.getElementById('scheduleDateFilter').value;
+    const formData = new FormData();
+    formData.append('id', id);
+    formData.append('schedule_date', date);
+    
+    fetch('./api/qa_schedule_api.php?action=schedule_po', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+        if(res.success) {
+            Swal.fire({icon:'success', title:'Scheduled!', timer:1500, showConfirmButton:false});
+            bootstrap.Modal.getInstance(document.getElementById('addScheduleModal')).hide();
+            loadQASchedule();
+        } else {
+            Swal.fire('Error', res.message, 'error');
+        }
+    });
+}
+
+function removeSchedule(id) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "This will remove the PO from the QA schedule.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, remove it'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('id', id);
+            fetch('./api/qa_schedule_api.php?action=remove_schedule', {
+                method: 'POST',
+                body: formData
+            }).then(r => r.json()).then(res => {
+                if(res.success) loadQASchedule();
+            });
+        }
+    });
+}
+
+function openUpdateModal(po) {
+    document.getElementById('inspect_po_id').value = po.id;
+    document.getElementById('inspect_po_number').value = po.po_number;
+    document.getElementById('inspect_status').value = po.inspection_status || '';
+    document.getElementById('inspect_result').value = po.inspection_result || '';
+    document.getElementById('inspect_remark').value = po.remark || '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('updateInspectionModal'));
+    modal.show();
+}
+
+function saveInspectionResult() {
+    const form = document.getElementById('formUpdateInspection');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const formData = new FormData(form);
+    fetch('./api/qa_schedule_api.php?action=update_result', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            Swal.fire({icon:'success', title:'Saved', timer:1500, showConfirmButton:false});
+            bootstrap.Modal.getInstance(document.getElementById('updateInspectionModal')).hide();
+            loadQASchedule();
+        } else {
+            Swal.fire('Error', res.message, 'error');
+        }
+    });
+}
+
+// Auto load on tab show or page load if needed. We will trigger it when tab is clicked.
+document.addEventListener('DOMContentLoaded', () => {
+    // If it's the active tab, load it.
+    if(document.getElementById('qaScheduleBody')) {
+        loadQASchedule();
+    }
+});
+</script>

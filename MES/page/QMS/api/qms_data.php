@@ -16,7 +16,7 @@ try {
                     c.case_id, c.car_no, c.case_date, c.customer_name, 
                     c.product_name, c.current_status,
                     n.defect_type, n.defect_qty,
-                    u.username as created_by_name
+                    COALESCE(u.fullname, u.username) as created_by_name
                 FROM QMS_CASES c WITH (NOLOCK)
                 LEFT JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
                 LEFT JOIN USERS u WITH (NOLOCK) ON c.created_by = u.id
@@ -58,7 +58,7 @@ try {
         if (!$case_id) throw new Exception("Missing Case ID");
 
         $sql = "SELECT 
-                    c.case_id, c.car_no, c.case_date, c.current_status, c.customer_name, c.product_name, c.issue_by_name,
+                    c.case_id, c.car_no, c.case_date, c.current_status, c.customer_name, c.product_name, COALESCE(u.fullname, u.username, c.issue_by_name) as issue_by_name,
                     n.defect_type, n.defect_qty, n.defect_description, n.production_date, n.lot_no, n.found_shift,
                     n.invoice_no, n.issuer_position, n.found_by_type, n.production_line, n.product_model, 
                     n.prelim_disposition, n.prelim_remark,
@@ -76,6 +76,7 @@ try {
                 LEFT JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
                 LEFT JOIN QMS_CAR car WITH (NOLOCK) ON c.case_id = car.case_id
                 LEFT JOIN QMS_CLAIM cl WITH (NOLOCK) ON c.case_id = cl.case_id
+                LEFT JOIN USERS u WITH (NOLOCK) ON c.created_by = u.id
                 WHERE c.case_id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$case_id]);
@@ -91,8 +92,8 @@ try {
         echo json_encode(['success' => true, 'data' => $data, 'message' => 'OK']);
 
     } elseif ($action === 'master_data') {
-        // ดึงรายการ Line ผลิตที่ Active
-        $sqlLine = "SELECT DISTINCT location_name as line_name FROM LOCATIONS WITH (NOLOCK) WHERE is_active = 1 AND location_type = 'WIP' ORDER BY location_name";
+        // ดึงรายการ Line ผลิตที่ Active (รวม WIP, FG, SEMI)
+        $sqlLine = "SELECT DISTINCT location_name as line_name FROM LOCATIONS WITH (NOLOCK) WHERE is_active = 1 AND location_type IN ('WIP', 'FG', 'SEMI') ORDER BY location_name";
         $lines = $pdo->query($sqlLine)->fetchAll(PDO::FETCH_ASSOC);
 
         // ดึงรายการสินค้าที่มี (Part No & Name) เพื่อทำ Auto-complete

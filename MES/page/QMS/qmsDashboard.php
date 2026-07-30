@@ -25,51 +25,75 @@ $pageIcon = "fas fa-shield-alt";
                 <div class="spinner-border text-primary" role="status"></div>
             </div>
 
-            <div class="content-wrapper container-fluid p-3">
-                
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <div class="input-group shadow-sm" style="max-width: 400px; border-radius: 6px; overflow: hidden;">
-                        <span class="input-group-text bg-white border-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" id="searchInput" class="form-control border-0 bg-white" placeholder="ค้นหา CAR No, ลูกค้า, สินค้า..." style="font-size: 0.95rem;">
-                    </div>
-                    
-                    <button class="btn btn-danger fw-bold shadow-sm d-none d-lg-block" onclick="openNCRModal()">
-                        <i class="fas fa-plus-circle me-1"></i> แจ้งปัญหา (New NCR)
-                    </button>
+            <!-- Sub Navbar for QMS Modules (Compact) -->
+            <div class="bg-white border-bottom shadow-sm mb-1">
+                <div class="container-fluid px-3 d-flex justify-content-between align-items-center">
+                    <ul class="nav nav-tabs border-0 qms-subnav" id="qmsTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold border-0" id="cases-tab" data-bs-toggle="tab" data-bs-target="#cases" type="button" role="tab">
+                                <i class="fas fa-list-alt me-1 text-primary"></i> NCR / CAR
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold border-0" id="schedule-tab" data-bs-toggle="tab" data-bs-target="#schedule" type="button" role="tab">
+                                <i class="fas fa-calendar-alt me-1 text-primary"></i> QA/QC Schedule
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold border-0" id="concession-tab" data-bs-toggle="tab" data-bs-target="#concession" type="button" role="tab">
+                                <i class="fas fa-file-signature me-1 text-primary"></i> Concession
+                            </button>
+                        </li>
+                    </ul>
                 </div>
+            </div>
 
-                <div class="mobile-swipe-row mb-3">
-                    <div class="swipe-card-wrapper">
-                        <div class="kpi-card active p-3 h-100" id="card-all" onclick="setFilter('ALL')">
-                            <div class="text-secondary fw-bold small text-uppercase mb-1"><i class="fas fa-clipboard-list me-1"></i> Total</div>
-                            <h3 class="mb-0 fw-bold text-dark" id="stat-total">0</h3>
+            <div class="content-wrapper container-fluid p-3 pt-2">
+                <div class="tab-content" id="qmsTabsContent">
+                    <!-- Tab 1: NCR / CAR Cases -->
+                    <div class="tab-pane fade show active" id="cases" role="tabpanel">
+                        <div class="mobile-swipe-row mb-2">
+                            <div class="swipe-card-wrapper">
+                                <div class="kpi-card active p-3 h-100" id="card-all" onclick="setFilter('ALL')">
+                                    <div class="text-secondary fw-bold small text-uppercase mb-1"><i class="fas fa-clipboard-list me-1"></i> Total</div>
+                                    <h3 class="mb-0 fw-bold text-dark" id="stat-total">0</h3>
+                                </div>
+                            </div>
+                            <div class="swipe-card-wrapper">
+                                <div class="kpi-card p-3 h-100" id="card-ncr" onclick="setFilter('NCR_CREATED')">
+                                    <div class="text-danger fw-bold small text-uppercase mb-1"><i class="fas fa-exclamation-circle me-1"></i> New NCR</div>
+                                    <h3 class="mb-0 fw-bold text-dark" id="stat-ncr">0</h3>
+                                </div>
+                            </div>
+                            <div class="swipe-card-wrapper">
+                                <div class="kpi-card p-3 h-100" id="card-sent" onclick="setFilter('SENT_TO_CUSTOMER')">
+                                    <div class="text-warning text-dark fw-bold small text-uppercase mb-1"><i class="fas fa-paper-plane me-1"></i> Wait CAR</div>
+                                    <h3 class="mb-0 fw-bold text-dark" id="stat-car">0</h3>
+                                </div>
+                            </div>
+                            <div class="swipe-card-wrapper">
+                                <div class="kpi-card p-3 h-100" id="card-replied" onclick="setFilter('CUSTOMER_REPLIED')">
+                                    <div class="text-info text-dark fw-bold small text-uppercase mb-1"><i class="fas fa-reply-all me-1"></i> Replied</div>
+                                    <h3 class="mb-0 fw-bold text-dark" id="stat-reply">0</h3>
+                                </div>
+                            </div>
+                            <div class="swipe-card-wrapper">
+                                <div class="kpi-card p-3 h-100" id="card-closed" onclick="setFilter('CLOSED')">
+                                    <div class="text-success fw-bold small text-uppercase mb-1"><i class="fas fa-check-circle me-1"></i> Closed</div>
+                                    <h3 class="mb-0 fw-bold text-dark" id="stat-closed">0</h3>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="swipe-card-wrapper">
-                        <div class="kpi-card p-3 h-100" id="card-ncr" onclick="setFilter('NCR_CREATED')">
-                            <div class="text-danger fw-bold small text-uppercase mb-1"><i class="fas fa-exclamation-circle me-1"></i> New NCR</div>
-                            <h3 class="mb-0 fw-bold text-dark" id="stat-ncr">0</h3>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+                            <div class="input-group shadow-sm" style="max-width: 400px; border-radius: 6px; overflow: hidden; flex: 1; min-width: 250px;">
+                                <span class="input-group-text bg-white border-0"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" id="searchInput" class="form-control border-0 bg-white" placeholder="ค้นหา CAR No, ลูกค้า, สินค้า..." style="font-size: 0.95rem;">
+                            </div>
+                            <button class="btn btn-sm btn-danger fw-bold shadow-sm d-none d-lg-block" onclick="openNCRModal()">
+                                <i class="fas fa-plus-circle me-1"></i> แจ้งปัญหา (New NCR)
+                            </button>
                         </div>
-                    </div>
-                    <div class="swipe-card-wrapper">
-                        <div class="kpi-card p-3 h-100" id="card-sent" onclick="setFilter('SENT_TO_CUSTOMER')">
-                            <div class="text-warning text-dark fw-bold small text-uppercase mb-1"><i class="fas fa-paper-plane me-1"></i> Wait CAR</div>
-                            <h3 class="mb-0 fw-bold text-dark" id="stat-car">0</h3>
-                        </div>
-                    </div>
-                    <div class="swipe-card-wrapper">
-                        <div class="kpi-card p-3 h-100" id="card-replied" onclick="setFilter('CUSTOMER_REPLIED')">
-                            <div class="text-info text-dark fw-bold small text-uppercase mb-1"><i class="fas fa-reply-all me-1"></i> Replied</div>
-                            <h3 class="mb-0 fw-bold text-dark" id="stat-reply">0</h3>
-                        </div>
-                    </div>
-                    <div class="swipe-card-wrapper">
-                        <div class="kpi-card p-3 h-100" id="card-closed" onclick="setFilter('CLOSED')">
-                            <div class="text-success fw-bold small text-uppercase mb-1"><i class="fas fa-check-circle me-1"></i> Closed</div>
-                            <h3 class="mb-0 fw-bold text-dark" id="stat-closed">0</h3>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="card table-card shadow-sm border-0 desktop-view">
                     <div class="table-responsive-custom">
@@ -92,6 +116,19 @@ $pageIcon = "fas fa-shield-alt";
 
                 <div class="mobile-view" id="mobileCaseContainer"></div>
 
+                    </div> <!-- End cases tab -->
+
+                    <!-- Tab 2: QA/QC Schedule -->
+                    <div class="tab-pane fade" id="schedule" role="tabpanel">
+                        <?php include_once './components/qa_schedule.php'; ?>
+                    </div>
+
+                    <!-- Tab 3: Concession Request -->
+                    <div class="tab-pane fade" id="concession" role="tabpanel">
+                        <?php include_once './components/concession_list.php'; ?>
+                    </div>
+                </div> <!-- End tab-content -->
+
             </div>
         </main>
     </div>
@@ -104,6 +141,8 @@ $pageIcon = "fas fa-shield-alt";
     <?php include_once './components/caseDetailOffcanvas.php'; ?>
 
     <script src="./script/qms_core.js?v=<?php echo time(); ?>"></script>
+    <?php include_once './components/qa_schedule_script.php'; ?>
+    <?php include_once './components/concession_script.php'; ?>
     
     <script>
         // ผูก overlay เข้ากับการโหลดข้อมูลเดิมที่มีอยู่

@@ -30,10 +30,12 @@ if ($is_blank) {
     $sql = "SELECT c.car_no, c.customer_name, c.product_name,
                    n.defect_type, n.defect_qty, n.defect_description, n.product_model,
                    cl.disposition, cl.final_qty, cl.cost_estimation, cl.closed_at,
-                   u.username as approved_by_name
+                   COALESCE(u.fullname, u.username) as approved_by_name,
+                   car.return_container_no -- [NEW]
             FROM QMS_CASES c WITH (NOLOCK)
             JOIN QMS_CLAIM cl WITH (NOLOCK) ON c.case_id = cl.case_id
             JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
+            LEFT JOIN QMS_CAR car WITH (NOLOCK) ON c.case_id = car.case_id -- [NEW]
             LEFT JOIN USERS u WITH (NOLOCK) ON cl.approved_by = u.id
             WHERE c.case_id = ?";
             
@@ -119,8 +121,10 @@ $html = '
 $html .= '
 <table border="0" cellpadding="5" cellspacing="0">
     <tr>
-        <td width="10%"><b>Supplier Name :</b></td>
-        <td width="90%" style="border-bottom:1px dotted #000;">' . $data['customer_name'] . '</td>
+        <td width="15%"><b>Supplier Name :</b></td>
+        <td width="45%" style="border-bottom:1px dotted #000;">' . $data['customer_name'] . '</td>
+        <td width="15%" align="right"><b>Container No :</b></td>
+        <td width="25%" style="border-bottom:1px dotted #000;">' . htmlspecialchars($data['return_container_no'] ?? '-') . '</td>
     </tr>
 </table>
 <br>';
