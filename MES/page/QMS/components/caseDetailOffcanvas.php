@@ -110,9 +110,9 @@
         padding: 16px;
     }
     
-    /* Disabled Form Styling (View Only Mode) */
-    .form-control:disabled, .form-select:disabled,
-    .form-control[readonly], .form-select[readonly] {
+    /* Disabled Form Styling (View Only Mode for Claim Tab) */
+    #content-claim .form-control:disabled, #content-claim .form-select:disabled,
+    #content-claim .form-control[readonly], #content-claim .form-select[readonly] {
         background-color: transparent !important;
         border-color: transparent !important;
         color: #212529 !important;
