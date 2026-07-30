@@ -36,7 +36,7 @@
 
 <!-- Modal Concession Form -->
 <div class="modal fade" id="concessionModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold"><i class="fas fa-file-alt me-2"></i>New Customer Concession Request</h5>

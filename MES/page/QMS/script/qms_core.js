@@ -331,6 +331,19 @@ function openCaseDetail(caseId) {
             setText('view_cost', data.cost_estimation > 0 ? Number(data.cost_estimation).toLocaleString(undefined, {minimumFractionDigits: 2}) + ' THB' : '-');
             if (data.closed_at) setText('claim_closed_date', new Date(data.closed_at).toLocaleString('th-TH'));
 
+            // Populate formCloseClaim inputs for view-only when CLOSED
+            ['1', '2', '3'].forEach(i => {
+                if(document.querySelector(`[name="verify_date_${i}"]`)) document.querySelector(`[name="verify_date_${i}"]`).value = data[`verify_date_${i}`] || '';
+                if(document.querySelector(`[name="verify_result_${i}"]`)) document.querySelector(`[name="verify_result_${i}"]`).value = data[`verify_result_${i}`] !== null ? data[`verify_result_${i}`] : '';
+            });
+            ['std_fmea', 'std_control_plan', 'std_wi'].forEach(key => {
+                if(document.querySelector(`[name="${key}"]`)) document.querySelector(`[name="${key}"]`).checked = (data[key] == 1);
+            });
+            if(document.querySelector('[name="std_others"]')) document.querySelector('[name="std_others"]').value = data.std_others || '';
+            if(document.querySelector('[name="disposition"]')) document.querySelector('[name="disposition"]').value = data.disposition || '';
+            if(document.querySelector('[name="actual_received_qty"]')) document.querySelector('[name="actual_received_qty"]').value = data.actual_received_qty || '';
+            if(document.querySelector('[name="cost_estimation"]')) document.querySelector('[name="cost_estimation"]').value = data.cost_estimation || '';
+
             manageUIZones(data);
 
         } else {
@@ -394,7 +407,26 @@ function manageUIZones(data) {
     }
     else if (status === 'CLOSED') {
         show('zone_customer_replied');
+        show('claim_form_zone'); // Show the form for traceability
         show('claim_closed_zone');
+        
+        // Disable form inputs and hide action buttons
+        const form = document.getElementById('formCloseClaim');
+        if (form) {
+            Array.from(form.elements).forEach(el => el.disabled = true);
+            if (document.getElementById('btnCloseClaimBtn')) document.getElementById('btnCloseClaimBtn').classList.add('d-none');
+            if (document.getElementById('btnRejectCAR')) document.getElementById('btnRejectCAR').classList.add('d-none');
+        }
+    }
+
+    // Reset form states if NOT closed
+    if (status !== 'CLOSED') {
+        const form = document.getElementById('formCloseClaim');
+        if (form) {
+            Array.from(form.elements).forEach(el => el.disabled = false);
+            if (document.getElementById('btnCloseClaimBtn')) document.getElementById('btnCloseClaimBtn').classList.remove('d-none');
+            if (document.getElementById('btnRejectCAR')) document.getElementById('btnRejectCAR').classList.remove('d-none');
+        }
     }
 }
 
