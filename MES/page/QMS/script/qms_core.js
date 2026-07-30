@@ -409,6 +409,7 @@ function manageUIZones(data) {
         show('zone_customer_replied');
         show('claim_form_zone'); // Show the form for traceability
         show('claim_closed_zone');
+        hide('missing_container_alert');
         
         // Disable form inputs and hide action buttons
         const form = document.getElementById('formCloseClaim');

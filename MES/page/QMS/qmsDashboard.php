@@ -91,19 +91,19 @@ $pageIcon = "fas fa-shield-alt";
                                 <input type="text" id="searchInput" class="form-control border-0 bg-white" placeholder="ค้นหา CAR No, ลูกค้า, สินค้า..." style="font-size: 0.95rem;">
                             </div>
                             <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-danger fw-bold shadow-sm d-none d-lg-block" onclick="openNCRModal()">
+                                    <i class="fas fa-plus-circle me-1"></i> แจ้งปัญหา (New NCR)
+                                </button>
                                 <div class="dropdown d-none d-lg-block">
-                                    <button class="btn btn-sm btn-secondary fw-bold shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        <i class="fas fa-print me-1"></i> Print Blank
+                                    <button class="btn btn-sm btn-secondary fw-bold shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Print Blank">
+                                        <i class="fas fa-print"></i>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                                    <ul class="dropdown-menu dropdown-menu-end shadow" style="z-index: 1050;">
                                         <li><a class="dropdown-item fw-bold text-secondary" href="print_ncr.php?mode=blank" target="_blank"><i class="fas fa-file-alt me-2 text-danger"></i> Blank NCR</a></li>
                                         <li><a class="dropdown-item fw-bold text-secondary" href="print_car.php?mode=blank" target="_blank"><i class="fas fa-file-signature me-2 text-warning"></i> Blank CAR</a></li>
                                         <li><a class="dropdown-item fw-bold text-secondary" href="print_claim.php?mode=blank" target="_blank"><i class="fas fa-clipboard-check me-2 text-success"></i> Blank Claim</a></li>
                                     </ul>
                                 </div>
-                                <button class="btn btn-sm btn-danger fw-bold shadow-sm d-none d-lg-block" onclick="openNCRModal()">
-                                    <i class="fas fa-plus-circle me-1"></i> แจ้งปัญหา (New NCR)
-                                </button>
                             </div>
                         </div>
 

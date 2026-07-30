@@ -265,6 +265,34 @@
                     <p class="text-secondary fw-bold small mb-0">ต้องรอให้ลูกค้าส่งแนวทางแก้ไข(8D) <br>ก่อนถึงจะสามารถปิดเคลมได้</p>
                 </div>
 
+                <div id="claim_closed_zone" class="d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-start border-4 border-success ps-2">
+                        <h6 class="fw-bold text-dark mb-0">ข้อมูลการปิดงาน (Claim Closed)</h6>
+                        <button class="btn btn-sm btn-light border fw-bold text-secondary" onclick="printDoc('claim')"><i class="fas fa-print text-primary"></i> Print</button>
+                    </div>
+                    
+                    <div class="border rounded bg-success bg-opacity-10 p-4 text-center mb-4 border-success border-opacity-25 shadow-sm">
+                        <i class="fas fa-check-circle fa-3x text-success mb-2"></i>
+                        <h5 class="fw-bold text-success mb-1">เคสนี้ถูกปิดสมบูรณ์แล้ว</h5>
+                        <div class="text-secondary fw-bold mt-2"><i class="far fa-clock me-1"></i><span id="claim_closed_date">-</span></div>
+                    </div>
+
+                    <div class="row g-3 px-2">
+                        <div class="col-6">
+                            <div class="info-label">Disposition</div>
+                            <div class="info-value text-primary fs-5" id="view_disposition">-</div>
+                        </div>
+                        <div class="col-6 text-end">
+                            <div class="info-label">Final Qty</div>
+                            <div class="info-value fs-5 fw-bold" id="view_final_qty">-</div>
+                        </div>
+                        <div class="col-12 mt-4 text-center border-top pt-4">
+                            <div class="info-label">Total Cost Estimation</div>
+                            <div class="info-value text-danger display-6 fw-bold" id="view_cost">-</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="claim_form_zone" class="d-none">
                     <div class="mb-3 border-start border-4 border-warning ps-2">
                         <h6 class="fw-bold text-dark mb-0">ตรวจสอบและรับของ (Review & Receive)</h6>
@@ -401,32 +429,6 @@
                     </form>
                 </div>
 
-                <div id="claim_closed_zone" class="d-none">
-                    <div class="d-flex justify-content-between align-items-center mb-3 border-start border-4 border-success ps-2">
-                        <h6 class="fw-bold text-dark mb-0">ข้อมูลการปิดงาน (Claim Closed)</h6>
-                        <button class="btn btn-sm btn-light border fw-bold text-secondary" onclick="printDoc('claim')"><i class="fas fa-print text-primary"></i> Print</button>
-                    </div>
-                    
-                    <div class="border rounded bg-success bg-opacity-10 p-4 text-center mb-4 border-success border-opacity-25 shadow-sm">
-                        <i class="fas fa-check-circle fa-3x text-success mb-2"></i>
-                        <h5 class="fw-bold text-success mb-1">เคสนี้ถูกปิดสมบูรณ์แล้ว</h5>
-                        <div class="text-secondary fw-bold mt-2"><i class="far fa-clock me-1"></i><span id="claim_closed_date">-</span></div>
-                    </div>
-
-                    <div class="row g-3 px-2">
-                        <div class="col-6">
-                            <div class="info-label">Disposition</div>
-                            <div class="info-value text-primary fs-5" id="view_disposition">-</div>
-                        </div>
-                        <div class="col-6 text-end">
-                            <div class="info-label">Final Qty</div>
-                            <div class="info-value fs-5 fw-bold" id="view_final_qty">-</div>
-                        </div>
-                        <div class="col-12 mt-4 text-center border-top pt-4">
-                            <div class="info-label">Total Cost Estimation</div>
-                            <div class="info-value text-danger display-6 fw-bold" id="view_cost">-</div>
-                        </div>
-                    </div>
                 </div>
 
             </div>
