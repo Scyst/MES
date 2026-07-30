@@ -16,10 +16,11 @@ try {
                     c.case_id, c.car_no, c.case_date, c.customer_name, 
                     c.product_name, c.current_status,
                     n.defect_type, n.defect_qty,
-                    COALESCE(u.fullname, u.username) as created_by_name
+                    COALESCE(m.name_th, u.fullname, u.username) as created_by_name
                 FROM QMS_CASES c WITH (NOLOCK)
                 LEFT JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
                 LEFT JOIN USERS u WITH (NOLOCK) ON c.created_by = u.id
+                LEFT JOIN MANPOWER_EMPLOYEES m WITH (NOLOCK) ON u.username = m.emp_id
                 WHERE 1=1 ";
         $params = [];
 
@@ -58,7 +59,7 @@ try {
         if (!$case_id) throw new Exception("Missing Case ID");
 
         $sql = "SELECT 
-                    c.case_id, c.car_no, c.case_date, c.current_status, c.customer_name, c.product_name, COALESCE(u.fullname, u.username, c.issue_by_name) as issue_by_name,
+                    c.case_id, c.car_no, c.case_date, c.current_status, c.customer_name, c.product_name, COALESCE(m.name_th, u.fullname, u.username, c.issue_by_name) as issue_by_name,
                     n.defect_type, n.defect_qty, n.defect_description, n.production_date, n.lot_no, n.found_shift,
                     n.invoice_no, n.issuer_position, n.found_by_type, n.production_line, n.product_model, 
                     n.prelim_disposition, n.prelim_remark,
@@ -77,6 +78,7 @@ try {
                 LEFT JOIN QMS_CAR car WITH (NOLOCK) ON c.case_id = car.case_id
                 LEFT JOIN QMS_CLAIM cl WITH (NOLOCK) ON c.case_id = cl.case_id
                 LEFT JOIN USERS u WITH (NOLOCK) ON c.created_by = u.id
+                LEFT JOIN MANPOWER_EMPLOYEES m WITH (NOLOCK) ON u.username = m.emp_id
                 WHERE c.case_id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$case_id]);

@@ -32,13 +32,14 @@ if ($is_blank) {
     // 1. ระบุชื่อตารางใหม่ตรงๆ และใส่ WITH (NOLOCK)
     // [แก้ไข] ดึง c.issue_by_name และ n.prelim_disposition, n.prelim_remark ออกมาด้วย
     $sql = "SELECT c.car_no, c.customer_name, c.product_name, c.case_date as found_date,
-                   COALESCE(u.fullname, u.username, c.issue_by_name) as issuer_name, 
+                   COALESCE(m.name_th, u.fullname, u.username, c.issue_by_name) as issuer_name, 
                    n.defect_type, n.defect_qty, n.defect_description, n.production_date, n.lot_no, n.found_shift, 
                    n.product_model, n.production_line,
                    n.prelim_disposition, n.prelim_remark
             FROM QMS_CASES c WITH (NOLOCK)
-            JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
+            LEFT JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
             LEFT JOIN USERS u WITH (NOLOCK) ON c.created_by = u.id
+            LEFT JOIN MANPOWER_EMPLOYEES m WITH (NOLOCK) ON u.username = m.emp_id
             WHERE c.case_id = ?";
             
     $stmt = $pdo->prepare($sql);

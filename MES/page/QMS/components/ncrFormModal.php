@@ -111,7 +111,15 @@
                                     <div class="row bg-primary bg-opacity-10 p-2 mx-0 rounded">
                                         <div class="col-md-6 mb-1">
                                             <label class="form-label small fw-bold text-primary mb-1">ชื่อผู้แจ้ง <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control form-control-sm border-primary fw-bold" name="issue_by_name" required value="<?php echo $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? ''; ?>">
+                                            <?php 
+                                            require_once __DIR__ . '/../../db.php';
+                                            $u_id = $_SESSION['user']['id'] ?? 0;
+                                            $stmt_name = $pdo->prepare("SELECT COALESCE(m.name_th, u.fullname, u.username) as real_name FROM USERS u LEFT JOIN MANPOWER_EMPLOYEES m ON u.username = m.emp_id WHERE u.id = ?");
+                                            $stmt_name->execute([$u_id]);
+                                            $real_name_row = $stmt_name->fetch();
+                                            $real_person_name = $real_name_row ? $real_name_row['real_name'] : ($_SESSION['user']['fullname'] ?? '');
+                                            ?>
+                                            <input type="text" class="form-control form-control-sm border-primary fw-bold" name="issue_by_name" required value="<?php echo htmlspecialchars($real_person_name); ?>">
                                         </div>
                                         <div class="col-md-6 mb-1">
                                             <label class="form-label small fw-bold text-primary mb-1">ตำแหน่ง</label>

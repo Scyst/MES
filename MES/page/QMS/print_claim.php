@@ -30,13 +30,14 @@ if ($is_blank) {
     $sql = "SELECT c.car_no, c.customer_name, c.product_name,
                    n.defect_type, n.defect_qty, n.defect_description, n.product_model,
                    cl.disposition, cl.final_qty, cl.cost_estimation, cl.closed_at,
-                   COALESCE(u.fullname, u.username) as approved_by_name,
-                   car.return_container_no -- [NEW]
+                   COALESCE(m.name_th, u.fullname, u.username) as approved_by_name,
+                   car.return_container_no
             FROM QMS_CASES c WITH (NOLOCK)
             JOIN QMS_CLAIM cl WITH (NOLOCK) ON c.case_id = cl.case_id
             JOIN QMS_NCR n WITH (NOLOCK) ON c.case_id = n.case_id
-            LEFT JOIN QMS_CAR car WITH (NOLOCK) ON c.case_id = car.case_id -- [NEW]
+            LEFT JOIN QMS_CAR car WITH (NOLOCK) ON c.case_id = car.case_id
             LEFT JOIN USERS u WITH (NOLOCK) ON cl.approved_by = u.id
+            LEFT JOIN MANPOWER_EMPLOYEES m WITH (NOLOCK) ON u.username = m.emp_id
             WHERE c.case_id = ?";
             
     $stmt = $pdo->prepare($sql);

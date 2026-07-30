@@ -85,7 +85,11 @@ try {
         
         if (!$id) throw new Exception("Missing ID");
         
-        $approver_name = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'System';
+        $u_id = $_SESSION['user']['id'] ?? 0;
+        $stmt_name = $pdo->prepare("SELECT COALESCE(m.name_th, u.fullname, u.username) as real_name FROM USERS u LEFT JOIN MANPOWER_EMPLOYEES m ON u.username = m.emp_id WHERE u.id = ?");
+        $stmt_name->execute([$u_id]);
+        $real_name_row = $stmt_name->fetch();
+        $approver_name = $real_name_row ? $real_name_row['real_name'] : ($_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'System');
 
         $field_name = "approver_{$approver_level}_name";
         $field_status = "approver_{$approver_level}_status";

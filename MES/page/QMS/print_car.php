@@ -44,7 +44,7 @@ if ($is_blank) {
                    n.lot_no, n.production_date,
                    n.product_model, n.production_line,
                    n.invoice_no, n.issuer_position, n.found_by_type, -- [NEW]
-                   car.*, COALESCE(u.fullname, u.username) as issuer_name,
+                   car.*, COALESCE(m.name_th, u.fullname, u.username) as issuer_name,
                    cl.verify_date_1, cl.verify_result_1, cl.verify_date_2, cl.verify_result_2, -- [NEW]
                    cl.verify_date_3, cl.verify_result_3, cl.std_fmea, cl.std_control_plan, -- [NEW]
                    cl.std_wi, cl.std_others -- [NEW]
@@ -53,6 +53,7 @@ if ($is_blank) {
             LEFT JOIN QMS_CAR car WITH (NOLOCK) ON c.case_id = car.case_id
             LEFT JOIN QMS_CLAIM cl WITH (NOLOCK) ON c.case_id = cl.case_id
             LEFT JOIN USERS u WITH (NOLOCK) ON c.created_by = u.id
+            LEFT JOIN MANPOWER_EMPLOYEES m WITH (NOLOCK) ON u.username = m.emp_id
             WHERE c.case_id = ?";
             
     $stmt = $pdo->prepare($sql);

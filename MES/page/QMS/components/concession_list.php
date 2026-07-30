@@ -62,7 +62,15 @@
                         <!-- Core info -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label small fw-bold">Person Name</label>
-                            <input type="text" class="form-control form-control-sm" name="person_name" value="<?php echo $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? ''; ?>" required>
+                            <?php 
+                            require_once __DIR__ . '/../../db.php';
+                            $u_id = $_SESSION['user']['id'] ?? 0;
+                            $stmt_name = $pdo->prepare("SELECT COALESCE(m.name_th, u.fullname, u.username) as real_name FROM USERS u LEFT JOIN MANPOWER_EMPLOYEES m ON u.username = m.emp_id WHERE u.id = ?");
+                            $stmt_name->execute([$u_id]);
+                            $real_name_row = $stmt_name->fetch();
+                            $real_person_name = $real_name_row ? $real_name_row['real_name'] : ($_SESSION['user']['fullname'] ?? '');
+                            ?>
+                            <input type="text" class="form-control form-control-sm" name="person_name" value="<?php echo htmlspecialchars($real_person_name); ?>" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label small fw-bold">Subject (เรื่อง)</label>
