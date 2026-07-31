@@ -27,33 +27,81 @@
     </div>
 </div>
 
-<div class="d-flex flex-wrap mb-3 d-print-none align-items-center justify-content-between gap-2">
-    <div class="d-flex flex-wrap align-items-center gap-2">
-        <div class="input-group shadow-sm" style="width: auto; border-radius: 6px; overflow: hidden;">
-            <button class="btn btn-light border-0 text-primary px-3" onclick="changeScheduleDate(-1)" title="Previous Day"><i class="fas fa-chevron-left"></i></button>
-            <input type="date" id="scheduleDateFilter" class="form-control border-0 bg-white text-center fw-bold text-dark px-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule('date')" style="font-size: 0.95rem; width: 140px; cursor: pointer;">
-            <button class="btn btn-light border-0 text-primary px-3" onclick="changeScheduleDate(1)" title="Next Day"><i class="fas fa-chevron-right"></i></button>
-        </div>
+<style>
+.date-filter-bar {
+    background: #ffffff;
+    padding: 6px;
+    border-radius: 50px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border: 1px solid #e9ecef;
+}
+.date-filter-label {
+    color: #6c757d;
+    border: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    margin: 0;
+}
+.date-filter-label:hover {
+    color: #495057;
+    background-color: rgba(0,0,0,0.03);
+}
+.date-filter-check:checked + .date-filter-label {
+    background-color: #0d6efd;
+    color: white;
+    box-shadow: 0 2px 6px rgba(13,110,253,0.3);
+}
+.date-nav-btn {
+    transition: all 0.2s;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.date-nav-btn:hover {
+    color: #0d6efd !important;
+    background-color: rgba(13,110,253,0.1);
+}
+</style>
+
+<div class="d-flex flex-wrap mb-4 d-print-none align-items-center justify-content-between gap-3">
+    <!-- Modern Filter Bar -->
+    <div class="d-flex align-items-center date-filter-bar">
         
-        <div class="btn-group shadow-sm" role="group">
-            <input type="radio" class="btn-check" name="dateFilterGroup" id="btnDate_today" autocomplete="off" onchange="setScheduleDateToday()" checked>
-            <label class="btn btn-outline-secondary btn-sm fw-bold px-3 bg-white" for="btnDate_today">Today</label>
+        <!-- Quick Filters -->
+        <div class="d-flex gap-1 pe-2 border-end">
+            <input type="radio" class="btn-check date-filter-check" name="dateFilterGroup" id="btnDate_today" autocomplete="off" onchange="setScheduleDateToday()" checked>
+            <label class="btn btn-sm rounded-pill fw-bold px-3 date-filter-label" for="btnDate_today">Today</label>
 
-            <input type="radio" class="btn-check" name="dateFilterGroup" id="btnDate_this_week" autocomplete="off" onchange="loadQASchedule('this_week')">
-            <label class="btn btn-outline-secondary btn-sm fw-bold px-3 bg-white" for="btnDate_this_week">This Wk</label>
+            <input type="radio" class="btn-check date-filter-check" name="dateFilterGroup" id="btnDate_this_week" autocomplete="off" onchange="loadQASchedule('this_week')">
+            <label class="btn btn-sm rounded-pill fw-bold px-3 date-filter-label" for="btnDate_this_week">This Wk</label>
 
-            <input type="radio" class="btn-check" name="dateFilterGroup" id="btnDate_this_month" autocomplete="off" onchange="loadQASchedule('this_month')">
-            <label class="btn btn-outline-secondary btn-sm fw-bold px-3 bg-white" for="btnDate_this_month">This Mo</label>
+            <input type="radio" class="btn-check date-filter-check" name="dateFilterGroup" id="btnDate_this_month" autocomplete="off" onchange="loadQASchedule('this_month')">
+            <label class="btn btn-sm rounded-pill fw-bold px-3 date-filter-label" for="btnDate_this_month">This Mo</label>
 
-            <input type="radio" class="btn-check" name="dateFilterGroup" id="btnDate_last_month" autocomplete="off" onchange="loadQASchedule('last_month')">
-            <label class="btn btn-outline-secondary btn-sm fw-bold px-3 bg-white" for="btnDate_last_month">Last Mo</label>
+            <input type="radio" class="btn-check date-filter-check" name="dateFilterGroup" id="btnDate_last_month" autocomplete="off" onchange="loadQASchedule('last_month')">
+            <label class="btn btn-sm rounded-pill fw-bold px-3 date-filter-label" for="btnDate_last_month">Last Mo</label>
+        </div>
+
+        <!-- Custom Date Picker -->
+        <div class="d-flex align-items-center ps-2 pe-1">
+            <button class="btn btn-sm text-muted border-0 date-nav-btn p-0" onclick="changeScheduleDate(-1)" title="Previous Day">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <input type="date" id="scheduleDateFilter" class="form-control form-control-sm border-0 bg-transparent text-center fw-bold text-dark px-1 mx-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule('date')" style="font-size: 0.95rem; width: 135px; cursor: pointer; box-shadow: none;">
+            <button class="btn btn-sm text-muted border-0 date-nav-btn p-0" onclick="changeScheduleDate(1)" title="Next Day">
+                <i class="fas fa-chevron-right"></i>
+            </button>
         </div>
     </div>
+    
     <div class="d-flex gap-2 ms-auto">
-        <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" onclick="window.print()">
-            <i class="fas fa-print me-1"></i> Print Schedule
+        <button class="btn btn-sm btn-outline-secondary rounded-pill fw-bold shadow-sm px-3" onclick="window.print()">
+            <i class="fas fa-print me-1"></i> Print
         </button>
-        <button class="btn btn-sm btn-primary fw-bold shadow-sm d-none" onclick="openAddScheduleModal()">
+        <button class="btn btn-sm btn-primary rounded-pill fw-bold shadow-sm px-3 d-none" onclick="openAddScheduleModal()">
             <i class="fas fa-plus-circle me-1"></i> Add PO
         </button>
     </div>
