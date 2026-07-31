@@ -41,22 +41,38 @@
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     border: 1px solid #e9ecef;
 }
+.date-filter-btn {
+    border-radius: 40px !important;
+    transition: all 0.3s ease;
+}
 .date-filter-label {
-    color: #6c757d;
-    border: none;
-    transition: all 0.2s ease;
+    border-radius: 40px !important;
     cursor: pointer;
-    margin: 0;
+    font-size: 0.85rem;
+    padding: 6px 16px;
+    transition: all 0.2s ease;
+    border: none;
+    color: #6c757d;
+    background: transparent;
+    font-weight: 600;
 }
-.date-filter-label:hover {
-    color: #495057;
-    background-color: rgba(0,0,0,0.03);
-}
-.date-filter-check:checked + .date-filter-label {
+.btn-check:checked + .date-filter-label {
     background-color: #0d6efd;
     color: white;
-    box-shadow: 0 2px 6px rgba(13,110,253,0.3);
+    box-shadow: 0 2px 8px rgba(13,110,253,0.3);
 }
+.date-filter-label:hover:not(.active) {
+    background-color: #f8f9fa;
+    color: #495057;
+}
+
+.table-overdue td {
+    background-color: #fff0f0 !important;
+}
+.table-approaching td {
+    background-color: #fff9e6 !important;
+}
+
 .date-nav-btn {
     transition: all 0.2s;
     border-radius: 50%;

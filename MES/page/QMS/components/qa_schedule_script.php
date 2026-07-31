@@ -42,8 +42,8 @@ function loadQASchedule(filterType = null) {
                 
                 const todayDate = new Date();
                 todayDate.setHours(0,0,0,0);
-                const in2Days = new Date(todayDate);
-                in2Days.setDate(todayDate.getDate() + 2);
+                const in7Days = new Date(todayDate);
+                in7Days.setDate(todayDate.getDate() + 7);
 
                 let html = '';
                 res.data.forEach(po => {
@@ -60,9 +60,9 @@ function loadQASchedule(filterType = null) {
                         const lDate = new Date(po.loading_date);
                         lDate.setHours(0,0,0,0);
                         if (lDate <= todayDate) {
-                            rowClass = 'table-danger';
-                        } else if (lDate <= in2Days) {
-                            rowClass = 'table-warning';
+                            rowClass = 'table-overdue';
+                        } else if (lDate <= in7Days) {
+                            rowClass = 'table-approaching';
                         }
                     }
 
