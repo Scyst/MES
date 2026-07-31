@@ -327,7 +327,7 @@ $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Ne
             <tr class="bg-header">
                 <td colspan="4">
                     4. Approver's Comments / Signatures<br>
-                    <span style="font-weight:normal; font-size:11px;">By Signing this approval, it is agreed that OTI will take full responsibility for any claims and damages arise from this adaptation</span>
+                    <span style="font-weight:normal; font-size:11px;">By Signing this approval, it is agreed that <?php echo $is_blank || empty($data['request_to']) ? '....................' : htmlspecialchars($data['request_to']); ?> will take full responsibility for any claims and damages arise from this adaptation</span>
                 </td>
             </tr>
             <tr>
