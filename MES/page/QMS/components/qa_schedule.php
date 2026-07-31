@@ -1,8 +1,12 @@
 <!-- page/QMS/components/qa_schedule.php -->
 <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
-    <div class="input-group shadow-sm" style="max-width: 250px; border-radius: 6px; overflow: hidden;">
-        <span class="input-group-text bg-white border-0"><i class="fas fa-calendar-alt text-muted"></i></span>
-        <input type="date" id="scheduleDateFilter" class="form-control border-0 bg-white" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule()" style="font-size: 0.95rem;">
+    <div class="d-flex align-items-center gap-2">
+        <div class="input-group shadow-sm" style="width: auto; border-radius: 6px; overflow: hidden;">
+            <button class="btn btn-light border-0 text-primary px-3" onclick="changeScheduleDate(-1)" title="Previous Day"><i class="fas fa-chevron-left"></i></button>
+            <input type="date" id="scheduleDateFilter" class="form-control border-0 bg-white text-center fw-bold text-dark px-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule()" style="font-size: 0.95rem; width: 140px; cursor: pointer;">
+            <button class="btn btn-light border-0 text-primary px-3" onclick="changeScheduleDate(1)" title="Next Day"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" onclick="setScheduleDateToday()">Today</button>
     </div>
     <button class="btn btn-sm btn-primary fw-bold shadow-sm" onclick="openAddScheduleModal()">
         <i class="fas fa-plus-circle me-1"></i> Add PO to Schedule

@@ -182,4 +182,32 @@ document.addEventListener('DOMContentLoaded', () => {
         loadQASchedule();
     }
 });
+
+function changeScheduleDate(days) {
+    const input = document.getElementById('scheduleDateFilter');
+    if (!input.value) input.value = new Date().toISOString().split('T')[0];
+    
+    const date = new Date(input.value);
+    date.setDate(date.getDate() + days);
+    
+    // Format YYYY-MM-DD
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    
+    input.value = `${yyyy}-${mm}-${dd}`;
+    loadQASchedule();
+}
+
+function setScheduleDateToday() {
+    const input = document.getElementById('scheduleDateFilter');
+    
+    const date = new Date();
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    
+    input.value = `${yyyy}-${mm}-${dd}`;
+    loadQASchedule();
+}
 </script>
