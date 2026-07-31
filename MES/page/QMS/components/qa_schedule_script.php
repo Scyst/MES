@@ -171,16 +171,25 @@ function removeSchedule(id) {
 function openUpdateModal(po) {
     document.getElementById('inspect_po_id').value = po.id;
     document.getElementById('inspect_po_number').value = po.po_number + ' - ' + po.sku;
+    let status = po.inspection_status ? po.inspection_status.toString().trim().toUpperCase() : '';
+    if (!status || status === 'NULL') status = 'WAITING';
     
-    const status = (po.inspection_status || 'WAITING').trim().toUpperCase();
-    document.querySelectorAll(`input[name="inspection_status"]`).forEach(el => {
-        el.checked = (el.value === status);
-    });
+    const statusRadio = document.getElementById('status_' + status.toLowerCase().replace(' ', '_'));
+    if (statusRadio) {
+        statusRadio.checked = true;
+    } else {
+        document.querySelectorAll(`input[name="inspection_status"]`).forEach(el => el.checked = false);
+    }
     
-    const result = (po.inspection_result || '').trim().toUpperCase();
-    document.querySelectorAll(`input[name="inspection_result"]`).forEach(el => {
-        el.checked = (el.value === result);
-    });
+    let result = po.inspection_result ? po.inspection_result.toString().trim().toUpperCase() : '';
+    if (result === 'NULL') result = '';
+    
+    if (result) {
+        const resultRadio = document.getElementById('result_' + result.toLowerCase());
+        if (resultRadio) resultRadio.checked = true;
+    } else {
+        document.querySelectorAll(`input[name="inspection_result"]`).forEach(el => el.checked = false);
+    }
     
     document.getElementById('inspect_remark').value = po.inspection_remark || '';
     
