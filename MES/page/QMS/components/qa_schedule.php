@@ -8,9 +8,15 @@
         </div>
     </div>
     <div class="swipe-card-wrapper flex-fill">
+        <div class="kpi-card p-3 h-100 bg-white w-100" style="border-left: 4px solid #6c757d;">
+            <div class="text-secondary fw-bold small text-uppercase mb-1"><i class="fas fa-clock me-1"></i> Waiting</div>
+            <h3 class="mb-0 fw-bold text-dark" id="stat-waiting">0</h3>
+        </div>
+    </div>
+    <div class="swipe-card-wrapper flex-fill">
         <div class="kpi-card p-3 h-100 bg-white w-100" style="border-left: 4px solid var(--bs-warning);">
-            <div class="text-warning text-dark fw-bold small text-uppercase mb-1"><i class="fas fa-hourglass-half me-1"></i> Pending</div>
-            <h3 class="mb-0 fw-bold text-dark" id="stat-pending">0</h3>
+            <div class="text-warning text-dark fw-bold small text-uppercase mb-1"><i class="fas fa-spinner fa-spin me-1"></i> In Progress</div>
+            <h3 class="mb-0 fw-bold text-dark" id="stat-inprogress">0</h3>
         </div>
     </div>
     <div class="swipe-card-wrapper flex-fill">
@@ -66,7 +72,7 @@
 }
 </style>
 
-<div class="d-flex flex-wrap mb-4 d-print-none align-items-center justify-content-between gap-3">
+<div class="d-flex flex-wrap mb-2 d-print-none align-items-center justify-content-between gap-3">
     <!-- Modern Filter Bar -->
     <div class="d-flex align-items-center date-filter-bar">
         

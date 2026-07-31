@@ -29,7 +29,8 @@ function loadQASchedule(filterType = null) {
             if(res.success) {
                 if(res.stats) {
                     document.getElementById('stat-total').innerText = res.stats.total;
-                    document.getElementById('stat-pending').innerText = res.stats.pending;
+                    document.getElementById('stat-waiting').innerText = res.stats.waiting;
+                    document.getElementById('stat-inprogress').innerText = res.stats.in_progress;
                     document.getElementById('stat-passed').innerText = res.stats.passed;
                     document.getElementById('stat-failed').innerText = res.stats.failed;
                 }

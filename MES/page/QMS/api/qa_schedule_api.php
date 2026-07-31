@@ -46,7 +46,8 @@ try {
 
         $stats = [
             'total' => count($data),
-            'pending' => 0,
+            'waiting' => 0,
+            'in_progress' => 0,
             'passed' => 0,
             'failed' => 0
         ];
@@ -57,7 +58,11 @@ try {
             } elseif ($row['inspection_result'] === 'FAIL') {
                 $stats['failed']++;
             } else {
-                $stats['pending']++;
+                if ($row['inspection_status'] === 'IN_PROGRESS') {
+                    $stats['in_progress']++;
+                } else {
+                    $stats['waiting']++;
+                }
             }
         }
 
