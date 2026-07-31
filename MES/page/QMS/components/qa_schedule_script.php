@@ -171,8 +171,17 @@ function removeSchedule(id) {
 function openUpdateModal(po) {
     document.getElementById('inspect_po_id').value = po.id;
     document.getElementById('inspect_po_number').value = po.po_number + ' - ' + po.sku;
-    document.getElementById('inspect_status').value = po.inspection_status || '';
-    document.getElementById('inspect_result').value = po.inspection_result || '';
+    
+    const status = po.inspection_status || 'WAITING';
+    document.querySelectorAll(`input[name="inspection_status"]`).forEach(el => {
+        el.checked = (el.value === status);
+    });
+    
+    const result = po.inspection_result || '';
+    document.querySelectorAll(`input[name="inspection_result"]`).forEach(el => {
+        el.checked = (el.value === result);
+    });
+    
     document.getElementById('inspect_remark').value = po.remark || '';
     
     // Bind remove button inside the modal

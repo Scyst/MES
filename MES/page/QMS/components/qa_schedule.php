@@ -114,7 +114,7 @@
 
 <!-- Modal Update Inspection Result -->
 <div class="modal fade" id="updateInspectionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow border-0">
             <div class="modal-header bg-white border-bottom">
                 <h5 class="modal-title fw-bold text-dark"><i class="fas fa-edit me-2 text-primary"></i>Update Inspection Result</h5>
@@ -132,20 +132,26 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label fw-bold small text-muted">Status <span class="text-danger">*</span></label>
-                            <select class="form-select" name="inspection_status" id="inspect_status" required>
-                                <option value="">-- Select Status --</option>
-                                <option value="WAITING">WAITING</option>
-                                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                                <option value="DONE">DONE</option>
-                            </select>
+                            <div class="d-flex gap-2">
+                                <input type="radio" class="btn-check" name="inspection_status" id="status_waiting" value="WAITING" required>
+                                <label class="btn btn-outline-secondary btn-sm flex-fill fw-bold" for="status_waiting">WAITING</label>
+
+                                <input type="radio" class="btn-check" name="inspection_status" id="status_in_progress" value="IN_PROGRESS">
+                                <label class="btn btn-outline-warning btn-sm flex-fill fw-bold text-dark" for="status_in_progress">IN PROGRESS</label>
+
+                                <input type="radio" class="btn-check" name="inspection_status" id="status_done" value="DONE">
+                                <label class="btn btn-outline-success btn-sm flex-fill fw-bold" for="status_done">DONE</label>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold small text-muted">Result</label>
-                            <select class="form-select" name="inspection_result" id="inspect_result">
-                                <option value="">-- Select Result --</option>
-                                <option value="PASS" class="text-success fw-bold">PASS</option>
-                                <option value="FAIL" class="text-danger fw-bold">FAIL</option>
-                            </select>
+                            <div class="d-flex gap-2">
+                                <input type="radio" class="btn-check" name="inspection_result" id="result_pass" value="PASS">
+                                <label class="btn btn-outline-success btn-sm flex-fill fw-bold" for="result_pass"><i class="fas fa-check me-1"></i>PASS</label>
+
+                                <input type="radio" class="btn-check" name="inspection_result" id="result_fail" value="FAIL">
+                                <label class="btn btn-outline-danger btn-sm flex-fill fw-bold" for="result_fail"><i class="fas fa-times me-1"></i>FAIL</label>
+                            </div>
                         </div>
                     </div>
 
