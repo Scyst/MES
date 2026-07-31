@@ -92,7 +92,7 @@ try {
                 s.is_loading_done, s.is_production_done, 
                 s.is_confirmed, s.custom_order, s.created_at,
                 s.production_date, s.production_end_date, s.loading_date, s.inspection_date,
-                s.inspection_status, s.ticket_number, s.team
+                s.inspection_status, s.inspection_result, s.ticket_number, s.team
             ";
 
             $sql = "SELECT $columns, 

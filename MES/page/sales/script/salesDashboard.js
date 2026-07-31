@@ -263,7 +263,8 @@ function renderTable(searchTerm) {
         const isConf = item.is_confirmed == 1;
         
         const inspRaw = (item.inspection_status || '').toLowerCase();
-        const isInsp = (inspRaw === 'pass' || inspRaw === 'ok' || inspRaw === 'done' || inspRaw === 'yes');
+        const inspResRaw = (item.inspection_result || '').toLowerCase();
+        const isInsp = (inspRaw === 'done' && inspResRaw === 'pass');
 
         const loadDateObj = getDateObj(item.loading_date);
         const isDelay = loadDateObj && loadDateObj < todayDate && !isLoad;
