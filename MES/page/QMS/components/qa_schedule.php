@@ -129,29 +129,28 @@
                         <input type="text" id="inspect_po_number" class="form-control fw-bold bg-white" readonly>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold small text-muted">Status <span class="text-danger">*</span></label>
-                            <div class="d-flex gap-2">
-                                <input type="radio" class="btn-check" name="inspection_status" id="status_waiting" value="WAITING" required>
-                                <label class="btn btn-outline-secondary btn-sm flex-fill fw-bold" for="status_waiting">WAITING</label>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Status <span class="text-danger">*</span></label>
+                        <div class="btn-group w-100 shadow-sm" role="group">
+                            <input type="radio" class="btn-check" name="inspection_status" id="status_waiting" value="WAITING" required>
+                            <label class="btn btn-outline-secondary" for="status_waiting">WAITING</label>
 
-                                <input type="radio" class="btn-check" name="inspection_status" id="status_in_progress" value="IN_PROGRESS">
-                                <label class="btn btn-outline-warning btn-sm flex-fill fw-bold text-dark" for="status_in_progress">IN PROGRESS</label>
+                            <input type="radio" class="btn-check" name="inspection_status" id="status_in_progress" value="IN_PROGRESS">
+                            <label class="btn btn-outline-warning text-dark" for="status_in_progress">IN PROGRESS</label>
 
-                                <input type="radio" class="btn-check" name="inspection_status" id="status_done" value="DONE">
-                                <label class="btn btn-outline-success btn-sm flex-fill fw-bold" for="status_done">DONE</label>
-                            </div>
+                            <input type="radio" class="btn-check" name="inspection_status" id="status_done" value="DONE">
+                            <label class="btn btn-outline-success" for="status_done">DONE</label>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold small text-muted">Result</label>
-                            <div class="d-flex gap-2">
-                                <input type="radio" class="btn-check" name="inspection_result" id="result_pass" value="PASS">
-                                <label class="btn btn-outline-success btn-sm flex-fill fw-bold" for="result_pass"><i class="fas fa-check me-1"></i>PASS</label>
+                    </div>
 
-                                <input type="radio" class="btn-check" name="inspection_result" id="result_fail" value="FAIL">
-                                <label class="btn btn-outline-danger btn-sm flex-fill fw-bold" for="result_fail"><i class="fas fa-times me-1"></i>FAIL</label>
-                            </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Result</label>
+                        <div class="btn-group w-100 shadow-sm" role="group">
+                            <input type="radio" class="btn-check" name="inspection_result" id="result_pass" value="PASS">
+                            <label class="btn btn-outline-success" for="result_pass"><i class="fas fa-check-circle me-1"></i> PASS</label>
+
+                            <input type="radio" class="btn-check" name="inspection_result" id="result_fail" value="FAIL">
+                            <label class="btn btn-outline-danger" for="result_fail"><i class="fas fa-times-circle me-1"></i> FAIL</label>
                         </div>
                     </div>
 
