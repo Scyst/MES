@@ -475,6 +475,7 @@ async function toggleCheck(id, field, val) {
                 }
                 else if (field === 'insp') {
                     row.inspection_status = dbVal ? 'DONE' : 'WAITING';
+                    row.inspection_result = dbVal ? 'PASS' : null;
                 }
             }
             // รีเฟรชตารางด้วยข้อมูลที่ถูกอัปเดตใน Memory
