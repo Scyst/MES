@@ -9,16 +9,39 @@ $action = $_REQUEST['action'] ?? '';
 try {
     if ($action === 'get_schedule') {
         $date = $_GET['date'] ?? date('Y-m-d');
+        $range = $_GET['range'] ?? '';
         
         try {
             $pdo->exec("ALTER TABLE SALES_ORDERS ADD inspection_remark NVARCHAR(MAX) NULL");
         } catch(Exception $e) {}
 
         $sql = "SELECT id, po_number, sku, description, color, quantity, dc_location, loading_date, inspection_date, inspection_status, inspection_result, is_confirmed, inspection_remark, qa_inspector 
-                FROM SALES_ORDERS WITH (NOLOCK)
-                WHERE CAST(inspection_date AS DATE) = ?";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$date]);
+                FROM SALES_ORDERS WITH (NOLOCK) ";
+                
+        if ($range === 'this_week') {
+            $start = date('Y-m-d', strtotime('monday this week'));
+            $end = date('Y-m-d', strtotime('sunday this week'));
+            $sql .= "WHERE CAST(inspection_date AS DATE) >= ? AND CAST(inspection_date AS DATE) <= ? ORDER BY inspection_date ASC";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$start, $end]);
+        } else if ($range === 'this_month') {
+            $start = date('Y-m-01');
+            $end = date('Y-m-t');
+            $sql .= "WHERE CAST(inspection_date AS DATE) >= ? AND CAST(inspection_date AS DATE) <= ? ORDER BY inspection_date ASC";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$start, $end]);
+        } else if ($range === 'last_month') {
+            $start = date('Y-m-01', strtotime('last month'));
+            $end = date('Y-m-t', strtotime('last month'));
+            $sql .= "WHERE CAST(inspection_date AS DATE) >= ? AND CAST(inspection_date AS DATE) <= ? ORDER BY inspection_date ASC";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$start, $end]);
+        } else {
+            $sql .= "WHERE CAST(inspection_date AS DATE) = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$date]);
+        }
+        
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $stats = [

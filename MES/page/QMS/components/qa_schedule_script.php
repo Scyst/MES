@@ -1,10 +1,29 @@
 <script>
-function loadQASchedule() {
+let currentFilter = 'date';
+
+function loadQASchedule(filterType = null) {
+    if (filterType) currentFilter = filterType;
+    
+    // Clear check if switching to date input
+    if (currentFilter === 'date') {
+        const dStr = document.getElementById('scheduleDateFilter').value;
+        const tStr = new Date().toISOString().split('T')[0];
+        if (dStr === tStr) {
+            const btnToday = document.getElementById('btnDate_today');
+            if(btnToday) btnToday.checked = true;
+        } else {
+            document.querySelectorAll('input[name="dateFilterGroup"]').forEach(el => el.checked = false);
+        }
+    } else {
+        const btnFilter = document.getElementById('btnDate_' + currentFilter);
+        if(btnFilter) btnFilter.checked = true;
+    }
+
     const date = document.getElementById('scheduleDateFilter').value;
     const tbody = document.getElementById('qaScheduleBody');
     tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
     
-    fetch(`./api/qa_schedule_api.php?action=get_schedule&date=${date}`)
+    fetch(`./api/qa_schedule_api.php?action=get_schedule&date=${date}&range=${currentFilter}`)
         .then(r => r.json())
         .then(res => {
             if(res.success) {
@@ -279,7 +298,7 @@ function changeScheduleDate(days) {
     const dd = String(date.getDate()).padStart(2, '0');
     
     input.value = `${yyyy}-${mm}-${dd}`;
-    loadQASchedule();
+    loadQASchedule('date');
 }
 
 function setScheduleDateToday() {
@@ -291,7 +310,7 @@ function setScheduleDateToday() {
     const dd = String(date.getDate()).padStart(2, '0');
     
     input.value = `${yyyy}-${mm}-${dd}`;
-    loadQASchedule();
+    loadQASchedule('date');
 }
 
 // ---- INLINE ADD PO LOGIC ----
