@@ -1,4 +1,4 @@
-﻿# SNC Transport System — ROADMAP
+# SNC Transport System — ROADMAP
 
 > ระบบจองและบริหารรถรับ-ส่งพนักงาน
 > Stack: React + Vite + TailwindCSS + localStorage (Frontend-only, awaiting backend)
@@ -69,6 +69,19 @@ Design: Modal แสดงรายละเอียดสิ่งที่จ
 
 ---
 
+### Phase 3: Driver App (แอปพลิเคชันสำหรับคนขับ)
+
+#### 3.1 ~~Driver Layout & Login~~ ✅ DONE (2026-07-31)
+- จำลองการเข้าระบบด้วยการเลือกรถจาก Master Data
+
+#### 3.2 ~~Driver Trips & Trip Details~~ ✅ DONE (2026-07-31)
+- ดูรายการรอบรถในวันนี้
+- ดูรายชื่อผู้โดยสาร (รอขึ้นรถ / ขึ้นรถแล้ว)
+- สามารถกด Manual Check-in ได้
+- สามารถเพิ่มผู้โดยสาร Walk-in (เสริม) ได้
+
+---
+
 ## Backend — งานในอนาคต (Planned)
 
 หมายเหตุ: เริ่มหลัง UI/UX ได้รับการยืนยันว่าใช้งานได้ดีแล้ว
@@ -109,11 +122,9 @@ Design: Modal แสดงรายละเอียดสิ่งที่จ
 |-------|------|-----------|
 | confirm() ทุกที่ | BookingHome, MyTicket, ManageSchedules | HIGH |
 | Hardcoded routes filter | BookingHome.jsx:112 | HIGH |
-| CheckInPassenger ใช้ Zustand ไม่ sync | CheckInPassenger.jsx | HIGH |
 | empId/name/bu hardcoded | BookingHome.jsx:61-63 | MEDIUM |
 | Multi-day booking ไม่แจ้งวันที่ข้าม | BookingHome.jsx | MEDIUM |
 | Status badge เป็นภาษาอังกฤษ | MyTicket.jsx | LOW |
-| TripDetails.jsx ยังใช้ Zustand เก่า | TripDetails.jsx | MEDIUM |
 
 
 

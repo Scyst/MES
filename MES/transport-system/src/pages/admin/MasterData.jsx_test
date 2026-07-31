@@ -1,0 +1,491 @@
+﻿import { useState, useEffect } from 'react';
+import { Database, Plus, Trash2, Bus, Route as RouteIcon, Clock, Save, X, BusFront, Pencil, Building2, UserCircle, MapPin, Car, Truck } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const MasterData = () => {
+  const [activeTab, setActiveTab] = useState('fleet');
+  
+  const [fleet, setFleet] = useState([]);
+  const [routes, setRoutes] = useState([]);
+  const [timeSlots, setTimeSlots] = useState([]);
+  const [departments, setDepartments] = useState([]);
+
+  // States for Add/Edit Forms
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  
+  const [fleetForm, setFleetForm] = useState({ licensePlate: '', type: 'VAN', capacity: 12, driverEmpId: '', driverName: '', driverPhone: '' });
+  const [routeForm, setRouteForm] = useState({ name: '', stops: [] });
+  const [timeSlotForm, setTimeSlotForm] = useState({ name: '', time: '' });
+  const [departmentForm, setDepartmentForm] = useState({ code: '', name: '' });
+
+  // Load Data
+  useEffect(() => {
+    setFleet(JSON.parse(localStorage.getItem('fleet')) || []);
+    setRoutes(JSON.parse(localStorage.getItem('routes')) || []);
+    setTimeSlots(JSON.parse(localStorage.getItem('timeSlots')) || []);
+    setDepartments(JSON.parse(localStorage.getItem('departments')) || []);
+  }, []);
+
+  // Save Data
+  const saveData = (key, data) => {
+    localStorage.setItem(key, JSON.stringify(data));
+  };
+
+  // -----------------------------------------------------
+  // Fleet CRUD
+  // -----------------------------------------------------
+  const handleAddFleet = (e) => {
+    e.preventDefault();
+    let newData;
+    if (editingId) {
+      newData = fleet.map(f => f.id === editingId ? { ...f, ...fleetForm } : f);
+    } else {
+      newData = [...fleet, { id: `F-${Date.now()}`, ...fleetForm }];
+    }
+    setFleet(newData);
+    saveData('fleet', newData);
+    setShowAddForm(false);
+    setEditingId(null);
+    setFleetForm({ licensePlate: '', type: 'VAN', capacity: 12, driverEmpId: '', driverName: '', driverPhone: '' });
+  };
+  
+  const handleEditFleet = (item) => {
+    setFleetForm({ 
+      licensePlate: item.licensePlate, 
+      type: item.type, 
+      capacity: item.capacity,
+      driverEmpId: item.driverEmpId || '',
+      driverName: item.driverName || '',
+      driverPhone: item.driverPhone || ''
+    });
+    setEditingId(item.id);
+    setShowAddForm(true);
+  };
+  const handleDeleteFleet = (id) => {
+    if (confirm('เน€เธเธเน€เธเธ—เน€เธยเน€เธเธเน€เธเธ‘เน€เธยเน€เธยเน€เธเธ’เน€เธเธเน€เธเธ…เน€เธยเน€เธเธเน€เธเธ’เน€เธยเน€เธยเน€เธเธ’เน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธ…เน€เธเธเน€เธยเน€เธยเน€เธยเน€เธเธ‘เน€เธย?')) {
+      const newData = fleet.filter(f => f.id !== id);
+      setFleet(newData);
+      saveData('fleet', newData);
+    }
+  };
+
+  // -----------------------------------------------------
+  // Routes CRUD
+  // -----------------------------------------------------
+  const handleAddRoute = (e) => {
+    e.preventDefault();
+    let newData;
+    if (editingId) {
+      newData = routes.map(r => r.id === editingId ? { ...r, ...routeForm } : r);
+    } else {
+      newData = [...routes, { id: `R-${Date.now()}`, ...routeForm }];
+    }
+    setRoutes(newData);
+    saveData('routes', newData);
+    setShowAddForm(false);
+    setEditingId(null);
+    setRouteForm({ name: '', stops: [] });
+  };
+
+  const handleEditRoute = (route) => {
+    setRouteForm({ name: route.name, stops: route.stops || [] });
+    setEditingId(route.id);
+    setShowAddForm(true);
+  };
+  const handleDeleteRoute = (id) => {
+    if (confirm('เน€เธเธเน€เธเธ—เน€เธยเน€เธเธเน€เธเธ‘เน€เธยเน€เธยเน€เธเธ’เน€เธเธเน€เธเธ…เน€เธยเน€เธเธเน€เธเธ’เน€เธเธเน€เธเธเน€เธโ€“เน€เธยเน€เธเธ…เน€เธเธเน€เธยเน€เธเธเน€เธโ€เน€เธยเน€เธเธเน€เธโ€เน€เธโ€”เน€เธเธ‘เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธโ€เน€เธยเน€เธยเน€เธเธเน€เธเธ’เน€เธเธ?')) {
+      const newData = routes.filter(r => r.id !== id);
+      setRoutes(newData);
+      saveData('routes', newData);
+    }
+  };
+
+  const addStopToForm = () => {
+    setRouteForm({
+      ...routeForm,
+      stops: [...routeForm.stops, { id: `S-${Date.now()}-${Math.floor(Math.random()*1000)}`, name: '', description: '' }]
+    });
+  };
+
+  const removeStopFromForm = (stopId) => {
+    setRouteForm({
+      ...routeForm,
+      stops: routeForm.stops.filter(s => s.id !== stopId)
+    });
+  };
+
+  const updateStopInForm = (stopId, field, value) => {
+    setRouteForm({
+      ...routeForm,
+      stops: routeForm.stops.map(s => s.id === stopId ? { ...s, [field]: value } : s)
+    });
+  };
+
+  return (
+    <div className="space-y-6 w-full">
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <Database size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">เน€เธโ€ขเน€เธเธ‘เน€เธยเน€เธยเน€เธยเน€เธยเน€เธเธ’เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…เน€เธเธเน€เธเธ…เน€เธเธ‘เน€เธย (Master Data)</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">เน€เธยเน€เธเธ‘เน€เธโ€เน€เธยเน€เธเธ’เน€เธเธเน€เธเธเน€เธเธ’เน€เธเธเน€เธยเน€เธเธ—เน€เธยเน€เธเธเน€เธเธเน€เธเธ’เน€เธเธเน€เธเธเน€เธโ€“ เน€เธเธเน€เธเธ’เน€เธยเน€เธยเน€เธเธ’เน€เธเธเน€เธยเน€เธเธ เน€เธยเน€เธเธ…เน€เธเธเน€เธยเน€เธยเน€เธเธเน€เธยเน€เธโฌเน€เธเธเน€เธเธ…เน€เธเธ’เน€เธเธเน€เธเธ’เน€เธโ€ขเน€เธเธเน€เธยเน€เธเธ’เน€เธย</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex overflow-x-auto hide-scrollbar gap-2 p-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 w-full md:w-fit">
+        <button
+          onClick={() => { setActiveTab('fleet'); setShowAddForm(false); setEditingId(null); }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'fleet' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          <BusFront size={16} /> เน€เธเธเน€เธโ€“เน€เธยเน€เธเธ…เน€เธเธเน€เธยเน€เธยเน€เธยเน€เธเธ‘เน€เธย ({fleet.length})
+        </button>
+        <button
+          onClick={() => { setActiveTab('routes'); setShowAddForm(false); setEditingId(null); }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'routes' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          <RouteIcon size={16} /> เน€เธโฌเน€เธเธเน€เธยเน€เธยเน€เธโ€”เน€เธเธ’เน€เธยเน€เธยเน€เธเธ…เน€เธเธเน€เธยเน€เธเธเน€เธโ€เน€เธยเน€เธเธเน€เธโ€ ({routes.length})
+        </button>
+        <button
+          onClick={() => { setActiveTab('timeSlots'); setShowAddForm(false); setEditingId(null); }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'timeSlots' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          <Clock size={16} /> เน€เธยเน€เธยเน€เธเธเน€เธยเน€เธโฌเน€เธเธเน€เธเธ…เน€เธเธ’ ({timeSlots.length})
+        </button>
+        <button
+          onClick={() => { setActiveTab('departments'); setShowAddForm(false); setEditingId(null); }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'departments' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          <Building2 size={16} /> เน€เธยเน€เธยเน€เธยเน€เธย/เน€เธยเน€เธยเน€เธเธ’เน€เธเธ ({departments.length})
+        </button>
+      </div>
+
+      {/* Content Area */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        
+        {/* Top Action Bar */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/20">
+          <h3 className="font-bold text-gray-900 dark:text-white">
+            {activeTab === 'fleet' && 'เน€เธเธเน€เธโ€“เน€เธยเน€เธเธ…เน€เธเธเน€เธยเน€เธยเน€เธยเน€เธเธ‘เน€เธย'}
+            {activeTab === 'routes' && 'เน€เธโฌเน€เธเธเน€เธยเน€เธยเน€เธโ€”เน€เธเธ’เน€เธยเน€เธยเน€เธเธ…เน€เธเธเน€เธยเน€เธเธเน€เธโ€เน€เธยเน€เธเธเน€เธโ€'}
+            {activeTab === 'timeSlots' && 'เน€เธยเน€เธยเน€เธเธเน€เธยเน€เธโฌเน€เธเธเน€เธเธ…เน€เธเธ’ (Time Slots)'}
+            {activeTab === 'departments' && 'เน€เธยเน€เธยเน€เธเธ’เน€เธเธ / เน€เธยเน€เธยเน€เธยเน€เธย (Business Units)'}
+          </h3>
+          <button
+            onClick={() => {
+              setEditingId(null);
+              setFleetForm({ licensePlate: '', type: 'VAN', capacity: 12, driverEmpId: '', driverName: '', driverPhone: '' });
+              setRouteForm({ name: '', stops: [] });
+              setTimeSlotForm({ name: '', time: '' });
+              setDepartmentForm({ code: '', name: '' });
+              setShowAddForm(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+          >
+            <Plus size={16}/> เน€เธโฌเน€เธยเน€เธเธ”เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…
+          </button>
+        </div>
+
+
+
+        {/* Data Lists */}
+        <div className="p-4">
+          
+          {/* List: Fleet */}
+          {activeTab === 'fleet' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {fleet.map(f => (
+                <div key={f.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 flex-shrink-0 rounded-xl flex items-center justify-center font-bold ${f.type === 'BUS' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400' : f.type === 'CAR' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400' : f.type === 'SONGTHAEW' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400'}`}>
+                      {f.type === 'BUS' ? <Bus size={24}/> : f.type === 'CAR' ? <Car size={24}/> : f.type === 'SONGTHAEW' ? <Truck size={24}/> : <BusFront size={24}/>}
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-x-8 gap-y-1">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase">เน€เธเธเน€เธเธ’เน€เธยเน€เธยเน€เธเธ’เน€เธเธเน€เธยเน€เธเธ</p>
+                        <p className="font-bold text-gray-900 dark:text-white text-sm">{f.licensePlate}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{f.type === 'BUS' ? 'เน€เธเธเน€เธโ€“เน€เธยเน€เธเธ‘เน€เธเธ' : 'เน€เธเธเน€เธโ€“เน€เธโ€ขเน€เธเธเน€เธย'} เนโฌเธ {f.capacity} เน€เธโ€”เน€เธเธ•เน€เธยเน€เธยเน€เธเธ‘เน€เธยเน€เธย</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase">เน€เธยเน€เธยเน€เธยเน€เธเธ‘เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธยเน€เธเธ“เน€เธเธเน€เธโ€“</p>
+                        <p className="font-bold text-gray-900 dark:text-white text-sm">{f.driverName || '-'}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{f.driverEmpId ? `${f.driverEmpId} เนโฌเธ ` : ''}{f.driverPhone || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 self-end sm:self-center">
+                    <button onClick={() => handleEditFleet(f)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><Pencil size={18}/></button>
+                    <button onClick={() => handleDeleteFleet(f.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18}/></button>
+                  </div>
+                </div>
+              ))}
+              {fleet.length === 0 && <p className="col-span-full text-center py-8 text-gray-500">เน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ•เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…เน€เธเธเน€เธโ€“เน€เธยเน€เธเธ…เน€เธเธเน€เธยเน€เธยเน€เธยเน€เธเธ‘เน€เธย</p>}
+            </div>
+          )}
+
+          {/* List: Routes */}
+          {activeTab === 'routes' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {routes.map(r => (
+                <div key={r.id} className="flex flex-col justify-between p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 gap-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 flex-shrink-0 rounded-lg bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400 flex items-center justify-center">
+                        <RouteIcon size={20}/>
+                      </div>
+                      <p className="font-bold text-gray-900 dark:text-white text-lg">{r.name}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => handleEditRoute(r)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><Pencil size={18}/></button>
+                      <button onClick={() => handleDeleteRoute(r.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18}/></button>
+                    </div>
+                  </div>
+                  {/* Show Stops */}
+                  <div className="pl-14">
+                    <p className="text-xs font-bold text-gray-500 mb-2">เน€เธยเน€เธเธเน€เธโ€เน€เธยเน€เธเธเน€เธโ€เน€เธเธเน€เธโ€“ ({r.stops?.length || 0})</p>
+                    {r.stops && r.stops.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {r.stops.map((stop, i) => (
+                          <div key={stop.id} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                            <span className="w-5 h-5 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 text-[10px] font-bold flex items-center justify-center">{i+1}</span>
+                            <div>
+                              <p className="font-semibold">{stop.name}</p>
+                              {stop.description && <p className="text-xs text-gray-500">{stop.description}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400 italic">เน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ•เน€เธยเน€เธเธเน€เธโ€เน€เธยเน€เธเธเน€เธโ€</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {routes.length === 0 && <p className="col-span-full text-center py-8 text-gray-500">เน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ•เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…เน€เธเธเน€เธเธ’เน€เธเธเน€เธเธเน€เธโ€“</p>}
+            </div>
+          )}
+
+          {/* List: Time Slots */}
+          {activeTab === 'timeSlots' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              {timeSlots.map(ts => (
+                <div key={ts.id} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400 flex items-center justify-center">
+                      <Clock size={20}/>
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 dark:text-white">{ts.name}</p>
+                      <p className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400">{ts.time}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => handleEditTimeSlot(ts)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><Pencil size={18}/></button>
+                    <button onClick={() => handleDeleteTimeSlot(ts.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18}/></button>
+                  </div>
+                </div>
+              ))}
+              {timeSlots.length === 0 && <p className="col-span-full text-center py-8 text-gray-500">เน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ•เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…เน€เธยเน€เธยเน€เธเธเน€เธยเน€เธโฌเน€เธเธเน€เธเธ…เน€เธเธ’</p>}
+            </div>
+          )}
+
+          {/* List: Departments */}
+          {activeTab === 'departments' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              {departments.map(d => (
+                <div key={d.id} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-400 flex items-center justify-center">
+                      <Building2 size={20}/>
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 dark:text-white">{d.name}</p>
+                      <p className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400">{d.code}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => handleEditDepartment(d)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><Pencil size={18}/></button>
+                    <button onClick={() => handleDeleteDepartment(d.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18}/></button>
+                  </div>
+                </div>
+              ))}
+              {departments.length === 0 && <p className="col-span-full text-center py-8 text-gray-500">เน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ•เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…เน€เธยเน€เธยเน€เธยเน€เธย</p>}
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* Add / Edit Modal */}
+      <AnimatePresence>
+      {showAddForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">`n          <motion.div `n            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}`n            className="absolute inset-0 bg-black/50 backdrop-blur-sm"`n            onClick={() => {`n              setShowAddForm(false);`n              setEditingId(null);`n            }}`n          ></motion.div>
+          <motion.div `n            initial={{ scale: 0.95, opacity: 0, y: 20 }} `n            animate={{ scale: 1, opacity: 1, y: 0 }} `n            exit={{ scale: 0.95, opacity: 0, y: 20 }}`n            className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto relative z-10">`n
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                {editingId ? 'เน€เธยเน€เธยเน€เธยเน€เธยเน€เธยเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…' : 'เน€เธโฌเน€เธยเน€เธเธ”เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…เน€เธยเน€เธเธเน€เธเธเน€เธย'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowAddForm(false);
+                  setEditingId(null);
+                  setFleetForm({ licensePlate: '', type: 'VAN', capacity: 12, driverEmpId: '', driverName: '', driverPhone: '' });
+                  setRouteForm({ name: '', stops: [] });
+                  setTimeSlotForm({ name: '', time: '' });
+                  setDepartmentForm({ code: '', name: '' });
+                }}
+                className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Form: Fleet */}
+            {activeTab === 'fleet' && (
+              <form onSubmit={handleAddFleet} className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">เน€เธโ€”เน€เธเธเน€เธโฌเน€เธยเน€เธเธ•เน€เธเธเน€เธยเน€เธเธเน€เธโ€“</label>
+                    <input type="text" required placeholder="เน€เธโฌเน€เธยเน€เธยเน€เธย 10-1234 เน€เธเธเน€เธเธเน€เธเธเน€เธเธเน€เธย" value={fleetForm.licensePlate} onChange={e => setFleetForm({...fleetForm, licensePlate: e.target.value})} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">เน€เธยเน€เธเธเน€เธเธเน€เธโฌเน€เธย เน€เธโ€”</label>
+                    <select value={fleetForm.type} onChange={e => {
+                        const newType = e.target.value;
+                        let newCap = 12;
+                        if(newType === 'BUS') newCap = 40;
+                        if(newType === 'CAR') newCap = 4;
+                        if(newType === 'SONGTHAEW') newCap = 14;
+                        setFleetForm({...fleetForm, type: newType, capacity: newCap});
+                      }} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500">
+                      <option value="VAN">เธฃเธ–เธ•เธนเน</option>
+                      <option value="BUS">เธฃเธ–เธเธฑเธช</option>
+                      <option value="SONGTHAEW">เธฃเธ–เธชเธญเธเนเธ–เธง</option>
+                      <option value="CAR">เธฃเธ–เธชเนเธงเธเธเธธเธเธเธฅ</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">เน€เธยเน€เธเธเน€เธเธ’เน€เธเธเน€เธยเน€เธเธ</label>
+                    <input type="number" required min="1" value={fleetForm.capacity} onChange={e => setFleetForm({...fleetForm, capacity: parseInt(e.target.value)})} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500" />
+                  </div>
+                </div>
+                
+                <h4 className="font-bold text-gray-900 dark:text-white mt-4 border-b border-gray-200 dark:border-gray-700 pb-2">เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…เน€เธยเน€เธยเน€เธยเน€เธเธ‘เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธยเน€เธเธ“เน€เธเธเน€เธโ€“</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">เน€เธเธเน€เธเธเน€เธเธ‘เน€เธเธเน€เธยเน€เธยเน€เธยเน€เธเธ‘เน€เธย</label>
+                    <input type="text" placeholder="เน€เธโฌเน€เธยเน€เธยเน€เธย DRV001" value={fleetForm.driverEmpId} onChange={e => setFleetForm({...fleetForm, driverEmpId: e.target.value})} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">เน€เธยเน€เธเธ—เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธยเน€เธเธ‘เน€เธย</label>
+                    <input type="text" placeholder="เน€เธโฌเน€เธยเน€เธยเน€เธย เน€เธเธเน€เธเธเน€เธยเน€เธเธ’เน€เธเธ เน€เธยเน€เธเธ‘เน€เธยเน€เธโ€เน€เธเธ•" value={fleetForm.driverName} onChange={e => setFleetForm({...fleetForm, driverName: e.target.value})} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">เน€เธโฌเน€เธยเน€เธเธเน€เธเธเน€เธยเน€เธยเน€เธโ€”เน€เธเธ</label>
+                    <input type="tel" placeholder="เน€เธโฌเน€เธยเน€เธยเน€เธย 081-234-5678" value={fleetForm.driverPhone} onChange={e => setFleetForm({...fleetForm, driverPhone: e.target.value})} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500" />
+                  </div>
+                </div>
+                
+                <div className="flex justify-end mt-4">
+                  <button type="submit" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2"><Save size={18}/> เน€เธยเน€เธเธ‘เน€เธยเน€เธโ€”เน€เธเธ–เน€เธยเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…</button>
+                </div>
+              </form>
+            )}
+
+            {/* Form: Route */}
+            {activeTab === 'routes' && (
+              <form onSubmit={handleAddRoute} className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">เน€เธยเน€เธเธ—เน€เธยเน€เธเธเน€เธเธเน€เธเธ’เน€เธเธเน€เธเธเน€เธโ€“</label>
+                  <input type="text" required placeholder="เน€เธโฌเน€เธยเน€เธยเน€เธย เน€เธเธเน€เธเธ’เน€เธเธ CK" value={routeForm.name} onChange={e => setRouteForm({...routeForm, name: e.target.value})} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500" />
+                </div>
+                <div className="space-y-3 mt-4">
+                  <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-2">
+                    <label className="block text-base font-bold text-gray-700 dark:text-gray-300">เน€เธยเน€เธเธเน€เธโ€เน€เธยเน€เธเธเน€เธโ€เน€เธยเน€เธยเน€เธเธเน€เธเธ’เน€เธเธเน€เธเธเน€เธโ€“</label>
+                    <button type="button" onClick={addStopToForm} className="text-sm px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold flex items-center gap-1 transition-colors"><Plus size={14}/> เน€เธโฌเน€เธยเน€เธเธ”เน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธโ€เน€เธยเน€เธเธเน€เธโ€</button>
+                  </div>
+                  {routeForm.stops.map((stop, index) => (
+                    <div key={stop.id} className="flex items-start gap-3 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm flex-shrink-0 mt-1">{index + 1}</div>
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">เน€เธยเน€เธเธ—เน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธโ€เน€เธยเน€เธเธเน€เธโ€</label>
+                          <input type="text" required value={stop.name} onChange={e => updateStopInForm(stop.id, 'name', e.target.value)} className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500" placeholder="เน€เธโฌเน€เธยเน€เธยเน€เธย เน€เธเธเน€เธยเน€เธยเน€เธเธ’เน€เธโฌเน€เธยเน€เธโฌเน€เธเธเน€เธยเน€เธย" />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">เน€เธเธเน€เธเธ’เน€เธเธเน€เธเธ…เน€เธเธเน€เธโฌเน€เธเธเน€เธเธ•เน€เธเธเน€เธโ€ / เน€เธยเน€เธเธเน€เธโ€เน€เธเธเน€เธเธ‘เน€เธยเน€เธโฌเน€เธยเน€เธโ€ข</label>
+                          <input type="text" value={stop.description} onChange={e => updateStopInForm(stop.id, 'description', e.target.value)} className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500" placeholder="เน€เธเธเน€เธเธ’เน€เธเธ…เน€เธเธ’เน€เธยเน€เธเธ‘เน€เธย" />
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => removeStopFromForm(stop.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg mt-5"><Trash2 size={20}/></button>
+                    </div>
+                  ))}
+                  {routeForm.stops.length === 0 && <p className="text-sm text-gray-500 italic text-center py-4">เน€เธเธเน€เธเธ‘เน€เธยเน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ•เน€เธยเน€เธเธเน€เธโ€เน€เธยเน€เธเธเน€เธโ€ (เน€เธเธเน€เธเธ’เน€เธเธเน€เธเธ’เน€เธเธเน€เธโ€“เน€เธยเน€เธโ€เน€เธยเน€เธเธเน€เธยเน€เธเธ "เน€เธโฌเน€เธยเน€เธเธ”เน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธโ€เน€เธยเน€เธเธเน€เธโ€" เน€เธยเน€เธโ€เน€เธย)</p>}
+                </div>
+                <div className="flex justify-end mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button type="submit" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2"><Save size={18}/> เน€เธยเน€เธเธ‘เน€เธยเน€เธโ€”เน€เธเธ–เน€เธยเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…</button>
+                </div>
+              </form>
+            )}
+
+            {/* Form: Time Slots */}
+            {activeTab === 'timeSlots' && (
+              <form onSubmit={handleAddTimeSlot} className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">เน€เธยเน€เธเธ—เน€เธยเน€เธเธเน€เธโฌเน€เธเธเน€เธเธ•เน€เธเธเน€เธยเน€เธยเน€เธเธ (Shift)</label>
+                    <input type="text" required placeholder="เน€เธโฌเน€เธยเน€เธยเน€เธย เน€เธยเน€เธเธเน€เธโฌเน€เธยเน€เธยเน€เธเธ’, เน€เธยเน€เธเธเน€เธโ€เน€เธเธ–เน€เธย" value={timeSlotForm.name} onChange={e => setTimeSlotForm({...timeSlotForm, name: e.target.value})} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">เน€เธโฌเน€เธเธเน€เธเธ…เน€เธเธ’เน€เธโฌเน€เธโ€เน€เธเธ”เน€เธยเน€เธเธเน€เธโ€“ (HH:mm)</label>
+                    <input type="time" required value={timeSlotForm.time} onChange={e => setTimeSlotForm({...timeSlotForm, time: e.target.value})} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500" />
+                  </div>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <button type="submit" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2"><Save size={18}/> เน€เธยเน€เธเธ‘เน€เธยเน€เธโ€”เน€เธเธ–เน€เธยเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…</button>
+                </div>
+              </form>
+            )}
+
+            {/* Form: Departments */}
+            {activeTab === 'departments' && (
+              <form onSubmit={handleAddDepartment} className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">เน€เธเธเน€เธเธเน€เธเธ‘เน€เธเธเน€เธยเน€เธยเน€เธยเน€เธย/เน€เธยเน€เธยเน€เธเธ’เน€เธเธ</label>
+                    <input type="text" required placeholder="เน€เธโฌเน€เธยเน€เธยเน€เธย PROD1" value={departmentForm.code} onChange={e => setDepartmentForm({...departmentForm, code: e.target.value})} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">เน€เธยเน€เธเธ—เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธยเน€เธย/เน€เธยเน€เธยเน€เธเธ’เน€เธเธ</label>
+                    <input type="text" required placeholder="เน€เธโฌเน€เธยเน€เธยเน€เธย Production 1" value={departmentForm.name} onChange={e => setDepartmentForm({...departmentForm, name: e.target.value})} className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500" />
+                  </div>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <button type="submit" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2"><Save size={18}/> เน€เธยเน€เธเธ‘เน€เธยเน€เธโ€”เน€เธเธ–เน€เธยเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…</button>
+                </div>
+              </form>
+            )}
+          </motion.div>
+        </div>
+      )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default MasterData;
+
+

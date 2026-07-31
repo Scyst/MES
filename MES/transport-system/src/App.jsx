@@ -2,10 +2,12 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import AdminLayout from './components/AdminLayout';
 import EmployeeLayout from './components/EmployeeLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
-import ManageTrips from './pages/admin/ManageTrips';
-import ManageVehicles from './pages/admin/ManageVehicles';
-import TripDetails from './pages/admin/TripDetails';
 import CheckInPassenger from './pages/CheckInPassenger';
+
+import DriverLayout from './components/DriverLayout';
+import DriverLogin from './pages/driver/DriverLogin';
+import DriverTrips from './pages/driver/DriverTrips';
+import DriverTripDetails from './pages/driver/DriverTripDetails';
 
 import ManageSchedules from './pages/admin/ManageSchedules';
 import ScheduleDetails from './pages/admin/ScheduleDetails';
@@ -33,13 +35,18 @@ function App() {
           <Route path="profile" element={<ProfilePage />} />
         </Route>
         
+        {/* Driver App */}
+        <Route path="/driver" element={<DriverLayout />}>
+          <Route index element={<Navigate to="/driver/trips" replace />} />
+          <Route path="trips" element={<DriverTrips />} />
+          <Route path="trips/:tripId" element={<DriverTripDetails />} />
+        </Route>
+        <Route path="/driver/login" element={<DriverLogin />} />
+        
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="vehicles" element={<ManageVehicles />} />
-          <Route path="trips" element={<ManageTrips />} />
-          <Route path="trips/:tripId" element={<TripDetails />} />
           
           <Route path="schedules" element={<ManageSchedules />} />
           <Route path="schedules/:scheduleId" element={<ScheduleDetails />} />
