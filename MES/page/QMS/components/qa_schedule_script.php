@@ -160,17 +160,27 @@ function schedulePO(id) {
     });
 }
 
-function removeSchedule(id) {
+function removeSchedule(id, force = false) {
+    let title = 'Are you sure?';
+    let text = "This will remove the PO from the QA schedule.";
+    if (force) {
+        title = 'Reset Inspection Data?';
+        text = "This PO has already been inspected or is in progress. Removing it will clear all results. Are you sure?";
+    }
+
     Swal.fire({
-        title: 'Are you sure?',
-        text: "This will remove the PO from the QA schedule.",
+        title: title,
+        text: text,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes, remove it'
+        confirmButtonText: force ? 'Yes, reset it' : 'Yes, remove it',
+        confirmButtonColor: '#dc3545'
     }).then((result) => {
         if (result.isConfirmed) {
             const formData = new FormData();
             formData.append('id', id);
+            if (force) formData.append('force', '1');
+
             fetch('./api/qa_schedule_api.php?action=remove_schedule', {
                 method: 'POST',
                 body: formData
@@ -181,6 +191,8 @@ function removeSchedule(id) {
                     const modalInst = bootstrap.Modal.getInstance(modalEl);
                     if (modalInst) modalInst.hide();
                     loadQASchedule();
+                } else if (res.require_force) {
+                    removeSchedule(id, true);
                 } else {
                     Swal.fire('Error', res.message, 'error');
                 }

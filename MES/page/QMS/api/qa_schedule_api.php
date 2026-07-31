@@ -121,11 +121,34 @@ try {
         $po_id = $_POST['id'] ?? '';
         if (empty($po_id)) throw new Exception("Missing PO ID.");
         
-        $sql = "UPDATE SALES_ORDERS SET inspection_date = NULL, updated_at = GETDATE() WHERE id = ?";
+        $checkSql = "SELECT inspection_status FROM SALES_ORDERS WITH (NOLOCK) WHERE id = ?";
+        $checkStmt = $pdo->prepare($checkSql);
+        $checkStmt->execute([$po_id]);
+        $row = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) throw new Exception("PO not found.");
+
+        $status = $row['inspection_status'] ?? 'WAITING';
+        $force = $_POST['force'] ?? '0';
+
+        if (($status === 'IN_PROGRESS' || $status === 'DONE') && $force === '0') {
+            echo json_encode(['success' => false, 'require_force' => true, 'message' => 'Confirmation required.']);
+            exit;
+        }
+
+        $sql = "UPDATE SALES_ORDERS SET 
+                inspection_date = NULL, 
+                inspection_status = 'WAITING',
+                inspection_result = NULL,
+                inspection_remark = NULL,
+                qa_inspector = NULL,
+                is_confirmed = 0,
+                updated_at = GETDATE() 
+                WHERE id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$po_id]);
 
-        echo json_encode(['success' => true, 'message' => 'Removed from schedule.']);
+        echo json_encode(['success' => true, 'message' => 'Removed from schedule and reset.']);
     }
     elseif ($action === 'assign_inspector') {
         $po_id = $_POST['id'] ?? '';
