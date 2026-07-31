@@ -1,5 +1,6 @@
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLayout from './components/AdminLayout';
+import EmployeeLayout from './components/EmployeeLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageTrips from './pages/admin/ManageTrips';
 import ManageVehicles from './pages/admin/ManageVehicles';
@@ -10,6 +11,8 @@ import ManageSchedules from './pages/admin/ManageSchedules';
 import ScheduleDetails from './pages/admin/ScheduleDetails';
 import BookingHome from './pages/employee/BookingHome';
 import MyTicket from './pages/employee/MyTicket';
+import BookingHistory from './pages/employee/BookingHistory';
+import ProfilePage from './pages/employee/ProfilePage';
 import MasterData from './pages/admin/MasterData';
 import { initializeSeedData } from './utils/seedData';
 
@@ -19,12 +22,16 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Passenger Route */}
+        {/* Passenger Check-in (QR landing) */}
         <Route path="/checkin" element={<CheckInPassenger />} />
         
-        {/* Pre-Booking Employee Routes */}
-        <Route path="/booking" element={<BookingHome />} />
-        <Route path="/booking/ticket/:ticketId" element={<MyTicket />} />
+        {/* Employee App — wrapped in EmployeeLayout for bottom nav */}
+        <Route path="/booking" element={<EmployeeLayout />}>
+          <Route index element={<BookingHome />} />
+          <Route path="ticket/:ticketId" element={<MyTicket />} />
+          <Route path="history" element={<BookingHistory />} />
+          <Route path="profile" element={<ProfilePage />} />
+        </Route>
         
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>
