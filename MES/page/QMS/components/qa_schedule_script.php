@@ -79,6 +79,7 @@ function loadQASchedule(filterType = null) {
                             </td>
                             <td class="fw-bold text-center">${po.quantity ? Number(po.quantity).toLocaleString() : '-'}</td>
                             <td class="text-center">${po.dc_location || '-'}</td>
+                            <td class="text-center fw-bold text-dark">${po.inspection_date ? po.inspection_date.substring(0, 10) : '-'}</td>
                             <td class="text-center">${po.loading_date ? po.loading_date : '-'}</td>
                             <td class="text-center" onclick="event.stopPropagation()">${inspectorCell}</td>
                             <td class="text-center">${statusBadge} ${resultBadge}</td>
@@ -87,10 +88,10 @@ function loadQASchedule(filterType = null) {
                 });
                 tbody.innerHTML = html;
             } else {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">${res.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">${res.message}</td></tr>`;
             }
         }).catch(err => {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Network Error</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Network Error</td></tr>';
         });
 }
 

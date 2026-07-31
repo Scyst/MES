@@ -140,28 +140,29 @@
         <table class="table table-hover align-middle mb-0" id="qaScheduleTable">
                 <thead class="bg-primary text-white small text-uppercase">
                     <tr>
-                        <th class="px-3 py-2 text-start" style="width: 130px;">PO Number</th>
+                        <th class="px-3 py-2 text-start" style="width: 180px;">PO Number</th>
                         <th class="py-2 text-start">Item Details</th>
                         <th class="py-2 text-center" style="width: 90px;">Qty</th>
                         <th class="py-2 text-center" style="width: 120px;">DC Location</th>
+                        <th class="py-2 text-center" style="width: 120px;">Inspection Date</th>
                         <th class="py-2 text-center" style="width: 120px;">Loading Date</th>
                         <th class="py-2 text-center" style="width: 140px;">Inspector</th>
                         <th class="py-2 text-center" style="width: 160px;">Inspection Status</th>
                     </tr>
                 </thead>
                 <tbody id="qaScheduleBody">
-                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading schedule...</td></tr>
+                    <tr><td colspan="8" class="text-center py-4 text-muted">Loading schedule...</td></tr>
                 </tbody>
                 <tfoot id="qaScheduleInlineAdd" class="border-top-0 d-print-none">
                     <tr id="qaScheduleAddBtnRow" class="bg-light" style="cursor: pointer;" onclick="showInlineSearch()">
-                        <td colspan="7" class="text-center py-2 text-primary fw-bold" style="transition: all 0.2s;">
+                        <td colspan="8" class="text-center py-2 text-primary fw-bold" style="transition: all 0.2s;">
                             <div class="d-inline-block px-4 py-1 rounded" style="background-color: rgba(13, 110, 253, 0.1);">
                                 <i class="fas fa-plus me-1"></i> Add PO to Schedule
                             </div>
                         </td>
                     </tr>
                     <tr id="qaScheduleSearchRow" class="bg-light d-none">
-                        <td colspan="7" class="p-2 text-center" style="position: relative;">
+                        <td colspan="8" class="p-2 text-center" style="position: relative;">
                             <div class="mx-auto position-relative" style="max-width: 500px;">
                                 <div class="input-group input-group-sm shadow-sm">
                                     <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
