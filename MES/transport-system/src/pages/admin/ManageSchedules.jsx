@@ -359,7 +359,7 @@ const ManageSchedules = () => {
                   <option value="">-- เลือกรถที่ต้องการใช้ --</option>
                   {fleet.map(v => (
                     <option key={v.id} value={v.id}>
-                      {v.licensePlate} ({v.type === 'VAN' ? 'รถตู้' : 'รถบัส'} - {v.capacity} ที่นั่ง) {v.driverName ? ` - พขร. ${v.driverName}` : ''}
+                      {v.licensePlate} ({v.type === 'BUS' ? 'รถบัส' : v.type === 'CAR' ? 'รถส่วนบุคคล' : v.type === 'SONGTHAEW' ? 'รถสองแถว' : 'รถตู้'} - {v.capacity} ที่นั่ง) {v.driverName ? ` - พขร. ${v.driverName}` : ''}
                     </option>
                   ))}
                 </select>

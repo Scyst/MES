@@ -114,57 +114,55 @@
 
 <!-- Modal Update Inspection Result -->
 <div class="modal fade" id="updateInspectionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header bg-white border-bottom p-4 pb-3">
-                <h5 class="modal-title fw-bolder text-primary">
-                    <i class="fas fa-clipboard-check me-2"></i>Update Inspection
-                </h5>
+    <div class="modal-dialog">
+        <div class="modal-content shadow border-0">
+            <div class="modal-header bg-white border-bottom">
+                <h5 class="modal-title fw-bold text-dark"><i class="fas fa-edit me-2 text-primary"></i>Update Inspection Result</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4 bg-light">
+            <div class="modal-body bg-light">
                 <form id="formUpdateInspection">
                     <input type="hidden" id="inspect_po_id" name="id">
                     
-                    <div class="mb-3 bg-white p-3 rounded-3 shadow-sm border">
-                        <label class="form-label text-muted small fw-bold text-uppercase mb-1">PO Number</label>
-                        <input type="text" id="inspect_po_number" class="form-control form-control-lg border-0 bg-transparent px-0 fw-bold text-dark shadow-none" readonly>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">PO Number</label>
+                        <input type="text" id="inspect_po_number" class="form-control fw-bold bg-white" readonly>
                     </div>
 
-                    <div class="row g-3 mb-3">
+                    <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-bold text-secondary small">Status <span class="text-danger">*</span></label>
-                            <select class="form-select form-select-lg shadow-sm border-0" name="inspection_status" id="inspect_status" required>
-                                <option value="">-- Select --</option>
+                            <label class="form-label fw-bold small text-muted">Status <span class="text-danger">*</span></label>
+                            <select class="form-select" name="inspection_status" id="inspect_status" required>
+                                <option value="">-- Select Status --</option>
                                 <option value="WAITING">WAITING</option>
                                 <option value="IN_PROGRESS">IN_PROGRESS</option>
                                 <option value="DONE">DONE</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-bold text-secondary small">Result</label>
-                            <select class="form-select form-select-lg shadow-sm border-0" name="inspection_result" id="inspect_result">
-                                <option value="">-- Select --</option>
+                            <label class="form-label fw-bold small text-muted">Result</label>
+                            <select class="form-select" name="inspection_result" id="inspect_result">
+                                <option value="">-- Select Result --</option>
                                 <option value="PASS" class="text-success fw-bold">PASS</option>
                                 <option value="FAIL" class="text-danger fw-bold">FAIL</option>
                             </select>
                         </div>
                     </div>
 
-                    <div class="mb-2">
-                        <label class="form-label fw-bold text-secondary small">Remark</label>
-                        <textarea class="form-control shadow-sm border-0" name="remark" id="inspect_remark" rows="3" placeholder="Add any notes or comments here..."></textarea>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Remark</label>
+                        <textarea class="form-control" name="remark" id="inspect_remark" rows="3" placeholder="Notes..."></textarea>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer bg-white border-top p-3 d-flex justify-content-between align-items-center">
-                <button type="button" class="btn btn-light text-danger fw-bold px-3 py-2 rounded-3" id="btnRemoveScheduleModal">
+            <div class="modal-footer bg-white d-flex justify-content-between border-top">
+                <button type="button" class="btn btn-outline-danger" id="btnRemoveScheduleModal">
                     <i class="fas fa-trash-alt me-1"></i> Remove
                 </button>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-light fw-bold px-4 py-2 rounded-3 text-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm" onclick="saveInspectionResult()">
-                        <i class="fas fa-save me-1"></i> Save
+                <div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary fw-bold px-4" onclick="saveInspectionResult()">
+                        <i class="fas fa-save me-1"></i> Save Result
                     </button>
                 </div>
             </div>
