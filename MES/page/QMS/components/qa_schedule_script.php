@@ -16,7 +16,7 @@ function loadQASchedule() {
                 }
 
                 if(res.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
                     return;
                 }
                 
@@ -48,10 +48,10 @@ function loadQASchedule() {
 
                     let inspectorCell = po.qa_inspector ? 
                         `<span class="badge bg-info text-dark shadow-sm"><i class="fas fa-user-check me-1"></i>${po.qa_inspector}</span>` :
-                        `<button class="btn btn-sm btn-outline-primary py-0 px-2 shadow-sm" onclick="assignToMe(${po.id})" style="font-size:0.75rem;">Assign to Me</button>`;
+                        `<button class="btn btn-sm btn-outline-primary py-0 px-2 shadow-sm" onclick="event.stopPropagation(); assignToMe(${po.id})" style="font-size:0.75rem;">Assign to Me</button>`;
 
                     html += `
-                        <tr class="${rowClass}">
+                        <tr class="${rowClass}" style="cursor: pointer;" onclick='openUpdateModal(${JSON.stringify(po).replace(/'/g, "&#39;")})' title="Click to view/update">
                             <td class="px-3 fw-bold text-primary">${po.po_number}</td>
                             <td>
                                 <div><strong>${po.sku}</strong></div>
@@ -60,25 +60,17 @@ function loadQASchedule() {
                             <td class="fw-bold">${po.quantity ? Number(po.quantity).toLocaleString() : '-'}</td>
                             <td>${po.dc_location || '-'}</td>
                             <td>${po.loading_date ? po.loading_date : '-'}</td>
-                            <td>${inspectorCell}</td>
+                            <td onclick="event.stopPropagation()">${inspectorCell}</td>
                             <td>${statusBadge} ${resultBadge}</td>
-                            <td class="text-center d-print-none">
-                                <button class="btn btn-sm btn-outline-warning shadow-sm" onclick='openUpdateModal(${JSON.stringify(po).replace(/'/g, "&#39;")})' title="Update Result">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger shadow-sm ms-1" onclick="removeSchedule(${po.id})" title="Remove from schedule">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </td>
                         </tr>
                     `;
                 });
                 tbody.innerHTML = html;
             } else {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">${res.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">${res.message}</td></tr>`;
             }
         }).catch(err => {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Network Error</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Network Error</td></tr>';
         });
 }
 
@@ -162,7 +154,15 @@ function removeSchedule(id) {
                 method: 'POST',
                 body: formData
             }).then(r => r.json()).then(res => {
-                if(res.success) loadQASchedule();
+                if(res.success) {
+                    Swal.fire({icon: 'success', title: 'Removed', timer: 1500, showConfirmButton: false});
+                    const modalEl = document.getElementById('updateInspectionModal');
+                    const modalInst = bootstrap.Modal.getInstance(modalEl);
+                    if (modalInst) modalInst.hide();
+                    loadQASchedule();
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
             });
         }
     });
@@ -170,10 +170,13 @@ function removeSchedule(id) {
 
 function openUpdateModal(po) {
     document.getElementById('inspect_po_id').value = po.id;
-    document.getElementById('inspect_po_number').value = po.po_number;
+    document.getElementById('inspect_po_number').value = po.po_number + ' - ' + po.sku;
     document.getElementById('inspect_status').value = po.inspection_status || '';
     document.getElementById('inspect_result').value = po.inspection_result || '';
     document.getElementById('inspect_remark').value = po.remark || '';
+    
+    // Bind remove button inside the modal
+    document.getElementById('btnRemoveScheduleModal').onclick = function() { removeSchedule(po.id); };
     
     const modal = new bootstrap.Modal(document.getElementById('updateInspectionModal'));
     modal.show();

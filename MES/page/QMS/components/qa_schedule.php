@@ -1,34 +1,34 @@
 <!-- page/QMS/components/qa_schedule.php -->
 <!-- KPI Summary Cards -->
-<div class="mobile-swipe-row mb-3 d-print-none">
-    <div class="swipe-card-wrapper">
-        <div class="kpi-card p-3 h-100 bg-white" style="border-left: 4px solid var(--bs-primary);">
+<div class="mobile-swipe-row mb-3 d-print-none d-flex w-100">
+    <div class="swipe-card-wrapper flex-fill">
+        <div class="kpi-card p-3 h-100 bg-white w-100" style="border-left: 4px solid var(--bs-primary);">
             <div class="text-secondary fw-bold small text-uppercase mb-1"><i class="fas fa-boxes me-1"></i> Total</div>
             <h3 class="mb-0 fw-bold text-dark" id="stat-total">0</h3>
         </div>
     </div>
-    <div class="swipe-card-wrapper">
-        <div class="kpi-card p-3 h-100 bg-white" style="border-left: 4px solid var(--bs-warning);">
+    <div class="swipe-card-wrapper flex-fill">
+        <div class="kpi-card p-3 h-100 bg-white w-100" style="border-left: 4px solid var(--bs-warning);">
             <div class="text-warning text-dark fw-bold small text-uppercase mb-1"><i class="fas fa-hourglass-half me-1"></i> Pending</div>
             <h3 class="mb-0 fw-bold text-dark" id="stat-pending">0</h3>
         </div>
     </div>
-    <div class="swipe-card-wrapper">
-        <div class="kpi-card p-3 h-100 bg-white" style="border-left: 4px solid var(--bs-success);">
+    <div class="swipe-card-wrapper flex-fill">
+        <div class="kpi-card p-3 h-100 bg-white w-100" style="border-left: 4px solid var(--bs-success);">
             <div class="text-success fw-bold small text-uppercase mb-1"><i class="fas fa-check-circle me-1"></i> Passed</div>
             <h3 class="mb-0 fw-bold text-dark" id="stat-passed">0</h3>
         </div>
     </div>
-    <div class="swipe-card-wrapper">
-        <div class="kpi-card p-3 h-100 bg-white" style="border-left: 4px solid var(--bs-danger);">
+    <div class="swipe-card-wrapper flex-fill">
+        <div class="kpi-card p-3 h-100 bg-white w-100" style="border-left: 4px solid var(--bs-danger);">
             <div class="text-danger fw-bold small text-uppercase mb-1"><i class="fas fa-times-circle me-1"></i> Failed</div>
             <h3 class="mb-0 fw-bold text-dark" id="stat-failed">0</h3>
         </div>
     </div>
 </div>
 
-<div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap d-print-none">
-    <div class="d-flex align-items-center gap-2">
+<div class="d-flex position-relative mb-3 d-print-none align-items-center" style="min-height: 38px;">
+    <div class="position-absolute start-50 translate-middle-x d-flex align-items-center gap-2">
         <div class="input-group shadow-sm" style="width: auto; border-radius: 6px; overflow: hidden;">
             <button class="btn btn-light border-0 text-primary px-3" onclick="changeScheduleDate(-1)" title="Previous Day"><i class="fas fa-chevron-left"></i></button>
             <input type="date" id="scheduleDateFilter" class="form-control border-0 bg-white text-center fw-bold text-dark px-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule()" style="font-size: 0.95rem; width: 140px; cursor: pointer;">
@@ -36,7 +36,7 @@
         </div>
         <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" onclick="setScheduleDateToday()">Today</button>
     </div>
-    <div class="d-flex gap-2">
+    <div class="ms-auto d-flex gap-2 z-1">
         <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" onclick="window.print()">
             <i class="fas fa-print me-1"></i> Print Schedule
         </button>
@@ -58,7 +58,6 @@
                         <th>Loading Date</th>
                         <th>Inspector</th>
                         <th>Inspection Status</th>
-                        <th class="text-center d-print-none">Action</th>
                     </tr>
                 </thead>
                 <tbody id="qaScheduleInlineAdd" class="border-bottom-0 d-print-none">
@@ -70,11 +69,11 @@
                         </td>
                     </tr>
                     <tr id="qaScheduleSearchRow" class="bg-light d-none">
-                        <td colspan="8" class="p-3 text-center" style="position: relative;">
+                        <td colspan="7" class="p-2 text-center" style="position: relative;">
                             <div class="mx-auto position-relative" style="max-width: 500px;">
-                                <div class="input-group shadow-sm">
+                                <div class="input-group input-group-sm shadow-sm">
                                     <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                                    <input type="text" class="form-control border-start-0 fw-bold text-primary py-2" id="inlineSearchPo" placeholder="Type PO Number..." autocomplete="off" onkeyup="debounceInlineSearch(event)">
+                                    <input type="text" class="form-control border-start-0 fw-bold text-primary" id="inlineSearchPo" placeholder="Type PO Number..." autocomplete="off" onkeyup="debounceInlineSearch(event)">
                                     <button class="btn btn-primary fw-bold px-4" onclick="triggerInlineSearch()">Add</button>
                                 </div>
                                 <div id="inlineSuggestBox" class="list-group position-absolute w-100 shadow mt-1 z-3 text-start" style="display:none; max-height: 250px; overflow-y: auto;"></div>
@@ -83,7 +82,7 @@
                     </tr>
                 </tbody>
                 <tbody id="qaScheduleBody">
-                    <tr><td colspan="8" class="text-center py-4 text-muted">Loading schedule...</td></tr>
+                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading schedule...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -155,11 +154,17 @@
                     </div>
                 </form>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning fw-bold text-dark" onclick="saveInspectionResult()">
-                    <i class="fas fa-save me-1"></i> Save Result
+            </div>
+            <div class="modal-footer bg-light d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-danger shadow-sm" id="btnRemoveScheduleModal">
+                    <i class="fas fa-trash-alt me-1"></i> Remove
                 </button>
+                <div>
+                    <button type="button" class="btn btn-secondary shadow-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning fw-bold text-dark shadow-sm" onclick="saveInspectionResult()">
+                        <i class="fas fa-save me-1"></i> Save Result
+                    </button>
+                </div>
             </div>
         </div>
     </div>
