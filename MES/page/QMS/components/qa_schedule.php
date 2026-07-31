@@ -129,28 +129,59 @@
                         <input type="text" id="inspect_po_number" class="form-control fw-bold bg-white" readonly>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">Status <span class="text-danger">*</span></label>
-                        <div class="btn-group w-100 shadow-sm" role="group">
+                    <style>
+                    .custom-segmented {
+                        background: #f1f3f5;
+                        padding: 4px;
+                        border-radius: 8px;
+                        display: flex;
+                        gap: 2px;
+                    }
+                    .custom-segmented .btn {
+                        border: none !important;
+                        border-radius: 6px !important;
+                        color: #adb5bd;
+                        font-weight: 600;
+                        transition: all 0.2s;
+                        background: transparent;
+                        box-shadow: none !important;
+                    }
+                    .custom-segmented .btn:hover {
+                        color: #6c757d;
+                    }
+                    .custom-segmented .btn-check:checked + .btn {
+                        background: #fff;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+                    }
+                    .custom-segmented .btn-check[value="WAITING"]:checked + .btn { color: #495057; }
+                    .custom-segmented .btn-check[value="IN_PROGRESS"]:checked + .btn { color: #fd7e14; }
+                    .custom-segmented .btn-check[value="DONE"]:checked + .btn { color: #198754; }
+                    .custom-segmented .btn-check[value="PASS"]:checked + .btn { color: #198754; }
+                    .custom-segmented .btn-check[value="FAIL"]:checked + .btn { color: #dc3545; }
+                    </style>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase mb-2">Inspection Status <span class="text-danger">*</span></label>
+                        <div class="custom-segmented w-100">
                             <input type="radio" class="btn-check" name="inspection_status" id="status_waiting" value="WAITING" required>
-                            <label class="btn btn-outline-secondary" for="status_waiting">WAITING</label>
+                            <label class="btn flex-fill" for="status_waiting">WAITING</label>
 
                             <input type="radio" class="btn-check" name="inspection_status" id="status_in_progress" value="IN_PROGRESS">
-                            <label class="btn btn-outline-warning text-dark" for="status_in_progress">IN PROGRESS</label>
+                            <label class="btn flex-fill" for="status_in_progress">IN PROGRESS</label>
 
                             <input type="radio" class="btn-check" name="inspection_status" id="status_done" value="DONE">
-                            <label class="btn btn-outline-success" for="status_done">DONE</label>
+                            <label class="btn flex-fill" for="status_done">DONE</label>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">Result</label>
-                        <div class="btn-group w-100 shadow-sm" role="group">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase mb-2">Final Result</label>
+                        <div class="custom-segmented w-100">
                             <input type="radio" class="btn-check" name="inspection_result" id="result_pass" value="PASS">
-                            <label class="btn btn-outline-success" for="result_pass"><i class="fas fa-check-circle me-1"></i> PASS</label>
+                            <label class="btn flex-fill" for="result_pass"><i class="fas fa-check-circle me-1"></i> PASS</label>
 
                             <input type="radio" class="btn-check" name="inspection_result" id="result_fail" value="FAIL">
-                            <label class="btn btn-outline-danger" for="result_fail"><i class="fas fa-times-circle me-1"></i> FAIL</label>
+                            <label class="btn flex-fill" for="result_fail"><i class="fas fa-times-circle me-1"></i> FAIL</label>
                         </div>
                     </div>
 
