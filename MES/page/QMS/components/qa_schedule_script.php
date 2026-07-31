@@ -270,4 +270,121 @@ function setScheduleDateToday() {
     input.value = `${yyyy}-${mm}-${dd}`;
     loadQASchedule();
 }
+
+// ---- INLINE ADD PO LOGIC ----
+let inlineSearchTimeout = null;
+
+function debounceInlineSearch(event) {
+    const term = event.target.value.trim();
+    if (event.key === 'Enter') {
+        // If Enter is pressed, try to trigger search or select first item if available
+        triggerInlineSearch();
+        return;
+    }
+    
+    if (inlineSearchTimeout) {
+        clearTimeout(inlineSearchTimeout);
+    }
+    
+    if (term.length < 3) {
+        document.getElementById('inlineSuggestBox').style.display = 'none';
+        return;
+    }
+    
+    inlineSearchTimeout = setTimeout(() => {
+        triggerInlineSearch();
+    }, 400);
+}
+
+function triggerInlineSearch() {
+    const term = document.getElementById('inlineSearchPo').value.trim();
+    if (term.length < 3) return;
+    
+    const box = document.getElementById('inlineSuggestBox');
+    box.innerHTML = '<div class="list-group-item text-center"><i class="fas fa-spinner fa-spin text-primary"></i> Searching...</div>';
+    box.style.display = 'block';
+    
+    fetch(`./api/qa_schedule_api.php?action=search_po&search=${encodeURIComponent(term)}`)
+        .then(r => r.json())
+        .then(res => {
+            if(res.success) {
+                if(res.data.length === 0) {
+                    box.innerHTML = '<div class="list-group-item text-muted text-center small">No PO found.</div>';
+                    return;
+                }
+                
+                let html = '';
+                res.data.forEach(po => {
+                    html += `
+                        <button type="button" class="list-group-item list-group-item-action text-start p-2" onclick="inlineAddPo(${po.id}, '${po.po_number}')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>${po.po_number}</strong>
+                                <span class="badge bg-light text-dark border">${po.sku}</span>
+                            </div>
+                            <div class="small text-muted mt-1">
+                                Qty: ${po.quantity} | Loading: ${po.loading_date || '-'}
+                                ${po.inspection_date ? `<span class="text-warning ms-1"><i class="fas fa-exclamation-triangle"></i> Scheduled: ${po.inspection_date}</span>` : ''}
+                            </div>
+                        </button>
+                    `;
+                });
+                box.innerHTML = html;
+            }
+        });
+}
+
+function inlineAddPo(id, poNumber) {
+    document.getElementById('inlineSearchPo').value = poNumber; // Visual feedback
+    document.getElementById('inlineSuggestBox').style.display = 'none';
+    
+    // Disable input while adding
+    document.getElementById('inlineSearchPo').disabled = true;
+    
+    const date = document.getElementById('scheduleDateFilter').value;
+    const formData = new FormData();
+    formData.append('id', id);
+    formData.append('schedule_date', date);
+    
+    fetch('./api/qa_schedule_api.php?action=schedule_po', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+        document.getElementById('inlineSearchPo').disabled = false;
+        
+        if(res.success) {
+            // Clear input and reload table
+            document.getElementById('inlineSearchPo').value = '';
+            document.getElementById('inlineSearchPo').focus();
+            
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: `${poNumber} added to schedule`,
+                showConfirmButton: false,
+                timer: 2000
+            });
+            
+            loadQASchedule();
+        } else {
+            Swal.fire('Error', res.message, 'error');
+            document.getElementById('inlineSearchPo').value = '';
+        }
+    })
+    .catch(() => {
+        document.getElementById('inlineSearchPo').disabled = false;
+        Swal.fire('Error', 'Network Error', 'error');
+    });
+}
+
+// Hide autocomplete box when clicking outside
+document.addEventListener('click', function(e) {
+    const box = document.getElementById('inlineSuggestBox');
+    const input = document.getElementById('inlineSearchPo');
+    if (box && input && !box.contains(e.target) && e.target !== input) {
+        box.style.display = 'none';
+    }
+});
 </script>

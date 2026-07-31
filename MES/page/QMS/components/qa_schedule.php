@@ -1,48 +1,28 @@
 <!-- page/QMS/components/qa_schedule.php -->
 <!-- KPI Summary Cards -->
-<div class="row g-3 mb-3 d-print-none">
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm bg-primary text-white h-100">
-            <div class="card-body p-3 d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-1 text-white-50 small fw-bold">Total</h6>
-                    <h3 class="mb-0 fw-bold" id="stat-total">0</h3>
-                </div>
-                <div class="fs-1 text-white-50 opacity-50"><i class="fas fa-boxes"></i></div>
-            </div>
+<div class="mobile-swipe-row mb-3 d-print-none">
+    <div class="swipe-card-wrapper">
+        <div class="kpi-card p-3 h-100 bg-white" style="border-left: 4px solid var(--bs-primary);">
+            <div class="text-secondary fw-bold small text-uppercase mb-1"><i class="fas fa-boxes me-1"></i> Total</div>
+            <h3 class="mb-0 fw-bold text-dark" id="stat-total">0</h3>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm bg-warning text-dark h-100">
-            <div class="card-body p-3 d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-1 text-dark-50 small fw-bold" style="opacity: 0.7;">Pending</h6>
-                    <h3 class="mb-0 fw-bold" id="stat-pending">0</h3>
-                </div>
-                <div class="fs-1 text-dark opacity-25"><i class="fas fa-hourglass-half"></i></div>
-            </div>
+    <div class="swipe-card-wrapper">
+        <div class="kpi-card p-3 h-100 bg-white" style="border-left: 4px solid var(--bs-warning);">
+            <div class="text-warning text-dark fw-bold small text-uppercase mb-1"><i class="fas fa-hourglass-half me-1"></i> Pending</div>
+            <h3 class="mb-0 fw-bold text-dark" id="stat-pending">0</h3>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm bg-success text-white h-100">
-            <div class="card-body p-3 d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-1 text-white-50 small fw-bold">Passed</h6>
-                    <h3 class="mb-0 fw-bold" id="stat-passed">0</h3>
-                </div>
-                <div class="fs-1 text-white-50 opacity-50"><i class="fas fa-check-circle"></i></div>
-            </div>
+    <div class="swipe-card-wrapper">
+        <div class="kpi-card p-3 h-100 bg-white" style="border-left: 4px solid var(--bs-success);">
+            <div class="text-success fw-bold small text-uppercase mb-1"><i class="fas fa-check-circle me-1"></i> Passed</div>
+            <h3 class="mb-0 fw-bold text-dark" id="stat-passed">0</h3>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm bg-danger text-white h-100">
-            <div class="card-body p-3 d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-1 text-white-50 small fw-bold">Failed</h6>
-                    <h3 class="mb-0 fw-bold" id="stat-failed">0</h3>
-                </div>
-                <div class="fs-1 text-white-50 opacity-50"><i class="fas fa-times-circle"></i></div>
-            </div>
+    <div class="swipe-card-wrapper">
+        <div class="kpi-card p-3 h-100 bg-white" style="border-left: 4px solid var(--bs-danger);">
+            <div class="text-danger fw-bold small text-uppercase mb-1"><i class="fas fa-times-circle me-1"></i> Failed</div>
+            <h3 class="mb-0 fw-bold text-dark" id="stat-failed">0</h3>
         </div>
     </div>
 </div>
@@ -60,7 +40,7 @@
         <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" onclick="window.print()">
             <i class="fas fa-print me-1"></i> Print Schedule
         </button>
-        <button class="btn btn-sm btn-primary fw-bold shadow-sm" onclick="openAddScheduleModal()">
+        <button class="btn btn-sm btn-primary fw-bold shadow-sm d-none" onclick="openAddScheduleModal()">
             <i class="fas fa-plus-circle me-1"></i> Add PO to Schedule
         </button>
     </div>
@@ -81,6 +61,21 @@
                         <th class="text-center d-print-none">Action</th>
                     </tr>
                 </thead>
+                <tbody id="qaScheduleInlineAdd" class="border-bottom-0 d-print-none">
+                    <tr class="bg-light">
+                        <td class="px-2 py-2" style="position: relative; width: 220px;">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0 fw-bold text-primary" id="inlineSearchPo" placeholder="Type PO Number..." autocomplete="off" onkeyup="debounceInlineSearch(event)">
+                                <button class="btn btn-primary fw-bold px-3" onclick="triggerInlineSearch()">Add</button>
+                            </div>
+                            <div id="inlineSuggestBox" class="list-group position-absolute w-100 shadow mt-1 z-3" style="display:none; max-height: 200px; overflow-y: auto; left: 0;"></div>
+                        </td>
+                        <td colspan="7" class="text-muted small align-middle fst-italic">
+                            Type PO Number to quick add to this date
+                        </td>
+                    </tr>
+                </tbody>
                 <tbody id="qaScheduleBody">
                     <tr><td colspan="8" class="text-center py-4 text-muted">Loading schedule...</td></tr>
                 </tbody>
