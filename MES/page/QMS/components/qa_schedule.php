@@ -127,30 +127,30 @@
                         <th>Inspection Status</th>
                     </tr>
                 </thead>
-                <tbody id="qaScheduleInlineAdd" class="border-bottom-0 d-print-none">
+                <tbody id="qaScheduleBody">
+                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading schedule...</td></tr>
+                </tbody>
+                <tfoot id="qaScheduleInlineAdd" class="border-top-0 d-print-none">
                     <tr id="qaScheduleAddBtnRow" class="bg-light" style="cursor: pointer;" onclick="showInlineSearch()">
-                        <td colspan="8" class="text-center py-2 text-primary fw-bold" style="transition: all 0.2s;">
-                            <div class="d-inline-block px-4 py-1 rounded" style="background-color: rgba(13, 110, 253, 0.1);">
+                        <td colspan="7" class="text-center py-3 text-primary fw-bold" style="transition: all 0.2s; border-bottom: none;">
+                            <div class="d-inline-block px-4 py-2 rounded-pill" style="background-color: rgba(13, 110, 253, 0.1); border: 1px dashed rgba(13, 110, 253, 0.5);">
                                 <i class="fas fa-plus me-1"></i> Add PO to Schedule
                             </div>
                         </td>
                     </tr>
                     <tr id="qaScheduleSearchRow" class="bg-light d-none">
-                        <td colspan="7" class="p-2 text-center" style="position: relative;">
+                        <td colspan="7" class="p-3 text-center" style="position: relative; border-bottom: none;">
                             <div class="mx-auto position-relative" style="max-width: 500px;">
-                                <div class="input-group input-group-sm shadow-sm">
+                                <div class="input-group shadow-sm">
                                     <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                                    <input type="text" class="form-control border-start-0 fw-bold text-primary" id="inlineSearchPo" placeholder="Type PO Number..." autocomplete="off" onkeyup="debounceInlineSearch(event)">
+                                    <input type="text" class="form-control border-start-0 fw-bold text-primary py-2" id="inlineSearchPo" placeholder="Type PO Number..." autocomplete="off" onkeyup="debounceInlineSearch(event)">
                                     <button class="btn btn-primary fw-bold px-4" onclick="triggerInlineSearch()">Add</button>
                                 </div>
                                 <div id="inlineSuggestBox" class="list-group position-absolute w-100 shadow mt-1 z-3 text-start" style="display:none; max-height: 250px; overflow-y: auto;"></div>
                             </div>
                         </td>
                     </tr>
-                </tbody>
-                <tbody id="qaScheduleBody">
-                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading schedule...</td></tr>
-                </tbody>
+                </tfoot>
             </table>
         </div>
     </div>
