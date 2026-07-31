@@ -62,17 +62,23 @@
                     </tr>
                 </thead>
                 <tbody id="qaScheduleInlineAdd" class="border-bottom-0 d-print-none">
-                    <tr class="bg-light">
-                        <td class="px-2 py-2" style="position: relative; width: 220px;">
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                                <input type="text" class="form-control border-start-0 fw-bold text-primary" id="inlineSearchPo" placeholder="Type PO Number..." autocomplete="off" onkeyup="debounceInlineSearch(event)">
-                                <button class="btn btn-primary fw-bold px-3" onclick="triggerInlineSearch()">Add</button>
+                    <tr id="qaScheduleAddBtnRow" class="bg-light" style="cursor: pointer;" onclick="showInlineSearch()">
+                        <td colspan="8" class="text-center py-2 text-primary fw-bold" style="transition: all 0.2s;">
+                            <div class="d-inline-block px-4 py-1 rounded" style="background-color: rgba(13, 110, 253, 0.1);">
+                                <i class="fas fa-plus me-1"></i> Add PO to Schedule
                             </div>
-                            <div id="inlineSuggestBox" class="list-group position-absolute w-100 shadow mt-1 z-3" style="display:none; max-height: 200px; overflow-y: auto; left: 0;"></div>
                         </td>
-                        <td colspan="7" class="text-muted small align-middle fst-italic">
-                            Type PO Number to quick add to this date
+                    </tr>
+                    <tr id="qaScheduleSearchRow" class="bg-light d-none">
+                        <td colspan="8" class="p-3 text-center" style="position: relative;">
+                            <div class="mx-auto position-relative" style="max-width: 500px;">
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                    <input type="text" class="form-control border-start-0 fw-bold text-primary py-2" id="inlineSearchPo" placeholder="Type PO Number..." autocomplete="off" onkeyup="debounceInlineSearch(event)">
+                                    <button class="btn btn-primary fw-bold px-4" onclick="triggerInlineSearch()">Add</button>
+                                </div>
+                                <div id="inlineSuggestBox" class="list-group position-absolute w-100 shadow mt-1 z-3 text-start" style="display:none; max-height: 250px; overflow-y: auto;"></div>
+                            </div>
                         </td>
                     </tr>
                 </tbody>

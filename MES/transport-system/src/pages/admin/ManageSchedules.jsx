@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 const ManageSchedules = () => {
   const [schedules, setSchedules] = useState([]);
-  const [vehicles, setVehicles] = useState([]);
+  const [fleet, setFleet] = useState([]);
   const [timeSlots, setTimeSlots] = useState([]);
   const [routes, setRoutes] = useState([]);
   
@@ -26,19 +26,19 @@ const ManageSchedules = () => {
   useEffect(() => {
     // Load mock data
     const savedSchedules = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-    const savedVehicles = JSON.parse(localStorage.getItem('vehicles')) || [];
+    const savedFleet = JSON.parse(localStorage.getItem('fleet')) || [];
     const savedTimeSlots = JSON.parse(localStorage.getItem('timeSlots')) || [];
     const savedRoutes = JSON.parse(localStorage.getItem('routes')) || [];
     
     setSchedules(savedSchedules);
-    setVehicles(savedVehicles);
+    setFleet(savedFleet);
     setTimeSlots(savedTimeSlots);
     setRoutes(savedRoutes);
   }, []);
 
   const handleAddSchedule = (e) => {
     e.preventDefault();
-    const vehicle = vehicles.find(v => v.id === formData.vehicleId);
+    const vehicle = fleet.find(v => v.id === formData.vehicleId);
     const timeSlot = timeSlots.find(ts => ts.id === formData.timeSlotId);
     if (!vehicle || !timeSlot) return;
 
@@ -60,6 +60,9 @@ const ManageSchedules = () => {
             vehicleId: vehicle.id,
             vehicleName: vehicle.licensePlate,
             capacity: vehicle.capacity,
+            driverName: vehicle.driverName,
+            driverPhone: vehicle.driverPhone,
+            driverEmpId: vehicle.driverEmpId
           };
         }
         return s;
@@ -75,6 +78,9 @@ const ManageSchedules = () => {
         vehicleId: vehicle.id,
         vehicleName: vehicle.licensePlate,
         capacity: vehicle.capacity,
+        driverName: vehicle.driverName,
+        driverPhone: vehicle.driverPhone,
+        driverEmpId: vehicle.driverEmpId,
         bookedCount: 0,
         status: 'OPEN',
         createdAt: new Date().toISOString(),
@@ -351,9 +357,9 @@ const ManageSchedules = () => {
                   className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                 >
                   <option value="">-- เลือกรถที่ต้องการใช้ --</option>
-                  {vehicles.map(v => (
+                  {fleet.map(v => (
                     <option key={v.id} value={v.id}>
-                      {v.licensePlate} ({v.type === 'VAN' ? 'รถตู้' : 'รถบัส'} - {v.capacity} ที่นั่ง)
+                      {v.licensePlate} ({v.type === 'VAN' ? 'รถตู้' : 'รถบัส'} - {v.capacity} ที่นั่ง) {v.driverName ? ` - พขร. ${v.driverName}` : ''}
                     </option>
                   ))}
                 </select>

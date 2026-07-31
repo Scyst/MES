@@ -274,6 +274,19 @@ function setScheduleDateToday() {
 // ---- INLINE ADD PO LOGIC ----
 let inlineSearchTimeout = null;
 
+function showInlineSearch() {
+    document.getElementById('qaScheduleAddBtnRow').classList.add('d-none');
+    document.getElementById('qaScheduleSearchRow').classList.remove('d-none');
+    document.getElementById('inlineSearchPo').focus();
+}
+
+function hideInlineSearch() {
+    document.getElementById('qaScheduleSearchRow').classList.add('d-none');
+    document.getElementById('qaScheduleAddBtnRow').classList.remove('d-none');
+    document.getElementById('inlineSearchPo').value = '';
+    document.getElementById('inlineSuggestBox').style.display = 'none';
+}
+
 function debounceInlineSearch(event) {
     const term = event.target.value.trim();
     if (event.key === 'Enter') {
@@ -354,10 +367,7 @@ function inlineAddPo(id, poNumber) {
         document.getElementById('inlineSearchPo').disabled = false;
         
         if(res.success) {
-            // Clear input and reload table
-            document.getElementById('inlineSearchPo').value = '';
-            document.getElementById('inlineSearchPo').focus();
-            
+            // Success, reload table and hide search
             Swal.fire({
                 toast: true,
                 position: 'top-end',
@@ -368,6 +378,7 @@ function inlineAddPo(id, poNumber) {
             });
             
             loadQASchedule();
+            hideInlineSearch();
         } else {
             Swal.fire('Error', res.message, 'error');
             document.getElementById('inlineSearchPo').value = '';
@@ -379,12 +390,25 @@ function inlineAddPo(id, poNumber) {
     });
 }
 
-// Hide autocomplete box when clicking outside
+// Hide autocomplete box and search row when clicking outside
 document.addEventListener('click', function(e) {
+    const searchRow = document.getElementById('qaScheduleSearchRow');
+    const btnRow = document.getElementById('qaScheduleAddBtnRow');
     const box = document.getElementById('inlineSuggestBox');
     const input = document.getElementById('inlineSearchPo');
+    
+    // Handle suggestion box visibility
     if (box && input && !box.contains(e.target) && e.target !== input) {
         box.style.display = 'none';
+    }
+    
+    // Handle search row visibility
+    if (searchRow && !searchRow.classList.contains('d-none')) {
+        if (!searchRow.contains(e.target) && (!btnRow || !btnRow.contains(e.target))) {
+            // Only hide if suggestion box is also not clicked (already handled by contains on searchRow)
+            // Wait, suggestBox is inside searchRow, so clicking it won't trigger this.
+            hideInlineSearch();
+        }
     }
 });
 </script>
