@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, MapPin, BusFront, CheckCircle, QrCode, ArrowLeft, AlertTriangle, ScanLine } from 'lucide-react';
 import SurveyModal from '../../components/employee/SurveyModal';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const MyTicket = () => {
   const { ticketId } = useParams();
@@ -10,6 +11,7 @@ const MyTicket = () => {
   const [schedule, setSchedule] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
     const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
@@ -43,21 +45,19 @@ const MyTicket = () => {
   };
 
   const handleCancelBooking = () => {
-    if (confirm('ยืนยันการยกเลิกจองที่นั่ง?')) {
-      const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-      const updatedBookings = allBookings.filter(b => b.id !== ticketId);
-      localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
+    const updatedBookings = allBookings.filter(b => b.id !== ticketId);
+    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
 
-      const allSchedules = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-      const scheduleIndex = allSchedules.findIndex(s => s.id === booking.scheduledTripId);
-      if (scheduleIndex !== -1) {
-        allSchedules[scheduleIndex].bookedCount = Math.max(0, allSchedules[scheduleIndex].bookedCount - 1);
-        localStorage.setItem('scheduledTrips', JSON.stringify(allSchedules));
-      }
-
-      localStorage.removeItem('my_ticket_id');
-      navigate('/booking');
+    const allSchedules = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
+    const scheduleIndex = allSchedules.findIndex(s => s.id === booking.scheduledTripId);
+    if (scheduleIndex !== -1) {
+      allSchedules[scheduleIndex].bookedCount = Math.max(0, allSchedules[scheduleIndex].bookedCount - 1);
+      localStorage.setItem('scheduledTrips', JSON.stringify(allSchedules));
     }
+
+    localStorage.removeItem('my_ticket_id');
+    navigate('/booking');
   };
 
   if (!booking || !schedule) {
@@ -107,7 +107,7 @@ const MyTicket = () => {
             </div>
             <div className="text-right">
               <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase ${isBoarded ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
-                {isBoarded ? 'BOARDED' : 'CONFIRMED'}
+                {isBoarded ? 'ขึ้นรถแล้ว' : 'จองแล้ว'}
               </span>
             </div>
           </div>
@@ -167,7 +167,7 @@ const MyTicket = () => {
                   ) : (
                     <>
                       <ScanLine size={22} />
-                      จำลองการสแกน (Demo)
+                      เปิดกล้องสแกน QR รถ
                     </>
                   )}
                 </button>
@@ -198,7 +198,7 @@ const MyTicket = () => {
         {!isBoarded && (
           <div className="mt-6 text-center">
             <button 
-              onClick={handleCancelBooking}
+              onClick={() => setShowCancelConfirm(true)}
               className="px-6 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl font-bold transition-all text-sm"
             >
               ยกเลิกการจอง
@@ -208,6 +208,22 @@ const MyTicket = () => {
       </div>
 
       <SurveyModal isOpen={showSurvey} onClose={() => setShowSurvey(false)} />
+
+      <ConfirmModal
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={handleCancelBooking}
+        title="ยกเลิกการจองที่นั่ง"
+        message="คุณกำลังจะยกเลิกการจองรถรอบนี้ ที่นั่งจะถูกคืนให้ผู้อื่นได้จองต่อ"
+        details={schedule ? [
+          { label: 'สายรถ', value: schedule.route },
+          { label: 'วันที่', value: new Date(schedule.departureTime).toLocaleDateString('th-TH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) },
+          { label: 'เวลา', value: new Date(schedule.departureTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) },
+        ] : []}
+        variant="danger"
+        confirmText="ยืนยันยกเลิก"
+        cancelText="เก็บการจองไว้"
+      />
       
       {/* Global Style for scanning animation */}
       <style dangerouslySetInnerHTML={{__html: `

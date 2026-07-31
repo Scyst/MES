@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Clock, Users, ArrowRight, Trash2, CalendarDays, Download, Filter, MapPin, BusFront, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const ManageSchedules = () => {
   const [schedules, setSchedules] = useState([]);
@@ -10,6 +11,7 @@ const ManageSchedules = () => {
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, scheduleId: null, schedule: null });
   const [formData, setFormData] = useState({
     route: '',
     date: new Date().toISOString().split('T')[0],
@@ -98,13 +100,15 @@ const ManageSchedules = () => {
     setFormData({ route: '', date: selectedDate, timeSlotId: '', vehicleId: '' });
   };
 
-  const handleDelete = (e, id) => {
+  const handleDelete = (e, schedule) => {
     e.stopPropagation();
-    if (confirm('ยืนยันการลบรอบรถนี้? การลบจะไม่สามารถกู้คืนได้')) {
-      const updatedSchedules = schedules.filter(s => s.id !== id);
-      setSchedules(updatedSchedules);
-      localStorage.setItem('scheduledTrips', JSON.stringify(updatedSchedules));
-    }
+    setDeleteConfirm({ isOpen: true, scheduleId: schedule.id, schedule });
+  };
+
+  const doDelete = () => {
+    const updatedSchedules = schedules.filter(s => s.id !== deleteConfirm.scheduleId);
+    setSchedules(updatedSchedules);
+    localStorage.setItem('scheduledTrips', JSON.stringify(updatedSchedules));
   };
 
   const handleEditSchedule = (e, schedule) => {
@@ -290,7 +294,7 @@ const ManageSchedules = () => {
                     <Pencil size={18} />
                   </button>
                   <button
-                    onClick={(e) => handleDelete(e, schedule.id)}
+                    onClick={(e) => handleDelete(e, schedule)}
                     className="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition-colors"
                     title="ลบรอบรถ"
                   >
@@ -401,6 +405,22 @@ const ManageSchedules = () => {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, scheduleId: null, schedule: null })}
+        onConfirm={doDelete}
+        title="ลบรอบรถ"
+        message="การลบจะไม่สามารถกู้คืนได้ ผู้จองที่มีอยู่จะต้องได้รับการแจ้งให้ทราบแยกต่างหาก"
+        details={deleteConfirm.schedule ? [
+          { label: 'สายรถ', value: deleteConfirm.schedule.route },
+          { label: 'วันที่', value: deleteConfirm.schedule.date },
+          { label: 'เวลา', value: deleteConfirm.schedule.timeSlotName || '-' },
+          { label: 'ทะเบียน', value: deleteConfirm.schedule.vehicleName || '-' },
+        ] : []}
+        variant="danger"
+        confirmText="ลบรอบนี้"
+      />
     </div>
   );
 };

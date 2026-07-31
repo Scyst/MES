@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, MapPin, BusFront, CheckSquare, Square, ChevronRight, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const BookingHome = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,14 +15,28 @@ const BookingHome = () => {
   // Multi-day selection state
   const [multiDayMode, setMultiDayMode] = useState(false);
   const [selectedMultiDays, setSelectedMultiDays] = useState([]);
+  const [masterRoutes, setMasterRoutes] = useState([]);
+
+  // Confirm modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    details: [],
+    onConfirm: () => {},
+    variant: 'info',
+    confirmText: 'ยืนยัน',
+  });
 
   const navigate = useNavigate();
 
   useEffect(() => {
     const savedTrips = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
     const savedBookings = JSON.parse(localStorage.getItem('bookings')) || [];
+    const savedRoutes = JSON.parse(localStorage.getItem('routes')) || [];
     setTrips(savedTrips);
     setBookings(savedBookings);
+    setMasterRoutes(savedRoutes);
   }, []);
 
   // Generate next 7 days for Date Picker
@@ -44,72 +59,101 @@ const BookingHome = () => {
     }
   };
 
-  const handleBook = (trip) => {
-    if (multiDayMode && selectedMultiDays.length > 0) {
-      if (confirm(`ยืนยันการจองรถสาย ${trip.route} จำนวน ${selectedMultiDays.length} วัน?`)) {
-        let updatedBookings = [...bookings];
-        let updatedTrips = [...trips];
+  const doBookSingleTrip = (trip) => {
+    const newBooking = {
+      id: `BKG-${Date.now()}`,
+      scheduledTripId: trip.id,
+      empId: '1096902163',
+      name: 'ณภัทร นุ่มทอง',
+      bu: 'อาคารเกิดหลิน',
+      status: 'BOOKED',
+      bookedAt: new Date().toISOString(),
+      isExtra: false
+    };
+    const updatedBookings = [...bookings, newBooking];
+    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+    const updatedTrips = trips.map(t =>
+      t.id === trip.id ? { ...t, bookedCount: t.bookedCount + 1 } : t
+    );
+    localStorage.setItem('scheduledTrips', JSON.stringify(updatedTrips));
+    setTrips(updatedTrips);
+    setBookings(updatedBookings);
+    navigate(`/booking/ticket/${newBooking.id}`);
+  };
 
-        selectedMultiDays.forEach(dateStr => {
-          // Find matching trip for that day (mocking same route different day)
-          let targetTrip = updatedTrips.find(t => t.date === dateStr && t.route === trip.route);
-          if (targetTrip && targetTrip.bookedCount < targetTrip.capacity) {
-            targetTrip.bookedCount += 1;
-            const newBooking = {
-              id: `BKG-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-              scheduledTripId: targetTrip.id,
-              empId: '1096902163',
-              name: 'ณภัทร นุ่มทอง',
-              bu: 'อาคารเกิดหลิน',
-              status: 'BOOKED',
-              bookedAt: new Date().toISOString(),
-              isExtra: false
-            };
-            updatedBookings.push(newBooking);
-          }
-        });
+  const doBookMultiDay = (trip) => {
+    let updatedBookings = [...bookings];
+    let updatedTrips = [...trips];
+    const skippedDates = [];
 
-        localStorage.setItem('scheduledTrips', JSON.stringify(updatedTrips));
-        localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-        setTrips(updatedTrips);
-        setBookings(updatedBookings);
-        
-        // Go to ticket for the earliest booked trip
-        const earliestBooking = updatedBookings[updatedBookings.length - 1];
-        navigate(`/booking/ticket/${earliestBooking.id}`);
-      }
-    } else {
-      if (confirm(`ยืนยันการจองรถสาย ${trip.route} วันที่ ${new Date(trip.departureTime).toLocaleDateString('th-TH')}?`)) {
-        const newBooking = {
-          id: `BKG-${Date.now()}`,
-          scheduledTripId: trip.id,
+    selectedMultiDays.forEach(dateStr => {
+      const targetTrip = updatedTrips.find(t => t.date === dateStr && t.route === trip.route);
+      if (targetTrip && targetTrip.bookedCount < targetTrip.capacity) {
+        targetTrip.bookedCount += 1;
+        updatedBookings.push({
+          id: `BKG-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          scheduledTripId: targetTrip.id,
           empId: '1096902163',
           name: 'ณภัทร นุ่มทอง',
           bu: 'อาคารเกิดหลิน',
           status: 'BOOKED',
           bookedAt: new Date().toISOString(),
           isExtra: false
-        };
-        
-        const updatedBookings = [...bookings, newBooking];
-        localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-        
-        const updatedTrips = trips.map(t => {
-          if (t.id === trip.id) {
-            return { ...t, bookedCount: t.bookedCount + 1 };
-          }
-          return t;
         });
-        localStorage.setItem('scheduledTrips', JSON.stringify(updatedTrips));
-        
-        setTrips(updatedTrips);
-        setBookings(updatedBookings);
-        navigate(`/booking/ticket/${newBooking.id}`);
+      } else {
+        skippedDates.push(dateStr);
       }
+    });
+
+    localStorage.setItem('scheduledTrips', JSON.stringify(updatedTrips));
+    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+    setTrips(updatedTrips);
+    setBookings(updatedBookings);
+    const lastBooking = updatedBookings[updatedBookings.length - 1];
+    if (lastBooking) navigate(`/booking/ticket/${lastBooking.id}`);
+  };
+
+  const handleBook = (trip) => {
+    if (multiDayMode && selectedMultiDays.length > 0) {
+      const skippedDates = selectedMultiDays.filter(dateStr => {
+        const t = trips.find(t => t.date === dateStr && t.route === trip.route);
+        return !t || t.bookedCount >= t.capacity;
+      });
+      const willBook = selectedMultiDays.length - skippedDates.length;
+      setConfirmModal({
+        isOpen: true,
+        title: 'ยืนยันการจองล่วงหน้า',
+        message: skippedDates.length > 0
+          ? `จะจองได้ ${willBook} วัน (ไม่มีรอบรถหรือเต็มแล้ว ${skippedDates.length} วัน)`
+          : `จองรถล่วงหน้า ${selectedMultiDays.length} วัน`,
+        details: [
+          { label: 'สายรถ', value: trip.route },
+          { label: 'จำนวนวัน', value: `${willBook} วัน` },
+          { label: 'เวลา', value: new Date(trip.departureTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) },
+        ],
+        onConfirm: () => doBookMultiDay(trip),
+        variant: 'info',
+        confirmText: 'จองเลย',
+      });
+    } else {
+      setConfirmModal({
+        isOpen: true,
+        title: 'ยืนยันการจองที่นั่ง',
+        message: 'ตรวจสอบข้อมูลรอบรถด้านล่างก่อนยืนยัน',
+        details: [
+          { label: 'สายรถ', value: trip.route },
+          { label: 'วันที่', value: new Date(trip.departureTime).toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) },
+          { label: 'เวลา', value: new Date(trip.departureTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) },
+          { label: 'ทะเบียนรถ', value: trip.vehicleName || '-' },
+        ],
+        onConfirm: () => doBookSingleTrip(trip),
+        variant: 'info',
+        confirmText: 'จองที่นั่ง',
+      });
     }
   };
 
-  const routes = ['ทั้งหมด', 'สายCK', 'สายบ่อวิน', 'สายบ้านค่าย', 'สายระยอง'];
+  const routes = ['ทั้งหมด', ...masterRoutes.map(r => r.name)];
 
   const now = new Date();
 
@@ -264,6 +308,17 @@ const BookingHome = () => {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(m => ({ ...m, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        details={confirmModal.details}
+        variant={confirmModal.variant}
+        confirmText={confirmModal.confirmText}
+      />
     </div>
   );
 };

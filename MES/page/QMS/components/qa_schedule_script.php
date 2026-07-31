@@ -72,16 +72,16 @@ function loadQASchedule(filterType = null) {
 
                     html += `
                         <tr class="${rowClass}" style="cursor: pointer;" onclick='openUpdateModal(${JSON.stringify(po).replace(/'/g, "&#39;")})' title="Click to view/update">
-                            <td class="px-3 fw-bold text-primary">${po.po_number}</td>
-                            <td>
+                            <td class="px-3 fw-bold text-primary text-start">${po.po_number}</td>
+                            <td class="text-start">
                                 <div><strong>${po.sku}</strong></div>
                                 <div class="small text-muted">${po.description} (${po.color})</div>
                             </td>
-                            <td class="fw-bold">${po.quantity ? Number(po.quantity).toLocaleString() : '-'}</td>
-                            <td>${po.dc_location || '-'}</td>
-                            <td>${po.loading_date ? po.loading_date : '-'}</td>
-                            <td onclick="event.stopPropagation()">${inspectorCell}</td>
-                            <td>${statusBadge} ${resultBadge}</td>
+                            <td class="fw-bold text-center">${po.quantity ? Number(po.quantity).toLocaleString() : '-'}</td>
+                            <td class="text-center">${po.dc_location || '-'}</td>
+                            <td class="text-center">${po.loading_date ? po.loading_date : '-'}</td>
+                            <td class="text-center" onclick="event.stopPropagation()">${inspectorCell}</td>
+                            <td class="text-center">${statusBadge} ${resultBadge}</td>
                         </tr>
                     `;
                 });
