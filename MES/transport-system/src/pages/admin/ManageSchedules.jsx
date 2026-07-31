@@ -150,6 +150,19 @@ const ManageSchedules = () => {
   return (
     <div className="space-y-6 w-full">
       
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <CalendarDays size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">จัดการรอบรถล่วงหน้า (Manage Schedules)</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">วางแผนและกำหนดรอบรถที่จะให้บริการในแต่ละวัน</p>
+          </div>
+        </div>
+      </div>
+      
       {/* Top Toolbar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
         

@@ -67,10 +67,16 @@
 }
 
 .table-overdue td {
-    background-color: #fff0f0 !important;
+    background-color: #ffe6e6 !important;
+}
+.table-overdue td:first-child {
+    border-left: 4px solid #dc3545;
 }
 .table-approaching td {
-    background-color: #fff9e6 !important;
+    background-color: #fff5cc !important;
+}
+.table-approaching td:first-child {
+    border-left: 4px solid #ffc107;
 }
 
 .date-nav-btn {

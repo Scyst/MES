@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BusFront, Users, QrCode, AlertCircle, Building2, MapPin, Clock, X, CheckCircle, UserPlus, Info, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { BusFront, Users, QrCode, AlertCircle, Building2, MapPin, Clock, X, CheckCircle, UserPlus, Info, Download, Calendar as CalendarIcon, LayoutDashboard } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -89,6 +89,19 @@ const AdminDashboard = () => {
 
   return (
     <div className="text-gray-900 dark:text-gray-100 w-full space-y-6 font-sans">
+      
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <LayoutDashboard size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">ภาพรวมระบบ (Dashboard)</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">สรุปข้อมูลการเดินทางและการใช้งานระบบทั้งหมดประจำวัน</p>
+          </div>
+        </div>
+      </div>
       
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
