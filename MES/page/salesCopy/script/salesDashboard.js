@@ -427,7 +427,7 @@ async function toggleCheck(id, field, val) {
                 if(field === 'confirm') row.is_confirmed = dbVal;
                 else if(field === 'prod') row.is_production_done = dbVal;
                 else if(field === 'load') row.is_loading_done = dbVal;
-                else if(field === 'insp') row.inspection_status = dbVal ? 'Pass' : '';
+                else if(field === 'insp') row.inspection_status = dbVal ? 'DONE' : 'WAITING';
             }
             renderTable(document.getElementById('universalSearch').value);
         } else {

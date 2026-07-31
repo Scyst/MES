@@ -314,8 +314,9 @@ try {
             $in = json_decode(file_get_contents('php://input'), true);
             $val = $in['checked'] ? 1 : 0;
             if ($in['field'] == 'insp') {
-                $txtVal = $in['checked'] ? 'Pass' : null;
-                $pdo->prepare("UPDATE $table SET inspection_status = ?, updated_at = GETDATE() WHERE id = ?")->execute([$txtVal, $in['id']]);
+                $statusVal = $in['checked'] ? 'DONE' : 'WAITING';
+                $resultVal = $in['checked'] ? 'PASS' : null;
+                $pdo->prepare("UPDATE $table SET inspection_status = ?, inspection_result = ?, updated_at = GETDATE() WHERE id = ?")->execute([$statusVal, $resultVal, $in['id']]);
             } else {
                 $col = ($in['field']=='prod')?'is_production_done':(($in['field']=='load')?'is_loading_done':(($in['field']=='confirm')?'is_confirmed':''));
                 if($col) {
