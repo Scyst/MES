@@ -21,7 +21,7 @@ function loadQASchedule(filterType = null) {
 
     const date = document.getElementById('scheduleDateFilter').value;
     const tbody = document.getElementById('qaScheduleBody');
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
     
     fetch(`./api/qa_schedule_api.php?action=get_schedule&date=${date}&range=${currentFilter}`)
         .then(r => r.json())
@@ -36,7 +36,7 @@ function loadQASchedule(filterType = null) {
                 }
 
                 if(res.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
                     return;
                 }
                 
