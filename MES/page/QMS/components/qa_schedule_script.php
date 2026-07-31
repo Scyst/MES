@@ -172,7 +172,9 @@ function openUpdateModal(po) {
     document.getElementById('inspect_po_id').value = po.id;
     document.getElementById('inspect_po_number').value = po.po_number + ' - ' + po.sku;
     let status = po.inspection_status ? po.inspection_status.toString().trim().toUpperCase() : '';
-    if (!status || status === 'NULL') status = 'WAITING';
+    if (status !== 'IN_PROGRESS' && status !== 'DONE') {
+        status = 'WAITING';
+    }
     
     const statusRadio = document.getElementById('status_' + status.toLowerCase().replace(' ', '_'));
     if (statusRadio) {
