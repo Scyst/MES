@@ -8,11 +8,23 @@ function loadQASchedule() {
         .then(r => r.json())
         .then(res => {
             if(res.success) {
+                if(res.stats) {
+                    document.getElementById('stat-total').innerText = res.stats.total;
+                    document.getElementById('stat-pending').innerText = res.stats.pending;
+                    document.getElementById('stat-passed').innerText = res.stats.passed;
+                    document.getElementById('stat-failed').innerText = res.stats.failed;
+                }
+
                 if(res.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
                     return;
                 }
                 
+                const todayDate = new Date();
+                todayDate.setHours(0,0,0,0);
+                const in2Days = new Date(todayDate);
+                in2Days.setDate(todayDate.getDate() + 2);
+
                 let html = '';
                 res.data.forEach(po => {
                     let statusBadge = '<span class="badge bg-secondary">WAITING</span>';
@@ -23,8 +35,23 @@ function loadQASchedule() {
                     if (po.inspection_result === 'PASS') resultBadge = '<span class="badge bg-success ms-1">PASS</span>';
                     if (po.inspection_result === 'FAIL') resultBadge = '<span class="badge bg-danger ms-1">FAIL</span>';
 
+                    let rowClass = '';
+                    if (po.inspection_status !== 'DONE' && po.loading_date) {
+                        const lDate = new Date(po.loading_date);
+                        lDate.setHours(0,0,0,0);
+                        if (lDate <= todayDate) {
+                            rowClass = 'table-danger';
+                        } else if (lDate <= in2Days) {
+                            rowClass = 'table-warning';
+                        }
+                    }
+
+                    let inspectorCell = po.qa_inspector ? 
+                        `<span class="badge bg-info text-dark shadow-sm"><i class="fas fa-user-check me-1"></i>${po.qa_inspector}</span>` :
+                        `<button class="btn btn-sm btn-outline-primary py-0 px-2 shadow-sm" onclick="assignToMe(${po.id})" style="font-size:0.75rem;">Assign to Me</button>`;
+
                     html += `
-                        <tr>
+                        <tr class="${rowClass}">
                             <td class="px-3 fw-bold text-primary">${po.po_number}</td>
                             <td>
                                 <div><strong>${po.sku}</strong></div>
@@ -33,12 +60,13 @@ function loadQASchedule() {
                             <td class="fw-bold">${po.quantity ? Number(po.quantity).toLocaleString() : '-'}</td>
                             <td>${po.dc_location || '-'}</td>
                             <td>${po.loading_date ? po.loading_date : '-'}</td>
+                            <td>${inspectorCell}</td>
                             <td>${statusBadge} ${resultBadge}</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-outline-warning" onclick='openUpdateModal(${JSON.stringify(po).replace(/'/g, "&#39;")})' title="Update Result">
+                            <td class="text-center d-print-none">
+                                <button class="btn btn-sm btn-outline-warning shadow-sm" onclick='openUpdateModal(${JSON.stringify(po).replace(/'/g, "&#39;")})' title="Update Result">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger ms-1" onclick="removeSchedule(${po.id})" title="Remove from schedule">
+                                <button class="btn btn-sm btn-outline-danger shadow-sm ms-1" onclick="removeSchedule(${po.id})" title="Remove from schedule">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </td>
@@ -47,10 +75,10 @@ function loadQASchedule() {
                 });
                 tbody.innerHTML = html;
             } else {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">${res.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">${res.message}</td></tr>`;
             }
         }).catch(err => {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Network Error</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Network Error</td></tr>';
         });
 }
 
@@ -171,6 +199,38 @@ function saveInspectionResult() {
             loadQASchedule();
         } else {
             Swal.fire('Error', res.message, 'error');
+        }
+    });
+}
+
+function assignToMe(poId) {
+    const username = '<?php echo $_SESSION['username'] ?? "QA Staff"; ?>'; // Using session username
+    
+    Swal.fire({
+        title: 'Assign to Me?',
+        text: "You will be marked as the inspector for this PO.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, assign to me'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('id', poId);
+            formData.append('qa_inspector', username);
+            
+            fetch('./api/qa_schedule_api.php?action=assign_inspector', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    Swal.fire({icon:'success', title:'Assigned', timer:1500, showConfirmButton:false});
+                    loadQASchedule();
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            });
         }
     });
 }

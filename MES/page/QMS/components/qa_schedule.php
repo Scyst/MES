@@ -1,5 +1,53 @@
 <!-- page/QMS/components/qa_schedule.php -->
-<div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+<!-- KPI Summary Cards -->
+<div class="row g-3 mb-3 d-print-none">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm bg-primary text-white h-100">
+            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1 text-white-50 small fw-bold">Total</h6>
+                    <h3 class="mb-0 fw-bold" id="stat-total">0</h3>
+                </div>
+                <div class="fs-1 text-white-50 opacity-50"><i class="fas fa-boxes"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm bg-warning text-dark h-100">
+            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1 text-dark-50 small fw-bold" style="opacity: 0.7;">Pending</h6>
+                    <h3 class="mb-0 fw-bold" id="stat-pending">0</h3>
+                </div>
+                <div class="fs-1 text-dark opacity-25"><i class="fas fa-hourglass-half"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm bg-success text-white h-100">
+            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1 text-white-50 small fw-bold">Passed</h6>
+                    <h3 class="mb-0 fw-bold" id="stat-passed">0</h3>
+                </div>
+                <div class="fs-1 text-white-50 opacity-50"><i class="fas fa-check-circle"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm bg-danger text-white h-100">
+            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1 text-white-50 small fw-bold">Failed</h6>
+                    <h3 class="mb-0 fw-bold" id="stat-failed">0</h3>
+                </div>
+                <div class="fs-1 text-white-50 opacity-50"><i class="fas fa-times-circle"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap d-print-none">
     <div class="d-flex align-items-center gap-2">
         <div class="input-group shadow-sm" style="width: auto; border-radius: 6px; overflow: hidden;">
             <button class="btn btn-light border-0 text-primary px-3" onclick="changeScheduleDate(-1)" title="Previous Day"><i class="fas fa-chevron-left"></i></button>
@@ -8,9 +56,14 @@
         </div>
         <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" onclick="setScheduleDateToday()">Today</button>
     </div>
-    <button class="btn btn-sm btn-primary fw-bold shadow-sm" onclick="openAddScheduleModal()">
-        <i class="fas fa-plus-circle me-1"></i> Add PO to Schedule
-    </button>
+    <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" onclick="window.print()">
+            <i class="fas fa-print me-1"></i> Print Schedule
+        </button>
+        <button class="btn btn-sm btn-primary fw-bold shadow-sm" onclick="openAddScheduleModal()">
+            <i class="fas fa-plus-circle me-1"></i> Add PO to Schedule
+        </button>
+    </div>
 </div>
 
 <div class="card table-card shadow-sm border-0 desktop-view h-100 d-flex flex-column">
@@ -23,12 +76,13 @@
                         <th>Qty</th>
                         <th>DC Location</th>
                         <th>Loading Date</th>
+                        <th>Inspector</th>
                         <th>Inspection Status</th>
-                        <th class="text-center">Action</th>
+                        <th class="text-center d-print-none">Action</th>
                     </tr>
                 </thead>
                 <tbody id="qaScheduleBody">
-                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading schedule...</td></tr>
+                    <tr><td colspan="8" class="text-center py-4 text-muted">Loading schedule...</td></tr>
                 </tbody>
             </table>
         </div>

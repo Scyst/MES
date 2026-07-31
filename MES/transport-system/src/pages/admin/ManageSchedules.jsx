@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Clock, Users, ArrowRight, Trash2, CalendarDays, Download, Filter, MapPin, BusFront } from 'lucide-react';
+import { Plus, Clock, Users, ArrowRight, Trash2, CalendarDays, Download, Filter, MapPin, BusFront, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const ManageSchedules = () => {
@@ -9,6 +9,7 @@ const ManageSchedules = () => {
   const [routes, setRoutes] = useState([]);
   
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     route: '',
     date: new Date().toISOString().split('T')[0],
@@ -44,26 +45,48 @@ const ManageSchedules = () => {
     // Construct exact ISO departure time from date + timeSlot
     const departureTimeStr = `${formData.date}T${timeSlot.time}:00.000Z`;
 
-    const newSchedule = {
-      id: Date.now().toString(),
-      route: formData.route,
-      departureTime: departureTimeStr,
-      date: formData.date,
-      timeSlotId: timeSlot.id,
-      timeSlotName: timeSlot.name,
-      vehicleId: vehicle.id,
-      vehicleName: vehicle.licensePlate,
-      capacity: vehicle.type === 'VAN' ? 12 : 40,
-      bookedCount: 0,
-      status: 'OPEN',
-      createdAt: new Date().toISOString(),
-      baseCost: vehicle.type === 'VAN' ? 1500 : 3500
-    };
+    let updatedSchedules;
 
-    const updatedSchedules = [...schedules, newSchedule];
+    if (editingId) {
+      updatedSchedules = schedules.map(s => {
+        if (s.id === editingId) {
+          return {
+            ...s,
+            route: formData.route,
+            departureTime: departureTimeStr,
+            date: formData.date,
+            timeSlotId: timeSlot.id,
+            timeSlotName: timeSlot.name,
+            vehicleId: vehicle.id,
+            vehicleName: vehicle.licensePlate,
+            capacity: vehicle.capacity,
+          };
+        }
+        return s;
+      });
+    } else {
+      const newSchedule = {
+        id: Date.now().toString(),
+        route: formData.route,
+        departureTime: departureTimeStr,
+        date: formData.date,
+        timeSlotId: timeSlot.id,
+        timeSlotName: timeSlot.name,
+        vehicleId: vehicle.id,
+        vehicleName: vehicle.licensePlate,
+        capacity: vehicle.capacity,
+        bookedCount: 0,
+        status: 'OPEN',
+        createdAt: new Date().toISOString(),
+        baseCost: vehicle.type === 'VAN' ? 1500 : 3500
+      };
+      updatedSchedules = [...schedules, newSchedule];
+    }
+
     setSchedules(updatedSchedules);
     localStorage.setItem('scheduledTrips', JSON.stringify(updatedSchedules));
     setShowAddModal(false);
+    setEditingId(null);
     
     // Reset form
     setFormData({ route: '', date: selectedDate, timeSlotId: '', vehicleId: '' });
@@ -76,6 +99,18 @@ const ManageSchedules = () => {
       setSchedules(updatedSchedules);
       localStorage.setItem('scheduledTrips', JSON.stringify(updatedSchedules));
     }
+  };
+
+  const handleEditSchedule = (e, schedule) => {
+    e.stopPropagation();
+    setFormData({
+      route: schedule.route,
+      date: schedule.date || schedule.departureTime.split('T')[0],
+      timeSlotId: schedule.timeSlotId,
+      vehicleId: schedule.vehicleId
+    });
+    setEditingId(schedule.id);
+    setShowAddModal(true);
   };
 
   // Generate next 14 days for Date Picker (Admins might need to look further ahead)
@@ -227,7 +262,14 @@ const ManageSchedules = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 flex-shrink-0 pl-2">
+                <div className="flex items-center gap-1 flex-shrink-0 pl-2">
+                  <button
+                    onClick={(e) => handleEditSchedule(e, schedule)}
+                    className="text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-2 rounded-lg transition-colors"
+                    title="แก้ไขรอบรถ"
+                  >
+                    <Pencil size={18} />
+                  </button>
                   <button
                     onClick={(e) => handleDelete(e, schedule.id)}
                     className="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition-colors"
@@ -246,7 +288,9 @@ const ManageSchedules = () => {
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">สร้างรอบรถใหม่</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+              {editingId ? 'แก้ไขรอบรถ' : 'สร้างรอบรถใหม่'}
+            </h3>
             <form onSubmit={handleAddSchedule} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -309,7 +353,7 @@ const ManageSchedules = () => {
                   <option value="">-- เลือกรถที่ต้องการใช้ --</option>
                   {vehicles.map(v => (
                     <option key={v.id} value={v.id}>
-                      {v.licensePlate} ({v.type === 'VAN' ? 'รถตู้' : 'รถบัส'} - {v.type === 'VAN' ? 12 : 40} ที่นั่ง)
+                      {v.licensePlate} ({v.type === 'VAN' ? 'รถตู้' : 'รถบัส'} - {v.capacity} ที่นั่ง)
                     </option>
                   ))}
                 </select>
@@ -318,7 +362,11 @@ const ManageSchedules = () => {
               <div className="flex justify-end gap-3 mt-8">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setEditingId(null);
+                    setFormData({ route: '', date: selectedDate, timeSlotId: '', vehicleId: '' });
+                  }}
                   className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
                 >
                   ยกเลิก

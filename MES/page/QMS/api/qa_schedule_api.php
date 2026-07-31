@@ -10,14 +10,31 @@ try {
     if ($action === 'get_schedule') {
         $date = $_GET['date'] ?? date('Y-m-d');
         
-        $sql = "SELECT id, po_number, sku, description, color, quantity, dc_location, loading_date, inspection_date, inspection_status, inspection_result, is_confirmed, remark 
+        $sql = "SELECT id, po_number, sku, description, color, quantity, dc_location, loading_date, inspection_date, inspection_status, inspection_result, is_confirmed, remark, qa_inspector 
                 FROM SALES_ORDERS WITH (NOLOCK)
                 WHERE CAST(inspection_date AS DATE) = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$date]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        echo json_encode(['success' => true, 'data' => $data]);
+        $stats = [
+            'total' => count($data),
+            'pending' => 0,
+            'passed' => 0,
+            'failed' => 0
+        ];
+
+        foreach ($data as $row) {
+            if ($row['inspection_result'] === 'PASS') {
+                $stats['passed']++;
+            } elseif ($row['inspection_result'] === 'FAIL') {
+                $stats['failed']++;
+            } else {
+                $stats['pending']++;
+            }
+        }
+
+        echo json_encode(['success' => true, 'data' => $data, 'stats' => $stats]);
     }
     elseif ($action === 'search_po') {
         $search = $_GET['search'] ?? '';
@@ -77,6 +94,17 @@ try {
         $stmt->execute([$po_id]);
 
         echo json_encode(['success' => true, 'message' => 'Removed from schedule.']);
+    }
+    elseif ($action === 'assign_inspector') {
+        $po_id = $_POST['id'] ?? '';
+        $inspector = $_POST['qa_inspector'] ?? '';
+        if (empty($po_id)) throw new Exception("Missing PO ID.");
+
+        $sql = "UPDATE SALES_ORDERS SET qa_inspector = ?, updated_at = GETDATE() WHERE id = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$inspector, $po_id]);
+
+        echo json_encode(['success' => true, 'message' => 'Inspector assigned successfully.']);
     }
     else {
         throw new Exception("Invalid action.");
