@@ -10,7 +10,11 @@ try {
     if ($action === 'get_schedule') {
         $date = $_GET['date'] ?? date('Y-m-d');
         
-        $sql = "SELECT id, po_number, sku, description, color, quantity, dc_location, loading_date, inspection_date, inspection_status, inspection_result, is_confirmed, remark, qa_inspector 
+        try {
+            $pdo->exec("ALTER TABLE SALES_ORDERS ADD inspection_remark NVARCHAR(MAX) NULL");
+        } catch(Exception $e) {}
+
+        $sql = "SELECT id, po_number, sku, description, color, quantity, dc_location, loading_date, inspection_date, inspection_status, inspection_result, is_confirmed, inspection_remark, qa_inspector 
                 FROM SALES_ORDERS WITH (NOLOCK)
                 WHERE CAST(inspection_date AS DATE) = ?";
         $stmt = $pdo->prepare($sql);
@@ -78,7 +82,7 @@ try {
         }
 
         $sql = "UPDATE SALES_ORDERS 
-                SET inspection_status = ?, inspection_result = ?, remark = ?, is_confirmed = 1, updated_at = GETDATE() 
+                SET inspection_status = ?, inspection_result = ?, inspection_remark = ?, is_confirmed = 1, updated_at = GETDATE() 
                 WHERE id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$inspection_status, $inspection_result, $remark, $po_id]);

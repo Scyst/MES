@@ -172,17 +172,17 @@ function openUpdateModal(po) {
     document.getElementById('inspect_po_id').value = po.id;
     document.getElementById('inspect_po_number').value = po.po_number + ' - ' + po.sku;
     
-    const status = po.inspection_status || 'WAITING';
+    const status = (po.inspection_status || 'WAITING').trim().toUpperCase();
     document.querySelectorAll(`input[name="inspection_status"]`).forEach(el => {
         el.checked = (el.value === status);
     });
     
-    const result = po.inspection_result || '';
+    const result = (po.inspection_result || '').trim().toUpperCase();
     document.querySelectorAll(`input[name="inspection_result"]`).forEach(el => {
         el.checked = (el.value === result);
     });
     
-    document.getElementById('inspect_remark').value = po.remark || '';
+    document.getElementById('inspect_remark').value = po.inspection_remark || '';
     
     // Bind remove button inside the modal
     document.getElementById('btnRemoveScheduleModal').onclick = function() { removeSchedule(po.id); };
