@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Users, CheckCircle, XCircle, Download } from 'lucide-react';
-import { schedulesAPI, bookingsAPI } from '../../services/api';
+import { ArrowLeft, Clock, Users, CheckCircle, XCircle, Download, Pencil } from 'lucide-react';
+import { schedulesAPI, bookingsAPI, masterAPI } from '../../services/api';
+import ScheduleFormModal from '../../components/admin/ScheduleFormModal';
 
 const ScheduleDetails = () => {
   const { scheduleId } = useParams();
@@ -20,14 +21,27 @@ const ScheduleDetails = () => {
   const [selectedPendingIds, setSelectedPendingIds] = useState([]);
   const [isAssigning, setIsAssigning] = useState(false);
 
+  // Edit Schedule Modal
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [routes, setRoutes] = useState([]);
+  const [timeSlots, setTimeSlots] = useState([]);
+  const [fleet, setFleet] = useState([]);
+
   useEffect(() => {
     const loadDetails = async () => {
       setLoading(true);
       try {
-        const [allSchedules, scheduleBookings] = await Promise.all([
+        const [allSchedules, scheduleBookings, fleetData, slotsData, routesData] = await Promise.all([
           schedulesAPI.getSchedules(),
-          bookingsAPI.getBookings({ scheduleId })
+          bookingsAPI.getBookings({ scheduleId }),
+          masterAPI.getFleet(),
+          masterAPI.getTimeSlots(),
+          masterAPI.getRoutes()
         ]);
+        
+        setFleet(fleetData || []);
+        setTimeSlots(slotsData || []);
+        setRoutes(routesData || []);
         
         const foundSchedule = allSchedules.find(s => s.id === scheduleId);
         if (foundSchedule) {
@@ -57,6 +71,15 @@ const ScheduleDetails = () => {
     try {
       const scheduleBookings = await bookingsAPI.getBookings({ scheduleId });
       setBookings(scheduleBookings || []);
+      
+      if (schedule) {
+        const pending = await bookingsAPI.getBookings({ 
+          routeId: schedule.routeId, 
+          targetDate: schedule.date || schedule.departureTime.split(' ')[0],
+          unassigned: true 
+        });
+        setPendingBookings(pending || []);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -174,6 +197,37 @@ const ScheduleDetails = () => {
     }
   };
 
+  const handleEditSchedule = async (formData) => {
+    try {
+      const vehicle = fleet.find(v => v.id === formData.vehicleId);
+      const timeSlot = timeSlots.find(ts => ts.id === formData.timeSlotId);
+      if (!vehicle || !timeSlot) return;
+
+      const payload = {
+        id: scheduleId,
+        routeId: formData.routeId,
+        vehicleId: vehicle.id,
+        date: formData.date,
+        time: timeSlot.time,
+        baseCost: vehicle.type === 'VAN' ? 1500 : 3500 // example logic
+      };
+      
+      await schedulesAPI.addSchedule(payload);
+      
+      setShowEditModal(false);
+      
+      // Reload schedule
+      const [allSchedules] = await Promise.all([
+        schedulesAPI.getSchedules()
+      ]);
+      const foundSchedule = allSchedules.find(s => s.id === scheduleId);
+      if (foundSchedule) setSchedule(foundSchedule);
+      
+    } catch (err) {
+      alert(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    }
+  };
+
   const boardedCount = bookings.filter(b => b.status === 'BOARDED').length;
 
   return (
@@ -202,6 +256,12 @@ const ScheduleDetails = () => {
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm"
           >
             <Users size={16} /> เพิ่มผู้โดยสาร
+          </button>
+          <button 
+            onClick={() => setShowEditModal(true)}
+            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm"
+          >
+            <Pencil size={16} /> แก้ไขรถ
           </button>
           <button 
             onClick={handleExportCSV}
@@ -251,9 +311,11 @@ const ScheduleDetails = () => {
         </div>
       </div>
 
-      {/* Passengers List */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+      {/* Grid Layout for Tables */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Passengers List */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col h-full">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
           <h3 className="font-bold text-gray-900 dark:text-white">รายชื่อผู้ที่จองตั๋ว</h3>
         </div>
         
@@ -305,11 +367,11 @@ const ScheduleDetails = () => {
             </table>
           </div>
         )}
-      </div>
+        </div>
 
-      {/* Central Pool List */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:gray-700 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-amber-50 dark:bg-amber-900/10 flex justify-between items-center">
+        {/* Central Pool List */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:gray-700 shadow-sm overflow-hidden flex flex-col h-full">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-amber-50 dark:bg-amber-900/10 flex justify-between items-center">
           <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Users className="text-amber-500" size={20} />
             รอจัดรถ (Central Pool)
@@ -503,6 +565,22 @@ const ScheduleDetails = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Schedule Modal */}
+      <ScheduleFormModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSubmit={handleEditSchedule}
+        initialData={{
+          routeId: schedule.routeId,
+          date: schedule.date || schedule.departureTime.split(' ')[0],
+          timeSlotId: schedule.timeSlotId,
+          vehicleId: schedule.vehicleId
+        }}
+        routes={routes}
+        timeSlots={timeSlots}
+        fleet={fleet}
+      />
     </div>
   );
 };

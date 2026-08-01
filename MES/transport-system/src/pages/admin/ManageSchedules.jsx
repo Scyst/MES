@@ -3,6 +3,7 @@ import { schedulesAPI, masterAPI } from '../../services/api';
 import { Plus, Clock, Users, ArrowRight, Trash2, CalendarDays, Download, Filter, MapPin, BusFront, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
+import ScheduleFormModal from '../../components/admin/ScheduleFormModal';
 
 const ManageSchedules = () => {
   const [schedules, setSchedules] = useState([]);
@@ -54,17 +55,16 @@ const ManageSchedules = () => {
     loadData();
   }, []);
 
-  const handleAddSchedule = async (e) => {
-    e.preventDefault();
-    const vehicle = fleet.find(v => v.id === formData.vehicleId);
-    const timeSlot = timeSlots.find(ts => ts.id === formData.timeSlotId);
+  const handleAddSchedule = async (formDataSubmitted) => {
+    const vehicle = fleet.find(v => v.id === formDataSubmitted.vehicleId);
+    const timeSlot = timeSlots.find(ts => ts.id === formDataSubmitted.timeSlotId);
     if (!vehicle || !timeSlot) return;
 
     try {
       const payload = {
-        routeId: formData.routeId,
+        routeId: formDataSubmitted.routeId,
         vehicleId: vehicle.id,
-        date: formData.date,
+        date: formDataSubmitted.date,
         time: timeSlot.time,
         baseCost: vehicle.type === 'VAN' ? 1500 : 3500 // example logic
       };
@@ -304,103 +304,19 @@ const ManageSchedules = () => {
       </div>
 
       {/* Add Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-              {editingId ? 'แก้ไขรอบรถ' : 'สร้างรอบรถใหม่'}
-            </h3>
-            <form onSubmit={handleAddSchedule} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  เส้นทาง
-                </label>
-                <select
-                  required
-                  value={formData.routeId}
-                  onChange={(e) => setFormData({ ...formData, routeId: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                >
-                  <option value="">-- เลือกสายรถ --</option>
-                  {routes.map(r => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    วันที่วิ่ง
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    ช่วงเวลา (กะ)
-                  </label>
-                  <select
-                    required
-                    value={formData.timeSlotId}
-                    onChange={(e) => setFormData({ ...formData, timeSlotId: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                  >
-                    <option value="">-- เลือกเวลา --</option>
-                    {timeSlots.map(ts => (
-                      <option key={ts.id} value={ts.id}>{ts.name} ({ts.time})</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  เลือกรถ
-                </label>
-                <select
-                  required
-                  value={formData.vehicleId}
-                  onChange={(e) => setFormData({ ...formData, vehicleId: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                >
-                  <option value="">-- เลือกรถที่ต้องการใช้ --</option>
-                  {fleet.map(v => (
-                    <option key={v.id} value={v.id}>
-                      {v.licensePlate} ({v.type === 'BUS' ? 'รถบัส' : v.type === 'CAR' ? 'รถส่วนบุคคล' : v.type === 'SONGTHAEW' ? 'รถสองแถว' : 'รถตู้'} - {v.capacity} ที่นั่ง) {v.driverName ? ` - พขร. ${v.driverName}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-3 mt-8">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setEditingId(null);
-                    setFormData({ routeId: '', date: selectedDate, timeSlotId: '', vehicleId: '' });
-                  }}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium shadow-sm"
-                >
-                  บันทึก
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ScheduleFormModal
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          setEditingId(null);
+          setFormData({ routeId: '', date: selectedDate, timeSlotId: '', vehicleId: '' });
+        }}
+        onSubmit={handleAddSchedule}
+        initialData={editingId ? { ...formData, id: editingId } : null}
+        routes={routes}
+        timeSlots={timeSlots}
+        fleet={fleet}
+      />
 
       <ConfirmModal
         isOpen={deleteConfirm.isOpen}

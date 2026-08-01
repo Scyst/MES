@@ -80,6 +80,16 @@ elseif ($method === 'POST') {
     try {
         $pdo->beginTransaction();
         
+        // Prevent duplicate bookings
+        if (!$isExtra) {
+            $stmt = $pdo->prepare("SELECT id FROM TRANSPORT_BOOKINGS WHERE emp_id = ? AND target_date = ? AND time_slot_id = ? AND status != 'CANCELLED'");
+            $stmt->execute([$data['empId'], $targetDate, $timeSlotId]);
+            if ($stmt->fetch()) {
+                $pdo->rollBack();
+                sendResponse(false, null, "คุณได้จองรถในวันและรอบเวลานี้ไปแล้ว", 400);
+            }
+        }
+        
         // Check capacity if booking into a specific schedule
         if (!$isExtra && $scheduledTripId) {
             $stmt = $pdo->prepare("
