@@ -15,7 +15,7 @@ const EmployeeLayout = () => {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
-        <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-4">
+        <div className="flex justify-around items-center h-16 w-full max-w-3xl mx-auto px-4">
 
           <NavLink
             to="/booking"

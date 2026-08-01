@@ -3,13 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, MapPin, BusFront, CheckCircle, QrCode, ArrowLeft, AlertTriangle, ScanLine } from 'lucide-react';
 import SurveyModal from '../../components/employee/SurveyModal';
 import ConfirmModal from '../../components/ConfirmModal';
-import { bookingsAPI, schedulesAPI } from '../../services/api';
+import { bookingsAPI, schedulesAPI, authAPI, masterAPI } from '../../services/api';
 
 const MyTicket = () => {
   const { ticketId } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
   const [schedule, setSchedule] = useState(null);
+  const [routeName, setRouteName] = useState('');
+  const [timeSlotName, setTimeSlotName] = useState('');
   const [loading, setLoading] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
@@ -19,17 +21,31 @@ const MyTicket = () => {
     const loadTicket = async () => {
       setLoading(true);
       try {
-        // NOTE: Intentionally >50 lines — load booking + schedule in one fetch
-        const empId = localStorage.getItem('passenger_empId') || '';
-        const [allBookings, allSchedules] = await Promise.all([
+        let me = null;
+        try {
+          me = await authAPI.getMe();
+        } catch(e) {}
+        
+        const empId = me?.username || localStorage.getItem('passenger_empId') || '';
+        
+        const [myBookings, ticketBookings, allSchedules, allRoutes, allTimeSlots] = await Promise.all([
           bookingsAPI.getBookings(empId ? { empId } : {}),
+          bookingsAPI.getBookings({ id: ticketId }),
           schedulesAPI.getSchedules(),
+          masterAPI.getRoutes(),
+          masterAPI.getTimeSlots()
         ]);
-        const foundBooking = allBookings.find(b => b.id === ticketId);
+        
+        const foundBooking = ticketBookings.length > 0 ? ticketBookings[0] : myBookings.find(b => b.id === ticketId);
+        
         if (foundBooking) {
           setBooking(foundBooking);
           const foundSchedule = allSchedules.find(s => s.id === foundBooking.scheduledTripId);
           setSchedule(foundSchedule || null);
+          const foundRoute = allRoutes.find(r => r.id === foundBooking.routeId);
+          setRouteName(foundRoute ? foundRoute.name : '');
+          const foundTimeSlot = allTimeSlots.find(t => t.id === foundBooking.timeSlotId);
+          setTimeSlotName(foundTimeSlot ? foundTimeSlot.name : 'ไม่ระบุรอบเวลา');
         }
       } catch (err) {
         // Booking not found or API error — handled by empty state below
@@ -65,26 +81,22 @@ const MyTicket = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="flex items-center justify-center h-40">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
-  if (!booking || !schedule) {
+  if (!booking) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+      <div className="flex items-center justify-center p-4 mt-10">
         <div className="text-center">
           <div className="w-16 h-16 bg-gray-200 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
              <AlertTriangle className="text-gray-500 dark:text-gray-400" size={32} />
           </div>
-          <p className="text-gray-600 dark:text-gray-400 mb-6 font-bold text-lg">ไม่พบข้อมูล หรือถูกยกเลิกไปแล้ว</p>
-          <button 
-            onClick={() => navigate('/booking')}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm"
-          >
-            กลับหน้าหลัก
-          </button>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">ไม่พบตั๋วรถ</h2>
+          <p className="text-gray-500 dark:text-gray-400">ตั๋วที่คุณค้นหาไม่มีอยู่ในระบบหรือถูกยกเลิกไปแล้ว</p>
+          <button onClick={() => navigate('/booking')} className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold">กลับหน้าแรก</button>
         </div>
       </div>
     );
@@ -93,13 +105,13 @@ const MyTicket = () => {
   const isBoarded = booking.status === 'BOARDED';
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans transition-colors duration-300">
+    <div className="w-full">
       
       {/* Header */}
-      <div className="pt-6 pb-4 px-6 flex items-center justify-between">
+      <div className="pt-6 pb-4 px-6 bg-white dark:bg-gray-800 rounded-b-3xl shadow-sm z-10 sticky top-0 mb-6 flex items-center justify-between">
         <button 
           onClick={() => navigate('/booking')} 
-          className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
@@ -107,14 +119,14 @@ const MyTicket = () => {
         <div className="w-10"></div>
       </div>
 
-      <div className="flex-1 px-5 flex flex-col w-full mx-auto md:max-w-4xl pb-10">
+      <div className="px-5 flex flex-col w-full mx-auto pb-10">
         
         {/* Booking Context */}
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
           <div className="flex justify-between items-start mb-4">
             <div>
               <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">รอบรถของคุณ</p>
-              <h2 className="text-xl font-black text-gray-900 dark:text-white leading-tight">{schedule.route}</h2>
+              <h2 className="text-xl font-black text-gray-900 dark:text-white leading-tight">{schedule ? schedule.route : routeName}</h2>
             </div>
             <div className="text-right">
               <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase ${isBoarded ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
@@ -126,11 +138,11 @@ const MyTicket = () => {
           <div className="flex items-center gap-4 text-sm font-bold text-gray-700 dark:text-gray-300">
              <div className="flex items-center gap-1.5">
                <Clock size={16} className="text-blue-500" />
-               {schedule.departureTime ? schedule.departureTime.split(' ')[1].substring(0, 5) : ''}
+               {schedule && schedule.departureTime ? schedule.departureTime.split(' ')[1].substring(0, 5) : timeSlotName}
              </div>
              <div className="flex items-center gap-1.5">
                <BusFront size={16} className="text-blue-500" />
-               {schedule.vehicleName}
+               {schedule ? schedule.vehicleName : 'กำลังจัดรถ'}
              </div>
           </div>
         </div>
@@ -140,7 +152,13 @@ const MyTicket = () => {
           
           <div className={`rounded-3xl flex-1 flex flex-col items-center justify-center p-8 relative overflow-hidden border border-gray-200 dark:border-gray-700 ${isBoarded ? 'bg-emerald-50 dark:bg-emerald-900/10' : 'bg-gray-900'}`}>
             
-            {!isBoarded ? (
+            {!schedule ? (
+              <div className="text-center py-10 w-full h-full flex flex-col items-center justify-center">
+                <Clock size={80} className="text-gray-500 dark:text-gray-400 mx-auto mb-6 opacity-50" />
+                <h3 className="text-2xl font-black text-gray-400 dark:text-gray-500 mb-2">รอการจัดรถ</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-500 font-bold mb-8">แอดมินกำลังจัดเตรียมรถสำหรับรอบนี้</p>
+              </div>
+            ) : !isBoarded ? (
               <>
                 {/* Simulated Camera Viewfinder */}
                 <div className="relative w-64 h-64 mb-8">

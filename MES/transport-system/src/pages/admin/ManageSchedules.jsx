@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { schedulesAPI, masterAPI } from '../../services/api';
 import { Plus, Clock, Users, ArrowRight, Trash2, CalendarDays, Download, Filter, MapPin, BusFront, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -9,11 +10,15 @@ const ManageSchedules = () => {
   const [timeSlots, setTimeSlots] = useState([]);
   const [routes, setRoutes] = useState([]);
   
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, scheduleId: null, schedule: null });
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: '' });
   const [formData, setFormData] = useState({
-    route: '',
+    routeId: '',
     date: new Date().toISOString().split('T')[0],
     timeSlotId: '',
     vehicleId: '',
@@ -25,79 +30,58 @@ const ManageSchedules = () => {
   
   const navigate = useNavigate();
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [schedData, fleetData, slotsData, routesData] = await Promise.all([
+        schedulesAPI.getSchedules(),
+        masterAPI.getFleet(),
+        masterAPI.getTimeSlots(),
+        masterAPI.getRoutes()
+      ]);
+      setSchedules(schedData || []);
+      setFleet(fleetData || []);
+      setTimeSlots(slotsData || []);
+      setRoutes(routesData || []);
+    } catch (err) {
+      setError(err.message || "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Load mock data
-    const savedSchedules = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-    const savedFleet = JSON.parse(localStorage.getItem('fleet')) || [];
-    const savedTimeSlots = JSON.parse(localStorage.getItem('timeSlots')) || [];
-    const savedRoutes = JSON.parse(localStorage.getItem('routes')) || [];
-    
-    setSchedules(savedSchedules);
-    setFleet(savedFleet);
-    setTimeSlots(savedTimeSlots);
-    setRoutes(savedRoutes);
+    loadData();
   }, []);
 
-  const handleAddSchedule = (e) => {
+  const handleAddSchedule = async (e) => {
     e.preventDefault();
     const vehicle = fleet.find(v => v.id === formData.vehicleId);
     const timeSlot = timeSlots.find(ts => ts.id === formData.timeSlotId);
     if (!vehicle || !timeSlot) return;
 
-    // Construct exact ISO departure time from date + timeSlot
-    const departureTimeStr = `${formData.date}T${timeSlot.time}:00.000Z`;
-
-    let updatedSchedules;
-
-    if (editingId) {
-      updatedSchedules = schedules.map(s => {
-        if (s.id === editingId) {
-          return {
-            ...s,
-            route: formData.route,
-            departureTime: departureTimeStr,
-            date: formData.date,
-            timeSlotId: timeSlot.id,
-            timeSlotName: timeSlot.name,
-            vehicleId: vehicle.id,
-            vehicleName: vehicle.licensePlate,
-            capacity: vehicle.capacity,
-            driverName: vehicle.driverName,
-            driverPhone: vehicle.driverPhone,
-            driverEmpId: vehicle.driverEmpId
-          };
-        }
-        return s;
-      });
-    } else {
-      const newSchedule = {
-        id: Date.now().toString(),
-        route: formData.route,
-        departureTime: departureTimeStr,
-        date: formData.date,
-        timeSlotId: timeSlot.id,
-        timeSlotName: timeSlot.name,
+    try {
+      const payload = {
+        routeId: formData.routeId,
         vehicleId: vehicle.id,
-        vehicleName: vehicle.licensePlate,
-        capacity: vehicle.capacity,
-        driverName: vehicle.driverName,
-        driverPhone: vehicle.driverPhone,
-        driverEmpId: vehicle.driverEmpId,
-        bookedCount: 0,
-        status: 'OPEN',
-        createdAt: new Date().toISOString(),
-        baseCost: vehicle.type === 'VAN' ? 1500 : 3500
+        date: formData.date,
+        time: timeSlot.time,
+        baseCost: vehicle.type === 'VAN' ? 1500 : 3500 // example logic
       };
-      updatedSchedules = [...schedules, newSchedule];
+      
+      if (editingId) {
+        payload.id = editingId;
+      }
+      
+      await schedulesAPI.addSchedule(payload);
+      
+      await loadData();
+      setShowAddModal(false);
+      setEditingId(null);
+      setFormData({ routeId: '', date: selectedDate, timeSlotId: '', vehicleId: '' });
+    } catch (err) {
+      setErrorModal({ isOpen: true, message: err.message });
     }
-
-    setSchedules(updatedSchedules);
-    localStorage.setItem('scheduledTrips', JSON.stringify(updatedSchedules));
-    setShowAddModal(false);
-    setEditingId(null);
-    
-    // Reset form
-    setFormData({ route: '', date: selectedDate, timeSlotId: '', vehicleId: '' });
   };
 
   const handleDelete = (e, schedule) => {
@@ -105,18 +89,25 @@ const ManageSchedules = () => {
     setDeleteConfirm({ isOpen: true, scheduleId: schedule.id, schedule });
   };
 
-  const doDelete = () => {
-    const updatedSchedules = schedules.filter(s => s.id !== deleteConfirm.scheduleId);
-    setSchedules(updatedSchedules);
-    localStorage.setItem('scheduledTrips', JSON.stringify(updatedSchedules));
+  const doDelete = async () => {
+    try {
+      await schedulesAPI.deleteSchedule(deleteConfirm.scheduleId);
+      await loadData();
+      setDeleteConfirm({ isOpen: false, scheduleId: null, schedule: null });
+    } catch (err) {
+      setErrorModal({ isOpen: true, message: err.message });
+    }
   };
 
   const handleEditSchedule = (e, schedule) => {
     e.stopPropagation();
+    const tripTime = schedule.departureTime ? schedule.departureTime.split(' ')[1].substring(0, 5) : '';
+    const matchingTimeSlot = timeSlots.find(ts => ts.time && ts.time.substring(0, 5) === tripTime);
+
     setFormData({
-      route: schedule.route,
-      date: schedule.date || schedule.departureTime.split('T')[0],
-      timeSlotId: schedule.timeSlotId,
+      routeId: schedule.routeId,
+      date: schedule.date || schedule.departureTime.split(' ')[0],
+      timeSlotId: schedule.timeSlotId || (matchingTimeSlot ? matchingTimeSlot.id : ''),
       vehicleId: schedule.vehicleId
     });
     setEditingId(schedule.id);
@@ -138,14 +129,14 @@ const ManageSchedules = () => {
   const filterRoutesList = ['ทั้งหมด', ...routes.map(r => r.name)];
 
   const filteredSchedules = schedules.filter(schedule => {
-    // Some mock data might not have date field initialized properly if created before the change, so fallback to split
-    const tripDate = schedule.date || schedule.departureTime.split('T')[0];
-    const tripTime = new Date(schedule.departureTime).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
+    // API departureTime usually looks like '2026-07-31 07:30:00'
+    const dtParts = schedule.departureTime ? schedule.departureTime.split(' ') : [];
+    const tripDate = schedule.date || dtParts[0];
+    const tripTime = dtParts[1] ? dtParts[1].substring(0, 5) : '';
     
     const matchesDate = tripDate === selectedDate;
     const matchesRoute = selectedRoute === 'ทั้งหมด' || schedule.route === selectedRoute;
     const matchesTimeSlot = selectedTimeSlot === 'ทั้งหมด' || 
-                            schedule.timeSlotName === selectedTimeSlot || 
                             tripTime === timeSlots.find(t => t.id === selectedTimeSlot)?.time;
     
     return matchesDate && matchesRoute && matchesTimeSlot;
@@ -237,9 +228,14 @@ const ManageSchedules = () => {
         ))}
       </div>
 
-      {/* Compact Grid - Changed to max 2 or 3 columns so cards have breathing room and don't squeeze */}
+      {/* Compact Grid */}
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filteredSchedules.length === 0 ? (
+        {loading ? (
+          <div className="col-span-full py-12 flex justify-center items-center gap-3 text-blue-600">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="font-bold">กำลังโหลดข้อมูล...</span>
+          </div>
+        ) : filteredSchedules.length === 0 ? (
           <div className="col-span-full bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 text-center shadow-sm">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-400 mb-4">
               <CalendarDays size={32} />
@@ -261,7 +257,7 @@ const ManageSchedules = () => {
                 <div className="flex-1 flex flex-col gap-2 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-lg font-black text-gray-900 dark:text-white flex-shrink-0">
-                      {new Date(schedule.departureTime).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
+                      {schedule.departureTime ? schedule.departureTime.split(' ')[1].substring(0, 5) : ''}
                     </span>
                     <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold rounded-lg truncate max-w-[120px]">
                       {schedule.route}
@@ -321,13 +317,13 @@ const ManageSchedules = () => {
                 </label>
                 <select
                   required
-                  value={formData.route}
-                  onChange={(e) => setFormData({ ...formData, route: e.target.value })}
+                  value={formData.routeId}
+                  onChange={(e) => setFormData({ ...formData, routeId: e.target.value })}
                   className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                 >
                   <option value="">-- เลือกสายรถ --</option>
                   {routes.map(r => (
-                    <option key={r.id} value={r.name}>{r.name}</option>
+                    <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
                 </select>
               </div>
@@ -388,7 +384,7 @@ const ManageSchedules = () => {
                   onClick={() => {
                     setShowAddModal(false);
                     setEditingId(null);
-                    setFormData({ route: '', date: selectedDate, timeSlotId: '', vehicleId: '' });
+                    setFormData({ routeId: '', date: selectedDate, timeSlotId: '', vehicleId: '' });
                   }}
                   className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
                 >
@@ -420,6 +416,17 @@ const ManageSchedules = () => {
         ] : []}
         variant="danger"
         confirmText="ลบรอบนี้"
+      />
+
+      <ConfirmModal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ isOpen: false, message: '' })}
+        onConfirm={() => setErrorModal({ isOpen: false, message: '' })}
+        title="เกิดข้อผิดพลาด"
+        message={errorModal.message}
+        variant="danger"
+        confirmText="ตกลง"
+        cancelText={null}
       />
     </div>
   );

@@ -73,7 +73,9 @@ const AdminDashboard = () => {
 
   const todayTripIds = new Set(todayTrips.map(t => t.id));
   const todayBookings = bookings.filter(b => todayTripIds.has(b.scheduledTripId) && b.status !== 'CANCELLED');
-  const totalBookingsToday = todayBookings.length;
+  const pendingAssignmentBookings = bookings.filter(b => !b.scheduledTripId && b.targetDate === selectedDate && b.status === 'BOOKED');
+  
+  const totalBookingsToday = todayBookings.length + pendingAssignmentBookings.length;
   const totalScansToday = todayBookings.filter(b => b.status === 'BOARDED').length;
   const unscannedBookings = todayBookings.filter(b => b.status === 'BOOKED');
 
@@ -240,6 +242,23 @@ const AdminDashboard = () => {
               <div className={`text-3xl font-black mt-1 ${unscannedBookings.length > 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
                 {unscannedBookings.length} <span className="text-sm font-bold text-gray-400">คน</span>
               </div>
+            </div>
+            
+            <div className={`col-span-2 sm:col-span-4 p-5 rounded-2xl border shadow-sm ${pendingAssignmentBookings.length > 0 ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">รอจัดรถ (Pending Assignment)</p>
+                  <div className={`text-3xl font-black mt-1 ${pendingAssignmentBookings.length > 0 ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+                    {pendingAssignmentBookings.length} <span className="text-sm font-bold text-gray-400">คน</span>
+                  </div>
+                </div>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${pendingAssignmentBookings.length > 0 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
+                  <Users size={26} />
+                </div>
+              </div>
+              {pendingAssignmentBookings.length > 0 && (
+                <p className="text-xs text-amber-700 dark:text-amber-500 mt-2 font-medium">มีผู้โดยสารรอยืนยันรอบรถ โปรดไปที่เมนู จัดการรอบรถ เพื่อจัดสรรที่นั่ง</p>
+              )}
             </div>
           </div>
 

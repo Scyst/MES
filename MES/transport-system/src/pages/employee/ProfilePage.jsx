@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { UserCircle, Save, Sun, Moon, Building2, Phone, Briefcase, CheckCircle2 } from 'lucide-react';
-import { masterAPI } from '../../services/api';
+import { UserCircle, Save, Sun, Moon, Building2, Phone, Briefcase, CheckCircle2, Lock } from 'lucide-react';
+import { masterAPI, authAPI } from '../../services/api';
 
 /**
  * ProfilePage — Employee self-service profile setup.
- * Stores empId, name, bu, theme preference in localStorage.
- * This is the primary way employees identify themselves in the prototype
- * before a proper auth system is built.
+ * Integrates with MES SSO for identity (empId, name).
+ * Stores additional preferences (phone, bu) locally or allows saving.
  */
 const ProfilePage = () => {
   const [profile, setProfile] = useState({
@@ -18,19 +17,27 @@ const ProfilePage = () => {
   const [departments, setDepartments] = useState([]);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setProfile({
-      empId: localStorage.getItem('passenger_empId') || '',
-      name: localStorage.getItem('passenger_name') || '',
-      bu: localStorage.getItem('passenger_bu') || '',
-      phone: localStorage.getItem('passenger_phone') || '',
-    });
-
-    // Load departments from API
-    masterAPI.getDepartments()
-      .then(data => setDepartments(data || []))
-      .catch(() => setDepartments([]));
+    const initProfile = async () => {
+      try {
+        const deptData = await masterAPI.getDepartments().catch(() => []);
+        setDepartments(deptData || []);
+        
+        setProfile({
+          empId: localStorage.getItem('passenger_empId') || '',
+          name: localStorage.getItem('passenger_name') || '',
+          bu: localStorage.getItem('passenger_bu') || '',
+          phone: localStorage.getItem('passenger_phone') || '',
+        });
+      } catch (err) {
+        console.error('Failed to load data', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    initProfile();
   }, []);
 
   // Sync theme with document
@@ -56,35 +63,58 @@ const ProfilePage = () => {
 
   const isProfileComplete = profile.empId && profile.name && profile.bu;
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-6 px-4 pb-8">
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-40">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
+  return (
+    <div className="w-full">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black text-2xl ${
-          isProfileComplete
-            ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
-            : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
-        }`}>
-          {profile.name ? profile.name.charAt(0) : <UserCircle size={32} />}
-        </div>
-        <div>
-          <h1 className="text-xl font-black text-gray-900 dark:text-white">
-            {profile.name || 'ยังไม่ได้ตั้งค่าชื่อ'}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {profile.empId ? `รหัส: ${profile.empId}` : 'กรุณากรอกข้อมูลด้านล่าง'}
-          </p>
-          {!isProfileComplete && (
-            <span className="inline-block mt-1 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
-              ⚠ โปรไฟล์ยังไม่สมบูรณ์
-            </span>
-          )}
+      <div className="pt-6 pb-6 px-6 bg-white dark:bg-gray-800 rounded-b-3xl shadow-sm z-10 sticky top-0 mb-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center font-black text-2xl shadow-sm ${
+              isProfileComplete
+                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
+            }`}>
+              {profile.name ? profile.name.charAt(0) : <UserCircle size={32} />}
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-gray-900 dark:text-white mb-0.5">
+                {profile.name || 'โปรไฟล์ของฉัน'}
+              </h1>
+              {profile.empId && (
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  รหัส: {profile.empId}
+                </p>
+              )}
+              {!isProfileComplete && (
+                <span className="inline-block mt-1 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1 rounded-full border border-amber-200/50 dark:border-amber-800/50">
+                  ⚠ กรุณาตั้งค่าโปรไฟล์
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Theme Toggle */}
+          <button
+            onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+            className="p-2 rounded-full bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            title="เปลี่ยนธีม"
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
         </div>
       </div>
 
-      {/* Profile Form */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-4">
+      <div className="px-4 pb-6">
+        {/* Profile Form */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-4">
         <h2 className="text-sm font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">ข้อมูลส่วนตัว</h2>
 
         <form onSubmit={handleSave} className="space-y-4">
@@ -98,7 +128,7 @@ const ProfilePage = () => {
               <input
                 required
                 type="text"
-                placeholder="เช่น 1096902163"
+                placeholder="เช่น 123456"
                 value={profile.empId}
                 onChange={e => setProfile({ ...profile, empId: e.target.value })}
                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
@@ -184,41 +214,8 @@ const ProfilePage = () => {
             )}
           </button>
         </form>
-      </div>
-
-      {/* Theme Toggle */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-4">
-        <h2 className="text-sm font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">การแสดงผล</h2>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-bold text-gray-900 dark:text-white">โหมดธีม</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {theme === 'dark' ? 'โหมดมืด (Dark)' : 'โหมดสว่าง (Light)'}
-            </p>
-          </div>
-          <button
-            onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-            className={`relative w-14 h-7 rounded-full transition-all duration-300 ${
-              theme === 'dark' ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
-            }`}
-          >
-            <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all duration-300 flex items-center justify-center ${
-              theme === 'dark' ? 'left-8' : 'left-1'
-            }`}>
-              {theme === 'dark'
-                ? <Moon size={10} className="text-blue-600" />
-                : <Sun size={10} className="text-amber-500" />
-              }
-            </div>
-          </button>
         </div>
-      </div>
 
-      {/* App Info */}
-      <div className="text-center text-gray-400 dark:text-gray-500 text-xs space-y-1">
-        <p className="font-bold">SNC Transport System</p>
-        <p>SNC Former Public Company Limited</p>
-        <p>v1.0</p>
       </div>
     </div>
   );

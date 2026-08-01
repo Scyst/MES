@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { masterAPI } from '../../services/api';
 import { Database, Plus, Trash2, Bus, Route as RouteIcon, Clock, Save, X, BusFront, Pencil, Building2, UserCircle, MapPin, Car, Truck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const MasterData = () => {
   const [activeTab, setActiveTab] = useState('fleet');
@@ -10,104 +12,192 @@ const MasterData = () => {
   const [timeSlots, setTimeSlots] = useState([]);
   const [departments, setDepartments] = useState([]);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   // States for Add/Edit Forms
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [fleetForm, setFleetForm] = useState({ licensePlate: '', type: 'VAN', capacity: 12, driverEmpId: '', driverName: '', driverPhone: '' });
   const [routeForm, setRouteForm] = useState({ name: '', stops: [] });
   const [timeSlotForm, setTimeSlotForm] = useState({ name: '', time: '' });
   const [departmentForm, setDepartmentForm] = useState({ code: '', name: '' });
 
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'danger',
+    confirmText: 'ตกลง',
+    cancelText: 'ยกเลิก'
+  });
+
+  const showSuccess = (message) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'สำเร็จ',
+      message,
+      variant: 'success',
+      confirmText: 'ตกลง',
+      cancelText: null,
+      onConfirm: () => setConfirmModal(m => ({ ...m, isOpen: false }))
+    });
+  };
+
+  const showError = (message) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'เกิดข้อผิดพลาด',
+      message,
+      variant: 'danger',
+      confirmText: 'ตกลง',
+      cancelText: null,
+      onConfirm: () => setConfirmModal(m => ({ ...m, isOpen: false }))
+    });
+  };
+
   // Load Data
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [fleetData, routesData, slotsData, deptsData] = await Promise.all([
+        masterAPI.getFleet(),
+        masterAPI.getRoutes(),
+        masterAPI.getTimeSlots(),
+        masterAPI.getDepartments()
+      ]);
+      setFleet(fleetData || []);
+      setRoutes(routesData || []);
+      setTimeSlots(slotsData || []);
+      setDepartments(deptsData || []);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "โหลดข้อมูลล้มเหลว");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setFleet(JSON.parse(localStorage.getItem('fleet')) || []);
-    setRoutes(JSON.parse(localStorage.getItem('routes')) || []);
-    setTimeSlots(JSON.parse(localStorage.getItem('timeSlots')) || []);
-    setDepartments(JSON.parse(localStorage.getItem('departments')) || []);
+    loadData();
   }, []);
 
   // Save Handlers
-  const handleAddFleet = (e) => {
+  const handleAddFleet = async (e) => {
     e.preventDefault();
-    let updatedFleet;
-    if (editingId) {
-      updatedFleet = fleet.map(f => f.id === editingId ? { ...fleetForm, id: editingId } : f);
-    } else {
-      updatedFleet = [...fleet, { ...fleetForm, id: Date.now().toString() }];
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const data = { ...fleetForm, id: editingId || null };
+      await masterAPI.addFleet(data);
+      await loadData();
+      setFleetForm({ licensePlate: '', type: 'VAN', capacity: 12, driverEmpId: '', driverName: '', driverPhone: '' });
+      setShowAddForm(false);
+      setEditingId(null);
+      showSuccess('บันทึกข้อมูลยานพาหนะสำเร็จ');
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
-    setFleet(updatedFleet);
-    localStorage.setItem('fleet', JSON.stringify(updatedFleet));
-    setFleetForm({ licensePlate: '', type: 'VAN', capacity: 12, driverEmpId: '', driverName: '', driverPhone: '' });
-    setShowAddForm(false);
-    setEditingId(null);
   };
 
-  const handleAddRoute = (e) => {
+  const handleAddRoute = async (e) => {
     e.preventDefault();
-    let updatedRoutes;
-    if (editingId) {
-      updatedRoutes = routes.map(r => r.id === editingId ? { ...routeForm, id: editingId } : r);
-    } else {
-      updatedRoutes = [...routes, { ...routeForm, id: Date.now().toString() }];
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const data = { ...routeForm, id: editingId || null };
+      await masterAPI.addRoute(data);
+      await loadData();
+      setRouteForm({ name: '', stops: [] });
+      setShowAddForm(false);
+      setEditingId(null);
+      showSuccess('บันทึกข้อมูลเส้นทางสำเร็จ');
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
-    setRoutes(updatedRoutes);
-    localStorage.setItem('routes', JSON.stringify(updatedRoutes));
-    setRouteForm({ name: '', stops: [] });
-    setShowAddForm(false);
-    setEditingId(null);
   };
 
-  const handleAddTimeSlot = (e) => {
+  const handleAddTimeSlot = async (e) => {
     e.preventDefault();
-    let updatedSlots;
-    if (editingId) {
-      updatedSlots = timeSlots.map(t => t.id === editingId ? { ...timeSlotForm, id: editingId } : t);
-    } else {
-      updatedSlots = [...timeSlots, { ...timeSlotForm, id: Date.now().toString() }];
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const data = { ...timeSlotForm, id: editingId || null };
+      await masterAPI.addTimeSlot(data);
+      await loadData();
+      setTimeSlotForm({ name: '', time: '' });
+      setShowAddForm(false);
+      setEditingId(null);
+      showSuccess('บันทึกข้อมูลช่วงเวลาสำเร็จ');
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
-    setTimeSlots(updatedSlots);
-    localStorage.setItem('timeSlots', JSON.stringify(updatedSlots));
-    setTimeSlotForm({ name: '', time: '' });
-    setShowAddForm(false);
-    setEditingId(null);
   };
 
-  const handleAddDepartment = (e) => {
+  const handleAddDepartment = async (e) => {
     e.preventDefault();
-    let updatedDepts;
-    if (editingId) {
-      updatedDepts = departments.map(d => d.id === editingId ? { ...departmentForm, id: editingId } : d);
-    } else {
-      updatedDepts = [...departments, { ...departmentForm, id: Date.now().toString() }];
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const data = { ...departmentForm, id: editingId || null };
+      await masterAPI.addDepartment(data);
+      await loadData();
+      setDepartmentForm({ code: '', name: '' });
+      setShowAddForm(false);
+      setEditingId(null);
+      showSuccess('บันทึกข้อมูลแผนกสำเร็จ');
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
-    setDepartments(updatedDepts);
-    localStorage.setItem('departments', JSON.stringify(updatedDepts));
-    setDepartmentForm({ code: '', name: '' });
-    setShowAddForm(false);
-    setEditingId(null);
   };
 
   // Delete Handlers
   const handleDeleteFleet = (id) => {
-    const updated = fleet.filter(f => f.id !== id);
-    setFleet(updated);
-    localStorage.setItem('fleet', JSON.stringify(updated));
+    setConfirmModal({
+      isOpen: true, title: 'ยืนยันการลบ', message: 'ยืนยันการลบข้อมูลรถ?', variant: 'danger', confirmText: 'ลบข้อมูล', cancelText: 'ยกเลิก',
+      onConfirm: async () => {
+        setConfirmModal(m => ({...m, isOpen: false}));
+        try { await masterAPI.deleteFleet(id); await loadData(); } catch (err) { showError(err.message); }
+      }
+    });
   };
   const handleDeleteRoute = (id) => {
-    const updated = routes.filter(r => r.id !== id);
-    setRoutes(updated);
-    localStorage.setItem('routes', JSON.stringify(updated));
+    setConfirmModal({
+      isOpen: true, title: 'ยืนยันการลบ', message: 'ยืนยันการลบข้อมูลเส้นทาง?', variant: 'danger', confirmText: 'ลบข้อมูล', cancelText: 'ยกเลิก',
+      onConfirm: async () => {
+        setConfirmModal(m => ({...m, isOpen: false}));
+        try { await masterAPI.deleteRoute(id); await loadData(); } catch (err) { showError(err.message); }
+      }
+    });
   };
   const handleDeleteTimeSlot = (id) => {
-    const updated = timeSlots.filter(t => t.id !== id);
-    setTimeSlots(updated);
-    localStorage.setItem('timeSlots', JSON.stringify(updated));
+    setConfirmModal({
+      isOpen: true, title: 'ยืนยันการลบ', message: 'ยืนยันการลบข้อมูลช่วงเวลา?', variant: 'danger', confirmText: 'ลบข้อมูล', cancelText: 'ยกเลิก',
+      onConfirm: async () => {
+        setConfirmModal(m => ({...m, isOpen: false}));
+        try { await masterAPI.deleteTimeSlot(id); await loadData(); } catch (err) { showError(err.message); }
+      }
+    });
   };
   const handleDeleteDepartment = (id) => {
-    const updated = departments.filter(d => d.id !== id);
-    setDepartments(updated);
-    localStorage.setItem('departments', JSON.stringify(updated));
+    setConfirmModal({
+      isOpen: true, title: 'ยืนยันการลบ', message: 'ยืนยันการลบข้อมูลแผนก?', variant: 'danger', confirmText: 'ลบข้อมูล', cancelText: 'ยกเลิก',
+      onConfirm: async () => {
+        setConfirmModal(m => ({...m, isOpen: false}));
+        try { await masterAPI.deleteDepartment(id); await loadData(); } catch (err) { showError(err.message); }
+      }
+    });
   };
 
   // Route Stops Handlers (inside the form)
@@ -212,8 +302,20 @@ const MasterData = () => {
         {/* List Areas */}
         <div className="p-4">
           
-          {/* List: Fleet */}
-          {activeTab === 'fleet' && (
+          {loading ? (
+            <div className="py-12 flex justify-center items-center gap-3 text-blue-600">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="font-bold">กำลังโหลดข้อมูล...</span>
+            </div>
+          ) : error ? (
+            <div className="py-12 text-center text-red-500 font-bold bg-red-50 rounded-xl">
+              <p>เกิดข้อผิดพลาด: {error}</p>
+              <button onClick={loadData} className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200">ลองใหม่</button>
+            </div>
+          ) : (
+            <>
+              {/* List: Fleet */}
+              {activeTab === 'fleet' && (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               {fleet.map(f => (
                 <div key={f.id} className="flex items-center justify-between p-4 border border-gray-100 dark:border-gray-700 rounded-xl hover:shadow-md transition-shadow bg-white dark:bg-gray-800">
@@ -237,7 +339,7 @@ const MasterData = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => { setEditingId(f.id); setFleetForm(f); setShowAddForm(true); }} className="p-2 text-gray-400 hover:text-blue-600 transition-colors"><Pencil size={18}/></button>
+                    <button onClick={() => { setEditingId(f.id); setFleetForm({...f, driverEmpId: f.driverEmpId || '', driverName: f.driverName || '', driverPhone: f.driverPhone || ''}); setShowAddForm(true); }} className="p-2 text-gray-400 hover:text-blue-600 transition-colors"><Pencil size={18}/></button>
                     <button onClick={() => handleDeleteFleet(f.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
                   </div>
                 </div>
@@ -262,7 +364,7 @@ const MasterData = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => { setEditingId(r.id); setRouteForm(r); setShowAddForm(true); }} className="p-2 text-gray-400 hover:text-blue-600 transition-colors"><Pencil size={18}/></button>
+                    <button onClick={() => { setEditingId(r.id); setRouteForm({...r, stops: r.stops || []}); setShowAddForm(true); }} className="p-2 text-gray-400 hover:text-blue-600 transition-colors"><Pencil size={18}/></button>
                     <button onClick={() => handleDeleteRoute(r.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
                   </div>
                 </div>
@@ -318,6 +420,8 @@ const MasterData = () => {
               ))}
               {departments.length === 0 && <div className="col-span-full py-12 text-center text-gray-500">ยังไม่มีข้อมูลแผนกในระบบ</div>}
             </div>
+          )}
+            </>
           )}
 
         </div>
@@ -406,7 +510,7 @@ const MasterData = () => {
                 </div>
                 
                 <div className="flex justify-end mt-4">
-                  <button type="submit" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2"><Save size={18}/> บันทึกข้อมูล</button>
+                  <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"><Save size={18}/> {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}</button>
                 </div>
               </form>
             )}
@@ -442,7 +546,7 @@ const MasterData = () => {
                   {routeForm.stops.length === 0 && <p className="text-sm text-gray-500 italic text-center py-4">ยังไม่มีจุดจอด (สามารถกดปุ่ม "เพิ่มจุดจอด" ได้)</p>}
                 </div>
                 <div className="flex justify-end mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <button type="submit" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2"><Save size={18}/> บันทึกข้อมูล</button>
+                  <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"><Save size={18}/> {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}</button>
                 </div>
               </form>
             )}
@@ -461,7 +565,7 @@ const MasterData = () => {
                   </div>
                 </div>
                 <div className="flex justify-end mt-4">
-                  <button type="submit" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2"><Save size={18}/> บันทึกข้อมูล</button>
+                  <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"><Save size={18}/> {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}</button>
                 </div>
               </form>
             )}
@@ -480,7 +584,7 @@ const MasterData = () => {
                   </div>
                 </div>
                 <div className="flex justify-end mt-4">
-                  <button type="submit" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2"><Save size={18}/> บันทึกข้อมูล</button>
+                  <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"><Save size={18}/> {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}</button>
                 </div>
               </form>
             )}
@@ -488,6 +592,17 @@ const MasterData = () => {
         </div>
       )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(m => ({ ...m, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+      />
     </div>
   );
 };

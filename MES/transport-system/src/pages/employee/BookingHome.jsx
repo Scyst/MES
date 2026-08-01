@@ -1,22 +1,19 @@
 import { useState, useEffect } from 'react';
-import { schedulesAPI, masterAPI, bookingsAPI } from '../../services/api';
-import { Clock, MapPin, BusFront, CheckSquare, Square, ChevronRight, Filter } from 'lucide-react';
+import { masterAPI, bookingsAPI, authAPI } from '../../services/api';
+import { BusFront, ChevronRight, Filter, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
 
 const BookingHome = () => {
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoute, setSelectedRoute] = useState('ทั้งหมด');
-  const [trips, setTrips] = useState([]);
   const [bookings, setBookings] = useState([]);
   
   // Date Picker State
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   
-  // Multi-day selection state
-  const [multiDayMode, setMultiDayMode] = useState(false);
-  const [selectedMultiDays, setSelectedMultiDays] = useState([]);
   const [masterRoutes, setMasterRoutes] = useState([]);
+  const [timeSlots, setTimeSlots] = useState([]);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,20 +29,30 @@ const BookingHome = () => {
     confirmText: 'ยืนยัน',
   });
 
+  const [bookingModal, setBookingModal] = useState({
+    isOpen: false,
+    route: null
+  });
+
   const navigate = useNavigate();
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const empId = localStorage.getItem('passenger_empId') || '';
-      const [schedData, bookingsData, routesData] = await Promise.all([
-        schedulesAPI.getSchedules(),
-        bookingsAPI.getBookings(empId ? { empId } : {}),
-        masterAPI.getRoutes()
+      const currentEmpId = localStorage.getItem('passenger_empId') || '';
+      const [bookingsData, routesData, timeSlotsData] = await Promise.all([
+        bookingsAPI.getBookings(currentEmpId ? { empId: currentEmpId } : {}),
+        masterAPI.getRoutes(),
+        masterAPI.getTimeSlots()
       ]);
-      setTrips(schedData || []);
+      
       setBookings(bookingsData || []);
       setMasterRoutes(routesData || []);
+      setTimeSlots(timeSlotsData || []);
+      
+      if (timeSlotsData && timeSlotsData.length > 0 && !selectedTimeSlot) {
+        setSelectedTimeSlot(timeSlotsData[0].id);
+      }
     } catch (err) {
       setError(err.message || 'โหลดข้อมูลล้มเหลว');
     } finally {
@@ -69,130 +76,91 @@ const BookingHome = () => {
     };
   });
 
-  const handleToggleMultiDay = (dateStr) => {
-    if (selectedMultiDays.includes(dateStr)) {
-      setSelectedMultiDays(selectedMultiDays.filter(d => d !== dateStr));
-    } else {
-      setSelectedMultiDays([...selectedMultiDays, dateStr]);
-    }
-  };
+  // handleToggleMultiDay removed
 
-  const doBookSingleTrip = async (trip) => {
+  const getCurrentUserParams = () => {
     const empId = localStorage.getItem('passenger_empId') || '';
     const name = localStorage.getItem('passenger_name') || '';
     const bu = localStorage.getItem('passenger_bu') || '';
+    return { empId, name, bu };
+  };
+
+  const doBookSingleRoute = async (route) => {
+    const { empId, name, bu } = getCurrentUserParams();
+    
     if (!empId || !name) {
       navigate('/booking/profile');
       return;
     }
+    
+    if (!selectedTimeSlot) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'ข้อมูลไม่ครบ',
+        message: 'กรุณาเลือกรอบเวลา (กะเช้า/กะเย็น) ก่อนทำการลงชื่อ',
+        details: [],
+        onConfirm: () => setConfirmModal(m => ({ ...m, isOpen: false })),
+        variant: 'danger',
+        confirmText: 'ตกลง',
+      });
+      return;
+    }
+
     try {
-      const payload = { scheduledTripId: trip.id, empId, name, bu, isExtra: false };
+      const payload = { routeId: route.id, timeSlotId: selectedTimeSlot, targetDate: selectedDate, empId, name, bu, isExtra: false };
       const res = await bookingsAPI.addBooking(payload);
       await loadData();
       navigate(`/booking/ticket/${res.id}`);
     } catch (err) {
-      alert(err.message);
+      setConfirmModal({
+        isOpen: true,
+        title: 'เกิดข้อผิดพลาด',
+        message: err.message || 'ไม่สามารถลงชื่อเดินทางได้',
+        details: [],
+        onConfirm: () => setConfirmModal(m => ({ ...m, isOpen: false })),
+        variant: 'danger',
+        confirmText: 'ตกลง',
+      });
     }
   };
 
-  const doBookMultiDay = async (trip) => {
-    const empId = localStorage.getItem('passenger_empId') || '';
-    const name = localStorage.getItem('passenger_name') || '';
-    const bu = localStorage.getItem('passenger_bu') || '';
-    if (!empId || !name) {
-      navigate('/booking/profile');
-      return;
-    }
-    let lastBookingId = null;
+  // doBookMultiDay removed
 
-    try {
-      for (const dateStr of selectedMultiDays) {
-        const targetTrip = trips.find(t => {
-          const tripDate = t.date || (t.departureTime ? t.departureTime.split(' ')[0] : '');
-          return tripDate === dateStr && t.route === trip.route;
-        });
-        if (targetTrip && targetTrip.bookedCount < targetTrip.capacity) {
-          const payload = { scheduledTripId: targetTrip.id, empId, name, bu, isExtra: false };
-          const res = await bookingsAPI.addBooking(payload);
-          lastBookingId = res.id;
-        }
-      }
-
-      await loadData();
-      if (lastBookingId) {
-        navigate(`/booking/ticket/${lastBookingId}`);
-      } else {
-        alert('ไม่สามารถจองได้ (รอบรถอาจเต็มแล้ว)');
-      }
-    } catch (err) {
-      alert(err.message);
-    }
+  const handleBookClick = (route) => {
+    setBookingModal({ isOpen: true, route });
   };
 
-  const handleBook = (trip) => {
-    if (multiDayMode && selectedMultiDays.length > 0) {
-      const skippedDates = selectedMultiDays.filter(dateStr => {
-        const t = trips.find(t => t.date === dateStr && t.route === trip.route);
-        return !t || t.bookedCount >= t.capacity;
-      });
-      const willBook = selectedMultiDays.length - skippedDates.length;
-      setConfirmModal({
-        isOpen: true,
-        title: 'ยืนยันการจองล่วงหน้า',
-        message: skippedDates.length > 0
-          ? `จะจองได้ ${willBook} วัน (ไม่มีรอบรถหรือเต็มแล้ว ${skippedDates.length} วัน)`
-          : `จองรถล่วงหน้า ${selectedMultiDays.length} วัน`,
-        details: [
-          { label: 'สายรถ', value: trip.route },
-          { label: 'จำนวนวัน', value: `${willBook} วัน` },
-          { label: 'เวลา', value: new Date(trip.departureTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) },
-        ],
-        onConfirm: () => doBookMultiDay(trip),
-        variant: 'info',
-        confirmText: 'จองเลย',
-      });
-    } else {
-      setConfirmModal({
-        isOpen: true,
-        title: 'ยืนยันการจองที่นั่ง',
-        message: 'ตรวจสอบข้อมูลรอบรถด้านล่างก่อนยืนยัน',
-        details: [
-          { label: 'สายรถ', value: trip.route },
-          { label: 'วันที่', value: new Date(trip.departureTime).toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) },
-          { label: 'เวลา', value: new Date(trip.departureTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) },
-          { label: 'ทะเบียนรถ', value: trip.vehicleName || '-' },
-        ],
-        onConfirm: () => doBookSingleTrip(trip),
-        variant: 'info',
-        confirmText: 'จองที่นั่ง',
-      });
-    }
+  const handleBook = (route) => {
+    const timeSlotName = timeSlots.find(t => t.id === selectedTimeSlot)?.name || 'ไม่ระบุ';
+    setConfirmModal({
+      isOpen: true,
+      title: 'ยืนยันการลงชื่อเดินทาง',
+      message: 'คุณกำลังลงชื่อแสดงความประสงค์เดินทางในเส้นทางนี้',
+      details: [
+        { label: 'สายรถ', value: route.name },
+        { label: 'วันที่', value: new Date(selectedDate).toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) },
+        { label: 'รอบเวลา', value: timeSlotName },
+      ],
+      onConfirm: () => doBookSingleRoute(route),
+      variant: 'info',
+      confirmText: 'ลงชื่อเดินทาง',
+    });
   };
 
   const routes = ['ทั้งหมด', ...masterRoutes.map(r => r.name)];
-
-  const now = new Date();
-
-  const filteredTrips = trips.filter(trip => {
-    // Basic filters
-    const matchesDate = trip.date === selectedDate;
-    const matchesRoute = selectedRoute === 'ทั้งหมด' || trip.route === selectedRoute;
-    
-    // Time filter (hide past trips for today)
-    const tripTime = new Date(trip.departureTime);
-    const isPast = trip.date === now.toISOString().split('T')[0] && tripTime < now;
-
-    return matchesDate && matchesRoute && !isPast;
+  
+  const filteredRoutes = masterRoutes.filter(route => {
+    return selectedRoute === 'ทั้งหมด' || route.name === selectedRoute;
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans transition-colors duration-300 pb-20">
+    <div className="w-full">
       
       <div className="pt-4 pb-4 px-6 bg-white dark:bg-gray-800 rounded-b-3xl shadow-sm z-10 sticky top-0">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">จองรถรับ-ส่ง</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">เลือกวันที่และรอบรถที่ต้องการ</p>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">ลงชื่อเดินทาง</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">ระบุเส้นทางและวันที่ต้องการเดินทาง</p>
           </div>
           <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
             <BusFront size={24} />
@@ -215,38 +183,21 @@ const BookingHome = () => {
               ))}
             </select>
           </div>
-          <button 
-            onClick={() => setMultiDayMode(!multiDayMode)}
-            className={`px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${multiDayMode ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}
-          >
-            {multiDayMode ? <CheckSquare size={18} /> : <Square size={18} />}
-            <span className="hidden sm:inline">จองล่วงหน้า</span>
-          </button>
         </div>
       </div>
 
-      <div className="flex-1 w-full mx-auto md:max-w-4xl px-4 pt-6">
+      <div className="flex-1 w-full mx-auto px-4 pt-6">
         
         {/* Date Strip */}
         <div className="flex gap-3 overflow-x-auto pb-4 hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
           {dateStrip.map((item) => (
             <button
               key={item.dateStr}
-              onClick={() => {
-                if (multiDayMode) {
-                  handleToggleMultiDay(item.dateStr);
-                } else {
-                  setSelectedDate(item.dateStr);
-                }
-              }}
+              onClick={() => setSelectedDate(item.dateStr)}
               className={`flex-shrink-0 w-16 h-20 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all border ${
-                multiDayMode 
-                  ? selectedMultiDays.includes(item.dateStr)
-                    ? 'bg-blue-600 border-blue-600 text-white shadow-md scale-105'
-                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-300'
-                  : selectedDate === item.dateStr
-                    ? 'bg-blue-600 border-blue-600 text-white shadow-md scale-105'
-                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-300'
+                selectedDate === item.dateStr
+                  ? 'bg-blue-600 border-blue-600 text-white shadow-md scale-105'
+                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-300'
               }`}
             >
               <span className="text-[10px] font-bold uppercase tracking-wider">{item.isToday ? 'วันนี้' : item.dayName}</span>
@@ -255,50 +206,37 @@ const BookingHome = () => {
           ))}
         </div>
 
-        {multiDayMode && selectedMultiDays.length > 0 && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 p-3 rounded-xl mb-4 text-sm font-bold flex justify-between items-center">
-            <span>เลือกแล้ว {selectedMultiDays.length} วัน</span>
-            <button onClick={() => setSelectedMultiDays([])} className="text-blue-600 dark:text-blue-400 underline text-xs">ล้างทั้งหมด</button>
-          </div>
-        )}
+        {/* Time Slots Selector (Moved to Modal) */}
 
-        {/* Compact Schedule List */}
-        <div className="mt-2 space-y-3">
+        {/* Route List */}
+        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {loading ? (
             <div className="text-center py-10">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
               <p className="text-gray-500 font-bold mt-3">กำลังโหลดข้อมูล...</p>
             </div>
-          ) : filteredTrips.length === 0 ? (
+          ) : filteredRoutes.length === 0 ? (
             <div className="text-center py-10 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
               <BusFront size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="text-gray-500 dark:text-gray-400 font-bold">ไม่มีรอบรถในวันที่และสายที่คุณเลือก</p>
+              <p className="text-gray-500 dark:text-gray-400 font-bold">ไม่พบเส้นทาง</p>
             </div>
           ) : (
-            filteredTrips.map(trip => {
-              const myBooking = bookings.find(b => b.scheduledTripId === trip.id && b.empId === '1096902163' && b.status !== 'CANCELLED');
-              const isFull = trip.bookedCount >= trip.capacity;
-              const percent = (trip.bookedCount / trip.capacity) * 100;
+            filteredRoutes.map(route => {
+              const currentEmpId = localStorage.getItem('passenger_empId') || '';
+              const myBooking = bookings.find(b => b.routeId === route.id && b.targetDate === selectedDate && b.timeSlotId === selectedTimeSlot && b.empId === currentEmpId && b.status !== 'CANCELLED');
 
               return (
-                <div key={trip.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between gap-4 transition-all hover:border-blue-300">
+                <div key={route.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between gap-4 transition-all hover:border-blue-300">
                   
                   {/* Info */}
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="flex items-center gap-3">
                       <span className="text-lg font-black text-gray-900 dark:text-white">
-                        {trip.departureTime ? trip.departureTime.split(' ')[1].substring(0, 5) : ''}
+                        {route.name}
                       </span>
-                      <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold rounded-lg">{trip.route}</span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
-                      <span className="flex items-center gap-1"><MapPin size={12}/> {trip.vehicleName}</span>
-                      <span className="flex items-center gap-1">
-                        <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden flex">
-                          <div className={`h-full ${percent >= 100 ? 'bg-red-500' : percent >= 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(percent, 100)}%` }}></div>
-                        </div>
-                        {trip.capacity - trip.bookedCount} ที่
-                      </span>
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate max-w-[200px]" title={route.stops ? route.stops.map(s => typeof s === 'string' ? s : s.name).filter(Boolean).join(' ➔ ') : ''}>
+                      {route.stops && route.stops.map(s => typeof s === 'string' ? s : s.name).filter(Boolean).join(' ➔ ')}
                     </div>
                   </div>
 
@@ -307,21 +245,16 @@ const BookingHome = () => {
                     {myBooking ? (
                       <button 
                         onClick={() => navigate(`/booking/ticket/${myBooking.id}`)}
-                        className="px-4 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-xl font-bold text-sm flex items-center gap-1"
+                        className="px-4 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-xl font-bold text-sm flex items-center gap-1 whitespace-nowrap flex-shrink-0"
                       >
                         ดูตั๋ว <ChevronRight size={16} />
                       </button>
                     ) : (
                       <button 
-                        onClick={() => handleBook(trip)}
-                        disabled={isFull}
-                        className={`px-6 py-2 rounded-xl font-bold text-sm transition-all ${
-                          isFull 
-                            ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
-                            : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md'
-                        }`}
+                        onClick={() => handleBookClick(route)}
+                        className={`px-6 py-2 rounded-xl font-bold text-sm transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md whitespace-nowrap flex-shrink-0`}
                       >
-                        {isFull ? 'เต็ม' : multiDayMode ? 'จองล่วงหน้า' : 'จองที่นั่ง'}
+                        ลงชื่อ
                       </button>
                     )}
                   </div>
@@ -342,6 +275,59 @@ const BookingHome = () => {
         variant={confirmModal.variant}
         confirmText={confirmModal.confirmText}
       />
+
+      {/* Booking Time Slot Modal */}
+      {bookingModal.isOpen && bookingModal.route && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-sm shadow-xl overflow-hidden flex flex-col scale-100 animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
+              <h3 className="text-xl font-black text-gray-900 dark:text-white text-center">เลือกรอบเวลา</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1 font-medium">{bookingModal.route.name}</p>
+            </div>
+            <div className="p-4 flex flex-col gap-3">
+              {timeSlots.map((ts) => (
+                <button
+                  key={ts.id}
+                  onClick={() => setSelectedTimeSlot(ts.id)}
+                  className={`px-4 py-3 rounded-xl font-bold flex items-center justify-between transition-all border ${
+                    selectedTimeSlot === ts.id
+                      ? 'bg-blue-50 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm'
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-blue-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Clock size={18} className={selectedTimeSlot === ts.id ? 'text-blue-500' : 'text-gray-400'} />
+                    <span>{ts.name}</span>
+                  </div>
+                  <span className="text-xs font-black bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md">{ts.time}</span>
+                </button>
+              ))}
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-3 border-t border-gray-100 dark:border-gray-700">
+              <button
+                onClick={() => setBookingModal({ isOpen: false, route: null })}
+                className="py-3 font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={() => {
+                  setBookingModal({ isOpen: false, route: null });
+                  handleBook(bookingModal.route);
+                }}
+                disabled={!selectedTimeSlot}
+                className={`py-3 font-bold rounded-xl transition-colors shadow-sm ${
+                  selectedTimeSlot
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                ดำเนินการต่อ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

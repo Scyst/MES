@@ -2,29 +2,41 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Ticket, BusFront, Clock, MapPin, AlertTriangle, ChevronRight, X } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
-import { bookingsAPI, schedulesAPI } from '../../services/api';
+import { bookingsAPI, schedulesAPI, authAPI, masterAPI } from '../../services/api';
 
 const BookingHistory = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  const [routes, setRoutes] = useState([]);
+  const [timeSlots, setTimeSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cancelConfirm, setCancelConfirm] = useState({ isOpen: false, booking: null });
 
   useEffect(() => {
     const loadHistory = async () => {
       setLoading(true);
-      const empId = localStorage.getItem('passenger_empId') || '';
       try {
-        const [myBookings, allSchedules] = await Promise.all([
+        let me = null;
+        try {
+          me = await authAPI.getMe();
+        } catch(e) {}
+        
+        const empId = me?.username || localStorage.getItem('passenger_empId') || '';
+        
+        const [myBookings, allSchedules, allRoutes, allTimeSlots] = await Promise.all([
           bookingsAPI.getBookings(empId ? { empId } : {}),
           schedulesAPI.getSchedules(),
+          masterAPI.getRoutes(),
+          masterAPI.getTimeSlots()
         ]);
         const sorted = [...(myBookings || [])].sort(
           (a, b) => new Date(b.bookedAt) - new Date(a.bookedAt)
         );
         setBookings(sorted);
         setSchedules(allSchedules || []);
+        setRoutes(allRoutes || []);
+        setTimeSlots(allTimeSlots || []);
       } catch (err) {
         setBookings([]);
       } finally {
@@ -66,22 +78,31 @@ const BookingHistory = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="flex items-center justify-center h-40">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 pt-6 pb-6">
+    <div className="w-full">
 
       {/* Header */}
-      <div className="mb-5">
-        <h1 className="text-2xl font-black text-gray-900 dark:text-white">การจองของฉัน</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {bookings.length > 0 ? `พบ ${bookings.length} รายการ` : 'ยังไม่มีประวัติการจอง'}
-        </p>
+      <div className="pt-6 pb-6 px-6 bg-white dark:bg-gray-800 rounded-b-3xl shadow-sm z-10 sticky top-0 mb-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">การจองของฉัน</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium">
+              {bookings.length > 0 ? `พบ ${bookings.length} รายการ` : 'ยังไม่มีประวัติการจอง'}
+            </p>
+          </div>
+          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <Ticket size={24} />
+          </div>
+        </div>
       </div>
+
+      <div className="px-4 pb-6">
 
       {/* Empty state */}
       {bookings.length === 0 && (
@@ -104,6 +125,8 @@ const BookingHistory = () => {
           const sched = getSchedule(booking.scheduledTripId);
           const status = statusConfig[booking.status] || statusConfig.CANCELLED;
           const allowCancel = canCancel(booking);
+          const routeName = routes.find(r => r.id === booking.routeId)?.name || 'ไม่ทราบสายรถ';
+          const timeSlotName = timeSlots.find(t => t.id === booking.timeSlotId)?.name || 'ไม่ระบุรอบเวลา';
 
           return (
             <div
@@ -146,6 +169,17 @@ const BookingHistory = () => {
                         {sched.departureTime ? sched.departureTime.split(' ')[0] : ''}
                         {' · '}
                         {sched.departureTime ? sched.departureTime.split(' ')[1].substring(0, 5) : ''} น.
+                      </p>
+                    </>
+                  ) : booking.status === 'BOOKED' ? (
+                    <>
+                      <p className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
+                        <MapPin size={13} className="text-blue-500 flex-shrink-0" />
+                        {routeName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1.5">
+                        <Clock size={12} className="flex-shrink-0" />
+                        รอจัดรถ ({timeSlotName})
                       </p>
                     </>
                   ) : (
@@ -201,6 +235,7 @@ const BookingHistory = () => {
         confirmText="ยืนยันยกเลิก"
         cancelText="ไม่ยกเลิก"
       />
+      </div>
     </div>
   );
 };
