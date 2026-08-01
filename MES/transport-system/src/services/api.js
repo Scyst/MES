@@ -70,5 +70,6 @@ export const bookingsAPI = {
   addBooking: (data) => fetchAPI('/bookings.php', { method: 'POST', body: JSON.stringify(data) }),
   cancelBooking: (id) => fetchAPI('/bookings.php', { method: 'PUT', body: JSON.stringify({ id, action: 'CANCEL' }) }),
   boardPassenger: (id) => fetchAPI('/bookings.php', { method: 'PUT', body: JSON.stringify({ id, action: 'BOARD' }) }),
+  smartBoardPassenger: (data) => fetchAPI('/bookings.php', { method: 'PUT', body: JSON.stringify({ ...data, action: 'SMART_BOARD' }) }),
   assignBookingsToSchedule: (scheduleId, bookingIds) => fetchAPI('/bookings.php', { method: 'PUT', body: JSON.stringify({ action: 'ASSIGN_SCHEDULE', scheduleId, bookingIds }) }),
 };

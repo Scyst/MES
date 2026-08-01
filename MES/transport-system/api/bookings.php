@@ -163,6 +163,96 @@ elseif ($method === 'PUT') {
             
             sendResponse(true, null, "จัดสรรผู้โดยสารลงรถสำเร็จ");
         }
+        elseif ($action === 'SMART_BOARD') {
+            $scheduleId = $data['scheduleId'] ?? '';
+            $empId = $data['empId'] ?? '';
+            $name = $data['name'] ?? '';
+            $bu = $data['bu'] ?? '';
+            
+            if (!$scheduleId || !$empId) {
+                sendResponse(false, null, "ข้อมูลไม่ครบถ้วนสำหรับการสแกนขึ้นรถ", 400);
+            }
+            
+            $pdo->beginTransaction();
+            
+            // 1. Check Capacity of the Schedule
+            $stmt = $pdo->prepare("
+                SELECT s.id, s.route_id, s.trip_date, f.capacity, 
+                       (SELECT COUNT(*) FROM TRANSPORT_BOOKINGS b WHERE b.schedule_id = s.id AND b.status != 'CANCELLED') as currentCount
+                FROM TRANSPORT_SCHEDULES s
+                JOIN TRANSPORT_FLEET f ON s.vehicle_id = f.id
+                WHERE s.id = ?
+            ");
+            $stmt->execute([$scheduleId]);
+            $tripInfo = $stmt->fetch();
+            
+            if (!$tripInfo) {
+                $pdo->rollBack();
+                sendResponse(false, null, "ไม่พบข้อมูลรอบรถ", 404);
+            }
+            
+            if ($tripInfo['currentCount'] >= $tripInfo['capacity']) {
+                $pdo->rollBack();
+                sendResponse(false, null, "ขออภัย รถรอบนี้เต็มแล้ว", 400);
+            }
+            
+            $dbRouteId = $tripInfo['route_id'];
+            $dbTargetDate = $tripInfo['trip_date'];
+            
+            // 2. Try to find a Central Pool booking for this empId on the SAME route and date
+            // Prioritize: 
+            // 1. Already assigned to this exact schedule_id (and not boarded yet)
+            // 2. Unassigned (schedule_id IS NULL) but matches route_id and target_date
+            
+            $stmt = $pdo->prepare("
+                SELECT id, schedule_id, status 
+                FROM TRANSPORT_BOOKINGS 
+                WHERE emp_id = ? 
+                  AND status IN ('BOOKED', 'BOARDED')
+                  AND (
+                      schedule_id = ? 
+                      OR (schedule_id IS NULL AND route_id = ? AND target_date = ?)
+                  )
+                ORDER BY 
+                  CASE WHEN schedule_id = ? THEN 1 ELSE 2 END ASC
+            ");
+            $stmt->execute([$empId, $scheduleId, $dbRouteId, $dbTargetDate, $scheduleId]);
+            $booking = $stmt->fetch();
+            
+            if ($booking) {
+                if ($booking['status'] === 'BOARDED' && $booking['schedule_id'] === $scheduleId) {
+                    // Already boarded this car
+                    $pdo->commit();
+                    sendResponse(true, ['id' => $booking['id'], 'isExtra' => false, 'message' => 'เช็คอินเรียบร้อยแล้ว (ซ้ำ)'], "เช็คอินเรียบร้อยแล้ว");
+                    exit;
+                }
+                
+                // Board them
+                $stmt = $pdo->prepare("UPDATE TRANSPORT_BOOKINGS SET schedule_id = ?, status = 'BOARDED', boarded_at = GETDATE() WHERE id = ?");
+                $stmt->execute([$scheduleId, $booking['id']]);
+                
+                $pdo->commit();
+                sendResponse(true, ['id' => $booking['id'], 'isExtra' => false], "ดึงจากพูลและเช็คอินสำเร็จ");
+            } else {
+                // 3. Walk-in (Not found in pool, or booked different route/date)
+                $newId = uniqid('BK-');
+                $sql = "INSERT INTO TRANSPORT_BOOKINGS (id, schedule_id, route_id, target_date, emp_id, emp_name, bu_id, status, is_extra, boarded_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 'BOARDED', 1, GETDATE())";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    $newId, 
+                    $scheduleId, 
+                    $dbRouteId,
+                    $dbTargetDate,
+                    $empId, 
+                    $name, 
+                    $bu
+                ]);
+                
+                $pdo->commit();
+                sendResponse(true, ['id' => $newId, 'isExtra' => true], "เช็คอิน Walk-in สำเร็จ");
+            }
+        }
         else {
             sendResponse(false, null, "Action ไม่ถูกต้อง", 400);
         }

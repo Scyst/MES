@@ -80,35 +80,23 @@ const CheckInPassenger = () => {
 
     if (trip) {
       try {
-        // Try to find a matching pre-booked ticket by empId or name
-        const matchingBooking = bookedPassengers.find(b =>
-          b.status === 'BOOKED' &&
-          (b.empId === empId || b.name === name)
-        );
-
-        if (matchingBooking) {
-          // Mark existing booking as BOARDED
-          await bookingsAPI.boardPassenger(matchingBooking.id);
-          setMatchedBooking(matchingBooking);
-          setIsExtra(false);
-        } else {
-          // Walk-in: create new booking + auto-board
-          const res = await bookingsAPI.addBooking({
-            scheduledTripId: trip.id,
-            empId: empId || '',
-            name,
-            bu,
-            isExtra: true,
-          });
-          setMatchedBooking({ id: res.id });
-          setIsExtra(true);
-        }
-
+        const res = await bookingsAPI.smartBoardPassenger({
+          scheduleId: trip.id,
+          empId: empId || '',
+          name,
+          bu
+        });
+        
+        setMatchedBooking({ id: res.id });
+        setIsExtra(res.isExtra);
+        
         // Refresh boarding counts
         const updatedBookings = await bookingsAPI.getBookings({ scheduleId: trip.id });
         setBookedPassengers(updatedBookings || []);
       } catch (err) {
-        // Still show success — driver confirmed the person boarded
+        alert(err.message || "เกิดข้อผิดพลาดในการเช็คอิน");
+        setIsSubmitting(false);
+        return; // Don't proceed to success screen if it fails (e.g. car full)
       }
     }
 

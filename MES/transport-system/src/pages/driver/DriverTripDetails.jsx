@@ -42,17 +42,22 @@ const DriverTripDetails = () => {
     }
   };
 
-  const handleManualCheckIn = async (bookingId) => {
+  const handleManualCheckIn = async (booking) => {
     try {
-      await bookingsAPI.boardPassenger(bookingId);
+      await bookingsAPI.smartBoardPassenger({
+        scheduleId: tripId,
+        empId: booking.empId,
+        name: booking.name,
+        bu: booking.bu || ''
+      });
       setPassengers(prev =>
-        prev.map(p => p.id === bookingId
+        prev.map(p => p.id === booking.id
           ? { ...p, status: 'BOARDED', boardedAt: new Date().toISOString() }
           : p
         )
       );
     } catch (err) {
-      // Silent fail — passenger stays in waiting list
+      alert(err.message || "เกิดข้อผิดพลาดในการเช็คอิน");
     }
   };
 
@@ -61,19 +66,18 @@ const DriverTripDetails = () => {
     if (!walkinForm.empId || !walkinForm.name) return;
     setWalkinSubmitting(true);
     try {
-      await bookingsAPI.addBooking({
-        scheduledTripId: tripId,
+      await bookingsAPI.smartBoardPassenger({
+        scheduleId: tripId,
         empId: walkinForm.empId,
         name: walkinForm.name,
         bu: walkinForm.bu || '',
-        isExtra: true,
       });
       setWalkinForm({ empId: '', name: '', bu: '' });
       setShowWalkinModal(false);
       setActiveTab('boarded');
       await loadData();
     } catch (err) {
-      // Silent fail — modal stays open so driver can retry
+      alert(err.message || "เกิดข้อผิดพลาดในการเช็คอิน");
     } finally {
       setWalkinSubmitting(false);
     }
@@ -207,7 +211,7 @@ const DriverTripDetails = () => {
                 
                 {activeTab === 'waiting' ? (
                   <button 
-                    onClick={() => handleManualCheckIn(p.id)}
+                    onClick={() => handleManualCheckIn(p)}
                     className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-xl shadow-sm transition-colors active:scale-90"
                   >
                     <CheckCircle2 size={20} />

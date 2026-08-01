@@ -33,6 +33,14 @@ const ScheduleDetails = () => {
         if (foundSchedule) {
           setSchedule(foundSchedule);
           setBookings(scheduleBookings || []);
+          
+          // Load Central Pool for this route and date
+          const pending = await bookingsAPI.getBookings({ 
+            routeId: foundSchedule.routeId, 
+            targetDate: foundSchedule.date || foundSchedule.departureTime.split(' ')[0],
+            unassigned: true 
+          });
+          setPendingBookings(pending || []);
         } else {
           setError("ไม่พบข้อมูลรอบรถ");
         }
@@ -131,13 +139,13 @@ const ScheduleDetails = () => {
 
   const handleOpenAssignModal = async () => {
     setShowAssignModal(true);
-    setPendingBookings([]);
+    setShowAssignModal(true);
     setSelectedPendingIds([]);
+    // We already loaded pendingBookings, no need to fetch again, but can refresh to be safe
     try {
       const pending = await bookingsAPI.getBookings({ 
         routeId: schedule.routeId, 
         targetDate: schedule.date || schedule.departureTime.split(' ')[0],
-        timeSlotId: schedule.timeSlotId, // Filter by time slot
         unassigned: true 
       });
       setPendingBookings(pending || []);
@@ -219,13 +227,13 @@ const ScheduleDetails = () => {
         </div>
 
         <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-lg">
+          <div className="p-3 bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 rounded-lg">
             <Users size={24} />
           </div>
           <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">ผู้จองทั้งหมด</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">รอจัดรถ (Central Pool)</p>
             <p className="text-lg font-bold text-gray-900 dark:text-white">
-              {bookings.length} / {schedule.capacity}
+              {pendingBookings.length} คน
             </p>
           </div>
         </div>
@@ -290,6 +298,54 @@ const ScheduleDetails = () => {
                           <Clock size={14} /> รอขึ้นรถ
                         </span>
                       )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Central Pool List */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:gray-700 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-amber-50 dark:bg-amber-900/10 flex justify-between items-center">
+          <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Users className="text-amber-500" size={20} />
+            รอจัดรถ (Central Pool)
+          </h3>
+          <span className="text-sm text-gray-500">สำหรับเส้นทางและวันที่เดียวกัน</span>
+        </div>
+        
+        {pendingBookings.length === 0 ? (
+          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+            ไม่มีผู้โดยสารตกค้างในพูลกลาง
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400">
+              <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white font-medium border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                  <th className="px-6 py-4">รหัสพนักงาน</th>
+                  <th className="px-6 py-4">ชื่อ - นามสกุล</th>
+                  <th className="px-6 py-4">แผนก (BU)</th>
+                  <th className="px-6 py-4">เวลาที่จอง</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {pendingBookings.map((booking) => (
+                  <tr key={booking.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                      {booking.empId}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                      {booking.name}
+                    </td>
+                    <td className="px-6 py-4">
+                      {booking.bu}
+                    </td>
+                    <td className="px-6 py-4 text-gray-500">
+                      {new Date(booking.bookedAt).toLocaleTimeString('th-TH')}
                     </td>
                   </tr>
                 ))}
