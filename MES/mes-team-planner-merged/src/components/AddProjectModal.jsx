@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiCheckSquare, FiTrash } from 'react-icons/fi';
+import ConfirmDialog from './common/ConfirmDialog';
 
 export default function AddProjectModal({ isOpen, onClose, onSave, initialData, spaces = [] }) {
   const [activeModalTab, setActiveModalTab] = useState('general');
@@ -9,6 +10,8 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
     title: '', description: '', status: 'active', assignee: '', 
     startDate: '', dueDate: '', tags: '', priority: 'normal', checklist: [], spaceId: ''
   });
+  const [initialFormState, setInitialFormState] = useState(null);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
 
   useEffect(() => {
     if (initialData && isOpen) {
@@ -23,7 +26,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
         console.error("Failed to parse checklist", e);
       }
 
-      setFormData({
+      const newFormData = {
         title: initialData.Title || initialData.title || '',
         description: initialData.Description || initialData.description || '',
         status: initialData.Status || initialData.status || 'active',
@@ -35,13 +38,17 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
         checklist: Array.isArray(parsedChecklist) ? parsedChecklist : [],
         spaceId: initialData.SpaceId || initialData.spaceId || '',
         Id: initialData.Id
-      });
+      };
+      setFormData(newFormData);
+      setInitialFormState(JSON.stringify(newFormData));
       setActiveModalTab('general');
     } else if (isOpen) {
-      setFormData({ 
+      const newFormData = { 
         title: '', description: '', status: 'active', assignee: '', 
         startDate: '', dueDate: '', tags: '', priority: 'normal', checklist: [], spaceId: ''
-      });
+      };
+      setFormData(newFormData);
+      setInitialFormState(JSON.stringify(newFormData));
       setNewChecklistItem('');
       setActiveModalTab('general');
     }
@@ -50,12 +57,20 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        handleClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  const handleClose = () => {
+    if (initialFormState && JSON.stringify(formData) !== initialFormState) {
+      setShowConfirmClose(true);
+      return;
+    }
+    onClose();
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -67,11 +82,26 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100] p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 animate-slide-up my-8">
+    <>
+    <ConfirmDialog 
+      isOpen={showConfirmClose}
+      title="ละทิ้งการเปลี่ยนแปลง?"
+      message="คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้และละทิ้งการเปลี่ยนแปลงหรือไม่?"
+      confirmText="ใช่, ปิดหน้าต่าง"
+      cancelText="ยกเลิก"
+      type="danger"
+      onConfirm={() => {
+        setShowConfirmClose(false);
+        onClose();
+      }}
+      onCancel={() => setShowConfirmClose(false)}
+    />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={handleClose}></div>
+      <div className="relative bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 animate-scale-up shadow-2xl my-8">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold">{formData.Id ? 'แก้ไขโปรเจ็ค' : 'สร้างโปรเจ็คใหม่'}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={handleClose} className="text-slate-400 hover:text-slate-600">✕</button>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col h-full gap-4">
           <div className="flex border-b border-slate-200 dark:border-slate-800 -mx-6 px-4">
@@ -243,5 +273,6 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
         </form>
       </div>
     </div>
+    </>
   );
 }

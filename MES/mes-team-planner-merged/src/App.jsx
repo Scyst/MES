@@ -14,6 +14,8 @@ import NotificationModal from './components/NotificationModal';
 import AddTaskModal from './components/AddTaskModal';
 import AddProjectModal from './components/AddProjectModal';
 import AddSpaceModal from './components/AddSpaceModal';
+import InviteTeamModal from './components/InviteTeamModal';
+import ProfileSettingsModal from './components/ProfileSettingsModal';
 import MyTasks from './components/MyTasks';
 import Resources from './components/Resources';
 import SpaceView from './components/SpaceView';
@@ -40,6 +42,9 @@ function App() {
   const [isGlobalProjectModalOpen, setIsGlobalProjectModalOpen] = useState(false);
   const [globalEditingProject, setGlobalEditingProject] = useState(null);
   const [isAddSpaceModalOpen, setIsAddSpaceModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteModalSpaceId, setInviteModalSpaceId] = useState(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState(null);
 
   useEffect(() => {
@@ -206,6 +211,33 @@ function App() {
     }
   }, [refreshData]);
 
+  const handleSaveSpace = async (data) => {
+    try {
+      if (data.id) {
+        await axios.put(`/api/spaces.php?id=${data.id}`, data);
+      } else {
+        await axios.post('/api/spaces.php', data);
+      }
+      await refreshData();
+      return true;
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.error || 'Failed to save space');
+      return false;
+    }
+  };
+
+  const handleSaveInvite = async (data) => {
+    try {
+      await axios.post('/api/space_members.php', data);
+      alert('เชิญสมาชิกสำเร็จ (Invitation sent)');
+      return true;
+    } catch (err) {
+      console.error(err);
+      return err.response?.data?.error || 'Failed to send invite';
+    }
+  };
+
   const handleSaveEvent = useCallback(async (eventData) => {
     try {
       if (eventData.Id) {
@@ -218,22 +250,6 @@ function App() {
       return true;
     } catch (err) {
       console.error('Failed to save event', err);
-      return false;
-    }
-  }, []);
-
-  const handleSaveSpace = useCallback(async (spaceData) => {
-    try {
-      if (spaceData.Id) {
-        const res = await axios.put(`/api/spaces.php?id=${spaceData.Id}`, spaceData);
-        setSpaces(prev => prev.map(s => s.Id === spaceData.Id ? res.data : s));
-      } else {
-        const res = await axios.post('/api/spaces.php', spaceData);
-        setSpaces(prev => [...prev, res.data]);
-      }
-      return true;
-    } catch (err) {
-      console.error('Failed to save space', err);
       return false;
     }
   }, []);
@@ -337,7 +353,20 @@ function App() {
 
     switch (activeTab) {
       case 'dashboard': 
-        return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav} />;
+        return <Dashboard 
+          tasks={tasks} 
+          events={events} 
+          activities={activities} 
+          loading={dataLoading} 
+          users={users}
+          onNav={handleNav} 
+          openTaskModal={() => { setGlobalEditingTask(null); setIsGlobalTaskModalOpen(true); }}
+          openProjectModal={() => { setGlobalEditingProject(null); setIsGlobalProjectModalOpen(true); }}
+          openSpaceModal={() => { setEditingSpace(null); setIsAddSpaceModalOpen(true); }}
+          openInviteModal={() => { setInviteModalSpaceId(null); setIsInviteModalOpen(true); }}
+          onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
+          onProjectClick={(proj) => { setGlobalEditingProject(proj); setIsGlobalProjectModalOpen(true); }}
+        />;
       case 'calendar': 
         return <CalendarView tasks={tasks} events={events} onSaveTask={handleSaveTask} onDeleteTask={handleDeleteTask} onSaveEvent={handleSaveEvent} onDeleteEvent={handleDeleteEvent} loading={dataLoading} users={users} />;
       case 'tasks': 
@@ -374,6 +403,7 @@ function App() {
             users={users} 
             onEditSpace={(s) => { setEditingSpace(s); setIsAddSpaceModalOpen(true); }} 
             onDeleteSpace={async (id) => { if(confirm('ต้องการลบทีมนี้ใช่หรือไม่?')) { await axios.delete(`/api/spaces.php?id=${id}`); refreshData(); setActiveTab('space-home'); } }} 
+            openInviteModal={(sId) => { setInviteModalSpaceId(sId); setIsInviteModalOpen(true); }}
             onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
             onCreateTask={handleCreateTask}
             onCreateProject={handleCreateProject}
@@ -381,7 +411,20 @@ function App() {
             onSaveTask={handleSaveTask}
           />;
         }
-        return <Dashboard tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav} />;
+        return <Dashboard 
+          tasks={tasks} 
+          events={events} 
+          activities={activities} 
+          loading={dataLoading} 
+          users={users}
+          onNav={handleNav} 
+          openTaskModal={() => { setGlobalEditingTask(null); setIsGlobalTaskModalOpen(true); }}
+          openProjectModal={() => { setGlobalEditingProject(null); setIsGlobalProjectModalOpen(true); }}
+          openSpaceModal={() => { setEditingSpace(null); setIsAddSpaceModalOpen(true); }}
+          openInviteModal={() => { setInviteModalSpaceId(null); setIsInviteModalOpen(true); }}
+          onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
+          onProjectClick={(proj) => { setGlobalEditingProject(proj); setIsGlobalProjectModalOpen(true); }}
+        />;
     }
   };
 
@@ -392,12 +435,22 @@ function App() {
 
   // Profile avatar component
   const ProfileAvatar = ({ size = 'sm', onClick }) => {
+    const [imgError, setImgError] = useState(false);
+    // Force reload image when refreshData changes by using a timestamp if needed, but for now simple src is fine.
+    // We add a timestamp to avoid caching issues right after an upload
+    const avatarTimestamp = localStorage.getItem('avatar_ts') || '';
+    
     if (!currentUser) return null;
     const initial = (currentUser.fullname || currentUser.username || 'U').charAt(0).toUpperCase();
     const sizeClass = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-9 h-9 text-sm';
+    
     return (
-      <button onClick={onClick} className={`${sizeClass} rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0 hover:ring-2 hover:ring-indigo-500/50 transition-all active:scale-95`} title={currentUser.fullname || currentUser.username}>
-        {initial}
+      <button onClick={onClick} className={`${sizeClass} rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0 hover:ring-2 hover:ring-indigo-500/50 transition-all active:scale-95 overflow-hidden`} title={currentUser.fullname || currentUser.username}>
+        {!imgError ? (
+          <img src={`api/uploads/avatars/${currentUser.username}.jpg?t=${avatarTimestamp}`} onError={() => setImgError(true)} className="w-full h-full object-cover" alt={initial} />
+        ) : (
+          initial
+        )}
       </button>
     );
   };
@@ -458,6 +511,9 @@ function App() {
                     </div>
                   )}
                   <div className="p-2">
+                    <button onClick={() => { setIsProfileModalOpen(true); setShowProfileMenu(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
+                      <FiUser className="text-[1.1rem]" /> ตั้งค่าโปรไฟล์
+                    </button>
                     <a href="/iot-toolbox/sandbox-b9/Toolbox2/#/" className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
                       <FiHome className="text-[1.1rem]" /> Home (ระบบใหม่)
                     </a>
@@ -719,6 +775,22 @@ function App() {
         onClose={() => { setIsAddSpaceModalOpen(false); setEditingSpace(null); }}
         onSave={handleSaveSpace}
         initialData={editingSpace}
+      />
+      
+      <InviteTeamModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        onSave={handleSaveInvite}
+        spaces={spaces}
+        users={users}
+        initialSpaceId={inviteModalSpaceId}
+      />
+      
+      <ProfileSettingsModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        currentUser={currentUser}
+        onSaved={refreshData}
       />
       
       {/* Chat Notification Widget */}

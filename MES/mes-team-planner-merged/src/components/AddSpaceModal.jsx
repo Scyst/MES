@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiX, FiUsers, FiFolder, FiGrid, FiLayout, FiCheck } from 'react-icons/fi';
+import ConfirmDialog from './common/ConfirmDialog';
 
 const ICON_OPTIONS = [
   { name: 'FiUsers', icon: FiUsers },
@@ -22,18 +23,50 @@ export default function AddSpaceModal({ isOpen, onClose, onSave, initialData }) 
   const [selectedIcon, setSelectedIcon] = useState('FiUsers');
   const [selectedColor, setSelectedColor] = useState(COLOR_OPTIONS[0].value);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [initialFormState, setInitialFormState] = useState(null);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
 
   React.useEffect(() => {
     if (initialData && isOpen) {
       setName(initialData.Name || '');
       setSelectedIcon(initialData.Icon || 'FiUsers');
       setSelectedColor(initialData.Color || COLOR_OPTIONS[0].value);
+      setInitialFormState(JSON.stringify({
+        name: initialData.Name || '',
+        selectedIcon: initialData.Icon || 'FiUsers',
+        selectedColor: initialData.Color || COLOR_OPTIONS[0].value
+      }));
     } else if (isOpen) {
       setName('');
       setSelectedIcon('FiUsers');
       setSelectedColor(COLOR_OPTIONS[0].value);
+      setInitialFormState(JSON.stringify({
+        name: '',
+        selectedIcon: 'FiUsers',
+        selectedColor: COLOR_OPTIONS[0].value
+      }));
     }
   }, [isOpen, initialData]);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  const handleClose = () => {
+    const currentFormState = JSON.stringify({ name, selectedIcon, selectedColor });
+    if (initialFormState && currentFormState !== initialFormState) {
+      setShowConfirmClose(true);
+      return;
+    }
+    onClose();
+  };
 
   if (!isOpen) return null;
 
@@ -55,16 +88,30 @@ export default function AddSpaceModal({ isOpen, onClose, onSave, initialData }) 
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-fade-in" onClick={onClose}></div>
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-50 animate-slide-up overflow-hidden">
+    <ConfirmDialog 
+      isOpen={showConfirmClose}
+      title="ละทิ้งการเปลี่ยนแปลง?"
+      message="คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้และละทิ้งการเปลี่ยนแปลงหรือไม่?"
+      confirmText="ใช่, ปิดหน้าต่าง"
+      cancelText="ยกเลิก"
+      type="danger"
+      onConfirm={() => {
+        setShowConfirmClose(false);
+        onClose();
+      }}
+      onCancel={() => setShowConfirmClose(false)}
+    />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={handleClose}></div>
+      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl animate-scale-up overflow-hidden">
         <div className="flex justify-between items-center p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedColor}`}>
-              <FiUsers />
+              <FiFolder />
             </div>
-            {initialData ? 'แก้ไขข้อมูล Space' : 'Create New Space'}
+            {initialData ? 'ตั้งค่าสเปซ' : 'สร้างสเปซใหม่'}
           </h3>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 p-2 rounded-xl transition-colors">
+          <button type="button" onClick={handleClose} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 p-2 rounded-xl transition-colors">
             <FiX className="text-xl" />
           </button>
         </div>
@@ -106,6 +153,7 @@ export default function AddSpaceModal({ isOpen, onClose, onSave, initialData }) 
           </div>
         </form>
       </div>
+    </div>
     </>
   );
 }

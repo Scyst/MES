@@ -39,9 +39,9 @@ export default function SearchModal({ onClose, tasks = [], projects = [], onNav 
   };
 
   return (
-    <>
-      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100]" onClick={onClose}></div>
-      <div className="fixed top-[10%] left-1/2 -translate-x-1/2 w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-[110] overflow-hidden animate-slide-up border border-slate-200 dark:border-slate-800">
+    <div className="fixed inset-0 z-[100] flex justify-center items-start pt-[10vh] px-4">
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={onClose}></div>
+      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-[110] overflow-hidden animate-scale-up border border-slate-200 dark:border-slate-800">
         
         {/* Search Input Area */}
         <div className="flex items-center px-4 py-4 border-b border-slate-100 dark:border-slate-800">
@@ -142,6 +142,6 @@ export default function SearchModal({ onClose, tasks = [], projects = [], onNav 
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

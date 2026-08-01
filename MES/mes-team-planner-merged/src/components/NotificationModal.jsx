@@ -14,8 +14,8 @@ export default function NotificationModal({ onClose, activities = [] }) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-[1px] z-[100]" onClick={onClose}></div>
-      <div className="fixed top-14 right-4 md:top-16 md:right-6 w-[calc(100%-2rem)] md:w-80 max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-[110] overflow-hidden animate-slide-up border border-slate-200 dark:border-slate-800 flex flex-col">
+      <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-[1px] z-[100] animate-fade-in" onClick={onClose}></div>
+      <div className="fixed top-14 right-4 md:top-16 md:right-6 w-[calc(100%-2rem)] md:w-80 max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-[110] overflow-hidden animate-scale-up border border-slate-200 dark:border-slate-800 flex flex-col">
         
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
           <div className="flex items-center gap-2">

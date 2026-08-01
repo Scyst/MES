@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiX, FiTrash2 } from 'react-icons/fi';
 import MultiSelectInput from './common/MultiSelectInput';
+import ConfirmDialog from './common/ConfirmDialog';
 
 export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSelectedDate, initialData, tasks = [] }) {
   const [formData, setFormData] = useState({
@@ -9,32 +10,46 @@ export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSe
     type: 'meeting',
     assignee: ''
   });
+  const [initialFormState, setInitialFormState] = useState(null);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
 
   useEffect(() => {
     if (isOpen && initialData) {
       // Edit mode
-      setFormData({
+      const newFormData = {
         title: initialData.Title || '',
         date: initialData.date || preSelectedDate || '',
         type: initialData.Type || 'meeting',
         assignee: initialData.Assignee || '',
         Id: initialData.Id
-      });
+      };
+      setFormData(newFormData);
+      setInitialFormState(JSON.stringify(newFormData));
     } else if (isOpen) {
       // New event
-      setFormData({ title: '', date: preSelectedDate || '', type: 'meeting', assignee: '' });
+      const newFormData = { title: '', date: preSelectedDate || '', type: 'meeting', assignee: '' };
+      setFormData(newFormData);
+      setInitialFormState(JSON.stringify(newFormData));
     }
   }, [isOpen, initialData, preSelectedDate]);
 
   React.useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        handleClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  const handleClose = () => {
+    if (initialFormState && JSON.stringify(formData) !== initialFormState) {
+      setShowConfirmClose(true);
+      return;
+    }
+    onClose();
+  };
 
   if (!isOpen) return null;
 
@@ -57,12 +72,27 @@ export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSe
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-slide-up">
+    <>
+    <ConfirmDialog 
+      isOpen={showConfirmClose}
+      title="ละทิ้งการเปลี่ยนแปลง?"
+      message="คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้และละทิ้งการเปลี่ยนแปลงหรือไม่?"
+      confirmText="ใช่, ปิดหน้าต่าง"
+      cancelText="ยกเลิก"
+      type="danger"
+      onConfirm={() => {
+        setShowConfirmClose(false);
+        onClose();
+      }}
+      onCancel={() => setShowConfirmClose(false)}
+    />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={handleClose}></div>
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-up">
         <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEditing ? 'แก้ไขนัดหมาย' : 'สร้างนัดหมายใหม่'}</h3>
-          <button onClick={onClose} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition">
-            <FiX />
+          <button onClick={handleClose} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+            <FiX size={20} />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -116,5 +146,6 @@ export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSe
         </form>
       </div>
     </div>
+    </>
   );
 }

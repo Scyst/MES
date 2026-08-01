@@ -3,6 +3,7 @@ import { FiX, FiTrash2, FiCalendar, FiClock, FiUser, FiEye, FiCheckCircle, FiChe
 import MultiSelectInput from './common/MultiSelectInput';
 import axios from 'axios';
 import { canEditTask, canDeleteTask } from '../utils/permissions';
+import ConfirmDialog from './common/ConfirmDialog';
 
 const PRIORITY_OPTIONS = [
   { value: 'urgent', label: '🔴 ด่วนมาก', color: 'bg-red-500', dot: 'bg-red-400', ring: 'ring-red-500/30' },
@@ -42,13 +43,16 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     priority: 'normal', description: '', tags: '', recurrence: 'none',
     recurrenceDays: [], recurrenceDates: [], recurrenceEndDate: '', recurrenceDuration: '1m', projectId: '', projectChecklistId: '', groupId: '', updateSeries: false
   });
+  const [initialFormState, setInitialFormState] = useState(null);
+  const [initialSubtasksState, setInitialSubtasksState] = useState(null);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [projectsList, setProjectsList] = useState([]);
   const isEditable = canEditTask(currentUser, initialData);
   const canDelete = canDeleteTask(currentUser, initialData);
 
   useEffect(() => {
     if (initialData && isOpen) {
-      setFormData({
+      const newFormData = {
         title: initialData.Title || initialData.title || '',
         status: initialData.Status || initialData.status || 'todo',
         visibility: initialData.Visibility || initialData.visibility || 'public',
@@ -66,13 +70,17 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         groupId: initialData.groupId || initialData.GroupId || '',
         updateSeries: false,
         Id: initialData.Id
-      });
+      };
+      setFormData(newFormData);
+      setInitialFormState(JSON.stringify(newFormData));
       
       try {
         const parsed = JSON.parse(initialData.subtasks || initialData.Subtasks || '[]');
         setSubtasksArr(parsed);
+        setInitialSubtasksState(JSON.stringify(parsed));
       } catch (e) {
         setSubtasksArr([]);
+        setInitialSubtasksState('[]');
       }
 
       if (initialData.Id) {
@@ -81,13 +89,16 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         setComments([]);
       }
     } else if (isOpen) {
-      setFormData({
+      const newFormData = {
         title: '', status: 'todo', visibility: 'public', assignee: currentUser?.fullname || currentUser?.username || '',
         startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
         priority: 'normal', description: '', tags: '', recurrence: 'none',
         recurrenceDays: [], recurrenceDates: [], recurrenceEndDate: '', recurrenceDuration: '1m', projectId: '', projectChecklistId: '', groupId: '', updateSeries: false
-      });
+      };
+      setFormData(newFormData);
+      setInitialFormState(JSON.stringify(newFormData));
       setSubtasksArr([]);
+      setInitialSubtasksState('[]');
       setComments([]);
       setNewComment('');
       setActiveTab('general');
@@ -97,7 +108,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   React.useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        handleClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -115,6 +126,19 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       }).catch(console.error);
     }
   }, [isOpen]);
+
+  const handleClose = () => {
+    const currentFormState = JSON.stringify(formData);
+    const currentSubtasksState = JSON.stringify(subtasksArr);
+    
+    if (initialFormState && initialSubtasksState) {
+      if (currentFormState !== initialFormState || currentSubtasksState !== initialSubtasksState) {
+        setShowConfirmClose(true);
+        return;
+      }
+    }
+    onClose();
+  };
 
   const fetchComments = async (taskId) => {
     try {
@@ -222,10 +246,27 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   ])).sort();
 
   return (
+    <>
+    <ConfirmDialog 
+      isOpen={showConfirmClose}
+      title="ละทิ้งการเปลี่ยนแปลง?"
+      message="คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้และละทิ้งการเปลี่ยนแปลงหรือไม่?"
+      confirmText="ใช่, ปิดหน้าต่าง"
+      cancelText="ยกเลิก"
+      type="danger"
+      onConfirm={() => {
+        setShowConfirmClose(false);
+        onClose();
+      }}
+      onCancel={() => setShowConfirmClose(false)}
+    />
     <div 
-      className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
     >
-      <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-slide-up">
+      <div className="relative bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-scale-up">
         
         {/* Header */}
         <div className="flex flex-col shrink-0">
@@ -708,5 +749,6 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         </div>
       </div>
     </div>
+    </>
   );
 }
