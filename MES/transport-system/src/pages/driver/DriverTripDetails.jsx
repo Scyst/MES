@@ -1,93 +1,91 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserPlus, CheckCircle2, QrCode, Search, AlertCircle, X } from 'lucide-react';
+import { ArrowLeft, UserPlus, CheckCircle2, Search, AlertCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { schedulesAPI, bookingsAPI, masterAPI } from '../../services/api';
 
-/**
- * DriverTripDetails — Driver view of a specific trip.
- * Handles passenger list, manual check-in, and adding walk-in passengers.
- */
 const DriverTripDetails = () => {
   const { tripId } = useParams();
   const navigate = useNavigate();
   
   const [trip, setTrip] = useState(null);
   const [passengers, setPassengers] = useState([]);
-  const [activeTab, setActiveTab] = useState('waiting'); // 'waiting' or 'boarded'
+  const [departments, setDepartments] = useState([]);
+  const [activeTab, setActiveTab] = useState('waiting');
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
   
-  // Modals
   const [showWalkinModal, setShowWalkinModal] = useState(false);
   const [walkinForm, setWalkinForm] = useState({ empId: '', name: '', bu: '' });
+  const [walkinSubmitting, setWalkinSubmitting] = useState(false);
 
-  // Load Data
   useEffect(() => {
     loadData();
   }, [tripId]);
 
-  const loadData = () => {
-    // 1. Get Trip
-    const allTrips = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-    const currentTrip = allTrips.find(t => t.id === tripId);
-    setTrip(currentTrip);
-
-    // 2. Get Bookings for this trip
-    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-    const tripBookings = allBookings.filter(b => b.scheduledTripId === tripId);
-    setPassengers(tripBookings);
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [allSchedules, tripBookings, deptData] = await Promise.all([
+        schedulesAPI.getSchedules(),
+        bookingsAPI.getBookings({ scheduleId: tripId }),
+        masterAPI.getDepartments(),
+      ]);
+      const currentTrip = (allSchedules || []).find(t => t.id === tripId);
+      setTrip(currentTrip || null);
+      setPassengers(tripBookings || []);
+      setDepartments(deptData || []);
+    } catch (err) {
+      setPassengers([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleManualCheckIn = (bookingId) => {
-    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-    const updatedBookings = allBookings.map(b => {
-      if (b.id === bookingId) {
-        return { ...b, status: 'BOARDED', boardedAt: new Date().toISOString() };
-      }
-      return b;
-    });
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-    
-    // Refresh local state
-    setPassengers(updatedBookings.filter(b => b.scheduledTripId === tripId));
+  const handleManualCheckIn = async (bookingId) => {
+    try {
+      await bookingsAPI.boardPassenger(bookingId);
+      setPassengers(prev =>
+        prev.map(p => p.id === bookingId
+          ? { ...p, status: 'BOARDED', boardedAt: new Date().toISOString() }
+          : p
+        )
+      );
+    } catch (err) {
+      // Silent fail — passenger stays in waiting list
+    }
   };
 
-  const handleAddWalkin = (e) => {
+  const handleAddWalkin = async (e) => {
     e.preventDefault();
     if (!walkinForm.empId || !walkinForm.name) return;
-
-    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-    
-    const newWalkin = {
-      id: `WALKIN-${Date.now()}`,
-      scheduledTripId: tripId,
-      empId: walkinForm.empId,
-      name: walkinForm.name,
-      bu: walkinForm.bu || 'UNKNOWN',
-      status: 'BOARDED', // Walk-in is auto-boarded
-      bookedAt: new Date().toISOString(),
-      boardedAt: new Date().toISOString(),
-      isExtra: true
-    };
-
-    allBookings.push(newWalkin);
-    localStorage.setItem('bookings', JSON.stringify(allBookings));
-
-    // Update trip capacity/count
-    const allTrips = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-    const updatedTrips = allTrips.map(t => {
-      if (t.id === tripId) {
-        return { ...t, bookedCount: (t.bookedCount || 0) + 1 };
-      }
-      return t;
-    });
-    localStorage.setItem('scheduledTrips', JSON.stringify(updatedTrips));
-
-    // Refresh and close modal
-    setWalkinForm({ empId: '', name: '', bu: '' });
-    setShowWalkinModal(false);
-    loadData();
-    setActiveTab('boarded'); // switch to boarded to see the new person
+    setWalkinSubmitting(true);
+    try {
+      await bookingsAPI.addBooking({
+        scheduledTripId: tripId,
+        empId: walkinForm.empId,
+        name: walkinForm.name,
+        bu: walkinForm.bu || '',
+        isExtra: true,
+      });
+      setWalkinForm({ empId: '', name: '', bu: '' });
+      setShowWalkinModal(false);
+      setActiveTab('boarded');
+      await loadData();
+    } catch (err) {
+      // Silent fail — modal stays open so driver can retry
+    } finally {
+      setWalkinSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!trip) return null;
 
@@ -95,11 +93,12 @@ const DriverTripDetails = () => {
   const boardedList = passengers.filter(p => p.status === 'BOARDED');
 
   const filteredList = (activeTab === 'waiting' ? waitingList : boardedList).filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.empId.toLowerCase().includes(searchTerm.toLowerCase())
+    (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (p.empId || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const percent = Math.round(((boardedList.length) / (trip.capacity || 12)) * 100);
+  const capacity = trip.capacity || 1;
+  const percent = Math.round((boardedList.length / capacity) * 100);
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen flex flex-col font-sans transition-colors duration-300">
@@ -117,10 +116,10 @@ const DriverTripDetails = () => {
           <div className="text-center flex-1 px-2">
             <h1 className="font-black text-gray-900 dark:text-white truncate">{trip.route}</h1>
             <p className="text-xs text-blue-600 dark:text-blue-400 font-bold mt-0.5">
-              {new Date(trip.departureTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+              {trip.departureTime ? trip.departureTime.split(' ')[1].substring(0, 5) : ''} น.
             </p>
           </div>
-          <div className="w-10"></div> {/* Spacer for alignment */}
+          <div className="w-10"></div>
         </div>
 
         {/* Progress Bar */}
@@ -275,20 +274,24 @@ const DriverTripDetails = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase">สังกัด / BU</label>
-                  <input 
-                    type="text" 
+                  <select
                     value={walkinForm.bu}
                     onChange={(e) => setWalkinForm({...walkinForm, bu: e.target.value})}
-                    placeholder="(ระบุหรือไม่ก็ได้)"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                  />
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none"
+                  >
+                    <option value="">-- ระบุหรือไม่ก็ได้ --</option>
+                    {departments.map(d => (
+                      <option key={d.id} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <button 
                   type="submit"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl mt-4 shadow-sm active:scale-95 transition-transform"
+                  disabled={walkinSubmitting}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-xl mt-4 shadow-sm active:scale-95 transition-transform"
                 >
-                  ยืนยันเพิ่มและเช็คอิน
+                  {walkinSubmitting ? 'กำลังบันทึก...' : 'ยืนยันเพิ่มและเช็คอิน'}
                 </button>
               </form>
             </motion.div>

@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { BusFront, Users, QrCode, AlertCircle, Building2, MapPin, Clock, X, CheckCircle, UserPlus, Info, Download, Calendar as CalendarIcon, LayoutDashboard, RefreshCw } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
+import { schedulesAPI, bookingsAPI } from '../../services/api';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
-const AUTO_REFRESH_INTERVAL = 30_000; // 30 seconds
+const AUTO_REFRESH_INTERVAL = 30_000;
 
 const AdminDashboard = () => {
   const [trips, setTrips] = useState([]);
@@ -16,7 +17,6 @@ const AdminDashboard = () => {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Toast state
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
 
@@ -26,38 +26,36 @@ const AdminDashboard = () => {
     toastTimerRef.current = setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // ─── Data loading ────────────────────────────────────────────────────────────
-  const loadData = useCallback((animate = false) => {
+  const loadData = useCallback(async (animate = false) => {
     if (animate) setIsRefreshing(true);
-    const savedTrips = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-    const savedBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-    setTrips(savedTrips);
-    setBookings(savedBookings);
-    setLastUpdated(new Date());
-    if (animate) {
-      setTimeout(() => setIsRefreshing(false), 600);
+    try {
+      const [allSchedules, allBookings] = await Promise.all([
+        schedulesAPI.getSchedules(),
+        bookingsAPI.getBookings({}),
+      ]);
+      setTrips(allSchedules || []);
+      setBookings(allBookings || []);
+      setLastUpdated(new Date());
+    } catch (err) {
+      // Keep stale data on error
+    } finally {
+      if (animate) setTimeout(() => setIsRefreshing(false), 600);
     }
   }, []);
 
-  // Initial load
-  useEffect(() => {
-    loadData(false);
-  }, [loadData]);
+  useEffect(() => { loadData(false); }, [loadData]);
 
-  // Auto-refresh every 30s
   useEffect(() => {
     const timer = setInterval(() => loadData(false), AUTO_REFRESH_INTERVAL);
     return () => clearInterval(timer);
   }, [loadData]);
 
-  // Refresh on window focus (user switches tabs)
   useEffect(() => {
     const handleFocus = () => loadData(false);
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [loadData]);
 
-  // Dark mode observer
   useEffect(() => {
     const observer = new MutationObserver(() => {
       setIsDarkMode(document.documentElement.classList.contains('dark'));
@@ -67,18 +65,19 @@ const AdminDashboard = () => {
     return () => observer.disconnect();
   }, []);
 
-  // ─── Stats derived from selected date ────────────────────────────────────────
-  const todayTrips = trips.filter(t => t.date === selectedDate);
+  // ─── Stats derived from selected date ───────────────────────────────────────
+  const todayTrips = trips.filter(t => {
+    const tripDate = t.date || (t.departureTime ? t.departureTime.split(' ')[0] : '');
+    return tripDate === selectedDate;
+  });
 
-  // Get booking IDs that belong to today's trips
   const todayTripIds = new Set(todayTrips.map(t => t.id));
   const todayBookings = bookings.filter(b => todayTripIds.has(b.scheduledTripId) && b.status !== 'CANCELLED');
   const totalBookingsToday = todayBookings.length;
   const totalScansToday = todayBookings.filter(b => b.status === 'BOARDED').length;
-
   const unscannedBookings = todayBookings.filter(b => b.status === 'BOOKED');
 
-  // ─── Fair Billing Calculation ─────────────────────────────────────────────────
+  // ─── Fair Billing Calculation ────────────────────────────────────────────────
   const buBillingRaw = {};
 
   todayTrips.forEach(trip => {
@@ -95,7 +94,8 @@ const AdminDashboard = () => {
         buBillingRaw[b.bu].count += 1;
       });
     } else {
-      const isPast = new Date(trip.departureTime) < new Date();
+      const departureTime = trip.departureTime || '';
+      const isPast = departureTime && new Date(departureTime) < new Date();
       if (isPast || selectedDate < new Date().toISOString().split('T')[0]) {
         const centralKey = 'ส่วนกลาง (รถเปล่า)';
         if (!buBillingRaw[centralKey]) buBillingRaw[centralKey] = { amount: 0, count: 0 };
@@ -110,7 +110,7 @@ const AdminDashboard = () => {
     count: buBillingRaw[bu].count
   })).sort((a, b) => b.amount - a.amount);
 
-  // ─── Export CSV ────────────────────────────────────────────────────────────────
+  // ─── Export CSV ───────────────────────────────────────────────────────────────
   const handleExportCSV = () => {
     if (billingData.length === 0) {
       showToast('ไม่มีข้อมูลที่จะ export', 'warning');
@@ -136,7 +136,7 @@ const AdminDashboard = () => {
     showToast(`Export สำเร็จ: billing_${selectedDate}.csv`);
   };
 
-  // ─── Trip Modal ────────────────────────────────────────────────────────────────
+  // ─── Trip Modal ───────────────────────────────────────────────────────────────
   const openTripModal = (trip) => {
     const tripBookings = bookings.filter(b => b.scheduledTripId === trip.id);
     setSelectedTripDetails({
@@ -162,7 +162,6 @@ const AdminDashboard = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400">สรุปข้อมูลการเดินทางและการใช้งานระบบทั้งหมดประจำวัน</p>
           </div>
         </div>
-        {/* Last updated + manual refresh */}
         <div className="hidden sm:flex flex-col items-end gap-1">
           {lastUpdated && (
             <span className="text-xs text-gray-400 dark:text-gray-500">
@@ -171,7 +170,7 @@ const AdminDashboard = () => {
           )}
           <button
             onClick={() => loadData(true)}
-            className={`flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors`}
+            className="flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors"
           >
             <RefreshCw size={13} className={isRefreshing ? 'animate-spin' : ''} />
             รีเฟรช
@@ -209,7 +208,6 @@ const AdminDashboard = () => {
         <div className="xl:col-span-2 space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
 
-            {/* Total Trips */}
             <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center mb-3">
                 <BusFront size={22} />
@@ -218,7 +216,6 @@ const AdminDashboard = () => {
               <div className="text-3xl font-black mt-1">{todayTrips.length} <span className="text-sm font-bold text-gray-400">รอบ</span></div>
             </div>
 
-            {/* Total Bookings */}
             <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center mb-3">
                 <Users size={22} />
@@ -227,7 +224,6 @@ const AdminDashboard = () => {
               <div className="text-3xl font-black mt-1">{totalBookingsToday} <span className="text-sm font-bold text-gray-400">คน</span></div>
             </div>
 
-            {/* Boarded */}
             <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center mb-3">
                 <QrCode size={22} />
@@ -236,7 +232,6 @@ const AdminDashboard = () => {
               <div className="text-3xl font-black mt-1">{totalScansToday} <span className="text-sm font-bold text-gray-400">คน</span></div>
             </div>
 
-            {/* Unscanned */}
             <div className={`p-5 rounded-2xl border shadow-sm ${unscannedBookings.length > 0 ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${unscannedBookings.length > 0 ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
                 <AlertCircle size={22} />
@@ -267,8 +262,10 @@ const AdminDashboard = () => {
                 ) : (
                   todayTrips.map(trip => {
                     const tripBoardedCount = bookings.filter(b => b.scheduledTripId === trip.id && b.status === 'BOARDED').length;
-                    const percent = Math.round((trip.bookedCount / trip.capacity) * 100);
-                    const boardedPercent = Math.round((tripBoardedCount / trip.capacity) * 100);
+                    const bookedCount = trip.bookedCount || 0;
+                    const capacity = trip.capacity || 1;
+                    const percent = Math.round((bookedCount / capacity) * 100);
+                    const boardedPercent = Math.round((tripBoardedCount / capacity) * 100);
                     let barColor = 'bg-blue-500';
                     if (percent >= 100) barColor = 'bg-red-500';
                     else if (percent >= 80) barColor = 'bg-amber-500';
@@ -287,14 +284,13 @@ const AdminDashboard = () => {
                             </p>
                           </div>
                           <span className="text-sm font-bold bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg text-gray-700 dark:text-gray-300">
-                            {new Date(trip.departureTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                            {trip.departureTime ? trip.departureTime.split(' ')[1].substring(0, 5) : ''}
                           </span>
                         </div>
 
-                        {/* Booked bar */}
                         <div className="space-y-1.5">
                           <div className="flex justify-between text-xs font-bold">
-                            <span className="text-gray-500 dark:text-gray-400">จอง {trip.bookedCount} / {trip.capacity}</span>
+                            <span className="text-gray-500 dark:text-gray-400">จอง {bookedCount} / {capacity}</span>
                             <span className="text-emerald-600 dark:text-emerald-400">สแกน {tripBoardedCount}</span>
                           </div>
                           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 relative">
@@ -422,7 +418,7 @@ const AdminDashboard = () => {
                           <div className="text-right ml-2 flex-shrink-0">
                             <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block">{trip?.route}</span>
                             <span className="text-[10px] text-red-500 font-black bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded mt-1 inline-block">
-                              {trip ? new Date(trip.departureTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''}
+                              {trip?.departureTime ? trip.departureTime.split(' ')[1].substring(0, 5) : ''}
                             </span>
                           </div>
                         </div>
@@ -457,11 +453,10 @@ const AdminDashboard = () => {
                   <h3 className="text-xl font-black text-gray-900 dark:text-white">{selectedTripDetails.trip.route}</h3>
                   <p className="text-sm text-gray-500 font-medium flex items-center gap-2 mt-1">
                     <Clock size={14} />
-                    {new Date(selectedTripDetails.trip.departureTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                    {selectedTripDetails.trip.departureTime ? selectedTripDetails.trip.departureTime.split(' ')[1].substring(0, 5) : ''}
                     <span className="text-gray-300 dark:text-gray-600">|</span>
                     <MapPin size={14} /> {selectedTripDetails.trip.vehicleName}
-                    <span className="text-gray-300 dark:text-gray-600">|</span>
-                    {selectedTripDetails.trip.driverName && <span>คนขับ: {selectedTripDetails.trip.driverName}</span>}
+                    {selectedTripDetails.trip.driverName && <><span className="text-gray-300 dark:text-gray-600">|</span><span>คนขับ: {selectedTripDetails.trip.driverName}</span></>}
                   </p>
                 </div>
                 <button onClick={() => setSelectedTripDetails(null)} className="p-2 bg-white dark:bg-gray-800 rounded-full text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-700 transition-colors shadow-sm">
@@ -469,7 +464,6 @@ const AdminDashboard = () => {
                 </button>
               </div>
 
-              {/* Tabs */}
               <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 pt-2">
                 {[
                   { key: 'boarded', label: 'สแกนปกติ', icon: <CheckCircle size={15} />, count: selectedTripDetails.boarded.length, color: 'emerald' },
@@ -493,7 +487,6 @@ const AdminDashboard = () => {
                 ))}
               </div>
 
-              {/* List */}
               <div className="overflow-y-auto flex-1 bg-gray-50 dark:bg-gray-900/30">
                 <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                   {selectedTripDetails[modalTab].length === 0 ? (

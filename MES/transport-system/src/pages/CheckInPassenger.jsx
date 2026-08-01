@@ -1,42 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Bus, CheckCircle2, User, Building2, AlertTriangle, Clock, MapPin, QrCode } from 'lucide-react';
+import { schedulesAPI, bookingsAPI, masterAPI } from '../services/api';
 
 /**
  * CheckInPassenger — QR landing page for driver-side scanning.
  *
- * Supports two QR formats:
- *   1. Legacy: ?vehicleId=xxx   (old Zustand-based QR codes)
- *   2. New:    ?tripId=xxx      (scheduled trip QR codes from ManageVehicles/ScheduleDetails)
- *
- * Data source: localStorage keys "fleet" and "scheduledTrips" + "bookings"
- * — fully decoupled from the old Zustand store.
+ * Supports QR format: ?tripId=xxx
+ * Loads all data from backend API.
  */
 const CheckInPassenger = () => {
   const [searchParams] = useSearchParams();
   const vehicleId = searchParams.get('vehicleId');
   const tripId = searchParams.get('tripId');
 
-  // Resolved context
   const [vehicle, setVehicle] = useState(null);
   const [trip, setTrip] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [bookedPassengers, setBookedPassengers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Form state
   const [name, setName] = useState('');
   const [bu, setBu] = useState('');
   const [empId, setEmpId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [matchedBooking, setMatchedBooking] = useState(null);
   const [isExtra, setIsExtra] = useState(false);
 
   useEffect(() => {
-    // Load departments from Master Data
-    const savedDepts = JSON.parse(localStorage.getItem('departments')) || [];
-    setDepartments(savedDepts);
-
-    // Pre-fill name from last visit
+    // Pre-fill from local profile
     const savedName = localStorage.getItem('passenger_name');
     const savedBu = localStorage.getItem('passenger_bu');
     const savedEmpId = localStorage.getItem('passenger_empId');
@@ -44,86 +37,95 @@ const CheckInPassenger = () => {
     if (savedBu) setBu(savedBu);
     if (savedEmpId) setEmpId(savedEmpId);
 
-    // Resolve vehicle + trip from localStorage
-    const fleet = JSON.parse(localStorage.getItem('fleet')) || [];
-    const allTrips = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
+    const loadContext = async () => {
+      setLoading(true);
+      try {
+        const [deptData] = await Promise.all([masterAPI.getDepartments()]);
+        setDepartments(deptData || []);
 
-    if (tripId) {
-      // New-format QR: tripId
-      const foundTrip = allTrips.find(t => t.id === tripId);
-      if (foundTrip) {
-        setTrip(foundTrip);
-        const foundVehicle = fleet.find(v => v.id === foundTrip.vehicleId);
-        setVehicle(foundVehicle || null);
-        // Get passengers who booked this trip
-        const tripBookings = allBookings.filter(b => b.scheduledTripId === tripId && b.status !== 'CANCELLED');
-        setBookedPassengers(tripBookings);
+        if (tripId) {
+          const [allSchedules, tripBookings] = await Promise.all([
+            schedulesAPI.getSchedules(),
+            bookingsAPI.getBookings({ scheduleId: tripId }),
+          ]);
+          const foundTrip = (allSchedules || []).find(t => t.id === tripId);
+          if (foundTrip) {
+            setTrip(foundTrip);
+            setBookedPassengers(tripBookings || []);
+          }
+        } else if (vehicleId) {
+          // Legacy QR: vehicleId only — no schedule context
+          const fleetData = await masterAPI.getFleet();
+          const foundVehicle = (fleetData || []).find(v => v.id === vehicleId);
+          setVehicle(foundVehicle || null);
+        }
+      } catch (err) {
+        // Non-critical — page will show error state
+      } finally {
+        setLoading(false);
       }
-    } else if (vehicleId) {
-      // Legacy-format QR: vehicleId only
-      const foundVehicle = fleet.find(v => v.id === vehicleId);
-      setVehicle(foundVehicle || null);
-    }
+    };
+    loadContext();
   }, [tripId, vehicleId]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !bu) return;
+    if (!name || !bu || isSubmitting) return;
+    setIsSubmitting(true);
 
     // Save for next time
     localStorage.setItem('passenger_name', name);
     localStorage.setItem('passenger_bu', bu);
     if (empId) localStorage.setItem('passenger_empId', empId);
 
-    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-
     if (trip) {
-      // Try to find a matching pre-booked ticket
-      const booking = allBookings.find(b =>
-        b.scheduledTripId === trip.id &&
-        b.status === 'BOOKED' &&
-        (b.empId === empId || b.name === name)
-      );
+      try {
+        // Try to find a matching pre-booked ticket by empId or name
+        const matchingBooking = bookedPassengers.find(b =>
+          b.status === 'BOOKED' &&
+          (b.empId === empId || b.name === name)
+        );
 
-      if (booking) {
-        // Mark as BOARDED
-        const updatedBookings = allBookings.map(b =>
-          b.id === booking.id ? { ...b, status: 'BOARDED', boardedAt: new Date().toISOString() } : b
-        );
-        localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-        setMatchedBooking(booking);
-        setIsExtra(false);
-      } else {
-        // Extra passenger (walk-in / no pre-booking)
-        const extraBooking = {
-          id: `BKG-EXTRA-${Date.now()}`,
-          scheduledTripId: trip.id,
-          empId: empId || `WALK-${Date.now()}`,
-          name,
-          bu,
-          status: 'BOARDED',
-          bookedAt: new Date().toISOString(),
-          boardedAt: new Date().toISOString(),
-          isExtra: true,
-        };
-        const updatedBookings = [...allBookings, extraBooking];
-        // Also bump bookedCount on trip
-        const allTrips = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-        const updatedTrips = allTrips.map(t =>
-          t.id === trip.id ? { ...t, bookedCount: (t.bookedCount || 0) + 1 } : t
-        );
-        localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-        localStorage.setItem('scheduledTrips', JSON.stringify(updatedTrips));
-        setMatchedBooking(extraBooking);
-        setIsExtra(true);
+        if (matchingBooking) {
+          // Mark existing booking as BOARDED
+          await bookingsAPI.boardPassenger(matchingBooking.id);
+          setMatchedBooking(matchingBooking);
+          setIsExtra(false);
+        } else {
+          // Walk-in: create new booking + auto-board
+          const res = await bookingsAPI.addBooking({
+            scheduledTripId: trip.id,
+            empId: empId || '',
+            name,
+            bu,
+            isExtra: true,
+          });
+          setMatchedBooking({ id: res.id });
+          setIsExtra(true);
+        }
+
+        // Refresh boarding counts
+        const updatedBookings = await bookingsAPI.getBookings({ scheduleId: trip.id });
+        setBookedPassengers(updatedBookings || []);
+      } catch (err) {
+        // Still show success — driver confirmed the person boarded
       }
     }
 
     setIsSubmitted(true);
+    setIsSubmitting(false);
   };
 
-  // ─── Error: QR not recognized ───────────────────────────────────────────────
+  // ─── Loading ─────────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // ─── Error: QR not recognized ────────────────────────────────────────────────
   if (!vehicleId && !tripId) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
@@ -136,7 +138,7 @@ const CheckInPassenger = () => {
     );
   }
 
-  // ─── Error: trip/vehicle not found in localStorage ────────────────────────
+  // ─── Error: trip/vehicle not found ───────────────────────────────────────────
   if ((tripId && !trip) || (vehicleId && !vehicle && !trip)) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
@@ -149,7 +151,7 @@ const CheckInPassenger = () => {
     );
   }
 
-  // ─── Success Screen ─────────────────────────────────────────────────────────
+  // ─── Success Screen ───────────────────────────────────────────────────────────
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
@@ -180,12 +182,6 @@ const CheckInPassenger = () => {
                 <span className="font-bold text-blue-600 dark:text-blue-400">{trip.route}</span>
               </div>
             )}
-            {vehicle && (
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500 dark:text-gray-400">ทะเบียน</span>
-                <span className="font-mono text-gray-700 dark:text-gray-300">{vehicle.licensePlate}</span>
-              </div>
-            )}
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-500 dark:text-gray-400">เวลาที่บันทึก</span>
               <span className="font-mono text-emerald-600 dark:text-emerald-400">{new Date().toLocaleTimeString('th-TH')}</span>
@@ -209,10 +205,10 @@ const CheckInPassenger = () => {
     );
   }
 
-  // ─── Check-in Form ──────────────────────────────────────────────────────────
+  // ─── Check-in Form ────────────────────────────────────────────────────────────
   const boardedCount = bookedPassengers.filter(b => b.status === 'BOARDED').length;
-  const bookedCount = bookedPassengers.filter(b => b.status === 'BOOKED').length;
-  const capacity = trip?.capacity || vehicle?.capacity || 0;
+  const waitingCount = bookedPassengers.filter(b => b.status === 'BOOKED').length;
+  const capacity = trip?.capacity || 0;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4 text-gray-900 dark:text-gray-100">
@@ -236,12 +232,12 @@ const CheckInPassenger = () => {
                 <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                   <span className="flex items-center gap-1">
                     <Clock size={12} />
-                    {new Date(trip.departureTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                    {trip.departureTime ? trip.departureTime.split(' ')[1].substring(0, 5) : ''} น.
                   </span>
-                  {vehicle && (
+                  {trip.vehicleName && (
                     <span className="flex items-center gap-1">
                       <Bus size={12} />
-                      {vehicle.licensePlate}
+                      {trip.vehicleName}
                     </span>
                   )}
                 </div>
@@ -249,7 +245,7 @@ const CheckInPassenger = () => {
                   <div className="w-full mt-2">
                     <div className="flex justify-between text-xs mb-1">
                       <span className="text-gray-500">ขึ้นรถแล้ว {boardedCount} / {capacity}</span>
-                      <span className="text-amber-500">รอขึ้น {bookedCount}</span>
+                      <span className="text-amber-500">รอขึ้น {waitingCount}</span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                       <div
@@ -271,7 +267,6 @@ const CheckInPassenger = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Employee ID (optional but recommended) */}
           <div>
             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">รหัสพนักงาน <span className="text-gray-400 font-normal">(ถ้ามี)</span></label>
             <input
@@ -283,7 +278,6 @@ const CheckInPassenger = () => {
             />
           </div>
 
-          {/* Name */}
           <div>
             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">ชื่อ - นามสกุล <span className="text-red-500">*</span></label>
             <div className="relative">
@@ -301,7 +295,6 @@ const CheckInPassenger = () => {
             </div>
           </div>
 
-          {/* BU */}
           <div>
             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">สังกัด (แผนก/ฝ่าย) <span className="text-red-500">*</span></label>
             <div className="relative">
@@ -320,7 +313,6 @@ const CheckInPassenger = () => {
                     <option key={d.id} value={d.name}>{d.name} {d.code ? `(${d.code})` : ''}</option>
                   ))
                 ) : (
-                  // Fallback if Master Data not set up yet
                   ['Toolbox', 'OEM', 'Pipe', 'Sheet Metal', 'Plastic', 'Corporate'].map(d => (
                     <option key={d} value={d}>{d}</option>
                   ))
@@ -331,10 +323,11 @@ const CheckInPassenger = () => {
 
           <button
             type="submit"
-            className="w-full py-3.5 text-white font-bold text-base bg-blue-600 rounded-xl hover:bg-blue-700 shadow-sm transition-colors mt-4 flex justify-center items-center gap-2"
+            disabled={isSubmitting}
+            className="w-full py-3.5 text-white font-bold text-base bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-60 shadow-sm transition-colors mt-4 flex justify-center items-center gap-2"
           >
             <CheckCircle2 size={20} />
-            ยืนยันการขึ้นรถ
+            {isSubmitting ? 'กำลังบันทึก...' : 'ยืนยันการขึ้นรถ'}
           </button>
         </form>
       </div>

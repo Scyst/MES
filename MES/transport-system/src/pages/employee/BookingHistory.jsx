@@ -2,56 +2,53 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Ticket, BusFront, Clock, MapPin, AlertTriangle, ChevronRight, X } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
+import { bookingsAPI, schedulesAPI } from '../../services/api';
 
-/**
- * BookingHistory — Shows all past and upcoming bookings for the current employee.
- * Reads from localStorage bookings + scheduledTrips.
- * Employee is identified by empId stored in localStorage (from ProfilePage).
- */
 const BookingHistory = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
-  const [trips, setTrips] = useState([]);
-  const [empId, setEmpId] = useState('');
+  const [schedules, setSchedules] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [cancelConfirm, setCancelConfirm] = useState({ isOpen: false, booking: null });
 
   useEffect(() => {
-    const savedEmpId = localStorage.getItem('passenger_empId') || '';
-    setEmpId(savedEmpId);
-
-    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-    const allTrips = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-
-    // Show all bookings for this employee (or all if no empId set yet)
-    const myBookings = savedEmpId
-      ? allBookings.filter(b => b.empId === savedEmpId)
-      : allBookings;
-
-    // Sort newest first
-    const sorted = [...myBookings].sort((a, b) => new Date(b.bookedAt) - new Date(a.bookedAt));
-    setBookings(sorted);
-    setTrips(allTrips);
+    const loadHistory = async () => {
+      setLoading(true);
+      const empId = localStorage.getItem('passenger_empId') || '';
+      try {
+        const [myBookings, allSchedules] = await Promise.all([
+          bookingsAPI.getBookings(empId ? { empId } : {}),
+          schedulesAPI.getSchedules(),
+        ]);
+        const sorted = [...(myBookings || [])].sort(
+          (a, b) => new Date(b.bookedAt) - new Date(a.bookedAt)
+        );
+        setBookings(sorted);
+        setSchedules(allSchedules || []);
+      } catch (err) {
+        setBookings([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadHistory();
   }, []);
 
-  const getTrip = (scheduledTripId) => trips.find(t => t.id === scheduledTripId);
+  const getSchedule = (scheduledTripId) => schedules.find(s => s.id === scheduledTripId);
 
-  const handleCancelBooking = () => {
+  const handleCancelBooking = async () => {
     const { booking } = cancelConfirm;
     if (!booking) return;
-
-    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-    const updatedBookings = allBookings.filter(b => b.id !== booking.id);
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-
-    // Return seat to trip
-    const allTrips = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-    const tripIdx = allTrips.findIndex(t => t.id === booking.scheduledTripId);
-    if (tripIdx !== -1) {
-      allTrips[tripIdx].bookedCount = Math.max(0, (allTrips[tripIdx].bookedCount || 1) - 1);
-      localStorage.setItem('scheduledTrips', JSON.stringify(allTrips));
+    try {
+      await bookingsAPI.cancelBooking(booking.id);
+      setBookings(prev =>
+        prev.map(b => b.id === booking.id ? { ...b, status: 'CANCELLED' } : b)
+      );
+    } catch (err) {
+      // Silent fail — UI still closes modal
+    } finally {
+      setCancelConfirm({ isOpen: false, booking: null });
     }
-
-    setBookings(prev => prev.filter(b => b.id !== booking.id));
   };
 
   const statusConfig = {
@@ -61,12 +58,19 @@ const BookingHistory = () => {
   };
 
   const canCancel = (booking) => {
-    const trip = getTrip(booking.scheduledTripId);
-    if (!trip || booking.status !== 'BOOKED') return false;
-    // Can cancel up to 1 hour before departure
-    const depTime = new Date(trip.departureTime).getTime();
+    const sched = getSchedule(booking.scheduledTripId);
+    if (!sched || booking.status !== 'BOOKED') return false;
+    const depTime = new Date(sched.departureTime).getTime();
     return Date.now() < depTime - 60 * 60 * 1000;
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 pt-6 pb-6">
@@ -97,9 +101,8 @@ const BookingHistory = () => {
       {/* Booking List */}
       <div className="space-y-3">
         {bookings.map(booking => {
-          const trip = getTrip(booking.scheduledTripId);
+          const sched = getSchedule(booking.scheduledTripId);
           const status = statusConfig[booking.status] || statusConfig.CANCELLED;
-          const isPast = trip ? new Date(trip.departureTime) < new Date() : true;
           const allowCancel = canCancel(booking);
 
           return (
@@ -132,19 +135,17 @@ const BookingHistory = () => {
                       <span className="text-xs text-amber-600 dark:text-amber-400 font-bold">ผู้โดยสารเพิ่ม</span>
                     )}
                   </div>
-                  {trip ? (
+                  {sched ? (
                     <>
                       <p className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
                         <MapPin size={13} className="text-blue-500 flex-shrink-0" />
-                        {trip.route}
+                        {sched.route}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1.5">
                         <Clock size={12} className="flex-shrink-0" />
-                        {new Date(trip.departureTime).toLocaleDateString('th-TH', {
-                          weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
-                        })}
+                        {sched.departureTime ? sched.departureTime.split(' ')[0] : ''}
                         {' · '}
-                        {new Date(trip.departureTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                        {sched.departureTime ? sched.departureTime.split(' ')[1].substring(0, 5) : ''} น.
                       </p>
                     </>
                   ) : (
@@ -190,10 +191,10 @@ const BookingHistory = () => {
         title="ยกเลิกการจองที่นั่ง"
         message="ยกเลิกแล้วจะไม่สามารถกู้คืนได้ ที่นั่งจะคืนให้ผู้อื่น"
         details={cancelConfirm.booking ? (() => {
-          const t = getTrip(cancelConfirm.booking.scheduledTripId);
-          return t ? [
-            { label: 'สายรถ', value: t.route },
-            { label: 'วันที่', value: new Date(t.departureTime).toLocaleDateString('th-TH') },
+          const s = getSchedule(cancelConfirm.booking.scheduledTripId);
+          return s ? [
+            { label: 'สายรถ', value: s.route },
+            { label: 'วันที่', value: s.departureTime ? s.departureTime.split(' ')[0] : '' },
           ] : [];
         })() : []}
         variant="danger"

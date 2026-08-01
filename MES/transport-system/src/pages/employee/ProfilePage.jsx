@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { UserCircle, Save, Sun, Moon, Building2, Phone, Briefcase, CheckCircle2 } from 'lucide-react';
+import { masterAPI } from '../../services/api';
 
 /**
  * ProfilePage — Employee self-service profile setup.
@@ -19,7 +20,6 @@ const ProfilePage = () => {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    // Load saved profile
     setProfile({
       empId: localStorage.getItem('passenger_empId') || '',
       name: localStorage.getItem('passenger_name') || '',
@@ -27,9 +27,10 @@ const ProfilePage = () => {
       phone: localStorage.getItem('passenger_phone') || '',
     });
 
-    // Load departments from Master Data
-    const savedDepts = JSON.parse(localStorage.getItem('departments')) || [];
-    setDepartments(savedDepts);
+    // Load departments from API
+    masterAPI.getDepartments()
+      .then(data => setDepartments(data || []))
+      .catch(() => setDepartments([]));
   }, []);
 
   // Sync theme with document
@@ -217,7 +218,7 @@ const ProfilePage = () => {
       <div className="text-center text-gray-400 dark:text-gray-500 text-xs space-y-1">
         <p className="font-bold">SNC Transport System</p>
         <p>SNC Former Public Company Limited</p>
-        <p>v1.0 (Prototype — UI/UX Phase)</p>
+        <p>v1.0</p>
       </div>
     </div>
   );

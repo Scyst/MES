@@ -16,9 +16,7 @@ import MyTicket from './pages/employee/MyTicket';
 import BookingHistory from './pages/employee/BookingHistory';
 import ProfilePage from './pages/employee/ProfilePage';
 import MasterData from './pages/admin/MasterData';
-import { initializeSeedData } from './utils/seedData';
 
-initializeSeedData();
 
 function App() {
   return (

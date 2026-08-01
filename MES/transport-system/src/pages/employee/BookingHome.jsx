@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { schedulesAPI, masterAPI, bookingsAPI } from '../../services/api';
 import { Clock, MapPin, BusFront, CheckSquare, Square, ChevronRight, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -17,6 +18,9 @@ const BookingHome = () => {
   const [selectedMultiDays, setSelectedMultiDays] = useState([]);
   const [masterRoutes, setMasterRoutes] = useState([]);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   // Confirm modal state
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -30,13 +34,27 @@ const BookingHome = () => {
 
   const navigate = useNavigate();
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const empId = localStorage.getItem('passenger_empId') || '';
+      const [schedData, bookingsData, routesData] = await Promise.all([
+        schedulesAPI.getSchedules(),
+        bookingsAPI.getBookings(empId ? { empId } : {}),
+        masterAPI.getRoutes()
+      ]);
+      setTrips(schedData || []);
+      setBookings(bookingsData || []);
+      setMasterRoutes(routesData || []);
+    } catch (err) {
+      setError(err.message || 'โหลดข้อมูลล้มเหลว');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const savedTrips = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-    const savedBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-    const savedRoutes = JSON.parse(localStorage.getItem('routes')) || [];
-    setTrips(savedTrips);
-    setBookings(savedBookings);
-    setMasterRoutes(savedRoutes);
+    loadData();
   }, []);
 
   // Generate next 7 days for Date Picker
@@ -59,58 +77,56 @@ const BookingHome = () => {
     }
   };
 
-  const doBookSingleTrip = (trip) => {
-    const newBooking = {
-      id: `BKG-${Date.now()}`,
-      scheduledTripId: trip.id,
-      empId: '1096902163',
-      name: 'ณภัทร นุ่มทอง',
-      bu: 'อาคารเกิดหลิน',
-      status: 'BOOKED',
-      bookedAt: new Date().toISOString(),
-      isExtra: false
-    };
-    const updatedBookings = [...bookings, newBooking];
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-    const updatedTrips = trips.map(t =>
-      t.id === trip.id ? { ...t, bookedCount: t.bookedCount + 1 } : t
-    );
-    localStorage.setItem('scheduledTrips', JSON.stringify(updatedTrips));
-    setTrips(updatedTrips);
-    setBookings(updatedBookings);
-    navigate(`/booking/ticket/${newBooking.id}`);
+  const doBookSingleTrip = async (trip) => {
+    const empId = localStorage.getItem('passenger_empId') || '';
+    const name = localStorage.getItem('passenger_name') || '';
+    const bu = localStorage.getItem('passenger_bu') || '';
+    if (!empId || !name) {
+      navigate('/booking/profile');
+      return;
+    }
+    try {
+      const payload = { scheduledTripId: trip.id, empId, name, bu, isExtra: false };
+      const res = await bookingsAPI.addBooking(payload);
+      await loadData();
+      navigate(`/booking/ticket/${res.id}`);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
-  const doBookMultiDay = (trip) => {
-    let updatedBookings = [...bookings];
-    let updatedTrips = [...trips];
-    const skippedDates = [];
+  const doBookMultiDay = async (trip) => {
+    const empId = localStorage.getItem('passenger_empId') || '';
+    const name = localStorage.getItem('passenger_name') || '';
+    const bu = localStorage.getItem('passenger_bu') || '';
+    if (!empId || !name) {
+      navigate('/booking/profile');
+      return;
+    }
+    let lastBookingId = null;
 
-    selectedMultiDays.forEach(dateStr => {
-      const targetTrip = updatedTrips.find(t => t.date === dateStr && t.route === trip.route);
-      if (targetTrip && targetTrip.bookedCount < targetTrip.capacity) {
-        targetTrip.bookedCount += 1;
-        updatedBookings.push({
-          id: `BKG-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          scheduledTripId: targetTrip.id,
-          empId: '1096902163',
-          name: 'ณภัทร นุ่มทอง',
-          bu: 'อาคารเกิดหลิน',
-          status: 'BOOKED',
-          bookedAt: new Date().toISOString(),
-          isExtra: false
+    try {
+      for (const dateStr of selectedMultiDays) {
+        const targetTrip = trips.find(t => {
+          const tripDate = t.date || (t.departureTime ? t.departureTime.split(' ')[0] : '');
+          return tripDate === dateStr && t.route === trip.route;
         });
-      } else {
-        skippedDates.push(dateStr);
+        if (targetTrip && targetTrip.bookedCount < targetTrip.capacity) {
+          const payload = { scheduledTripId: targetTrip.id, empId, name, bu, isExtra: false };
+          const res = await bookingsAPI.addBooking(payload);
+          lastBookingId = res.id;
+        }
       }
-    });
 
-    localStorage.setItem('scheduledTrips', JSON.stringify(updatedTrips));
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-    setTrips(updatedTrips);
-    setBookings(updatedBookings);
-    const lastBooking = updatedBookings[updatedBookings.length - 1];
-    if (lastBooking) navigate(`/booking/ticket/${lastBooking.id}`);
+      await loadData();
+      if (lastBookingId) {
+        navigate(`/booking/ticket/${lastBookingId}`);
+      } else {
+        alert('ไม่สามารถจองได้ (รอบรถอาจเต็มแล้ว)');
+      }
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const handleBook = (trip) => {
@@ -248,7 +264,12 @@ const BookingHome = () => {
 
         {/* Compact Schedule List */}
         <div className="mt-2 space-y-3">
-          {filteredTrips.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-500 font-bold mt-3">กำลังโหลดข้อมูล...</p>
+            </div>
+          ) : filteredTrips.length === 0 ? (
             <div className="text-center py-10 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
               <BusFront size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
               <p className="text-gray-500 dark:text-gray-400 font-bold">ไม่มีรอบรถในวันที่และสายที่คุณเลือก</p>
@@ -265,7 +286,9 @@ const BookingHome = () => {
                   {/* Info */}
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="flex items-center gap-3">
-                      <span className="text-lg font-black text-gray-900 dark:text-white">{new Date(trip.departureTime).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}</span>
+                      <span className="text-lg font-black text-gray-900 dark:text-white">
+                        {trip.departureTime ? trip.departureTime.split(' ')[1].substring(0, 5) : ''}
+                      </span>
                       <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold rounded-lg">{trip.route}</span>
                     </div>
                     <div className="flex items-center gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">

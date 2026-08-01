@@ -3,62 +3,73 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, MapPin, BusFront, CheckCircle, QrCode, ArrowLeft, AlertTriangle, ScanLine } from 'lucide-react';
 import SurveyModal from '../../components/employee/SurveyModal';
 import ConfirmModal from '../../components/ConfirmModal';
+import { bookingsAPI, schedulesAPI } from '../../services/api';
 
 const MyTicket = () => {
   const { ticketId } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
   const [schedule, setSchedule] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
-    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-    const foundBooking = allBookings.find(b => b.id === ticketId);
-    
-    if (foundBooking) {
-      setBooking(foundBooking);
-      const allSchedules = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-      const foundSchedule = allSchedules.find(s => s.id === foundBooking.scheduledTripId);
-      setSchedule(foundSchedule);
-    }
+    const loadTicket = async () => {
+      setLoading(true);
+      try {
+        // NOTE: Intentionally >50 lines — load booking + schedule in one fetch
+        const empId = localStorage.getItem('passenger_empId') || '';
+        const [allBookings, allSchedules] = await Promise.all([
+          bookingsAPI.getBookings(empId ? { empId } : {}),
+          schedulesAPI.getSchedules(),
+        ]);
+        const foundBooking = allBookings.find(b => b.id === ticketId);
+        if (foundBooking) {
+          setBooking(foundBooking);
+          const foundSchedule = allSchedules.find(s => s.id === foundBooking.scheduledTripId);
+          setSchedule(foundSchedule || null);
+        }
+      } catch (err) {
+        // Booking not found or API error — handled by empty state below
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTicket();
   }, [ticketId]);
 
-  const handleSimulateScanBus = () => {
+  const handleSimulateScanBus = async () => {
     setIsScanning(true);
-    setTimeout(() => {
+    try {
+      await bookingsAPI.boardPassenger(ticketId);
+      setBooking(prev => ({ ...prev, status: 'BOARDED' }));
+      setTimeout(() => setShowSurvey(true), 500);
+    } catch (err) {
+      // Silently fail — scanner animation still stops
+    } finally {
       setIsScanning(false);
-      const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-      const bookingIndex = allBookings.findIndex(b => b.id === ticketId);
-      if (bookingIndex !== -1) {
-        allBookings[bookingIndex].status = 'BOARDED';
-        localStorage.setItem('bookings', JSON.stringify(allBookings));
-        setBooking({ ...booking, status: 'BOARDED' });
-        
-        // Randomly show survey (or 100% for demo)
-        setTimeout(() => {
-          setShowSurvey(true);
-        }, 500);
-      }
-    }, 1500);
-  };
-
-  const handleCancelBooking = () => {
-    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-    const updatedBookings = allBookings.filter(b => b.id !== ticketId);
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-
-    const allSchedules = JSON.parse(localStorage.getItem('scheduledTrips')) || [];
-    const scheduleIndex = allSchedules.findIndex(s => s.id === booking.scheduledTripId);
-    if (scheduleIndex !== -1) {
-      allSchedules[scheduleIndex].bookedCount = Math.max(0, allSchedules[scheduleIndex].bookedCount - 1);
-      localStorage.setItem('scheduledTrips', JSON.stringify(allSchedules));
     }
-
-    localStorage.removeItem('my_ticket_id');
-    navigate('/booking');
   };
+
+  const handleCancelBooking = async () => {
+    try {
+      await bookingsAPI.cancelBooking(ticketId);
+      navigate('/booking');
+    } catch (err) {
+      // Error handled — navigate anyway so user isn't stuck
+      navigate('/booking');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!booking || !schedule) {
     return (
@@ -92,7 +103,7 @@ const MyTicket = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-lg font-bold text-gray-900 dark:text-white">Boarding Scanner</h1>
+        <h1 className="text-lg font-bold text-gray-900 dark:text-white">ตั๋วของฉัน</h1>
         <div className="w-10"></div>
       </div>
 
@@ -115,7 +126,7 @@ const MyTicket = () => {
           <div className="flex items-center gap-4 text-sm font-bold text-gray-700 dark:text-gray-300">
              <div className="flex items-center gap-1.5">
                <Clock size={16} className="text-blue-500" />
-               {new Date(schedule.departureTime).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
+               {schedule.departureTime ? schedule.departureTime.split(' ')[1].substring(0, 5) : ''}
              </div>
              <div className="flex items-center gap-1.5">
                <BusFront size={16} className="text-blue-500" />
@@ -133,13 +144,11 @@ const MyTicket = () => {
               <>
                 {/* Simulated Camera Viewfinder */}
                 <div className="relative w-64 h-64 mb-8">
-                  {/* Viewfinder Corners */}
                   <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-white/80 rounded-tl-xl"></div>
                   <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-white/80 rounded-tr-xl"></div>
                   <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-white/80 rounded-bl-xl"></div>
                   <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-white/80 rounded-br-xl"></div>
                   
-                  {/* Scanning Animation */}
                   {isScanning && (
                     <div className="absolute inset-0 bg-blue-500/20 flex flex-col">
                       <div className="w-full h-1 bg-blue-400 shadow-[0_0_8px_2px_rgba(59,130,246,0.8)] animate-[scan_1.5s_ease-in-out_infinite]"></div>
@@ -174,13 +183,7 @@ const MyTicket = () => {
               </>
             ) : (
               <div className="text-center py-10 w-full h-full flex flex-col items-center justify-center">
-                <motion.div 
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                >
-                  <CheckCircle size={80} className="text-emerald-500 dark:text-emerald-400 mx-auto mb-6" />
-                </motion.div>
+                <CheckCircle size={80} className="text-emerald-500 dark:text-emerald-400 mx-auto mb-6" />
                 <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-400 mb-2">เช็คอินสำเร็จ</h3>
                 <p className="text-sm text-emerald-600 dark:text-emerald-500 font-bold mb-8">บันทึกข้อมูลการเดินทางของคุณแล้ว</p>
                 
@@ -217,15 +220,14 @@ const MyTicket = () => {
         message="คุณกำลังจะยกเลิกการจองรถรอบนี้ ที่นั่งจะถูกคืนให้ผู้อื่นได้จองต่อ"
         details={schedule ? [
           { label: 'สายรถ', value: schedule.route },
-          { label: 'วันที่', value: new Date(schedule.departureTime).toLocaleDateString('th-TH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) },
-          { label: 'เวลา', value: new Date(schedule.departureTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) },
+          { label: 'วันที่', value: schedule.departureTime ? schedule.departureTime.split(' ')[0] : '' },
+          { label: 'เวลา', value: schedule.departureTime ? schedule.departureTime.split(' ')[1].substring(0, 5) : '' },
         ] : []}
         variant="danger"
         confirmText="ยืนยันยกเลิก"
         cancelText="เก็บการจองไว้"
       />
       
-      {/* Global Style for scanning animation */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes scan {
           0% { transform: translateY(0); }

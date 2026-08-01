@@ -1,35 +1,47 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bus, KeyRound } from 'lucide-react';
+import { masterAPI } from '../../services/api';
 
-/**
- * DriverLogin — Mock login for drivers.
- * Drivers select their vehicle (from Master Data) to identify themselves.
- */
 const DriverLogin = () => {
   const [fleet, setFleet] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState('');
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if already logged in
-    const savedVehicleId = localStorage.getItem('driver_vehicle_id');
-    if (savedVehicleId) {
-      navigate('/driver/trips', { replace: true });
-    }
-
-    // Load fleet from Master Data
-    const savedFleet = JSON.parse(localStorage.getItem('fleet')) || [];
-    setFleet(savedFleet);
+    const init = async () => {
+      const savedVehicleId = localStorage.getItem('driver_vehicle_id');
+      if (savedVehicleId) {
+        navigate('/driver/trips', { replace: true });
+        return;
+      }
+      try {
+        const fleetData = await masterAPI.getFleet();
+        setFleet(fleetData || []);
+      } catch (err) {
+        setFleet([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
   }, [navigate]);
 
   const handleLogin = (e) => {
     e.preventDefault();
     if (!selectedVehicle) return;
-
     localStorage.setItem('driver_vehicle_id', selectedVehicle);
     navigate('/driver/trips', { replace: true });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4 text-gray-900 dark:text-gray-100">
@@ -56,7 +68,8 @@ const DriverLogin = () => {
               <option value="" disabled>-- เลือกรถของคุณ --</option>
               {fleet.map(v => (
                 <option key={v.id} value={v.id}>
-                  {v.name} ({v.licensePlate})
+                  {v.licensePlate} ({v.type === 'BUS' ? 'รถบัส' : v.type === 'SONGTHAEW' ? 'รถสองแถว' : v.type === 'CAR' ? 'รถส่วนตัว' : 'รถตู้'})
+                  {v.driverName ? ` — ${v.driverName}` : ''}
                 </option>
               ))}
             </select>
