@@ -8,7 +8,7 @@
 *   **Backend API:** PHP 8.x (RESTful architecture)
 *   **Database:** Microsoft SQL Server (MSSQL)
 *   **State Management:** React Hooks (`useState`, `useEffect`, `useMemo`) combined with Prop Drilling and lifting state up to `App.jsx`.
-*   **Deployment:** Custom FTP deployment script (`deploy.js`) uploading production builds (`npm run build`) to an Apache/IIS server.
+*   **Deployment:** The frontend production build (`npm run build`) is deployed to the FTP server (`/iot-toolbox/sandbox-b9/Toolbox/plannerAgent`), served by an Apache/IIS server.
 
 ---
 
@@ -34,6 +34,7 @@
 *   **Concept:** Comprehensive CRUD (Create, Read, Update, Delete) operations for granular tasks.
 *   **Features:**
     *   Tasks contain Title, Description, Status, Priority, Due Date, and Assignee.
+    *   **RBAC (Role-Based Access Control):** Edit and delete operations are securely restricted to Admins/Managers, the specific `Assignee` of the task, or the original `CreatedBy` user.
     *   **Subtasks & Checklists:** Users can break tasks down into smaller, trackable subtasks.
     *   **Project Integration:** Tasks can be linked to a specific Project checklist.
     *   **Comments System:** Integrated chat/commenting system within each task for team communication.

@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react';
-import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTrash2, FiPlus } from 'react-icons/fi';
+import React, { useMemo, useState, useEffect } from 'react';
+import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTrash2, FiPlus, FiUserPlus } from 'react-icons/fi';
+import axios from 'axios';
 import { canManageSpace } from '../utils/permissions';
+import { resolveAssigneeName } from '../utils/userUtils';
 
-export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], currentUser, refreshData, onEditSpace, onDeleteSpace, onTaskClick, onCreateTask, onCreateProject, onProjectClick, onSaveTask }) {
+export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], users = [], currentUser, refreshData, onEditSpace, onDeleteSpace, openInviteModal, onTaskClick, onCreateTask, onCreateProject, onProjectClick, onSaveTask }) {
   // Determine Space Name and current Space
   const currentSpace = useMemo(() => {
     if (activeTab === 'space-home') return { Id: 'home', Name: 'Home' };
@@ -16,8 +18,20 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
     if (activeTab === 'team-design') return { Id: 'mock', Name: 'Design Team' };
     if (activeTab === 'team-developer') return { Id: 'mock', Name: 'Developer Team' };
     
-    return { Id: 'unknown', Name: String(activeTab || '').replace('-', ' ') };
+    return { Id: 'unknown', Name: 'Unknown Space' };
   }, [activeTab, spaces]);
+
+  const [spaceMembers, setSpaceMembers] = useState([]);
+
+  useEffect(() => {
+    if (currentSpace.Id && currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown') {
+      axios.get(`/api/space_members.php?space_id=${currentSpace.Id}`)
+        .then(res => setSpaceMembers(res.data))
+        .catch(console.error);
+    } else {
+      setSpaceMembers([]);
+    }
+  }, [currentSpace.Id, refreshData]);
 
   const spaceName = currentSpace?.Name || 'Unknown Space';
 
@@ -57,32 +71,62 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
           <p className="text-indigo-100 text-sm mt-1 mb-2">
             ยินดีต้อนรับสู่พื้นที่ทำงานของทีม {spaceName}
           </p>
-          {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown' && canManageSpace(currentUser) && (
-            <div className="flex gap-2">
+          <div className="flex gap-2">
+            {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown' && canManageSpace(currentUser) && (
+              <>
+                <button 
+                  onClick={() => onEditSpace && onEditSpace(currentSpace)}
+                  className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 transition-colors rounded text-xs font-semibold backdrop-blur-sm"
+                >
+                  <FiEdit2 /> แก้ไข
+                </button>
+                <button 
+                  onClick={() => onDeleteSpace && onDeleteSpace(currentSpace.Id)}
+                  className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 text-rose-200 hover:text-rose-100 transition-colors rounded text-xs font-semibold backdrop-blur-sm"
+                >
+                  <FiTrash2 /> ลบ
+                </button>
+              </>
+            )}
+            {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown' && (
               <button 
-                onClick={() => onEditSpace && onEditSpace(currentSpace)}
+                onClick={() => openInviteModal && openInviteModal(currentSpace.Id)}
                 className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 transition-colors rounded text-xs font-semibold backdrop-blur-sm"
               >
-                <FiEdit2 /> แก้ไข
+                <FiUserPlus /> เชิญคนเข้าทีม
               </button>
-              <button 
-                onClick={() => onDeleteSpace && onDeleteSpace(currentSpace.Id)}
-                className="flex items-center gap-1 px-3 py-1 bg-rose-500/80 hover:bg-rose-500 transition-colors rounded text-xs font-semibold backdrop-blur-sm"
-              >
-                <FiTrash2 /> ลบทีม
-              </button>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex flex-col items-end gap-4">
+          {spaceMembers.length > 0 && (
+            <div className="hidden md:flex flex-col items-end gap-1">
+              <div className="text-[10px] text-indigo-100 font-semibold uppercase tracking-wider">Members</div>
+              <div className="flex -space-x-2">
+                {spaceMembers.slice(0, 5).map((m, i) => (
+                  <div key={m.Id} className="w-8 h-8 rounded-full bg-indigo-200 text-indigo-700 flex items-center justify-center text-xs font-bold ring-2 ring-indigo-500 shadow-sm" title={`${m.fullname || m.UserId} (${m.Role})`}>
+                    {(m.fullname || m.UserId).charAt(0).toUpperCase()}
+                  </div>
+                ))}
+                {spaceMembers.length > 5 && (
+                  <div className="w-8 h-8 rounded-full bg-indigo-900/50 text-indigo-100 flex items-center justify-center text-xs font-bold ring-2 ring-indigo-500 shadow-sm">
+                    +{spaceMembers.length - 5}
+                  </div>
+                )}
+              </div>
             </div>
           )}
-        </div>
-        <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-6 py-3 rounded-xl border border-white/20">
-          <div className="text-center">
-            <div className="text-2xl font-bold">{activeProjects.length}</div>
-            <div className="text-[10px] text-indigo-100 uppercase tracking-wide">Active Projects</div>
-          </div>
-          <div className="w-px h-8 bg-white/20"></div>
-          <div className="text-center">
-            <div className="text-2xl font-bold">{teamTasks.length}</div>
-            <div className="text-[10px] text-indigo-100 uppercase tracking-wide">Total Tasks</div>
+          <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-6 py-3 rounded-xl border border-white/20">
+            <div className="text-center">
+              <div className="text-2xl font-bold">{activeProjects.length}</div>
+              <div className="text-[10px] text-indigo-100 uppercase tracking-wide">Active Projects</div>
+            </div>
+            <div className="w-px h-8 bg-white/20"></div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">{teamTasks.length}</div>
+              <div className="text-[10px] text-indigo-100 uppercase tracking-wide">Total Tasks</div>
+            </div>
           </div>
         </div>
       </div>
@@ -100,11 +144,10 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
                   <FiPlus /> New Project
                 </button>
               )}
-              <button className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">View All</button>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {activeProjects.slice(0, 4).map((proj, idx) => {
+            {activeProjects.map((proj, idx) => {
               let checklist = [];
               try { checklist = proj?.Checklist ? (typeof proj.Checklist === 'string' ? JSON.parse(proj.Checklist) : proj.Checklist) : []; } catch (e) {}
               const totalItems = Array.isArray(checklist) ? checklist.length : 0;
@@ -146,8 +189,10 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
                 </button>
               )}
             </h3>
-            <div className="space-y-2">
-              {teamTasks.slice(0, 5).map((task, idx) => (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
+              {teamTasks.map((task, idx) => {
+                const assigneeName = resolveAssigneeName(task.Assignee, users);
+                return (
                 <div 
                   key={task?.Id || `task-${idx}`} 
                   onClick={() => onTaskClick && onTaskClick(task)}
@@ -159,12 +204,12 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-tight truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{String(task?.Title || 'ไม่มีชื่องาน')}</p>
                     <div className="flex justify-between items-center mt-1 text-[10px] text-slate-500">
-                      <span>{String(task?.Assignee || 'Unassigned')}</span>
-                      <span className="flex items-center gap-1"><FiClock /> {typeof task?.DueDate === 'string' ? task.DueDate.substring(0, 10) : (task?.DueDate ? String(task.DueDate) : '-')}</span>
+                      <span className="truncate max-w-[120px]" title={assigneeName}>{String(assigneeName || 'Unassigned')}</span>
+                      <span className="flex items-center gap-1 shrink-0"><FiClock /> {typeof task?.DueDate === 'string' ? task.DueDate.substring(0, 10) : (task?.DueDate ? String(task.DueDate) : '-')}</span>
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
               {teamTasks.length === 0 && (
                 <div className="p-4 text-center text-slate-500 text-xs bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 border-dashed">
                   ไม่มีงานในทีมนี้

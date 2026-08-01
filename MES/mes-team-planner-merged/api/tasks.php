@@ -10,17 +10,25 @@ function isAdminOrManager() {
     return in_array($role, ['admin', 'manager', 'supervisor', 'creator']);
 }
 
-function isTaskOwner($taskAssignee) {
-    if (!isset($_SESSION['username']) && !isset($_SESSION['fullname']) && !isset($_SESSION['user_aka'])) return false;
-    $assigneeStr = strtolower($taskAssignee ?? '');
-    
-    $uname = strtolower($_SESSION['username'] ?? '');
-    $fname = strtolower($_SESSION['fullname'] ?? '');
+function isTaskOwner($taskAssignee, $taskCreatedBy = '') {
+    $uname = strtolower($_SESSION['username'] ?? ($_SESSION['user']['username'] ?? ''));
+    $fname = strtolower($_SESSION['fullname'] ?? ($_SESSION['user']['fullname'] ?? ''));
     $aka = strtolower($_SESSION['user_aka'] ?? '');
     
-    return ($uname && strpos($assigneeStr, $uname) !== false) || 
-           ($fname && strpos($assigneeStr, $fname) !== false) || 
-           ($aka && strpos($assigneeStr, $aka) !== false);
+    if (!$uname && !$fname && !$aka) return false;
+
+    $assigneeStr = strtolower($taskAssignee ?? '');
+    $creatorStr = strtolower($taskCreatedBy ?? '');
+    
+    $isAssignee = ($uname && strpos($assigneeStr, $uname) !== false) || 
+                  ($fname && strpos($assigneeStr, $fname) !== false) || 
+                  ($aka && strpos($assigneeStr, $aka) !== false);
+                  
+    $isCreator = ($uname && $creatorStr === $uname) || 
+                 ($fname && $creatorStr === $fname) || 
+                 ($aka && $creatorStr === $aka);
+                 
+    return $isAssignee || $isCreator;
 }
 
 function formatTaskOutput($row) {
@@ -237,11 +245,11 @@ try {
         sendJson($createdTasks, 201);
     } 
     elseif ($method === 'PUT' && $id) {
-        $chkStmt = $pdo->prepare("SELECT GroupId, StartDate, Assignee FROM TeamPlanner_Tasks WHERE Id = ?");
+        $chkStmt = $pdo->prepare("SELECT GroupId, StartDate, Assignee, CreatedBy FROM TeamPlanner_Tasks WHERE Id = ?");
         $chkStmt->execute([$id]);
         $targetTask = $chkStmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($targetTask && !isAdminOrManager() && !isTaskOwner($targetTask['Assignee'])) {
+        if ($targetTask && !isAdminOrManager() && !isTaskOwner($targetTask['Assignee'], $targetTask['CreatedBy'] ?? '')) {
             http_response_code(403);
             sendJson(['error' => 'Permission denied: Only Admin/Manager or the Task Owner can edit this task.']);
         }
@@ -341,11 +349,11 @@ try {
         sendJson($updateSeries ? $updatedTasks : $updatedTasks[0]);
     } 
     elseif ($method === 'DELETE' && $id) {
-        $chkStmt = $pdo->prepare("SELECT GroupId, StartDate, Assignee FROM TeamPlanner_Tasks WHERE Id = ?");
+        $chkStmt = $pdo->prepare("SELECT GroupId, StartDate, Assignee, CreatedBy FROM TeamPlanner_Tasks WHERE Id = ?");
         $chkStmt->execute([$id]);
         $targetTask = $chkStmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($targetTask && !isAdminOrManager() && !isTaskOwner($targetTask['Assignee'])) {
+        if ($targetTask && !isAdminOrManager() && !isTaskOwner($targetTask['Assignee'], $targetTask['CreatedBy'] ?? '')) {
             http_response_code(403);
             sendJson(['error' => 'Permission denied: Only Admin/Manager or the Task Owner can delete this task.']);
         }

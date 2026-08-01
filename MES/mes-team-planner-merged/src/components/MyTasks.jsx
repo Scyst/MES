@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import axios from 'axios';
 import { FiCheckSquare, FiClock, FiAlertCircle, FiCheck, FiPlay, FiMoreHorizontal, FiTarget, FiActivity, FiSearch, FiPlus } from 'react-icons/fi';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
@@ -6,37 +7,17 @@ import 'react-circular-progressbar/dist/styles.css';
 export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTask, onTaskClick, onCreateTask }) {
   const [filterProject, setFilterProject] = useState('all');
   const [akas, setAkas] = useState([]);
-  const [isEditingAka, setIsEditingAka] = useState(false);
-  const [akaInput, setAkaInput] = useState('');
 
   useEffect(() => {
-    import('axios').then(axios => {
-      axios.default.get('/api/profile.php').then(res => {
+    axios.get('/api/profile.php').then(res => {
         if (res.data && res.data.aka !== undefined) {
           const akaStr = res.data.aka;
           const parsed = akaStr.split(',').map(s => s.trim()).filter(s => s);
           setAkas(parsed);
-          setAkaInput(akaStr);
           localStorage.setItem('user_akas', JSON.stringify(parsed)); // Keep legacy format for now if needed by other components
         }
       }).catch(() => {});
-    });
-  }, []);
-
-  const handleSaveAka = () => {
-    const newAkas = akaInput.split(',').map(s => s.trim()).filter(s => s);
-    setAkas(newAkas);
-    setIsEditingAka(false);
-    
-    import('axios').then(axios => {
-      axios.default.post('/api/profile.php', { aka: newAkas.join(', ') })
-        .then(() => {
-          localStorage.setItem('user_akas', JSON.stringify(newAkas));
-          if(refreshData) refreshData();
-        })
-        .catch(err => console.error(err));
-    });
-  };
+  }, [refreshData]);
   const myTasks = useMemo(() => {
     if (!currentUser) return [];
     const safeTasks = Array.isArray(tasks) ? tasks : [];
@@ -122,24 +103,10 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
           <div className="flex items-center gap-3 mt-2">
             <p className="text-slate-500 text-sm">Manage your heavy workload efficiently</p>
             <div className="h-4 w-px bg-slate-300 dark:bg-slate-600"></div>
-            {isEditingAka ? (
-              <div className="flex items-center gap-2">
-                <input 
-                  type="text" 
-                  value={akaInput} 
-                  onChange={e => setAkaInput(e.target.value)} 
-                  placeholder="e.g. Oat, โอ๊ต (comma separated)"
-                  className="text-xs px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none w-48"
-                />
-                <button onClick={handleSaveAka} className="text-xs bg-indigo-500 text-white px-2 py-1 rounded font-medium hover:bg-indigo-600">Save</button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-400 font-medium">AKAs:</span>
-                <span className="text-indigo-500 dark:text-indigo-400 font-bold">{akas.length > 0 ? akas.join(', ') : 'None'}</span>
-                <button onClick={() => setIsEditingAka(true)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline">Edit</button>
-              </div>
-            )}
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-400 font-medium">AKAs:</span>
+              <span className="text-indigo-500 dark:text-indigo-400 font-bold">{akas.length > 0 ? akas.join(', ') : 'None'}</span>
+            </div>
           </div>
         </div>
         
