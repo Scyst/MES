@@ -75,6 +75,7 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
       setIsModalOpen(false);
       setEditingProject(null);
       fetchProjects();
+      if (refreshData) refreshData();
     } catch (e) {
       console.error(e);
       alert('Failed to save project');
@@ -85,8 +86,8 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
     if (!window.confirm('ยืนยันการลบโปรเจ็คนี้? (งานที่ถูกเชื่อมโยงจะยังอยู่ แต่จะหลุดจากการอ้างอิงโปรเจ็ค)')) return;
     try {
       await axios.delete(`/api/projects.php?id=${id}`);
-      refreshData();
       fetchProjects();
+      if (refreshData) refreshData();
     } catch(e) {
       console.error(e);
     }
@@ -100,6 +101,7 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
         checklist: JSON.stringify(newChecklist)
       });
       fetchProjects();
+      if (refreshData) refreshData();
     } catch (e) {
       console.error(e);
       alert('Failed to update checklist');

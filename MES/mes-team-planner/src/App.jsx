@@ -773,7 +773,13 @@ function App() {
       <AddProjectModal 
         isOpen={isGlobalProjectModalOpen} 
         onClose={() => { setIsGlobalProjectModalOpen(false); setGlobalEditingProject(null); }} 
-        onSave={handleSaveProject}
+        onSave={async (data) => {
+          const ok = await handleSaveProject(data);
+          if (ok) {
+            setIsGlobalProjectModalOpen(false);
+            setGlobalEditingProject(null);
+          }
+        }}
         initialData={globalEditingProject}
         spaces={spaces}
       />
