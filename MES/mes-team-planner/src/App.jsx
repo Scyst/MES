@@ -31,7 +31,7 @@ const ProfileAvatar = ({ currentUser, size = 'sm', onClick }) => {
   return (
     <button onClick={onClick} className={`${sizeClass} rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0 hover:ring-2 hover:ring-indigo-500/50 transition-all active:scale-95 overflow-hidden`} title={currentUser.fullname || currentUser.username}>
       {!imgError ? (
-        <img src={`api/uploads/avatars/${currentUser.username}.jpg?t=${avatarTimestamp}`} onError={() => setImgError(true)} className="w-full h-full object-cover" alt={initial} />
+        <img src={`api/uploads/avatars/${encodeURIComponent(currentUser.username)}.jpg?t=${avatarTimestamp}`} onError={() => setImgError(true)} className="w-full h-full object-cover" alt={initial} />
       ) : (
         initial
       )}
@@ -477,7 +477,7 @@ function App() {
     <div className="flex flex-col h-screen bg-[#f4f9f8] dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans overflow-hidden">
       
       {/* ══════════ Desktop Top Header ══════════ */}
-      <header className="hidden md:flex h-16 bg-white dark:bg-slate-900 border-b border-transparent dark:border-slate-800 shrink-0 px-5 items-center justify-between shadow-soft z-20">
+      <header className="hidden md:flex h-16 bg-white dark:bg-slate-900 border-b border-transparent dark:border-slate-800 shrink-0 px-5 items-center justify-between shadow-soft z-50">
         <a href="/iot-toolbox/sandbox-b9/Toolbox2/#/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
             <FiCalendar className="text-xl" />

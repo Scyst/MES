@@ -74,8 +74,15 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    let finalData = { ...formData };
+    if (newChecklistItem.trim()) {
+      finalData.checklist = [...finalData.checklist, { id: Date.now().toString(), text: newChecklistItem.trim(), isDone: false }];
+      setNewChecklistItem('');
+    }
+    
     if (onSave) {
-      onSave(formData);
+      onSave(finalData);
     }
   };
 

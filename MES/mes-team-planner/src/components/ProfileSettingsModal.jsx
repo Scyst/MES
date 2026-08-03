@@ -31,7 +31,7 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentUser, onS
       setError(null);
       setAvatarError(false);
       if (currentUser?.username) {
-        setAvatarPreview(`api/uploads/avatars/${currentUser.username}.jpg?t=${Date.now()}`);
+        setAvatarPreview(`api/uploads/avatars/${encodeURIComponent(currentUser.username)}.jpg?t=${Date.now()}`);
       }
       // Fetch current AKA when modal opens
       axios.get('/api/profile.php')
@@ -67,7 +67,7 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentUser, onS
       }
 
       await axios.post('/api/profile.php', { aka: formattedAka });
-      localStorage.setItem('user_akas', JSON.stringify(newAkas));
+      localStorage.setItem('user_akas', formattedAka);
       
       // Update global current user object if needed
       if (currentUser && avatarPreview) {
