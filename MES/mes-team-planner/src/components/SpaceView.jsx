@@ -1,28 +1,37 @@
-import React, { useMemo } from 'react';
-import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import React, { useMemo, useState, useEffect } from 'react';
+import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTrash2, FiPlus, FiUserPlus } from 'react-icons/fi';
+import axios from 'axios';
+import { canManageSpace } from '../utils/permissions';
+import { resolveAssigneeName } from '../utils/userUtils';
 
-export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], currentUser, refreshData, onEditSpace, onDeleteSpace }) {
+export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], users = [], currentUser, refreshData, onEditSpace, onDeleteSpace, openInviteModal, onTaskClick, onCreateTask, onCreateProject, onProjectClick, onSaveTask }) {
   // Determine Space Name and current Space
   const currentSpace = useMemo(() => {
     if (activeTab === 'space-home') return { Id: 'home', Name: 'Home' };
     if (activeTab.startsWith('space-')) {
       const spaceId = activeTab.replace('space-', '');
-      const found = spaces.find(s => String(s.Id || s.id) === String(spaceId));
-      if (found) {
-        return {
-          ...found,
-          Id: found.Id || found.id,
-          Name: found.Name || found.name
-        };
-      }
+      const found = spaces.find(s => String(s.Id) === String(spaceId));
+      if (found) return found;
     }
     // Fallback for legacy mock tabs
     if (activeTab === 'team-engineers') return { Id: 'mock', Name: 'Engineers' };
     if (activeTab === 'team-design') return { Id: 'mock', Name: 'Design Team' };
     if (activeTab === 'team-developer') return { Id: 'mock', Name: 'Developer Team' };
     
-    return { Id: 'unknown', Name: String(activeTab || '').replace('-', ' ') };
+    return { Id: 'unknown', Name: 'Unknown Space' };
   }, [activeTab, spaces]);
+
+  const [spaceMembers, setSpaceMembers] = useState([]);
+
+  useEffect(() => {
+    if (currentSpace.Id && currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown') {
+      axios.get(`/api/space_members.php?space_id=${currentSpace.Id}`)
+        .then(res => setSpaceMembers(res.data))
+        .catch(console.error);
+    } else {
+      setSpaceMembers([]);
+    }
+  }, [currentSpace.Id, refreshData]);
 
   const spaceName = currentSpace?.Name || 'Unknown Space';
 
@@ -31,7 +40,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
     if (currentSpace.Id === 'home') return safeProjects;
     if (currentSpace.Id === 'mock') return []; // Clear mock data to prevent confusion
     
-    return safeProjects.filter(p => String(p.SpaceId || p.spaceId) === String(currentSpace.Id));
+    return safeProjects.filter(p => String(p.SpaceId) === String(currentSpace.Id));
   }, [currentSpace, projects]);
 
   const teamTasks = useMemo(() => {
@@ -40,7 +49,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
     if (currentSpace.Id === 'mock') return [];
     
     return safeTasks.filter(t => 
-      String(t.SpaceId || t.spaceId) === String(currentSpace.Id) || teamProjects.some(p => (p?.Id || p?.id) && (t?.ProjectId || t?.projectId) && String(p.Id || p.id) === String(t.ProjectId || t.projectId))
+      String(t.SpaceId) === String(currentSpace.Id) || teamProjects.some(p => p?.Id && t?.ProjectId && String(p.Id) === String(t.ProjectId))
     );
   }, [currentSpace, tasks, teamProjects]);
 
@@ -62,32 +71,62 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
           <p className="text-indigo-100 text-sm mt-1 mb-2">
             ยินดีต้อนรับสู่พื้นที่ทำงานของทีม {spaceName}
           </p>
-          {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown' && (
-            <div className="flex gap-2">
+          <div className="flex gap-2">
+            {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown' && canManageSpace(currentUser) && (
+              <>
+                <button 
+                  onClick={() => onEditSpace && onEditSpace(currentSpace)}
+                  className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 transition-colors rounded text-xs font-semibold backdrop-blur-sm"
+                >
+                  <FiEdit2 /> แก้ไข
+                </button>
+                <button 
+                  onClick={() => onDeleteSpace && onDeleteSpace(currentSpace.Id)}
+                  className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 text-rose-200 hover:text-rose-100 transition-colors rounded text-xs font-semibold backdrop-blur-sm"
+                >
+                  <FiTrash2 /> ลบ
+                </button>
+              </>
+            )}
+            {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown' && (
               <button 
-                onClick={() => onEditSpace && onEditSpace(currentSpace)}
+                onClick={() => openInviteModal && openInviteModal(currentSpace.Id)}
                 className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 transition-colors rounded text-xs font-semibold backdrop-blur-sm"
               >
-                <FiEdit2 /> แก้ไข
+                <FiUserPlus /> เชิญคนเข้าทีม
               </button>
-              <button 
-                onClick={() => onDeleteSpace && onDeleteSpace(currentSpace.Id)}
-                className="flex items-center gap-1 px-3 py-1 bg-rose-500/80 hover:bg-rose-500 transition-colors rounded text-xs font-semibold backdrop-blur-sm"
-              >
-                <FiTrash2 /> ลบทีม
-              </button>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex flex-col items-end gap-4">
+          {spaceMembers.length > 0 && (
+            <div className="hidden md:flex flex-col items-end gap-1">
+              <div className="text-[10px] text-indigo-100 font-semibold uppercase tracking-wider">Members</div>
+              <div className="flex -space-x-2">
+                {spaceMembers.slice(0, 5).map((m, i) => (
+                  <div key={m.Id} className="w-8 h-8 rounded-full bg-indigo-200 text-indigo-700 flex items-center justify-center text-xs font-bold ring-2 ring-indigo-500 shadow-sm" title={`${m.fullname || m.UserId} (${m.Role})`}>
+                    {(m.fullname || m.UserId).charAt(0).toUpperCase()}
+                  </div>
+                ))}
+                {spaceMembers.length > 5 && (
+                  <div className="w-8 h-8 rounded-full bg-indigo-900/50 text-indigo-100 flex items-center justify-center text-xs font-bold ring-2 ring-indigo-500 shadow-sm">
+                    +{spaceMembers.length - 5}
+                  </div>
+                )}
+              </div>
             </div>
           )}
-        </div>
-        <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-6 py-3 rounded-xl border border-white/20">
-          <div className="text-center">
-            <div className="text-2xl font-bold">{activeProjects.length}</div>
-            <div className="text-[10px] text-indigo-100 uppercase tracking-wide">Active Projects</div>
-          </div>
-          <div className="w-px h-8 bg-white/20"></div>
-          <div className="text-center">
-            <div className="text-2xl font-bold">{teamTasks.length}</div>
-            <div className="text-[10px] text-indigo-100 uppercase tracking-wide">Total Tasks</div>
+          <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-6 py-3 rounded-xl border border-white/20">
+            <div className="text-center">
+              <div className="text-2xl font-bold">{activeProjects.length}</div>
+              <div className="text-[10px] text-indigo-100 uppercase tracking-wide">Active Projects</div>
+            </div>
+            <div className="w-px h-8 bg-white/20"></div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">{teamTasks.length}</div>
+              <div className="text-[10px] text-indigo-100 uppercase tracking-wide">Total Tasks</div>
+            </div>
           </div>
         </div>
       </div>
@@ -99,10 +138,16 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
             <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
               <FiFolder className="text-indigo-500" /> Team Projects
             </h3>
-            <button className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">View All</button>
+            <div className="flex items-center gap-2">
+              {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && (
+                <button onClick={() => onCreateProject && onCreateProject({ SpaceId: currentSpace.Id })} className="text-xs font-bold bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900 transition-colors flex items-center gap-1">
+                  <FiPlus /> New Project
+                </button>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {activeProjects.slice(0, 4).map((proj, idx) => {
+            {activeProjects.map((proj, idx) => {
               let checklist = [];
               try { checklist = proj?.Checklist ? (typeof proj.Checklist === 'string' ? JSON.parse(proj.Checklist) : proj.Checklist) : []; } catch (e) {}
               const totalItems = Array.isArray(checklist) ? checklist.length : 0;
@@ -110,7 +155,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
               const progress = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
               
               return (
-                <div key={proj?.Id || `proj-${idx}`} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 hover:shadow-soft transition-all">
+                <div key={proj?.Id || `proj-${idx}`} onClick={() => onProjectClick && onProjectClick(proj)} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 hover:shadow-soft transition-all cursor-pointer">
                   <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{String(proj?.Title || 'ไม่มีชื่อ')}</h4>
                   <p className="text-xs text-slate-500 mt-1 line-clamp-2 min-h-[32px]">{String(proj?.Description || 'ไม่มีรายละเอียด')}</p>
                   <div className="mt-4">
@@ -136,24 +181,40 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
         {/* Right Col - Recent Tasks & Team Members */}
         <div className="space-y-6">
           <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4">
-            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 mb-4">
-              <FiCheckCircle className="text-emerald-500" /> Recent Tasks
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between gap-2 mb-4">
+              <span className="flex items-center gap-2"><FiCheckCircle className="text-emerald-500" /> Recent Tasks</span>
+              {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && (
+                <button onClick={() => onCreateTask && onCreateTask({ SpaceId: currentSpace.Id })} className="text-xs font-bold bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors flex items-center gap-1">
+                  <FiPlus /> New Task
+                </button>
+              )}
             </h3>
-            <div className="space-y-3">
-              {teamTasks.slice(0, 5).map((task, idx) => (
-                <div key={task?.Id || `task-${idx}`} className="flex gap-3 items-start border-b border-slate-100 dark:border-slate-700/50 last:border-0 pb-3 last:pb-0">
+            <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
+              {teamTasks.map((task, idx) => {
+                const assigneeName = resolveAssigneeName(task.Assignee, users);
+                return (
+                <div 
+                  key={task?.Id || `task-${idx}`} 
+                  onClick={() => onTaskClick && onTaskClick(task)}
+                  className="flex gap-3 items-start border border-transparent hover:border-slate-200 dark:hover:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30 p-2 rounded-xl transition-colors group"
+                >
                   <div className="mt-0.5">
                     <div className={`w-2 h-2 rounded-full ${task?.Status === 'Done' ? 'bg-emerald-500' : task?.Status === 'In Progress' ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-tight truncate">{String(task?.Title || 'ไม่มีชื่องาน')}</p>
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-tight truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{String(task?.Title || 'ไม่มีชื่องาน')}</p>
                     <div className="flex justify-between items-center mt-1 text-[10px] text-slate-500">
-                      <span>{String(task?.Assignee || 'Unassigned')}</span>
-                      <span className="flex items-center gap-1"><FiClock /> {typeof task?.DueDate === 'string' ? task.DueDate.substring(0, 10) : (task?.DueDate ? String(task.DueDate) : '-')}</span>
+                      <span className="truncate max-w-[120px]" title={assigneeName}>{String(assigneeName || 'Unassigned')}</span>
+                      <span className="flex items-center gap-1 shrink-0"><FiClock /> {typeof task?.DueDate === 'string' ? task.DueDate.substring(0, 10) : (task?.DueDate ? String(task.DueDate) : '-')}</span>
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
+              {teamTasks.length === 0 && (
+                <div className="p-4 text-center text-slate-500 text-xs bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 border-dashed">
+                  ไม่มีงานในทีมนี้
+                </div>
+              )}
             </div>
           </div>
         </div>

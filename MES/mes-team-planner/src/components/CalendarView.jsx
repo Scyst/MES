@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FiChevronLeft, FiChevronRight, FiPlus, FiCalendar } from 'react-icons/fi';
 import { getDaysInMonth, startOfMonth, getDay, format, addMonths, subMonths } from 'date-fns';
+import { resolveAssigneeName } from '../utils/userUtils';
 import AddTaskModal from './AddTaskModal';
 import AddEventModal from './AddEventModal';
 
@@ -122,21 +123,21 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
 
       <div className="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden">
         {/* Calendar Grid */}
-        <div className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 flex flex-col min-h-0">
+        <div className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
         {/* Day headers */}
-        <div className="grid grid-cols-7 bg-slate-50 dark:bg-slate-800/80 shrink-0">
+        <div className="grid grid-cols-7 bg-slate-50 dark:bg-slate-800/80 shrink-0 sticky top-0 z-20">
           {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map((day, idx) => (
-            <div key={idx} className="text-center py-2 text-[11px] sm:text-xs md:text-sm font-bold text-slate-500">
+            <div key={idx} className="text-center py-2 text-[11px] sm:text-xs md:text-sm font-bold text-slate-500 border-b border-slate-300 dark:border-slate-700">
               {day}
             </div>
           ))}
         </div>
 
         {/* Day cells */}
-        <div className="grid grid-cols-7 flex-1 auto-rows-fr overflow-y-auto custom-scrollbar">
+        <div className="grid grid-cols-7 flex-1 auto-rows-fr">
           {/* Empty cells before first day */}
           {Array.from({ length: startDay }).map((_, i) => (
-            <div key={`empty-${i}`} className="aspect-square sm:aspect-auto sm:min-h-[80px] md:min-h-[100px] p-1 border-t border-r border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/40 shadow-[inset_1px_1px_4px_rgba(0,0,0,0.03)] dark:shadow-[inset_1px_1px_4px_rgba(0,0,0,0.2)]"></div>
+            <div key={`empty-${i}`} className="min-w-0 aspect-square sm:aspect-auto sm:min-h-[80px] md:min-h-[100px] p-1 border-t border-r border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/40 shadow-[inset_1px_1px_4px_rgba(0,0,0,0.03)] dark:shadow-[inset_1px_1px_4px_rgba(0,0,0,0.2)]"></div>
           ))}
           
           {/* Day cells */}
@@ -151,7 +152,7 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
               <div 
                 key={day} 
                 onClick={() => handleDayClick(day)}
-                className={`aspect-square sm:aspect-auto sm:min-h-[80px] md:min-h-[100px] p-1 sm:p-1.5 md:p-2 border-t border-r border-slate-300 dark:border-slate-700 cursor-pointer transition-all relative hover:shadow-lg hover:z-10
+                className={`min-w-0 aspect-square sm:aspect-auto sm:min-h-[80px] md:min-h-[100px] p-1 sm:p-1.5 md:p-2 border-t border-r border-slate-300 dark:border-slate-700 cursor-pointer transition-all relative hover:shadow-lg hover:z-10
                   ${isSelected ? 'bg-indigo-50 dark:bg-indigo-500/10 ring-2 ring-inset ring-indigo-500/50 shadow-inner' : 'bg-white dark:bg-slate-900 shadow-[inset_1px_1px_4px_rgba(0,0,0,0.03)] dark:shadow-[inset_1px_1px_4px_rgba(0,0,0,0.2)] hover:bg-slate-50 dark:hover:bg-slate-800/80'}
                   ${isToday && !isSelected ? 'ring-2 ring-inset ring-fuchsia-500/70' : ''}
                 `}
@@ -198,7 +199,7 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
           
           {/* Empty cells after last day */}
           {Array.from({ length: (7 - ((daysInMonth + startDay) % 7)) % 7 }).map((_, i) => (
-            <div key={`empty-end-${i}`} className="aspect-square sm:aspect-auto sm:min-h-[80px] md:min-h-[100px] p-1 border-t border-r border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/40 shadow-[inset_1px_1px_4px_rgba(0,0,0,0.03)] dark:shadow-[inset_1px_1px_4px_rgba(0,0,0,0.2)]"></div>
+            <div key={`empty-end-${i}`} className="min-w-0 aspect-square sm:aspect-auto sm:min-h-[80px] md:min-h-[100px] p-1 border-t border-r border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/40 shadow-[inset_1px_1px_4px_rgba(0,0,0,0.03)] dark:shadow-[inset_1px_1px_4px_rgba(0,0,0,0.2)]"></div>
           ))}
         </div>
       </div>
@@ -244,12 +245,12 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
                         {item.Title}
                       </div>
                       {item._type === 'task' && item.Assignee && (
-                        <div className="text-[11px] md:text-xs text-slate-500 mt-0.5">👤 {item.Assignee}</div>
+                        <div className="text-[11px] md:text-xs text-slate-500 mt-0.5 truncate">👤 {resolveAssigneeName(item.Assignee, users)}</div>
                       )}
                       {item._type === 'event' && item.Type && (
                         <div className="text-[11px] md:text-xs text-slate-500 mt-0.5">
                           {item.Type === 'leave' ? '🏖️ วันลา' : item.Type === 'holiday' ? '🎉 วันหยุด' : item.Type === 'maintenance' ? '🔧 บำรุงรักษา' : '📌 นัดหมาย'}
-                          {item.Assignee ? ` · ${item.Assignee}` : ''}
+                          {item.Assignee ? ` · ${resolveAssigneeName(item.Assignee, users)}` : ''}
                         </div>
                       )}
                     </div>

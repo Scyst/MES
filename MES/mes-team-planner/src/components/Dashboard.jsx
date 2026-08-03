@@ -2,8 +2,9 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { FiActivity, FiUserCheck, FiAlertCircle, FiCheckCircle, FiClock, FiBarChart2, FiTrendingUp, FiPieChart, FiFolderPlus, FiFilePlus, FiUserPlus, FiCalendar, FiBriefcase } from 'react-icons/fi';
 import { format, subDays } from 'date-fns';
 import axios from 'axios';
+import { resolveAssigneeName } from '../utils/userUtils';
 
-export default function Dashboard({ tasks = [], events = [], activities = [], loading, onNav, openTaskModal, openProjectModal, openSpaceModal }) {
+export default function Dashboard({ tasks = [], events = [], activities = [], loading, users = [], onNav, openTaskModal, openProjectModal, openSpaceModal, onTaskClick, onProjectClick, openInviteModal }) {
   const [projects, setProjects] = useState([]);
 
   useEffect(() => {
@@ -38,8 +39,9 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
     const map = {};
     tasks.forEach(t => {
       const names = (t.Assignee || 'Unassigned').split(',').map(n => n.trim()).filter(Boolean);
-      names.forEach(name => {
-        if (!map[name]) map[name] = { total: 0, done: 0, inProgress: 0, todo: 0 };
+      names.forEach(rawName => {
+        const name = resolveAssigneeName(rawName, users);
+        if (!map[name]) map[name] = { total: 0, done: 0, inProgress: 0, todo: 0, initial: rawName.charAt(0).toUpperCase() };
         map[name].total++;
         if (t.Status === 'done') map[name].done++;
         else if (t.Status === 'in-progress') map[name].inProgress++;
@@ -88,7 +90,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
           </div>
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Create Task</span>
         </button>
-        <button onClick={() => alert('ฟีเจอร์นี้อยู่ระหว่างการพัฒนา')} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
+        <button onClick={openInviteModal} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
           <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 group-hover:bg-blue-600 group-hover:text-white transition-colors">
             <FiUserPlus className="text-xl" />
           </div>
@@ -157,8 +159,10 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
           </div>
           {todaysTasks.length > 0 ? (
             <ul className="space-y-2 overflow-y-auto custom-scrollbar pr-1 flex-1">
-              {todaysTasks.map(task => (
-                <li key={task.Id} className="group flex items-center justify-between text-slate-700 dark:text-slate-300 text-sm bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/50 dark:hover:bg-slate-700/50 px-4 py-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-all cursor-pointer">
+              {todaysTasks.map(task => {
+                const assigneeName = resolveAssigneeName(task.Assignee, users);
+                return (
+                <li key={task.Id} onClick={() => onTaskClick && onTaskClick(task)} className="group flex items-center justify-between text-slate-700 dark:text-slate-300 text-sm bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/50 dark:hover:bg-slate-700/50 px-4 py-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-all cursor-pointer">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></div>
                     <span className="truncate font-medium">{task.Title}</span>
@@ -167,12 +171,12 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
                     <span className="text-[11px] font-bold px-2 py-0.5 bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-md">
                       DUE TODAY
                     </span>
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-[10px] font-bold" title={task.Assignee}>
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-[10px] font-bold" title={assigneeName}>
                       {(task.Assignee || 'U').charAt(0).toUpperCase()}
                     </div>
                   </div>
                 </li>
-              ))}
+              )})}
             </ul>
           ) : (
             <div className="text-slate-500 text-sm flex-1 flex items-center justify-center">ไม่มีงานที่ครบกำหนดวันนี้ ✅</div>
@@ -197,7 +201,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
                 const progress = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
                 
                 return (
-                  <div key={proj.Id} className="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 flex flex-col gap-2 transition-all cursor-pointer">
+                  <div key={proj.Id} onClick={() => onProjectClick && onProjectClick(proj)} className="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 flex flex-col gap-2 transition-all cursor-pointer">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{proj.Title}</span>
                       <span className="text-xs font-mono font-bold text-emerald-500 shrink-0">{progress}%</span>
@@ -265,8 +269,8 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
                 return (
                   <div key={name} className="flex items-center justify-between bg-white dark:bg-slate-900/50 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-sm text-white font-bold shrink-0 shadow-sm ring-2 ring-white dark:ring-slate-800">
-                        {name.substring(0, 1).toUpperCase()}
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-sm text-white font-bold shrink-0 shadow-sm ring-2 ring-white dark:ring-slate-800" title={name}>
+                        {data.initial}
                       </div>
                       <div className="flex flex-col min-w-0">
                         <span className="text-sm text-slate-800 dark:text-slate-200 font-bold truncate">{name}</span>

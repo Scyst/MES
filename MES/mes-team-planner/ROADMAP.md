@@ -25,17 +25,32 @@ A seamless, modern, and responsive team planning and task management application
 - [x] **Link Hub (คลังข้อมูล) Tab**:
   - Centralized categorized link management
   - Clean grid layout for easy access
+- [x] **UI/UX Refinements**:
+  - Improved form layout density and typography (AddTaskModal)
+  - Implemented intuitive tooltips for complex form rules
 - [x] Layout optimizations for PC & Mobile across all tabs
 
-## ✅ Completed (Phase 2: Backend Integration & Database)
-- [x] Define MSSQL database schemas (Tasks, Events, Links, Activities, Projects, Spaces)
-- [x] Set up PHP RESTful API backend (CRUD for all modules)
-- [x] Connect React frontend components to PHP backend via Axios
-- [x] Implement dynamic Workspaces (Team Spaces) sidebar & views
-- [x] Deployment scripts for DEV (`PlannerDev`) and PRD (`Planner`) environments
+## 🛠️ Current Phase (Phase 2: Backend Integration & Database)
+- [x] Define Microsoft SQL Server (MSSQL) database schemas (tasks, events, links, activities, spaces)
+- [x] Fix the UI of `AddTaskModal` (remove Recurrence label, fix tooltip, adjust padding/card layout to be flatter and wider max-w-2xl).
+- [x] Integrate full interactivity to `SpaceView` and `MyTasks`:
+  - Added "New Task" and "New Project" creation buttons.
+  - Allowed clicking on recent tasks to edit them.
+  - Enabled status changes directly from the team view.
+  - Made project cards clickable to open the project editing modal.
+- [x] Set up PHP RESTful API backend (`api/` folder) replacing legacy node mock.
+- [x] Connect React frontend components to PHP backend via Axios and Vite proxy.
+- [x] Implement data fetching, creation, updating, and deletion (CRUD).
+- [x] Fix RBAC (Role-Based Access Control) permissions allowing Task Creators to edit their own tasks.
+- [x] Fix UI misalignment bugs in Calendar/Schedule view (added `min-w-0` to prevent grid blowout).
+- [x] Deploy frontend build to the live FTP server (`/Toolbox/plannerAgent`) and verify UI fixes in production environment.
+- [x] Implement Avatar Cropper feature in Profile Settings.
+- [x] Standardize unsaved changes warning across all modals using a custom `ConfirmDialog`.
+- [ ] Implement robust error handling on the backend (e.g. handling missing task IDs gracefully).
 
 ## 🚀 Upcoming Features (Phase 3: Advanced Functionality)
+- [ ] **Authentication & User Roles**: Login system to distinguish Admin vs normal users.
 - [ ] **Real-time Notifications**: WebSockets or polling for live updates on task changes.
 - [ ] **File Attachments**: Ability to upload images/documents to tasks.
 - [ ] **Reporting & Export**: Export task boards to PDF or Excel.
-- [ ] **Enhanced Access Control**: Fine-grained permissions for specific Team Spaces.
+- [ ] **Dark/Light Mode Toggle**: Allow users to switch themes if necessary.

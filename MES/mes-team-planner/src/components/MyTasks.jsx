@@ -1,42 +1,23 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { FiCheckSquare, FiClock, FiAlertCircle, FiCheck, FiPlay, FiMoreHorizontal, FiTarget, FiActivity, FiSearch } from 'react-icons/fi';
+import axios from 'axios';
+import { FiCheckSquare, FiClock, FiAlertCircle, FiCheck, FiPlay, FiMoreHorizontal, FiTarget, FiActivity, FiSearch, FiPlus } from 'react-icons/fi';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 
-export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTask }) {
+export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTask, onTaskClick, onCreateTask }) {
   const [filterProject, setFilterProject] = useState('all');
   const [akas, setAkas] = useState([]);
-  const [isEditingAka, setIsEditingAka] = useState(false);
-  const [akaInput, setAkaInput] = useState('');
 
   useEffect(() => {
-    import('axios').then(axios => {
-      axios.default.get('/api/profile.php').then(res => {
+    axios.get('/api/profile.php').then(res => {
         if (res.data && res.data.aka !== undefined) {
           const akaStr = res.data.aka;
           const parsed = akaStr.split(',').map(s => s.trim()).filter(s => s);
           setAkas(parsed);
-          setAkaInput(akaStr);
           localStorage.setItem('user_akas', JSON.stringify(parsed)); // Keep legacy format for now if needed by other components
         }
       }).catch(() => {});
-    });
-  }, []);
-
-  const handleSaveAka = () => {
-    const newAkas = akaInput.split(',').map(s => s.trim()).filter(s => s);
-    setAkas(newAkas);
-    setIsEditingAka(false);
-    
-    import('axios').then(axios => {
-      axios.default.post('/api/profile.php', { aka: newAkas.join(', ') })
-        .then(() => {
-          localStorage.setItem('user_akas', JSON.stringify(newAkas));
-          if(refreshData) refreshData();
-        })
-        .catch(err => console.error(err));
-    });
-  };
+  }, [refreshData]);
   const myTasks = useMemo(() => {
     if (!currentUser) return [];
     const safeTasks = Array.isArray(tasks) ? tasks : [];
@@ -122,24 +103,10 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
           <div className="flex items-center gap-3 mt-2">
             <p className="text-slate-500 text-sm">Manage your heavy workload efficiently</p>
             <div className="h-4 w-px bg-slate-300 dark:bg-slate-600"></div>
-            {isEditingAka ? (
-              <div className="flex items-center gap-2">
-                <input 
-                  type="text" 
-                  value={akaInput} 
-                  onChange={e => setAkaInput(e.target.value)} 
-                  placeholder="e.g. Oat, โอ๊ต (comma separated)"
-                  className="text-xs px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none w-48"
-                />
-                <button onClick={handleSaveAka} className="text-xs bg-indigo-500 text-white px-2 py-1 rounded font-medium hover:bg-indigo-600">Save</button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-400 font-medium">AKAs:</span>
-                <span className="text-indigo-500 dark:text-indigo-400 font-bold">{akas.length > 0 ? akas.join(', ') : 'None'}</span>
-                <button onClick={() => setIsEditingAka(true)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline">Edit</button>
-              </div>
-            )}
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-400 font-medium">AKAs:</span>
+              <span className="text-indigo-500 dark:text-indigo-400 font-bold">{akas.length > 0 ? akas.join(', ') : 'None'}</span>
+            </div>
           </div>
         </div>
         
@@ -170,7 +137,10 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
 
       {/* Focus Mode Panel */}
       {focusTask && (
-        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 p-1 rounded-3xl shadow-lg">
+        <div 
+          onClick={() => onTaskClick && onTaskClick(focusTask)}
+          className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 p-1 rounded-3xl shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+        >
           <div className="bg-white dark:bg-slate-900 rounded-[22px] p-6 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
@@ -187,14 +157,21 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
               <p className="text-slate-500 text-sm line-clamp-2 mb-4">{focusTask.Description || 'No description provided.'}</p>
               
               <div className="flex flex-wrap items-center gap-3">
+                {focusTask.Status !== 'In Progress' && focusTask.Status !== 'in-progress' && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleStatusChange(focusTask, 'in-progress'); }}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md shadow-indigo-500/30 transition-all flex items-center gap-2"
+                  >
+                    <FiPlay /> Start Working
+                  </button>
+                )}
+                {(focusTask.Status === 'In Progress' || focusTask.Status === 'in-progress') && (
+                  <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 border border-indigo-200 dark:border-indigo-700">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div> In Progress
+                  </span>
+                )}
                 <button 
-                  onClick={() => handleStatusChange(focusTask, 'in-progress')}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md shadow-indigo-500/30 transition-all flex items-center gap-2"
-                >
-                  <FiPlay /> Start Working
-                </button>
-                <button 
-                  onClick={() => handleStatusChange(focusTask, 'done')}
+                  onClick={(e) => { e.stopPropagation(); handleStatusChange(focusTask, 'done'); }}
                   className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-5 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2"
                 >
                   <FiCheck /> Mark as Done
@@ -229,58 +206,58 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
             </button>
           ))}
         </div>
+        <button onClick={() => onCreateTask && onCreateTask()} className="shrink-0 flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-md shadow-indigo-500/20 transition-colors">
+          <FiPlus /> Create Task
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column */}
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <TaskSection 
             title="Overdue" 
             tasks={overdueTasks} 
-            colorClass="border-t-4 border-rose-500 bg-rose-50/30 dark:bg-rose-900/10" 
+            colorClass="bg-rose-50/30 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/30"
             headerColor="text-rose-600 dark:text-rose-400"
             icon={FiAlertCircle}
             onStatusChange={handleStatusChange}
             onSaveTask={onSaveTask}
+            onTaskClick={onTaskClick}
           />
           <TaskSection 
             title="Due Today" 
             tasks={dueTodayTasks} 
-            colorClass="border-t-4 border-amber-500 bg-amber-50/30 dark:bg-amber-900/10" 
+            colorClass="bg-amber-50/30 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30"
             headerColor="text-amber-600 dark:text-amber-400"
             icon={FiClock}
             onStatusChange={handleStatusChange}
             onSaveTask={onSaveTask}
+            onTaskClick={onTaskClick}
           />
-        </div>
-
-        {/* Right Column */}
-        <div className="space-y-6">
           <TaskSection 
             title="Upcoming" 
             tasks={upcomingTasks} 
-            colorClass="border-t-4 border-indigo-500 bg-indigo-50/30 dark:bg-indigo-900/10" 
-            headerColor="text-indigo-600 dark:text-indigo-400"
-            icon={FiClock}
-            onStatusChange={handleStatusChange}
-            onSaveTask={onSaveTask}
-          />
-          <TaskSection 
-            title="No Due Date" 
-            tasks={noDateTasks} 
-            colorClass="border-t-4 border-slate-400 bg-slate-50 dark:bg-slate-800/50" 
-            headerColor="text-slate-600 dark:text-slate-400"
+            colorClass="bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30"
+            headerColor="text-emerald-600 dark:text-emerald-400"
             icon={FiCheckSquare}
             onStatusChange={handleStatusChange}
             onSaveTask={onSaveTask}
+            onTaskClick={onTaskClick}
           />
-        </div>
+          <TaskSection 
+            title="No Date" 
+            tasks={noDateTasks} 
+            colorClass="bg-slate-50/30 dark:bg-slate-900/10 border-slate-100 dark:border-slate-800"
+            headerColor="text-slate-600 dark:text-slate-400"
+            icon={FiMoreHorizontal}
+            onStatusChange={handleStatusChange}
+            onSaveTask={onSaveTask}
+            onTaskClick={onTaskClick}
+          />
       </div>
     </div>
   );
 }
 
-function TaskSection({ title, tasks, colorClass, headerColor, icon: Icon, onStatusChange, onSaveTask }) {
+function TaskSection({ title, tasks, colorClass, headerColor, icon: Icon, onStatusChange, onSaveTask, onTaskClick }) {
   if (tasks.length === 0) return null;
 
   return (
@@ -291,14 +268,14 @@ function TaskSection({ title, tasks, colorClass, headerColor, icon: Icon, onStat
       </h3>
       <div className="space-y-4">
         {tasks.map(task => (
-          <HeavyTaskCard key={task.Id} task={task} onStatusChange={onStatusChange} onSaveTask={onSaveTask} />
+          <HeavyTaskCard key={task.Id} task={task} onStatusChange={onStatusChange} onSaveTask={onSaveTask} onTaskClick={onTaskClick} />
         ))}
       </div>
     </div>
   );
 }
 
-function HeavyTaskCard({ task, onStatusChange, onSaveTask }) {
+function HeavyTaskCard({ task, onStatusChange, onSaveTask, onTaskClick }) {
   const isUrgent = task.Priority === 'Urgent';
   const isInProgress = task.Status === 'In Progress' || task.Status === 'in-progress';
   
@@ -324,7 +301,10 @@ function HeavyTaskCard({ task, onStatusChange, onSaveTask }) {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all relative group overflow-hidden">
+    <div 
+      onClick={() => onTaskClick && onTaskClick(task)}
+      className="bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all relative group overflow-hidden cursor-pointer"
+    >
       {isUrgent && <div className="absolute top-0 left-0 w-1.5 h-full bg-rose-500"></div>}
       
       <div className="flex justify-between items-start gap-4">

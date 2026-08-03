@@ -1,0 +1,41 @@
+name: Deploy MES Planner
+
+on:
+  push:
+    branches: [ "main", "agent/*" ]
+    paths:
+      - 'mes-team-planner/**'
+      - '.github/workflows/deploy-planner.yml'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Dependencies
+      working-directory: ./mes-team-planner
+      run: npm install
+
+    - name: Build React App
+      working-directory: ./mes-team-planner
+      run: npm run build
+
+    - name: Deploy to FTP Server
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        # The folder containing the built files
+        local-dir: ./mes-team-planner/dist/
+        # WARNING: Update this to your actual test folder on the server
+        # e.g., /mes-test/planner/
+        server-dir: /public_html/mes-test-planner/

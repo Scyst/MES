@@ -11,12 +11,14 @@ import NotificationManager from './components/NotificationManager';
 import NotificationWidget from './components/NotificationWidget';
 import SearchModal from './components/SearchModal';
 import NotificationModal from './components/NotificationModal';
-import MyTasks from './components/MyTasks';
-import Resources from './components/Resources';
-import SpaceView from './components/SpaceView';
 import AddTaskModal from './components/AddTaskModal';
 import AddProjectModal from './components/AddProjectModal';
 import AddSpaceModal from './components/AddSpaceModal';
+import InviteTeamModal from './components/InviteTeamModal';
+import ProfileSettingsModal from './components/ProfileSettingsModal';
+import MyTasks from './components/MyTasks';
+import Resources from './components/Resources';
+import SpaceView from './components/SpaceView';
 
 const mainNav = [
   { tab: 'dashboard', icon: FiPieChart, label: 'Dashboard' },
@@ -28,8 +30,6 @@ const mainNav = [
   { tab: 'links', icon: FiLink, label: 'Resources' },
 ];
 
-const navItems = [...mainNav];
-
 function App() {
   const [activeTab, setActiveTab] = useState('calendar');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -38,8 +38,13 @@ function App() {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [isGlobalTaskModalOpen, setIsGlobalTaskModalOpen] = useState(false);
+  const [globalEditingTask, setGlobalEditingTask] = useState(null);
   const [isGlobalProjectModalOpen, setIsGlobalProjectModalOpen] = useState(false);
+  const [globalEditingProject, setGlobalEditingProject] = useState(null);
   const [isAddSpaceModalOpen, setIsAddSpaceModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteModalSpaceId, setInviteModalSpaceId] = useState(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState(null);
 
   useEffect(() => {
@@ -119,8 +124,8 @@ function App() {
   const handleSaveTask = useCallback(async (taskData) => {
     if (Array.isArray(taskData)) {
       try {
-        const results = await Promise.all(taskData.map(t => axios.post('/api/tasks', t)));
-        setTasks(prev => [...results.map(r => r.data), ...prev]);
+        await Promise.all(taskData.map(t => axios.post('/api/tasks.php', t)));
+        refreshData();
         return true;
       } catch (err) {
         console.error('Failed to bulk save tasks', err);
@@ -129,12 +134,11 @@ function App() {
       }
     }
 
-    // Optimistic UI Update for immediate feedback (crucial for drag & drop)
-    if (taskData.Id) {
+    // Optimistic UI Update (only for single tasks)
+    if (taskData.Id && !taskData.updateSeries) {
       setTasks(prev => prev.map(t => {
         if (String(t.Id) === String(taskData.Id)) {
           const updated = { ...t, ...taskData };
-          // Ensure casing matches backend for TaskBoard filtering
           if (taskData.status) updated.Status = taskData.status;
           return updated;
         }
@@ -144,14 +148,23 @@ function App() {
 
     try {
       if (taskData.Id) {
-        const res = await axios.put(`/api/tasks/${taskData.Id}`, taskData);
-        // Only update from response if it's an actual task object
-        if (res.data && res.data.Id) {
+        const res = await axios.put(`/api/tasks.php?id=${taskData.Id}`, taskData);
+        if (Array.isArray(res.data) || taskData.updateSeries) {
+          refreshData(); // bulk update or series update
+        } else if (res.data && res.data.Id) {
           setTasks(prev => prev.map(t => String(t.Id) === String(taskData.Id) ? { ...t, ...res.data } : t));
         }
       } else {
-        const res = await axios.post('/api/tasks', taskData);
-        setTasks(prev => [res.data, ...prev]);
+        const res = await axios.post('/api/tasks.php', taskData);
+        if (Array.isArray(res.data) && res.data.length > 1) {
+          refreshData(); // Multiple tasks created (recurrence)
+        } else if (Array.isArray(res.data) && res.data.length === 1) {
+          setTasks(prev => [res.data[0], ...prev]);
+        } else if (res.data && res.data.Id) {
+          setTasks(prev => [res.data, ...prev]);
+        } else {
+          refreshData();
+        }
       }
       return true;
     } catch (err) {
@@ -162,16 +175,20 @@ function App() {
     }
   }, [refreshData]);
 
-  const handleDeleteTask = useCallback(async (taskId) => {
+  const handleDeleteTask = useCallback(async (taskId, deleteSeries = false) => {
     try {
-      await axios.delete(`/api/tasks.php?id=${taskId}`);
-      setTasks(prev => prev.filter(t => t.Id !== taskId));
+      await axios.delete(`/api/tasks.php?id=${taskId}${deleteSeries ? '&deleteSeries=true' : ''}`);
+      if (deleteSeries) {
+        refreshData();
+      } else {
+        setTasks(prev => prev.filter(t => t.Id !== taskId));
+      }
       return true;
     } catch (err) {
       console.error('Failed to delete task', err);
       return false;
     }
-  }, []);
+  }, [refreshData]);
 
   const handleSaveProject = useCallback(async (projectData) => {
     try {
@@ -185,6 +202,7 @@ function App() {
         await axios.post('/api/projects.php', payload);
       }
       setIsGlobalProjectModalOpen(false);
+      setGlobalEditingProject(null);
       refreshData();
       return true;
     } catch (err) {
@@ -193,13 +211,40 @@ function App() {
     }
   }, [refreshData]);
 
+  const handleSaveSpace = async (data) => {
+    try {
+      if (data.id) {
+        await axios.put(`/api/spaces.php?id=${data.id}`, data);
+      } else {
+        await axios.post('/api/spaces.php', data);
+      }
+      await refreshData();
+      return true;
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.error || 'Failed to save space');
+      return false;
+    }
+  };
+
+  const handleSaveInvite = async (data) => {
+    try {
+      await axios.post('/api/space_members.php', data);
+      alert('เชิญสมาชิกสำเร็จ (Invitation sent)');
+      return true;
+    } catch (err) {
+      console.error(err);
+      return err.response?.data?.error || 'Failed to send invite';
+    }
+  };
+
   const handleSaveEvent = useCallback(async (eventData) => {
     try {
       if (eventData.Id) {
-        const res = await axios.put(`/api/events/${eventData.Id}`, eventData);
+        const res = await axios.put(`/api/events.php?id=${eventData.Id}`, eventData);
         setEvents(prev => prev.map(e => e.Id === eventData.Id ? res.data : e));
       } else {
-        const res = await axios.post('/api/events', eventData);
+        const res = await axios.post('/api/events.php', eventData);
         setEvents(prev => [...prev, res.data]);
       }
       return true;
@@ -209,25 +254,9 @@ function App() {
     }
   }, []);
 
-  const handleSaveSpace = useCallback(async (spaceData) => {
-    try {
-      if (spaceData.Id) {
-        const res = await axios.put(`/api/spaces.php?id=${spaceData.Id}`, spaceData);
-        setSpaces(prev => prev.map(s => s.Id === spaceData.Id ? res.data : s));
-      } else {
-        const res = await axios.post('/api/spaces.php', spaceData);
-        setSpaces(prev => [...prev, res.data]);
-      }
-      return true;
-    } catch (err) {
-      console.error('Failed to save space', err);
-      return false;
-    }
-  }, []);
-
   const handleDeleteEvent = useCallback(async (eventId) => {
     try {
-      await axios.delete(`/api/events/${eventId}`);
+      await axios.delete(`/api/events.php?id=${eventId}`);
       setEvents(prev => prev.filter(e => e.Id !== eventId));
       return true;
     } catch (err) {
@@ -252,6 +281,13 @@ function App() {
       window.location.href = '../../MES/MES/auth/login_form.php';
     });
   };
+
+  // ══════════ Computed Nav ══════════
+  const dynamicSpacesNav = [
+    { tab: 'space-home', icon: FiHome, label: 'Home', color: 'text-emerald-500 bg-emerald-500/10' },
+    ...spaces.map(s => ({ tab: `space-${s.Id}`, icon: FiUsers, label: s.Name, subItem: true }))
+  ];
+  const dynamicNavItems = [...mainNav, ...dynamicSpacesNav];
 
   // ══════════ Theme ══════════
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -297,16 +333,39 @@ function App() {
   };
 
   // ══════════ Render Content with Props ══════════
+  const handleCreateTask = (initialData = null) => {
+    setGlobalEditingTask(initialData);
+    setIsGlobalTaskModalOpen(true);
+  };
+
+  const handleCreateProject = (initialData = null) => {
+    setGlobalEditingProject(initialData);
+    setIsGlobalProjectModalOpen(true);
+  };
+
+  const handleProjectClick = (project) => {
+    setGlobalEditingProject(project);
+    setIsGlobalProjectModalOpen(true);
+  };
+
   const renderContent = () => {
     const sharedTaskProps = { currentUser, tasks, setTasks, onSaveTask: handleSaveTask, onDeleteTask: handleDeleteTask, loading: dataLoading, users };
 
     switch (activeTab) {
       case 'dashboard': 
         return <Dashboard 
-          tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav}
-          openProjectModal={() => setIsGlobalProjectModalOpen(true)}
-          openTaskModal={() => setIsGlobalTaskModalOpen(true)}
-          openSpaceModal={() => setIsAddSpaceModalOpen(true)}
+          tasks={tasks} 
+          events={events} 
+          activities={activities} 
+          loading={dataLoading} 
+          users={users}
+          onNav={handleNav} 
+          openTaskModal={() => { setGlobalEditingTask(null); setIsGlobalTaskModalOpen(true); }}
+          openProjectModal={() => { setGlobalEditingProject(null); setIsGlobalProjectModalOpen(true); }}
+          openSpaceModal={() => { setEditingSpace(null); setIsAddSpaceModalOpen(true); }}
+          openInviteModal={() => { setInviteModalSpaceId(null); setIsInviteModalOpen(true); }}
+          onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
+          onProjectClick={(proj) => { setGlobalEditingProject(proj); setIsGlobalProjectModalOpen(true); }}
         />;
       case 'calendar': 
         return <CalendarView tasks={tasks} events={events} onSaveTask={handleSaveTask} onDeleteTask={handleDeleteTask} onSaveEvent={handleSaveEvent} onDeleteEvent={handleDeleteEvent} loading={dataLoading} users={users} />;
@@ -315,11 +374,18 @@ function App() {
       case 'gantt': 
         return <GanttChart {...sharedTaskProps} />;
       case 'projects':
-        return <ProjectsTab tasks={tasks} spaces={spaces} refreshData={refreshData} />;
+        return <ProjectsTab currentUser={currentUser} tasks={tasks} refreshData={refreshData} />;
       case 'links': 
         return <LinkHub />;
       case 'my-tasks':
-        return <MyTasks tasks={tasks} currentUser={currentUser} refreshData={refreshData} />;
+        return <MyTasks 
+          tasks={tasks} 
+          currentUser={currentUser} 
+          refreshData={refreshData} 
+          onSaveTask={handleSaveTask}
+          onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
+          onCreateTask={handleCreateTask}
+        />;
       case 'timeline':
         return <GanttChart {...sharedTaskProps} />;
       case 'resources':
@@ -327,13 +393,37 @@ function App() {
       default: 
         // Fallback for Spaces and mock tabs
         if (activeTab.startsWith('space-') || activeTab.startsWith('team-')) {
-          return <SpaceView activeTab={activeTab} spaces={spaces} tasks={tasks} projects={projects} currentUser={currentUser} refreshData={refreshData} users={users} />;
+          return <SpaceView 
+            activeTab={activeTab} 
+            spaces={spaces} 
+            tasks={tasks} 
+            projects={projects} 
+            currentUser={currentUser} 
+            refreshData={refreshData} 
+            users={users} 
+            onEditSpace={(s) => { setEditingSpace(s); setIsAddSpaceModalOpen(true); }} 
+            onDeleteSpace={async (id) => { if(confirm('ต้องการลบทีมนี้ใช่หรือไม่?')) { await axios.delete(`/api/spaces.php?id=${id}`); refreshData(); setActiveTab('space-home'); } }} 
+            openInviteModal={(sId) => { setInviteModalSpaceId(sId); setIsInviteModalOpen(true); }}
+            onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
+            onCreateTask={handleCreateTask}
+            onCreateProject={handleCreateProject}
+            onProjectClick={handleProjectClick}
+            onSaveTask={handleSaveTask}
+          />;
         }
         return <Dashboard 
-          tasks={tasks} events={events} activities={activities} loading={dataLoading} onNav={handleNav}
-          openProjectModal={() => setIsGlobalProjectModalOpen(true)}
-          openTaskModal={() => setIsGlobalTaskModalOpen(true)}
-          openSpaceModal={() => setIsAddSpaceModalOpen(true)}
+          tasks={tasks} 
+          events={events} 
+          activities={activities} 
+          loading={dataLoading} 
+          users={users}
+          onNav={handleNav} 
+          openTaskModal={() => { setGlobalEditingTask(null); setIsGlobalTaskModalOpen(true); }}
+          openProjectModal={() => { setGlobalEditingProject(null); setIsGlobalProjectModalOpen(true); }}
+          openSpaceModal={() => { setEditingSpace(null); setIsAddSpaceModalOpen(true); }}
+          openInviteModal={() => { setInviteModalSpaceId(null); setIsInviteModalOpen(true); }}
+          onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
+          onProjectClick={(proj) => { setGlobalEditingProject(proj); setIsGlobalProjectModalOpen(true); }}
         />;
     }
   };
@@ -345,12 +435,22 @@ function App() {
 
   // Profile avatar component
   const ProfileAvatar = ({ size = 'sm', onClick }) => {
+    const [imgError, setImgError] = useState(false);
+    // Force reload image when refreshData changes by using a timestamp if needed, but for now simple src is fine.
+    // We add a timestamp to avoid caching issues right after an upload
+    const avatarTimestamp = localStorage.getItem('avatar_ts') || '';
+    
     if (!currentUser) return null;
     const initial = (currentUser.fullname || currentUser.username || 'U').charAt(0).toUpperCase();
     const sizeClass = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-9 h-9 text-sm';
+    
     return (
-      <button onClick={onClick} className={`${sizeClass} rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0 hover:ring-2 hover:ring-indigo-500/50 transition-all active:scale-95`} title={currentUser.fullname || currentUser.username}>
-        {initial}
+      <button onClick={onClick} className={`${sizeClass} rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0 hover:ring-2 hover:ring-indigo-500/50 transition-all active:scale-95 overflow-hidden`} title={currentUser.fullname || currentUser.username}>
+        {!imgError ? (
+          <img src={`api/uploads/avatars/${currentUser.username}.jpg?t=${avatarTimestamp}`} onError={() => setImgError(true)} className="w-full h-full object-cover" alt={initial} />
+        ) : (
+          initial
+        )}
       </button>
     );
   };
@@ -411,6 +511,9 @@ function App() {
                     </div>
                   )}
                   <div className="p-2">
+                    <button onClick={() => { setIsProfileModalOpen(true); setShowProfileMenu(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
+                      <FiUser className="text-[1.1rem]" /> ตั้งค่าโปรไฟล์
+                    </button>
                     <a href="/iot-toolbox/sandbox-b9/Toolbox2/#/" className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
                       <FiHome className="text-[1.1rem]" /> Home (ระบบใหม่)
                     </a>
@@ -468,39 +571,31 @@ function App() {
               <div className="flex items-center justify-between text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
                 <span>Spaces</span>
                 <div className="flex gap-2">
-                  <FiSearch className="cursor-pointer hover:text-slate-600" />
-                  <FiPlus className="cursor-pointer hover:text-slate-600" />
+                  <FiSearch className="cursor-pointer hover:text-slate-600" onClick={() => setShowSearchModal(true)} title="Search Teams" />
+                  <FiPlus className="cursor-pointer hover:text-slate-600" onClick={() => { setEditingSpace(null); setIsAddSpaceModalOpen(true); }} title="Create Team Space" />
                 </div>
               </div>
               <div className="space-y-0.5">
-                <button 
-                  onClick={() => handleNav('space-home')}
-                  className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium px-3 ${
-                    activeTab === 'space-home'
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' 
-                      : 'hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-200 text-slate-600'
-                  }`}
-                >
-                  <div className="p-1 rounded flex items-center justify-center text-emerald-500 bg-emerald-500/10">
-                    <FiHome className="text-[14px]" />
-                  </div>
-                  <span>Home</span>
-                </button>
-                {spaces.map(s => (
-                  <button 
-                    key={s.Id || s.id}
-                    onClick={() => handleNav(`space-${s.Id || s.id}`)}
-                    className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium pl-8 pr-3 text-slate-500 text-[13px] ${
-                      activeTab === `space-${s.Id || s.id}`
+                  {dynamicSpacesNav.map(item => (
+                    <button 
+                    key={item.tab}
+                    onClick={() => handleNav(item.tab)}
+                    className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium ${item.subItem ? 'pl-8 pr-3 text-slate-500 text-[13px]' : 'px-3'} ${
+                      activeTab === item.tab 
                         ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' 
                         : 'hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-200 text-slate-600'
                     }`}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>
-                    <span>{s.Name || s.name || 'Unnamed Space'}</span>
-                  </button>
-                ))}
-              </div>
+                    {!item.subItem && (
+                      <div className={`p-1 rounded flex items-center justify-center ${item.color || 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
+                        <item.icon className="text-[14px]" />
+                      </div>
+                    )}
+                    {item.subItem && <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>}
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
             </div>
           </nav>
         </aside>
@@ -521,11 +616,7 @@ function App() {
               <FiMenu className="text-xl" />
             </button>
             <a href="/iot-toolbox/sandbox-b9/Toolbox2/#/" className="text-base font-bold text-slate-900 dark:text-white hover:opacity-80 transition-opacity">
-              {mainNav.find(n => n.tab === activeTab)?.label || 
-               (activeTab === 'space-home' ? 'Home' : 
-                (activeTab.startsWith('space-') ? 
-                  (spaces.find(s => `space-${s.Id || s.id}` === activeTab)?.Name || spaces.find(s => `space-${s.Id || s.id}` === activeTab)?.name || 'Team Space') 
-                  : 'MES Planner'))}
+              {dynamicNavItems.find(n => n.tab === activeTab)?.label || 'MES Planner'}
             </a>
           </div>
           <div className="flex items-center gap-2">
@@ -560,7 +651,8 @@ function App() {
                   <FiHome className="text-base" /> Home (ระบบเก่า)
                 </a>
                 <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors">
-                  <FiLogOut className="text-base" /> ออกจากระบบ
+                  <FiLogOut className="text-base" />
+                  ออกจากระบบ
                 </button>
               </div>
             </div>
@@ -615,7 +707,7 @@ function App() {
             </div>
             
             <nav className="flex-1 px-3 space-y-2 overflow-y-auto pt-4">
-              {navItems.map(item => (
+              {dynamicNavItems.map(item => (
                 <button 
                   key={item.tab}
                   onClick={() => { handleNav(item.tab); setIsSidebarOpen(false); }}
@@ -659,21 +751,23 @@ function App() {
       {showNotificationModal && <NotificationModal onClose={() => setShowNotificationModal(false)} activities={activities} />}
 
       {/* Global Notifications */}
-      <NotificationManager />
+      <NotificationManager tasks={tasks} />
       
       {/* Global Modals */}
       <AddTaskModal 
         isOpen={isGlobalTaskModalOpen} 
-        onClose={() => setIsGlobalTaskModalOpen(false)} 
-        onSave={(data) => { handleSaveTask(data); setIsGlobalTaskModalOpen(false); }} 
+        onClose={() => { setIsGlobalTaskModalOpen(false); setGlobalEditingTask(null); }} 
+        onSave={(data) => { handleSaveTask(data); setIsGlobalTaskModalOpen(false); setGlobalEditingTask(null); }} 
         currentUser={currentUser} 
         tasks={tasks}
-        users={users} 
+        users={users}
+        initialData={globalEditingTask}
       />
       <AddProjectModal 
         isOpen={isGlobalProjectModalOpen} 
-        onClose={() => setIsGlobalProjectModalOpen(false)} 
+        onClose={() => { setIsGlobalProjectModalOpen(false); setGlobalEditingProject(null); }} 
         onSave={handleSaveProject}
+        initialData={globalEditingProject}
         spaces={spaces}
       />
       <AddSpaceModal
@@ -681,6 +775,22 @@ function App() {
         onClose={() => { setIsAddSpaceModalOpen(false); setEditingSpace(null); }}
         onSave={handleSaveSpace}
         initialData={editingSpace}
+      />
+      
+      <InviteTeamModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        onSave={handleSaveInvite}
+        spaces={spaces}
+        users={users}
+        initialSpaceId={inviteModalSpaceId}
+      />
+      
+      <ProfileSettingsModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        currentUser={currentUser}
+        onSaved={refreshData}
       />
       
       {/* Chat Notification Widget */}

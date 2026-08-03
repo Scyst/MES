@@ -3,8 +3,7 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import { FiBell, FiX } from 'react-icons/fi';
 
-export default function NotificationManager() {
-  const [tasks, setTasks] = useState([]);
+export default function NotificationManager({ tasks = [] }) {
   const [notifications, setNotifications] = useState([]);
   const [urgentModals, setUrgentModals] = useState([]);
 
@@ -14,20 +13,7 @@ export default function NotificationManager() {
     }
   }, []);
 
-  // Fetch tasks every 30 seconds to keep data fresh for notifications
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const res = await axios.get('/api/tasks');
-        setTasks(res.data);
-      } catch (err) {
-        console.error('Failed to fetch tasks for notifications', err);
-      }
-    };
-    fetchTasks();
-    const interval = setInterval(fetchTasks, 30 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+
 
   const playChime = (level) => {
     try {
