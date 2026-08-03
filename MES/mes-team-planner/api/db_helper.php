@@ -47,6 +47,60 @@ function sendJson($data, $status = 200) {
     exit;
 }
 
+// ==========================================
+// Shared Permission Helpers (BUG-010)
+// ==========================================
+
+/**
+ * ตรวจสอบว่า session user เป็น Admin/Manager หรือไม่
+ */
+function isAdminOrManager() {
+    if (!isset($_SESSION['user_role'])) return false;
+    $role = strtolower($_SESSION['user_role']);
+    return in_array($role, ['admin', 'manager', 'supervisor', 'creator']);
+}
+
+/**
+ * ตรวจสอบว่า session user เป็นเจ้าของงานหรือ creator หรือไม่
+ */
+function isTaskOwnerBySession($taskAssignee, $taskCreatedBy = '') {
+    $uname = strtolower($_SESSION['username'] ?? ($_SESSION['user']['username'] ?? ''));
+    $fname = strtolower($_SESSION['fullname'] ?? ($_SESSION['user']['fullname'] ?? ''));
+    $aka   = strtolower($_SESSION['user_aka'] ?? '');
+
+    if (!$uname && !$fname && !$aka) return false;
+
+    $assigneeStr = strtolower($taskAssignee ?? '');
+    $creatorStr  = strtolower($taskCreatedBy ?? '');
+
+    $isAssignee = ($uname && strpos($assigneeStr, $uname) !== false) ||
+                  ($fname && strpos($assigneeStr, $fname) !== false) ||
+                  ($aka   && strpos($assigneeStr, $aka)   !== false);
+
+    $isCreator  = ($uname && $creatorStr === $uname) ||
+                  ($fname && $creatorStr === $fname) ||
+                  ($aka   && $creatorStr === $aka);
+
+    return $isAssignee || $isCreator;
+}
+
+/**
+ * ตรวจสอบว่า session user เป็นเจ้าของโปรเจ็คหรือไม่
+ */
+function isProjectOwnerBySession($projectAssignee) {
+    $uname = strtolower($_SESSION['username'] ?? '');
+    $fname = strtolower($_SESSION['fullname'] ?? '');
+    $aka   = strtolower($_SESSION['user_aka'] ?? '');
+
+    if (!$uname && !$fname && !$aka) return false;
+
+    $assigneeStr = strtolower($projectAssignee ?? '');
+
+    return ($uname && strpos($assigneeStr, $uname) !== false) ||
+           ($fname && strpos($assigneeStr, $fname) !== false) ||
+           ($aka   && strpos($assigneeStr, $aka)   !== false);
+}
+
 // Ensure $_SESSION['user'] exists
 if (!isset($_SESSION['user'])) {
     sendJson(['error' => 'Unauthorized'], 401);

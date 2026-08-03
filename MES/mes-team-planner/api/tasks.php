@@ -4,32 +4,7 @@ require_once 'db_helper.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $id = isset($_GET['id']) ? $_GET['id'] : null;
 
-function isAdminOrManager() {
-    if (!isset($_SESSION['user_role'])) return false;
-    $role = strtolower($_SESSION['user_role']);
-    return in_array($role, ['admin', 'manager', 'supervisor', 'creator']);
-}
-
-function isTaskOwner($taskAssignee, $taskCreatedBy = '') {
-    $uname = strtolower($_SESSION['username'] ?? ($_SESSION['user']['username'] ?? ''));
-    $fname = strtolower($_SESSION['fullname'] ?? ($_SESSION['user']['fullname'] ?? ''));
-    $aka = strtolower($_SESSION['user_aka'] ?? '');
-    
-    if (!$uname && !$fname && !$aka) return false;
-
-    $assigneeStr = strtolower($taskAssignee ?? '');
-    $creatorStr = strtolower($taskCreatedBy ?? '');
-    
-    $isAssignee = ($uname && strpos($assigneeStr, $uname) !== false) || 
-                  ($fname && strpos($assigneeStr, $fname) !== false) || 
-                  ($aka && strpos($assigneeStr, $aka) !== false);
-                  
-    $isCreator = ($uname && $creatorStr === $uname) || 
-                 ($fname && $creatorStr === $fname) || 
-                 ($aka && $creatorStr === $aka);
-                 
-    return $isAssignee || $isCreator;
-}
+// NOTE: isAdminOrManager() and isTaskOwnerBySession() are defined in db_helper.php (BUG-010)
 
 function formatTaskOutput($row) {
     $row['dueDate'] = formatDate($row['DueDate'] ?? null);
@@ -58,25 +33,25 @@ try {
 
         $conditions = ["Visibility = 'public'"];
         $params = [];
-        
+
         if ($currentUsername) {
             $conditions[] = "CreatedBy = ?";
             $params[] = $currentUsername;
-            
+
             $conditions[] = "Assignee LIKE ?";
             $params[] = "%$currentUsername%";
-            
+
             if ($currentUserFullname) {
                 $conditions[] = "Assignee LIKE ?";
                 $params[] = "%$currentUserFullname%";
             }
-            
+
             foreach ($akas as $aka) {
                 $conditions[] = "Assignee LIKE ?";
                 $params[] = "%$aka%";
             }
         }
-        
+
         $whereClause = "";
         if (count($conditions) > 1) {
             $visibilityCondition = array_shift($conditions);
@@ -92,38 +67,38 @@ try {
             $tasks[] = formatTaskOutput($row);
         }
         sendJson($tasks);
-    } 
+    }
     elseif ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
         $createdBy = $_SESSION['user']['username'] ?? 'System';
-        
+
         $recurrence = $data['recurrence'] ?? 'none';
         $tasksToCreate = [];
-        
+
         if ($recurrence !== 'none' && !empty($data['startDate']) && !empty($data['recurrenceEndDate'])) {
             $groupId = uniqid('grp_');
             $start = new DateTime($data['startDate']);
             $end = new DateTime($data['recurrenceEndDate']);
-            
+
             // Safety limit 365 days
             $diff = $start->diff($end)->days;
             if ($diff > 366) $end = (clone $start)->modify('+365 days');
-            
+
             $recDays = $data['recurrenceDays'] ?? [];
             $recDates = $data['recurrenceDates'] ?? [];
             $settingsJson = json_encode([
-                'days' => $recDays,
-                'dates' => $recDates,
+                'days'    => $recDays,
+                'dates'   => $recDates,
                 'endDate' => $data['recurrenceEndDate']
             ]);
-            
+
             $current = clone $start;
             $dueDiffDays = 0;
             if (!empty($data['dueDate'])) {
                 $dueDt = new DateTime($data['dueDate']);
                 $dueDiffDays = (int)$start->diff($dueDt)->format('%R%a');
             }
-            
+
             $safetyCounter = 0;
             while ($current <= $end && $safetyCounter < 400) {
                 $shouldCreate = false;
@@ -141,7 +116,7 @@ try {
                         $shouldCreate = true;
                     }
                 }
-                
+
                 if ($shouldCreate) {
                     $currentStartStr = $current->format('Y-m-d');
                     $currentDueDt = clone $current;
@@ -149,127 +124,151 @@ try {
                         $currentDueDt->modify(($dueDiffDays >= 0 ? '+' : '') . $dueDiffDays . ' days');
                     }
                     $currentDueStr = $currentDueDt->format('Y-m-d');
-                    
+
                     $tasksToCreate[] = [
                         'startDate' => $currentStartStr,
-                        'dueDate' => $currentDueStr,
-                        'groupId' => $groupId,
-                        'settings' => $settingsJson
+                        'dueDate'   => $currentDueStr,
+                        'groupId'   => $groupId,
+                        'settings'  => $settingsJson
                     ];
                 }
                 $current->modify('+1 day');
                 $safetyCounter++;
             }
         }
-        
+
         if (empty($tasksToCreate)) {
             $tasksToCreate[] = [
                 'startDate' => $data['startDate'] ?? null,
-                'dueDate' => $data['dueDate'] ?? null,
-                'groupId' => null,
-                'settings' => null
+                'dueDate'   => $data['dueDate'] ?? null,
+                'groupId'   => null,
+                'settings'  => null
             ];
         }
-        
-        $sql = "INSERT INTO TeamPlanner_Tasks (Title, Status, Visibility, Assignee, DueDate, StartDate, StartTime, EndTime, Priority, Description, Subtasks, Tags, Recurrence, ProjectId, ProjectChecklistId, SpaceId, CreatedBy, GroupId, RecurrenceSettings) 
-                OUTPUT INSERTED.* 
+
+        $sql = "INSERT INTO TeamPlanner_Tasks (Title, Status, Visibility, Assignee, DueDate, StartDate, StartTime, EndTime, Priority, Description, Subtasks, Tags, Recurrence, ProjectId, ProjectChecklistId, SpaceId, CreatedBy, GroupId, RecurrenceSettings)
+                OUTPUT INSERTED.*
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                
+
         $stmt = $pdo->prepare($sql);
         $createdTasks = [];
-        
-        foreach ($tasksToCreate as $t) {
-            $stmt->execute([
-                $data['title'],
-                $data['status'] ?? 'todo',
-                $data['visibility'] ?? 'public',
-                $data['assignee'] ?? 'Unassigned',
-                $t['dueDate'],
-                $t['startDate'],
-                $data['startTime'] ?? '09:00',
-                $data['endTime'] ?? '18:00',
-                $data['priority'] ?? 'normal',
-                $data['description'] ?? null,
-                $data['subtasks'] ?? '[]',
-                $data['tags'] ?? '',
-                $recurrence,
-                $data['projectId'] ?? null,
-                $data['projectChecklistId'] ?? null,
-                $data['spaceId'] ?? null,
-                $createdBy,
-                $t['groupId'],
-                $t['settings']
-            ]);
-            
-            $newTask = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($newTask) $createdTasks[] = formatTaskOutput($newTask);
-        }
-        
-        if (count($createdTasks) > 0 && $createdTasks[0]['Status'] === 'done' && !empty($createdTasks[0]['ProjectId'])) {
-            $pStmt = $pdo->prepare("SELECT Checklist FROM TeamPlanner_Projects WHERE Id = ?");
-            $pStmt->execute([$createdTasks[0]['ProjectId']]);
-            $project = $pStmt->fetch(PDO::FETCH_ASSOC);
-            if ($project && !empty($project['Checklist'])) {
-                $checklist = json_decode($project['Checklist'], true);
-                $changed = false;
-                
-                $targetIds = [];
-                if (!empty($createdTasks[0]['ProjectChecklistId'])) $targetIds[] = $createdTasks[0]['ProjectChecklistId'];
-                
-                $subtasksArr = json_decode($createdTasks[0]['subtasks'], true);
-                if (is_array($subtasksArr)) {
-                    foreach ($subtasksArr as $st) {
-                        if (!empty($st['projectChecklistId'])) $targetIds[] = $st['projectChecklistId'];
+
+        // BUG-003: Wrap INSERT + checklist update in a transaction
+        $pdo->beginTransaction();
+        try {
+            foreach ($tasksToCreate as $t) {
+                $stmt->execute([
+                    $data['title'],
+                    $data['status'] ?? 'todo',
+                    $data['visibility'] ?? 'public',
+                    $data['assignee'] ?? 'Unassigned',
+                    $t['dueDate'],
+                    $t['startDate'],
+                    $data['startTime'] ?? '09:00',
+                    $data['endTime'] ?? '18:00',
+                    $data['priority'] ?? 'normal',
+                    $data['description'] ?? null,
+                    $data['subtasks'] ?? '[]',
+                    $data['tags'] ?? '',
+                    $recurrence,
+                    $data['projectId'] ?? null,
+                    $data['projectChecklistId'] ?? null,
+                    $data['spaceId'] ?? null,
+                    $createdBy,
+                    $t['groupId'],
+                    $t['settings']
+                ]);
+
+                $newTask = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($newTask) $createdTasks[] = formatTaskOutput($newTask);
+            }
+
+            if (count($createdTasks) > 0 && $createdTasks[0]['Status'] === 'done' && !empty($createdTasks[0]['ProjectId'])) {
+                $pStmt = $pdo->prepare("SELECT Checklist FROM TeamPlanner_Projects WHERE Id = ?");
+                $pStmt->execute([$createdTasks[0]['ProjectId']]);
+                $project = $pStmt->fetch(PDO::FETCH_ASSOC);
+                if ($project && !empty($project['Checklist'])) {
+                    $checklist = json_decode($project['Checklist'], true);
+                    $changed = false;
+
+                    $targetIds = [];
+                    if (!empty($createdTasks[0]['ProjectChecklistId'])) $targetIds[] = $createdTasks[0]['ProjectChecklistId'];
+
+                    $subtasksArr = json_decode($createdTasks[0]['subtasks'], true);
+                    if (is_array($subtasksArr)) {
+                        foreach ($subtasksArr as $st) {
+                            if (!empty($st['projectChecklistId'])) $targetIds[] = $st['projectChecklistId'];
+                        }
                     }
-                }
-                
-                if (is_array($checklist) && count($targetIds) > 0) {
-                    foreach ($checklist as &$item) {
-                        if (isset($item['id']) && in_array($item['id'], $targetIds)) {
-                            if (empty($item['isDone'])) {
-                                $item['isDone'] = true;
-                                $changed = true;
+
+                    if (is_array($checklist) && count($targetIds) > 0) {
+                        foreach ($checklist as &$item) {
+                            if (isset($item['id']) && in_array($item['id'], $targetIds)) {
+                                if (empty($item['isDone'])) {
+                                    $item['isDone'] = true;
+                                    $changed = true;
+                                }
                             }
                         }
                     }
-                }
-                
-                if ($changed) {
-                    $updStmt = $pdo->prepare("UPDATE TeamPlanner_Projects SET Checklist = ? WHERE Id = ?");
-                    $updStmt->execute([json_encode($checklist), $createdTasks[0]['ProjectId']]);
+
+                    if ($changed) {
+                        $updStmt = $pdo->prepare("UPDATE TeamPlanner_Projects SET Checklist = ? WHERE Id = ?");
+                        $updStmt->execute([json_encode($checklist), $createdTasks[0]['ProjectId']]);
+                    }
                 }
             }
+
+            $pdo->commit();
+        } catch (Exception $txErr) {
+            $pdo->rollBack();
+            throw $txErr;
         }
-        
+
         logActivity($pdo, "Task(s) created: " . $data['title'] . " by " . ($data['assignee'] ?? 'Unassigned'));
         sendJson($createdTasks, 201);
-    } 
+    }
     elseif ($method === 'PUT' && $id) {
         $chkStmt = $pdo->prepare("SELECT GroupId, StartDate, Assignee, CreatedBy FROM TeamPlanner_Tasks WHERE Id = ?");
         $chkStmt->execute([$id]);
         $targetTask = $chkStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($targetTask && !isAdminOrManager() && !isTaskOwner($targetTask['Assignee'], $targetTask['CreatedBy'] ?? '')) {
+
+        // BUG-009: Explicitly return 404 when task not found — prevents permission bypass
+        if (!$targetTask) {
+            sendJson(['error' => 'Task not found'], 404);
+        }
+
+        if (!isAdminOrManager() && !isTaskOwnerBySession($targetTask['Assignee'], $targetTask['CreatedBy'] ?? '')) {
             http_response_code(403);
             sendJson(['error' => 'Permission denied: Only Admin/Manager or the Task Owner can edit this task.']);
         }
 
         $data = json_decode(file_get_contents('php://input'), true);
-        
+
         $updateSeries = !empty($data['updateSeries']) && !empty($targetTask['GroupId']);
-        
+
         $updateFields = [];
         $params = [];
-        
+
         $fields = [
-            'status' => 'Status', 'title' => 'Title', 'visibility' => 'Visibility',
-            'assignee' => 'Assignee', 'dueDate' => 'DueDate', 'startDate' => 'StartDate',
-            'startTime' => 'StartTime', 'endTime' => 'EndTime', 'priority' => 'Priority',
-            'description' => 'Description', 'subtasks' => 'Subtasks', 'tags' => 'Tags',
-            'recurrence' => 'Recurrence', 'projectId' => 'ProjectId', 'projectChecklistId' => 'ProjectChecklistId',
-            'spaceId' => 'SpaceId'
+            'status'             => 'Status',
+            'title'              => 'Title',
+            'visibility'         => 'Visibility',
+            'assignee'           => 'Assignee',
+            'dueDate'            => 'DueDate',
+            'startDate'          => 'StartDate',
+            'startTime'          => 'StartTime',
+            'endTime'            => 'EndTime',
+            'priority'           => 'Priority',
+            'description'        => 'Description',
+            'subtasks'           => 'Subtasks',
+            'tags'               => 'Tags',
+            'recurrence'         => 'Recurrence',
+            'projectId'          => 'ProjectId',
+            'projectChecklistId' => 'ProjectChecklistId',
+            'spaceId'            => 'SpaceId'
         ];
-        
+
         foreach ($fields as $jsonKey => $dbKey) {
             if (array_key_exists($jsonKey, $data)) {
                 if ($updateSeries && ($dbKey === 'StartDate' || $dbKey === 'DueDate')) {
@@ -279,11 +278,11 @@ try {
                 $params[] = $data[$jsonKey];
             }
         }
-        
+
         if (empty($updateFields)) {
             sendJson(['error' => 'No fields to update'], 400);
         }
-        
+
         $sql = "UPDATE TeamPlanner_Tasks SET " . implode(', ', $updateFields) . " OUTPUT INSERTED.* WHERE ";
         if ($updateSeries) {
             $sql .= "GroupId = ? AND StartDate >= ?";
@@ -293,21 +292,21 @@ try {
             $sql .= "Id = ?";
             $params[] = $id;
         }
-        
+
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
-        
+
         $updatedTasks = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $updatedTasks[] = formatTaskOutput($row);
         }
-        
+
         if (empty($updatedTasks)) {
             sendJson(['error' => 'Task not found or no rows updated'], 404);
         }
-        
+
         $firstUpdated = $updatedTasks[0];
-        
+
         if (array_key_exists('status', $data) && !empty($firstUpdated['ProjectId'])) {
             $pStmt = $pdo->prepare("SELECT Checklist FROM TeamPlanner_Projects WHERE Id = ?");
             $pStmt->execute([$firstUpdated['ProjectId']]);
@@ -316,17 +315,17 @@ try {
                 $checklist = json_decode($project['Checklist'], true);
                 $isDone = ($firstUpdated['Status'] === 'done');
                 $changed = false;
-                
+
                 $targetIds = [];
                 if (!empty($firstUpdated['ProjectChecklistId'])) $targetIds[] = $firstUpdated['ProjectChecklistId'];
-                
+
                 $subtasksArr = json_decode($firstUpdated['subtasks'], true);
                 if (is_array($subtasksArr)) {
                     foreach ($subtasksArr as $st) {
                         if (!empty($st['projectChecklistId'])) $targetIds[] = $st['projectChecklistId'];
                     }
                 }
-                
+
                 if (is_array($checklist) && count($targetIds) > 0) {
                     foreach ($checklist as &$item) {
                         if (isset($item['id']) && in_array($item['id'], $targetIds)) {
@@ -337,32 +336,36 @@ try {
                         }
                     }
                 }
-                
+
                 if ($changed) {
                     $updStmt = $pdo->prepare("UPDATE TeamPlanner_Projects SET Checklist = ? WHERE Id = ?");
                     $updStmt->execute([json_encode($checklist), $firstUpdated['ProjectId']]);
                 }
             }
         }
-        
+
         logActivity($pdo, "Task updated: " . ($data['title'] ?? 'Unknown'));
         sendJson($updateSeries ? $updatedTasks : $updatedTasks[0]);
-    } 
+    }
     elseif ($method === 'DELETE' && $id) {
         $chkStmt = $pdo->prepare("SELECT GroupId, StartDate, Assignee, CreatedBy FROM TeamPlanner_Tasks WHERE Id = ?");
         $chkStmt->execute([$id]);
         $targetTask = $chkStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($targetTask && !isAdminOrManager() && !isTaskOwner($targetTask['Assignee'], $targetTask['CreatedBy'] ?? '')) {
+
+        // BUG-009: Explicitly return 404 when task not found
+        if (!$targetTask) {
+            sendJson(['error' => 'Task not found'], 404);
+        }
+
+        if (!isAdminOrManager() && !isTaskOwnerBySession($targetTask['Assignee'], $targetTask['CreatedBy'] ?? '')) {
             http_response_code(403);
             sendJson(['error' => 'Permission denied: Only Admin/Manager or the Task Owner can delete this task.']);
         }
 
         $deleteSeries = isset($_GET['deleteSeries']) && $_GET['deleteSeries'] === 'true';
-        
+
         if ($deleteSeries) {
-            
-            if ($targetTask && $targetTask['GroupId']) {
+            if ($targetTask['GroupId']) {
                 $stmt = $pdo->prepare("DELETE FROM TeamPlanner_Tasks WHERE GroupId = ? AND StartDate >= ?");
                 $stmt->execute([$targetTask['GroupId'], $targetTask['StartDate']]);
             } else {
@@ -373,13 +376,13 @@ try {
             $stmt = $pdo->prepare("DELETE FROM TeamPlanner_Tasks WHERE Id = ?");
             $stmt->execute([$id]);
         }
-        
+
         logActivity($pdo, "Task deleted (ID: $id, Series: " . ($deleteSeries ? 'Yes' : 'No') . ")");
         http_response_code(204);
         exit;
     }
 } catch (Exception $e) {
-    error_log($e->getMessage());
+    error_log('tasks.php error: ' . $e->getMessage());
     sendJson(['error' => 'Server Error', 'details' => $e->getMessage()], 500);
 }
 ?>

@@ -142,7 +142,10 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
       const link = document.createElement('a');
       link.href = url;
       link.download = `mes_tasks_${new Date().toISOString().slice(0,10)}.csv`;
+      // BUG-014: Must append, click, then remove to avoid memory leak (DOM element orphan)
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('CSV Export Error:', error);

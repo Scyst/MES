@@ -11,10 +11,11 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
   useEffect(() => {
     axios.get('/api/profile.php').then(res => {
         if (res.data && res.data.aka !== undefined) {
-          const akaStr = res.data.aka;
+          const akaStr = res.data.aka; // server always returns comma-separated string
           const parsed = akaStr.split(',').map(s => s.trim()).filter(s => s);
           setAkas(parsed);
-          localStorage.setItem('user_akas', JSON.stringify(parsed)); // Keep legacy format for now if needed by other components
+          // BUG-007: Store as comma-separated string (NOT JSON array) to match App.jsx reader
+          localStorage.setItem('user_akas', akaStr);
         }
       }).catch(() => {});
   }, [refreshData]);
@@ -61,11 +62,12 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
     else upcomingTasks.push(t);
   });
 
-  // Sort by priority (Urgent first)
+  // BUG-016: Sort case-insensitive — DB stores lowercase 'urgent' but original code compared 'Urgent'
   const sortTasks = (a, b) => {
-    if (a.Priority === 'Urgent' && b.Priority !== 'Urgent') return -1;
-    if (a.Priority !== 'Urgent' && b.Priority === 'Urgent') return 1;
-    return 0;
+    const aPrio = (a.Priority || a.priority || '').toLowerCase();
+    const bPrio = (b.Priority || b.priority || '').toLowerCase();
+    const PRIORITY_ORDER = { urgent: 0, high: 1, normal: 2, low: 3 };
+    return (PRIORITY_ORDER[aPrio] ?? 2) - (PRIORITY_ORDER[bPrio] ?? 2);
   };
 
   overdueTasks.sort(sortTasks);

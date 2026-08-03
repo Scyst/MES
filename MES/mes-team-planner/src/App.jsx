@@ -20,6 +20,40 @@ import MyTasks from './components/MyTasks';
 import Resources from './components/Resources';
 import SpaceView from './components/SpaceView';
 
+// BUG-018: Top-level components — must NOT be defined inside App() to prevent
+// unmount/remount on every parent render, which resets internal state (e.g. imgError).
+const ProfileAvatar = ({ currentUser, size = 'sm', onClick }) => {
+  const [imgError, setImgError] = useState(false);
+  const avatarTimestamp = localStorage.getItem('avatar_ts') || '';
+  if (!currentUser) return null;
+  const initial = (currentUser.fullname || currentUser.username || 'U').charAt(0).toUpperCase();
+  const sizeClass = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-9 h-9 text-sm';
+  return (
+    <button onClick={onClick} className={`${sizeClass} rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0 hover:ring-2 hover:ring-indigo-500/50 transition-all active:scale-95 overflow-hidden`} title={currentUser.fullname || currentUser.username}>
+      {!imgError ? (
+        <img src={`api/uploads/avatars/${currentUser.username}.jpg?t=${avatarTimestamp}`} onError={() => setImgError(true)} className="w-full h-full object-cover" alt={initial} />
+      ) : (
+        initial
+      )}
+    </button>
+  );
+};
+
+const RealTimeClock = () => {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <div className="hidden lg:flex items-center justify-center">
+      <span className="text-xs font-medium text-slate-500 dark:text-slate-400" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        {time.toLocaleTimeString('th-TH', { hour12: false, hour: '2-digit', minute: '2-digit' })} น. • {time.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+      </span>
+    </div>
+  );
+};
+
 const mainNav = [
   { tab: 'dashboard', icon: FiPieChart, label: 'Dashboard' },
   { tab: 'my-tasks', icon: FiUser, label: 'Assigned to me' },
@@ -71,16 +105,32 @@ function App() {
   const refreshData = useCallback(async (silent = false) => {
     if (!silent) setDataLoading(true);
     try {
-      // 1. Fetch AKA from DB first
-      let storedAkas = localStorage.getItem('user_akas') || '';
+      // BUG-007: Normalize AKA to comma-separated string regardless of localStorage format
+      let storedAkas = '';
       try {
         const profileRes = await axios.get('/api/profile.php');
         if (profileRes.data && profileRes.data.aka !== undefined) {
-          storedAkas = profileRes.data.aka;
+          storedAkas = profileRes.data.aka; // server always returns comma-separated string
           localStorage.setItem('user_akas', storedAkas);
+        } else {
+          // Read from localStorage — handle both old JSON array and new string formats
+          const raw = localStorage.getItem('user_akas') || '';
+          try {
+            const parsed = JSON.parse(raw);
+            storedAkas = Array.isArray(parsed) ? parsed.join(',') : raw;
+          } catch {
+            storedAkas = raw;
+          }
         }
       } catch (e) {
         // Ignore auth error on profile fetch if not ready
+        const raw = localStorage.getItem('user_akas') || '';
+        try {
+          const parsed = JSON.parse(raw);
+          storedAkas = Array.isArray(parsed) ? parsed.join(',') : raw;
+        } catch {
+          storedAkas = raw;
+        }
       }
 
       let tasksUrl = '/api/tasks.php';
@@ -181,7 +231,8 @@ function App() {
       if (deleteSeries) {
         refreshData();
       } else {
-        setTasks(prev => prev.filter(t => t.Id !== taskId));
+        // BUG-005: Use String comparison to avoid number vs string type mismatch
+        setTasks(prev => prev.filter(t => String(t.Id) !== String(taskId)));
       }
       return true;
     } catch (err) {
@@ -296,40 +347,26 @@ function App() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
+  // BUG-001: Single source of truth for theme — useEffect is the ONLY place that writes DOM/localStorage.
+  // Removed switchTheme() which duplicated these writes causing triple-write race conditions.
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      document.documentElement.style.backgroundColor = '#020617';
       localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.style.backgroundColor = '#f8fafc';
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
 
-  const switchTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    if (!isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-      document.documentElement.style.backgroundColor = '#020617';
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-      document.documentElement.style.backgroundColor = '#f8fafc';
-    }
-  };
-
+  // BUG-001: Only flip state — let useEffect handle all DOM side-effects
   const toggleTheme = (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
+    if (e) { e.preventDefault(); e.stopPropagation(); }
     document.documentElement.classList.add('theme-transitioning');
-    switchTheme();
-    setTimeout(() => {
-      document.documentElement.classList.remove('theme-transitioning');
-    }, 400);
+    setIsDarkMode(prev => !prev);
+    setTimeout(() => document.documentElement.classList.remove('theme-transitioning'), 400);
   };
 
   // ══════════ Render Content with Props ══════════
@@ -433,42 +470,8 @@ function App() {
     setIsSidebarOpen(false);
   };
 
-  // Profile avatar component
-  const ProfileAvatar = ({ size = 'sm', onClick }) => {
-    const [imgError, setImgError] = useState(false);
-    // Force reload image when refreshData changes by using a timestamp if needed, but for now simple src is fine.
-    // We add a timestamp to avoid caching issues right after an upload
-    const avatarTimestamp = localStorage.getItem('avatar_ts') || '';
-    
-    if (!currentUser) return null;
-    const initial = (currentUser.fullname || currentUser.username || 'U').charAt(0).toUpperCase();
-    const sizeClass = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-9 h-9 text-sm';
-    
-    return (
-      <button onClick={onClick} className={`${sizeClass} rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0 hover:ring-2 hover:ring-indigo-500/50 transition-all active:scale-95 overflow-hidden`} title={currentUser.fullname || currentUser.username}>
-        {!imgError ? (
-          <img src={`api/uploads/avatars/${currentUser.username}.jpg?t=${avatarTimestamp}`} onError={() => setImgError(true)} className="w-full h-full object-cover" alt={initial} />
-        ) : (
-          initial
-        )}
-      </button>
-    );
-  };
-
-  const RealTimeClock = () => {
-    const [time, setTime] = useState(new Date());
-    useEffect(() => {
-      const timer = setInterval(() => setTime(new Date()), 1000);
-      return () => clearInterval(timer);
-    }, []);
-    return (
-      <div className="hidden lg:flex items-center justify-center">
-        <span className="text-xs font-medium text-slate-500 dark:text-slate-400" style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {time.toLocaleTimeString('th-TH', { hour12: false, hour: '2-digit', minute: '2-digit' })} น. • {time.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
-        </span>
-      </div>
-    );
-  };
+  // BUG-018: ProfileAvatar and RealTimeClock moved to top-level (above App function)
+  // to prevent re-mount on every App render which was resetting imgError state.
 
   return (
     <div className="flex flex-col h-screen bg-[#f4f9f8] dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans overflow-hidden">
@@ -497,7 +500,7 @@ function App() {
           
           <div className="relative">
             <div className="flex items-center gap-3 cursor-pointer p-1 pl-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700" onClick={() => setShowProfileMenu(!showProfileMenu)}>
-              <ProfileAvatar size="md" />
+              <ProfileAvatar currentUser={currentUser} size="md" />
             </div>
             
             {showProfileMenu && (
@@ -628,7 +631,7 @@ function App() {
               <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
             </button>
             {/* Mobile Profile Icon */}
-            <ProfileAvatar size="sm" onClick={() => setShowProfileMenu(!showProfileMenu)} />
+            <ProfileAvatar currentUser={currentUser} size="sm" onClick={() => setShowProfileMenu(!showProfileMenu)} />
           </div>
         </header>
 
@@ -754,11 +757,15 @@ function App() {
       <NotificationManager tasks={tasks} />
       
       {/* Global Modals */}
-      <AddTaskModal 
-        isOpen={isGlobalTaskModalOpen} 
-        onClose={() => { setIsGlobalTaskModalOpen(false); setGlobalEditingTask(null); }} 
-        onSave={(data) => { handleSaveTask(data); setIsGlobalTaskModalOpen(false); setGlobalEditingTask(null); }} 
-        currentUser={currentUser} 
+      <AddTaskModal
+        isOpen={isGlobalTaskModalOpen}
+        onClose={() => { setIsGlobalTaskModalOpen(false); setGlobalEditingTask(null); }}
+        onSave={async (data) => {
+          // BUG-002: await save before closing — prevents modal closing on failure
+          const ok = await handleSaveTask(data);
+          if (ok) { setIsGlobalTaskModalOpen(false); setGlobalEditingTask(null); }
+        }}
+        currentUser={currentUser}
         tasks={tasks}
         users={users}
         initialData={globalEditingTask}

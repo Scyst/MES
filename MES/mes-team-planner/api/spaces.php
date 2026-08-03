@@ -4,11 +4,7 @@ require_once 'db_helper.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $id = isset($_GET['id']) ? $_GET['id'] : null;
 
-function isAdminOrManager() {
-    if (!isset($_SESSION['user_role'])) return false;
-    $role = strtolower($_SESSION['user_role']);
-    return in_array($role, ['admin', 'manager', 'supervisor', 'creator']);
-}
+// NOTE: isAdminOrManager() is defined in db_helper.php (BUG-010)
 
 function ensureSpacesTable($pdo) {
     try {
@@ -50,7 +46,7 @@ function ensureSpacesTable($pdo) {
         $count = $pdo->query($sqlCheckEmpty)->fetchColumn();
         if ($count == 0) {
             $sqlInsertDefaults = "
-                INSERT INTO TeamPlanner_Spaces (Name, Icon, Color) VALUES 
+                INSERT INTO TeamPlanner_Spaces (Name, Icon, Color) VALUES
                 ('Engineers', 'FiUsers', 'text-indigo-500 bg-indigo-500/10'),
                 ('Design Team', 'FiUsers', 'text-pink-500 bg-pink-500/10'),
                 ('Developer Team', 'FiUsers', 'text-cyan-500 bg-cyan-500/10')
@@ -72,7 +68,7 @@ try {
             $spaces[] = $row;
         }
         sendJson($spaces);
-    } 
+    }
     elseif ($method === 'POST') {
         if (!isAdminOrManager()) {
             http_response_code(403);
@@ -102,7 +98,7 @@ try {
             $data['color'] ?? 'text-indigo-500 bg-indigo-500/10',
             $id
         ]);
-        
+
         $stmt = $pdo->prepare("SELECT * FROM TeamPlanner_Spaces WHERE Id = ?");
         $stmt->execute([$id]);
         sendJson($stmt->fetch(PDO::FETCH_ASSOC));
@@ -112,6 +108,14 @@ try {
             http_response_code(403);
             sendJson(['error' => 'Permission denied: Only Admin/Manager can delete spaces.']);
         }
+
+        // BUG-021: Cascade unlink tasks and projects before deleting space
+        $unlinkTasks = $pdo->prepare("UPDATE TeamPlanner_Tasks SET SpaceId = NULL WHERE SpaceId = ?");
+        $unlinkTasks->execute([$id]);
+
+        $unlinkProjects = $pdo->prepare("UPDATE TeamPlanner_Projects SET SpaceId = NULL WHERE SpaceId = ?");
+        $unlinkProjects->execute([$id]);
+
         $stmt = $pdo->prepare("DELETE FROM TeamPlanner_Spaces WHERE Id = ?");
         $stmt->execute([$id]);
         sendJson(['success' => true]);
@@ -120,6 +124,7 @@ try {
         sendJson(['error' => 'Method not allowed'], 405);
     }
 } catch (PDOException $e) {
+    error_log('spaces.php error: ' . $e->getMessage());
     sendJson(['error' => $e->getMessage()], 500);
 }
 ?>

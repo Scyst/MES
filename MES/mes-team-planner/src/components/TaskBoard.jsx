@@ -78,12 +78,13 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
     document.body.removeChild(link);
   };
 
+  // BUG-006: await save and only close modal on success — previously closed immediately before save
   const handleSaveTask = async (taskData) => {
-    setIsModalOpen(false);
-    setEditingTask(null);
-    setTimeout(async () => {
-      await onSaveTask(taskData);
-    }, 10);
+    const ok = await onSaveTask(taskData);
+    if (ok) {
+      setIsModalOpen(false);
+      setEditingTask(null);
+    }
   };
 
   const handleDeleteTask = async (taskId) => {

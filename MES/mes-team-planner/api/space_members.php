@@ -5,11 +5,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $id = isset($_GET['id']) ? $_GET['id'] : null;
 $spaceId = isset($_GET['space_id']) ? $_GET['space_id'] : null;
 
-function isAdminOrManager() {
-    if (!isset($_SESSION['user_role'])) return false;
-    $role = strtolower($_SESSION['user_role']);
-    return in_array($role, ['admin', 'manager', 'supervisor', 'creator']);
-}
+// NOTE: isAdminOrManager() is defined in db_helper.php (BUG-010)
 
 try {
     if ($method === 'GET') {
