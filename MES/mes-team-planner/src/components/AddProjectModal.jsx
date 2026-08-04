@@ -102,8 +102,18 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
     }
   };
 
-  const removeAttachment = (id) => {
-    setAttachmentsArr(attachmentsArr.filter(a => a.id !== id));
+  const removeAttachment = async (id, url) => {
+    if (!window.confirm('คุณต้องการลบไฟล์นี้ออกจากเซิร์ฟเวอร์ใช่หรือไม่? (การลบจะเกิดขึ้นทันที)')) return;
+    
+    try {
+      if (url) {
+        await axios.post('/api/delete_attachment.php', { url });
+      }
+      setAttachmentsArr(attachmentsArr.filter(a => a.id !== id));
+    } catch (e) {
+      console.error('Delete failed:', e);
+      alert('เกิดข้อผิดพลาดในการลบไฟล์จากเซิร์ฟเวอร์');
+    }
   };
 
   const handleClose = () => {
@@ -283,7 +293,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
                             <span className="text-[10px] text-slate-500">{(att.size / 1024).toFixed(1)} KB</span>
                           </div>
                         </div>
-                        <button type="button" onClick={() => removeAttachment(att.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors">
+                        <button type="button" onClick={() => removeAttachment(att.id, att.url)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors">
                           <FiTrash />
                         </button>
                       </div>
