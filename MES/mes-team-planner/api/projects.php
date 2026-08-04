@@ -50,7 +50,7 @@ try {
             sendJson(['error' => 'Project not found'], 404);
         }
 
-        if (!isAdminOrManager() && !isProjectOwnerBySession($project['Assignee'])) {
+        if (!isAdminOrManager() && !isProjectOwnerBySession($project['Assignee'], $pdo)) {
             http_response_code(403);
             sendJson(['error' => 'Permission denied: Only Admin/Manager or the Project Owner can edit this project.']);
         }

@@ -65,48 +65,62 @@ function isAdminOrManager() {
 
 /**
  * ตรวจสอบว่า session user เป็นเจ้าของงานหรือ creator หรือไม่
+ * รองรับ AKA ที่ดึงมาจาก DB โดยตรง
  */
-function isTaskOwnerBySession($taskAssignee, $taskCreatedBy = '') {
+function isTaskOwnerBySession($taskAssignee, $taskCreatedBy = '', $pdo = null) {
     $uname = strtolower($_SESSION['username'] ?? ($_SESSION['user']['username'] ?? ''));
     $fname = strtolower($_SESSION['fullname'] ?? ($_SESSION['user']['fullname'] ?? ''));
-    $aka   = strtolower($_SESSION['user_aka'] ?? '');
 
-    if (!$uname && !$fname && !$aka) return false;
+    // ดึง AKA จาก DB เสมอ (AKA ไม่ได้ถูกเก็บใน Session)
+    $akaList = [];
+    if ($pdo && $uname) {
+        try {
+            $s = $pdo->prepare("SELECT aka FROM USERS WHERE username = ?");
+            $s->execute([$uname]);
+            $row = $s->fetch(PDO::FETCH_ASSOC);
+            if ($row && !empty($row['aka'])) {
+                $akaList = array_filter(array_map('trim', array_map('strtolower', explode(',', $row['aka']))));
+            }
+        } catch (Exception $e) { /* ไม่บล็อคถ้า query fail */ }
+    }
+
+    if (!$uname && !$fname && empty($akaList)) return false;
 
     $assigneeStr = strtolower($taskAssignee ?? '');
     $creatorStr  = strtolower($taskCreatedBy ?? '');
 
-    $isAssignee = ($uname && strpos($assigneeStr, $uname) !== false) ||
-                  ($fname && strpos($assigneeStr, $fname) !== false) ||
-                  ($aka   && strpos($assigneeStr, $aka)   !== false);
+    $matchNames = function($str) use ($uname, $fname, $akaList) {
+        if ($uname && strpos($str, $uname) !== false) return true;
+        if ($fname && strpos($str, $fname) !== false) return true;
+        foreach ($akaList as $aka) {
+            if (!empty($aka) && strpos($str, $aka) !== false) return true;
+        }
+        return false;
+    };
 
-    $isCreator  = ($uname && $creatorStr === $uname) ||
-                  ($fname && $creatorStr === $fname) ||
-                  ($aka   && $creatorStr === $aka);
-
-    return $isAssignee || $isCreator;
+    return $matchNames($assigneeStr) || $matchNames($creatorStr);
 }
 
 /**
  * ตรวจสอบว่า session user เป็นเจ้าของโปรเจ็คหรือไม่
+ * ดึง AKA จาก DB โดยตรง เพราะ AKA ไม่ได้ถูกเก็บใน Session ตอน Login
  */
-function isProjectOwnerBySession($projectAssignee) {
+function isProjectOwnerBySession($projectAssignee, $pdo = null) {
     $uname = strtolower(trim($_SESSION['username'] ?? ($_SESSION['user']['username'] ?? '')));
     $fname = strtolower(trim($_SESSION['fullname'] ?? ($_SESSION['user']['fullname'] ?? '')));
-    
-    $rawAka = $_SESSION['user_aka'] ?? '';
+
+    // ดึง AKA จาก DB เสมอ (AKA ไม่ได้ถูกเก็บใน Session)
     $akaList = [];
-    if (!empty($rawAka)) {
-        if (is_string($rawAka) && (strpos(trim($rawAka), '[') === 0)) {
-            $decoded = json_decode($rawAka, true);
-            if (is_array($decoded)) {
-                $akaList = $decoded;
+    if ($pdo && $uname) {
+        try {
+            $s = $pdo->prepare("SELECT aka FROM USERS WHERE username = ?");
+            $s->execute([$uname]);
+            $row = $s->fetch(PDO::FETCH_ASSOC);
+            if ($row && !empty($row['aka'])) {
+                $akaList = array_filter(array_map('trim', array_map('strtolower', explode(',', $row['aka']))));
             }
-        } else {
-            $akaList = explode(',', $rawAka);
-        }
+        } catch (Exception $e) { /* ไม่บล็อคถ้า query fail */ }
     }
-    $akaList = array_filter(array_map('trim', array_map('strtolower', $akaList)));
 
     if (!$uname && !$fname && empty($akaList)) return false;
 
@@ -114,13 +128,10 @@ function isProjectOwnerBySession($projectAssignee) {
 
     if ($uname && strpos($assigneeStr, $uname) !== false) return true;
     if ($fname && strpos($assigneeStr, $fname) !== false) return true;
-    
     foreach ($akaList as $aka) {
-        if (!empty($aka) && strpos($assigneeStr, $aka) !== false) {
-            return true;
-        }
+        if (!empty($aka) && strpos($assigneeStr, $aka) !== false) return true;
     }
-    
+
     return false;
 }
 
