@@ -55,7 +55,9 @@ try {
             sendJson(['error' => 'Permission denied: Only Admin/Manager or the Project Owner can edit this project.']);
         }
 
-        $data = json_decode(file_get_contents('php://input'), true);
+        $inputString = file_get_contents('php://input');
+        file_put_contents(__DIR__ . '/debug.log', date('Y-m-d H:i:s') . " PUT Payload: " . $inputString . "\n", FILE_APPEND);
+        $data = json_decode($inputString, true);
 
         $updateFields = [];
         $params = [];

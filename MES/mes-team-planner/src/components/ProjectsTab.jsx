@@ -16,7 +16,7 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
 
   const fetchProjects = async () => {
     try {
-      const res = await axios.get('/api/projects');
+      const res = await axios.get(`/api/projects.php?_t=${Date.now()}`);
       const formattedData = res.data.map(p => ({
         ...p,
         Checklist: p.Checklist ? (typeof p.Checklist === 'string' ? JSON.parse(p.Checklist) : p.Checklist) : []

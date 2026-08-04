@@ -138,12 +138,13 @@ function App() {
         tasksUrl += `?akas=${encodeURIComponent(storedAkas)}`;
       }
 
+      const timestamp = Date.now();
       const [resTasks, resEvents, resAct, resProj, resSpaces, resUsers] = await Promise.all([
-        axios.get(tasksUrl),
+        axios.get(`${tasksUrl}${tasksUrl.includes('?') ? '&' : '?'}_t=${timestamp}`),
         axios.get('/api/events.php'),
         axios.get('/api/activities.php'),
-        axios.get('/api/projects.php'),
-        axios.get('/api/spaces.php'),
+        axios.get(`/api/projects.php?_t=${timestamp}`),
+        axios.get(`/api/spaces.php?_t=${timestamp}`),
         axios.get('/api/users.php').catch(() => ({ data: [] }))
       ]);
         setTasks(Array.isArray(resTasks.data) ? resTasks.data : []);
