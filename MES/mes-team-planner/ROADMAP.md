@@ -46,11 +46,10 @@ A seamless, modern, and responsive team planning and task management application
 - [x] Deploy frontend build to the live FTP server (`/Toolbox/plannerAgent`) and verify UI fixes in production environment.
 - [x] Implement Avatar Cropper feature in Profile Settings.
 - [x] Standardize unsaved changes warning across all modals using a custom `ConfirmDialog`.
-- [ ] Implement robust error handling on the backend (e.g. handling missing task IDs gracefully).
+- [x] Implement robust error handling on the backend (e.g. handling missing task IDs gracefully).
 
 ## 🚀 Upcoming Features (Phase 3: Advanced Functionality)
 - [ ] **Authentication & User Roles**: Login system to distinguish Admin vs normal users.
 - [ ] **Real-time Notifications**: WebSockets or polling for live updates on task changes.
-- [ ] **File Attachments**: Ability to upload images/documents to tasks.
+- [x] **File Attachments**: Ability to upload images/documents to tasks.
 - [ ] **Reporting & Export**: Export task boards to PDF or Excel.
-- [ ] **Dark/Light Mode Toggle**: Allow users to switch themes if necessary.

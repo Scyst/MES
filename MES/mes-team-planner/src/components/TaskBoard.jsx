@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { FiPlus, FiMoreVertical, FiLock, FiGlobe, FiClock, FiSearch, FiFilter, FiX, FiDownload, FiTag, FiCheckSquare, FiRefreshCw } from 'react-icons/fi';
+import { FiPlus, FiMoreVertical, FiLock, FiGlobe, FiClock, FiSearch, FiFilter, FiX, FiDownload, FiTag, FiCheckSquare, FiRefreshCw, FiPaperclip } from 'react-icons/fi';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import AddTaskModal from './AddTaskModal';
 import { canEditTask } from '../utils/permissions';
@@ -286,6 +286,19 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
                                       <span className="text-[10px] md:text-[11px] font-medium">{completedSubtasks}/{subtasks.length}</span>
                                     </div>
                                   )}
+                                  {(() => {
+                                    let attCount = 0;
+                                    try {
+                                      const arr = JSON.parse(task.attachments || task.Attachments || '[]');
+                                      attCount = arr.length;
+                                    } catch(e) {}
+                                    return attCount > 0 ? (
+                                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-500">
+                                        <FiPaperclip className="text-[10px]" />
+                                        <span className="text-[10px] md:text-[11px] font-medium">{attCount}</span>
+                                      </div>
+                                    ) : null;
+                                  })()}
                                 </div>
                                 <div className="flex items-center">
                                   {(task.Assignee || '').split(',').map(a => a.trim()).filter(Boolean).slice(0, 3).map((assignee, idx) => (

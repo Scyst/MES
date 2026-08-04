@@ -30,7 +30,10 @@ try {
         http_response_code(204);
         exit;
     }
-} catch (Exception $e) {
+} else {
+    sendJson(['error' => 'Invalid Request or Missing ID'], 400);
+}
+catch (Exception $e) {
     sendJson(['error' => 'Server Error'], 500);
 }
 ?>

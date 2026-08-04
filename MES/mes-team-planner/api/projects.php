@@ -116,7 +116,10 @@ try {
         http_response_code(204);
         exit;
     }
-} catch (Exception $e) {
+} else {
+    sendJson(['error' => 'Invalid Request or Missing ID'], 400);
+}
+catch (Exception $e) {
     // BUG-015: Log error details
     error_log('projects.php error: ' . $e->getMessage());
     sendJson(['error' => 'Server Error'], 500);

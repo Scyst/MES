@@ -36,6 +36,9 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   const [newComment, setNewComment] = useState('');
   const [subtasksArr, setSubtasksArr] = useState([]);
   const [newSubtask, setNewSubtask] = useState('');
+  const [attachmentsArr, setAttachmentsArr] = useState([]);
+  const [initialAttachmentsState, setInitialAttachmentsState] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '', status: 'todo', visibility: 'public', assignee: '',
@@ -83,6 +86,15 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         setInitialSubtasksState('[]');
       }
 
+      try {
+        const parsedAttachments = JSON.parse(initialData.attachments || initialData.Attachments || '[]');
+        setAttachmentsArr(parsedAttachments);
+        setInitialAttachmentsState(JSON.stringify(parsedAttachments));
+      } catch (e) {
+        setAttachmentsArr([]);
+        setInitialAttachmentsState('[]');
+      }
+
       if (initialData.Id) {
         fetchComments(initialData.Id);
       } else {
@@ -99,6 +111,8 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       setInitialFormState(JSON.stringify(newFormData));
       setSubtasksArr([]);
       setInitialSubtasksState('[]');
+      setAttachmentsArr([]);
+      setInitialAttachmentsState('[]');
       setComments([]);
       setNewComment('');
       setActiveTab('general');
@@ -130,9 +144,10 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   const handleClose = () => {
     const currentFormState = JSON.stringify(formData);
     const currentSubtasksState = JSON.stringify(subtasksArr);
+    const currentAttachmentsState = JSON.stringify(attachmentsArr);
     
-    if (initialFormState && initialSubtasksState) {
-      if (currentFormState !== initialFormState || currentSubtasksState !== initialSubtasksState) {
+    if (initialFormState && initialSubtasksState && initialAttachmentsState) {
+      if (currentFormState !== initialFormState || currentSubtasksState !== initialSubtasksState || currentAttachmentsState !== initialAttachmentsState) {
         setShowConfirmClose(true);
         return;
       }
@@ -193,6 +208,32 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     setSubtasksArr(subtasksArr.filter(st => st.id !== id));
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setIsUploading(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await axios.post('/api/upload_attachment.php', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data && res.data.id) {
+        setAttachmentsArr([...attachmentsArr, res.data]);
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert(error.response?.data?.error || 'Failed to upload file.');
+    } finally {
+      setIsUploading(false);
+      e.target.value = null; // reset input
+    }
+  };
+  
+  const removeAttachment = (id) => {
+    setAttachmentsArr(attachmentsArr.filter(a => a.id !== id));
+  };
+
   const handlePostComment = async (e) => {
     e.preventDefault();
     if (!newComment.trim() || !formData.Id) return;
@@ -224,7 +265,8 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     onSave({
       ...formData,
       recurrenceEndDate: computedEndDate,
-      subtasks: JSON.stringify(subtasksArr)
+      subtasks: JSON.stringify(subtasksArr),
+      attachments: JSON.stringify(attachmentsArr)
     });
   };
 
@@ -306,10 +348,22 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 onClick={() => setActiveTab('comments')}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'comments' ? 'border-sky-500 text-sky-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
               >
-                <FiMessageSquare /> พูดคุย
-                {comments.length > 0 && <span className="ml-1 bg-slate-100 dark:bg-slate-800 text-xs px-1.5 py-0.5 rounded-full">{comments.length}</span>}
+                <FiMessageSquare /> ความคิดเห็น
+                {comments.length > 0 && (
+                  <span className="ml-1 bg-slate-100 dark:bg-slate-800 text-xs px-1.5 py-0.5 rounded-full">{comments.length}</span>
+                )}
               </button>
             )}
+            <button 
+              type="button"
+              onClick={() => setActiveTab('attachments')}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'attachments' ? 'border-pink-500 text-pink-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
+            >
+              <FiType /> แนบไฟล์
+              {attachmentsArr.length > 0 && (
+                <span className="ml-1 bg-slate-100 dark:bg-slate-800 text-xs px-1.5 py-0.5 rounded-full">{attachmentsArr.length}</span>
+              )}
+            </button>
           </div>
         </div>
         
@@ -723,6 +777,59 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {/* ATTACHMENTS TAB */}
+          {activeTab === 'attachments' && (
+            <div className="flex flex-col h-full max-h-[50vh]">
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                
+                {/* File input area */}
+                <div className="flex flex-col items-center justify-center w-full">
+                  <label htmlFor="file-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 dark:border-slate-700 border-dashed rounded-xl cursor-pointer bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <FiPlus className="w-8 h-8 mb-2 text-slate-500" />
+                      <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">คลิกเพื่ออัปโหลด</span> หรือลากไฟล์มาวาง</p>
+                      <p className="text-xs text-slate-500">PNG, JPG, PDF หรือเอกสาร (สูงสุด 10MB)</p>
+                    </div>
+                    <input id="file-upload" type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
+                  </label>
+                  {isUploading && <p className="text-xs text-pink-500 mt-2 animate-pulse">กำลังอัปโหลด...</p>}
+                </div>
+
+                {/* List of attachments */}
+                {attachmentsArr.length > 0 && (
+                  <div className="flex flex-col gap-2 mt-4">
+                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">ไฟล์แนบทั้งหมด ({attachmentsArr.length})</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {attachmentsArr.map(att => (
+                        <div key={att.id} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            {att.type.startsWith('image/') ? (
+                              <img src={'/' + att.url} alt="thumbnail" className="w-10 h-10 object-cover rounded-md border border-slate-200 dark:border-slate-700" />
+                            ) : (
+                              <div className="w-10 h-10 flex items-center justify-center rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 text-xl border border-slate-200 dark:border-slate-700">
+                                <FiType />
+                              </div>
+                            )}
+                            <div className="flex flex-col overflow-hidden">
+                              <a href={'/' + att.url} target="_blank" rel="noreferrer" className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate hover:text-sky-500 hover:underline">
+                                {att.name}
+                              </a>
+                              <span className="text-[10px] text-slate-500">{(att.size / 1024).toFixed(1)} KB</span>
+                            </div>
+                          </div>
+                          <button type="button" onClick={() => removeAttachment(att.id)} className="text-rose-400 hover:text-rose-500 p-1.5 hover:bg-rose-500/10 rounded-md transition-colors shrink-0">
+                            <FiTrash2 className="text-sm" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+              </div>
             </div>
           )}
 

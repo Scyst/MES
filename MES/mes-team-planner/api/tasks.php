@@ -21,6 +21,7 @@ function formatTaskOutput($row) {
     $row['spaceId'] = $row['SpaceId'] ?: null;
     $row['groupId'] = $row['GroupId'] ?: null;
     $row['recurrenceSettings'] = $row['RecurrenceSettings'] ?: null;
+    $row['attachments'] = $row['Attachments'] ?: '[]';
     return $row;
 }
 
@@ -146,9 +147,9 @@ try {
             ];
         }
 
-        $sql = "INSERT INTO TeamPlanner_Tasks (Title, Status, Visibility, Assignee, DueDate, StartDate, StartTime, EndTime, Priority, Description, Subtasks, Tags, Recurrence, ProjectId, ProjectChecklistId, SpaceId, CreatedBy, GroupId, RecurrenceSettings)
+        $sql = "INSERT INTO TeamPlanner_Tasks (Title, Status, Visibility, Assignee, DueDate, StartDate, StartTime, EndTime, Priority, Description, Subtasks, Tags, Recurrence, ProjectId, ProjectChecklistId, SpaceId, CreatedBy, GroupId, RecurrenceSettings, Attachments)
                 OUTPUT INSERTED.*
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $pdo->prepare($sql);
         $createdTasks = [];
@@ -176,7 +177,8 @@ try {
                     $data['spaceId'] ?? null,
                     $createdBy,
                     $t['groupId'],
-                    $t['settings']
+                    $t['settings'],
+                    $data['attachments'] ?? '[]'
                 ]);
 
                 $newTask = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -220,7 +222,10 @@ try {
             }
 
             $pdo->commit();
-        } catch (Exception $txErr) {
+        } else {
+            sendJson(['error' => 'Invalid Request or Missing ID'], 400);
+        }
+        catch (Exception $txErr) {
             $pdo->rollBack();
             throw $txErr;
         }
@@ -266,7 +271,8 @@ try {
             'recurrence'         => 'Recurrence',
             'projectId'          => 'ProjectId',
             'projectChecklistId' => 'ProjectChecklistId',
-            'spaceId'            => 'SpaceId'
+            'spaceId'            => 'SpaceId',
+            'attachments'        => 'Attachments'
         ];
 
         foreach ($fields as $jsonKey => $dbKey) {
