@@ -36,9 +36,11 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   const [newComment, setNewComment] = useState('');
   const [subtasksArr, setSubtasksArr] = useState([]);
   const [newSubtask, setNewSubtask] = useState('');
+  const [checklistsArr, setChecklistsArr] = useState([]);
   const [attachmentsArr, setAttachmentsArr] = useState([]);
   const [initialAttachmentsState, setInitialAttachmentsState] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState(null);
   
   const [formData, setFormData] = useState({
     title: '', status: 'todo', visibility: 'public', assignee: '',
@@ -211,13 +213,18 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+      alert('ขนาดไฟล์เกิน 50MB');
+      e.target.value = null;
+      return;
+    }
+
     setIsUploading(true);
     const fd = new FormData();
     fd.append('file', file);
     try {
-      const res = await axios.post('/api/upload_attachment.php', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const res = await axios.post('/api/upload_attachment.php', fd);
       if (res.data && res.data.id) {
         setAttachmentsArr([...attachmentsArr, res.data]);
       }
@@ -226,12 +233,27 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       alert(error.response?.data?.error || 'Failed to upload file.');
     } finally {
       setIsUploading(false);
-      e.target.value = null; // reset input
+      e.target.value = null;
     }
   };
   
-  const removeAttachment = (id) => {
-    setAttachmentsArr(attachmentsArr.filter(a => a.id !== id));
+  const removeAttachment = (id, url) => {
+    setAttachmentToDelete({ id, url });
+  };
+
+  const confirmDeleteAttachment = async () => {
+    if (!attachmentToDelete) return;
+    try {
+      if (attachmentToDelete.url) {
+        await axios.post('/api/delete_attachment.php', { url: attachmentToDelete.url });
+      }
+      setAttachmentsArr(attachmentsArr.filter(a => a.id !== attachmentToDelete.id));
+    } catch (e) {
+      console.error('Delete failed:', e);
+      alert('เกิดข้อผิดพลาดในการลบไฟล์จากเซิร์ฟเวอร์');
+    } finally {
+      setAttachmentToDelete(null);
+    }
   };
 
   const handlePostComment = async (e) => {
@@ -289,19 +311,43 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
   return (
     <>
-    <ConfirmDialog 
-      isOpen={showConfirmClose}
-      title="ละทิ้งการเปลี่ยนแปลง?"
-      message="คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้และละทิ้งการเปลี่ยนแปลงหรือไม่?"
-      confirmText="ใช่, ปิดหน้าต่าง"
-      cancelText="ยกเลิก"
-      type="danger"
-      onConfirm={() => {
-        setShowConfirmClose(false);
-        onClose();
-      }}
-      onCancel={() => setShowConfirmClose(false)}
-    />
+    {showConfirmClose && (
+      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-fade-in">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700 animate-scale-up">
+          <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-2">ละทิ้งการเปลี่ยนแปลง?</h4>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการปิดโดยไม่บันทึกใช่หรือไม่?</p>
+          <div className="flex gap-3 justify-end">
+            <button onClick={() => setShowConfirmClose(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
+              ยกเลิก
+            </button>
+            <button onClick={() => { setShowConfirmClose(false); onClose(); }} className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-rose-500/20">
+              ยืนยันการปิด
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {attachmentToDelete && (
+      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-fade-in">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700 animate-scale-up">
+          <div className="flex items-center gap-3 mb-3 text-rose-500">
+            <FiTrash className="w-6 h-6" />
+            <h4 className="text-lg font-bold text-slate-800 dark:text-white">ลบไฟล์แนบ?</h4>
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">คุณต้องการลบไฟล์นี้ออกจากเซิร์ฟเวอร์ใช่หรือไม่? (การลบจะเกิดขึ้นทันที และไม่สามารถกู้คืนได้)</p>
+          <div className="flex gap-3 justify-end">
+            <button onClick={() => setAttachmentToDelete(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
+              ยกเลิก
+            </button>
+            <button onClick={confirmDeleteAttachment} className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-rose-500/20">
+              ลบถาวร
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <div 
       className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6"
       onClick={(e) => {
@@ -317,7 +363,6 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               <div className={`w-2.5 h-2.5 rounded-full ${isEditing ? 'bg-amber-400' : 'bg-indigo-500'}`}></div>
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{isEditing ? 'แก้ไขงาน' : 'สร้างงานใหม่'}</h3>
             </div>
-            {/* BUG-011: Use handleClose (not onClose) to trigger unsaved-change confirmation */}
             <button onClick={handleClose} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-700/80 transition-all active:scale-90">
               <FiX className="text-lg" />
             </button>
@@ -791,7 +836,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <FiPlus className="w-8 h-8 mb-2 text-slate-500" />
                       <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">คลิกเพื่ออัปโหลด</span> หรือลากไฟล์มาวาง</p>
-                      <p className="text-xs text-slate-500">PNG, JPG, PDF หรือเอกสาร (สูงสุด 10MB)</p>
+                      <p className="text-xs text-slate-500">PNG, JPG, PDF หรือเอกสาร (สูงสุด 50MB)</p>
                     </div>
                     <input id="file-upload" type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
                   </label>
@@ -820,7 +865,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                               <span className="text-[10px] text-slate-500">{(att.size / 1024).toFixed(1)} KB</span>
                             </div>
                           </div>
-                          <button type="button" onClick={() => removeAttachment(att.id)} className="text-rose-400 hover:text-rose-500 p-1.5 hover:bg-rose-500/10 rounded-md transition-colors shrink-0">
+                          <button type="button" onClick={() => removeAttachment(att.id, att.url)} className="text-rose-400 hover:text-rose-500 p-1.5 hover:bg-rose-500/10 rounded-md transition-colors shrink-0">
                             <FiTrash2 className="text-sm" />
                           </button>
                         </div>

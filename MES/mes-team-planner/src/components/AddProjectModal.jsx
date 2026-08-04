@@ -8,6 +8,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [attachmentsArr, setAttachmentsArr] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState(null);
   
   const [formData, setFormData] = useState({
     title: '', description: '', status: 'active', assignee: '', 
@@ -102,17 +103,22 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
     }
   };
 
-  const removeAttachment = async (id, url) => {
-    if (!window.confirm('คุณต้องการลบไฟล์นี้ออกจากเซิร์ฟเวอร์ใช่หรือไม่? (การลบจะเกิดขึ้นทันที)')) return;
-    
+  const removeAttachment = (id, url) => {
+    setAttachmentToDelete({ id, url });
+  };
+
+  const confirmDeleteAttachment = async () => {
+    if (!attachmentToDelete) return;
     try {
-      if (url) {
-        await axios.post('/api/delete_attachment.php', { url });
+      if (attachmentToDelete.url) {
+        await axios.post('/api/delete_attachment.php', { url: attachmentToDelete.url });
       }
-      setAttachmentsArr(attachmentsArr.filter(a => a.id !== id));
+      setAttachmentsArr(attachmentsArr.filter(a => a.id !== attachmentToDelete.id));
     } catch (e) {
       console.error('Delete failed:', e);
       alert('เกิดข้อผิดพลาดในการลบไฟล์จากเซิร์ฟเวอร์');
+    } finally {
+      setAttachmentToDelete(null);
     }
   };
 
@@ -267,6 +273,42 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
                     <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">คลิกเพื่ออัปโหลด</span> หรือลากไฟล์มาวาง</p>
                     <p className="text-xs text-slate-500">PNG, JPG, PDF หรือเอกสาร (สูงสุด 50MB)</p>
                   </div>
+                  {showConfirmClose && (
+                    <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-2xl animate-fade-in">
+                      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl max-w-sm w-full mx-4 border border-slate-200 dark:border-slate-700 animate-scale-up">
+                        <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-2">ละทิ้งการเปลี่ยนแปลง?</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการปิดโดยไม่บันทึกใช่หรือไม่?</p>
+                        <div className="flex gap-3 justify-end">
+                          <button onClick={() => setShowConfirmClose(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
+                            ยกเลิก
+                          </button>
+                          <button onClick={() => { setShowConfirmClose(false); onClose(); }} className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-rose-500/20">
+                            ยืนยันการปิด
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {attachmentToDelete && (
+                    <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-2xl animate-fade-in">
+                      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl max-w-sm w-full mx-4 border border-slate-200 dark:border-slate-700 animate-scale-up">
+                        <div className="flex items-center gap-3 mb-3 text-rose-500">
+                          <FiTrash className="w-6 h-6" />
+                          <h4 className="text-lg font-bold text-slate-800 dark:text-white">ลบไฟล์แนบ?</h4>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">คุณต้องการลบไฟล์นี้ออกจากเซิร์ฟเวอร์ใช่หรือไม่? (การลบจะเกิดขึ้นทันที และไม่สามารถกู้คืนได้)</p>
+                        <div className="flex gap-3 justify-end">
+                          <button onClick={() => setAttachmentToDelete(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
+                            ยกเลิก
+                          </button>
+                          <button onClick={confirmDeleteAttachment} className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-rose-500/20">
+                            ลบถาวร
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <input id="project-file-upload" type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
                 </label>
                 {isUploading && <p className="text-xs text-pink-500 mt-2 animate-pulse">กำลังอัปโหลด...</p>}
