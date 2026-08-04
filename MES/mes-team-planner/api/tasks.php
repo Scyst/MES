@@ -238,7 +238,7 @@ try {
             sendJson(['error' => 'Task not found'], 404);
         }
 
-        if (!isAdminOrManager() && !isTaskOwnerBySession($targetTask['Assignee'], $targetTask['CreatedBy'] ?? '')) {
+        if (!isAdminOrManager() && !isTaskOwnerBySession($targetTask['Assignee'], $targetTask['CreatedBy'] ?? '', $pdo)) {
             http_response_code(403);
             sendJson(['error' => 'Permission denied: Only Admin/Manager or the Task Owner can edit this task.']);
         }
@@ -357,7 +357,7 @@ try {
             sendJson(['error' => 'Task not found'], 404);
         }
 
-        if (!isAdminOrManager() && !isTaskOwnerBySession($targetTask['Assignee'], $targetTask['CreatedBy'] ?? '')) {
+        if (!isAdminOrManager() && !isTaskOwnerBySession($targetTask['Assignee'], $targetTask['CreatedBy'] ?? '', $pdo)) {
             http_response_code(403);
             sendJson(['error' => 'Permission denied: Only Admin/Manager or the Task Owner can delete this task.']);
         }
