@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FiBriefcase, FiPlus, FiClock, FiTrash2, FiEdit2, FiCheckSquare, FiTrash, FiCheckCircle } from 'react-icons/fi';
+import { FiBriefcase, FiPlus, FiClock, FiTrash2, FiEdit2, FiCheckSquare, FiTrash, FiCheckCircle, FiPaperclip } from 'react-icons/fi';
 import AddProjectModal from './AddProjectModal';
 import { canEditProject, canDeleteProject } from '../utils/permissions';
 
@@ -17,10 +17,17 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
   const fetchProjects = async () => {
     try {
       const res = await axios.get(`/api/projects.php?_t=${Date.now()}`);
-      const formattedData = res.data.map(p => ({
-        ...p,
-        Checklist: p.Checklist ? (typeof p.Checklist === 'string' ? JSON.parse(p.Checklist) : p.Checklist) : []
-      }));
+      const formattedData = res.data.map(p => {
+        let parsedAttachments = [];
+        try {
+          if (p.Attachments) parsedAttachments = typeof p.Attachments === 'string' ? JSON.parse(p.Attachments) : p.Attachments;
+        } catch(e) {}
+        return {
+          ...p,
+          Checklist: p.Checklist ? (typeof p.Checklist === 'string' ? JSON.parse(p.Checklist) : p.Checklist) : [],
+          Attachments: Array.isArray(parsedAttachments) ? parsedAttachments : []
+        };
+      });
       setProjects(formattedData);
     } catch (e) {
       console.error(e);
@@ -158,6 +165,11 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
                   </span>
                 )}
                 {p.Assignee && <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-purple-50 text-purple-500 dark:bg-purple-500/20 dark:text-purple-400">👤 {p.Assignee}</span>}
+                {p.Attachments && p.Attachments.length > 0 && (
+                  <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-sky-50 text-sky-500 dark:bg-sky-500/20 dark:text-sky-400 flex items-center gap-1">
+                    <FiPaperclip className="w-2.5 h-2.5" /> {p.Attachments.length}
+                  </span>
+                )}
                 {p.StartDate && p.DueDate && <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-slate-50 text-slate-500 dark:bg-slate-700 dark:text-slate-300">📅 {p.StartDate} ถึง {p.DueDate}</span>}
               </div>
 
