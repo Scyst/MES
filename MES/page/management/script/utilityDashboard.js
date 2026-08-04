@@ -1,34 +1,91 @@
 /* script/utilityDashboard.js */
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // 1. เปลี่ยนตัวแปรมารับค่า Start Date และ End Date
+
     const startDateInput = document.getElementById('startDate');
-    const endDateInput = document.getElementById('endDate');
-    const liveClockEl = document.getElementById('live-clock');
-    let energyChart = null;
+    const endDateInput   = document.getElementById('endDate');
+    const liveClockEl    = document.getElementById('live-clock');
 
+    // ── Chart state ──────────────────────────────────────────────────────────
+    let combinedChart = null;
+    let energyChart   = null;
+    let lpgChart      = null;
+    let currentMode   = 'stacked';   // default view
+    let lastTrendElec = [];
+    let lastTrendLpg  = [];
+    let lastIsRange   = false;
+
+    // ── Toggle chart view mode ────────────────────────────────────────────
+    window.switchChartMode = (mode) => {
+        if (mode === currentMode) return;
+        currentMode = mode;
+
+        // Update button active states
+        ['grouped', 'stacked', 'split'].forEach(m => {
+            const btn = document.getElementById(`btn-mode-${m}`);
+            if (!btn) return;
+            const isActive = m === mode;
+            btn.classList.toggle('btn-primary',         isActive);
+            btn.classList.toggle('btn-outline-primary',  !isActive);
+            btn.classList.toggle('active',               isActive);
+        });
+
+        const combinedView = document.getElementById('chart-combined-view');
+        const splitView    = document.getElementById('chart-split-view');
+
+        if (mode === 'split') {
+            // Destroy combined chart, show split canvases
+            if (combinedChart) { combinedChart.destroy(); combinedChart = null; }
+            combinedView.style.display = 'none';
+            splitView.style.display    = '';
+            if (energyChart) { energyChart.destroy(); energyChart = null; }
+            if (lpgChart)    { lpgChart.destroy();    lpgChart    = null; }
+            renderElecChart(lastTrendElec, lastIsRange);
+            renderLpgChart(lastTrendLpg,  lastIsRange);
+        } else {
+            // Destroy split charts, show combined canvas
+            if (energyChart) { energyChart.destroy(); energyChart = null; }
+            if (lpgChart)    { lpgChart.destroy();    lpgChart    = null; }
+            combinedView.style.display = '';
+            splitView.style.display    = 'none';
+            if (combinedChart) { combinedChart.destroy(); combinedChart = null; }
+            renderCombinedChart(lastTrendElec, lastTrendLpg, lastIsRange, mode);
+        }
+    };
+
+    // ── Load data from API ───────────────────────────────────────────────
     window.loadUtilityData = async () => {
-        if (document.hidden) return; // ประหยัดโหลด
+        if (document.hidden) return;
         if (!startDateInput || !endDateInput) return;
-        
-        try {
-            const sd = startDateInput.value;
-            const ed = endDateInput.value;
 
-            // 2. อัปเดต API ให้ส่ง startDate และ endDate
-            const res = await fetch(`api/api_utility.php?action=get_dashboard&startDate=${sd}&endDate=${ed}`);
+        try {
+            const sd  = startDateInput.value;
+            const ed  = endDateInput.value;
+            const res  = await fetch(`api/api_utility.php?action=get_dashboard&startDate=${sd}&endDate=${ed}`);
             const json = await res.json();
-            
+
             if (json.success) {
+                // Cache trend data for mode switching without re-fetching
+                lastTrendElec = json.data.trend_elec ?? json.data.trend ?? [];
+                lastTrendLpg  = json.data.trend_lpg  ?? [];
+                lastIsRange   = json.data.is_range;
+
                 renderKPIs(json.data.summary);
                 renderMeters(json.data.meters);
-                // 3. ส่งข้อมูลกราฟและสถานะ (is_range) ไปให้ฟังก์ชันวาดกราฟ
-                renderChart(json.data.trend, json.data.is_range);
+
+                if (currentMode === 'split') {
+                    if (energyChart) { energyChart.destroy(); energyChart = null; }
+                    if (lpgChart)    { lpgChart.destroy();    lpgChart    = null; }
+                    renderElecChart(lastTrendElec, lastIsRange);
+                    renderLpgChart(lastTrendLpg,  lastIsRange);
+                } else {
+                    if (combinedChart) { combinedChart.destroy(); combinedChart = null; }
+                    renderCombinedChart(lastTrendElec, lastTrendLpg, lastIsRange, currentMode);
+                }
             } else {
-                if(typeof showToast === 'function') showToast(json.message, 'danger');
+                if (typeof showToast === 'function') showToast(json.message, 'danger');
             }
         } catch (e) {
-            console.error("Error fetching data:", e);
+            console.error('Error fetching data:', e);
         }
     };
 
@@ -139,77 +196,271 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 🚀 Logic วาดกราฟใหม่ (รองรับการเริ่มที่ 08:00 และรองรับการดูรายเดือน)
-    function renderChart(trendData, isRange) {
+    // ── Electricity Hourly Bar Chart ─────────────────────────────
+    function renderElecChart(trendData, isRange) {
         const ctx = document.getElementById('energyTrendChart');
         if (!ctx) return;
 
-        let labels = [];
+        let labels   = [];
         let costData = [];
+        let usageData = [];
 
         if (!isRange) {
-            // โหมดวันเดียว: แกน X ต้องเรียงจาก 08:00 ถึง 07:00 (รวม 24 ชม.)
+            // โหมดวันเดียว: เรียงชั่วโมงจาก 08:00 ถึง 07:00 (production shift)
             for (let i = 8; i < 32; i++) {
-                let hr = i % 24;
-                let hrStr = hr.toString().padStart(2, '0') + ':00';
+                const hr    = i % 24;
+                const hrStr = hr.toString().padStart(2, '0') + ':00';
                 labels.push(hrStr);
-                
-                let found = trendData.find(d => parseInt(d.label_key) === hr);
-                costData.push(found ? parseFloat(found.val_cost) : 0);
+                const found = trendData.find(d => parseInt(d.label_key) === hr);
+                costData.push(found  ? parseFloat(found.val_cost)  : 0);
+                usageData.push(found ? parseFloat(found.val_usage) : 0);
             }
         } else {
-            // โหมดหลายวัน (Range): แกน X เป็นวันที่ (YYYY-MM-DD)
             trendData.forEach(d => {
                 labels.push(d.label_key);
                 costData.push(parseFloat(d.val_cost));
+                usageData.push(parseFloat(d.val_usage));
             });
         }
 
-        const barColors = !isRange 
-            ? labels.map(l => { let h = parseInt(l); return (h >= 9 && h <= 21) ? 'rgba(253, 126, 20, 0.8)' : 'rgba(13, 110, 253, 0.6)'; })
-            : 'rgba(25, 135, 84, 0.8)'; // โหมดหลายวันให้เป็นสีเขียวล้วนไปเลย
+        // สี Peak (09-22 น.) = ส้ม, Off-Peak = น้ำเงิน, range = เขียว
+        const barColors = !isRange
+            ? labels.map(l => { const h = parseInt(l); return (h >= 9 && h <= 21) ? 'rgba(253,126,20,0.85)' : 'rgba(13,110,253,0.55)'; })
+            : 'rgba(25,135,84,0.8)';
+
+        const chartConfig = {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{ label: 'Cost (฿)', data: costData, backgroundColor: barColors, borderRadius: 5, borderSkipped: false }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => !isRange ? `Hour: ${items[0].label}` : `Date: ${items[0].label}`,
+                            label: (item) => ` Cost: ฿${item.raw.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                            afterLabel: (item) => ` Usage: ${usageData[item.dataIndex].toLocaleString(undefined, { maximumFractionDigits: 1 })} kWh`
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Baht (฿)' } }
+                }
+            }
+        };
 
         if (energyChart) {
-            energyChart.data.labels = labels;
-            energyChart.data.datasets[0].data = costData;
-            energyChart.data.datasets[0].backgroundColor = barColors;
+            energyChart.data.labels                       = labels;
+            energyChart.data.datasets[0].data             = costData;
+            energyChart.data.datasets[0].backgroundColor  = barColors;
             energyChart.update();
         } else {
-            energyChart = new Chart(ctx.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{ label: 'Cost (THB)', data: costData, backgroundColor: barColors, borderRadius: 4 }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { 
-                        x: { grid: { display: false } },
-                        y: { beginAtZero: true, title: { display: true, text: 'Baht (฿)' } } 
-                    }
-                }
-            });
+            energyChart = new Chart(ctx.getContext('2d'), chartConfig);
         }
     }
 
-    window.exportToCSV = async () => {
-        const sd = startDateInput.value;
-        const ed = endDateInput.value;
-        const res = await fetch(`api/api_utility.php?action=get_dashboard&startDate=${sd}&endDate=${ed}`);
-        const json = await res.json();
-        if (json.success && json.data.trend.length > 0) {
-            let csv = "\uFEFFPeriod,Usage,Cost(THB)\n";
-            json.data.trend.forEach(r => {
-                csv += `${r.label_key},${r.val_usage},${r.val_cost}\n`;
+    // ── LPG Gas Hourly Bar Chart ─────────────────────────────────
+    function renderLpgChart(trendData, isRange) {
+        const ctx = document.getElementById('lpgTrendChart');
+        if (!ctx) return;
+
+        let labels    = [];
+        let costData  = [];
+        let usageData = [];
+
+        if (!isRange) {
+            for (let i = 8; i < 32; i++) {
+                const hr    = i % 24;
+                const hrStr = hr.toString().padStart(2, '0') + ':00';
+                labels.push(hrStr);
+                const found = trendData.find(d => parseInt(d.label_key) === hr);
+                costData.push(found  ? parseFloat(found.val_cost)  : 0);
+                usageData.push(found ? parseFloat(found.val_usage) : 0);
+            }
+        } else {
+            trendData.forEach(d => {
+                labels.push(d.label_key);
+                costData.push(parseFloat(d.val_cost));
+                usageData.push(parseFloat(d.val_usage));
             });
+        }
+
+        // สีแดงสอดคล้องกับ KPI card LPG
+        const barColor = isRange ? 'rgba(220,53,69,0.8)' : labels.map(() => 'rgba(220,53,69,0.75)');
+
+        const chartConfig = {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{ label: 'LPG Cost (฿)', data: costData, backgroundColor: barColor, borderRadius: 5, borderSkipped: false }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => !isRange ? `Hour: ${items[0].label}` : `Date: ${items[0].label}`,
+                            label: (item) => ` Cost: ฿${item.raw.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                            afterLabel: (item) => ` Usage: ${usageData[item.dataIndex].toLocaleString(undefined, { maximumFractionDigits: 3 })} m³`
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Baht (฿)' } }
+                }
+            }
+        };
+
+        if (lpgChart) {
+            lpgChart.data.labels                      = labels;
+            lpgChart.data.datasets[0].data            = costData;
+            lpgChart.data.datasets[0].backgroundColor = barColor;
+            lpgChart.update();
+        } else {
+            lpgChart = new Chart(ctx.getContext('2d'), chartConfig);
+        }
+    }
+
+    // ── Combined Chart: Grouped or Stacked ────────────────────────────────────
+    // NOTE: Intentionally >50 lines — complex dual-dataset config with peak coloring + stacking logic
+    function renderCombinedChart(trendElec, trendLpg, isRange, mode) {
+        const ctx = document.getElementById('combinedTrendChart');
+        if (!ctx) return;
+
+        let labels    = [];
+        let elecCost  = [];
+        let lpgCost   = [];
+        let elecUsage = [];
+        let lpgUsage  = [];
+
+        if (!isRange) {
+            // วันเดียว: เรียงชั่วโมง 08:00 → 07:00 (production shift)
+            for (let i = 8; i < 32; i++) {
+                const hr    = i % 24;
+                const hrStr = hr.toString().padStart(2, '0') + ':00';
+                labels.push(hrStr);
+                const fe = trendElec.find(d => parseInt(d.label_key) === hr);
+                const fl = trendLpg.find(d  => parseInt(d.label_key) === hr);
+                elecCost.push(fe  ? parseFloat(fe.val_cost)  : 0);
+                lpgCost.push(fl   ? parseFloat(fl.val_cost)  : 0);
+                elecUsage.push(fe ? parseFloat(fe.val_usage) : 0);
+                lpgUsage.push(fl  ? parseFloat(fl.val_usage) : 0);
+            }
+        } else {
+            // หลายวัน: merge labels จากทั้งสอง dataset
+            const allLabels = [...new Set([
+                ...trendElec.map(d => d.label_key),
+                ...trendLpg.map(d  => d.label_key)
+            ])].sort();
+            allLabels.forEach(lbl => {
+                labels.push(lbl);
+                const fe = trendElec.find(d => d.label_key === lbl);
+                const fl = trendLpg.find(d  => d.label_key === lbl);
+                elecCost.push(fe  ? parseFloat(fe.val_cost)  : 0);
+                lpgCost.push(fl   ? parseFloat(fl.val_cost)  : 0);
+                elecUsage.push(fe ? parseFloat(fe.val_usage) : 0);
+                lpgUsage.push(fl  ? parseFloat(fl.val_usage) : 0);
+            });
+        }
+
+        // สี Peak/Off-Peak สำหรับไฟฟ้า (range ใช้สีส้มล้วน)
+        const elecColors = !isRange
+            ? labels.map(l => { const h = parseInt(l); return (h >= 9 && h <= 21) ? 'rgba(253,126,20,0.85)' : 'rgba(13,110,253,0.6)'; })
+            : 'rgba(253,126,20,0.8)';
+
+        const isStacked = mode === 'stacked';
+
+        combinedChart = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Electricity (฿)',
+                        data: elecCost,
+                        backgroundColor: elecColors,
+                        borderRadius: isStacked ? 0 : 4,
+                        borderSkipped: 'bottom',
+                        // stack key: stacked=same group, grouped=unique group
+                        stack: isStacked ? 'utility' : 'elec',
+                    },
+                    {
+                        label: 'LPG Gas (฿)',
+                        data: lpgCost,
+                        backgroundColor: 'rgba(220,53,69,0.8)',
+                        borderRadius: 4,
+                        borderSkipped: 'bottom',
+                        stack: isStacked ? 'utility' : 'lpg',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        display: true, position: 'top',
+                        labels: { usePointStyle: true, pointStyle: 'rect', padding: 16, font: { size: 11 } }
+                    },
+                    tooltip: {
+                        mode: 'index', intersect: false,
+                        callbacks: {
+                            title: (items) => !isRange ? `Hour: ${items[0].label}` : `Date: ${items[0].label}`,
+                            label: (item) => {
+                                const usage = item.datasetIndex === 0
+                                    ? ` ${elecUsage[item.dataIndex].toLocaleString(undefined, { maximumFractionDigits: 1 })} kWh`
+                                    : ` ${lpgUsage[item.dataIndex].toLocaleString(undefined, { maximumFractionDigits: 3 })} m³`;
+                                return ` ${item.dataset.label}: ฿${item.raw.toLocaleString(undefined, { minimumFractionDigits: 2 })}${usage}`;
+                            },
+                            afterBody: (items) => {
+                                if (!isStacked) return [];
+                                const total = items.reduce((sum, i) => sum + i.raw, 0);
+                                return [`──────────────`, `  Total: ฿${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, stacked: isStacked },
+                    y: {
+                        beginAtZero: true,
+                        stacked: isStacked,
+                        title: { display: true, text: 'Baht (฿)' }
+                    }
+                }
+            }
+        });
+    }
+
+    window.exportToCSV = async () => {
+        const sd  = startDateInput.value;
+        const ed  = endDateInput.value;
+        const res  = await fetch(`api/api_utility.php?action=get_dashboard&startDate=${sd}&endDate=${ed}`);
+        const json = await res.json();
+        if (json.success) {
+            const elecRows = json.data.trend_elec ?? json.data.trend ?? [];
+            const lpgRows  = json.data.trend_lpg  ?? [];
+
+            if (elecRows.length === 0 && lpgRows.length === 0) { alert('No data to export'); return; }
+
+            let csv = '\uFEFFType,Period,Usage,Cost(THB)\n';
+            elecRows.forEach(r => { csv += `Electricity,${r.label_key},${r.val_usage},${r.val_cost}\n`; });
+            lpgRows.forEach(r  => { csv += `LPG,${r.label_key},${r.val_usage},${r.val_cost}\n`; });
+
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
+            const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Utility_Cost_${sd}_to_${ed}.csv`;
+            link.download = `Utility_${sd}_to_${ed}.csv`;
             link.click();
         } else {
-            alert("No data to export");
+            alert('No data to export');
         }
     };
 

@@ -49,46 +49,70 @@ try {
                 $meterSums[$row['meter_name']] = $row;
             }
 
+            // ── Trend: Electricity (กรองออก MDB เพราะเป็น Main breaker ไม่ใช่ sub-meter) ──
             if ($startDate === $endDate) {
-                $sqlTrend = "SELECT log_hour AS label_key, SUM(consumption) as val_usage, SUM(calculated_cost) as val_cost 
-                             FROM dbo.UTILITY_HOURLY_SUMMARY WITH (NOLOCK)
-                             WHERE log_date = :sd AND meter_id IN (SELECT meter_id FROM dbo.UTILITY_METERS WHERE utility_type = 'ELECTRIC' AND meter_name != 'MDB')
-                             GROUP BY log_hour ORDER BY log_hour";
-                $stmtHE = $pdo->prepare($sqlTrend);
-                $stmtHE->execute([':sd' => $startDate]);
+                $sqlTrendElec = "SELECT log_hour AS label_key, SUM(consumption) as val_usage, SUM(calculated_cost) as val_cost 
+                                 FROM dbo.UTILITY_HOURLY_SUMMARY WITH (NOLOCK)
+                                 WHERE log_date = :sd AND meter_id IN (SELECT meter_id FROM dbo.UTILITY_METERS WHERE utility_type = 'ELECTRIC' AND meter_name != 'MDB')
+                                 GROUP BY log_hour ORDER BY log_hour";
+                $stmtElec = $pdo->prepare($sqlTrendElec);
+                $stmtElec->execute([':sd' => $startDate]);
+
+                $sqlTrendLpg = "SELECT log_hour AS label_key, SUM(consumption) as val_usage, SUM(calculated_cost) as val_cost 
+                                FROM dbo.UTILITY_HOURLY_SUMMARY WITH (NOLOCK)
+                                WHERE log_date = :sd AND meter_id IN (SELECT meter_id FROM dbo.UTILITY_METERS WHERE utility_type = 'LPG')
+                                GROUP BY log_hour ORDER BY log_hour";
+                $stmtLpg = $pdo->prepare($sqlTrendLpg);
+                $stmtLpg->execute([':sd' => $startDate]);
             } else {
-                $sqlTrend = "SELECT CONVERT(VARCHAR, log_date, 23) AS label_key, SUM(consumption) as val_usage, SUM(calculated_cost) as val_cost 
-                             FROM dbo.UTILITY_HOURLY_SUMMARY WITH (NOLOCK)
-                             WHERE log_date BETWEEN :sd AND :ed AND meter_id IN (SELECT meter_id FROM dbo.UTILITY_METERS WHERE utility_type = 'ELECTRIC' AND meter_name != 'MDB')
-                             GROUP BY log_date ORDER BY log_date";
-                $stmtHE = $pdo->prepare($sqlTrend);
-                $stmtHE->execute([':sd' => $startDate, ':ed' => $endDate]);
+                $sqlTrendElec = "SELECT CONVERT(VARCHAR, log_date, 23) AS label_key, SUM(consumption) as val_usage, SUM(calculated_cost) as val_cost 
+                                 FROM dbo.UTILITY_HOURLY_SUMMARY WITH (NOLOCK)
+                                 WHERE log_date BETWEEN :sd AND :ed AND meter_id IN (SELECT meter_id FROM dbo.UTILITY_METERS WHERE utility_type = 'ELECTRIC' AND meter_name != 'MDB')
+                                 GROUP BY log_date ORDER BY log_date";
+                $stmtElec = $pdo->prepare($sqlTrendElec);
+                $stmtElec->execute([':sd' => $startDate, ':ed' => $endDate]);
+
+                $sqlTrendLpg = "SELECT CONVERT(VARCHAR, log_date, 23) AS label_key, SUM(consumption) as val_usage, SUM(calculated_cost) as val_cost 
+                                FROM dbo.UTILITY_HOURLY_SUMMARY WITH (NOLOCK)
+                                WHERE log_date BETWEEN :sd AND :ed AND meter_id IN (SELECT meter_id FROM dbo.UTILITY_METERS WHERE utility_type = 'LPG')
+                                GROUP BY log_date ORDER BY log_date";
+                $stmtLpg = $pdo->prepare($sqlTrendLpg);
+                $stmtLpg->execute([':sd' => $startDate, ':ed' => $endDate]);
             }
-            $trendData = $stmtHE->fetchAll(PDO::FETCH_ASSOC);
+            $trendElec = $stmtElec->fetchAll(PDO::FETCH_ASSOC);
+            $trendLpg  = $stmtLpg->fetchAll(PDO::FETCH_ASSOC);
+
             $summary = ['total_kw' => 0, 'period_kwh' => 0, 'period_elec_cost' => 0, 'total_lpg_flow' => 0, 'period_lpg_usage' => 0, 'period_lpg_cost' => 0, 'avg_pf' => 0, 'pf_count' => 0, 'online_meters' => 0, 'total_meters' => count($realtimeData)];
             $meters = [];
             foreach ($realtimeData as $row) {
                 $mName = $row['meter_name'];
                 $row['period_usage'] = $meterSums[$mName]['period_usage'] ?? 0;
-                $row['period_cost'] = $meterSums[$mName]['period_cost'] ?? 0;
+                $row['period_cost']  = $meterSums[$mName]['period_cost']  ?? 0;
                 $meters[] = $row;
                 if ($row['status'] === 'ONLINE') $summary['online_meters']++;
                 if ($row['utility_type'] === 'ELECTRIC') {
                     if ($mName !== 'MDB') {
-                        $summary['total_kw'] += floatval($row['power_kw']);
-                        $summary['period_kwh'] += floatval($row['period_usage']);
-                        $summary['period_elec_cost'] += floatval($row['period_cost']);
+                        $summary['total_kw']         += floatval($row['power_kw']);
+                        $summary['period_kwh']        += floatval($row['period_usage']);
+                        $summary['period_elec_cost']  += floatval($row['period_cost']);
                     }
                     if (floatval($row['power_factor']) > 0) { $summary['avg_pf'] += floatval($row['power_factor']); $summary['pf_count']++; }
                 } elseif ($row['utility_type'] === 'LPG') {
-                    $summary['total_lpg_flow'] += floatval($row['flow_rate']);
-                    $summary['period_lpg_usage'] += floatval($row['period_usage']);
-                    $summary['period_lpg_cost'] += floatval($row['period_cost']);
+                    $summary['total_lpg_flow']    += floatval($row['flow_rate']);
+                    $summary['period_lpg_usage']  += floatval($row['period_usage']);
+                    $summary['period_lpg_cost']   += floatval($row['period_cost']);
                 }
             }
             if ($summary['pf_count'] > 0) $summary['avg_pf'] = $summary['avg_pf'] / $summary['pf_count'];
 
-            sendSuccess(['summary' => $summary, 'meters' => $meters, 'trend' => $trendData, 'is_range' => ($startDate !== $endDate)]);
+            sendSuccess([
+                'summary'   => $summary,
+                'meters'    => $meters,
+                'trend'     => $trendElec,   // backward-compat key (electricity)
+                'trend_elec'=> $trendElec,
+                'trend_lpg' => $trendLpg,
+                'is_range'  => ($startDate !== $endDate)
+            ]);
             break;
 
         case 'get_tou_rates':
@@ -175,8 +199,8 @@ try {
                 $logTimeStr  = str_replace(['T', 'Z'], [' ', ''], $logTimeStr);
 
                 if ($utilityType === 'ELECTRIC') {
+                    // NOTE: ไม่ต้องแปลง timezone เพราะ Node-RED ส่ง thai_time มาแล้ว
                     $dt = new DateTime($logTimeStr);
-                    $dt->modify('0 hours');
                     $logTimeStr = $dt->format('Y-m-d H:i:s');
                 }
 
@@ -231,8 +255,4 @@ try {
     sendError("System Error: " . $e->getMessage(), 500);
 }
 
-/*} catch (Exception $e) {
-    error_log("Utility API Error: " . $e->getMessage());
-    sendError("System Error. Please try again.", 500);
-}*/ // [แก้ไข] ปิด try-catch ใหญ่ไว้ก่อน เพื่อให้เห็น Error จริงของ Database ที่อาจเกิดขึ้นในแต่ละบล็อกได้ชัดเจนขึ้น
 ?>

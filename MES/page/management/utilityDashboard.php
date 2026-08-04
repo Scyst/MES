@@ -114,19 +114,69 @@ $pageHeaderSubtitle = "Real-time Power, LPG Consumption & Cost Analysis";
                 </div>
             </div>
 
-            <div class="row mb-3">
+
+            <div class="row g-3 mb-3">
                 <div class="col-12">
                     <div class="exec-card p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                             <h6 class="fw-bold text-dark mb-0">
-                                <i class="fas fa-chart-area me-2 text-primary"></i>Hourly Utility Cost Profile (฿)
+                                <i class="fas fa-chart-bar me-2 text-primary"></i>Hourly Utility Cost (฿)
+                                <span class="text-muted fw-normal ms-1" style="font-size:0.75rem;" id="chart-legend-hint">
+                                    — Electricity + LPG
+                                </span>
                             </h6>
-                            <span class="badge bg-light text-secondary border">Peak / Off-Peak Highlighted</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="d-flex gap-1" style="font-size:0.75rem;">
+                                    <span class="d-flex align-items-center gap-1"><span style="width:10px;height:10px;border-radius:2px;background:rgba(253,126,20,0.85);display:inline-block;"></span>Elec Peak</span>
+                                    <span class="d-flex align-items-center gap-1 ms-2"><span style="width:10px;height:10px;border-radius:2px;background:rgba(13,110,253,0.6);display:inline-block;"></span>Off-Peak</span>
+                                    <span class="d-flex align-items-center gap-1 ms-2"><span style="width:10px;height:10px;border-radius:2px;background:rgba(220,53,69,0.8);display:inline-block;"></span>LPG</span>
+                                </div>
+                                <div class="btn-group btn-group-sm ms-2" role="group" aria-label="Chart view mode">
+                                    <button id="btn-mode-grouped" type="button"
+                                        class="btn btn-outline-primary fw-bold"
+                                        onclick="switchChartMode('grouped')" title="Grouped bars — compare Elec vs LPG side-by-side">
+                                        <i class="fas fa-chart-bar"></i><span class="d-none d-sm-inline ms-1">Grouped</span>
+                                    </button>
+                                    <button id="btn-mode-stacked" type="button"
+                                        class="btn btn-primary fw-bold active"
+                                        onclick="switchChartMode('stacked')" title="Stacked bars — see total cost and proportions">
+                                        <i class="fas fa-layer-group"></i><span class="d-none d-sm-inline ms-1">Stacked</span>
+                                    </button>
+                                    <button id="btn-mode-split" type="button"
+                                        class="btn btn-outline-primary fw-bold"
+                                        onclick="switchChartMode('split')" title="Split view — two separate charts">
+                                        <i class="fas fa-columns"></i><span class="d-none d-sm-inline ms-1">Split</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div style="height: 300px;"><canvas id="energyTrendChart"></canvas></div>
+
+                        <!-- Combined view: Grouped / Stacked -->
+                        <div id="chart-combined-view" style="height: 300px;">
+                            <canvas id="combinedTrendChart"></canvas>
+                        </div>
+
+                        <!-- Split view: two separate charts -->
+                        <div id="chart-split-view" class="row g-3" style="display:none;">
+                            <div class="col-12 col-xl-6">
+                                <div style="height: 260px;"><canvas id="energyTrendChart"></canvas></div>
+                                <div class="text-center mt-1" style="font-size:0.7rem;color:#888;">
+                                    <i class="fas fa-bolt text-warning me-1"></i>Electricity Cost / Hour
+                                    <span class="ms-2"><span style="width:8px;height:8px;border-radius:2px;background:rgba(253,126,20,0.85);display:inline-block;"></span> Peak</span>
+                                    <span class="ms-1"><span style="width:8px;height:8px;border-radius:2px;background:rgba(13,110,253,0.6);display:inline-block;"></span> Off-Peak</span>
+                                </div>
+                            </div>
+                            <div class="col-12 col-xl-6">
+                                <div style="height: 260px;"><canvas id="lpgTrendChart"></canvas></div>
+                                <div class="text-center mt-1" style="font-size:0.7rem;color:#888;">
+                                    <i class="fas fa-fire text-danger me-1"></i>LPG Gas Cost / Hour (m³)
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
 
             <div class="d-flex align-items-center mb-3 mt-4">
                 <h6 class="fw-bold text-dark mb-0"><i class="fas fa-sitemap me-2 text-secondary"></i>Sub-Meter Details</h6>
