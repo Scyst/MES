@@ -26,10 +26,10 @@ $fileSize = $file['size'];
 $fileTmpPath = $file['tmp_name'];
 $fileMimeType = mime_content_type($fileTmpPath);
 
-// Validate file size (e.g., max 2MB to match PHP ini defaults)
-$maxSize = 2 * 1024 * 1024;
+// Validate file size (e.g., max 50MB)
+$maxSize = 50 * 1024 * 1024;
 if ($fileSize > $maxSize) {
-    sendJson(['error' => 'File size exceeds 2MB limit.'], 400);
+    sendJson(['error' => 'File size exceeds 50MB limit.'], 400);
 }
 
 // Validate file type
