@@ -222,10 +222,7 @@ try {
             }
 
             $pdo->commit();
-        } else {
-            sendJson(['error' => 'Invalid Request or Missing ID'], 400);
-        }
-        catch (Exception $txErr) {
+        } catch (Exception $txErr) {
             $pdo->rollBack();
             throw $txErr;
         }
