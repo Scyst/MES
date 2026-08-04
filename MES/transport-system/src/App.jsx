@@ -18,12 +18,16 @@ const MyTicket = React.lazy(() => import('./pages/employee/MyTicket'));
 const BookingHistory = React.lazy(() => import('./pages/employee/BookingHistory'));
 const ProfilePage = React.lazy(() => import('./pages/employee/ProfilePage'));
 const MasterData = React.lazy(() => import('./pages/admin/MasterData'));
+const Portal = React.lazy(() => import('./pages/Portal'));
 
 function App() {
   return (
     <Router>
       <Suspense fallback={<PageLoader />}>
         <Routes>
+          {/* Main Landing Page */}
+          <Route path="/" element={<Portal />} />
+          
           {/* Passenger Check-in (QR landing) */}
           <Route path="/checkin" element={<CheckInPassenger />} />
           
@@ -54,8 +58,8 @@ function App() {
             <Route path="master" element={<MasterData />} />
           </Route>
           
-          {/* Redirect root to admin for this prototype */}
-          <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
     </Router>

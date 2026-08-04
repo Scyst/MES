@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BusFront, MapPin, Clock, Users, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { schedulesAPI, masterAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const DriverTrips = () => {
+  const { driverVehicleId } = useAuth();
   const [vehicle, setVehicle] = useState(null);
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,11 +13,13 @@ const DriverTrips = () => {
 
   useEffect(() => {
     const loadDriverData = async () => {
-      const vehicleId = localStorage.getItem('driver_vehicle_id');
-      if (!vehicleId) {
+      if (!driverVehicleId) {
         setLoading(false);
+        navigate('/driver', { replace: true });
         return;
       }
+      
+      const vehicleId = driverVehicleId;
 
       try {
         const [allSchedules, fleetData] = await Promise.all([

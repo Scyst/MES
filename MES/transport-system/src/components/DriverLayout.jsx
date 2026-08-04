@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Bus, Settings, LogOut, ClipboardList } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * DriverLayout — Shell layout for the driver-facing app.
@@ -8,25 +9,22 @@ import { useState, useEffect } from 'react';
  */
 const DriverLayout = () => {
   const navigate = useNavigate();
-  const [vehicleId, setVehicleId] = useState(null);
+  const { driverVehicleId, logoutDriver } = useAuth();
 
   useEffect(() => {
-    const savedVehicleId = localStorage.getItem('driver_vehicle_id');
-    if (!savedVehicleId) {
+    if (!driverVehicleId) {
       // Redirect to login if not logged in
       navigate('/driver/login', { replace: true });
-    } else {
-      setVehicleId(savedVehicleId);
     }
-  }, [navigate]);
+  }, [navigate, driverVehicleId]);
 
   const handleLogout = () => {
-    localStorage.removeItem('driver_vehicle_id');
+    logoutDriver();
     navigate('/driver/login', { replace: true });
   };
 
   // Don't render the layout shell if we are redirecting to login
-  if (!vehicleId) return null;
+  if (!driverVehicleId) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans transition-colors duration-300">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { UserCircle, Save, Sun, Moon, Building2, Phone, Briefcase, CheckCircle2, Lock } from 'lucide-react';
 import { masterAPI, authAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * ProfilePage — Employee self-service profile setup.
@@ -8,6 +9,8 @@ import { masterAPI, authAPI } from '../../services/api';
  * Stores additional preferences (phone, bu) locally or allows saving.
  */
 const ProfilePage = () => {
+  const { passengerProfile, loginPassenger } = useAuth();
+  
   const [profile, setProfile] = useState({
     empId: '',
     name: '',
@@ -25,12 +28,14 @@ const ProfilePage = () => {
         const deptData = await masterAPI.getDepartments().catch(() => []);
         setDepartments(deptData || []);
         
-        setProfile({
-          empId: localStorage.getItem('passenger_empId') || '',
-          name: localStorage.getItem('passenger_name') || '',
-          bu: localStorage.getItem('passenger_bu') || '',
-          phone: localStorage.getItem('passenger_phone') || '',
-        });
+        if (passengerProfile) {
+          setProfile({
+            empId: passengerProfile.empId || '',
+            name: passengerProfile.name || '',
+            bu: passengerProfile.bu || '',
+            phone: passengerProfile.phone || '',
+          });
+        }
       } catch (err) {
         console.error('Failed to load data', err);
       } finally {
@@ -38,7 +43,7 @@ const ProfilePage = () => {
       }
     };
     initProfile();
-  }, []);
+  }, [passengerProfile]);
 
   // Sync theme with document
   useEffect(() => {
@@ -53,12 +58,27 @@ const ProfilePage = () => {
 
   const handleSave = (e) => {
     e.preventDefault();
-    localStorage.setItem('passenger_empId', profile.empId);
-    localStorage.setItem('passenger_name', profile.name);
-    localStorage.setItem('passenger_bu', profile.bu);
-    localStorage.setItem('passenger_phone', profile.phone);
+    loginPassenger(profile);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  };
+
+  const handleVerifyEmployee = async () => {
+    if (!profile.empId) return;
+    try {
+      const res = await masterAPI.verifyEmployee(profile.empId);
+      if (res.success && res.data) {
+        setProfile(prev => ({
+          ...prev,
+          name: res.data.emp_name || prev.name,
+          bu: res.data.bu_id || prev.bu,
+        }));
+        // Could show a toast notification here
+      }
+    } catch (err) {
+      // If not found or error, just leave it as is so user can manually type
+      console.log('Employee not found in central DB, using manual entry');
+    }
   };
 
   const isProfileComplete = profile.empId && profile.name && profile.bu;
@@ -131,6 +151,7 @@ const ProfilePage = () => {
                 placeholder="เช่น 123456"
                 value={profile.empId}
                 onChange={e => setProfile({ ...profile, empId: e.target.value })}
+                onBlur={handleVerifyEmployee}
                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
               />
             </div>

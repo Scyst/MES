@@ -1,12 +1,14 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Bus, Route, Menu, X, Hexagon, Sun, Moon, LogOut, CalendarDays, ExternalLink, Settings, Database } from 'lucide-react';
+import { LayoutDashboard, Bus, Route, Menu, X, Hexagon, Sun, Moon, LogOut, CalendarDays, ExternalLink, Settings, Database, ShieldAlert } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const navigate = useNavigate();
   const location = useLocation();
+  const { me, loadingMe } = useAuth();
 
   // Close sidebar on mobile when navigating
   useEffect(() => {
@@ -37,7 +39,7 @@ const AdminLayout = () => {
   };
 
   const handleLogout = () => {
-    navigate('/checkin');
+    navigate('/');
   };
 
   const getPageTitle = () => {
@@ -46,6 +48,34 @@ const AdminLayout = () => {
     if (location.pathname.includes('vehicles')) return 'ฐานข้อมูลยานพาหนะ';
     return 'Admin Control';
   };
+
+  // Authorization Check
+  if (loadingMe) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Restrict to logged-in central MES users (ideally checking for specific admin/HR roles)
+  if (!me) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 max-w-sm w-full text-center">
+          <ShieldAlert className="mx-auto text-red-500 mb-4" size={48} />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Access Denied</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">คุณไม่มีสิทธิ์เข้าถึงระบบผู้ดูแลการเดินรถ กรุณาเข้าสู่ระบบด้วยบัญชี MES ที่ได้รับสิทธิ์</p>
+          <button
+            onClick={() => navigate('/')}
+            className="w-full py-3 text-white font-bold bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors"
+          >
+            กลับสู่หน้าหลัก
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden text-gray-900 dark:text-gray-100 transition-colors">

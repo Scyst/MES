@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Bus, CheckCircle2, User, Building2, AlertTriangle, Clock, MapPin, QrCode } from 'lucide-react';
 import { schedulesAPI, bookingsAPI, masterAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * CheckInPassenger — QR landing page for driver-side scanning.
@@ -13,6 +14,7 @@ const CheckInPassenger = () => {
   const [searchParams] = useSearchParams();
   const vehicleId = searchParams.get('vehicleId');
   const tripId = searchParams.get('tripId');
+  const { passengerProfile, loginPassenger } = useAuth();
 
   const [vehicle, setVehicle] = useState(null);
   const [trip, setTrip] = useState(null);
@@ -29,13 +31,12 @@ const CheckInPassenger = () => {
   const [isExtra, setIsExtra] = useState(false);
 
   useEffect(() => {
-    // Pre-fill from local profile
-    const savedName = localStorage.getItem('passenger_name');
-    const savedBu = localStorage.getItem('passenger_bu');
-    const savedEmpId = localStorage.getItem('passenger_empId');
-    if (savedName) setName(savedName);
-    if (savedBu) setBu(savedBu);
-    if (savedEmpId) setEmpId(savedEmpId);
+    // Pre-fill from local profile (memory-only)
+    if (passengerProfile) {
+      if (passengerProfile.name) setName(passengerProfile.name);
+      if (passengerProfile.bu) setBu(passengerProfile.bu);
+      if (passengerProfile.empId) setEmpId(passengerProfile.empId);
+    }
 
     const loadContext = async () => {
       setLoading(true);
@@ -66,17 +67,15 @@ const CheckInPassenger = () => {
       }
     };
     loadContext();
-  }, [tripId, vehicleId]);
+  }, [tripId, vehicleId, passengerProfile]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name || !bu || isSubmitting) return;
     setIsSubmitting(true);
 
-    // Save for next time
-    localStorage.setItem('passenger_name', name);
-    localStorage.setItem('passenger_bu', bu);
-    if (empId) localStorage.setItem('passenger_empId', empId);
+    // Save for next time (in memory)
+    loginPassenger({ empId, name, bu, phone: passengerProfile?.phone || '' });
 
     if (trip) {
       try {
@@ -193,6 +192,19 @@ const CheckInPassenger = () => {
     );
   }
 
+  const handleVerifyEmployee = async () => {
+    if (!empId) return;
+    try {
+      const res = await masterAPI.verifyEmployee(empId);
+      if (res.success && res.data) {
+        setName(res.data.emp_name || name);
+        setBu(res.data.bu_id || bu);
+      }
+    } catch (err) {
+      console.log('Employee not found in central DB, using manual entry');
+    }
+  };
+
   // ─── Check-in Form ────────────────────────────────────────────────────────────
   const boardedCount = bookedPassengers.filter(b => b.status === 'BOARDED').length;
   const waitingCount = bookedPassengers.filter(b => b.status === 'BOOKED').length;
@@ -261,6 +273,7 @@ const CheckInPassenger = () => {
               type="text"
               value={empId}
               onChange={e => setEmpId(e.target.value)}
+              onBlur={handleVerifyEmployee}
               placeholder="เช่น 1096902163"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
             />

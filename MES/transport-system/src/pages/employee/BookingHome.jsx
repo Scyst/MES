@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { masterAPI, bookingsAPI, authAPI } from '../../services/api';
+import { masterAPI, bookingsAPI } from '../../services/api';
 import { BusFront, ChevronRight, Filter, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
+import { useAuth } from '../../contexts/AuthContext';
 
 const BookingHome = () => {
+  const { passengerProfile } = useAuth();
+  
   const [selectedRoute, setSelectedRoute] = useState('ทั้งหมด');
   const [bookings, setBookings] = useState([]);
   
@@ -39,7 +42,7 @@ const BookingHome = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const currentEmpId = localStorage.getItem('passenger_empId') || '';
+      const currentEmpId = passengerProfile?.empId || '';
       const [bookingsData, routesData, timeSlotsData] = await Promise.all([
         bookingsAPI.getBookings(currentEmpId ? { empId: currentEmpId } : {}),
         masterAPI.getRoutes(),
@@ -62,7 +65,7 @@ const BookingHome = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [passengerProfile]);
 
   // Generate next 7 days for Date Picker
   const dateStrip = Array.from({ length: 7 }).map((_, i) => {
@@ -76,13 +79,14 @@ const BookingHome = () => {
     };
   });
 
-  // handleToggleMultiDay removed
-
+  // --- Helper: Get Profile Data ---
   const getCurrentUserParams = () => {
-    const empId = localStorage.getItem('passenger_empId') || '';
-    const name = localStorage.getItem('passenger_name') || '';
-    const bu = localStorage.getItem('passenger_bu') || '';
-    return { empId, name, bu };
+    if (!passengerProfile) return { empId: '', name: '', bu: '' };
+    return { 
+      empId: passengerProfile.empId || '', 
+      name: passengerProfile.name || '', 
+      bu: passengerProfile.bu || '' 
+    };
   };
 
   const doBookSingleRoute = async (route) => {
@@ -123,8 +127,6 @@ const BookingHome = () => {
       });
     }
   };
-
-  // doBookMultiDay removed
 
   const handleBookClick = (route) => {
     setBookingModal({ isOpen: true, route });
@@ -206,8 +208,6 @@ const BookingHome = () => {
           ))}
         </div>
 
-        {/* Time Slots Selector (Moved to Modal) */}
-
         {/* Route List */}
         <div className="mt-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {loading ? (
@@ -222,7 +222,7 @@ const BookingHome = () => {
             </div>
           ) : (
             filteredRoutes.map(route => {
-              const currentEmpId = localStorage.getItem('passenger_empId') || '';
+              const currentEmpId = passengerProfile?.empId || '';
               const myBooking = bookings.find(b => b.routeId === route.id && b.targetDate === selectedDate && b.timeSlotId === selectedTimeSlot && b.empId === currentEmpId && b.status !== 'CANCELLED');
 
               return (

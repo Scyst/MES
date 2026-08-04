@@ -4,10 +4,13 @@ import { Clock, MapPin, BusFront, CheckCircle, QrCode, ArrowLeft, AlertTriangle,
 import SurveyModal from '../../components/employee/SurveyModal';
 import ConfirmModal from '../../components/ConfirmModal';
 import { bookingsAPI, schedulesAPI, authAPI, masterAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const MyTicket = () => {
   const { ticketId } = useParams();
   const navigate = useNavigate();
+  const { passengerProfile } = useAuth();
+  
   const [booking, setBooking] = useState(null);
   const [schedule, setSchedule] = useState(null);
   const [routeName, setRouteName] = useState('');
@@ -26,7 +29,7 @@ const MyTicket = () => {
           me = await authAPI.getMe();
         } catch(e) {}
         
-        const empId = me?.username || localStorage.getItem('passenger_empId') || '';
+        const empId = me?.username || passengerProfile?.empId || '';
         
         const [myBookings, ticketBookings, allSchedules, allRoutes, allTimeSlots] = await Promise.all([
           bookingsAPI.getBookings(empId ? { empId } : {}),

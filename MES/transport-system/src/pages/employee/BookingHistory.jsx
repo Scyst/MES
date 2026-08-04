@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Ticket, BusFront, Clock, MapPin, AlertTriangle, ChevronRight, X } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
 import { bookingsAPI, schedulesAPI, authAPI, masterAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const BookingHistory = () => {
   const navigate = useNavigate();
+  const { passengerProfile } = useAuth();
+  
   const [bookings, setBookings] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [routes, setRoutes] = useState([]);
@@ -22,10 +25,15 @@ const BookingHistory = () => {
           me = await authAPI.getMe();
         } catch(e) {}
         
-        const empId = me?.username || localStorage.getItem('passenger_empId') || '';
+        const empId = me?.username || passengerProfile?.empId || '';
         
+        if (!empId) {
+          setLoading(false);
+          return;
+        }
+
         const [myBookings, allSchedules, allRoutes, allTimeSlots] = await Promise.all([
-          bookingsAPI.getBookings(empId ? { empId } : {}),
+          bookingsAPI.getBookings({ empId }),
           schedulesAPI.getSchedules(),
           masterAPI.getRoutes(),
           masterAPI.getTimeSlots()

@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bus, KeyRound } from 'lucide-react';
 import { masterAPI, authAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const DriverLogin = () => {
+  const { driverVehicleId, loginDriver } = useAuth();
   const [fleet, setFleet] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [loading, setLoading] = useState(true);
@@ -11,8 +13,7 @@ const DriverLogin = () => {
 
   useEffect(() => {
     const init = async () => {
-      const savedVehicleId = localStorage.getItem('driver_vehicle_id');
-      if (savedVehicleId) {
+      if (driverVehicleId) {
         navigate('/driver/trips', { replace: true });
         return;
       }
@@ -26,12 +27,12 @@ const DriverLogin = () => {
       }
     };
     init();
-  }, [navigate]);
+  }, [navigate, driverVehicleId]);
 
   const handleLogin = (e) => {
     e.preventDefault();
     if (!selectedVehicle) return;
-    localStorage.setItem('driver_vehicle_id', selectedVehicle);
+    loginDriver(selectedVehicle);
     navigate('/driver/trips', { replace: true });
   };
 

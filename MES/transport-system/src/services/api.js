@@ -50,12 +50,15 @@ export const masterAPI = {
   getDepartments: () => fetchAPI('/master.php?type=departments'),
   addDepartment: (data) => fetchAPI('/master.php?type=departments', { method: 'POST', body: JSON.stringify(data) }),
   deleteDepartment: (id) => fetchAPI(`/master.php?type=departments&id=${id}`, { method: 'DELETE' }),
+  
+  verifyEmployee: (empId) => fetchAPI(`/master/verify_employee.php?empId=${empId}`),
 };
 
 export const schedulesAPI = {
   getSchedules: () => fetchAPI('/schedules.php'),
   addSchedule: (data) => fetchAPI('/schedules.php', { method: 'POST', body: JSON.stringify(data) }),
   deleteSchedule: (id) => fetchAPI(`/schedules.php?id=${id}`, { method: 'DELETE' }),
+  getBilling: (scheduleId) => fetchAPI(`/schedules/billing.php?scheduleId=${scheduleId}`),
 };
 
 export const bookingsAPI = {
