@@ -57,8 +57,9 @@ function sendJson($data, $status = 200) {
  * ตรวจสอบว่า session user เป็น Admin/Manager หรือไม่
  */
 function isAdminOrManager() {
-    if (!isset($_SESSION['user_role'])) return false;
-    $role = strtolower($_SESSION['user_role']);
+    $role = $_SESSION['user_role'] ?? ($_SESSION['user']['role'] ?? '');
+    if (empty($role)) return false;
+    $role = strtolower($role);
     return in_array($role, ['admin', 'manager', 'supervisor', 'creator']);
 }
 
@@ -90,8 +91,8 @@ function isTaskOwnerBySession($taskAssignee, $taskCreatedBy = '') {
  * ตรวจสอบว่า session user เป็นเจ้าของโปรเจ็คหรือไม่
  */
 function isProjectOwnerBySession($projectAssignee) {
-    $uname = strtolower(trim($_SESSION['username'] ?? ''));
-    $fname = strtolower(trim($_SESSION['fullname'] ?? ''));
+    $uname = strtolower(trim($_SESSION['username'] ?? ($_SESSION['user']['username'] ?? '')));
+    $fname = strtolower(trim($_SESSION['fullname'] ?? ($_SESSION['user']['fullname'] ?? '')));
     
     $rawAka = $_SESSION['user_aka'] ?? '';
     $akaList = [];
