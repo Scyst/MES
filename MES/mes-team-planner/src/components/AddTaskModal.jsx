@@ -342,6 +342,16 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 <span className="ml-1 bg-slate-100 dark:bg-slate-800 text-xs px-1.5 py-0.5 rounded-full">{subtasksArr.filter(s=>s.completed).length}/{subtasksArr.length}</span>
               )}
             </button>
+            <button 
+              type="button"
+              onClick={() => setActiveTab('attachments')}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'attachments' ? 'border-pink-500 text-pink-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
+            >
+              <FiType /> แนบไฟล์
+              {attachmentsArr.length > 0 && (
+                <span className="ml-1 bg-slate-100 dark:bg-slate-800 text-xs px-1.5 py-0.5 rounded-full">{attachmentsArr.length}</span>
+              )}
+            </button>
             {isEditing && (
               <button 
                 type="button"
@@ -354,16 +364,6 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 )}
               </button>
             )}
-            <button 
-              type="button"
-              onClick={() => setActiveTab('attachments')}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'attachments' ? 'border-pink-500 text-pink-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
-            >
-              <FiType /> แนบไฟล์
-              {attachmentsArr.length > 0 && (
-                <span className="ml-1 bg-slate-100 dark:bg-slate-800 text-xs px-1.5 py-0.5 rounded-full">{attachmentsArr.length}</span>
-              )}
-            </button>
           </div>
         </div>
         

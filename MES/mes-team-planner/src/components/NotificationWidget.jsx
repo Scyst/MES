@@ -8,9 +8,7 @@ export default function NotificationWidget({ currentUser, tasks, onSaveTask, onD
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   
-  // Custom AKA for filtering
-  const [aka, setAka] = useState(() => localStorage.getItem('mes_planner_aka') || '');
-  
+
   // Last checked time from localStorage or current time
   const [lastChecked, setLastChecked] = useState(() => {
     const saved = localStorage.getItem('mes_planner_last_checked');
@@ -40,17 +38,24 @@ export default function NotificationWidget({ currentUser, tasks, onSaveTask, onD
 
   const username = currentUser ? (currentUser.fullname || currentUser.username) : '';
 
+  // Get AKA from global profile
+  const userAkas = localStorage.getItem('user_akas') || '';
+
   // 1. Get tasks where current user is involved
   const myTasks = useMemo(() => {
-    if (!tasks || (!username && !aka)) return [];
+    if (!tasks || (!username && !userAkas)) return [];
     const searchTerms = [username];
-    if (aka.trim()) searchTerms.push(aka.trim());
+    if (userAkas.trim()) {
+      userAkas.split(',').forEach(a => {
+        if (a.trim()) searchTerms.push(a.trim());
+      });
+    }
 
     return tasks.filter(t => {
       const assignees = (t.Assignee || '').split(',').map(n => n.trim().toLowerCase());
       return searchTerms.some(term => assignees.includes(term.toLowerCase()));
     });
-  }, [tasks, username, aka]);
+  }, [tasks, username, userAkas]);
 
   // 2. Map tasks with their latest comment and unread status
   const chatRooms = useMemo(() => {
@@ -84,7 +89,11 @@ export default function NotificationWidget({ currentUser, tasks, onSaveTask, onD
   const unreadCount = useMemo(() => {
     let count = 0;
     const searchTerms = [username];
-    if (aka.trim()) searchTerms.push(aka.trim());
+    if (userAkas.trim()) {
+      userAkas.split(',').forEach(a => {
+        if (a.trim()) searchTerms.push(a.trim());
+      });
+    }
 
     recentComments.forEach(c => {
       const commentDate = new Date(c.CreatedAt);
@@ -97,7 +106,7 @@ export default function NotificationWidget({ currentUser, tasks, onSaveTask, onD
       }
     });
     return count;
-  }, [recentComments, lastChecked, username, aka]);
+  }, [recentComments, lastChecked, username, userAkas]);
 
   const handleOpen = () => {
     setIsOpen(!isOpen);
@@ -134,21 +143,7 @@ export default function NotificationWidget({ currentUser, tasks, onSaveTask, onD
               </button>
             </div>
 
-            {/* AKA Settings Bar */}
-            <div className="px-3 py-2.5 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2 shrink-0 shadow-sm">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">AKA ของคุณ:</span>
-              <input 
-                type="text" 
-                value={aka} 
-                onChange={(e) => {
-                  setAka(e.target.value);
-                  localStorage.setItem('mes_planner_aka', e.target.value);
-                }}
-                placeholder="เช่น NPT หรือชื่อเล่น"
-                className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-md px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500 transition-all placeholder-slate-400"
-              />
-            </div>
-            
+
             <div className="overflow-y-auto custom-scrollbar flex-1 p-2 bg-slate-50/50 dark:bg-slate-900/50">
               {chatRooms.length > 0 ? (
                 <div className="space-y-1.5">

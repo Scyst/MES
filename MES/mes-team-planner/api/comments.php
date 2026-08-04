@@ -30,11 +30,13 @@ try {
             sendJson(['error' => 'Message is required']);
         }
 
+        $author = $_SESSION['username'] ?? ($_SESSION['user']['username'] ?? ($data['author'] ?? 'Unknown'));
+
         $sql = "INSERT INTO TeamPlanner_Comments (TaskId, Author, Message) OUTPUT INSERTED.* VALUES (?, ?, ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             $taskId,
-            $data['author'] ?? 'User',
+            $author,
             trim($data['message'])
         ]);
 

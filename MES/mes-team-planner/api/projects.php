@@ -14,6 +14,7 @@ try {
             if (!empty($row['StartDate'])) $row['StartDate'] = formatDate($row['StartDate']);
             if (!empty($row['DueDate'])) $row['DueDate'] = formatDate($row['DueDate']);
             $row['SpaceId'] = $row['SpaceId'] ?: null;
+            $row['Attachments'] = $row['Attachments'] ?: '[]';
             $projects[] = $row;
         }
         sendJson($projects);
@@ -21,7 +22,7 @@ try {
     elseif ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
 
-        $sql = "INSERT INTO TeamPlanner_Projects (Title, Description, Status, Assignee, StartDate, DueDate, Tags, Priority, Checklist, SpaceId) OUTPUT INSERTED.* VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO TeamPlanner_Projects (Title, Description, Status, Assignee, StartDate, DueDate, Tags, Priority, Checklist, SpaceId, Attachments) OUTPUT INSERTED.* VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             $data['title'],
@@ -33,7 +34,8 @@ try {
             $data['tags'] ?? null,
             $data['priority'] ?? 'normal',
             $data['checklist'] ?? '[]',
-            $data['spaceId'] ?? null
+            $data['spaceId'] ?? null,
+            $data['attachments'] ?? '[]'
         ]);
 
         $newProject = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -72,7 +74,8 @@ try {
             'tags'        => 'Tags',
             'priority'    => 'Priority',
             'checklist'   => 'Checklist',
-            'spaceId'     => 'SpaceId'
+            'spaceId'     => 'SpaceId',
+            'attachments' => 'Attachments'
         ];
 
         foreach ($fields as $jsonKey => $dbKey) {

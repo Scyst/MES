@@ -1,10 +1,13 @@
+import axios from 'axios';
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiCheckSquare, FiTrash } from 'react-icons/fi';
+import { FiPlus, FiCheckSquare, FiTrash, FiType } from 'react-icons/fi';
 import ConfirmDialog from './common/ConfirmDialog';
 
 export default function AddProjectModal({ isOpen, onClose, onSave, initialData, spaces = [] }) {
   const [activeModalTab, setActiveModalTab] = useState('general');
   const [newChecklistItem, setNewChecklistItem] = useState('');
+  const [attachmentsArr, setAttachmentsArr] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '', description: '', status: 'active', assignee: '', 
@@ -25,6 +28,13 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
       } catch (e) {
         console.error("Failed to parse checklist", e);
       }
+
+      let parsedAttachments = [];
+      try {
+        if (initialData.Attachments) parsedAttachments = typeof initialData.Attachments === 'string' ? JSON.parse(initialData.Attachments) : initialData.Attachments;
+        else if (initialData.attachments) parsedAttachments = typeof initialData.attachments === 'string' ? JSON.parse(initialData.attachments) : initialData.attachments;
+      } catch (e) { console.error(e); }
+      setAttachmentsArr(Array.isArray(parsedAttachments) ? parsedAttachments : []);
 
       const newFormData = {
         title: initialData.Title || initialData.title || '',
@@ -50,6 +60,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
       setFormData(newFormData);
       setInitialFormState(JSON.stringify(newFormData));
       setNewChecklistItem('');
+      setAttachmentsArr([]);
       setActiveModalTab('general');
     }
   }, [isOpen, initialData]);
@@ -63,6 +74,32 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setIsUploading(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await axios.post('/api/upload_attachment.php', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data && res.data.id) {
+        setAttachmentsArr([...attachmentsArr, res.data]);
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert(error.response?.data?.error || 'Failed to upload file.');
+    } finally {
+      setIsUploading(false);
+      e.target.value = null;
+    }
+  };
+
+  const removeAttachment = (id) => {
+    setAttachmentsArr(attachmentsArr.filter(a => a.id !== id));
+  };
 
   const handleClose = () => {
     if (initialFormState && JSON.stringify(formData) !== initialFormState) {
@@ -81,6 +118,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
       setNewChecklistItem('');
     }
     
+    finalData.attachments = JSON.stringify(attachmentsArr);
     if (onSave) {
       onSave(finalData);
     }
@@ -127,6 +165,16 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
               Checklist
               {formData.checklist?.length > 0 && (
                 <span className="bg-slate-100 dark:bg-slate-800 text-xs px-1.5 py-0.5 rounded-full">{formData.checklist.filter(s=>s.isDone).length}/{formData.checklist.length}</span>
+              )}
+            </button>
+            <button 
+              type="button"
+              onClick={() => setActiveModalTab('attachments')}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeModalTab === 'attachments' ? 'border-pink-500 text-pink-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
+            >
+              แนบไฟล์
+              {attachmentsArr?.length > 0 && (
+                <span className="bg-slate-100 dark:bg-slate-800 text-xs px-1.5 py-0.5 rounded-full">{attachmentsArr.length}</span>
               )}
             </button>
           </div>
@@ -192,6 +240,55 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
               </div>
             </div>
           )}
+
+        {/* ATTACHMENTS TAB */}
+        {activeModalTab === 'attachments' && (
+          <div className="flex flex-col h-full max-h-[50vh]">
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <div className="flex flex-col items-center justify-center w-full">
+                <label htmlFor="project-file-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 dark:border-slate-700 border-dashed rounded-xl cursor-pointer bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <FiPlus className="w-8 h-8 mb-2 text-slate-500" />
+                    <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">คลิกเพื่ออัปโหลด</span> หรือลากไฟล์มาวาง</p>
+                    <p className="text-xs text-slate-500">PNG, JPG, PDF หรือเอกสาร (สูงสุด 10MB)</p>
+                  </div>
+                  <input id="project-file-upload" type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
+                </label>
+                {isUploading && <p className="text-xs text-pink-500 mt-2 animate-pulse">กำลังอัปโหลด...</p>}
+              </div>
+
+              {attachmentsArr.length > 0 && (
+                <div className="flex flex-col gap-2 mt-4">
+                  <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">ไฟล์แนบทั้งหมด ({attachmentsArr.length})</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {attachmentsArr.map(att => (
+                      <div key={att.id} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          {att.type.startsWith('image/') ? (
+                            <img src={import.meta.env.BASE_URL + att.url} alt="thumbnail" className="w-10 h-10 object-cover rounded-md border border-slate-200 dark:border-slate-700" />
+                          ) : (
+                            <div className="w-10 h-10 flex items-center justify-center rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 text-xl border border-slate-200 dark:border-slate-700">
+                              <FiType />
+                            </div>
+                          )}
+                          <div className="flex flex-col overflow-hidden">
+                            <a href={import.meta.env.BASE_URL + att.url} target="_blank" rel="noreferrer" className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate hover:text-sky-500 hover:underline">
+                              {att.name}
+                            </a>
+                            <span className="text-[10px] text-slate-500">{(att.size / 1024).toFixed(1)} KB</span>
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => removeAttachment(att.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors">
+                          <FiTrash />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
           {activeModalTab === 'checklist' && (
             <div className="space-y-4">
