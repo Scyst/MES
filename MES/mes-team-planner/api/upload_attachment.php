@@ -12,8 +12,12 @@ if ($method !== 'POST') {
     sendJson(['error' => 'Method Not Allowed'], 405);
 }
 
-if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-    sendJson(['error' => 'No file uploaded or upload error.'], 400);
+if (!isset($_FILES['file'])) {
+    sendJson(['error' => 'No file uploaded.'], 400);
+}
+
+if ($_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+    sendJson(['error' => 'Upload error code: ' . $_FILES['file']['error']], 400);
 }
 
 $file = $_FILES['file'];

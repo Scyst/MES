@@ -82,9 +82,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
     const fd = new FormData();
     fd.append('file', file);
     try {
-      const res = await axios.post('/api/upload_attachment.php', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const res = await axios.post('/api/upload_attachment.php', fd);
       if (res.data && res.data.id) {
         setAttachmentsArr([...attachmentsArr, res.data]);
       }
