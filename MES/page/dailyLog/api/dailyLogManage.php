@@ -36,7 +36,7 @@ try {
             // --- [1] Manpower Data ---
             $mpQuery = "SELECT COUNT(L.emp_id) as total,
                 SUM(CASE WHEN L.status IN ('PRESENT', 'LATE') THEN 1 ELSE 0 END) as present,
-                SUM(CASE WHEN L.status IN ('SICK', 'BUSINESS', 'VACATION', 'LEAVE') THEN 1 ELSE 0 END) as leave_count
+                SUM(CASE WHEN L.status IN ('SICK', 'BUSINESS', 'VACATION', 'LEAVE', 'ABSENT', 'HOLIDAY') THEN 1 ELSE 0 END) as leave_count
                 FROM MANPOWER_DAILY_LOGS L WITH (NOLOCK) 
                 LEFT JOIN MANPOWER_EMPLOYEES E WITH (NOLOCK) ON L.emp_id = E.emp_id
                 LEFT JOIN MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
