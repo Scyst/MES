@@ -90,17 +90,37 @@ function isTaskOwnerBySession($taskAssignee, $taskCreatedBy = '') {
  * ตรวจสอบว่า session user เป็นเจ้าของโปรเจ็คหรือไม่
  */
 function isProjectOwnerBySession($projectAssignee) {
-    $uname = strtolower($_SESSION['username'] ?? '');
-    $fname = strtolower($_SESSION['fullname'] ?? '');
-    $aka   = strtolower($_SESSION['user_aka'] ?? '');
+    $uname = strtolower(trim($_SESSION['username'] ?? ''));
+    $fname = strtolower(trim($_SESSION['fullname'] ?? ''));
+    
+    $rawAka = $_SESSION['user_aka'] ?? '';
+    $akaList = [];
+    if (!empty($rawAka)) {
+        if (is_string($rawAka) && (strpos(trim($rawAka), '[') === 0)) {
+            $decoded = json_decode($rawAka, true);
+            if (is_array($decoded)) {
+                $akaList = $decoded;
+            }
+        } else {
+            $akaList = explode(',', $rawAka);
+        }
+    }
+    $akaList = array_filter(array_map('trim', array_map('strtolower', $akaList)));
 
-    if (!$uname && !$fname && !$aka) return false;
+    if (!$uname && !$fname && empty($akaList)) return false;
 
     $assigneeStr = strtolower($projectAssignee ?? '');
 
-    return ($uname && strpos($assigneeStr, $uname) !== false) ||
-           ($fname && strpos($assigneeStr, $fname) !== false) ||
-           ($aka   && strpos($assigneeStr, $aka)   !== false);
+    if ($uname && strpos($assigneeStr, $uname) !== false) return true;
+    if ($fname && strpos($assigneeStr, $fname) !== false) return true;
+    
+    foreach ($akaList as $aka) {
+        if (!empty($aka) && strpos($assigneeStr, $aka) !== false) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 // Ensure $_SESSION['user'] exists
