@@ -42,7 +42,7 @@
                                 </div>
                                 <div class="text-danger">
                                     <h4 class="fw-bold mb-0" id="briefMpLeave">0</h4>
-                                    <small>ลา/หยุด</small>
+                                    <small>ขาด/ลา</small>
                                 </div>
                             </div>
                         </div>
