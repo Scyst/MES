@@ -507,7 +507,7 @@ function App() {
             {showProfileMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)}></div>
-                <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden animate-slide-up">
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-[200] overflow-hidden animate-slide-up">
                   {currentUser && (
                     <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{currentUser.fullname || currentUser.username}</p>
@@ -640,7 +640,7 @@ function App() {
         {showProfileMenu && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)}></div>
-            <div className="fixed right-4 top-14 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden animate-slide-up">
+            <div className="fixed right-4 top-14 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-[200] overflow-hidden animate-slide-up">
               {currentUser && (
                 <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">{currentUser.fullname || currentUser.username}</p>
