@@ -807,14 +807,14 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                         <div key={att.id} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                           <div className="flex items-center gap-3 overflow-hidden">
                             {att.type.startsWith('image/') ? (
-                              <img src={(window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/') + att.url} alt="thumbnail" className="w-10 h-10 object-cover rounded-md border border-slate-200 dark:border-slate-700" />
+                              <img src={import.meta.env.BASE_URL + att.url} alt="thumbnail" className="w-10 h-10 object-cover rounded-md border border-slate-200 dark:border-slate-700" />
                             ) : (
                               <div className="w-10 h-10 flex items-center justify-center rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 text-xl border border-slate-200 dark:border-slate-700">
                                 <FiType />
                               </div>
                             )}
                             <div className="flex flex-col overflow-hidden">
-                              <a href={(window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/') + att.url} target="_blank" rel="noreferrer" className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate hover:text-sky-500 hover:underline">
+                              <a href={import.meta.env.BASE_URL + att.url} target="_blank" rel="noreferrer" className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate hover:text-sky-500 hover:underline">
                                 {att.name}
                               </a>
                               <span className="text-[10px] text-slate-500">{(att.size / 1024).toFixed(1)} KB</span>
