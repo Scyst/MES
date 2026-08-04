@@ -50,13 +50,13 @@ export default function LinkHub() {
 
   // Filter links by search query
   const filteredLinks = useMemo(() => {
-    if (!searchQuery) return links;
+    if (!searchQuery) return Array.isArray(links) ? links : [];
     const q = searchQuery.toLowerCase();
-    return links.filter(l => 
+    return Array.isArray(links) ? links.filter(l => 
       l.Title.toLowerCase().includes(q) || 
       l.Url.toLowerCase().includes(q) || 
       l.Category.toLowerCase().includes(q)
-    );
+    ) : [];
   }, [links, searchQuery]);
 
   // Group by category

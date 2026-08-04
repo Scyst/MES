@@ -386,6 +386,8 @@ try {
         logActivity($pdo, "Task deleted (ID: $id, Series: " . ($deleteSeries ? 'Yes' : 'No') . ")");
         http_response_code(204);
         exit;
+    } else {
+        sendJson(['error' => 'Invalid Request or Missing ID'], 400);
     }
 } catch (Exception $e) {
     error_log('tasks.php error: ' . $e->getMessage());

@@ -115,9 +115,9 @@ try {
         logActivity($pdo, "Project deleted (ID: $id)");
         http_response_code(204);
         exit;
+    } else {
+        sendJson(['error' => 'Invalid Request or Missing ID'], 400);
     }
-} else {
-    sendJson(['error' => 'Invalid Request or Missing ID'], 400);
 }
 catch (Exception $e) {
     // BUG-015: Log error details
