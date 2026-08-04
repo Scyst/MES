@@ -117,7 +117,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                     </div>
                     <div className="text-red-500">
                       <h4 className="text-2xl font-bold mb-0">{data.mp_leave}</h4>
-                      <small className="font-medium">ลา/หยุด</small>
+                      <small className="font-medium">ขาด/ลา</small>
                     </div>
                   </div>
                 </div>
