@@ -78,6 +78,13 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('ขนาดไฟล์เกิน 2MB (ข้อจำกัดของเซิร์ฟเวอร์)');
+      e.target.value = null;
+      return;
+    }
+
     setIsUploading(true);
     const fd = new FormData();
     fd.append('file', file);
@@ -248,7 +255,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <FiPlus className="w-8 h-8 mb-2 text-slate-500" />
                     <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">คลิกเพื่ออัปโหลด</span> หรือลากไฟล์มาวาง</p>
-                    <p className="text-xs text-slate-500">PNG, JPG, PDF หรือเอกสาร (สูงสุด 10MB)</p>
+                    <p className="text-xs text-slate-500">PNG, JPG, PDF หรือเอกสาร (สูงสุด 2MB)</p>
                   </div>
                   <input id="project-file-upload" type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
                 </label>
