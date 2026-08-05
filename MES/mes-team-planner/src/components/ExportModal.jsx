@@ -7,7 +7,12 @@ export default function ExportModal({ isOpen, onClose, tasks, projects, currentU
   const [exportFormat, setExportFormat] = useState('excel');
   const [exportDataset, setExportDataset] = useState('all_tasks');
   const [exportAssignee, setExportAssignee] = useState('all');
+  const [customAssignee, setCustomAssignee] = useState('');
   const [exportDateRange, setExportDateRange] = useState('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+
+  const allAssignees = [...new Set(tasks.map(t => t.Assignee).filter(Boolean))];
 
   if (!isOpen) return null;
 
@@ -18,6 +23,8 @@ export default function ExportModal({ isOpen, onClose, tasks, projects, currentU
     if (exportAssignee === 'me' && currentUser) {
       const myName = currentUser.fullname || currentUser.username;
       dataset = dataset.filter(t => t.Assignee === myName);
+    } else if (exportAssignee === 'custom' && customAssignee) {
+      dataset = dataset.filter(t => t.Assignee === customAssignee);
     }
 
     // 2. Filter by Status
@@ -40,6 +47,12 @@ export default function ExportModal({ isOpen, onClose, tasks, projects, currentU
       } else if (exportDateRange === 'this_month') {
         start = startOfMonth(today);
         end = endOfMonth(today);
+      } else if (exportDateRange === 'custom') {
+        if (customStartDate) start = new Date(customStartDate);
+        if (customEndDate) {
+          end = new Date(customEndDate);
+          end.setHours(23, 59, 59, 999);
+        }
       }
       
       if (start && end) {
@@ -76,42 +89,81 @@ export default function ExportModal({ isOpen, onClose, tasks, projects, currentU
         <div className="p-5 space-y-5">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">ข้อมูลผู้รับผิดชอบ</label>
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="grid grid-cols-3 gap-2 mb-3">
               <button
                 onClick={() => setExportAssignee('all')}
-                className={`py-2 px-3 text-sm rounded-lg border transition-colors ${exportAssignee === 'all' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                className={`py-2 px-3 text-xs rounded-lg border transition-colors ${exportAssignee === 'all' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
               >
-                ทุกคน (All)
+                ทุกคน
               </button>
               <button
                 onClick={() => setExportAssignee('me')}
-                className={`py-2 px-3 text-sm rounded-lg border transition-colors ${exportAssignee === 'me' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                className={`py-2 px-3 text-xs rounded-lg border transition-colors ${exportAssignee === 'me' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
               >
-                เฉพาะงานของฉัน
+                งานของฉัน
+              </button>
+              <button
+                onClick={() => setExportAssignee('custom')}
+                className={`py-2 px-3 text-xs rounded-lg border transition-colors ${exportAssignee === 'custom' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+              >
+                ระบุชื่อ
               </button>
             </div>
+            {exportAssignee === 'custom' && (
+              <select 
+                value={customAssignee}
+                onChange={e => setCustomAssignee(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 dark:text-slate-200 text-sm mb-3 animate-fade-in"
+              >
+                <option value="">-- เลือกรายชื่อ --</option>
+                {allAssignees.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            )}
 
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 mt-4">ช่วงเวลา (Date Range)</label>
-            <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="grid grid-cols-4 gap-2 mb-3">
               <button
                 onClick={() => setExportDateRange('all')}
-                className={`py-2 px-3 text-xs rounded-lg border transition-colors ${exportDateRange === 'all' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                className={`py-2 px-1 text-xs rounded-lg border transition-colors ${exportDateRange === 'all' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
               >
                 ทั้งหมด
               </button>
               <button
                 onClick={() => setExportDateRange('this_week')}
-                className={`py-2 px-3 text-xs rounded-lg border transition-colors ${exportDateRange === 'this_week' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                className={`py-2 px-1 text-xs rounded-lg border transition-colors ${exportDateRange === 'this_week' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
               >
                 สัปดาห์นี้
               </button>
               <button
                 onClick={() => setExportDateRange('this_month')}
-                className={`py-2 px-3 text-xs rounded-lg border transition-colors ${exportDateRange === 'this_month' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                className={`py-2 px-1 text-xs rounded-lg border transition-colors ${exportDateRange === 'this_month' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
               >
                 เดือนนี้
               </button>
+              <button
+                onClick={() => setExportDateRange('custom')}
+                className={`py-2 px-1 text-xs rounded-lg border transition-colors ${exportDateRange === 'custom' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+              >
+                กำหนดเอง
+              </button>
             </div>
+            {exportDateRange === 'custom' && (
+              <div className="flex gap-2 mb-3 animate-fade-in items-center">
+                <input 
+                  type="date" 
+                  value={customStartDate} 
+                  onChange={e => setCustomStartDate(e.target.value)}
+                  className="flex-1 p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 dark:text-slate-200 text-sm"
+                />
+                <span className="text-slate-500">-</span>
+                <input 
+                  type="date" 
+                  value={customEndDate} 
+                  onChange={e => setCustomEndDate(e.target.value)}
+                  className="flex-1 p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 dark:text-slate-200 text-sm"
+                />
+              </div>
+            )}
 
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 mt-4">สถานะงาน</label>
             <select 
