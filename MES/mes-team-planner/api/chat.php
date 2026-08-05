@@ -24,7 +24,7 @@ try {
                        (SELECT TOP 1 t.Title FROM TeamPlanner_Tasks t WHERE t.Id = r.ReferenceId) as TaskTitle,
                        (SELECT TOP 1 t.CreatedBy FROM TeamPlanner_Tasks t WHERE t.Id = r.ReferenceId) as TaskCreatedBy,
                        (SELECT TOP 1 t.Assignee FROM TeamPlanner_Tasks t WHERE t.Id = r.ReferenceId) as TaskAssignee,
-                       (SELECT TOP 1 p.Name FROM TeamPlanner_Projects p WHERE p.Id = r.ReferenceId) as ProjectTitle,
+                       (SELECT TOP 1 p.Title FROM TeamPlanner_Projects p WHERE p.Id = r.ReferenceId) as ProjectTitle,
                        (SELECT TOP 1 p.CreatedBy FROM TeamPlanner_Projects p WHERE p.Id = r.ReferenceId) as ProjectCreatedBy,
                        (SELECT TOP 1 p.Assignee FROM TeamPlanner_Projects p WHERE p.Id = r.ReferenceId) as ProjectAssignee
                 FROM TeamPlanner_ChatRooms r
