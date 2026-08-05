@@ -3,7 +3,7 @@ import axios from 'axios';
 import { FiMessageSquare, FiX, FiChevronLeft, FiSend, FiPaperclip, FiBriefcase, FiFolder, FiUser, FiUsers, FiPlus, FiSearch } from 'react-icons/fi';
 import AddTaskModal from './AddTaskModal';
 
-export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTask, users = [] }) {
+export default function ChatWidget({ currentUser, tasks = [], projects = [], onSaveTask, onDeleteTask, users = [] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [rooms, setRooms] = useState([]);
   const [activeRoom, setActiveRoom] = useState(null);
@@ -57,7 +57,38 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
     try {
       const res = await axios.get('/api/chat.php?action=rooms');
       if (res.data && Array.isArray(res.data)) {
-        setRooms(res.data);
+        
+        let akas = [];
+        try {
+          const stored = localStorage.getItem('user_akas');
+          if (stored) akas = JSON.parse(stored);
+        } catch(e) {}
+        
+        const isMe = (name) => {
+          if (!name) return false;
+          if (name === currentUser?.fullname || name === currentUser?.username) return true;
+          return akas.includes(name);
+        };
+
+        const filteredRooms = res.data.filter(room => {
+          if (room.Type === 'task') {
+            const task = tasks.find(t => t.Id == room.ReferenceId);
+            if (!task) return true; // keep if task data not loaded
+            if (isMe(task.CreatedBy)) return true;
+            let assignees = [];
+            try { assignees = JSON.parse(task.Assignees || '[]'); } catch(e){}
+            return assignees.some(isMe);
+          } else if (room.Type === 'project') {
+            const project = projects.find(p => p.Id == room.ReferenceId);
+            if (!project) return true; // keep if project data not loaded
+            if (isMe(project.CreatedBy)) return true;
+            if (isMe(project.Assignee)) return true;
+            return false; // hide if not involved
+          }
+          return true; // keep private/group chats
+        });
+        
+        setRooms(filteredRooms);
       }
     } catch (err) {
       console.error('Failed to fetch rooms:', err);

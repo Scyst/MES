@@ -822,6 +822,7 @@ function App() {
       <ChatWidget 
         currentUser={currentUser}
         tasks={tasks}
+        projects={projects}
         onSaveTask={handleSaveTask}
         onDeleteTask={handleDeleteTask}
         users={users}
