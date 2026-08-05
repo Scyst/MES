@@ -30,7 +30,7 @@ try {
                     WHERE m.RoomId = r.Id 
                     ORDER BY m.CreatedAt DESC
                 ) lm
-                WHERE (r.Type = 'task' AND lm.CreatedAt IS NOT NULL) 
+                WHERE (r.Type IN ('task', 'project') AND lm.CreatedAt IS NOT NULL) 
                    OR mem.Username = ?
                 ORDER BY lm.CreatedAt DESC, r.CreatedAt DESC
             ";
@@ -42,6 +42,8 @@ try {
             foreach ($rooms as &$r) {
                 if ($r['Type'] === 'task') {
                     $r['DisplayName'] = $r['TaskTitle'] ? "Task: " . $r['TaskTitle'] : "Task #" . $r['ReferenceId'];
+                } else if ($r['Type'] === 'project') {
+                    $r['DisplayName'] = $r['Name'] ? "Project: " . $r['Name'] : "Project #" . $r['ReferenceId'];
                 } else if ($r['Type'] === 'private') {
                     // Get the other member's name for private chat
                     $stmt2 = $pdo->prepare("SELECT m.Username, u.fullname FROM TeamPlanner_ChatMembers m LEFT JOIN USERS u ON u.username = m.Username WHERE m.RoomId = ? AND m.Username != ?");
@@ -65,7 +67,7 @@ try {
 
             if (!$room) sendJson(['error' => 'Room not found'], 404);
 
-            if ($room['Type'] !== 'task') {
+            if ($room['Type'] !== 'task' && $room['Type'] !== 'project') {
                 $stmtMem = $pdo->prepare("SELECT 1 FROM TeamPlanner_ChatMembers WHERE RoomId = ? AND Username = ?");
                 $stmtMem->execute([$roomId, $user]);
                 if (!$stmtMem->fetch()) {
@@ -101,6 +103,24 @@ try {
                     $room['TaskTitle'] = $stmt3->fetchColumn();
                 }
                 $room['DisplayName'] = $room['TaskTitle'] ? "Task: " . $room['TaskTitle'] : "Task #" . $room['ReferenceId'];
+                sendJson($room);
+            }
+            elseif ($type === 'project' && $refId) {
+                $stmt = $pdo->prepare("SELECT r.*, (SELECT TOP 1 p.Title FROM TeamPlanner_Projects p WHERE p.Id = r.ReferenceId) as ProjectTitle FROM TeamPlanner_ChatRooms r WHERE r.Type = 'project' AND r.ReferenceId = ?");
+                $stmt->execute([$refId]);
+                $room = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$room) {
+                    $stmt3 = $pdo->prepare("SELECT Title FROM TeamPlanner_Projects WHERE Id = ?");
+                    $stmt3->execute([$refId]);
+                    $projectTitle = $stmt3->fetchColumn();
+
+                    $stmt2 = $pdo->prepare("INSERT INTO TeamPlanner_ChatRooms (Type, ReferenceId, Name) OUTPUT INSERTED.* VALUES ('project', ?, ?)");
+                    $stmt2->execute([$refId, $projectTitle]);
+                    $room = $stmt2->fetch(PDO::FETCH_ASSOC);
+                    $room['ProjectTitle'] = $projectTitle;
+                }
+                $room['DisplayName'] = $room['ProjectTitle'] ? "Project: " . $room['ProjectTitle'] : "Project #" . $room['ReferenceId'];
                 sendJson($room);
             }
             sendJson(['error' => 'Invalid parameters'], 400);

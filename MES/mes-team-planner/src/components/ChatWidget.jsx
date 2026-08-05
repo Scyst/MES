@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
-import { FiMessageSquare, FiX, FiChevronLeft, FiSend, FiPaperclip, FiBriefcase, FiUser, FiUsers, FiPlus, FiSearch } from 'react-icons/fi';
+import { FiMessageSquare, FiX, FiChevronLeft, FiSend, FiPaperclip, FiBriefcase, FiFolder, FiUser, FiUsers, FiPlus, FiSearch } from 'react-icons/fi';
 import AddTaskModal from './AddTaskModal';
 
 export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTask, users = [] }) {
@@ -24,14 +24,14 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
     const handleOpenChat = async (e) => {
       const { type, referenceId } = e.detail;
       setIsOpen(true);
-      if (type === 'task') {
+      if (type === 'task' || type === 'project') {
         try {
-          const res = await axios.get(`/api/chat.php?action=get_or_create_room&type=task&referenceId=${referenceId}`);
+          const res = await axios.get(`/api/chat.php?action=get_or_create_room&type=${type}&referenceId=${referenceId}`);
           if (res.data && res.data.Id) {
             handleOpenRoom(res.data);
           }
         } catch (err) {
-          console.error('Failed to open task chat:', err);
+          console.error(`Failed to open ${type} chat:`, err);
         }
       }
     };
@@ -274,7 +274,7 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
                           className="flex items-center gap-3 p-3 bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl cursor-pointer border border-slate-200/60 dark:border-slate-700/60 transition-colors"
                         >
                           <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                            {room.Type === 'task' ? <FiBriefcase /> : room.Type === 'private' ? <FiUser /> : <FiUsers />}
+                            {room.Type === 'task' ? <FiBriefcase /> : room.Type === 'project' ? <FiFolder /> : room.Type === 'private' ? <FiUser /> : <FiUsers />}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-baseline mb-0.5">

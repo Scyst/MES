@@ -1,6 +1,6 @@
 import axios from 'axios';
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiCheckSquare, FiTrash, FiType } from 'react-icons/fi';
+import { FiPlus, FiCheckSquare, FiTrash, FiType, FiMessageSquare } from 'react-icons/fi';
 import ConfirmDialog from './common/ConfirmDialog';
 
 export default function AddProjectModal({ isOpen, onClose, onSave, initialData, spaces = [] }) {
@@ -167,7 +167,19 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
       <div className="relative bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 animate-scale-up shadow-2xl my-8">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold">{formData.Id ? 'แก้ไขโปรเจ็ค' : 'สร้างโปรเจ็คใหม่'}</h3>
-          <button onClick={handleClose} className="text-slate-400 hover:text-slate-600">✕</button>
+          <div className="flex items-center gap-3">
+            {formData.Id && (
+              <button 
+                type="button" 
+                onClick={() => window.dispatchEvent(new CustomEvent('open-chat-room', { detail: { type: 'project', referenceId: formData.Id }}))}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
+                title="เปิดแชทโปรเจ็ค"
+              >
+                <FiMessageSquare className="w-3.5 h-3.5" /> แชท
+              </button>
+            )}
+            <button type="button" onClick={handleClose} className="text-slate-400 hover:text-slate-600">✕</button>
+          </div>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col h-full gap-4">
           <div className="flex border-b border-slate-200 dark:border-slate-800 -mx-6 px-4">

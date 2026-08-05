@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FiBriefcase, FiPlus, FiClock, FiTrash2, FiEdit2, FiCheckSquare, FiTrash, FiCheckCircle, FiPaperclip } from 'react-icons/fi';
+import { FiBriefcase, FiPlus, FiClock, FiTrash2, FiEdit2, FiCheckSquare, FiTrash, FiCheckCircle, FiPaperclip, FiMessageSquare } from 'react-icons/fi';
 import AddProjectModal from './AddProjectModal';
 import { canEditProject, canDeleteProject } from '../utils/permissions';
 
@@ -267,6 +267,12 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
                 </div>
                 
                 <div className="flex gap-2">
+                  <button 
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-chat-room', { detail: { type: 'project', referenceId: p.Id }}))}
+                    className="flex-none bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 px-2 py-1.5 rounded-md transition-colors" title="เปิดแชทโปรเจ็ค"
+                  >
+                    <FiMessageSquare className="w-3.5 h-3.5" />
+                  </button>
                   {canEditProject(currentUser, p) && (
                     <button onClick={() => { setEditingProject(p); setIsModalOpen(true); }} className="flex-1 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 px-2 py-1.5 rounded-md text-xs font-medium transition-colors">
                       แก้ไขโปรเจ็ค
