@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
-import { FiMessageSquare, FiX, FiChevronLeft, FiSend, FiPaperclip, FiBriefcase, FiUser, FiUsers, FiPlus } from 'react-icons/fi';
+import { FiMessageSquare, FiX, FiChevronLeft, FiSend, FiPaperclip, FiBriefcase, FiUser, FiUsers, FiPlus, FiSearch } from 'react-icons/fi';
 import AddTaskModal from './AddTaskModal';
 
 export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTask, users = [] }) {
@@ -12,6 +12,7 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
   const [isSending, setIsSending] = useState(false);
   
   const [isCreatingPrivate, setIsCreatingPrivate] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedTaskForModal, setSelectedTaskForModal] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -89,6 +90,7 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
     setActiveRoom(null);
     setMessages([]);
     setIsCreatingPrivate(false);
+    setSearchTerm('');
     setAttachments([]);
   };
 
@@ -221,10 +223,21 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
             <div className="flex-1 overflow-hidden flex flex-col bg-slate-50 dark:bg-slate-900">
               {isCreatingPrivate ? (
                 // NEW PRIVATE CHAT VIEW
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
-                  <div className="mb-3 text-sm font-semibold text-slate-500 dark:text-slate-400">เลือกผู้ติดต่อ</div>
-                  <div className="space-y-1.5">
-                    {users.filter(u => u.username !== currentUser.username).map(u => (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="p-3 border-b border-slate-200 dark:border-slate-800">
+                    <div className="relative">
+                      <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input 
+                        type="text" 
+                        placeholder="ค้นหาชื่อพนักงาน..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-sm focus:ring-1 focus:ring-indigo-500 text-slate-700 dark:text-slate-200"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1.5">
+                    {users.filter(u => u.username !== currentUser.username && (u.fullname?.toLowerCase().includes(searchTerm.toLowerCase()) || u.username.toLowerCase().includes(searchTerm.toLowerCase()))).map(u => (
                       <div 
                         key={u.id}
                         onClick={() => handleStartPrivateChat(u.username)}
@@ -240,12 +253,14 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
                       </div>
                     ))}
                   </div>
-                  <button 
-                    onClick={() => setIsCreatingPrivate(false)}
-                    className="mt-4 w-full p-2 text-sm text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors"
-                  >
-                    ยกเลิก
-                  </button>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+                    <button 
+                      onClick={() => { setIsCreatingPrivate(false); setSearchTerm(''); }}
+                      className="w-full p-2 text-sm text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                    >
+                      ยกเลิก
+                    </button>
+                  </div>
                 </div>
               ) : !activeRoom ? (
                 // INBOX VIEW

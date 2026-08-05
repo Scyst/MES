@@ -36,10 +36,10 @@ try {
                     $r['DisplayName'] = $r['TaskTitle'] ? "Task: " . $r['TaskTitle'] : "Task #" . $r['ReferenceId'];
                 } else if ($r['Type'] === 'private') {
                     // Get the other member's name for private chat
-                    $stmt2 = $pdo->prepare("SELECT Username FROM TeamPlanner_ChatMembers WHERE RoomId = ? AND Username != ?");
+                    $stmt2 = $pdo->prepare("SELECT m.Username, u.fullname FROM TeamPlanner_ChatMembers m LEFT JOIN USERS u ON u.username = m.Username WHERE m.RoomId = ? AND m.Username != ?");
                     $stmt2->execute([$r['Id'], $user]);
                     $other = $stmt2->fetch(PDO::FETCH_ASSOC);
-                    $r['DisplayName'] = $other ? $other['Username'] : 'Private Chat';
+                    $r['DisplayName'] = $other ? ($other['fullname'] ?: $other['Username']) : 'Private Chat';
                 } else {
                     $r['DisplayName'] = $r['Name'] ?: 'Group Chat';
                 }
