@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { FiCalendar, FiCheckSquare, FiLink, FiPieChart, FiBarChart2, FiBell, FiMenu, FiX, FiSun, FiMoon, FiLogOut, FiUser, FiBriefcase, FiSearch, FiHome, FiUsers, FiPlus } from 'react-icons/fi';
+import { FiCalendar, FiCheckSquare, FiLink, FiPieChart, FiBarChart2, FiBell, FiMenu, FiX, FiSun, FiMoon, FiLogOut, FiUser, FiBriefcase, FiSearch, FiHome, FiUsers, FiPlus, FiFolder } from 'react-icons/fi';
 import axios from 'axios';
 
 // ── Lazy-loaded page components (split into separate chunks) ──
