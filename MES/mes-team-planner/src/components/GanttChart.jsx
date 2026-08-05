@@ -3,6 +3,7 @@ import { format, addDays, subDays, startOfWeek, endOfWeek, addWeeks, subWeeks } 
 import { FiChevronLeft, FiChevronRight, FiSearch, FiPlus, FiX, FiUsers, FiUser, FiDownload, FiFileText } from 'react-icons/fi';
 import { toPng } from 'html-to-image';
 import AddTaskModal from './AddTaskModal';
+import ExportModal from './ExportModal';
 
 // Assign stable colors to assignees
 const PERSON_COLORS = [
@@ -24,6 +25,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   const [timelineRange, setTimelineRange] = useState(() => localStorage.getItem('timelineRange') || '24h');
   const [isExporting, setIsExporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   
   React.useEffect(() => {
     localStorage.setItem('timelineRange', timelineRange);
@@ -343,6 +345,10 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                       </button>
                       <button onClick={() => { exportAsCSV(); setShowExportMenu(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
                         <FiFileText className="text-[1.1rem] text-sky-500" /> ข้อมูล (CSV)
+                      </button>
+                      <div className="h-px bg-slate-200 dark:bg-slate-700 my-1"></div>
+                      <button onClick={() => { setIsExportModalOpen(true); setShowExportMenu(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
+                        <FiFileText className="text-[1.1rem] text-indigo-500" /> รายงาน (PDF/Excel)
                       </button>
                     </div>
                   </div>
@@ -712,15 +718,26 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
         </div>
       )}
 
-      <AddTaskModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSave={handleSaveTask}
-        onDelete={handleDeleteTask}
-        initialData={editingTask}
+      {isModalOpen && (
+        <AddTaskModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingTask(null);
+          }}
+          onSave={handleSaveTask}
+          onDelete={handleDeleteTask}
+          taskToEdit={editingTask}
+          users={users}
+          currentUser={currentUser}
+        />
+      )}
+      
+      <ExportModal 
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
         tasks={tasks}
-        currentUser={currentUser}
-        users={users}
+        projects={[]} 
       />
     </div>
   );
