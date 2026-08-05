@@ -19,6 +19,7 @@ import ProfileSettingsModal from './components/ProfileSettingsModal';
 import MyTasks from './components/MyTasks';
 import Resources from './components/Resources';
 import SpaceView from './components/SpaceView';
+import { canManageSpace } from './utils/permissions';
 
 // BUG-018: Top-level components — must NOT be defined inside App() to prevent
 // unmount/remount on every parent render, which resets internal state (e.g. imgError).
@@ -400,7 +401,7 @@ function App() {
           onNav={handleNav} 
           openTaskModal={() => { setGlobalEditingTask(null); setIsGlobalTaskModalOpen(true); }}
           openProjectModal={() => { setGlobalEditingProject(null); setIsGlobalProjectModalOpen(true); }}
-          openSpaceModal={() => { setEditingSpace(null); setIsAddSpaceModalOpen(true); }}
+          openSpaceModal={canManageSpace(currentUser) ? () => { setEditingSpace(null); setIsAddSpaceModalOpen(true); } : undefined}
           openInviteModal={() => { setInviteModalSpaceId(null); setIsInviteModalOpen(true); }}
           onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
           onProjectClick={(proj) => { setGlobalEditingProject(proj); setIsGlobalProjectModalOpen(true); }}
@@ -458,7 +459,7 @@ function App() {
           onNav={handleNav} 
           openTaskModal={() => { setGlobalEditingTask(null); setIsGlobalTaskModalOpen(true); }}
           openProjectModal={() => { setGlobalEditingProject(null); setIsGlobalProjectModalOpen(true); }}
-          openSpaceModal={() => { setEditingSpace(null); setIsAddSpaceModalOpen(true); }}
+          openSpaceModal={canManageSpace(currentUser) ? () => { setEditingSpace(null); setIsAddSpaceModalOpen(true); } : undefined}
           openInviteModal={() => { setInviteModalSpaceId(null); setIsInviteModalOpen(true); }}
           onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
           onProjectClick={(proj) => { setGlobalEditingProject(proj); setIsGlobalProjectModalOpen(true); }}
@@ -576,7 +577,7 @@ function App() {
                 <span>Spaces</span>
                 <div className="flex gap-2">
                   <FiSearch className="cursor-pointer hover:text-slate-600" onClick={() => setShowSearchModal(true)} title="Search Teams" />
-                  <FiPlus className="cursor-pointer hover:text-slate-600" onClick={() => { setEditingSpace(null); setIsAddSpaceModalOpen(true); }} title="Create Team Space" />
+                  {canManageSpace(currentUser) && <FiPlus className="cursor-pointer hover:text-slate-600" onClick={() => { setEditingSpace(null); setIsAddSpaceModalOpen(true); }} title="Create Team Space" />}
                 </div>
               </div>
               <div className="space-y-0.5">

@@ -1,11 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { FiActivity, FiUserCheck, FiAlertCircle, FiCheckCircle, FiClock, FiBarChart2, FiTrendingUp, FiPieChart, FiFolderPlus, FiFilePlus, FiUserPlus, FiCalendar, FiBriefcase } from 'react-icons/fi';
+import { FiActivity, FiUserCheck, FiAlertCircle, FiCheckCircle, FiClock, FiBarChart2, FiTrendingUp, FiPieChart, FiFolderPlus, FiFilePlus, FiUserPlus, FiCalendar, FiBriefcase, FiDownload } from 'react-icons/fi';
 import { format, subDays } from 'date-fns';
 import axios from 'axios';
 import { resolveAssigneeName } from '../utils/userUtils';
+import ExportModal from './ExportModal';
 
 export default function Dashboard({ tasks = [], events = [], activities = [], loading, users = [], onNav, openTaskModal, openProjectModal, openSpaceModal, onTaskClick, onProjectClick, openInviteModal }) {
   const [projects, setProjects] = useState([]);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   useEffect(() => {
     axios.get('/api/projects.php')
@@ -107,6 +109,12 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
             <FiBriefcase className="text-xl" />
           </div>
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Create Space</span>
+        </button>
+        <button onClick={() => setIsExportModalOpen(true)} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
+          <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+            <FiDownload className="text-xl" />
+          </div>
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Export Report</span>
         </button>
       </div>
 
@@ -290,6 +298,13 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
           )}
         </div>
       </div>
+
+      <ExportModal 
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        tasks={tasks}
+        projects={projects}
+      />
     </div>
   );
 }
