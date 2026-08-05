@@ -398,6 +398,7 @@ function App() {
           activities={activities} 
           loading={dataLoading} 
           users={users}
+          currentUser={currentUser}
           onNav={handleNav} 
           openTaskModal={() => { setGlobalEditingTask(null); setIsGlobalTaskModalOpen(true); }}
           openProjectModal={() => { setGlobalEditingProject(null); setIsGlobalProjectModalOpen(true); }}

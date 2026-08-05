@@ -1,23 +1,54 @@
 import React, { useState } from 'react';
 import { FiX, FiDownload, FiFileText } from 'react-icons/fi';
 import { exportTasksToExcel, exportTasksToPDF } from '../utils/exportUtils';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 
-export default function ExportModal({ isOpen, onClose, tasks, projects }) {
+export default function ExportModal({ isOpen, onClose, tasks, projects, currentUser }) {
   const [exportFormat, setExportFormat] = useState('excel');
   const [exportDataset, setExportDataset] = useState('all_tasks');
+  const [exportAssignee, setExportAssignee] = useState('all');
+  const [exportDateRange, setExportDateRange] = useState('all');
 
   if (!isOpen) return null;
 
   const handleExport = () => {
-    let dataset = [];
-    if (exportDataset === 'all_tasks') {
-      dataset = tasks;
-    } else if (exportDataset === 'todo_tasks') {
-      dataset = tasks.filter(t => t.Status === 'todo');
+    let dataset = tasks;
+
+    // 1. Filter by Assignee
+    if (exportAssignee === 'me' && currentUser) {
+      const myName = currentUser.fullname || currentUser.username;
+      dataset = dataset.filter(t => t.Assignee === myName);
+    }
+
+    // 2. Filter by Status
+    if (exportDataset === 'todo_tasks') {
+      dataset = dataset.filter(t => t.Status === 'todo');
     } else if (exportDataset === 'inprogress_tasks') {
-      dataset = tasks.filter(t => t.Status === 'in-progress');
+      dataset = dataset.filter(t => t.Status === 'in-progress');
     } else if (exportDataset === 'done_tasks') {
-      dataset = tasks.filter(t => t.Status === 'done');
+      dataset = dataset.filter(t => t.Status === 'done');
+    }
+
+    // 3. Filter by Date Range (using dueDate)
+    if (exportDateRange !== 'all') {
+      const today = new Date();
+      let start = null;
+      let end = null;
+      if (exportDateRange === 'this_week') {
+        start = startOfWeek(today, { weekStartsOn: 1 });
+        end = endOfWeek(today, { weekStartsOn: 1 });
+      } else if (exportDateRange === 'this_month') {
+        start = startOfMonth(today);
+        end = endOfMonth(today);
+      }
+      
+      if (start && end) {
+        dataset = dataset.filter(t => {
+          if (!t.dueDate) return false;
+          const d = new Date(t.dueDate);
+          return d >= start && d <= end;
+        });
+      }
     }
 
     if (exportFormat === 'excel') {
@@ -44,7 +75,45 @@ export default function ExportModal({ isOpen, onClose, tasks, projects }) {
 
         <div className="p-5 space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">เลือกข้อมูลที่ต้องการออกรายงาน</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">ข้อมูลผู้รับผิดชอบ</label>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <button
+                onClick={() => setExportAssignee('all')}
+                className={`py-2 px-3 text-sm rounded-lg border transition-colors ${exportAssignee === 'all' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+              >
+                ทุกคน (All)
+              </button>
+              <button
+                onClick={() => setExportAssignee('me')}
+                className={`py-2 px-3 text-sm rounded-lg border transition-colors ${exportAssignee === 'me' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+              >
+                เฉพาะงานของฉัน
+              </button>
+            </div>
+
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 mt-4">ช่วงเวลา (Date Range)</label>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <button
+                onClick={() => setExportDateRange('all')}
+                className={`py-2 px-3 text-xs rounded-lg border transition-colors ${exportDateRange === 'all' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+              >
+                ทั้งหมด
+              </button>
+              <button
+                onClick={() => setExportDateRange('this_week')}
+                className={`py-2 px-3 text-xs rounded-lg border transition-colors ${exportDateRange === 'this_week' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+              >
+                สัปดาห์นี้
+              </button>
+              <button
+                onClick={() => setExportDateRange('this_month')}
+                className={`py-2 px-3 text-xs rounded-lg border transition-colors ${exportDateRange === 'this_month' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+              >
+                เดือนนี้
+              </button>
+            </div>
+
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 mt-4">สถานะงาน</label>
             <select 
               value={exportDataset}
               onChange={(e) => setExportDataset(e.target.value)}

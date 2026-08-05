@@ -328,7 +328,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
             <button onClick={() => setShowSearch(!showSearch)} className={`p-2.5 rounded-xl transition-all active:scale-90 border h-10 w-10 flex items-center justify-center ${showSearch || searchQuery ? 'bg-indigo-500/10 dark:bg-indigo-500/15 border-indigo-500/30 text-indigo-600 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
               <FiSearch className="text-sm" />
             </button>
-            <div className="relative hidden md:block">
+            <div className="relative hidden md:block z-[60]">
               <button 
                 onClick={() => setShowExportMenu(!showExportMenu)}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-emerald-900/20 flex items-center gap-1.5"
@@ -338,7 +338,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
               {showExportMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)}></div>
-                  <div className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden animate-slide-up">
+                  <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden animate-slide-up whitespace-nowrap">
                     <div className="p-2 flex flex-col gap-1">
                       <button onClick={() => { exportAsImage(); setShowExportMenu(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
                         <FiDownload className="text-[1.1rem] text-emerald-500" /> รูปภาพ (PNG)

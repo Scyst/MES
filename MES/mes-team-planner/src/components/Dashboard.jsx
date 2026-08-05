@@ -5,7 +5,7 @@ import axios from 'axios';
 import { resolveAssigneeName } from '../utils/userUtils';
 import ExportModal from './ExportModal';
 
-export default function Dashboard({ tasks = [], events = [], activities = [], loading, users = [], onNav, openTaskModal, openProjectModal, openSpaceModal, onTaskClick, onProjectClick, openInviteModal }) {
+export default function Dashboard({ tasks = [], events = [], activities = [], loading, users = [], currentUser, onNav, openTaskModal, openProjectModal, openSpaceModal, onTaskClick, onProjectClick, openInviteModal }) {
   const [projects, setProjects] = useState([]);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
@@ -304,6 +304,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
         onClose={() => setIsExportModalOpen(false)}
         tasks={tasks}
         projects={projects}
+        currentUser={currentUser}
       />
     </div>
   );
