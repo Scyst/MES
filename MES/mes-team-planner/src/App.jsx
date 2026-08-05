@@ -8,7 +8,7 @@ import GanttChart from './components/GanttChart';
 import LinkHub from './components/LinkHub';
 import ProjectsTab from './components/ProjectsTab';
 import NotificationManager from './components/NotificationManager';
-import NotificationWidget from './components/NotificationWidget';
+import ChatWidget from './components/ChatWidget';
 import SearchModal from './components/SearchModal';
 import NotificationModal from './components/NotificationModal';
 import AddTaskModal from './components/AddTaskModal';
@@ -807,8 +807,8 @@ function App() {
         onSaved={refreshData}
       />
       
-      {/* Chat Notification Widget */}
-      <NotificationWidget 
+      {/* Messenger-style Chat Widget */}
+      <ChatWidget 
         currentUser={currentUser}
         tasks={tasks}
         onSaveTask={handleSaveTask}

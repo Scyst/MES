@@ -21,8 +21,9 @@ try {
     }
     elseif ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
+        $user = $_SESSION['username'] ?? ($_SESSION['user']['username'] ?? 'Unknown');
 
-        $sql = "INSERT INTO TeamPlanner_Projects (Title, Description, Status, Assignee, StartDate, DueDate, Tags, Priority, Checklist, SpaceId, Attachments) OUTPUT INSERTED.* VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO TeamPlanner_Projects (Title, Description, Status, Assignee, StartDate, DueDate, Tags, Priority, Checklist, SpaceId, Attachments, CreatedBy) OUTPUT INSERTED.* VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             $data['title'],
@@ -35,7 +36,8 @@ try {
             $data['priority'] ?? 'normal',
             $data['checklist'] ?? '[]',
             $data['spaceId'] ?? null,
-            $data['attachments'] ?? '[]'
+            $data['attachments'] ?? '[]',
+            $user
         ]);
 
         $newProject = $stmt->fetch(PDO::FETCH_ASSOC);

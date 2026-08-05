@@ -182,7 +182,13 @@ try {
                 ]);
 
                 $newTask = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($newTask) $createdTasks[] = formatTaskOutput($newTask);
+                if ($newTask) {
+                    $createdTasks[] = formatTaskOutput($newTask);
+                    
+                    // Create ChatRoom for this task
+                    $stmtRoom = $pdo->prepare("INSERT INTO TeamPlanner_ChatRooms (Type, ReferenceId) VALUES ('task', ?)");
+                    $stmtRoom->execute([$newTask['Id']]);
+                }
             }
 
             if (count($createdTasks) > 0 && $createdTasks[0]['Status'] === 'done' && !empty($createdTasks[0]['ProjectId'])) {

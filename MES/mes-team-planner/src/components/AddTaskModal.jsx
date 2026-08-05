@@ -97,11 +97,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         setInitialAttachmentsState('[]');
       }
 
-      if (initialData.Id) {
-        fetchComments(initialData.Id);
-      } else {
-        setComments([]);
-      }
+
     } else if (isOpen) {
       const newFormData = {
         title: '', status: 'todo', visibility: 'public', assignee: currentUser?.fullname || currentUser?.username || '',
@@ -115,8 +111,8 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       setInitialSubtasksState('[]');
       setAttachmentsArr([]);
       setInitialAttachmentsState('[]');
-      setComments([]);
-      setNewComment('');
+
+
       setActiveTab('general');
     }
   }, [isOpen, initialData]);
@@ -155,15 +151,6 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       }
     }
     onClose();
-  };
-
-  const fetchComments = async (taskId) => {
-    try {
-      const res = await axios.get(`/api/tasks/${taskId}/comments`);
-      setComments(res.data);
-    } catch (e) {
-      console.error(e);
-    }
   };
 
   if (!isOpen) return null;
@@ -363,9 +350,24 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               <div className={`w-2.5 h-2.5 rounded-full ${isEditing ? 'bg-amber-400' : 'bg-indigo-500'}`}></div>
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{isEditing ? 'แก้ไขงาน' : 'สร้างงานใหม่'}</h3>
             </div>
-            <button onClick={handleClose} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-700/80 transition-all active:scale-90">
-              <FiX className="text-lg" />
-            </button>
+            <div className="flex items-center gap-2">
+              {isEditing && formData.Id && (
+                <button 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleClose();
+                    window.dispatchEvent(new CustomEvent('open-chat-room', { detail: { type: 'task', referenceId: formData.Id }}));
+                  }}
+                  className="flex items-center gap-1.5 bg-sky-100 hover:bg-sky-200 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 dark:hover:bg-sky-800/80 px-3 py-1.5 rounded-xl font-medium text-sm transition-all"
+                  title="เปิดแชทของงานนี้"
+                >
+                  <FiMessageSquare /> แชท
+                </button>
+              )}
+              <button type="button" onClick={handleClose} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-700/80 transition-all active:scale-90">
+                <FiX className="text-lg" />
+              </button>
+            </div>
           </div>
           
           {/* Tabs */}
@@ -787,41 +789,6 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   หากต้องการบันทึก Checklist อย่าลืมกด <b>บันทึกทั้งหมด</b> ที่ด้านล่างนะครับ
                 </span>
               </div>
-            </div>
-          )}
-
-          {/* COMMENTS TAB */}
-          {activeTab === 'comments' && (
-            <div className="flex flex-col h-full max-h-[50vh]">
-              <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                {comments.length === 0 ? (
-                  <div className="text-center text-slate-500 text-sm py-10">เริ่มพูดคุยในงานนี้เลย!</div>
-                ) : (
-                  comments.map(c => (
-                    <div key={c.Id} className="flex flex-col bg-slate-100/80 dark:bg-slate-800/80 rounded-tr-2xl rounded-bl-2xl rounded-br-2xl p-3 border border-slate-300/50 dark:border-slate-700/50 max-w-[90%]">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-sky-400 text-xs">{c.Author}</span>
-                        <span className="text-[10px] text-slate-500">{new Date(c.CreatedAt).toLocaleString('th-TH')}</span>
-                      </div>
-                      <p className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{c.Message}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-              
-              <form onSubmit={handlePostComment} className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
-                <div className="flex gap-2">
-                  <input 
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="flex-1 bg-slate-100 dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-sky-500"
-                    placeholder="พิมพ์คอมเมนต์..."
-                  />
-                  <button type="submit" disabled={!newComment.trim()} className="bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition-colors">
-                    <FiSend /> ส่ง
-                  </button>
-                </div>
-              </form>
             </div>
           )}
 
