@@ -55,7 +55,7 @@ export default function NotificationManager({ tasks = [], currentUser }) {
 
       const todaysTasks = tasks.filter(t => {
         if (!t.startDate || !t.dueDate || t.Status === 'done') return false;
-        
+
         // Filter to only notify the creator of the task (including AKAs)
         const userAkas = localStorage.getItem('user_akas') || '';
         const searchTerms = currentUser ? [currentUser.username, currentUser.fullname] : [];
@@ -95,8 +95,8 @@ export default function NotificationManager({ tasks = [], currentUser }) {
             notifiedStore[notifKey] = true;
             changed = true;
 
-            const title = level === 'urgent' ? 'เธ”เนเธงเธ! เธเธฒเธเธเธณเธฅเธฑเธเธเธฐเน€เธฃเธดเนเธก' : 'เน€เธ•เธฃเธตเธขเธกเธ•เธฑเธง! เธเธฒเธเนเธเธฅเนเธเธฐเน€เธฃเธดเนเธก';
-            const message = `เธเธฒเธ "${task.Title}" เธเธญเธ ${task.Assignee} เธเธฐเน€เธฃเธดเนเธกเนเธเธญเธตเธ ${diff} เธเธฒเธ—เธต! (${task.startTime})`;
+            const title = level === 'urgent' ? 'ด่วน! งานกำลังจะเริ่ม' : 'เตรียมตัว! งานใกล้จะเริ่ม';
+            const message = `งาน "${task.Title}" ของ ${task.Assignee} จะเริ่มในอีก ${diff} นาที! (${task.startTime})`;
 
             const newNotif = {
               id: Date.now() + Math.random(),
@@ -182,7 +182,7 @@ export default function NotificationManager({ tasks = [], currentUser }) {
                     onClick={() => setUrgentModals(prev => prev.filter(n => n.id !== notif.id))}
                     className="mt-8 w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-rose-900/50"
                   >
-                    เธฃเธฑเธเธ—เธฃเธฒเธ (Acknowledge)
+                    รับทราบ (Acknowledge)
                   </button>
                 </div>
               </div>
@@ -193,4 +193,3 @@ export default function NotificationManager({ tasks = [], currentUser }) {
     </>
   );
 }
-
