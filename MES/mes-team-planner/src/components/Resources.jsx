@@ -4,7 +4,7 @@ import {
   FiFolder, FiUploadCloud, FiSearch, FiGrid, FiList,
   FiDownload, FiTrash2, FiFile, FiFileText, FiImage,
   FiFilm, FiMusic, FiCode, FiX, FiCheck, FiPlus, FiTag,
-  FiAlertCircle, FiLoader
+  FiAlertCircle, FiLoader, FiEdit2
 } from 'react-icons/fi';
 
 // ═══ Helpers ═══
@@ -46,6 +46,73 @@ function getFileAccentColor(mimeType = '') {
   return 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700';
 }
 
+// ═══ Edit Modal ═══
+function EditModal({ file, onClose, onSuccess }) {
+  const [name, setName] = useState(file.Name);
+  const [category, setCategory] = useState(file.Category || 'General');
+  const [description, setDesc] = useState(file.Description || '');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name) { setError('กรุณาระบุชื่อไฟล์'); return; }
+    setLoading(true); setError('');
+    try {
+      await axios.put(`/api/resources.php?id=${file.Id}`, { name, category, description });
+      onSuccess({ ...file, Name: name, Category: category, Description: description });
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.message || 'แก้ไขล้มเหลว');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
+          <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <FiEdit2 className="text-indigo-500" /> แก้ไขข้อมูลไฟล์
+          </h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><FiX /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">ชื่อไฟล์</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} 
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">หมวดหมู่</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">คำอธิบาย</label>
+            <input value={description} onChange={(e) => setDesc(e.target.value)} 
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          {error && (
+            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 text-sm bg-rose-50 dark:bg-rose-500/10 px-3 py-2 rounded-xl">
+              <FiAlertCircle className="shrink-0" /> {error}
+            </div>
+          )}
+          <div className="flex justify-end gap-3 pt-1">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">ยกเลิก</button>
+            <button type="submit" disabled={loading} className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+              {loading ? <><FiLoader className="animate-spin" />กำลังบันทึก...</> : <><FiCheck />บันทึก</>}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ═══ Upload Modal ═══
 function UploadModal({ onClose, onSuccess }) {
   const [file, setFile]           = useState(null);
@@ -72,17 +139,15 @@ function UploadModal({ onClose, onSuccess }) {
     if (!file) { setError('กรุณาเลือกไฟล์'); return; }
     setUploading(true); setError('');
     try {
-      // Step 1: upload physical file
       const fd = new FormData();
       fd.append('file', file);
       const uploadRes = await axios.post('/api/upload_attachment.php', fd, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      const { name: storedName, url, size, type: mimeType } = uploadRes.data;
+      const { name: originalName, storedName, url, size, type: mimeType } = uploadRes.data;
 
-      // Step 2: register metadata
       const regRes = await axios.post('/api/resources.php', {
-        name: file.name, storedName, url,
+        name: file.name, storedName: storedName || originalName, url,
         mimeType: mimeType || file.type,
         sizeBytes: size || file.size,
         category, description
@@ -106,7 +171,6 @@ function UploadModal({ onClose, onSuccess }) {
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><FiX /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {/* Drop zone */}
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
@@ -136,8 +200,6 @@ function UploadModal({ onClose, onSuccess }) {
               </>
             )}
           </div>
-
-          {/* Category */}
           <div>
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">หมวดหมู่</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)}
@@ -145,20 +207,16 @@ function UploadModal({ onClose, onSuccess }) {
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-
-          {/* Description */}
           <div>
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">คำอธิบาย (ไม่บังคับ)</label>
             <input value={description} onChange={(e) => setDesc(e.target.value)} placeholder="ระบุรายละเอียดไฟล์..."
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
-
           {error && (
             <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 text-sm bg-rose-50 dark:bg-rose-500/10 px-3 py-2 rounded-xl">
               <FiAlertCircle className="shrink-0" /> {error}
             </div>
           )}
-
           <div className="flex justify-end gap-3 pt-1">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">ยกเลิก</button>
             <button type="submit" disabled={uploading} className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
@@ -180,6 +238,7 @@ export default function Resources({ currentUser }) {
   const [viewMode, setViewMode]       = useState('grid');
   const [loading, setLoading]         = useState(true);
   const [showUpload, setShowUpload]   = useState(false);
+  const [editingFile, setEditingFile] = useState(null);
   const [deleting, setDeleting]       = useState(null);
   const [error, setError]             = useState('');
 
@@ -217,6 +276,13 @@ export default function Resources({ currentUser }) {
     setFiles(prev => [newFile, ...prev]);
     if (newFile.Category && !categories.includes(newFile.Category)) {
       setCategories(prev => [...prev, newFile.Category].sort());
+    }
+  };
+
+  const handleEditSuccess = (updatedFile) => {
+    setFiles(prev => prev.map(f => f.Id === updatedFile.Id ? updatedFile : f));
+    if (updatedFile.Category && !categories.includes(updatedFile.Category)) {
+      setCategories(prev => [...prev, updatedFile.Category].sort());
     }
   };
 
@@ -269,8 +335,7 @@ export default function Resources({ currentUser }) {
 
       {/* Body: sidebar + content */}
       <div className="flex gap-4 flex-1 min-h-0">
-        {/* Sidebar categories */}
-        <div className="w-44 shrink-0 flex flex-col gap-1">
+        <div className="w-44 shrink-0 flex flex-col gap-1 hidden md:flex">
           <button onClick={() => setSelectedCat('all')}
             className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-colors ${selectedCat === 'all' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
             <span className="flex items-center gap-2"><FiFolder size={14} />ทั้งหมด</span>
@@ -285,7 +350,6 @@ export default function Resources({ currentUser }) {
           ))}
         </div>
 
-        {/* File area */}
         <div className="flex-1 min-w-0 overflow-y-auto custom-scrollbar">
           {loading ? (
             <div className="flex items-center justify-center h-40 text-slate-400">
@@ -312,6 +376,10 @@ export default function Resources({ currentUser }) {
                         className="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 text-emerald-600 hover:bg-white dark:hover:bg-slate-700 shadow-sm transition-colors">
                         <FiDownload size={13} />
                       </a>
+                      <button onClick={() => setEditingFile(file)}
+                        className="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 text-indigo-500 hover:bg-white dark:hover:bg-slate-700 shadow-sm transition-colors">
+                        <FiEdit2 size={13} />
+                      </button>
                       <button onClick={() => handleDelete(file)} disabled={deleting === file.Id}
                         className="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 text-rose-500 hover:bg-white dark:hover:bg-slate-700 shadow-sm transition-colors disabled:opacity-50">
                         {deleting === file.Id ? <FiLoader size={13} className="animate-spin" /> : <FiTrash2 size={13} />}
@@ -320,7 +388,7 @@ export default function Resources({ currentUser }) {
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate" title={file.Name}>{file.Name}</div>
-                    {file.Description && <div className="text-[11px] text-slate-500 truncate mt-0.5">{file.Description}</div>}
+                    {file.Description && <div className="text-[11px] text-slate-500 truncate mt-0.5" title={file.Description}>{file.Description}</div>}
                   </div>
                   <div className="flex items-center justify-between text-[10px] text-slate-400 mt-auto">
                     <span>{formatBytes(file.SizeBytes)}</span>
@@ -330,7 +398,6 @@ export default function Resources({ currentUser }) {
               ))}
             </div>
           ) : (
-            // List view
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
               <table className="w-full text-left text-sm">
                 <thead>
@@ -367,6 +434,10 @@ export default function Resources({ currentUser }) {
                             className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors">
                             <FiDownload size={15} />
                           </a>
+                          <button onClick={() => setEditingFile(file)}
+                            className="p-1.5 rounded-lg text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors">
+                            <FiEdit2 size={15} />
+                          </button>
                           <button onClick={() => handleDelete(file)} disabled={deleting === file.Id}
                             className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors disabled:opacity-50">
                             {deleting === file.Id ? <FiLoader size={15} className="animate-spin" /> : <FiTrash2 size={15} />}
@@ -383,6 +454,7 @@ export default function Resources({ currentUser }) {
       </div>
 
       {showUpload && <UploadModal onClose={() => setShowUpload(false)} onSuccess={handleUploadSuccess} />}
+      {editingFile && <EditModal file={editingFile} onClose={() => setEditingFile(null)} onSuccess={handleEditSuccess} />}
     </div>
   );
 }

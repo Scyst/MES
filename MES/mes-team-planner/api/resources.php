@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db_helper.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -51,7 +51,7 @@ try {
             $stmt->execute([$name, $storedName, $url, $mimeType, $sizeBytes, $category, $description, $uploadedBy]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            logActivity($pdo, "�ѻ��Ŵ���: {$name} (��Ǵ: {$category}) �� {$uploadedBy}");
+            logActivity($pdo, "อัปโหลดไฟล์: {$name} (หมวด: {$category}) โดย {$uploadedBy}");
 
             sendJson(['success' => true, 'data' => [
                 'Id' => $row['Id'], 'Name' => $name, 'StoredName' => $storedName,
@@ -59,6 +59,40 @@ try {
                 'Category' => $category, 'Description' => $description,
                 'UploadedBy' => $uploadedBy, 'CreatedAt' => $row['CreatedAt'],
             ]]);
+            break;
+
+        // PUT: Update file metadata
+        case 'PUT':
+            $id = intval($_GET['id'] ?? 0);
+            if (!$id) sendJson(['success' => false, 'message' => 'Missing file ID'], 400);
+
+            $body = json_decode(file_get_contents('php://input'), true);
+            if (!$body) sendJson(['success' => false, 'message' => 'Invalid JSON body'], 400);
+
+            $name        = trim($body['name'] ?? '');
+            $category    = trim($body['category'] ?? '');
+            $description = trim($body['description'] ?? '');
+
+            if (!$name || !$category) {
+                sendJson(['success' => false, 'message' => 'Missing required fields'], 400);
+            }
+
+            $stmt = $pdo->prepare("SELECT UploadedBy FROM TeamPlanner_Files WHERE Id = ?");
+            $stmt->execute([$id]);
+            $file = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$file) sendJson(['success' => false, 'message' => 'File not found'], 404);
+
+            $currentUser = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? '';
+            if (!isAdminOrManager() && strtolower($file['UploadedBy']) !== strtolower($currentUser)) {
+                sendJson(['success' => false, 'message' => 'Permission denied'], 403);
+            }
+
+            $stmt = $pdo->prepare("UPDATE TeamPlanner_Files SET Name = ?, Category = ?, Description = ? WHERE Id = ?");
+            $stmt->execute([$name, $category, $description, $id]);
+
+            logActivity($pdo, "แก้ไขข้อมูลไฟล์: {$name} โดย {$currentUser}");
+
+            sendJson(['success' => true, 'message' => 'File updated']);
             break;
 
         // DELETE: Remove file record + physical file
@@ -82,7 +116,7 @@ try {
             $stmt = $pdo->prepare("DELETE FROM TeamPlanner_Files WHERE Id = ?");
             $stmt->execute([$id]);
 
-            logActivity($pdo, "ź���: {$file['Name']} �� {$currentUser}");
+            logActivity($pdo, "ลบไฟล์: {$file['Name']} โดย {$currentUser}");
             sendJson(['success' => true, 'message' => 'File deleted']);
             break;
 

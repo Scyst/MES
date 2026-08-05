@@ -69,6 +69,7 @@ if (move_uploaded_file($fileTmpPath, $destination)) {
     sendJson([
         'id' => uniqid(),
         'name' => $fileName,
+        'storedName' => $uniqueName,
         'url' => $url,
         'size' => $fileSize,
         'type' => $fileMimeType
