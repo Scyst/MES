@@ -77,7 +77,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
   if (loading) return <div className="flex-1 flex items-center justify-center text-slate-600 dark:text-slate-400">Loading dashboard...</div>;
 
   return (
-    <div className="flex flex-col h-full w-full gap-4 pb-2">
+    <div className="flex flex-col min-h-full w-full gap-4 pb-2">
       {/* ═══ Quick Actions ═══ */}
       <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar shrink-0">
         <button onClick={() => openProjectModal && openProjectModal()} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
