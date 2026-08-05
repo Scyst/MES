@@ -66,7 +66,7 @@ const mainNav = [
 ];
 
 function App() {
-  const [activeTab, setActiveTab] = useState('calendar');
+  const [activeTab, setActiveTab] = useState('gantt');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
