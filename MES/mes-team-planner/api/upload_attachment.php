@@ -34,13 +34,19 @@ if ($fileSize > $maxSize) {
 
 // Validate file type
 $allowedMimeTypes = [
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
     'application/pdf',
-    'application/msword', 
+    'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain'
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/zip',
+    'application/x-zip-compressed',
+    'text/plain',
+    'text/csv',
+    'application/json',
 ];
 
 if (!in_array($fileMimeType, $allowedMimeTypes)) {

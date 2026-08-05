@@ -433,7 +433,7 @@ function App() {
       case 'timeline':
         return <GanttChart {...sharedTaskProps} />;
       case 'resources':
-        return <Resources />;
+        return <Resources currentUser={currentUser} />;
       default: 
         // Fallback for Spaces and mock tabs
         if (activeTab.startsWith('space-') || activeTab.startsWith('team-')) {
