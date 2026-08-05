@@ -56,8 +56,19 @@ export default function NotificationManager({ tasks = [], currentUser }) {
       const todaysTasks = tasks.filter(t => {
         if (!t.startDate || !t.dueDate || t.Status === 'done') return false;
         
-        // Filter to only notify the creator of the task
-        const isCreator = currentUser && (t.CreatedBy === currentUser.username || t.CreatedBy === currentUser.fullname);
+        // Filter to only notify the creator of the task (including AKAs)
+        const userAkas = localStorage.getItem('user_akas') || '';
+        const searchTerms = currentUser ? [currentUser.username, currentUser.fullname] : [];
+        if (userAkas.trim()) {
+          userAkas.split(',').forEach(a => {
+            if (a.trim()) searchTerms.push(a.trim());
+          });
+        }
+        
+        const isCreator = currentUser && searchTerms.some(term => 
+          term && (t.CreatedBy || '').toLowerCase() === term.toLowerCase()
+        );
+        
         if (!isCreator) return false;
 
         return t.startDate <= currentDateStr && t.dueDate >= currentDateStr;
