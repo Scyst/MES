@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FiX, FiDownload, FiFileText } from 'react-icons/fi';
 import { exportTasksToExcel, exportTasksToPDF } from '../utils/exportUtils';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { isTaskOwner } from '../utils/permissions';
 
 export default function ExportModal({ isOpen, onClose, tasks, projects, currentUser }) {
   const [exportFormat, setExportFormat] = useState('excel');
@@ -12,7 +13,10 @@ export default function ExportModal({ isOpen, onClose, tasks, projects, currentU
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
 
-  const allAssignees = [...new Set(tasks.map(t => t.Assignee).filter(Boolean))];
+  // Extract unique assignees properly by splitting commas
+  const allAssignees = [...new Set(tasks.flatMap(t => 
+    (t.Assignee || '').split(',').map(a => a.trim()).filter(Boolean)
+  ))].sort();
 
   if (!isOpen) return null;
 
@@ -21,10 +25,16 @@ export default function ExportModal({ isOpen, onClose, tasks, projects, currentU
 
     // 1. Filter by Assignee
     if (exportAssignee === 'me' && currentUser) {
-      const myName = currentUser.fullname || currentUser.username;
-      dataset = dataset.filter(t => t.Assignee === myName);
+      dataset = dataset.filter(t => {
+        const isOwner = isTaskOwner(currentUser, t);
+        const isCreator = t.CreatedBy === (currentUser.username || '');
+        return isOwner || isCreator;
+      });
     } else if (exportAssignee === 'custom' && customAssignee) {
-      dataset = dataset.filter(t => t.Assignee === customAssignee);
+      dataset = dataset.filter(t => {
+        const assignees = (t.Assignee || '').split(',').map(a => a.trim().toLowerCase());
+        return assignees.includes(customAssignee.toLowerCase());
+      });
     }
 
     // 2. Filter by Status
