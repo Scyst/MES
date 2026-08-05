@@ -3,7 +3,7 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import { FiBell, FiX } from 'react-icons/fi';
 
-export default function NotificationManager({ tasks = [] }) {
+export default function NotificationManager({ tasks = [], currentUser }) {
   const [notifications, setNotifications] = useState([]);
   const [urgentModals, setUrgentModals] = useState([]);
 
@@ -55,6 +55,11 @@ export default function NotificationManager({ tasks = [] }) {
 
       const todaysTasks = tasks.filter(t => {
         if (!t.startDate || !t.dueDate || t.Status === 'done') return false;
+        
+        // Filter to only notify the creator of the task
+        const isCreator = currentUser && (t.CreatedBy === currentUser.username || t.CreatedBy === currentUser.fullname);
+        if (!isCreator) return false;
+
         return t.startDate <= currentDateStr && t.dueDate >= currentDateStr;
       });
 
@@ -79,8 +84,8 @@ export default function NotificationManager({ tasks = [] }) {
             notifiedStore[notifKey] = true;
             changed = true;
 
-            const title = level === 'urgent' ? 'ด่วน! งานกำลังจะเริ่ม' : 'เตรียมตัว! งานใกล้จะเริ่ม';
-            const message = `งาน "${task.Title}" ของ ${task.Assignee} จะเริ่มในอีก ${diff} นาที! (${task.startTime})`;
+            const title = level === 'urgent' ? 'เธ”เนเธงเธ! เธเธฒเธเธเธณเธฅเธฑเธเธเธฐเน€เธฃเธดเนเธก' : 'เน€เธ•เธฃเธตเธขเธกเธ•เธฑเธง! เธเธฒเธเนเธเธฅเนเธเธฐเน€เธฃเธดเนเธก';
+            const message = `เธเธฒเธ "${task.Title}" เธเธญเธ ${task.Assignee} เธเธฐเน€เธฃเธดเนเธกเนเธเธญเธตเธ ${diff} เธเธฒเธ—เธต! (${task.startTime})`;
 
             const newNotif = {
               id: Date.now() + Math.random(),
@@ -118,7 +123,7 @@ export default function NotificationManager({ tasks = [] }) {
       checkUpcomingTasks();
     }
     return () => clearInterval(interval);
-  }, [tasks]);
+  }, [tasks, currentUser]);
 
   const dismiss = (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
@@ -166,7 +171,7 @@ export default function NotificationManager({ tasks = [] }) {
                     onClick={() => setUrgentModals(prev => prev.filter(n => n.id !== notif.id))}
                     className="mt-8 w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-rose-900/50"
                   >
-                    รับทราบ (Acknowledge)
+                    เธฃเธฑเธเธ—เธฃเธฒเธ (Acknowledge)
                   </button>
                 </div>
               </div>
@@ -177,3 +182,4 @@ export default function NotificationManager({ tasks = [] }) {
     </>
   );
 }
+

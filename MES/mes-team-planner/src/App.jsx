@@ -766,7 +766,7 @@ function App() {
       {showNotificationModal && <NotificationModal onClose={() => setShowNotificationModal(false)} activities={activities} />}
 
       {/* Global Notifications */}
-      <NotificationManager tasks={tasks} />
+      <NotificationManager tasks={tasks} currentUser={currentUser} />
       
       {/* Global Modals */}
       <AddTaskModal

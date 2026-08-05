@@ -764,14 +764,24 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                         >
                           {st.completed && <FiCheckSquare className="w-3.5 h-3.5" />}
                         </button>
-                        <span className={`flex-1 text-sm transition-all ${st.completed ? 'text-emerald-500/70 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
-                          {st.title}
-                          {st.projectChecklistId && (
-                            <span className="inline-block ml-2 px-1.5 py-0.5 rounded text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 font-medium">
-                              จากโปรเจ็ค
-                            </span>
-                          )}
-                        </span>
+                        <input
+                          disabled={!isEditable}
+                          value={st.title}
+                          onChange={(e) => {
+                            const newArr = [...subtasksArr];
+                            const idx = newArr.findIndex(s => s.id === st.id);
+                            if(idx !== -1) {
+                                newArr[idx].title = e.target.value;
+                                setSubtasksArr(newArr);
+                            }
+                          }}
+                          className={`flex-1 bg-transparent outline-none text-sm transition-all ${st.completed ? 'text-emerald-500/70 line-through' : 'text-slate-700 dark:text-slate-200'}`}
+                        />
+                        {st.projectChecklistId && (
+                          <span className="inline-block ml-2 px-1.5 py-0.5 rounded text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 font-medium shrink-0">
+                            จากโปรเจ็ค
+                          </span>
+                        )}
                         {isEditable && (
                           <button onClick={() => deleteSubtask(st.id)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 transition-all p-1">
                             <FiTrash2 />
