@@ -49,7 +49,8 @@ A seamless, modern, and responsive team planning and task management application
 - [x] Implement robust error handling on the backend (e.g. handling missing task IDs gracefully).
 
 ## 🚀 Upcoming Features (Phase 3: Advanced Functionality)
+- [x] **Chat System**: Messenger-style real-time chat with Task rooms and 1-on-1 private messaging.
 - [ ] **Authentication & User Roles**: Login system to distinguish Admin vs normal users.
-- [ ] **Real-time Notifications**: WebSockets or polling for live updates on task changes.
-- [x] **File Attachments**: Ability to upload images/documents to tasks.
+- [x] **Real-time Notifications**: Polling for live chat updates and chat notifications.
+- [x] **File Attachments**: Ability to upload images/documents to tasks and chats.
 - [ ] **Reporting & Export**: Export task boards to PDF or Excel.
