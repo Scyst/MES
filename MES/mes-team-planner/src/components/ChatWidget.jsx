@@ -94,7 +94,7 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
     setAttachments([]);
   };
 
-  const handleStartPrivateChat = async (targetUser) => {
+  const handleStartPrivateChat = async (targetUser, targetFullname) => {
     try {
       const res = await axios.post('/api/chat.php?action=create_room', {
         type: 'private',
@@ -104,7 +104,7 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
         setIsCreatingPrivate(false);
         fetchRooms().then(() => {
           // Open the new room
-          const newRoom = { Id: res.data.roomId, Type: 'private', DisplayName: targetUser };
+          const newRoom = { Id: res.data.roomId, Type: 'private', DisplayName: targetFullname || targetUser };
           handleOpenRoom(newRoom);
         });
       }
@@ -240,7 +240,7 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
                     {users.filter(u => u.username !== currentUser.username && (u.fullname?.toLowerCase().includes(searchTerm.toLowerCase()) || u.username.toLowerCase().includes(searchTerm.toLowerCase()))).map(u => (
                       <div 
                         key={u.id}
-                        onClick={() => handleStartPrivateChat(u.username)}
+                        onClick={() => handleStartPrivateChat(u.username, u.fullname)}
                         className="flex items-center gap-3 p-3 bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl cursor-pointer border border-slate-200/60 dark:border-slate-700/60 transition-colors"
                       >
                         <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0 font-bold">
@@ -286,7 +286,7 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
                               )}
                             </div>
                             <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate">
-                              {room.LastMessageAuthor && <span className="font-semibold text-slate-600 dark:text-slate-300">{room.LastMessageAuthor === (currentUser.username || currentUser.fullname) ? 'คุณ: ' : (room.Type === 'private' ? '' : `${room.LastMessageAuthor.split(' ')[0]}: `)}</span>}
+                              {room.LastMessageAuthor && <span className="text-slate-600 dark:text-slate-300">{room.LastMessageAuthor === (currentUser.username || currentUser.fullname) ? 'คุณ: ' : (room.Type === 'private' ? '' : `${room.LastMessageAuthor.split(' ')[0]}: `)}</span>}
                               {room.LastMessage ? room.LastMessage : (room.LastAttachments && room.LastAttachments !== '[]' && room.LastAttachments !== 'null' ? '📎 ส่งไฟล์แนบ' : <span className="italic">ยังไม่มีข้อความ</span>)}
                             </p>
                           </div>

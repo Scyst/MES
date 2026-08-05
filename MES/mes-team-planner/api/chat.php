@@ -17,16 +17,22 @@ try {
             // 2. Private/Group rooms where the user is a member
             $sql = "
                 SELECT r.Id, r.Type, r.Name, r.ReferenceId, r.CreatedAt,
-                       (SELECT TOP 1 m.Message FROM TeamPlanner_ChatMessages m WHERE m.RoomId = r.Id ORDER BY m.CreatedAt DESC) as LastMessage,
-                       (SELECT TOP 1 m.Attachments FROM TeamPlanner_ChatMessages m WHERE m.RoomId = r.Id ORDER BY m.CreatedAt DESC) as LastAttachments,
-                       (SELECT TOP 1 m.Author FROM TeamPlanner_ChatMessages m WHERE m.RoomId = r.Id ORDER BY m.CreatedAt DESC) as LastMessageAuthor,
-                       (SELECT TOP 1 m.CreatedAt FROM TeamPlanner_ChatMessages m WHERE m.RoomId = r.Id ORDER BY m.CreatedAt DESC) as LastMessageTime,
+                       lm.Message as LastMessage,
+                       lm.Attachments as LastAttachments,
+                       lm.Author as LastMessageAuthor,
+                       lm.CreatedAt as LastMessageTime,
                        (SELECT TOP 1 t.Title FROM TeamPlanner_Tasks t WHERE t.Id = r.ReferenceId) as TaskTitle
                 FROM TeamPlanner_ChatRooms r
                 LEFT JOIN TeamPlanner_ChatMembers mem ON mem.RoomId = r.Id
-                WHERE (r.Type = 'task' AND EXISTS (SELECT 1 FROM TeamPlanner_ChatMessages m2 WHERE m2.RoomId = r.Id)) 
+                OUTER APPLY (
+                    SELECT TOP 1 m.Message, m.Attachments, m.Author, m.CreatedAt 
+                    FROM TeamPlanner_ChatMessages m 
+                    WHERE m.RoomId = r.Id 
+                    ORDER BY m.CreatedAt DESC
+                ) lm
+                WHERE (r.Type = 'task' AND lm.CreatedAt IS NOT NULL) 
                    OR mem.Username = ?
-                ORDER BY LastMessageTime DESC, r.CreatedAt DESC
+                ORDER BY lm.CreatedAt DESC, r.CreatedAt DESC
             ";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$user]);
