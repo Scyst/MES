@@ -53,4 +53,4 @@ A seamless, modern, and responsive team planning and task management application
 - [ ] **Authentication & User Roles**: Login system to distinguish Admin vs normal users.
 - [x] **Real-time Notifications**: Polling for live chat updates and chat notifications.
 - [x] **File Attachments**: Ability to upload images/documents to tasks and chats.
-- [ ] **Reporting & Export**: Export task boards to PDF or Excel.
+- [x] **Reporting & Export**: Export task boards to PDF or Excel.
