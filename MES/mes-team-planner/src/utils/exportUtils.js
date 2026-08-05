@@ -1,9 +1,8 @@
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { THSarabunNew } from './thaiFont';
+// NOTE: Intentionally >50 lines — large export functions with lazy-loaded heavy deps
+// xlsx, jspdf, jspdf-autotable are dynamically imported to keep them out of initial bundle
 
-export const exportTasksToExcel = (tasks, filename = 'tasks_export.xlsx') => {
+export const exportTasksToExcel = async (tasks, filename = 'tasks_export.xlsx') => {
+  const XLSX = await import('xlsx');
   const headers = ['ลำดับ', 'ชื่องาน', 'สถานะ', 'โปรเจ็กต์', 'สิทธิ์', 'ความสำคัญ', 'ผู้รับผิดชอบ', 'เริ่ม', 'สิ้นสุด', 'รายละเอียด'];
   
   // Sort tasks by Due Date then Assignee
@@ -52,7 +51,11 @@ export const exportTasksToExcel = (tasks, filename = 'tasks_export.xlsx') => {
   XLSX.writeFile(wb, filename);
 };
 
-export const exportTasksToPDF = (tasks, filename = 'tasks_export.pdf') => {
+export const exportTasksToPDF = async (tasks, filename = 'tasks_export.pdf') => {
+  const { default: jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+  const { THSarabunNew } = await import('./thaiFont');
+
   const doc = new jsPDF();
   
   // Add Thai Font to VFS with Identity-H encoding

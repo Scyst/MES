@@ -39,7 +39,7 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
     return () => window.removeEventListener('open-chat-room', handleOpenChat);
   }, []);
 
-  // Poll for rooms/messages
+  // Poll for rooms/messages — only when widget is open (10s interval, was 5s)
   useEffect(() => {
     if (!isOpen || !currentUser) return;
     
@@ -49,7 +49,7 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
       if (activeRoom) {
         fetchMessages(activeRoom.Id, false);
       }
-    }, 5000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [isOpen, currentUser, activeRoom]);
 

@@ -1,12 +1,19 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { FiCalendar, FiCheckSquare, FiLink, FiPieChart, FiBarChart2, FiBell, FiMenu, FiX, FiSun, FiMoon, FiLogOut, FiUser, FiBriefcase, FiSearch, FiHome, FiUsers, FiPlus } from 'react-icons/fi';
 import axios from 'axios';
-import CalendarView from './components/CalendarView';
-import TaskBoard from './components/TaskBoard';
-import Dashboard from './components/Dashboard';
-import GanttChart from './components/GanttChart';
-import LinkHub from './components/LinkHub';
-import ProjectsTab from './components/ProjectsTab';
+
+// ── Lazy-loaded page components (split into separate chunks) ──
+const CalendarView   = lazy(() => import('./components/CalendarView'));
+const TaskBoard      = lazy(() => import('./components/TaskBoard'));
+const Dashboard      = lazy(() => import('./components/Dashboard'));
+const GanttChart     = lazy(() => import('./components/GanttChart'));
+const LinkHub        = lazy(() => import('./components/LinkHub'));
+const ProjectsTab    = lazy(() => import('./components/ProjectsTab'));
+const MyTasks        = lazy(() => import('./components/MyTasks'));
+const Resources      = lazy(() => import('./components/Resources'));
+const SpaceView      = lazy(() => import('./components/SpaceView'));
+
+// ── Static imports: modals & always-visible components ──
 import NotificationManager from './components/NotificationManager';
 import ChatWidget from './components/ChatWidget';
 import SearchModal from './components/SearchModal';
@@ -16,9 +23,6 @@ import AddProjectModal from './components/AddProjectModal';
 import AddSpaceModal from './components/AddSpaceModal';
 import InviteTeamModal from './components/InviteTeamModal';
 import ProfileSettingsModal from './components/ProfileSettingsModal';
-import MyTasks from './components/MyTasks';
-import Resources from './components/Resources';
-import SpaceView from './components/SpaceView';
 import { canManageSpace } from './utils/permissions';
 
 // BUG-018: Top-level components — must NOT be defined inside App() to prevent
@@ -164,10 +168,10 @@ function App() {
   useEffect(() => {
     refreshData(false);
     
-    // Background polling every 15 seconds
+    // Background polling every 30 seconds (reduced from 15s to cut server load 50%)
     const interval = setInterval(() => {
       refreshData(true);
-    }, 15000);
+    }, 30000);
     
     return () => clearInterval(interval);
   }, [refreshData]);
@@ -607,7 +611,9 @@ function App() {
         </aside>
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent">
           <div className="flex-1 flex flex-col p-5 lg:p-6 overflow-y-auto custom-scrollbar">
-            {renderContent()}
+            <Suspense fallback={<div className="flex-1 flex items-center justify-center text-slate-400"><div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>}>
+              {renderContent()}
+            </Suspense>
           </div>
         </main>
       </div>
@@ -667,7 +673,9 @@ function App() {
 
         {/* Mobile Content */}
         <main className="flex-1 flex flex-col overflow-y-auto p-3 bg-transparent custom-scrollbar">
-          {renderContent()}
+          <Suspense fallback={<div className="flex-1 flex items-center justify-center text-slate-400"><div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>}>
+            {renderContent()}
+          </Suspense>
         </main>
 
         {/* Mobile Bottom Tab Bar — All 5 tabs */}
