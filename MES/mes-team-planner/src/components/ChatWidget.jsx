@@ -286,7 +286,7 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
                               )}
                             </div>
                             <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate">
-                              {room.LastMessage || <span className="italic">ยังไม่มีข้อความ</span>}
+                              {room.LastMessage ? room.LastMessage : (room.LastAttachments && room.LastAttachments !== '[]' && room.LastAttachments !== 'null' ? '📎 ส่งไฟล์แนบ' : <span className="italic">ยังไม่มีข้อความ</span>)}
                             </p>
                           </div>
                         </div>
