@@ -286,6 +286,7 @@ export default function ChatWidget({ currentUser, tasks, onSaveTask, onDeleteTas
                               )}
                             </div>
                             <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate">
+                              {room.LastMessageAuthor && <span className="font-semibold text-slate-600 dark:text-slate-300">{room.LastMessageAuthor === (currentUser.username || currentUser.fullname) ? 'คุณ: ' : (room.Type === 'private' ? '' : `${room.LastMessageAuthor.split(' ')[0]}: `)}</span>}
                               {room.LastMessage ? room.LastMessage : (room.LastAttachments && room.LastAttachments !== '[]' && room.LastAttachments !== 'null' ? '📎 ส่งไฟล์แนบ' : <span className="italic">ยังไม่มีข้อความ</span>)}
                             </p>
                           </div>

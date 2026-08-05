@@ -19,6 +19,7 @@ try {
                 SELECT r.Id, r.Type, r.Name, r.ReferenceId, r.CreatedAt,
                        (SELECT TOP 1 m.Message FROM TeamPlanner_ChatMessages m WHERE m.RoomId = r.Id ORDER BY m.CreatedAt DESC) as LastMessage,
                        (SELECT TOP 1 m.Attachments FROM TeamPlanner_ChatMessages m WHERE m.RoomId = r.Id ORDER BY m.CreatedAt DESC) as LastAttachments,
+                       (SELECT TOP 1 m.Author FROM TeamPlanner_ChatMessages m WHERE m.RoomId = r.Id ORDER BY m.CreatedAt DESC) as LastMessageAuthor,
                        (SELECT TOP 1 m.CreatedAt FROM TeamPlanner_ChatMessages m WHERE m.RoomId = r.Id ORDER BY m.CreatedAt DESC) as LastMessageTime,
                        (SELECT TOP 1 t.Title FROM TeamPlanner_Tasks t WHERE t.Id = r.ReferenceId) as TaskTitle
                 FROM TeamPlanner_ChatRooms r
