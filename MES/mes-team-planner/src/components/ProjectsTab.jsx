@@ -42,6 +42,23 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
     return Math.round((completed / checklist.length) * 100);
   };
 
+  const isUserInvolvedInProject = (project) => {
+    if (!currentUser || !project) return false;
+    let akas = [];
+    try {
+      const stored = localStorage.getItem('user_akas');
+      if (stored) akas = JSON.parse(stored);
+    } catch(e) {}
+    
+    const isMe = (name) => {
+      if (!name) return false;
+      if (name === currentUser?.fullname || name === currentUser?.username) return true;
+      return akas.includes(name);
+    };
+
+    return isMe(project.CreatedBy) || isMe(project.Assignee);
+  };
+
   const calculateTimeSpent = (projectId) => {
     const projectTasks = tasks.filter(t => t.ProjectId == projectId || t.projectId == projectId);
     let totalMinutes = 0;
