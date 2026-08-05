@@ -727,9 +727,10 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
           }}
           onSave={handleSaveTask}
           onDelete={handleDeleteTask}
-          taskToEdit={editingTask}
+          initialData={editingTask}
           users={users}
           currentUser={currentUser}
+          tasks={tasks}
         />
       )}
       
