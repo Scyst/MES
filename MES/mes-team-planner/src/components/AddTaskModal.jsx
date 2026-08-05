@@ -332,7 +332,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-fade-in">
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700 animate-scale-up">
           <div className="flex items-center gap-3 mb-3 text-rose-500">
-            <FiTrash className="w-6 h-6" />
+            <FiTrash2 className="w-6 h-6" />
             <h4 className="text-lg font-bold text-slate-800 dark:text-white">ลบไฟล์แนบ?</h4>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">คุณต้องการลบไฟล์นี้ออกจากเซิร์ฟเวอร์ใช่หรือไม่? (การลบจะเกิดขึ้นทันที และไม่สามารถกู้คืนได้)</p>
