@@ -81,40 +81,40 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
       {/* ═══ Quick Actions ═══ */}
       <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar shrink-0">
         <button onClick={() => openProjectModal && openProjectModal()} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
-          <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-2 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+          <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-2 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
             <FiFolderPlus className="text-xl" />
           </div>
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Create Project</span>
+          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Create Project</span>
         </button>
         <button onClick={() => openTaskModal && openTaskModal()} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
-          <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
             <FiFilePlus className="text-xl" />
           </div>
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Create Task</span>
+          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Create Task</span>
         </button>
         <button onClick={openInviteModal} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
-          <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+          <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 group-hover:bg-blue-600 group-hover:text-white transition-colors">
             <FiUserPlus className="text-xl" />
           </div>
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Invite to Team</span>
+          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Invite to Team</span>
         </button>
         <button onClick={() => onNav && onNav('calendar')} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
-          <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+          <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2 group-hover:bg-amber-600 group-hover:text-white transition-colors">
             <FiCalendar className="text-xl" />
           </div>
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Schedule</span>
+          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Schedule</span>
         </button>
         <button onClick={() => openSpaceModal && openSpaceModal()} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
-          <div className="w-10 h-10 rounded-full bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center mb-2 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+          <div className="w-12 h-12 rounded-full bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center mb-2 group-hover:bg-violet-600 group-hover:text-white transition-colors">
             <FiBriefcase className="text-xl" />
           </div>
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Create Space</span>
+          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Create Space</span>
         </button>
         <button onClick={() => setIsExportModalOpen(true)} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
-          <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
             <FiDownload className="text-xl" />
           </div>
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Export Report</span>
+          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Export Report</span>
         </button>
       </div>
 
@@ -124,43 +124,43 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <FiBarChart2 className="text-indigo-400" />
-            <span className="text-xs md:text-sm text-slate-600 dark:text-slate-400 font-medium">งานทั้งหมด</span>
+            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">งานทั้งหมด</span>
           </div>
-          <div className="text-xl font-bold text-slate-900 dark:text-white">{totalTasks}</div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white">{totalTasks}</div>
         </div>
         {/* Completion */}
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <FiCheckCircle className="text-emerald-400" />
-            <span className="text-xs md:text-sm text-slate-600 dark:text-slate-400 font-medium">เสร็จแล้ว</span>
+            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">เสร็จแล้ว</span>
           </div>
-          <div className="text-xl font-bold text-emerald-400">{doneTasks}</div>
-          <div className="mt-2 h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div className="text-2xl font-bold text-emerald-400">{doneTasks}</div>
+          <div className="mt-2 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
             <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${completionRate}%` }}></div>
           </div>
-          <div className="text-xs md:text-sm text-slate-500 mt-1">{completionRate}%</div>
+          <div className="text-[10px] md:text-xs text-slate-500 mt-1">{completionRate}%</div>
         </div>
         {/* Overdue */}
         <div className={`border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 ${overdueTasks > 0 ? 'bg-rose-50 dark:bg-rose-500/10' : 'bg-white dark:bg-slate-800'}`}>
           <div className="flex items-center gap-2 mb-2">
             <FiAlertCircle className={overdueTasks > 0 ? 'text-rose-500' : 'text-slate-500'} />
-            <span className="text-xs md:text-sm text-slate-600 dark:text-slate-400 font-medium">เกินกำหนด</span>
+            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">เกินกำหนด</span>
           </div>
-          <div className={`text-xl font-bold ${overdueTasks > 0 ? 'text-rose-500' : 'text-slate-500'}`}>{overdueTasks}</div>
+          <div className={`text-2xl font-bold ${overdueTasks > 0 ? 'text-rose-500' : 'text-slate-500'}`}>{overdueTasks}</div>
         </div>
         {/* Urgent */}
         <div className={`border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 ${urgentTasks > 0 ? 'bg-red-50 dark:bg-red-500/10' : 'bg-white dark:bg-slate-800'}`}>
           <div className="flex items-center gap-2 mb-2">
             <FiClock className={urgentTasks > 0 ? 'text-red-400' : 'text-slate-500'} />
-            <span className="text-xs md:text-sm text-slate-600 dark:text-slate-400 font-medium">ด่วน/ด่วนมาก</span>
+            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">ด่วน/ด่วนมาก</span>
           </div>
-          <div className={`text-xl font-bold ${urgentTasks > 0 ? 'text-red-400' : 'text-slate-500'}`}>{urgentTasks + highTasks}</div>
+          <div className={`text-2xl font-bold ${urgentTasks > 0 ? 'text-red-400' : 'text-slate-500'}`}>{urgentTasks + highTasks}</div>
         </div>
       </div>
       {/* ═══ Trior Layout Row 1: Tasks & Projects ═══ */}
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-3 shrink-0">
         {/* Due Today */}
-        <div className="xl:col-span-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 flex flex-col">
+        <div className="xl:col-span-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 flex flex-col h-[300px]">
           <div className="flex items-center gap-2 mb-4">
             <FiAlertCircle className="text-rose-500" />
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">งานที่ครบกำหนดวันนี้</h3>
@@ -192,7 +192,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
         </div>
 
         {/* Active Projects Summary */}
-        <div className="xl:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-xl p-4 flex flex-col h-[280px]">
+        <div className="xl:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 flex flex-col h-[300px]">
           <div className="flex items-center gap-2 mb-3">
             <FiCheckCircle className="text-emerald-500 text-sm" />
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">โปรเจ็คที่กำลังดำเนินการ</h3>
@@ -248,7 +248,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
                 <div key={act.Id} className="flex gap-4 group">
                   <div className="mt-0.5 shrink-0 relative">
                     <div className="absolute top-6 bottom-[-20px] left-1/2 -translate-x-1/2 w-px bg-slate-200 dark:bg-slate-700 group-last:hidden"></div>
-                    <div className="w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-800 border-2 border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center relative z-10">
+                    <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 border-2 border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center relative z-10">
                       <div className="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
                     </div>
                   </div>
@@ -277,7 +277,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
                 return (
                   <div key={name} className="flex items-center justify-between bg-white dark:bg-slate-900/50 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-sm text-white font-bold shrink-0 shadow-sm ring-2 ring-white dark:ring-slate-800" title={name}>
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-sm text-white font-bold shrink-0 shadow-sm ring-2 ring-white dark:ring-slate-800" title={name}>
                         {data.initial}
                       </div>
                       <div className="flex flex-col min-w-0">
