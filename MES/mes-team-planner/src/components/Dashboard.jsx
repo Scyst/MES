@@ -77,7 +77,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
   if (loading) return <div className="flex-1 flex items-center justify-center text-slate-600 dark:text-slate-400">Loading dashboard...</div>;
 
   return (
-    <div className="flex-1 flex flex-col w-full gap-4 pb-2">
+    <div className="flex flex-col h-full w-full gap-4 pb-2">
       {/* ═══ Quick Actions ═══ */}
       <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar shrink-0">
         <button onClick={() => openProjectModal && openProjectModal()} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
@@ -119,42 +119,77 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
       </div>
 
       {/* ═══ Stats Cards ═══ */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 shrink-0">
         {/* Total */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <FiBarChart2 className="text-indigo-400" />
-            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">งานทั้งหมด</span>
+        <div className="relative overflow-hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-5 flex flex-col justify-between group">
+          <div className="absolute -right-4 -bottom-4 text-indigo-50 dark:text-indigo-500/5 transition-transform group-hover:scale-110">
+            <FiBarChart2 className="w-24 h-24" />
           </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white">{totalTasks}</div>
+          <div className="flex justify-between items-start mb-2 relative z-10">
+             <div>
+                <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">งานทั้งหมด</span>
+                <div className="text-3xl font-bold text-slate-800 dark:text-white mt-1">{totalTasks}</div>
+             </div>
+             <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                <FiBarChart2 className="text-lg" />
+             </div>
+          </div>
+          <div className="text-xs text-slate-400 relative z-10">จำนวนงานทั้งหมดในระบบ</div>
         </div>
         {/* Completion */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <FiCheckCircle className="text-emerald-400" />
-            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">เสร็จแล้ว</span>
+        <div className="relative overflow-hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-5 flex flex-col justify-between group">
+          <div className="absolute -right-4 -bottom-4 text-emerald-50 dark:text-emerald-500/5 transition-transform group-hover:scale-110">
+            <FiCheckCircle className="w-24 h-24" />
           </div>
-          <div className="text-2xl font-bold text-emerald-400">{doneTasks}</div>
-          <div className="mt-2 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${completionRate}%` }}></div>
+          <div className="flex justify-between items-start mb-2 relative z-10">
+             <div className="w-full pr-4">
+                <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">เสร็จแล้ว</span>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <div className="text-3xl font-bold text-emerald-500">{doneTasks}</div>
+                  <div className="text-sm font-bold text-emerald-500/70">{completionRate}%</div>
+                </div>
+             </div>
+             <div className="w-10 h-10 shrink-0 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                <FiCheckCircle className="text-lg" />
+             </div>
           </div>
-          <div className="text-[10px] md:text-xs text-slate-500 mt-1">{completionRate}%</div>
+          <div className="w-full relative z-10 mt-2">
+            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${completionRate}%` }}></div>
+            </div>
+          </div>
         </div>
         {/* Overdue */}
-        <div className={`border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 ${overdueTasks > 0 ? 'bg-rose-50 dark:bg-rose-500/10' : 'bg-white dark:bg-slate-800'}`}>
-          <div className="flex items-center gap-2 mb-2">
-            <FiAlertCircle className={overdueTasks > 0 ? 'text-rose-500' : 'text-slate-500'} />
-            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">เกินกำหนด</span>
+        <div className={`relative overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-5 flex flex-col justify-between group ${overdueTasks > 0 ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-100 dark:border-rose-500/20' : 'bg-white dark:bg-slate-800'}`}>
+          <div className={`absolute -right-4 -bottom-4 transition-transform group-hover:scale-110 ${overdueTasks > 0 ? 'text-rose-100 dark:text-rose-500/10' : 'text-slate-50 dark:text-slate-500/5'}`}>
+            <FiAlertCircle className="w-24 h-24" />
           </div>
-          <div className={`text-2xl font-bold ${overdueTasks > 0 ? 'text-rose-500' : 'text-slate-500'}`}>{overdueTasks}</div>
+          <div className="flex justify-between items-start mb-2 relative z-10">
+             <div>
+                <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">เกินกำหนด</span>
+                <div className={`text-3xl font-bold mt-1 ${overdueTasks > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'}`}>{overdueTasks}</div>
+             </div>
+             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${overdueTasks > 0 ? 'bg-rose-100/50 dark:bg-rose-500/20 text-rose-500' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}>
+                <FiAlertCircle className="text-lg" />
+             </div>
+          </div>
+          <div className="text-xs text-slate-400 relative z-10">งานที่ต้องเร่งติดตาม</div>
         </div>
         {/* Urgent */}
-        <div className={`border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 ${urgentTasks > 0 ? 'bg-red-50 dark:bg-red-500/10' : 'bg-white dark:bg-slate-800'}`}>
-          <div className="flex items-center gap-2 mb-2">
-            <FiClock className={urgentTasks > 0 ? 'text-red-400' : 'text-slate-500'} />
-            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">ด่วน/ด่วนมาก</span>
+        <div className={`relative overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-5 flex flex-col justify-between group ${urgentTasks + highTasks > 0 ? 'bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20' : 'bg-white dark:bg-slate-800'}`}>
+          <div className={`absolute -right-4 -bottom-4 transition-transform group-hover:scale-110 ${urgentTasks + highTasks > 0 ? 'text-red-100 dark:text-red-500/10' : 'text-slate-50 dark:text-slate-500/5'}`}>
+            <FiClock className="w-24 h-24" />
           </div>
-          <div className={`text-2xl font-bold ${urgentTasks > 0 ? 'text-red-400' : 'text-slate-500'}`}>{urgentTasks + highTasks}</div>
+          <div className="flex justify-between items-start mb-2 relative z-10">
+             <div>
+                <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">ด่วน/ด่วนมาก</span>
+                <div className={`text-3xl font-bold mt-1 ${urgentTasks + highTasks > 0 ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-white'}`}>{urgentTasks + highTasks}</div>
+             </div>
+             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${urgentTasks + highTasks > 0 ? 'bg-red-100/50 dark:bg-red-500/20 text-red-500' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}>
+                <FiClock className="text-lg" />
+             </div>
+          </div>
+          <div className="text-xs text-slate-400 relative z-10">งานที่จัดลำดับความสำคัญสูง</div>
         </div>
       </div>
       {/* ═══ Trior Layout Row 1: Tasks & Projects ═══ */}
