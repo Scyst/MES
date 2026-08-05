@@ -4,10 +4,21 @@ import autoTable from 'jspdf-autotable';
 import { THSarabunNew } from './thaiFont';
 
 export const exportTasksToExcel = (tasks, filename = 'tasks_export.xlsx') => {
-  const headers = ['ID', 'ชื่องาน', 'สถานะ', 'โปรเจ็กต์', 'สิทธิ์', 'ความสำคัญ', 'ผู้รับผิดชอบ', 'เริ่ม', 'สิ้นสุด', 'รายละเอียด'];
+  const headers = ['ลำดับ', 'ชื่องาน', 'สถานะ', 'โปรเจ็กต์', 'สิทธิ์', 'ความสำคัญ', 'ผู้รับผิดชอบ', 'เริ่ม', 'สิ้นสุด', 'รายละเอียด'];
   
-  const data = tasks.map(t => [
-    t.Id,
+  // Sort tasks by Due Date then Assignee
+  const sortedTasks = [...tasks].sort((a, b) => {
+    if (!a.dueDate && b.dueDate) return 1;
+    if (a.dueDate && !b.dueDate) return -1;
+    if (a.dueDate !== b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    
+    const aAssignee = a.Assignee || '';
+    const bAssignee = b.Assignee || '';
+    return aAssignee.localeCompare(bAssignee);
+  });
+  
+  const data = sortedTasks.map((t, index) => [
+    index + 1,
     t.Title || '',
     t.Status || '',
     t.ProjectId ? `Project #${t.ProjectId}` : '-',
@@ -44,17 +55,28 @@ export const exportTasksToExcel = (tasks, filename = 'tasks_export.xlsx') => {
 export const exportTasksToPDF = (tasks, filename = 'tasks_export.pdf') => {
   const doc = new jsPDF();
   
-  // Add Thai Font to VFS
+  // Add Thai Font to VFS with Identity-H encoding
   doc.addFileToVFS("THSarabunNew.ttf", THSarabunNew);
-  doc.addFont("THSarabunNew.ttf", "THSarabunNew", "normal");
+  doc.addFont("THSarabunNew.ttf", "THSarabunNew", "normal", "Identity-H");
   doc.setFont("THSarabunNew");
   
   doc.setFontSize(16);
   doc.text("รายงานสรุปงาน (Task Report)", 14, 15);
   
-  const head = [['ID', 'ชื่องาน', 'สถานะ', 'ผู้รับผิดชอบ', 'กำหนดส่ง']];
-  const data = tasks.map(t => [
-    t.Id,
+  // Sort tasks by Due Date then Assignee
+  const sortedTasks = [...tasks].sort((a, b) => {
+    if (!a.dueDate && b.dueDate) return 1;
+    if (a.dueDate && !b.dueDate) return -1;
+    if (a.dueDate !== b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    
+    const aAssignee = a.Assignee || '';
+    const bAssignee = b.Assignee || '';
+    return aAssignee.localeCompare(bAssignee);
+  });
+  
+  const head = [['ลำดับ', 'ชื่องาน', 'สถานะ', 'ผู้รับผิดชอบ', 'กำหนดส่ง']];
+  const data = sortedTasks.map((t, index) => [
+    index + 1,
     t.Title || '',
     t.Status || '',
     t.Assignee || '',
@@ -65,7 +87,8 @@ export const exportTasksToPDF = (tasks, filename = 'tasks_export.pdf') => {
     head: head,
     body: data,
     startY: 20,
-    styles: { font: 'THSarabunNew', fontSize: 12 } 
+    styles: { font: 'THSarabunNew', fontSize: 10 } 
+
   });
   
   doc.save(filename);
