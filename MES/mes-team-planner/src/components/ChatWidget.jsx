@@ -66,24 +66,24 @@ export default function ChatWidget({ currentUser, tasks = [], projects = [], onS
         
         const isMe = (name) => {
           if (!name) return false;
-          if (name === currentUser?.fullname || name === currentUser?.username) return true;
-          return akas.includes(name);
+          const strName = String(name).toLowerCase();
+          const fname = (currentUser?.fullname || '').toLowerCase();
+          const uname = (currentUser?.username || '').toLowerCase();
+          if (fname && strName.includes(fname)) return true;
+          if (uname && strName.includes(uname)) return true;
+          return akas.some(aka => {
+            const akaStr = String(aka).toLowerCase();
+            return akaStr && strName.includes(akaStr);
+          });
         };
 
         const filteredRooms = res.data.filter(room => {
           if (room.Type === 'task') {
-            const task = tasks.find(t => t.Id == room.ReferenceId);
-            if (!task) return true; // keep if task data not loaded
-            if (isMe(task.CreatedBy)) return true;
-            let assignees = [];
-            try { assignees = JSON.parse(task.Assignees || '[]'); } catch(e){}
-            return assignees.some(isMe);
+            if (isMe(room.TaskCreatedBy)) return true;
+            return isMe(room.TaskAssignee);
           } else if (room.Type === 'project') {
-            const project = projects.find(p => p.Id == room.ReferenceId);
-            if (!project) return true; // keep if project data not loaded
-            if (isMe(project.CreatedBy)) return true;
-            if (isMe(project.Assignee)) return true;
-            return false; // hide if not involved
+            if (isMe(room.ProjectCreatedBy)) return true;
+            return isMe(room.ProjectAssignee);
           }
           return true; // keep private/group chats
         });
