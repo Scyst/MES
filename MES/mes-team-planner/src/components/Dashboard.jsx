@@ -77,7 +77,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
   if (loading) return <div className="flex-1 flex items-center justify-center text-slate-600 dark:text-slate-400">Loading dashboard...</div>;
 
   return (
-    <div className="flex flex-col min-h-full w-full gap-4 pb-2">
+    <div className="flex flex-col w-full gap-4 pb-4">
       {/* ═══ Quick Actions ═══ */}
       <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar shrink-0">
         <button onClick={() => openProjectModal && openProjectModal()} className="flex-1 min-w-[120px] flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-soft transition-all active:scale-95 group">
@@ -193,9 +193,9 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
         </div>
       </div>
       {/* ═══ Trior Layout Row 1: Tasks & Projects ═══ */}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 flex-1 min-h-[300px]">
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4" style={{height: '300px'}}>
         {/* Due Today */}
-        <div className="xl:col-span-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-5 flex flex-col h-full">
+        <div className="xl:col-span-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-5 flex flex-col overflow-hidden">
           <div className="flex items-center gap-2 mb-4">
             <FiAlertCircle className="text-rose-500" />
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">งานที่ครบกำหนดวันนี้</h3>
@@ -227,7 +227,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
         </div>
 
         {/* Active Projects Summary */}
-        <div className="xl:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-5 flex flex-col h-full">
+        <div className="xl:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-5 flex flex-col overflow-hidden">
           <div className="flex items-center gap-2 mb-3">
             <FiCheckCircle className="text-emerald-500 text-sm" />
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">โปรเจ็คที่กำลังดำเนินการ</h3>
@@ -269,9 +269,9 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
       </div>
 
       {/* ═══ Trior Layout Row 2: Activity & People ═══ */}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 flex-1 min-h-[250px] pb-3">
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4" style={{height: '260px'}}>
         {/* Activity Feed */}
-        <div className="xl:col-span-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex flex-col h-full">
+        <div className="xl:col-span-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex flex-col overflow-hidden">
           <div className="flex items-center gap-2 mb-3">
             <FiActivity className="text-indigo-500 text-sm" />
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Recent Activity</h3>
@@ -300,7 +300,7 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
         </div>
 
         {/* Collaborators / Workload */}
-        <div className="xl:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-5 flex flex-col h-full">
+        <div className="xl:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-5 flex flex-col overflow-hidden">
           <div className="flex items-center gap-2 mb-3">
             <FiUserCheck className="text-violet-500 text-sm" />
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">People</h3>
