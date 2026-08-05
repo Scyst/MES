@@ -50,7 +50,7 @@ A seamless, modern, and responsive team planning and task management application
 
 ## 🚀 Upcoming Features (Phase 3: Advanced Functionality)
 - [x] **Chat System**: Messenger-style real-time chat with Task rooms and 1-on-1 private messaging.
-- [ ] **Authentication & User Roles**: Login system to distinguish Admin vs normal users.
+- [x] **Authentication & User Roles**: Inherits secure login and roles (Admin/User) from the main MES Toolbox session.
 - [x] **Real-time Notifications**: Polling for live chat updates and chat notifications.
 - [x] **File Attachments**: Ability to upload images/documents to tasks and chats.
 - [x] **Reporting & Export**: Export task boards to PDF or Excel.
