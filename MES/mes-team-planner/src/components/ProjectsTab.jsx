@@ -158,9 +158,38 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
           <p className="text-slate-500 mt-2">สร้างโปรเจ็คเพื่อเริ่มติดตามเวลาการทำงานแบบต่อเนื่อง</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {projects.map(p => (
-            <div key={p.Id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-soft transition-all flex flex-col h-full border border-slate-200 dark:border-slate-700">
+        <div className="space-y-8 pb-6">
+          {(() => {
+            const groupedProjects = spaces.map(space => {
+              return {
+                spaceId: space.Id,
+                spaceName: space.Name,
+                spaceColor: space.Color || 'indigo',
+                projects: projects.filter(p => p.SpaceId === space.Id)
+              };
+            }).filter(group => group.projects.length > 0);
+            
+            const spaceIds = spaces.map(s => s.Id);
+            const unassignedProjects = projects.filter(p => !p.SpaceId || !spaceIds.includes(p.SpaceId));
+            if (unassignedProjects.length > 0) {
+              groupedProjects.push({
+                spaceId: 'none',
+                spaceName: 'ทั่วไป (ไม่มี Team Space)',
+                spaceColor: 'slate',
+                projects: unassignedProjects
+              });
+            }
+
+            return groupedProjects.map(group => (
+              <div key={group.spaceId} className="space-y-4">
+                <div className="flex items-center gap-2 px-1">
+                  <div className={`w-3 h-3 rounded-full bg-${group.spaceColor}-500`}></div>
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">{group.spaceName}</h2>
+                  <span className="text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">{group.projects.length}</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {group.projects.map(p => (
+                    <div key={p.Id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-soft transition-all flex flex-col h-full border border-slate-200 dark:border-slate-700">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base">{p.Title}</h3>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider ${p.Status === 'active' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-slate-50 text-slate-500 dark:bg-slate-700 dark:text-slate-300'}`}>
@@ -252,6 +281,10 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
               </div>
             </div>
           ))}
+                </div>
+              </div>
+            ));
+          })()}
         </div>
       )}
       </div>
