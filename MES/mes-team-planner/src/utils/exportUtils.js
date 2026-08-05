@@ -87,8 +87,8 @@ export const exportTasksToPDF = (tasks, filename = 'tasks_export.pdf') => {
     head: head,
     body: data,
     startY: 20,
-    styles: { font: 'THSarabunNew', fontSize: 10 } 
-
+    styles: { font: 'THSarabunNew', fontSize: 10 },
+    headStyles: { fontStyle: 'normal' }
   });
   
   doc.save(filename);
