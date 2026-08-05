@@ -66,7 +66,8 @@ const mainNav = [
   { tab: 'projects', icon: FiBriefcase, label: 'Projects' },
   { tab: 'calendar', icon: FiCalendar, label: 'Schedule' },
   { tab: 'gantt', icon: FiBarChart2, label: 'Timeline' },
-  { tab: 'links', icon: FiLink, label: 'Resources' },
+  { tab: 'resources', icon: FiFolder, label: 'Files' },
+  { tab: 'links', icon: FiLink, label: 'Links' },
 ];
 
 function App() {
