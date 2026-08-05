@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { THSarabunNew } from './thaiFont';
 
 export const exportTasksToExcel = (tasks, filename = 'tasks_export.xlsx') => {
   const headers = ['ID', 'ชื่องาน', 'สถานะ', 'โปรเจ็กต์', 'สิทธิ์', 'ความสำคัญ', 'ผู้รับผิดชอบ', 'เริ่ม', 'สิ้นสุด', 'รายละเอียด'];
@@ -43,10 +44,15 @@ export const exportTasksToExcel = (tasks, filename = 'tasks_export.xlsx') => {
 export const exportTasksToPDF = (tasks, filename = 'tasks_export.pdf') => {
   const doc = new jsPDF();
   
-  // Basic PDF export (Note: Thai fonts require custom VFS, using English titles for columns as fallback if fonts aren't loaded)
-  doc.text("Task Report", 14, 15);
+  // Add Thai Font to VFS
+  doc.addFileToVFS("THSarabunNew.ttf", THSarabunNew);
+  doc.addFont("THSarabunNew.ttf", "THSarabunNew", "normal");
+  doc.setFont("THSarabunNew");
   
-  const head = [['ID', 'Task Name', 'Status', 'Assignee', 'Due Date']];
+  doc.setFontSize(16);
+  doc.text("รายงานสรุปงาน (Task Report)", 14, 15);
+  
+  const head = [['ID', 'ชื่องาน', 'สถานะ', 'ผู้รับผิดชอบ', 'กำหนดส่ง']];
   const data = tasks.map(t => [
     t.Id,
     t.Title || '',
@@ -59,7 +65,7 @@ export const exportTasksToPDF = (tasks, filename = 'tasks_export.pdf') => {
     head: head,
     body: data,
     startY: 20,
-    styles: { font: 'helvetica' } 
+    styles: { font: 'THSarabunNew', fontSize: 12 } 
   });
   
   doc.save(filename);
