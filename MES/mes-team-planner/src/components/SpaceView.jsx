@@ -3,6 +3,7 @@ import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTr
 import axios from 'axios';
 import { canManageSpace } from '../utils/permissions';
 import { resolveAssigneeName } from '../utils/userUtils';
+import WorkloadWidget from './workload/WorkloadWidget';
 
 export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], users = [], currentUser, refreshData, onEditSpace, onDeleteSpace, openInviteModal, onTaskClick, onCreateTask, onCreateProject, onProjectClick, onSaveTask }) {
   // Determine Space Name and current Space
@@ -23,6 +24,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
 
   const [spaceMembers, setSpaceMembers] = useState([]);
 
+
   useEffect(() => {
     if (currentSpace.Id && currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && currentSpace.Id !== 'unknown') {
       axios.get(`/api/space_members.php?space_id=${currentSpace.Id}`)
@@ -31,7 +33,10 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
     } else {
       setSpaceMembers([]);
     }
-  }, [currentSpace.Id, refreshData]);
+    // NOTE: Intentionally excludes refreshData — space members only change when space changes,
+    // not every 30s global poll. Including refreshData caused WorkloadWidget to re-fetch GitHub
+    // API (50+ calls) every polling cycle.
+  }, [currentSpace.Id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const spaceName = currentSpace?.Name || 'Unknown Space';
 
@@ -130,6 +135,21 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
           </div>
         </div>
       </div>
+
+      {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && spaceMembers.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              🚀 Team Developer Workloads
+            </h3>
+          </div>
+          <div className="flex flex-col gap-6">
+            {spaceMembers.map(member => (
+              <WorkloadWidget key={member.Id} user={{username: member.UserId, fullname: member.fullname, Role: member.Role}} />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Col - Projects */}

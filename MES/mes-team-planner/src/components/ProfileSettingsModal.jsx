@@ -13,10 +13,14 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentUser, onS
   const [avatarError, setAvatarError] = useState(false);
   
   const [initialAka, setInitialAka] = useState('');
+  const [githubUsername, setGithubUsername] = useState('');
+  const [githubToken, setGithubToken] = useState('');
+  const [initialGithub, setInitialGithub] = useState({ username: '', token: '' });
+  
   const [cropImageSrc, setCropImageSrc] = useState(null);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
 
-  const isDirty = akaInput !== initialAka || avatarFile !== null;
+  const isDirty = akaInput !== initialAka || avatarFile !== null || githubUsername !== initialGithub.username || githubToken !== initialGithub.token;
 
   const handleClose = () => {
     if (isDirty) {
@@ -33,12 +37,19 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentUser, onS
       if (currentUser?.username) {
         setAvatarPreview(`api/uploads/avatars/${encodeURIComponent(currentUser.username)}.jpg?t=${Date.now()}`);
       }
-      // Fetch current AKA when modal opens
+      // Fetch current AKA and Github Settings when modal opens
       axios.get('/api/profile.php')
         .then(res => {
-          if (res.data && res.data.aka !== undefined) {
-            setAkaInput(res.data.aka);
-            setInitialAka(res.data.aka);
+          if (res.data) {
+            if (res.data.aka !== undefined) {
+              setAkaInput(res.data.aka);
+              setInitialAka(res.data.aka);
+            }
+            if (res.data.githubUsername !== undefined) {
+              setGithubUsername(res.data.githubUsername);
+              setGithubToken(res.data.githubToken);
+              setInitialGithub({ username: res.data.githubUsername, token: res.data.githubToken });
+            }
           }
         })
         .catch(err => console.error(err));
@@ -66,7 +77,11 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentUser, onS
         localStorage.setItem('avatar_ts', Date.now().toString());
       }
 
-      await axios.post('/api/profile.php', { aka: formattedAka });
+      await axios.post('/api/profile.php', { 
+        aka: formattedAka,
+        githubUsername: githubUsername.trim(),
+        githubToken: githubToken.trim()
+      });
       localStorage.setItem('user_akas', formattedAka);
       
       // Update global current user object if needed
@@ -77,6 +92,7 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentUser, onS
       if (onSaved) onSaved();
       
       setInitialAka(formattedAka);
+      setInitialGithub({ username: githubUsername.trim(), token: githubToken.trim() });
       setAvatarFile(null);
       
       onClose();
@@ -192,6 +208,35 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentUser, onS
             <p className="text-xs text-slate-500 mt-2">
               ชื่อเล่นนี้จะช่วยให้ระบบค้นหาและแสดงชื่อจริงของคุณได้ถูกต้อง เมื่อเพื่อนร่วมทีมพิมพ์ชื่อเล่นของคุณในหน้าระบบ
             </p>
+          </div>
+
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-4">
+            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+              <FiUser /> การเชื่อมต่อ GitHub
+            </h4>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">GitHub Username</label>
+              <input 
+                type="text"
+                placeholder="เช่น scyst, torvalds"
+                value={githubUsername}
+                onChange={(e) => setGithubUsername(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm outline-none dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Personal Access Token (PAT) <span className="text-slate-400 font-normal">(ใส่หรือไม่ใส่ก็ได้)</span></label>
+              <input 
+                type="password"
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                value={githubToken}
+                onChange={(e) => setGithubToken(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm outline-none dark:text-white"
+              />
+              <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                * หากต้องการให้ระบบแสดงสถิติและจำนวน Commit จากโปรเจ็คที่เป็น Private Repository คุณต้องกรอก PAT ที่มีสิทธิ์ `repo` หรือ `read:user`
+              </p>
+            </div>
           </div>
           
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">

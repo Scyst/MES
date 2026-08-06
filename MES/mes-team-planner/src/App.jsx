@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { FiCalendar, FiCheckSquare, FiLink, FiPieChart, FiBarChart2, FiBell, FiMenu, FiX, FiSun, FiMoon, FiLogOut, FiUser, FiBriefcase, FiSearch, FiHome, FiUsers, FiPlus, FiFolder } from 'react-icons/fi';
 import axios from 'axios';
 
@@ -392,7 +392,7 @@ function App() {
     setIsGlobalProjectModalOpen(true);
   };
 
-  const renderContent = () => {
+  const pageContent = useMemo(() => {
     const sharedTaskProps = { currentUser, tasks, setTasks, onSaveTask: handleSaveTask, onDeleteTask: handleDeleteTask, loading: dataLoading, users };
 
     switch (activeTab) {
@@ -471,7 +471,8 @@ function App() {
           onProjectClick={(proj) => { setGlobalEditingProject(proj); setIsGlobalProjectModalOpen(true); }}
         />;
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, tasks, events, activities, projects, spaces, users, dataLoading, currentUser]);
 
   const handleNav = (tab) => {
     setActiveTab(tab);
@@ -613,7 +614,7 @@ function App() {
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent">
           <div className="flex-1 flex flex-col p-5 lg:p-6 overflow-y-auto custom-scrollbar">
             <Suspense fallback={<div className="flex-1 flex items-center justify-center text-slate-400"><div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>}>
-              {renderContent()}
+              {pageContent}
             </Suspense>
           </div>
         </main>
@@ -675,7 +676,7 @@ function App() {
         {/* Mobile Content */}
         <main className="flex-1 flex flex-col overflow-y-auto p-3 bg-transparent custom-scrollbar">
           <Suspense fallback={<div className="flex-1 flex items-center justify-center text-slate-400"><div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>}>
-            {renderContent()}
+            {pageContent}
           </Suspense>
         </main>
 
