@@ -24,25 +24,7 @@ import AddSpaceModal from './components/AddSpaceModal';
 import InviteTeamModal from './components/InviteTeamModal';
 import ProfileSettingsModal from './components/ProfileSettingsModal';
 import { canManageSpace } from './utils/permissions';
-
-// BUG-018: Top-level components — must NOT be defined inside App() to prevent
-// unmount/remount on every parent render, which resets internal state (e.g. imgError).
-const ProfileAvatar = ({ currentUser, size = 'sm', onClick }) => {
-  const [imgError, setImgError] = useState(false);
-  const avatarTimestamp = localStorage.getItem('avatar_ts') || '';
-  if (!currentUser) return null;
-  const initial = (currentUser.fullname || currentUser.username || 'U').charAt(0).toUpperCase();
-  const sizeClass = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-9 h-9 text-sm';
-  return (
-    <button onClick={onClick} className={`${sizeClass} rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0 hover:ring-2 hover:ring-indigo-500/50 transition-all active:scale-95 overflow-hidden`} title={currentUser.fullname || currentUser.username}>
-      {!imgError ? (
-        <img src={`api/uploads/avatars/${encodeURIComponent(currentUser.username)}.jpg?t=${avatarTimestamp}`} onError={() => setImgError(true)} className="w-full h-full object-cover" alt={initial} />
-      ) : (
-        initial
-      )}
-    </button>
-  );
-};
+import UserAvatar from './components/UserAvatar';
 
 const RealTimeClock = () => {
   const [time, setTime] = useState(new Date());
@@ -347,33 +329,9 @@ function App() {
   ];
   const dynamicNavItems = [...mainNav, ...dynamicSpacesNav];
 
-  // ══════════ Theme ══════════
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved) return saved === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
-  // BUG-001: Single source of truth for theme — useEffect is the ONLY place that writes DOM/localStorage.
-  // Removed switchTheme() which duplicated these writes causing triple-write race conditions.
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.style.backgroundColor = '#020617';
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.style.backgroundColor = '#f8fafc';
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  // BUG-001: Only flip state — let useEffect handle all DOM side-effects
-  const toggleTheme = (e) => {
-    if (e) { e.preventDefault(); e.stopPropagation(); }
-    document.documentElement.classList.add('theme-transitioning');
-    setIsDarkMode(prev => !prev);
-    setTimeout(() => document.documentElement.classList.remove('theme-transitioning'), 400);
+  const handleNav = (tab) => {
+    setActiveTab(tab);
+    setIsSidebarOpen(false);
   };
 
   // ══════════ Render Content with Props ══════════
@@ -474,13 +432,34 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, tasks, events, activities, projects, spaces, users, dataLoading, currentUser]);
 
-  const handleNav = (tab) => {
-    setActiveTab(tab);
-    setIsSidebarOpen(false);
-  };
+  // ══════════ Theme ══════════
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved) return saved === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
 
-  // BUG-018: ProfileAvatar and RealTimeClock moved to top-level (above App function)
-  // to prevent re-mount on every App render which was resetting imgError state.
+  // BUG-001: Single source of truth for theme — useEffect is the ONLY place that writes DOM/localStorage.
+  // Removed switchTheme() which duplicated these writes causing triple-write race conditions.
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.backgroundColor = '#020617';
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.style.backgroundColor = '#f8fafc';
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  // BUG-001: Only flip state — let useEffect handle all DOM side-effects
+  const toggleTheme = (e) => {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    document.documentElement.classList.add('theme-transitioning');
+    setIsDarkMode(prev => !prev);
+    setTimeout(() => document.documentElement.classList.remove('theme-transitioning'), 400);
+  };
 
   return (
     <div className="flex flex-col h-screen bg-[#f4f9f8] dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans overflow-hidden">
@@ -509,7 +488,12 @@ function App() {
           
           <div className="relative">
             <div className="flex items-center gap-3 cursor-pointer p-1 pl-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700" onClick={() => setShowProfileMenu(!showProfileMenu)}>
-              <ProfileAvatar currentUser={currentUser} size="md" />
+              <UserAvatar 
+                username={currentUser?.username} 
+                displayName={currentUser?.fullname || currentUser?.username} 
+                className="w-9 h-9 text-sm"
+                fallbackClass="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400"
+              />
             </div>
             
             {showProfileMenu && (
@@ -641,8 +625,13 @@ function App() {
               <FiBell className="text-lg" />
               <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
             </button>
-            {/* Mobile Profile Icon */}
-            <ProfileAvatar currentUser={currentUser} size="sm" onClick={() => setShowProfileMenu(!showProfileMenu)} />
+            <UserAvatar 
+              username={currentUser?.username} 
+              displayName={currentUser?.fullname || currentUser?.username} 
+              className="w-8 h-8 text-xs"
+              fallbackClass="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400"
+              onClick={() => setShowProfileMenu(!showProfileMenu)} 
+            />
           </div>
         </header>
 

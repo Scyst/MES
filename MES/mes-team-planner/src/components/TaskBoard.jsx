@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { FiPlus, FiMoreVertical, FiLock, FiGlobe, FiClock, FiSearch, FiFilter, FiX, FiDownload, FiTag, FiCheckSquare, FiRefreshCw, FiPaperclip } from 'react-icons/fi';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import AddTaskModal from './AddTaskModal';
+import UserAvatar from './UserAvatar';
 import { canEditTask } from '../utils/permissions';
 
 const cols = [
@@ -302,9 +303,15 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
                                 </div>
                                 <div className="flex items-center">
                                   {(task.Assignee || '').split(',').map(a => a.trim()).filter(Boolean).slice(0, 3).map((assignee, idx) => (
-                                    <div key={idx} className={`w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 flex items-center justify-center text-[10px] md:text-xs text-white font-bold border-2 border-white dark:border-slate-800 ${idx > 0 ? '-ml-2' : ''}`} title={assignee} style={{ zIndex: 10 - idx }}>
-                                      {assignee.substring(0, 1)}
-                                    </div>
+                                    <UserAvatar 
+                                      key={idx} 
+                                      username={assignee} 
+                                      users={users}
+                                      className={`w-6 h-6 md:w-7 md:h-7 border-2 border-white dark:border-slate-800 ${idx > 0 ? '-ml-2' : ''}`}
+                                      fallbackClass="bg-gradient-to-br from-indigo-500 to-violet-600 border border-white dark:border-slate-800"
+                                      textClass="text-[10px] md:text-xs text-white"
+                                      style={{ zIndex: 10 - idx }}
+                                    />
                                   ))}
                                   {((task.Assignee || '').split(',').map(a => a.trim()).filter(Boolean).length > 3) && (
                                      <div className="-ml-2 w-6 h-6 md:w-7 md:h-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[9px] md:text-[10px] text-slate-700 dark:text-slate-300 font-bold border-2 border-white dark:border-slate-800" style={{ zIndex: 1 }}>

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import UserAvatar from './UserAvatar';
 import { format, addDays, subDays, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { FiChevronLeft, FiChevronRight, FiSearch, FiPlus, FiX, FiUsers, FiUser, FiDownload, FiFileText } from 'react-icons/fi';
 import { toPng } from 'html-to-image';
@@ -432,9 +433,12 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                 <div key={assignee} className="flex border-b border-slate-200/40 dark:border-slate-700/40 group hover:bg-slate-100/50 dark:hover:bg-slate-800/30 relative" style={{ minHeight: `${requiredHeight}px` }}>
                   <div className="w-28 md:w-40 shrink-0 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-slate-700 flex items-center bg-white dark:bg-slate-900/95 z-20 sticky left-0 shadow-[2px_0_8px_rgba(0,0,0,0.08)] dark:shadow-[2px_0_8px_rgba(0,0,0,0.3)]">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[11px] md:text-xs text-white font-bold shrink-0 border border-indigo-400/30">
-                        {assignee.substring(0, 1).toUpperCase()}
-                      </div>
+                      <UserAvatar 
+                        username={assignee} 
+                        users={users}
+                        className="w-7 h-7 md:w-8 md:h-8 border border-indigo-400/30" 
+                        fallbackClass="bg-gradient-to-br from-indigo-500 to-violet-600 border border-indigo-400/30"
+                      />
                       <span className="truncate text-xs md:text-sm" title={assignee}>{assignee}</span>
                     </div>
                   </div>
@@ -479,10 +483,10 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                           console.error("Subtasks parse error", e);
                         }
 
-                        const colorClass = (task.priority || 'normal') === 'urgent' ? 'bg-red-500/90 border-red-400/60' :
+                        const colorClass = task.Status === 'done' ? 'bg-emerald-500/90 border-emerald-400/60' :
+                                           (task.priority || 'normal') === 'urgent' ? 'bg-red-500/90 border-red-400/60' :
                                            (task.priority || 'normal') === 'high' ? 'bg-orange-500/90 border-orange-400/60' :
                                            (task.priority || 'normal') === 'low' ? 'bg-green-500/80 border-green-400/60' :
-                                           task.Status === 'done' ? 'bg-emerald-500/90 border-emerald-400/60' :
                                            task.Status === 'in-progress' ? 'bg-amber-500/90 border-amber-400/60' :
                                            'bg-indigo-500/90 border-indigo-400/60';
 
@@ -654,10 +658,10 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                           console.error("Subtasks parse error", e);
                         }
 
-                        const colorClass = (task.priority || 'normal') === 'urgent' ? 'bg-red-500/90 border-red-400/60' :
+                        const colorClass = task.Status === 'done' ? 'bg-emerald-500/90 border-emerald-400/60' :
+                                           (task.priority || 'normal') === 'urgent' ? 'bg-red-500/90 border-red-400/60' :
                                            (task.priority || 'normal') === 'high' ? 'bg-orange-500/90 border-orange-400/60' :
                                            (task.priority || 'normal') === 'low' ? 'bg-green-500/80 border-green-400/60' :
-                                           task.Status === 'done' ? 'bg-emerald-500/90 border-emerald-400/60' :
                                            task.Status === 'in-progress' ? 'bg-amber-500/90 border-amber-400/60' :
                                            'bg-indigo-500/90 border-indigo-400/60';
 
