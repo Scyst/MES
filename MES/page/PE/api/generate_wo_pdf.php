@@ -7,26 +7,17 @@ require_once __DIR__ . '/../../components/init.php';
 requirePermission(['view_maintenance', 'view_production', 'view_dashboard']);
 
 $wo_id = $_GET['wo_id'] ?? null;
-if (!$wo_id) {
-    die("Work Order ID is required.");
+$wo_ids_param = $_GET['wo_ids'] ?? null;
+
+$wo_ids = [];
+if ($wo_ids_param) {
+    $wo_ids = explode(',', $wo_ids_param);
+} elseif ($wo_id) {
+    $wo_ids = [$wo_id];
 }
 
-// 1. Fetch Work Order Data
-$sql = "SELECT W.*, M.machine_name, U1.fullname AS req_fullname, U2.fullname AS tech_fullname
-        FROM " . PE_WORK_ORDERS_TABLE . " W WITH (NOLOCK)
-        LEFT JOIN " . PE_MACHINES_TABLE . " M WITH (NOLOCK) ON W.machine_id = M.machine_id
-        LEFT JOIN USERS U1 WITH (NOLOCK) ON W.requested_by = U1.username
-        LEFT JOIN USERS U2 WITH (NOLOCK) ON W.assigned_to = U2.username
-        WHERE W.wo_id = ?";
-$stmt = $pdo->prepare($sql);
-$stmt->execute([$wo_id]);
-$wo = $stmt->fetch(PDO::FETCH_ASSOC);
-
-$requested_by_display = $wo['req_fullname'] ? $wo['req_fullname'] : $wo['requested_by'];
-$assigned_to_display = $wo['tech_fullname'] ? $wo['tech_fullname'] : $wo['assigned_to'];
-
-if (!$wo) {
-    die("Work Order not found.");
+if (empty($wo_ids)) {
+    die("Work Order ID(s) required.");
 }
 
 // Helper Functions
@@ -37,75 +28,18 @@ if (!function_exists('formatTime_PDF')) {
     function formatTime_PDF($date) { return $date ? date('H:i', strtotime($date)) : "-"; }
 }
 
-// 3. Process Image Path (For HTML img src, we use relative web paths)
-$photoPath = '';
-if (!empty($wo['image_path'])) {
-    $cleanPath = str_replace('../../uploads/', 'uploads/', $wo['image_path']);
-    $photoPath = '../../../' . ltrim($cleanPath, '/');
-}
-
-$photoAfterPath = '';
-if (!empty($wo['photo_after'])) {
-    $cleanPathAfter = str_replace('../../uploads/', 'uploads/', $wo['photo_after']);
-    $photoAfterPath = '../../../' . ltrim($cleanPathAfter, '/');
-}
-
-$sqlParts = "SELECT ABS(t.quantity) AS quantity, i.uom, i.item_code, i.item_name, (ABS(t.quantity) * i.unit_price) AS total_cost 
-             FROM MT_TRANSACTIONS t WITH (NOLOCK)
-             JOIN MT_ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
-             WHERE t.pe_wo_id = ? AND t.transaction_type = 'ISSUE'";
-$stmtParts = $pdo->prepare($sqlParts);
-$stmtParts->execute([$wo_id]);
-$partsData = $stmtParts->fetchAll(PDO::FETCH_ASSOC);
-
-$hasParts = false;
-$partsHtml = '';
-$totalCost = 0;
-
-$partsHtml = '<table class="spare-parts-table">';
-$partsHtml .= '<thead><tr><th>รหัสอะไหล่ (Code)</th><th>ชื่ออะไหล่ (Item Name)</th><th class="text-right">จำนวน (Qty)</th><th class="text-right">ราคารวม (Total Cost)</th></tr></thead>';
-$partsHtml .= '<tbody>';
-
-foreach ($partsData as $p) {
-    $hasParts = true;
-    $cost = floatval($p['total_cost']);
-    $totalCost += $cost;
-    
-    $qty = floatval($p['quantity']);
-    $uom = $p['uom'] ?? 'unit';
-    $name = $p['item_name'] ?? 'Unknown Part';
-    $code = $p['item_code'] ?? '-';
-    
-    $partsHtml .= '<tr>';
-    $partsHtml .= '<td>' . htmlspecialchars($code) . '</td>';
-    $partsHtml .= '<td>' . htmlspecialchars($name) . '</td>';
-    $partsHtml .= '<td class="text-right">' . $qty . ' ' . htmlspecialchars($uom) . '</td>';
-    $partsHtml .= '<td class="text-right">' . number_format($cost, 2) . ' ฿</td>';
-    $partsHtml .= '</tr>';
-}
-
-if (!$hasParts) {
-    $partsHtml .= '<tr><td colspan="4" class="text-center" style="color:#94a3b8;">ไม่มีการเบิกอะไหล่ (No parts issued)</td></tr>';
-}
-
-$partsHtml .= '</tbody>';
-if ($hasParts) {
-    $partsHtml .= '<tfoot><tr class="total-row"><td colspan="3" class="text-right">Total Cost (รวมราคาอะไหล่)</td><td class="text-right text-danger">' . number_format($totalCost, 2) . ' ฿</td></tr></tfoot>';
-}
-$partsHtml .= '</table>';
-
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>WO_<?php echo htmlspecialchars($wo['wo_number']); ?></title>
+    <title>WO_<?php echo count($wo_ids) > 1 ? 'BULK_PRINT' : htmlspecialchars($wo_ids[0]); ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../../utils/libs/fontawesome/css/all.min.css">
     
     <style>
         /* === A4 SETTINGS === */
-        @page { size: A4 portrait; margin: 10mm; }
+        @page { size: A4 portrait; margin: 5mm 10mm 10mm 10mm; }
 
         body { 
             font-family: 'Sarabun', sans-serif; 
@@ -120,7 +54,7 @@ $partsHtml .= '</table>';
         .page { 
             width: 210mm; 
             min-height: 297mm; 
-            padding: 15mm; 
+            padding: 5mm 15mm 15mm 15mm; 
             margin: 0 auto 20px auto; 
             background: white; 
             position: relative; 
@@ -147,6 +81,12 @@ $partsHtml .= '</table>';
             .spare-parts-table tr { page-break-inside: avoid; page-break-after: auto; }
             .spare-parts-table thead { display: table-header-group; }
             .spare-parts-table tfoot { display: table-footer-group; }
+            
+            /* Prevent blocks from breaking across pages */
+            .text-block, .info-grid, .keep-together {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
         }
 
         /* --- STYLES --- */
@@ -174,7 +114,7 @@ $partsHtml .= '</table>';
         .photo-table td { width: 50%; padding: 0 10px; vertical-align: top; }
         .photo-box { border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden; }
         .photo-header { background-color: #f1f5f9; padding: 5px; text-align: center; font-size: 11px; font-weight: bold; color: #475569; border-bottom: 1px solid #cbd5e1; }
-        .photo-content { height: 220px; display: flex; align-items: center; justify-content: center; background-color: #fff; padding: 10px; }
+        .photo-content { height: 200px; display: flex; align-items: center; justify-content: center; background-color: #fff; padding: 10px; }
         .photo-content img { max-width: 100%; max-height: 100%; object-fit: contain; }
         .no-image { color: #94a3b8; font-size: 12px; font-style: italic; }
 
@@ -192,8 +132,8 @@ $partsHtml .= '</table>';
         .signature-line { width: 60%; border-top: 1px solid #000; margin: 0 auto; padding-top: 5px; }
         .signature-name { font-size: 13px; font-weight: bold; color: #0f172a; margin-bottom: 2px; }
         .signature-title { font-size: 11px; color: #64748b; }
-
-        .footer { position: absolute; bottom: 15px; width: calc(100% - 30mm); text-align: right; font-size: 10px; color: #94a3b8; font-style: italic; }
+        
+        .keep-together { page-break-inside: avoid; break-inside: avoid; }
     </style>
 </head>
 <body>
@@ -204,15 +144,89 @@ $partsHtml .= '</table>';
         </button>
     </div>
 
-    <div class="page" id="page-1">
-        
+<?php 
+foreach ($wo_ids as $current_wo_id):
+    $current_wo_id = trim($current_wo_id);
+    if (!is_numeric($current_wo_id)) continue;
+    
+    // 1. Fetch Work Order Data
+    $sql = "SELECT W.*, M.machine_name, U1.fullname AS req_fullname, U2.fullname AS tech_fullname
+            FROM " . PE_WORK_ORDERS_TABLE . " W WITH (NOLOCK)
+            LEFT JOIN " . PE_MACHINES_TABLE . " M WITH (NOLOCK) ON W.machine_id = M.machine_id
+            LEFT JOIN USERS U1 WITH (NOLOCK) ON W.requested_by = U1.username
+            LEFT JOIN USERS U2 WITH (NOLOCK) ON W.assigned_to = U2.username
+            WHERE W.wo_id = ?";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$current_wo_id]);
+    $wo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$wo) {
+        echo "<div class='page' style='padding: 20px; color: red;'>Work Order #{$current_wo_id} not found.</div>";
+        continue;
+    }
+
+    $requested_by_display = $wo['req_fullname'] ? $wo['req_fullname'] : $wo['requested_by'];
+    $assigned_to_display = $wo['tech_fullname'] ? $wo['tech_fullname'] : $wo['assigned_to'];
+
+    // 3. Process Image Path
+    $photoPath = '';
+    if (!empty($wo['image_path'])) {
+        $cleanPath = str_replace('../../uploads/', 'uploads/', $wo['image_path']);
+        $photoPath = '../../../' . ltrim($cleanPath, '/');
+    }
+
+    $photoAfterPath = '';
+    if (!empty($wo['photo_after'])) {
+        $cleanPathAfter = str_replace('../../uploads/', 'uploads/', $wo['photo_after']);
+        $photoAfterPath = '../../../' . ltrim($cleanPathAfter, '/');
+    }
+
+    // Spare Parts
+    $sqlParts = "SELECT ABS(t.quantity) AS quantity, i.uom, i.item_code, i.item_name, (ABS(t.quantity) * i.unit_price) AS total_cost 
+                 FROM MT_TRANSACTIONS t WITH (NOLOCK)
+                 JOIN MT_ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                 WHERE t.pe_wo_id = ? AND t.transaction_type = 'ISSUE'";
+    $stmtParts = $pdo->prepare($sqlParts);
+    $stmtParts->execute([$current_wo_id]);
+    $partsData = $stmtParts->fetchAll(PDO::FETCH_ASSOC);
+
+    $hasParts = false;
+    $totalCost = 0;
+    $partsHtml = '<table class="spare-parts-table">';
+    $partsHtml .= '<thead><tr><th>รหัสอะไหล่ (Code)</th><th>ชื่ออะไหล่ (Item Name)</th><th class="text-right">จำนวน (Qty)</th><th class="text-right">ราคารวม (Total Cost)</th></tr></thead><tbody>';
+
+    foreach ($partsData as $p) {
+        $hasParts = true;
+        $cost = floatval($p['total_cost']);
+        $totalCost += $cost;
+        $qty = floatval($p['quantity']);
+        $uom = $p['uom'] ?? 'unit';
+        $name = $p['item_name'] ?? 'Unknown Part';
+        $code = $p['item_code'] ?? '-';
+        $partsHtml .= '<tr><td>' . htmlspecialchars($code) . '</td><td>' . htmlspecialchars($name) . '</td><td class="text-right">' . $qty . ' ' . htmlspecialchars($uom) . '</td><td class="text-right">' . number_format($cost, 2) . ' ฿</td></tr>';
+    }
+
+    if (!$hasParts) {
+        $partsHtml .= '<tr><td colspan="4" class="text-center" style="color:#94a3b8;">ไม่มีการเบิกอะไหล่ (No parts issued)</td></tr>';
+    }
+    $partsHtml .= '</tbody>';
+    if ($hasParts) {
+        $partsHtml .= '<tfoot><tr class="total-row"><td colspan="3" class="text-right">Total Cost (รวมราคาอะไหล่)</td><td class="text-right text-danger">' . number_format($totalCost, 2) . ' ฿</td></tr></tfoot>';
+    }
+    $partsHtml .= '</table>';
+?>
+    <div class="page" id="page-<?= htmlspecialchars($current_wo_id) ?>">
+
         <table class="header-table">
             <tr>
-                <td width="70%">
+                <td width="70%" style="vertical-align: bottom;">
                     <div class="header-title">MAINTENANCE WORK ORDER</div>
                     <div class="header-sub">ใบแจ้งซ่อมเครื่องจักร (PE Enterprise)</div>
                 </td>
-                <td width="30%" class="job-id-box">
+                <td width="30%" class="job-id-box" style="vertical-align: bottom;">
+                    <div style="font-size: 9px; color: #94a3b8; font-style: italic; white-space: nowrap; margin-bottom: 8px; margin-right: -10px;">
+                        Generated by MES System | Ref: FM-MTD-013/R00:15/11/17
+                    </div>
                     <div class="job-id-label">WO NO.</div>
                     <div class="job-id"><?php echo htmlspecialchars($wo['wo_number']); ?></div>
                 </td>
@@ -288,40 +302,41 @@ $partsHtml .= '</table>';
             </div>
         </div>
 
-        <!-- SECTION 3: IMAGES -->
-        <div class="section-title">3. JOB PHOTOS (รูปภาพประกอบ)</div>
-        
-        <table class="photo-table">
-            <tr>
-                <td>
-                    <div class="photo-box">
-                        <div class="photo-header">BEFORE</div>
-                        <div class="photo-content">
-                            <?php if ($photoPath): ?>
-                                <img src="<?php echo $photoPath; ?>">
-                            <?php else: ?>
-                                <span class="no-image">- No Image -</span>
-                            <?php endif; ?>
+        <div class="keep-together" style="position: relative;">
+            <!-- SECTION 3: IMAGES -->
+            <div class="section-title">3. JOB PHOTOS (รูปภาพประกอบ)</div>
+            
+            <table class="photo-table">
+                <tr>
+                    <td>
+                        <div class="photo-box">
+                            <div class="photo-header">BEFORE</div>
+                            <div class="photo-content">
+                                <?php if ($photoPath): ?>
+                                    <img src="<?php echo $photoPath; ?>">
+                                <?php else: ?>
+                                    <span class="no-image">- No Image -</span>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                    </div>
-                </td>
-                <td>
-                    <div class="photo-box">
-                        <div class="photo-header">AFTER</div>
-                        <div class="photo-content">
-                            <?php if ($photoAfterPath): ?>
-                                <img src="<?php echo $photoAfterPath; ?>">
-                            <?php else: ?>
-                                <span class="no-image">- No Image -</span>
-                            <?php endif; ?>
+                    </td>
+                    <td>
+                        <div class="photo-box">
+                            <div class="photo-header">AFTER</div>
+                            <div class="photo-content">
+                                <?php if ($photoAfterPath): ?>
+                                    <img src="<?php echo $photoAfterPath; ?>">
+                                <?php else: ?>
+                                    <span class="no-image">- No Image -</span>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                    </div>
-                </td>
-            </tr>
-        </table>
+                    </td>
+                </tr>
+            </table>
 
-        <!-- SECTION 4: SIGNATURES -->
-        <table class="signature-table">
+            <!-- SECTION 4: SIGNATURES -->
+            <table class="signature-table">
             <tr>
                 <td>
                     <div class="signature-space"></div>
@@ -338,12 +353,11 @@ $partsHtml .= '</table>';
                     </div>
                 </td>
             </tr>
-        </table>
-
-        <div class="footer">
-            Generated by MES System | Ref: FM-MTD-013/R00:15/11/17
+            </table>
+        </div>
         </div>
     </div>
+<?php endforeach; ?>
 
 </body>
 </html>

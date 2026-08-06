@@ -77,7 +77,7 @@ const WorkOrderModule = (() => {
         if (!tbody) return;
 
         if (!data.length) {
-            tbody.innerHTML = `<tr><td colspan="11" class="pe-text-center pe-text-muted" style="padding:60px;">No work orders found</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" class="pe-text-center pe-text-muted" style="padding:60px;">No work orders found</td></tr>`;
             return;
         }
 
@@ -102,6 +102,9 @@ const WorkOrderModule = (() => {
 
             return `
             <tr style="cursor:pointer;" onclick="${rowAction}">
+                <td class="pe-text-center" onclick="event.stopPropagation();">
+                    <input type="checkbox" class="wo-bulk-check" value="${w.wo_id}" onchange="WorkOrderModule.toggleBulkPrintBtn()">
+                </td>
                 <td>${PEApp.getStatusBadge(w.status)}</td>
                 <td class="pe-fw-bold" style="color:var(--pe-primary);">${PEApp.escapeHtml(w.wo_number)}</td>
                 <td class="pe-text-sm">${PEApp.escapeHtml(w.wo_type || '-')}</td>
@@ -919,6 +922,37 @@ const WorkOrderModule = (() => {
         window.open(PE_CONFIG.apiBase + 'generate_wo_pdf.php?wo_id=' + woId, '_blank');
     }
 
+    // --- Bulk Print Functions ---
+    function toggleAllBulkChecks(checkbox) {
+        const isChecked = checkbox.checked;
+        const checks = document.querySelectorAll('.wo-bulk-check');
+        checks.forEach(c => c.checked = isChecked);
+        toggleBulkPrintBtn();
+    }
+
+    function toggleBulkPrintBtn() {
+        const btn = document.getElementById('woBulkPrintBtn');
+        const checkedCount = document.querySelectorAll('.wo-bulk-check:checked').length;
+        
+        if (btn) {
+            if (checkedCount > 0) {
+                btn.style.setProperty('display', 'inline-flex', 'important');
+                btn.innerHTML = `<i class="fas fa-print"></i> <span class="ms-2">Bulk Print (${checkedCount})</span>`;
+            } else {
+                btn.style.setProperty('display', 'none', 'important');
+                document.getElementById('woCheckAll').checked = false;
+            }
+        }
+    }
+
+    function bulkPrintPDF() {
+        const checked = document.querySelectorAll('.wo-bulk-check:checked');
+        if (checked.length === 0) return;
+        
+        const ids = Array.from(checked).map(c => c.value).join(',');
+        window.open(PE_CONFIG.apiBase + 'generate_wo_pdf.php?wo_ids=' + ids, '_blank');
+    }
+
     // --- Spare Parts Management ---
     let availableParts = [];
 
@@ -1362,7 +1396,8 @@ const WorkOrderModule = (() => {
         onMachineChange, printPDF, openSparePartsModal, onSparePartChange, confirmIssuePart, deleteSparePart,
         quickAccept, quickStart, openQuickCloseModal, submitQuickClose,
         dragStart, allowDrop, dragEnter, dragLeave, drop,
-        openFilterModal, resetFilters
+        openFilterModal, resetFilters,
+        toggleAllBulkChecks, toggleBulkPrintBtn, bulkPrintPDF
     };
 })();
 

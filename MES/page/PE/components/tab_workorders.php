@@ -60,6 +60,10 @@
             <i class="fas fa-file-excel pe-me-1"></i> <span class="d-none d-lg-inline" style="margin-left: 4px;">Export</span>
         </button>
 
+        <button class="pe-btn pe-btn-primary pe-btn-outline d-none d-md-inline-flex" id="woBulkPrintBtn" style="display:none !important;" onclick="WorkOrderModule.bulkPrintPDF()">
+            <i class="fas fa-print"></i> <span class="ms-2">Bulk Print</span>
+        </button>
+
         <button class="pe-btn pe-btn-primary d-none d-md-inline-flex" onclick="WorkOrderModule.openModal()">
             <i class="fas fa-plus"></i> <span class="ms-2">New Work Order</span>
         </button>
@@ -120,21 +124,24 @@
             <table class="pe-table" id="woTable">
                 <thead>
                     <tr>
+                        <th style="width:3%;" class="pe-text-center">
+                            <input type="checkbox" id="woCheckAll" onchange="WorkOrderModule.toggleAllBulkChecks(this)">
+                        </th>
                         <th style="width:8%;">Status</th>
                         <th style="width:10%;">WO #</th>
                         <th style="width:7%;">Type</th>
                         <th style="width:8%;">Priority</th>
                         <th style="width:12%;">Machine</th>
                         <th style="width:6%;">Line</th>
-                        <th style="width:18%;">Issue</th>
-                        <th style="width:8%;">Requested</th>
-                        <th style="width:8%;">Assigned To</th>
-                        <th style="width:8%;">Repair Time</th>
-                        <th style="width:7%;" class="pe-text-center">Actions</th>
+                        <th style="width:17%;">Issue</th>
+                        <th style="width:7%;">Requested</th>
+                        <th style="width:7%;">Assigned To</th>
+                        <th style="width:7%;">Repair Time</th>
+                        <th style="width:8%;" class="pe-text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="woTableBody">
-                    <tr><td colspan="11" class="pe-text-center pe-text-muted" style="padding:60px;">Loading...</td></tr>
+                    <tr><td colspan="12" class="pe-text-center pe-text-muted" style="padding:60px;">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
