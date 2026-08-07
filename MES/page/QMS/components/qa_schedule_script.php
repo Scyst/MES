@@ -1,5 +1,6 @@
 <script>
 let currentFilter = 'date';
+let currentUpdatePo = null;
 
 function loadQASchedule(filterType = null) {
     if (filterType) currentFilter = filterType;
@@ -308,6 +309,7 @@ function removeSchedule(id, force = false) {
 }
 
 function openUpdateModal(po) {
+    currentUpdatePo = po;
     document.getElementById('inspect_po_id').value = po.id;
     document.getElementById('inspect_po_number').value = po.po_number + ' - ' + po.sku;
     document.getElementById('inspect_ticket_number').value = po.ticket_number || '';
@@ -370,6 +372,54 @@ function saveInspectionResult() {
         if (res.success) {
             Swal.fire({icon:'success', title:'Saved', timer:1500, showConfirmButton:false});
             bootstrap.Modal.getInstance(document.getElementById('updateInspectionModal')).hide();
+            loadQASchedule();
+        } else {
+            Swal.fire('Error', res.message, 'error');
+        }
+    });
+}
+
+function openEditPoModal() {
+    if (!currentUpdatePo) return;
+    const po = currentUpdatePo;
+    
+    document.getElementById('edit_po_id').value = po.id;
+    document.getElementById('edit_po_number').value = po.po_number || '';
+    document.getElementById('edit_sku').value = po.sku || '';
+    document.getElementById('edit_description').value = po.description || '';
+    document.getElementById('edit_color').value = po.color || '';
+    document.getElementById('edit_quantity').value = po.quantity || '';
+    document.getElementById('edit_dc_location').value = po.dc_location || '';
+    document.getElementById('edit_loading_date').value = po.loading_date || '';
+    document.getElementById('edit_loading_week').value = po.loading_week || '';
+    
+    // Hide update modal
+    const updateModalInst = bootstrap.Modal.getInstance(document.getElementById('updateInspectionModal'));
+    if (updateModalInst) updateModalInst.hide();
+    
+    const modal = new bootstrap.Modal(document.getElementById('editPoModal'));
+    modal.show();
+}
+
+function savePoDetails() {
+    const form = document.getElementById('formEditPo');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const formData = new FormData(form);
+    formData.append('action', 'update_po_details');
+    
+    fetch('./api/qa_schedule_api.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            Swal.fire({icon:'success', title:'Saved', timer:1500, showConfirmButton:false});
+            bootstrap.Modal.getInstance(document.getElementById('editPoModal')).hide();
             loadQASchedule();
         } else {
             Swal.fire('Error', res.message, 'error');

@@ -211,12 +211,78 @@
     </div>
 </div>
 
+<!-- Modal Edit PO Details -->
+<div class="modal fade" id="editPoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border-0">
+            <div class="modal-header bg-warning text-dark border-bottom">
+                <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>Edit PO Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <form id="formEditPo">
+                    <input type="hidden" id="edit_po_id" name="po_id">
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted">PO Number <span class="text-danger">*</span></label>
+                            <input type="text" name="po_number" id="edit_po_number" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted">SKU</label>
+                            <input type="text" name="sku" id="edit_sku" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Description</label>
+                        <input type="text" name="description" id="edit_description" class="form-control">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold small text-muted">Color</label>
+                            <input type="text" name="color" id="edit_color" class="form-control">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold small text-muted">Quantity</label>
+                            <input type="number" name="quantity" id="edit_quantity" class="form-control">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold small text-muted">DC Location</label>
+                            <input type="text" name="dc_location" id="edit_dc_location" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted">Loading Date</label>
+                            <input type="date" name="loading_date" id="edit_loading_date" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted">Loading Week</label>
+                            <input type="text" name="loading_week" id="edit_loading_week" class="form-control" placeholder="e.g. WK32">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-white border-top">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning fw-bold px-4 text-dark" onclick="savePoDetails()">
+                    <i class="fas fa-save me-1"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Update Inspection Result -->
 <div class="modal fade" id="updateInspectionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow border-0">
             <div class="modal-header bg-white border-bottom">
                 <h5 class="modal-title fw-bold text-dark"><i class="fas fa-edit me-2 text-primary"></i>Update Inspection Result</h5>
+                <button type="button" class="btn btn-sm btn-outline-warning ms-3 fw-bold" onclick="openEditPoModal()"><i class="fas fa-pencil-alt me-1"></i> Edit PO Data</button>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-light">

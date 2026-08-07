@@ -3,6 +3,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../db.php';
 require_once '../../../auth/check_auth.php';
+require_once '../../../config/logger.php';
 
 $action = $_REQUEST['action'] ?? '';
 
@@ -207,6 +208,51 @@ try {
         $stmt->execute($params);
 
         echo json_encode(['success' => true, 'message' => count($po_ids) . ' PO(s) updated successfully.']);
+    }
+    elseif ($action === 'update_po_details') {
+        $po_id = $_POST['po_id'] ?? '';
+        if (empty($po_id)) throw new Exception("Missing PO ID.");
+        
+        $po_number = $_POST['po_number'] ?? '';
+        $sku = $_POST['sku'] ?? '';
+        $description = $_POST['description'] ?? '';
+        $color = $_POST['color'] ?? '';
+        $quantity = $_POST['quantity'] ?? null;
+        $dc_location = $_POST['dc_location'] ?? '';
+        $loading_date = $_POST['loading_date'] ?? null;
+        if ($loading_date === '') $loading_date = null;
+        $loading_week = $_POST['loading_week'] ?? '';
+        
+        // Fetch old data for logging
+        $oldStmt = $pdo->prepare("SELECT po_number, sku, description, color, quantity, dc_location, loading_date, loading_week FROM SALES_ORDERS WITH (NOLOCK) WHERE id = ?");
+        $oldStmt->execute([$po_id]);
+        $oldData = $oldStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$oldData) throw new Exception("PO not found.");
+        
+        $newData = [
+            'po_number' => $po_number,
+            'sku' => $sku,
+            'description' => $description,
+            'color' => $color,
+            'quantity' => $quantity,
+            'dc_location' => $dc_location,
+            'loading_date' => $loading_date,
+            'loading_week' => $loading_week
+        ];
+        
+        $sql = "UPDATE SALES_ORDERS SET 
+                po_number = ?, sku = ?, description = ?, color = ?, quantity = ?, dc_location = ?, loading_date = ?, loading_week = ?, updated_at = GETDATE()
+                WHERE id = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            $po_number, $sku, $description, $color, $quantity, $dc_location, $loading_date, $loading_week, $po_id
+        ]);
+        
+        if (function_exists('writeLog')) {
+            writeLog($pdo, 'UPDATE', 'QMS_QA_SCHEDULE', $po_id, json_encode($oldData, JSON_UNESCAPED_UNICODE), json_encode($newData, JSON_UNESCAPED_UNICODE), 'User edited PO details');
+        }
+        
+        echo json_encode(['success' => true, 'message' => 'PO Details updated successfully.']);
     }
     else {
         throw new Exception("Invalid action specified.");
