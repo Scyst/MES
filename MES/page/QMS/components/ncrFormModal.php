@@ -3,7 +3,7 @@
         <div class="modal-content">
             
             <div class="modal-header bg-primary text-white align-items-center">
-                <h5 class="modal-title fw-bold mb-0 d-flex align-items-center">
+                <h5 class="modal-title fw-bold mb-0 d-flex align-items-center" id="ncrModalTitle">
                     <i class="fas fa-exclamation-circle me-2"></i>แจ้งพบปัญหาคุณภาพ (New NCR)
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -11,6 +11,8 @@
             
             <div class="modal-body bg-light">
                 <form id="formNCR" class="needs-validation" novalidate>
+                    <input type="hidden" name="action" id="ncr_action" value="create_ncr">
+                    <input type="hidden" name="case_id" id="ncr_case_id" value="">
                     <div class="row">
                         
                         <div class="col-lg-6 mb-3 d-flex flex-column gap-3">
@@ -168,7 +170,7 @@
                                         <div class="photo-upload-box h-100 d-flex flex-column align-items-center justify-content-center" id="uploadBox" style="min-height: 150px;">
                                             <i class="fas fa-camera fa-2x text-primary opacity-75 mb-2"></i>
                                             <h6 class="fw-bold text-primary mb-1">แตะเพื่อถ่ายรูป หรือ เลือกรูปภาพ</h6>
-                                            <small class="text-muted">บังคับอัปโหลดอย่างน้อย 1 รูป (ไม่เกิน 5MB)</small>
+                                            <small class="text-muted" id="ncrFileInputHelp">บังคับอัปโหลดอย่างน้อย 1 รูป (ไม่เกิน 5MB)</small>
                                             <input type="file" id="ncrFileInput" name="ncr_images[]" multiple accept="image/*" capture="environment" required>
                                         </div>
                                     </div>
@@ -185,7 +187,7 @@
             <div class="modal-footer bg-white">
                 <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
                 <button type="submit" form="formNCR" class="btn btn-primary rounded-pill px-4 fw-bold" id="btnSaveNCR">
-                    <i class="fas fa-paper-plane me-2"></i>สร้างใบแจ้งปัญหา (NCR)
+                    <i class="fas fa-paper-plane me-2" id="btnSaveNCRIcon"></i><span id="btnSaveNCRText">สร้างใบแจ้งปัญหา (NCR)</span>
                 </button>
             </div>
 

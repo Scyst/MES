@@ -32,6 +32,7 @@ let currentStatusFilter = 'ALL';
 let searchTimer; 
 let caseDetailOffcanvasInstance = null; 
 let isDataReady = false;
+let currentCaseData = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     fetchCasesData();
@@ -266,6 +267,7 @@ function openCaseDetail(caseId) {
     .then(res => {
         if(res.success) {
             const data = res.data;
+            currentCaseData = data;
             
             document.getElementById('offcanvas_car_no').innerText = data.car_no;
             
@@ -414,6 +416,7 @@ function manageUIZones(data) {
             if (document.getElementById('btnCloseClaimBtn')) document.getElementById('btnCloseClaimBtn').classList.add('d-none');
             if (document.getElementById('btnRejectCAR')) document.getElementById('btnRejectCAR').classList.add('d-none');
         }
+        if (document.getElementById('btnEditNCR')) document.getElementById('btnEditNCR').classList.add('d-none');
     }
 
     // Reset form states if NOT closed
@@ -424,6 +427,7 @@ function manageUIZones(data) {
             if (document.getElementById('btnCloseClaimBtn')) document.getElementById('btnCloseClaimBtn').classList.remove('d-none');
             if (document.getElementById('btnRejectCAR')) document.getElementById('btnRejectCAR').classList.remove('d-none');
         }
+        if (document.getElementById('btnEditNCR')) document.getElementById('btnEditNCR').classList.remove('d-none');
     }
 }
 
@@ -448,7 +452,9 @@ function initForms() {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>กำลังบันทึก...';
 
             let formData = new FormData(this);
-            formData.append('action', 'create_ncr');
+            const action = document.getElementById('ncr_action').value || 'create_ncr';
+            // ensure action is in form data if not picked up
+            if(!formData.has('action')) formData.append('action', action);
             formData = appendCsrfToken(formData); // แทรก CSRF Token
 
             fetch('./api/qms_action.php', { method: 'POST', body: formData })
@@ -644,12 +650,47 @@ function openNCRModal() {
         formNCR.reset(); 
         formNCR.classList.remove('was-validated'); 
         
+        document.getElementById('ncr_action').value = 'create_ncr';
+        document.getElementById('ncr_case_id').value = '';
+        document.getElementById('ncrModalTitle').innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>แจ้งพบปัญหาคุณภาพ (New NCR)';
+        document.getElementById('btnSaveNCRText').innerText = 'สร้างใบแจ้งปัญหา (NCR)';
+        document.getElementById('btnSaveNCRIcon').className = 'fas fa-paper-plane me-2';
+        document.getElementById('ncrFileInputHelp').innerHTML = 'บังคับอัปโหลดอย่างน้อย 1 รูป (ไม่เกิน 5MB)';
+        
         const previewContainer = document.getElementById('imagePreviewContainer');
         const uploadBox = document.getElementById('uploadBox');
         if(previewContainer) previewContainer.innerHTML = '';
         if(uploadBox) {
             uploadBox.classList.remove('border-success', 'bg-success', 'bg-opacity-10');
             uploadBox.querySelector('h6').innerHTML = `แตะเพื่อถ่ายรูป หรือ เลือกรูปภาพ`;
+        }
+    }
+    const myModal = new bootstrap.Modal(document.getElementById('ncrModal'));
+    myModal.show();
+}
+
+function editNcr() {
+    if (!currentCaseData) return;
+    
+    if (caseDetailOffcanvasInstance) caseDetailOffcanvasInstance.hide();
+    
+    const formNCR = document.getElementById('formNCR');
+    if (formNCR) {
+        formNCR.reset();
+        formNCR.classList.remove('was-validated');
+        
+        document.getElementById('ncr_action').value = 'update_ncr';
+        document.getElementById('ncr_case_id').value = currentCaseData.case_id;
+        document.getElementById('ncrModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>แก้ไขข้อมูลแจ้งพบปัญหาคุณภาพ (Edit NCR)';
+        document.getElementById('btnSaveNCRText').innerText = 'บันทึกการแก้ไข';
+        document.getElementById('btnSaveNCRIcon').className = 'fas fa-save me-2';
+        document.getElementById('ncrFileInputHelp').innerHTML = 'แนบรูปภาพเพิ่มเติม (ไม่บังคับ)';
+        document.getElementById('ncrFileInput').removeAttribute('required');
+        
+        for (const key in currentCaseData) {
+            if (formNCR.elements[key]) {
+                formNCR.elements[key].value = currentCaseData[key];
+            }
         }
     }
     const myModal = new bootstrap.Modal(document.getElementById('ncrModal'));

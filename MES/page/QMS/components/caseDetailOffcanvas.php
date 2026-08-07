@@ -166,9 +166,14 @@
                 <div class="offcanvas-card">
                     <div class="offcanvas-card-header bg-primary bg-opacity-10 text-primary d-flex justify-content-between align-items-center">
                         <div><i class="fas fa-file-invoice me-1"></i> ข้อมูลรับแจ้งปัญหา (NCR Info)</div>
-                        <button class="btn btn-sm btn-light border fw-bold text-secondary shadow-sm" onclick="printDoc('ncr')">
-                            <i class="fas fa-print text-primary"></i> Print
-                        </button>
+                        <div>
+                            <button class="btn btn-sm btn-primary fw-bold shadow-sm me-1" id="btnEditNCR" onclick="editNcr()">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn-sm btn-light border fw-bold text-secondary shadow-sm" onclick="printDoc('ncr')">
+                                <i class="fas fa-print text-primary"></i> Print
+                            </button>
+                        </div>
                     </div>
                     <div class="offcanvas-card-body">
                         <div class="row g-3">

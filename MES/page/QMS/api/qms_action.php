@@ -137,6 +137,100 @@ try {
             break;
 
         // ==========================================
+        // 1.5 UPDATE NCR (แก้ไขเคสเดิม)
+        // ==========================================
+        case 'update_ncr':
+            $case_id = $_POST['case_id'] ?? null;
+            if (!$case_id) throw new Exception("Missing Case ID");
+            
+            $raw_defect_qty = trim($_POST['defect_qty'] ?? '');
+            $defect_qty = ($raw_defect_qty !== '') ? floatval($raw_defect_qty) : 0;
+            
+            $pdo->beginTransaction();
+            
+            // Fetch old data for logging
+            $stmtOld = $pdo->prepare("SELECT * FROM QMS_CASES c JOIN QMS_NCR n ON c.case_id = n.case_id WHERE c.case_id = ?");
+            $stmtOld->execute([$case_id]);
+            $oldData = $stmtOld->fetch(PDO::FETCH_ASSOC);
+
+            // Update QMS_CASES
+            $stmtCases = $pdo->prepare("
+                UPDATE QMS_CASES SET 
+                    customer_name = ?, product_name = ?, issue_by_name = ?, updated_at = GETDATE()
+                WHERE case_id = ?
+            ");
+            $stmtCases->execute([
+                $_POST['customer_name'] ?? '',
+                $_POST['product_name'] ?? '',
+                $_POST['issue_by_name'] ?? '',
+                $case_id
+            ]);
+            
+            // Update QMS_NCR
+            $stmtNCR = $pdo->prepare("
+                UPDATE QMS_NCR SET 
+                    defect_type = ?, defect_qty = ?, defect_description = ?, production_date = ?, 
+                    lot_no = ?, found_shift = ?, product_model = ?, production_line = ?, 
+                    invoice_no = ?, issuer_position = ?, found_by_type = ?, 
+                    prelim_disposition = ?, prelim_remark = ?
+                WHERE case_id = ?
+            ");
+            $stmtNCR->execute([
+                $_POST['defect_type'] ?? '',
+                $defect_qty,
+                $_POST['defect_description'] ?? '',
+                empty($_POST['production_date']) ? null : $_POST['production_date'],
+                $_POST['lot_no'] ?? null,
+                $_POST['found_shift'] ?? null,
+                $_POST['product_model'] ?? null,
+                $_POST['production_line'] ?? null,
+                empty(trim($_POST['invoice_no'] ?? '')) ? null : trim($_POST['invoice_no']),
+                empty(trim($_POST['issuer_position'] ?? '')) ? null : trim($_POST['issuer_position']),
+                empty(trim($_POST['found_by_type'] ?? '')) ? null : trim($_POST['found_by_type']),
+                empty(trim($_POST['prelim_disposition'] ?? '')) ? null : trim($_POST['prelim_disposition']),
+                empty(trim($_POST['prelim_remark'] ?? '')) ? null : trim($_POST['prelim_remark']),
+                $case_id
+            ]);
+            
+            $pdo->commit();
+            
+            // Log the change
+            require_once '../../../utils/logger.php';
+            $newData = array_merge($_POST, ['defect_qty' => $defect_qty]);
+            writeLog('QMS', 'UPDATE_NCR', "Updated NCR Case ID: $case_id", $oldData, $newData);
+            
+            // Handle new images if provided
+            if (!empty($_FILES['ncr_images']['name'][0])) {
+                $baseUploadDir = __DIR__ . '/../../../uploads/qms_files/';
+                if (!is_dir($baseUploadDir)) mkdir($baseUploadDir, 0777, true);
+                $uploadedFiles = [];
+                foreach ($_FILES['ncr_images']['tmp_name'] as $key => $tmpName) {
+                    if ($_FILES['ncr_images']['error'][$key] === UPLOAD_ERR_OK) {
+                        $fileName = basename($_FILES['ncr_images']['name'][$key]);
+                        $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                        $newFileName = "car_{$case_id}_" . time() . "_{$key}." . $ext;
+                        $targetPath = $baseUploadDir . $newFileName;
+                        if (!compressImage($tmpName, $targetPath, 70)) {
+                            move_uploaded_file($tmpName, $targetPath);
+                        }
+                        $dbPath = 'uploads/qms_files/' . $newFileName;
+                        $uploadedFiles[] = ['name' => $fileName, 'path' => $dbPath];
+                    }
+                }
+                if (!empty($uploadedFiles)) {
+                    $pdo->beginTransaction();
+                    $stmtAtt = $pdo->prepare("INSERT INTO QMS_FILE (case_id, doc_stage, file_name, file_path, uploaded_by) VALUES (?, 'NCR', ?, ?, ?)");
+                    foreach ($uploadedFiles as $file) {
+                        $stmtAtt->execute([$case_id, $file['name'], $file['path'], $user_id]);
+                    }
+                    $pdo->commit();
+                }
+            }
+
+            echo json_encode(['success' => true, 'data' => ['case_id' => $case_id], 'message' => 'บันทึกการแก้ไขเรียบร้อยแล้ว']);
+            break;
+
+        // ==========================================
         // 2. ISSUE CAR (ส่งให้ลูกค้า)
         // ==========================================
         case 'issue_car':
