@@ -23,9 +23,10 @@
                 <thead class="table-light text-secondary small text-uppercase">
                     <tr>
                         <th class="px-3 py-2 text-center" style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllConcession" onchange="toggleSelectAllConcession(this)"></th>
-                        <th class="px-3">Request No.</th>
-                        <th>Date</th>
-                        <th>Subject / Part Name</th>
+                        <th class="px-3">Document Info</th>
+                        <th>Issuer / Request To</th>
+                        <th>Product Details</th>
+                        <th>Order / Lot No.</th>
                         <th class="text-center">Qty</th>
                     </tr>
                 </thead>
