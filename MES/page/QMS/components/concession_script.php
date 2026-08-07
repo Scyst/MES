@@ -110,44 +110,6 @@ function viewConcession(id) {
     });
 }
 
-function renderApproval(name, status, date) {
-    if (!status) return '<span class="text-muted small">Pending...</span>';
-    let icon = status === 'Approve' ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-times-circle text-danger"></i>';
-    return `
-        <div>${icon} ${status}</div>
-        <div class="small fw-bold">${name}</div>
-        <div class="small text-muted">${date}</div>
-    `;
-}
-
-function approveConcession(id, level, status) {
-    Swal.fire({
-        title: 'Confirm Action',
-        text: `Are you sure you want to ${status} this request?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, proceed'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const formData = new FormData();
-            formData.append('id', id);
-            formData.append('level', level);
-            formData.append('status', status);
-            
-            fetch('./api/concession_api.php?action=approve', {
-                method: 'POST',
-                body: formData
-            }).then(r => r.json()).then(res => {
-                if(res.success) {
-                    Swal.fire({icon:'success', title:'Updated', timer:1500, showConfirmButton:false});
-                    bootstrap.Modal.getInstance(document.getElementById('concessionDetailModal')).hide();
-                    loadConcessionList();
-                }
-            });
-        }
-    });
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     // We bind tab shown event to load data
     const scheduleTab = document.getElementById('schedule-tab');
