@@ -945,12 +945,56 @@ const WorkOrderModule = (() => {
         }
     }
 
-    function bulkPrintPDF() {
+    async function bulkPrintPDF() {
         const checked = document.querySelectorAll('.wo-bulk-check:checked');
         if (checked.length === 0) return;
         
-        const ids = Array.from(checked).map(c => c.value).join(',');
-        window.open(PE_CONFIG.apiBase + 'generate_wo_pdf.php?wo_ids=' + ids, '_blank');
+        const ids = Array.from(checked).map(c => c.value);
+
+        const { value: sortOption } = await Swal.fire({
+            title: 'Bulk Print Options',
+            html: `
+                <div class="pe-text-start mb-2" style="font-size: 14px;">
+                    <label class="form-label fw-bold">การเรียงลำดับหน้าเอกสาร (Sort Order)</label>
+                    <select id="swal-sort-input" class="form-select mt-1">
+                        <option value="default">ตามลำดับที่เลือกในตาราง (Default)</option>
+                        <option value="completed_asc">ตามวันที่ทำงานเสร็จ (เก่า -> ใหม่)</option>
+                        <option value="completed_desc">ตามวันที่ทำงานเสร็จ (ใหม่ -> เก่า)</option>
+                    </select>
+                    <div class="text-muted mt-2" style="font-size: 12px;">* ใบงานที่ยังไม่เสร็จ (ไม่มีวันที่) จะถูกจัดไว้ท้ายสุดเสมอ</div>
+                </div>
+            `,
+            icon: 'info',
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-print me-1"></i> เปิดไฟล์ PDF',
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => {
+                return document.getElementById('swal-sort-input').value;
+            }
+        });
+
+        if (!sortOption) return;
+
+        let finalIds = [...ids];
+        if (sortOption !== 'default') {
+            const selectedWOs = ids.map(id => allData.find(w => w.wo_id == id)).filter(Boolean);
+            
+            selectedWOs.sort((a, b) => {
+                const dateA = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+                const dateB = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+                
+                if (dateA === 0 && dateB === 0) return 0;
+                if (dateA === 0) return 1;
+                if (dateB === 0) return -1;
+                
+                return sortOption === 'completed_asc' ? dateA - dateB : dateB - dateA;
+            });
+            
+            finalIds = selectedWOs.map(w => w.wo_id);
+        }
+
+        window.open(PE_CONFIG.apiBase + 'generate_wo_pdf.php?wo_ids=' + finalIds.join(','), '_blank');
     }
 
     // --- Spare Parts Management ---
