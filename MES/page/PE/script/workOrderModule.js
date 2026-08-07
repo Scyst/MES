@@ -958,14 +958,14 @@ const WorkOrderModule = (() => {
                     <label class="form-label fw-bold">การเรียงลำดับหน้าเอกสาร (Sort Order)</label>
                     <select id="swal-sort-input" class="form-select mt-1">
                         <option value="default">ตามลำดับที่เลือกในตาราง (Default)</option>
-                        <option value="requested_asc">ตามวันที่แจ้งซ่อม (เก่า -> ใหม่)</option>
-                        <option value="requested_desc">ตามวันที่แจ้งซ่อม (ใหม่ -> เก่า)</option>
-                        <option value="started_asc">ตามวันที่เริ่มซ่อม (เก่า -> ใหม่)</option>
-                        <option value="started_desc">ตามวันที่เริ่มซ่อม (ใหม่ -> เก่า)</option>
                         <option value="completed_asc">ตามวันที่ทำงานเสร็จ (เก่า -> ใหม่)</option>
                         <option value="completed_desc">ตามวันที่ทำงานเสร็จ (ใหม่ -> เก่า)</option>
+                        <option value="requested_asc">ตามวันที่แจ้งซ่อม (เก่า -> ใหม่)</option>
+                        <option value="requested_desc">ตามวันที่แจ้งซ่อม (ใหม่ -> เก่า)</option>
+                        <option value="started_asc">ตามวันที่เริ่มงาน (เก่า -> ใหม่)</option>
+                        <option value="started_desc">ตามวันที่เริ่มงาน (ใหม่ -> เก่า)</option>
                     </select>
-                    <div class="text-muted mt-2" style="font-size: 12px;">* ใบงานที่ไม่มีวันที่นั้นๆ จะถูกจัดไว้ท้ายสุดเสมอ</div>
+                    <div class="text-muted mt-2" style="font-size: 12px;">* ใบงานที่ยังไม่เสร็จ (ไม่มีวันที่) จะถูกจัดไว้ท้ายสุดเสมอ</div>
                 </div>
             `,
             icon: 'info',
@@ -985,23 +985,25 @@ const WorkOrderModule = (() => {
             const selectedWOs = ids.map(id => allData.find(w => w.wo_id == id)).filter(Boolean);
             
             selectedWOs.sort((a, b) => {
-                let dateA = 0, dateB = 0;
-                if (sortOption.startsWith('requested_')) {
-                    dateA = a.requested_at ? new Date(a.requested_at).getTime() : 0;
-                    dateB = b.requested_at ? new Date(b.requested_at).getTime() : 0;
-                } else if (sortOption.startsWith('started_')) {
-                    dateA = a.started_at ? new Date(a.started_at).getTime() : 0;
-                    dateB = b.started_at ? new Date(b.started_at).getTime() : 0;
-                } else {
+                let dateA = 0;
+                let dateB = 0;
+                
+                if (sortOption.startsWith('completed')) {
                     dateA = a.completed_at ? new Date(a.completed_at).getTime() : 0;
                     dateB = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+                } else if (sortOption.startsWith('requested')) {
+                    dateA = a.requested_at ? new Date(a.requested_at).getTime() : 0;
+                    dateB = b.requested_at ? new Date(b.requested_at).getTime() : 0;
+                } else if (sortOption.startsWith('started')) {
+                    dateA = a.started_at ? new Date(a.started_at).getTime() : 0;
+                    dateB = b.started_at ? new Date(b.started_at).getTime() : 0;
                 }
                 
                 if (dateA === 0 && dateB === 0) return 0;
                 if (dateA === 0) return 1;
                 if (dateB === 0) return -1;
                 
-                return sortOption.endsWith('_asc') ? dateA - dateB : dateB - dateA;
+                return sortOption.endsWith('asc') ? dateA - dateB : dateB - dateA;
             });
             
             finalIds = selectedWOs.map(w => w.wo_id);
