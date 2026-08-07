@@ -115,9 +115,11 @@
 
         <!-- Custom Date Picker (Range) -->
         <div class="d-flex align-items-center ps-2 pe-1">
-            <input type="date" id="scheduleStartDate" class="form-control form-control-sm border-0 bg-transparent text-center fw-bold text-dark px-1 mx-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule('custom_range')" style="font-size: 0.95rem; width: 130px; cursor: pointer; box-shadow: none;" title="Start Date">
-            <span class="text-muted small px-1">to</span>
-            <input type="date" id="scheduleEndDate" class="form-control form-control-sm border-0 bg-transparent text-center fw-bold text-dark px-1 mx-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule('custom_range')" style="font-size: 0.95rem; width: 130px; cursor: pointer; box-shadow: none;" title="End Date">
+            <button class="btn btn-sm btn-light border px-2 shadow-sm rounded-start-pill" onclick="changeDate(-1)" title="Previous Day"><i class="fas fa-chevron-left"></i></button>
+            <input type="date" id="scheduleStartDate" class="form-control form-control-sm border bg-white text-center fw-bold text-dark px-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule('custom_range')" style="font-size: 0.95rem; width: 130px; cursor: pointer; box-shadow: none;" title="Start Date">
+            <span class="text-muted small px-1 bg-light border-top border-bottom py-1" style="height:31px">to</span>
+            <input type="date" id="scheduleEndDate" class="form-control form-control-sm border bg-white text-center fw-bold text-dark px-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule('custom_range')" style="font-size: 0.95rem; width: 130px; cursor: pointer; box-shadow: none;" title="End Date">
+            <button class="btn btn-sm btn-light border px-2 shadow-sm rounded-end-pill" onclick="changeDate(1)" title="Next Day"><i class="fas fa-chevron-right"></i></button>
         </div>
     </div>
     
@@ -149,7 +151,8 @@
                         <th class="py-2 text-center" style="width: 80px;">Qty</th>
                         <th class="py-2 text-center" style="width: 80px;">Sampling</th>
                         <th class="py-2 text-center" style="width: 120px;">DC Location</th>
-                        <th class="py-2 text-center" style="width: 120px;">Inspection Date</th>
+                        <th class="py-2 text-center" style="width: 120px;">Plan Date</th>
+                        <th class="py-2 text-center" style="width: 120px;">Actual Date</th>
                         <th class="py-2 text-center" style="width: 120px;">Loading Date</th>
                         <th class="py-2 text-center" style="width: 110px;">Loading Week</th>
                         <th class="py-2 text-center" style="width: 140px;">Inspector</th>
@@ -224,7 +227,21 @@
                         <label class="form-label fw-bold small text-muted">PO Number</label>
                         <input type="text" id="inspect_po_number" class="form-control fw-bold bg-white" readonly>
                     </div>
-
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted">Inspection Status</label>
+                            <select name="inspection_status" id="inspect_status" class="form-select" onchange="toggleResultFields()">
+                                <option value="WAITING">WAITING</option>
+                                <option value="IN_PROGRESS">IN PROGRESS</option>
+                                <option value="DONE">DONE</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted">Actual Inspection Date</label>
+                            <input type="date" name="actual_inspection_date" id="inspect_actual_date" class="form-control">
+                        </div>
+                    </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold small text-muted">Ticket Number (เลขตั๋ว)</label>
@@ -382,10 +399,14 @@
                         <input type="text" id="create_ticket_number" class="form-control" placeholder="Ticket No...">
                     </div>
                     <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold small text-muted">Inspector (คนตรวจ)</label>
-                        <input type="text" id="create_qa_inspector" class="form-control" list="qc-users-list" placeholder="- Type or Select -">
+                        <label class="form-label fw-bold small text-muted">Plan Date</label>
+                        <input type="date" id="create_inspection_date" class="form-control">
                     </div>
                     <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold small text-muted">Inspector</label>
+                        <input type="text" id="create_qa_inspector" class="form-control" list="qc-users-list" placeholder="- Select -">
+                    </div>
+                    <div class="col-md-12 mb-3">
                         <label class="form-label fw-bold small text-muted">Inspection Type</label>
                         <div class="custom-segmented w-100">
                             <input type="radio" class="btn-check" name="create_inspect_type" id="create_type_remote" value="Remote">

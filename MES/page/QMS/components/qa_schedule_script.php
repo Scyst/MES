@@ -24,7 +24,7 @@ function loadQASchedule(filterType = null) {
     const startDate = document.getElementById('scheduleStartDate').value;
     const endDate = document.getElementById('scheduleEndDate').value;
     const tbody = document.getElementById('qaScheduleBody');
-    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
     
     fetch(`./api/qa_schedule_api.php?action=get_schedule&start_date=${startDate}&end_date=${endDate}&range=${currentFilter}`)
         .then(r => r.json())
@@ -40,7 +40,7 @@ function loadQASchedule(filterType = null) {
                 }
 
                 if(res.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
                     return;
                 }
                 
@@ -93,6 +93,7 @@ function loadQASchedule(filterType = null) {
                             <td class="text-center text-muted">-</td>
                             <td class="text-center">${po.dc_location || '-'}</td>
                             <td class="text-center fw-bold text-dark">${po.inspection_date ? po.inspection_date.substring(0, 10) : '-'}</td>
+                            <td class="text-center fw-bold text-success">${po.actual_inspection_date ? po.actual_inspection_date.substring(0, 10) : '-'}</td>
                             <td class="text-center">${po.loading_date ? po.loading_date : '-'}</td>
                             <td class="text-center fw-bold text-secondary">${po.loading_week || '-'}</td>
                             <td class="text-center" onclick="event.stopPropagation()">${inspectorCell}</td>
@@ -330,12 +331,8 @@ function openUpdateModal(po) {
         status = 'WAITING';
     }
     
-    const statusRadio = document.getElementById('status_' + status.toLowerCase().replace(' ', '_'));
-    if (statusRadio) {
-        statusRadio.checked = true;
-    } else {
-        document.querySelectorAll(`input[name="inspection_status"]`).forEach(el => el.checked = false);
-    }
+    document.getElementById('inspect_status').value = status;
+    document.getElementById('inspect_actual_date').value = po.actual_inspection_date ? po.actual_inspection_date.substring(0, 10) : '';
     
     let result = po.inspection_result ? po.inspection_result.toString().trim().toUpperCase() : '';
     if (result === 'NULL') result = '';
@@ -432,6 +429,24 @@ function setScheduleDateToday() {
     const today = `${yyyy}-${mm}-${dd}`;
     inputStart.value = today;
     inputEnd.value = today;
+    
+    loadQASchedule('custom_range');
+}
+
+function changeDate(days) {
+    const startInput = document.getElementById('scheduleStartDate');
+    const endInput = document.getElementById('scheduleEndDate');
+    
+    let startDate = new Date(startInput.value);
+    if(isNaN(startDate)) startDate = new Date();
+    startDate.setDate(startDate.getDate() + days);
+    
+    let endDate = new Date(endInput.value);
+    if(isNaN(endDate)) endDate = new Date();
+    endDate.setDate(endDate.getDate() + days);
+    
+    startInput.value = startDate.toISOString().split('T')[0];
+    endInput.value = endDate.toISOString().split('T')[0];
     
     loadQASchedule('custom_range');
 }
@@ -680,6 +695,7 @@ function openCreateTicketModal() {
     createTicketPoList = [];
     document.getElementById('create_ticket_number').value = '';
     document.getElementById('create_qa_inspector').value = '';
+    document.getElementById('create_inspection_date').value = document.getElementById('scheduleStartDate') ? document.getElementById('scheduleStartDate').value : new Date().toISOString().split('T')[0];
     document.querySelectorAll('input[name="create_inspect_type"]').forEach(el => el.checked = false);
     document.getElementById('createTicketSearchPo').value = '';
     renderCreateTicketPoTable();
@@ -788,6 +804,7 @@ function saveNewTicket() {
     
     const inspector = document.getElementById('create_qa_inspector').value;
     const type = document.querySelector('input[name="create_inspect_type"]:checked');
+    const inspectionDate = document.getElementById('create_inspection_date').value;
     
     const btn = document.getElementById('btnSaveCreateTicket');
     btn.disabled = true;
@@ -800,6 +817,7 @@ function saveNewTicket() {
     formData.append('ticket_number', ticket);
     formData.append('qa_inspector', inspector);
     if (type) formData.append('inspect_type', type.value);
+    if (inspectionDate) formData.append('inspection_date', inspectionDate);
     
     fetch('./api/qa_schedule_api.php?action=bulk_update_ticket', {
         method: 'POST',

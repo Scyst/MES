@@ -17,7 +17,7 @@ try {
             $pdo->exec("ALTER TABLE SALES_ORDERS ADD inspection_remark NVARCHAR(MAX) NULL");
         } catch(Exception $e) {}
 
-        $sql = "SELECT id, po_number, sku, description, color, quantity, dc_location, loading_date, loading_week, inspection_date, inspection_status, inspection_result, is_confirmed, inspection_remark, qa_inspector, ticket_number, inspect_type 
+        $sql = "SELECT id, po_number, sku, description, color, quantity, dc_location, loading_date, loading_week, inspection_date, actual_inspection_date, inspection_status, inspection_result, is_confirmed, inspection_remark, qa_inspector, ticket_number, inspect_type 
                 FROM SALES_ORDERS WITH (NOLOCK) ";
                 
         if ($range === 'this_week') {
@@ -113,16 +113,18 @@ try {
         $ticket_number = $_POST['ticket_number'] ?? null;
         $qa_inspector = $_POST['qa_inspector'] ?? null;
         $inspect_type = $_POST['inspect_type'] ?? null;
+        $actual_inspection_date = $_POST['actual_inspection_date'] ?? null;
+        if ($actual_inspection_date === '') $actual_inspection_date = null;
 
         if (empty($po_id) || empty($inspection_status)) {
             throw new Exception("Missing required fields.");
         }
 
         $sql = "UPDATE SALES_ORDERS 
-                SET inspection_status = ?, inspection_result = ?, inspection_remark = ?, ticket_number = ?, qa_inspector = ?, inspect_type = ?, is_confirmed = 1, updated_at = GETDATE() 
+                SET inspection_status = ?, inspection_result = ?, inspection_remark = ?, ticket_number = ?, qa_inspector = ?, inspect_type = ?, actual_inspection_date = ?, is_confirmed = 1, updated_at = GETDATE() 
                 WHERE id = ?";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$inspection_status, $inspection_result, $remark, $ticket_number, $qa_inspector, $inspect_type, $po_id]);
+        $stmt->execute([$inspection_status, $inspection_result, $remark, $ticket_number, $qa_inspector, $inspect_type, $actual_inspection_date, $po_id]);
 
         echo json_encode(['success' => true, 'message' => 'Inspection updated successfully.']);
     }
@@ -181,17 +183,26 @@ try {
         $ticket_number = $_POST['ticket_number'] ?? '';
         $qa_inspector = $_POST['qa_inspector'] ?? '';
         $inspect_type = $_POST['inspect_type'] ?? '';
+        $inspection_date = $_POST['inspection_date'] ?? '';
 
         if (empty($po_ids) || !is_array($po_ids)) {
             throw new Exception("No POs selected.");
         }
 
         $placeholders = implode(',', array_fill(0, count($po_ids), '?'));
-        $params = array_merge([$ticket_number, $qa_inspector, $inspect_type], $po_ids);
+        $params = [$ticket_number, $qa_inspector, $inspect_type];
         
         $sql = "UPDATE SALES_ORDERS 
-                SET ticket_number = ?, qa_inspector = ?, inspect_type = ?, updated_at = GETDATE() 
-                WHERE id IN ($placeholders)";
+                SET ticket_number = ?, qa_inspector = ?, inspect_type = ?";
+                
+        if (!empty($inspection_date)) {
+            $sql .= ", inspection_date = ?";
+            $params[] = $inspection_date;
+        }
+        
+        $sql .= ", updated_at = GETDATE() WHERE id IN ($placeholders)";
+        $params = array_merge($params, $po_ids);
+        
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
