@@ -75,6 +75,23 @@ try {
 
         echo json_encode(['success' => true, 'data' => $data, 'stats' => $stats]);
     }
+    elseif ($action === 'get_pending_jobs') {
+        $search = $_GET['search'] ?? '';
+        $sql = "SELECT TOP 100 id, po_number, sku, description, quantity, loading_date, inspection_date 
+                FROM SALES_ORDERS WITH (NOLOCK)
+                WHERE (inspection_date IS NULL OR inspection_status = 'WAITING' OR inspection_status IS NULL)";
+        $params = [];
+        if (!empty($search)) {
+            $sql .= " AND po_number LIKE ?";
+            $params[] = "%$search%";
+        }
+        $sql .= " ORDER BY loading_date DESC, id DESC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode(['success' => true, 'data' => $data]);
+    }
     elseif ($action === 'search_po') {
         $search = $_GET['search'] ?? '';
         if (empty($search)) {

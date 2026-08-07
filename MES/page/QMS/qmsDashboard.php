@@ -44,6 +44,11 @@ $pageIcon = "fas fa-shield-alt";
                                 <i class="fas fa-file-signature me-1 text-primary"></i> Concession
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold border-0" id="qa_planner-tab" data-bs-toggle="tab" data-bs-target="#qa_planner" type="button" role="tab">
+                                <i class="fas fa-calendar-check me-1 text-primary"></i> QA/QC Planner
+                            </button>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -139,6 +144,11 @@ $pageIcon = "fas fa-shield-alt";
                     <div class="tab-pane fade" id="concession" role="tabpanel">
                         <?php include_once './components/concession_list.php'; ?>
                     </div>
+
+                    <!-- Tab 4: QA/QC Planner -->
+                    <div class="tab-pane fade" id="qa_planner" role="tabpanel" style="height: calc(100vh - 170px);">
+                        <?php include_once './components/qa_calendar.php'; ?>
+                    </div>
                 </div> <!-- End tab-content -->
 
             </div>
@@ -152,6 +162,7 @@ $pageIcon = "fas fa-shield-alt";
     <?php include_once './components/ncrFormModal.php'; ?>
     <?php include_once './components/caseDetailOffcanvas.php'; ?>
 
+    <script src="../../utils/libs/fullcalendar.global.min.js"></script>
     <script src="./script/qms_core.js?v=<?php echo time(); ?>"></script>
     <?php include_once './components/qa_schedule_script.php'; ?>
     <?php include_once './components/concession_script.php'; ?>

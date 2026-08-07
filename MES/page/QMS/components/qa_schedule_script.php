@@ -1,6 +1,9 @@
 <script>
 let currentFilter = 'date';
 let currentUpdatePo = null;
+let currentQaData = [];
+let qaCalendarInstance = null;
+let currentQaView = 'list';
 
 function loadQASchedule(filterType = null) {
     if (filterType) currentFilter = filterType;
@@ -39,6 +42,9 @@ function loadQASchedule(filterType = null) {
                     document.getElementById('stat-passed').innerText = res.stats.passed;
                     document.getElementById('stat-failed').innerText = res.stats.failed;
                 }
+
+                currentQaData = res.data;
+                renderQaCalendar();
 
                 if(res.data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
@@ -245,8 +251,10 @@ function searchPO() {
         });
 }
 
-function schedulePO(id) {
-    const date = document.getElementById('scheduleStartDate').value;
+function schedulePO(id, date = null) {
+    if (!date) {
+        date = document.getElementById('scheduleStartDate').value;
+    }
     const formData = new FormData();
     formData.append('id', id);
     formData.append('schedule_date', date);
@@ -259,8 +267,13 @@ function schedulePO(id) {
     .then(res => {
         if(res.success) {
             Swal.fire({icon:'success', title:'Scheduled!', timer:1500, showConfirmButton:false});
-            bootstrap.Modal.getInstance(document.getElementById('addScheduleModal')).hide();
+            const modalEl = document.getElementById('addScheduleModal');
+            if (modalEl) {
+                const modalInst = bootstrap.Modal.getInstance(modalEl);
+                if (modalInst) modalInst.hide();
+            }
             loadQASchedule();
+            loadPendingJobs(); // refresh sidebar
         } else {
             Swal.fire('Error', res.message, 'error');
         }
@@ -298,6 +311,7 @@ function removeSchedule(id, force = false) {
                     const modalInst = bootstrap.Modal.getInstance(modalEl);
                     if (modalInst) modalInst.hide();
                     loadQASchedule();
+                    loadPendingJobs();
                 } else if (res.require_force) {
                     removeSchedule(id, true);
                 } else {
@@ -459,13 +473,203 @@ function assignToMe(poId) {
     });
 }
 
+function toggleQaView(viewType) {
+    // Deprecated: Calendar is now in its own tab
+}
+
+function initQaCalendar() {
+    const calendarEl = document.getElementById('qaCalendar');
+    if (!calendarEl) return;
+    
+    qaCalendarInstance = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: false,
+        height: 750, // Fixed height so expandRows works perfectly
+        expandRows: true, // Forces all weeks to have equal height
+        droppable: true, // Allow things to be dropped onto the calendar
+        dayMaxEvents: 4, // Allow "more" link when too many events
+        drop: function(info) {
+            const poId = info.draggedEl.getAttribute('data-id');
+            const dateStr = info.dateStr;
+            if (poId) {
+                schedulePO(poId, dateStr);
+            }
+        },
+        datesSet: function(dateInfo) {
+            const titleEl = document.getElementById('qa-calendar-title');
+            if (titleEl) titleEl.textContent = dateInfo.view.title;
+        },
+        events: function(info, successCallback, failureCallback) {
+            const startStr = info.startStr.split('T')[0];
+            const endStr = info.endStr.split('T')[0];
+            
+            fetch(`./api/qa_schedule_api.php?action=get_schedule&start_date=${startStr}&end_date=${endStr}&range=custom_range`)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        const events = res.data.map(po => {
+                            return {
+                                id: po.id,
+                                title: po.po_number + (po.sku ? ' (' + po.sku + ')' : ''),
+                                start: po.inspection_date ? po.inspection_date.split(' ')[0] : null,
+                                extendedProps: {
+                                    poData: po,
+                                    status: po.inspection_status,
+                                    result: po.inspection_result,
+                                    inspector: po.qa_inspector
+                                }
+                            };
+                        }).filter(e => e.start);
+                        successCallback(events);
+                    } else {
+                        failureCallback();
+                    }
+                })
+                .catch(err => {
+                    console.error('Calendar fetch error:', err);
+                    failureCallback();
+                });
+        },
+        eventClick: function(info) {
+            const poData = info.event.extendedProps.poData;
+            if (poData) {
+                openUpdateModal(poData);
+            }
+        },
+        eventContent: function(arg) {
+            let color = '#6c757d'; // default waiting
+            if (arg.event.extendedProps.status === 'IN_PROGRESS') color = '#fd7e14';
+            if (arg.event.extendedProps.status === 'DONE') color = '#198754';
+            if (arg.event.extendedProps.result === 'FAIL') color = '#dc3545';
+            
+            return {
+                html: `<div class="p-1 rounded text-white shadow-sm" style="background-color: ${color}; font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; border-left: 3px solid rgba(255,255,255,0.5);">
+                           <b title="${arg.event.title}">${arg.event.title}</b><br>
+                           ${arg.event.extendedProps.inspector ? '<i class="fas fa-user-check"></i> ' + arg.event.extendedProps.inspector : ''}
+                       </div>`
+            };
+        }
+    });
+    qaCalendarInstance.render();
+}
+
+function renderQaCalendar() {
+    if (!qaCalendarInstance) return;
+    
+    // Set date to current filter if possible
+    const startDate = document.getElementById('scheduleStartDate').value;
+    if (startDate) {
+        qaCalendarInstance.gotoDate(startDate);
+    }
+    
+    qaCalendarInstance.refetchEvents();
+}
+
 // Auto load on tab show or page load if needed. We will trigger it when tab is clicked.
 document.addEventListener('DOMContentLoaded', () => {
+    // Bind Custom Calendar Header Buttons
+    document.getElementById('qa-calendar-prev-button')?.addEventListener('click', () => qaCalendarInstance?.prev());
+    document.getElementById('qa-calendar-next-button')?.addEventListener('click', () => qaCalendarInstance?.next());
+    document.getElementById('qa-calendar-today-button')?.addEventListener('click', () => qaCalendarInstance?.today());
+    
+    document.getElementById('qa-calendar-month-view-button')?.addEventListener('click', function() {
+        qaCalendarInstance?.changeView('dayGridMonth');
+        this.classList.add('active');
+        document.getElementById('qa-calendar-week-view-button')?.classList.remove('active');
+    });
+    
+    document.getElementById('qa-calendar-week-view-button')?.addEventListener('click', function() {
+        qaCalendarInstance?.changeView('timeGridWeek');
+        this.classList.add('active');
+        document.getElementById('qa-calendar-month-view-button')?.classList.remove('active');
+    });
+
+    // Initialize Draggable for sidebar
+    const containerEl = document.getElementById('pendingJobsList');
+    if (containerEl && typeof FullCalendar !== 'undefined' && FullCalendar.Draggable) {
+        new FullCalendar.Draggable(containerEl, {
+            itemSelector: '.fc-event',
+            eventData: function(eventEl) {
+                return {
+                    title: eventEl.innerText
+                };
+            }
+        });
+    }
+
+    // Listen to Tab change to initialize or update calendar size
+    document.getElementById('qa_planner-tab')?.addEventListener('shown.bs.tab', function (e) {
+        if (!qaCalendarInstance) {
+            initQaCalendar();
+        } else {
+            setTimeout(() => {
+                qaCalendarInstance.updateSize();
+            }, 10);
+        }
+        renderQaCalendar();
+        loadPendingJobs();
+    });
+
     // If it's the active tab, load it.
     if(document.getElementById('qaScheduleBody')) {
         loadQASchedule();
     }
 });
+
+let pendingJobsData = [];
+
+function loadPendingJobs(search = '') {
+    const listEl = document.getElementById('pendingJobsList');
+    if (!listEl) return;
+    
+    fetch(`./api/qa_schedule_api.php?action=get_pending_jobs&search=${encodeURIComponent(search)}`)
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                pendingJobsData = res.data;
+                const countEl = document.getElementById('pendingJobsCount');
+                if (countEl) countEl.innerText = res.data.length;
+                renderPendingJobs();
+            }
+        })
+        .catch(err => {
+            listEl.innerHTML = '<div class="text-center py-4 text-danger small">Failed to load pending jobs.</div>';
+        });
+}
+
+function filterPendingJobs(term) {
+    loadPendingJobs(term);
+}
+
+function renderPendingJobs() {
+    const listEl = document.getElementById('pendingJobsList');
+    if (!listEl) return;
+
+    if (pendingJobsData.length === 0) {
+        listEl.innerHTML = '<div class="text-center py-4 text-muted small">No pending jobs found.</div>';
+        return;
+    }
+
+    let html = '';
+    pendingJobsData.forEach(job => {
+        let title = `${job.po_number}`;
+        if (job.sku) title += ` (${job.sku})`;
+        
+        html += `
+            <div class="card mb-2 shadow-sm border-0 fc-event" data-id="${job.id}" style="cursor: grab;">
+                <div class="card-body p-2">
+                    <div class="fw-bold text-primary mb-1" style="font-size: 0.85rem;"><i class="fas fa-arrows-alt me-1 text-muted"></i>${title}</div>
+                    <div class="d-flex justify-content-between text-muted" style="font-size: 0.75rem;">
+                        <span>Qty: ${job.quantity ? Number(job.quantity).toLocaleString() : '-'}</span>
+                        <span>Load: ${job.loading_date || '-'}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    listEl.innerHTML = html;
+}
+
 
 function setScheduleDateToday() {
     const inputStart = document.getElementById('scheduleStartDate');

@@ -123,7 +123,9 @@
         </div>
     </div>
     
-    <div class="d-flex gap-2 ms-auto">
+    <div class="d-flex gap-2 ms-auto align-items-center">
+        <!-- Removed View Toggle (Now in separate tab) -->
+
         <button class="btn btn-sm btn-primary fw-bold px-3 shadow-sm d-none rounded-pill" id="btnBulkUpdate" onclick="openBulkUpdateModal()">
             <i class="fas fa-layer-group me-1"></i> Bulk Update (<span id="bulkCount">0</span>)
         </button>
@@ -139,7 +141,7 @@
     </div>
 </div>
 
-<div class="card table-card shadow-sm border-0 desktop-view h-100 d-flex flex-column">
+<div class="card table-card shadow-sm border-0 desktop-view h-100 d-flex flex-column" id="qaScheduleListViewContainer">
     <div class="table-responsive-custom h-100">
         <table class="table table-hover align-middle mb-0" id="qaScheduleTable">
                 <thead class="bg-primary text-white small text-uppercase">
