@@ -193,7 +193,7 @@ foreach ($wo_ids as $current_wo_id):
     $hasParts = false;
     $totalCost = 0;
     $partsHtml = '<table class="spare-parts-table">';
-    $partsHtml .= '<thead><tr><th style="width:20%">รหัสอะไหล่ (Code)</th><th style="width:40%">ชื่ออะไหล่ (Item Name)</th><th class="text-center" style="width:20%">จำนวน (Qty)</th><th class="text-center" style="width:20%">ราคารวม (Total Cost)</th></tr></thead><tbody>';
+    $partsHtml .= '<thead><tr><th class="text-center" style="width:20%">รหัสอะไหล่ (Code)</th><th class="text-center" style="width:40%">ชื่ออะไหล่ (Item Name)</th><th class="text-center" style="width:20%">จำนวน (Qty)</th><th class="text-center" style="width:20%">ราคารวม (Total Cost)</th></tr></thead><tbody>';
 
     foreach ($partsData as $p) {
         $hasParts = true;
