@@ -1,14 +1,14 @@
 <script>
 function loadConcessionList() {
     const tbody = document.getElementById('concessionBody');
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
     
     fetch('./api/concession_api.php?action=list')
         .then(r => r.json())
         .then(res => {
             if(res.success) {
                 if(res.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No records found.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No records found.</td></tr>';
                     return;
                 }
                 
@@ -39,10 +39,10 @@ function loadConcessionList() {
                 });
                 tbody.innerHTML = html;
             } else {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${res.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger">${res.message}</td></tr>`;
             }
         }).catch(err => {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Network Error</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-danger">Network Error</td></tr>';
         });
 }
 

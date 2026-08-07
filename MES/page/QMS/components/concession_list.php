@@ -35,7 +35,7 @@
                     </tr>
                 </thead>
                 <tbody id="concessionBody">
-                    <tr><td colspan="5" class="text-center py-4 text-muted">Loading requests...</td></tr>
+                    <tr><td colspan="10" class="text-center py-4 text-muted">Loading requests...</td></tr>
                 </tbody>
             </table>
         </div>
