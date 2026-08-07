@@ -539,6 +539,11 @@ function buildCustomQaCalendar(eventsData) {
                 schedulePO(poId, dateStr);
             }
         });
+        
+        // Click to view day jobs
+        cell.onclick = () => {
+            viewDayJobs(dateStr);
+        };
 
         const dayNumber = document.createElement('div');
         dayNumber.className = 'qa-day-number';
@@ -571,6 +576,11 @@ function buildCustomQaCalendar(eventsData) {
                 if (evt.extendedProps.inspector) {
                     pill.innerHTML += `<br><i class="fas fa-user-check"></i> ${evt.extendedProps.inspector}`;
                 }
+                pill.draggable = true;
+                pill.ondragstart = (e) => {
+                    e.dataTransfer.setData('text/plain', evt.extendedProps.poData.id);
+                    e.stopPropagation(); // prevent triggering parent clicks
+                };
                 pill.onclick = (e) => {
                     e.stopPropagation();
                     openUpdateModal(evt.extendedProps.poData);
@@ -1191,5 +1201,80 @@ function saveNewTicket() {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-save me-1"></i> Create & Link';
     });
+}
+
+function viewDayJobs(dateStr) {
+    if (!eventsData || !dateStr) return;
+    
+    // Convert to Thai date string
+    const [year, month, day] = dateStr.split('-');
+    const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    const displayDate = `${parseInt(day, 10)} ${thaiMonths[parseInt(month, 10) - 1]} ${year}`;
+    
+    document.getElementById('viewDayJobsDate').textContent = displayDate;
+    
+    const dayEvents = eventsData.filter(e => e.start === dateStr);
+    const container = document.getElementById('viewDayJobsContainer');
+    const emptyMsg = document.getElementById('viewDayJobsEmpty');
+    
+    container.innerHTML = '';
+    
+    if (dayEvents.length === 0) {
+        emptyMsg.classList.remove('d-none');
+    } else {
+        emptyMsg.classList.add('d-none');
+        
+        let html = '';
+        dayEvents.forEach(evt => {
+            const po = evt.extendedProps.poData;
+            
+            let statusBadge = '<span class="badge bg-secondary">WAITING</span>';
+            if (po.inspection_status === 'IN_PROGRESS') {
+                statusBadge = '<span class="badge bg-warning text-dark">IN_PROGRESS</span>';
+            } else if (po.inspection_status === 'DONE') {
+                statusBadge = '<span class="badge bg-success">DONE</span>';
+            }
+            
+            let resultBadge = '';
+            if (po.inspection_result === 'PASS') {
+                resultBadge = '<span class="badge bg-success">PASS</span>';
+            } else if (po.inspection_result === 'FAIL') {
+                resultBadge = '<span class="badge bg-danger">FAIL</span>';
+            } else if (po.inspection_result === 'HOLD') {
+                resultBadge = '<span class="badge bg-warning text-dark">HOLD</span>';
+            }
+
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="card shadow-sm border-0 h-100" style="cursor:pointer;" onclick="openUpdateModalFromDayView(${po.id})">
+                        <div class="card-body">
+                            <h6 class="fw-bold text-primary mb-1">${po.po_number} <span class="badge bg-info ms-2">${po.sku || ''}</span></h6>
+                            <p class="small text-muted mb-2">${po.description || '-'}</p>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="small fw-bold">Qty: ${po.quantity}</span>
+                                <span class="small fw-bold text-secondary"><i class="fas fa-map-marker-alt"></i> ${po.dc_location || '-'}</span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                ${statusBadge} ${resultBadge}
+                            </div>
+                            ${po.qa_inspector ? `<div class="mt-2 small"><i class="fas fa-user-check text-muted"></i> ${po.qa_inspector}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('viewDayJobsModal'));
+    modal.show();
+}
+
+function openUpdateModalFromDayView(poId) {
+    const po = eventsData.find(e => e.extendedProps.poData.id == poId)?.extendedProps.poData;
+    if (po) {
+        bootstrap.Modal.getInstance(document.getElementById('viewDayJobsModal')).hide();
+        openUpdateModal(po);
+    }
 }
 </script>

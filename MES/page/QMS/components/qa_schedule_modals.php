@@ -337,3 +337,27 @@
 </div>
 
 <datalist id="qc-users-list"></datalist>
+
+<!-- View Day Jobs Modal -->
+<div class="modal fade" id="viewDayJobsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white border-bottom-0">
+                <h5 class="modal-title fw-bold" id="viewDayJobsTitle"><i class="fas fa-list-ul me-2"></i>Jobs for <span id="viewDayJobsDate"></span></h5>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light p-3">
+                <div class="row" id="viewDayJobsContainer">
+                    <!-- Cards will be injected here -->
+                </div>
+                <div id="viewDayJobsEmpty" class="text-center py-5 d-none">
+                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted fw-bold">No jobs scheduled for this date.</h5>
+                </div>
+            </div>
+            <div class="modal-footer bg-white border-top-0">
+                <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
