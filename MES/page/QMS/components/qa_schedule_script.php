@@ -488,6 +488,8 @@ function buildCustomQaCalendar(eventsData) {
     const gridEl = document.getElementById('qaCustomCalendarGrid');
     if (!gridEl) return;
 
+    window.qaEventsData = eventsData; // Store globally for modal access
+
     gridEl.innerHTML = ''; // Clear previous
 
     const year = currentQaCalendarDate.getFullYear();
@@ -540,10 +542,7 @@ function buildCustomQaCalendar(eventsData) {
             }
         });
         
-        // Click to view day jobs
-        cell.onclick = () => {
-            viewDayJobs(dateStr);
-        };
+
 
         const dayNumber = document.createElement('div');
         dayNumber.className = 'qa-day-number';
@@ -615,30 +614,11 @@ function buildCustomQaCalendar(eventsData) {
         cell.appendChild(desktopContainer);
         cell.appendChild(mobileContainer);
         
-        // Click on day cell to jump to schedule list for that date
+        // Click on day cell to view daily jobs modal
         cell.onclick = (e) => {
             // Prevent triggering if clicking on an event pill (which has e.stopPropagation())
             if (e.target.closest('.qa-event-pill')) return;
-
-            // 1. Set filter to custom date
-            const dateInputStart = document.getElementById('scheduleStartDate');
-            const dateInputEnd = document.getElementById('scheduleEndDate');
-            const btnDateCustom = document.getElementById('btnDate_custom');
-            if (dateInputStart && dateInputEnd && btnDateCustom) {
-                dateInputStart.value = dateStr;
-                dateInputEnd.value = dateStr;
-                btnDateCustom.checked = true;
-            }
-
-            // 2. Switch tab
-            const scheduleTab = document.getElementById('schedule-tab');
-            if (scheduleTab) {
-                const tab = new bootstrap.Tab(scheduleTab);
-                tab.show();
-                if (typeof loadQASchedule === 'function') {
-                    loadQASchedule('custom_range');
-                }
-            }
+            viewDayJobs(dateStr);
         };
         
         gridEl.appendChild(cell);
@@ -1204,6 +1184,7 @@ function saveNewTicket() {
 }
 
 function viewDayJobs(dateStr) {
+    const eventsData = window.qaEventsData;
     if (!eventsData || !dateStr) return;
     
     // Convert to Thai date string
@@ -1271,7 +1252,8 @@ function viewDayJobs(dateStr) {
 }
 
 function openUpdateModalFromDayView(poId) {
-    const po = eventsData.find(e => e.extendedProps.poData.id == poId)?.extendedProps.poData;
+    const eventsData = window.qaEventsData;
+    const po = eventsData?.find(e => e.extendedProps.poData.id == poId)?.extendedProps.poData;
     if (po) {
         bootstrap.Modal.getInstance(document.getElementById('viewDayJobsModal')).hide();
         openUpdateModal(po);
