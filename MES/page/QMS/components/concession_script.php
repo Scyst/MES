@@ -19,20 +19,20 @@ function loadConcessionList() {
                             <td class="text-center" onclick="event.stopPropagation()">
                                 <input type="checkbox" class="form-check-input concession-checkbox" value="${req.id}" onchange="updateConcessionBulkCount()">
                             </td>
-                            <td class="px-3 fw-bold text-primary" onclick="viewConcession(${req.id})">${req.request_no}</td>
-                            <td onclick="viewConcession(${req.id})">${req.request_date}</td>
-                            <td class="fw-bold" onclick="viewConcession(${req.id})">${req.subject || '-'}</td>
-                            <td onclick="viewConcession(${req.id})" style="font-size: 0.85rem;">
+                            <td class="px-3 fw-bold text-primary text-start" onclick="viewConcession(${req.id})">${req.request_no}</td>
+                            <td class="text-center" onclick="viewConcession(${req.id})">${req.request_date}</td>
+                            <td class="fw-bold text-start" onclick="viewConcession(${req.id})">${req.subject || '-'}</td>
+                            <td class="text-start" onclick="viewConcession(${req.id})" style="font-size: 0.85rem;">
                                 <div class="text-muted">Name: <span class="text-dark">${req.part_name || '-'}</span></div>
                                 <div class="text-muted mt-1">No: <span class="text-dark">${req.part_no || '-'}</span> | Model: <span class="text-dark">${req.model_name || '-'}</span></div>
                             </td>
-                            <td onclick="viewConcession(${req.id})" style="font-size: 0.85rem;">
+                            <td class="text-start" onclick="viewConcession(${req.id})" style="font-size: 0.85rem;">
                                 <div>Order: <span class="fw-bold text-dark">${req.order_no || '-'}</span></div>
                                 <div class="mt-1">Lot: <span class="text-dark">${req.lot_no || '-'}</span></div>
                             </td>
-                            <td onclick="viewConcession(${req.id})">${req.issued_by_dept || '-'}</td>
-                            <td onclick="viewConcession(${req.id})">${req.request_to || '-'}</td>
-                            <td onclick="viewConcession(${req.id})">${req.person_name || '-'}</td>
+                            <td class="text-center" onclick="viewConcession(${req.id})">${req.issued_by_dept || '-'}</td>
+                            <td class="text-center" onclick="viewConcession(${req.id})">${req.request_to || '-'}</td>
+                            <td class="text-center" onclick="viewConcession(${req.id})">${req.person_name || '-'}</td>
                             <td class="fw-bold text-center align-middle" onclick="viewConcession(${req.id})">${req.qty ? Number(req.qty).toLocaleString() : '-'}</td>
                         </tr>
                     `;
