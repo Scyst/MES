@@ -35,11 +35,6 @@ $pageIcon = "fas fa-shield-alt";
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link fw-bold border-0" id="schedule-tab" data-bs-toggle="tab" data-bs-target="#schedule" type="button" role="tab">
-                                <i class="fas fa-calendar-alt me-1 text-primary"></i> QA/QC Schedule
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold border-0" id="concession-tab" data-bs-toggle="tab" data-bs-target="#concession" type="button" role="tab">
                                 <i class="fas fa-file-signature me-1 text-primary"></i> Concession
                             </button>
@@ -47,6 +42,11 @@ $pageIcon = "fas fa-shield-alt";
                         <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold border-0" id="qa_planner-tab" data-bs-toggle="tab" data-bs-target="#qa_planner" type="button" role="tab">
                                 <i class="fas fa-calendar-check me-1 text-primary"></i> QA/QC Planner
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold border-0" id="schedule-tab" data-bs-toggle="tab" data-bs-target="#schedule" type="button" role="tab">
+                                <i class="fas fa-calendar-alt me-1 text-primary"></i> QA/QC Schedule
                             </button>
                         </li>
                     </ul>
@@ -161,6 +161,7 @@ $pageIcon = "fas fa-shield-alt";
 
     <?php include_once './components/ncrFormModal.php'; ?>
     <?php include_once './components/caseDetailOffcanvas.php'; ?>
+    <?php include_once './components/qa_schedule_modals.php'; ?>
 
     <script src="../../utils/libs/fullcalendar.global.min.js"></script>
     <script src="./script/qms_core.js?v=<?php echo time(); ?>"></script>

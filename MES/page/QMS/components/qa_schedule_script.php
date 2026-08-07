@@ -44,7 +44,9 @@ function loadQASchedule(filterType = null) {
                 }
 
                 currentQaData = res.data;
-                renderQaCalendar();
+                if (typeof fetchAndRenderQaCalendar === 'function') {
+                    fetchAndRenderQaCalendar();
+                }
 
                 if(res.data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
@@ -113,7 +115,8 @@ function loadQASchedule(filterType = null) {
                 tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-danger">${res.message}</td></tr>`;
             }
         }).catch(err => {
-            alert('Network Error');
+            console.error('Network Error in loadQASchedule:', err);
+            Swal.fire('Error', 'Network Error: ' + err.message, 'error');
         });
 }
 
@@ -200,7 +203,8 @@ function saveBulkUpdate() {
         }
     })
     .catch(err => {
-        alert('Network Error');
+        console.error('Network Error in bulk update:', err);
+        Swal.fire('Error', 'Network Error', 'error');
     })
     .finally(() => {
         btn.disabled = false;
@@ -365,7 +369,8 @@ function openUpdateModal(po) {
     // Bind remove button inside the modal
     document.getElementById('btnRemoveScheduleModal').onclick = function() { removeSchedule(po.id); };
     
-    const modal = new bootstrap.Modal(document.getElementById('updateInspectionModal'));
+    const modalEl = document.getElementById('updateInspectionModal');
+    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
     modal.show();
 }
 
@@ -477,136 +482,221 @@ function toggleQaView(viewType) {
     // Deprecated: Calendar is now in its own tab
 }
 
-function initQaCalendar() {
-    const calendarEl = document.getElementById('qaCalendar');
-    if (!calendarEl) return;
+let currentQaCalendarDate = new Date();
+
+function buildCustomQaCalendar(eventsData) {
+    const gridEl = document.getElementById('qaCustomCalendarGrid');
+    if (!gridEl) return;
+
+    gridEl.innerHTML = ''; // Clear previous
+
+    const year = currentQaCalendarDate.getFullYear();
+    const month = currentQaCalendarDate.getMonth();
     
-    qaCalendarInstance = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        headerToolbar: false,
-        height: 750, // Fixed height so expandRows works perfectly
-        expandRows: true, // Forces all weeks to have equal height
-        droppable: true, // Allow things to be dropped onto the calendar
-        dayMaxEvents: 4, // Allow "more" link when too many events
-        drop: function(info) {
-            const poId = info.draggedEl.getAttribute('data-id');
-            const dateStr = info.dateStr;
-            if (poId) {
+    // Update Title
+    const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+    const titleEl = document.getElementById('qa-calendar-title');
+    if (titleEl) {
+        titleEl.textContent = `${thaiMonths[month]} ${year}`;
+    }
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    // Previous month filler days
+    const prevMonthDays = new Date(year, month, 0).getDate();
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const cell = document.createElement('div');
+        cell.className = 'qa-day-cell other-month';
+        cell.innerHTML = `<div class="qa-day-number">${prevMonthDays - i}</div>`;
+        gridEl.appendChild(cell);
+    }
+
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isToday = dateStr === todayStr;
+        
+        const cell = document.createElement('div');
+        cell.className = `qa-day-cell ${isToday ? 'today' : ''}`;
+        cell.dataset.date = dateStr;
+        
+        // Native Drop events
+        cell.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            cell.classList.add('drag-over');
+        });
+        cell.addEventListener('dragleave', (e) => {
+            cell.classList.remove('drag-over');
+        });
+        cell.addEventListener('drop', (e) => {
+            e.preventDefault();
+            cell.classList.remove('drag-over');
+            const poId = e.dataTransfer.getData('text/plain');
+            if (poId && dateStr) {
                 schedulePO(poId, dateStr);
             }
-        },
-        datesSet: function(dateInfo) {
-            const titleEl = document.getElementById('qa-calendar-title');
-            if (titleEl) titleEl.textContent = dateInfo.view.title;
-        },
-        events: function(info, successCallback, failureCallback) {
-            const startStr = info.startStr.split('T')[0];
-            const endStr = info.endStr.split('T')[0];
-            
-            fetch(`./api/qa_schedule_api.php?action=get_schedule&start_date=${startStr}&end_date=${endStr}&range=custom_range`)
-                .then(r => r.json())
-                .then(res => {
-                    if (res.success) {
-                        const events = res.data.map(po => {
-                            return {
-                                id: po.id,
-                                title: po.po_number + (po.sku ? ' (' + po.sku + ')' : ''),
-                                start: po.inspection_date ? po.inspection_date.split(' ')[0] : null,
-                                extendedProps: {
-                                    poData: po,
-                                    status: po.inspection_status,
-                                    result: po.inspection_result,
-                                    inspector: po.qa_inspector
-                                }
-                            };
-                        }).filter(e => e.start);
-                        successCallback(events);
-                    } else {
-                        failureCallback();
-                    }
-                })
-                .catch(err => {
-                    console.error('Calendar fetch error:', err);
-                    failureCallback();
-                });
-        },
-        eventClick: function(info) {
-            const poData = info.event.extendedProps.poData;
-            if (poData) {
-                openUpdateModal(poData);
+        });
+
+        const dayNumber = document.createElement('div');
+        dayNumber.className = 'qa-day-number';
+        dayNumber.textContent = day;
+        cell.appendChild(dayNumber);
+
+        // Filter events for this day
+        const dayEvents = eventsData.filter(e => e.start === dateStr);
+        
+        // Desktop Events Container
+        const desktopContainer = document.createElement('div');
+        desktopContainer.className = 'qa-desktop-events';
+        
+        // Mobile Dots Container
+        const mobileContainer = document.createElement('div');
+        mobileContainer.className = 'qa-mobile-dots';
+
+        if (dayEvents.length > 0) {
+            // Render up to 2 on desktop
+            dayEvents.slice(0, 2).forEach(evt => {
+                let statusClass = 'status-waiting';
+                if (evt.extendedProps.status === 'IN_PROGRESS') statusClass = 'status-progress';
+                if (evt.extendedProps.status === 'DONE') statusClass = 'status-done';
+                if (evt.extendedProps.result === 'FAIL') statusClass = 'result-fail';
+
+                const pill = document.createElement('div');
+                pill.className = `qa-event-pill ${statusClass}`;
+                pill.title = evt.title;
+                pill.innerHTML = `<b>${evt.title}</b>`;
+                if (evt.extendedProps.inspector) {
+                    pill.innerHTML += `<br><i class="fas fa-user-check"></i> ${evt.extendedProps.inspector}`;
+                }
+                pill.onclick = (e) => {
+                    e.stopPropagation();
+                    openUpdateModal(evt.extendedProps.poData);
+                };
+                desktopContainer.appendChild(pill);
+                
+                // Add dot
+                const dot = document.createElement('div');
+                dot.className = `qa-dot ${statusClass}`;
+                mobileContainer.appendChild(dot);
+            });
+
+            // Extra events
+            if (dayEvents.length > 2) {
+                const moreLabel = document.createElement('div');
+                moreLabel.className = 'qa-more-text';
+                moreLabel.textContent = `+${dayEvents.length - 2} more`;
+                desktopContainer.appendChild(moreLabel);
+                
+                for(let i = 2; i < Math.min(dayEvents.length, 5); i++) {
+                    let sc = 'status-waiting';
+                    if (dayEvents[i].extendedProps.status === 'IN_PROGRESS') sc = 'status-progress';
+                    if (dayEvents[i].extendedProps.status === 'DONE') sc = 'status-done';
+                    if (dayEvents[i].extendedProps.result === 'FAIL') sc = 'result-fail';
+                    const d = document.createElement('div');
+                    d.className = `qa-dot ${sc}`;
+                    mobileContainer.appendChild(d);
+                }
             }
-        },
-        eventContent: function(arg) {
-            let color = '#6c757d'; // default waiting
-            if (arg.event.extendedProps.status === 'IN_PROGRESS') color = '#fd7e14';
-            if (arg.event.extendedProps.status === 'DONE') color = '#198754';
-            if (arg.event.extendedProps.result === 'FAIL') color = '#dc3545';
-            
-            return {
-                html: `<div class="p-1 rounded text-white shadow-sm" style="background-color: ${color}; font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; border-left: 3px solid rgba(255,255,255,0.5);">
-                           <b title="${arg.event.title}">${arg.event.title}</b><br>
-                           ${arg.event.extendedProps.inspector ? '<i class="fas fa-user-check"></i> ' + arg.event.extendedProps.inspector : ''}
-                       </div>`
-            };
         }
-    });
-    qaCalendarInstance.render();
-}
+        
+        cell.appendChild(desktopContainer);
+        cell.appendChild(mobileContainer);
+        
+        // Click on day cell to jump to schedule list for that date
+        cell.onclick = (e) => {
+            // Prevent triggering if clicking on an event pill (which has e.stopPropagation())
+            if (e.target.closest('.qa-event-pill')) return;
 
-function renderQaCalendar() {
-    if (!qaCalendarInstance) return;
-    
-    // Set date to current filter if possible
-    const startDate = document.getElementById('scheduleStartDate').value;
-    if (startDate) {
-        qaCalendarInstance.gotoDate(startDate);
+            // 1. Set filter to custom date
+            const dateInputStart = document.getElementById('scheduleStartDate');
+            const dateInputEnd = document.getElementById('scheduleEndDate');
+            const btnDateCustom = document.getElementById('btnDate_custom');
+            if (dateInputStart && dateInputEnd && btnDateCustom) {
+                dateInputStart.value = dateStr;
+                dateInputEnd.value = dateStr;
+                btnDateCustom.checked = true;
+            }
+
+            // 2. Switch tab
+            const scheduleTab = document.getElementById('schedule-tab');
+            if (scheduleTab) {
+                const tab = new bootstrap.Tab(scheduleTab);
+                tab.show();
+                if (typeof loadQASchedule === 'function') {
+                    loadQASchedule('custom_range');
+                }
+            }
+        };
+        
+        gridEl.appendChild(cell);
     }
-    
-    qaCalendarInstance.refetchEvents();
+
+    // Fill remaining cells for 6 weeks grid (42 cells total)
+    const totalCells = firstDay + daysInMonth;
+    const remainingCells = 42 - totalCells;
+    for (let i = 1; i <= remainingCells; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'qa-day-cell other-month';
+        cell.innerHTML = `<div class="qa-day-number">${i}</div>`;
+        gridEl.appendChild(cell);
+    }
 }
 
-// Auto load on tab show or page load if needed. We will trigger it when tab is clicked.
+function fetchAndRenderQaCalendar() {
+    const year = currentQaCalendarDate.getFullYear();
+    const month = currentQaCalendarDate.getMonth();
+    
+    const startStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const endStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+    fetch(`./api/qa_schedule_api.php?action=get_schedule&start_date=${startStr}&end_date=${endStr}&range=custom_range`)
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                const events = res.data.map(po => {
+                    return {
+                        id: po.id,
+                        title: po.po_number + (po.sku ? ' (' + po.sku + ')' : ''),
+                        start: po.inspection_date ? po.inspection_date.split(' ')[0] : null,
+                        extendedProps: {
+                            poData: po,
+                            status: po.inspection_status,
+                            result: po.inspection_result,
+                            inspector: po.qa_inspector
+                        }
+                    };
+                }).filter(e => e.start);
+                buildCustomQaCalendar(events);
+            }
+        })
+        .catch(err => console.error('Calendar fetch error:', err));
+}
+
+// Auto load on tab show or page load if needed.
 document.addEventListener('DOMContentLoaded', () => {
     // Bind Custom Calendar Header Buttons
-    document.getElementById('qa-calendar-prev-button')?.addEventListener('click', () => qaCalendarInstance?.prev());
-    document.getElementById('qa-calendar-next-button')?.addEventListener('click', () => qaCalendarInstance?.next());
-    document.getElementById('qa-calendar-today-button')?.addEventListener('click', () => qaCalendarInstance?.today());
-    
-    document.getElementById('qa-calendar-month-view-button')?.addEventListener('click', function() {
-        qaCalendarInstance?.changeView('dayGridMonth');
-        this.classList.add('active');
-        document.getElementById('qa-calendar-week-view-button')?.classList.remove('active');
+    document.getElementById('qa-calendar-prev-button')?.addEventListener('click', () => {
+        currentQaCalendarDate.setMonth(currentQaCalendarDate.getMonth() - 1);
+        fetchAndRenderQaCalendar();
     });
     
-    document.getElementById('qa-calendar-week-view-button')?.addEventListener('click', function() {
-        qaCalendarInstance?.changeView('timeGridWeek');
-        this.classList.add('active');
-        document.getElementById('qa-calendar-month-view-button')?.classList.remove('active');
+    document.getElementById('qa-calendar-next-button')?.addEventListener('click', () => {
+        currentQaCalendarDate.setMonth(currentQaCalendarDate.getMonth() + 1);
+        fetchAndRenderQaCalendar();
     });
-
-    // Initialize Draggable for sidebar
-    const containerEl = document.getElementById('pendingJobsList');
-    if (containerEl && typeof FullCalendar !== 'undefined' && FullCalendar.Draggable) {
-        new FullCalendar.Draggable(containerEl, {
-            itemSelector: '.fc-event',
-            eventData: function(eventEl) {
-                return {
-                    title: eventEl.innerText
-                };
-            }
-        });
-    }
-
-    // Listen to Tab change to initialize or update calendar size
+    
+    document.getElementById('qa-calendar-today-button')?.addEventListener('click', () => {
+        currentQaCalendarDate = new Date();
+        fetchAndRenderQaCalendar();
+    });
+    
+    // Listen to Tab change to initialize or update calendar
     document.getElementById('qa_planner-tab')?.addEventListener('shown.bs.tab', function (e) {
-        if (!qaCalendarInstance) {
-            initQaCalendar();
-        } else {
-            setTimeout(() => {
-                qaCalendarInstance.updateSize();
-            }, 10);
-        }
-        renderQaCalendar();
+        fetchAndRenderQaCalendar();
         loadPendingJobs();
     });
 
@@ -656,7 +746,7 @@ function renderPendingJobs() {
         if (job.sku) title += ` (${job.sku})`;
         
         html += `
-            <div class="card mb-2 shadow-sm border-0 fc-event" data-id="${job.id}" style="cursor: grab;">
+            <div class="card mb-2 shadow-sm border-0 qa-draggable-job" data-id="${job.id}" draggable="true" ondragstart="event.dataTransfer.setData('text/plain', '${job.id}')" style="cursor: grab;">
                 <div class="card-body p-2">
                     <div class="fw-bold text-primary mb-1" style="font-size: 0.85rem;"><i class="fas fa-arrows-alt me-1 text-muted"></i>${title}</div>
                     <div class="d-flex justify-content-between text-muted" style="font-size: 0.75rem;">
