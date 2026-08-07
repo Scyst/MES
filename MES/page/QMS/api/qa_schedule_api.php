@@ -9,13 +9,15 @@ $action = $_REQUEST['action'] ?? '';
 try {
     if ($action === 'get_schedule') {
         $date = $_GET['date'] ?? date('Y-m-d');
+        $start_date = $_GET['start_date'] ?? date('Y-m-d');
+        $end_date = $_GET['end_date'] ?? date('Y-m-d');
         $range = $_GET['range'] ?? '';
         
         try {
             $pdo->exec("ALTER TABLE SALES_ORDERS ADD inspection_remark NVARCHAR(MAX) NULL");
         } catch(Exception $e) {}
 
-        $sql = "SELECT id, po_number, sku, description, color, quantity, dc_location, loading_date, inspection_date, inspection_status, inspection_result, is_confirmed, inspection_remark, qa_inspector 
+        $sql = "SELECT id, po_number, sku, description, color, quantity, dc_location, loading_date, loading_week, inspection_date, inspection_status, inspection_result, is_confirmed, inspection_remark, qa_inspector, ticket_number, inspect_type 
                 FROM SALES_ORDERS WITH (NOLOCK) ";
                 
         if ($range === 'this_week') {
@@ -36,6 +38,10 @@ try {
             $sql .= "WHERE CAST(inspection_date AS DATE) >= ? AND CAST(inspection_date AS DATE) <= ? ORDER BY inspection_date ASC";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$start, $end]);
+        } else if ($range === 'custom_range') {
+            $sql .= "WHERE CAST(inspection_date AS DATE) >= ? AND CAST(inspection_date AS DATE) <= ? ORDER BY inspection_date ASC";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$start_date, $end_date]);
         } else {
             $sql .= "WHERE CAST(inspection_date AS DATE) = ?";
             $stmt = $pdo->prepare($sql);
@@ -104,16 +110,19 @@ try {
         $inspection_status = $_POST['inspection_status'] ?? '';
         $inspection_result = $_POST['inspection_result'] ?? '';
         $remark = $_POST['remark'] ?? '';
+        $ticket_number = $_POST['ticket_number'] ?? null;
+        $qa_inspector = $_POST['qa_inspector'] ?? null;
+        $inspect_type = $_POST['inspect_type'] ?? null;
 
         if (empty($po_id) || empty($inspection_status)) {
             throw new Exception("Missing required fields.");
         }
 
         $sql = "UPDATE SALES_ORDERS 
-                SET inspection_status = ?, inspection_result = ?, inspection_remark = ?, is_confirmed = 1, updated_at = GETDATE() 
+                SET inspection_status = ?, inspection_result = ?, inspection_remark = ?, ticket_number = ?, qa_inspector = ?, inspect_type = ?, is_confirmed = 1, updated_at = GETDATE() 
                 WHERE id = ?";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$inspection_status, $inspection_result, $remark, $po_id]);
+        $stmt->execute([$inspection_status, $inspection_result, $remark, $ticket_number, $qa_inspector, $inspect_type, $po_id]);
 
         echo json_encode(['success' => true, 'message' => 'Inspection updated successfully.']);
     }

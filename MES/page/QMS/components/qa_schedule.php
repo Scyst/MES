@@ -113,15 +113,11 @@
             <label class="btn btn-sm rounded-pill fw-bold px-3 date-filter-label" for="btnDate_last_month">Last Mo</label>
         </div>
 
-        <!-- Custom Date Picker -->
+        <!-- Custom Date Picker (Range) -->
         <div class="d-flex align-items-center ps-2 pe-1">
-            <button class="btn btn-sm text-muted border-0 date-nav-btn p-0" onclick="changeScheduleDate(-1)" title="Previous Day">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-            <input type="date" id="scheduleDateFilter" class="form-control form-control-sm border-0 bg-transparent text-center fw-bold text-dark px-1 mx-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule('date')" style="font-size: 0.95rem; width: 135px; cursor: pointer; box-shadow: none;">
-            <button class="btn btn-sm text-muted border-0 date-nav-btn p-0" onclick="changeScheduleDate(1)" title="Next Day">
-                <i class="fas fa-chevron-right"></i>
-            </button>
+            <input type="date" id="scheduleStartDate" class="form-control form-control-sm border-0 bg-transparent text-center fw-bold text-dark px-1 mx-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule('custom_range')" style="font-size: 0.95rem; width: 130px; cursor: pointer; box-shadow: none;" title="Start Date">
+            <span class="text-muted small px-1">to</span>
+            <input type="date" id="scheduleEndDate" class="form-control form-control-sm border-0 bg-transparent text-center fw-bold text-dark px-1 mx-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule('custom_range')" style="font-size: 0.95rem; width: 130px; cursor: pointer; box-shadow: none;" title="End Date">
         </div>
     </div>
     
@@ -146,23 +142,24 @@
                         <th class="py-2 text-center" style="width: 120px;">DC Location</th>
                         <th class="py-2 text-center" style="width: 120px;">Inspection Date</th>
                         <th class="py-2 text-center" style="width: 120px;">Loading Date</th>
+                        <th class="py-2 text-center" style="width: 110px;">Loading Week</th>
                         <th class="py-2 text-center" style="width: 140px;">Inspector</th>
                         <th class="py-2 text-center" style="width: 160px;">Inspection Status</th>
                     </tr>
                 </thead>
                 <tbody id="qaScheduleBody">
-                    <tr><td colspan="8" class="text-center py-4 text-muted">Loading schedule...</td></tr>
+                    <tr><td colspan="9" class="text-center py-4 text-muted">Loading schedule...</td></tr>
                 </tbody>
                 <tfoot id="qaScheduleInlineAdd" class="border-top-0 d-print-none">
                     <tr id="qaScheduleAddBtnRow" class="bg-light" style="cursor: pointer;" onclick="showInlineSearch()">
-                        <td colspan="8" class="text-center py-2 text-primary fw-bold" style="transition: all 0.2s;">
+                        <td colspan="9" class="text-center py-2 text-primary fw-bold" style="transition: all 0.2s;">
                             <div class="d-inline-block px-4 py-1 rounded" style="background-color: rgba(13, 110, 253, 0.1);">
                                 <i class="fas fa-plus me-1"></i> Add PO to Schedule
                             </div>
                         </td>
                     </tr>
                     <tr id="qaScheduleSearchRow" class="bg-light d-none">
-                        <td colspan="8" class="p-2 text-center" style="position: relative;">
+                        <td colspan="9" class="p-2 text-center" style="position: relative;">
                             <div class="mx-auto position-relative" style="max-width: 500px;">
                                 <div class="input-group input-group-sm shadow-sm">
                                     <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
@@ -217,6 +214,28 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-muted">PO Number</label>
                         <input type="text" id="inspect_po_number" class="form-control fw-bold bg-white" readonly>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted">Ticket Number (เลขตั๋ว)</label>
+                            <input type="text" name="ticket_number" id="inspect_ticket_number" class="form-control" placeholder="Ticket No...">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted">Inspector (คนตรวจ)</label>
+                            <input type="text" name="qa_inspector" id="inspect_qa_inspector" class="form-control" placeholder="Inspector Name...">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted text-uppercase mb-2">Inspection Type</label>
+                        <div class="custom-segmented w-100">
+                            <input type="radio" class="btn-check" name="inspect_type" id="type_remote" value="Remote">
+                            <label class="btn flex-fill" for="type_remote">Remote</label>
+
+                            <input type="radio" class="btn-check" name="inspect_type" id="type_onsite" value="On-site">
+                            <label class="btn flex-fill" for="type_onsite">On-site</label>
+                        </div>
                     </div>
 
                     <style>

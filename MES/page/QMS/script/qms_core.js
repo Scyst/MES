@@ -149,8 +149,7 @@ function setFilter(status) {
     if (!isDataReady || currentStatusFilter === status) return; 
 
     currentStatusFilter = status;
-    
-    document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('#cases .kpi-card').forEach(c => c.classList.remove('active'));
     
     let cardId = 'card-all';
     if(status === 'NCR_CREATED') cardId = 'card-ncr';

@@ -5,10 +5,12 @@ function loadQASchedule(filterType = null) {
     if (filterType) currentFilter = filterType;
     
     // Clear check if switching to date input
-    if (currentFilter === 'date') {
-        const dStr = document.getElementById('scheduleDateFilter').value;
+    if (currentFilter === 'date' || currentFilter === 'custom_range') {
+        const startStr = document.getElementById('scheduleStartDate').value;
+        const endStr = document.getElementById('scheduleEndDate').value;
         const tStr = new Date().toISOString().split('T')[0];
-        if (dStr === tStr) {
+        
+        if (startStr === tStr && endStr === tStr) {
             const btnToday = document.getElementById('btnDate_today');
             if(btnToday) btnToday.checked = true;
         } else {
@@ -19,11 +21,12 @@ function loadQASchedule(filterType = null) {
         if(btnFilter) btnFilter.checked = true;
     }
 
-    const date = document.getElementById('scheduleDateFilter').value;
+    const startDate = document.getElementById('scheduleStartDate').value;
+    const endDate = document.getElementById('scheduleEndDate').value;
     const tbody = document.getElementById('qaScheduleBody');
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
     
-    fetch(`./api/qa_schedule_api.php?action=get_schedule&date=${date}&range=${currentFilter}`)
+    fetch(`./api/qa_schedule_api.php?action=get_schedule&start_date=${startDate}&end_date=${endDate}&range=${currentFilter}`)
         .then(r => r.json())
         .then(res => {
             if(res.success) {
@@ -36,7 +39,7 @@ function loadQASchedule(filterType = null) {
                 }
 
                 if(res.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
                     return;
                 }
                 
@@ -81,6 +84,7 @@ function loadQASchedule(filterType = null) {
                             <td class="text-center">${po.dc_location || '-'}</td>
                             <td class="text-center fw-bold text-dark">${po.inspection_date ? po.inspection_date.substring(0, 10) : '-'}</td>
                             <td class="text-center">${po.loading_date ? po.loading_date : '-'}</td>
+                            <td class="text-center fw-bold text-secondary">${po.loading_week || '-'}</td>
                             <td class="text-center" onclick="event.stopPropagation()">${inspectorCell}</td>
                             <td class="text-center">${statusBadge} ${resultBadge}</td>
                         </tr>
@@ -88,10 +92,10 @@ function loadQASchedule(filterType = null) {
                 });
                 tbody.innerHTML = html;
             } else {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">${res.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">${res.message}</td></tr>`;
             }
         }).catch(err => {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Network Error</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger">Network Error</td></tr>';
         });
 }
 
@@ -139,7 +143,7 @@ function searchPO() {
 }
 
 function schedulePO(id) {
-    const date = document.getElementById('scheduleDateFilter').value;
+    const date = document.getElementById('scheduleStartDate').value;
     const formData = new FormData();
     formData.append('id', id);
     formData.append('schedule_date', date);
@@ -204,6 +208,17 @@ function removeSchedule(id, force = false) {
 function openUpdateModal(po) {
     document.getElementById('inspect_po_id').value = po.id;
     document.getElementById('inspect_po_number').value = po.po_number + ' - ' + po.sku;
+    document.getElementById('inspect_ticket_number').value = po.ticket_number || '';
+    document.getElementById('inspect_qa_inspector').value = po.qa_inspector || '';
+
+    if (po.inspect_type === 'Remote') {
+        document.getElementById('type_remote').checked = true;
+    } else if (po.inspect_type === 'On-site') {
+        document.getElementById('type_onsite').checked = true;
+    } else {
+        document.querySelectorAll(`input[name="inspect_type"]`).forEach(el => el.checked = false);
+    }
+    
     let status = po.inspection_status ? po.inspection_status.toString().trim().toUpperCase() : '';
     if (status !== 'IN_PROGRESS' && status !== 'DONE') {
         status = 'WAITING';
@@ -299,32 +314,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-function changeScheduleDate(days) {
-    const input = document.getElementById('scheduleDateFilter');
-    if (!input.value) input.value = new Date().toISOString().split('T')[0];
-    
-    const date = new Date(input.value);
-    date.setDate(date.getDate() + days);
-    
-    // Format YYYY-MM-DD
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    
-    input.value = `${yyyy}-${mm}-${dd}`;
-    loadQASchedule('date');
-}
-
 function setScheduleDateToday() {
-    const input = document.getElementById('scheduleDateFilter');
+    const inputStart = document.getElementById('scheduleStartDate');
+    const inputEnd = document.getElementById('scheduleEndDate');
     
     const date = new Date();
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, '0');
     const dd = String(date.getDate()).padStart(2, '0');
     
-    input.value = `${yyyy}-${mm}-${dd}`;
-    loadQASchedule('date');
+    const today = `${yyyy}-${mm}-${dd}`;
+    inputStart.value = today;
+    inputEnd.value = today;
+    
+    loadQASchedule('custom_range');
 }
 
 // ---- INLINE ADD PO LOGIC ----
@@ -409,7 +412,7 @@ function inlineAddPo(id, poNumber) {
     // Disable input while adding
     document.getElementById('inlineSearchPo').disabled = true;
     
-    const date = document.getElementById('scheduleDateFilter').value;
+    const date = document.getElementById('scheduleStartDate').value;
     const formData = new FormData();
     formData.append('id', id);
     formData.append('schedule_date', date);
