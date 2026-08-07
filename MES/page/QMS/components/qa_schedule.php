@@ -145,8 +145,8 @@
                 <thead class="bg-primary text-white small text-uppercase">
                     <tr>
                         <th class="px-3 py-2 text-center" style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllPo" onchange="toggleSelectAllPo(this)"></th>
-                        <th class="px-3 py-2 text-start" style="width: 130px;">Ticket No.</th>
-                        <th class="px-3 py-2 text-start" style="width: 180px;">PO Number</th>
+                        <th class="px-3 py-2 text-center" style="width: 130px;">Ticket No.</th>
+                        <th class="px-3 py-2 text-center" style="width: 180px;">PO Number</th>
                         <th class="py-2 text-start">Item Details</th>
                         <th class="py-2 text-center" style="width: 80px;">Qty</th>
                         <th class="py-2 text-center" style="width: 80px;">Sampling</th>

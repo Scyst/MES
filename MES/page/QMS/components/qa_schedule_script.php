@@ -84,7 +84,7 @@ function loadQASchedule(filterType = null) {
                                 <input type="checkbox" class="form-check-input po-checkbox" value="${po.id}" onchange="updateBulkCount()">
                             </td>
                             <td class="text-center text-secondary">${po.ticket_number || '-'}</td>
-                            <td class="px-3 fw-bold text-primary text-start">${po.po_number}</td>
+                            <td class="px-3 fw-bold text-primary text-center">${po.po_number}</td>
                             <td class="text-start">
                                 <div><strong>${po.sku}</strong></div>
                                 <div class="small text-muted">${po.description} (${po.color})</div>
