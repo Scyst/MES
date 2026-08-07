@@ -31,7 +31,8 @@ function loadQASchedule(filterType = null) {
         .then(res => {
             if(res.success) {
                 if(res.stats) {
-                    document.getElementById('stat-total').innerText = res.stats.total;
+                const qaTotal = document.getElementById('stat-qa-total');
+                if(qaTotal) qaTotal.innerText = res.stats.total;
                     document.getElementById('stat-waiting').innerText = res.stats.waiting;
                     document.getElementById('stat-inprogress').innerText = res.stats.in_progress;
                     document.getElementById('stat-passed').innerText = res.stats.passed;
@@ -75,6 +76,9 @@ function loadQASchedule(filterType = null) {
 
                     html += `
                         <tr class="${rowClass}" style="cursor: pointer;" onclick='openUpdateModal(${JSON.stringify(po).replace(/'/g, "&#39;")})' title="Click to view/update">
+                            <td class="text-center" onclick="event.stopPropagation()">
+                                <input type="checkbox" class="form-check-input po-checkbox" value="${po.id}" onchange="updateBulkCount()">
+                            </td>
                             <td class="px-3 fw-bold text-primary text-start">${po.po_number}</td>
                             <td class="text-start">
                                 <div><strong>${po.sku}</strong></div>
@@ -95,8 +99,99 @@ function loadQASchedule(filterType = null) {
                 tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">${res.message}</td></tr>`;
             }
         }).catch(err => {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger">Network Error</td></tr>';
+            alert('Network Error');
         });
+}
+
+function loadQcUsers() {
+    fetch('./api/qa_schedule_api.php?action=get_qc_users')
+        .then(r => r.json())
+        .then(res => {
+            if(res.success && res.data) {
+                const selects = document.querySelectorAll('.qc-user-select');
+                selects.forEach(select => {
+                    select.innerHTML = '<option value="">- Select -</option>';
+                    res.data.forEach(user => {
+                        const name = user.aka ? `${user.fullname} (${user.aka})` : user.fullname;
+                        select.innerHTML += `<option value="${user.fullname}">${name}</option>`;
+                    });
+                });
+            }
+        });
+}
+
+function toggleSelectAllPo(el) {
+    const isChecked = el.checked;
+    document.querySelectorAll('.po-checkbox').forEach(cb => cb.checked = isChecked);
+    updateBulkCount();
+}
+
+function updateBulkCount() {
+    const count = document.querySelectorAll('.po-checkbox:checked').length;
+    const btn = document.getElementById('btnBulkUpdate');
+    document.getElementById('bulkCount').innerText = count;
+    
+    if (count > 0) {
+        btn.classList.remove('d-none');
+    } else {
+        btn.classList.add('d-none');
+    }
+}
+
+function openBulkUpdateModal() {
+    const count = document.querySelectorAll('.po-checkbox:checked').length;
+    if (count === 0) return;
+    
+    document.getElementById('bulkUpdateCount').innerText = count;
+    document.getElementById('bulk_ticket_number').value = '';
+    document.getElementById('bulk_qa_inspector').value = '';
+    document.querySelectorAll('input[name="bulk_inspect_type"]').forEach(el => el.checked = false);
+    
+    const modal = new bootstrap.Modal(document.getElementById('bulkUpdateModal'));
+    modal.show();
+}
+
+function saveBulkUpdate() {
+    const poIds = Array.from(document.querySelectorAll('.po-checkbox:checked')).map(cb => cb.value);
+    if (poIds.length === 0) return;
+    
+    const ticket = document.getElementById('bulk_ticket_number').value;
+    const inspector = document.getElementById('bulk_qa_inspector').value;
+    const type = document.querySelector('input[name="bulk_inspect_type"]:checked');
+    
+    const btn = document.getElementById('btnSaveBulk');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+    
+    const formData = new FormData();
+    formData.append('po_ids', JSON.stringify(poIds));
+    formData.append('ticket_number', ticket);
+    formData.append('qa_inspector', inspector);
+    if (type) formData.append('inspect_type', type.value);
+    
+    fetch('./api/qa_schedule_api.php?action=bulk_update_ticket', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+        if(res.success) {
+            bootstrap.Modal.getInstance(document.getElementById('bulkUpdateModal')).hide();
+            loadQASchedule();
+            const selectAll = document.getElementById('selectAllPo');
+            if(selectAll) selectAll.checked = false;
+            updateBulkCount();
+        } else {
+            alert('Error: ' + res.message);
+        }
+    })
+    .catch(err => {
+        alert('Network Error');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save me-1"></i> Update Selected';
+    });
 }
 
 function openAddScheduleModal() {
@@ -218,6 +313,11 @@ function openUpdateModal(po) {
     } else {
         document.querySelectorAll(`input[name="inspect_type"]`).forEach(el => el.checked = false);
     }
+    
+    if (po.inspection_result === 'PASS') document.getElementById('res_pass').checked = true;
+    else if (po.inspection_result === 'FAIL') document.getElementById('result_fail').checked = true;
+    else if (po.inspection_result === 'PENDING') document.getElementById('res_pending').checked = true;
+    else document.querySelectorAll(`input[name="inspection_result"]`).forEach(el => el.checked = false);
     
     let status = po.inspection_status ? po.inspection_status.toString().trim().toUpperCase() : '';
     if (status !== 'IN_PROGRESS' && status !== 'DONE') {
@@ -469,5 +569,102 @@ document.addEventListener('click', function(e) {
             hideInlineSearch();
         }
     }
+});
+// Fetch QC Users
+function loadQcUsers() {
+    fetch('./api/qa_schedule_api.php?action=get_qc_users')
+        .then(r => r.json())
+        .then(res => {
+            if(res.success && res.data) {
+                const selects = document.querySelectorAll('.qc-user-select');
+                selects.forEach(select => {
+                    select.innerHTML = '<option value="">- Select -</option>';
+                    res.data.forEach(user => {
+                        const name = user.aka ? `${user.fullname} (${user.aka})` : user.fullname;
+                        select.innerHTML += `<option value="${user.fullname}">${name}</option>`;
+                    });
+                });
+            }
+        });
+}
+
+// Bulk Update Logic
+function toggleSelectAllPo(el) {
+    const isChecked = el.checked;
+    document.querySelectorAll('.po-checkbox').forEach(cb => cb.checked = isChecked);
+    updateBulkCount();
+}
+
+function updateBulkCount() {
+    const count = document.querySelectorAll('.po-checkbox:checked').length;
+    const btn = document.getElementById('btnBulkUpdate');
+    document.getElementById('bulkCount').innerText = count;
+    
+    if (count > 0) {
+        btn.classList.remove('d-none');
+    } else {
+        btn.classList.add('d-none');
+    }
+}
+
+function openBulkUpdateModal() {
+    const count = document.querySelectorAll('.po-checkbox:checked').length;
+    if (count === 0) return;
+    
+    document.getElementById('bulkUpdateCount').innerText = count;
+    document.getElementById('bulk_ticket_number').value = '';
+    document.getElementById('bulk_qa_inspector').value = '';
+    document.querySelectorAll('input[name="bulk_inspect_type"]').forEach(el => el.checked = false);
+    
+    const modal = new bootstrap.Modal(document.getElementById('bulkUpdateModal'));
+    modal.show();
+}
+
+function saveBulkUpdate() {
+    const poIds = Array.from(document.querySelectorAll('.po-checkbox:checked')).map(cb => cb.value);
+    if (poIds.length === 0) return;
+    
+    const ticket = document.getElementById('bulk_ticket_number').value;
+    const inspector = document.getElementById('bulk_qa_inspector').value;
+    const type = document.querySelector('input[name="bulk_inspect_type"]:checked');
+    
+    const btn = document.getElementById('btnSaveBulk');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+    
+    const formData = new FormData();
+    formData.append('po_ids', JSON.stringify(poIds));
+    formData.append('ticket_number', ticket);
+    formData.append('qa_inspector', inspector);
+    if (type) formData.append('inspect_type', type.value);
+    
+    fetch('./api/qa_schedule_api.php?action=bulk_update_ticket', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+        if(res.success) {
+            bootstrap.Modal.getInstance(document.getElementById('bulkUpdateModal')).hide();
+            loadQASchedule();
+            const selectAll = document.getElementById('selectAllPo');
+            if(selectAll) selectAll.checked = false;
+            updateBulkCount();
+        } else {
+            alert('Error: ' + res.message);
+        }
+    })
+    .catch(err => {
+        alert('Network Error');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save me-1"></i> Update Selected';
+    });
+}
+
+// Call on init
+document.addEventListener('DOMContentLoaded', () => {
+    loadQcUsers();
 });
 </script>

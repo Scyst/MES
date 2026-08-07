@@ -170,8 +170,35 @@ try {
 
         echo json_encode(['success' => true, 'message' => 'Inspector assigned successfully.']);
     }
+    elseif ($action === 'get_qc_users') {
+        $sql = "SELECT id, fullname, username, aka FROM USERS WITH (NOLOCK) WHERE role = 'qc' AND is_active = 1 ORDER BY fullname ASC";
+        $stmt = $pdo->query($sql);
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'data' => $users]);
+    }
+    elseif ($action === 'bulk_update_ticket') {
+        $po_ids = json_decode($_POST['po_ids'] ?? '[]');
+        $ticket_number = $_POST['ticket_number'] ?? '';
+        $qa_inspector = $_POST['qa_inspector'] ?? '';
+        $inspect_type = $_POST['inspect_type'] ?? '';
+
+        if (empty($po_ids) || !is_array($po_ids)) {
+            throw new Exception("No POs selected.");
+        }
+
+        $placeholders = implode(',', array_fill(0, count($po_ids), '?'));
+        $params = array_merge([$ticket_number, $qa_inspector, $inspect_type], $po_ids);
+        
+        $sql = "UPDATE SALES_ORDERS 
+                SET ticket_number = ?, qa_inspector = ?, inspect_type = ?, updated_at = GETDATE() 
+                WHERE id IN ($placeholders)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        echo json_encode(['success' => true, 'message' => count($po_ids) . ' PO(s) updated successfully.']);
+    }
     else {
-        throw new Exception("Invalid action.");
+        throw new Exception("Invalid action specified.");
     }
 } catch (Exception $e) {
     http_response_code(500);

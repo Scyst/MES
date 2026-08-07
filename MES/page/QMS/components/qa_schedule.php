@@ -2,9 +2,9 @@
 <!-- KPI Summary Cards -->
 <div class="mobile-swipe-row mb-3 d-print-none d-flex w-100">
     <div class="swipe-card-wrapper flex-fill">
-        <div class="kpi-card p-3 h-100 bg-white w-100" style="border-left: 4px solid var(--bs-primary);">
+        <div class="kpi-card p-3 h-100 bg-white w-100" style="border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
             <div class="text-secondary fw-bold small text-uppercase mb-1"><i class="fas fa-boxes me-1"></i> Total</div>
-            <h3 class="mb-0 fw-bold text-dark" id="stat-total">0</h3>
+            <h3 class="mb-0 fw-bold text-dark" id="stat-qa-total">0</h3>
         </div>
     </div>
     <div class="swipe-card-wrapper flex-fill">
@@ -121,6 +121,12 @@
         </div>
     </div>
     
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-primary fw-bold px-3 shadow-sm d-none" id="btnBulkUpdate" onclick="openBulkUpdateModal()">
+            <i class="fas fa-layer-group me-1"></i> Bulk Update (<span id="bulkCount">0</span>)
+        </button>
+    </div>
+    
     <div class="d-flex gap-2 ms-auto">
         <button class="btn btn-sm btn-outline-secondary rounded-pill fw-bold shadow-sm px-3" onclick="window.print()">
             <i class="fas fa-print me-1"></i> Print
@@ -136,6 +142,7 @@
         <table class="table table-hover align-middle mb-0" id="qaScheduleTable">
                 <thead class="bg-primary text-white small text-uppercase">
                     <tr>
+                        <th class="px-3 py-2 text-center" style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllPo" onchange="toggleSelectAllPo(this)"></th>
                         <th class="px-3 py-2 text-start" style="width: 180px;">PO Number</th>
                         <th class="py-2 text-start">Item Details</th>
                         <th class="py-2 text-center" style="width: 90px;">Qty</th>
@@ -148,18 +155,18 @@
                     </tr>
                 </thead>
                 <tbody id="qaScheduleBody">
-                    <tr><td colspan="9" class="text-center py-4 text-muted">Loading schedule...</td></tr>
+                    <tr><td colspan="10" class="text-center py-4 text-muted">Loading schedule...</td></tr>
                 </tbody>
                 <tfoot id="qaScheduleInlineAdd" class="border-top-0 d-print-none">
                     <tr id="qaScheduleAddBtnRow" class="bg-light" style="cursor: pointer;" onclick="showInlineSearch()">
-                        <td colspan="9" class="text-center py-2 text-primary fw-bold" style="transition: all 0.2s;">
+                        <td colspan="10" class="text-center py-2 text-primary fw-bold" style="transition: all 0.2s;">
                             <div class="d-inline-block px-4 py-1 rounded" style="background-color: rgba(13, 110, 253, 0.1);">
                                 <i class="fas fa-plus me-1"></i> Add PO to Schedule
                             </div>
                         </td>
                     </tr>
                     <tr id="qaScheduleSearchRow" class="bg-light d-none">
-                        <td colspan="9" class="p-2 text-center" style="position: relative;">
+                        <td colspan="10" class="p-2 text-center" style="position: relative;">
                             <div class="mx-auto position-relative" style="max-width: 500px;">
                                 <div class="input-group input-group-sm shadow-sm">
                                     <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
@@ -223,7 +230,9 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold small text-muted">Inspector (คนตรวจ)</label>
-                            <input type="text" name="qa_inspector" id="inspect_qa_inspector" class="form-control" placeholder="Inspector Name...">
+                            <select name="qa_inspector" id="inspect_qa_inspector" class="form-select qc-user-select">
+                                <option value="">- Select -</option>
+                            </select>
                         </div>
                     </div>
 
@@ -283,11 +292,14 @@
                         </div>
                     </div>
 
-                    <div class="mb-4">
+                    <div class="mb-3 mt-4">
                         <label class="form-label fw-bold small text-muted text-uppercase mb-2">Final Result</label>
                         <div class="custom-segmented w-100">
-                            <input type="radio" class="btn-check" name="inspection_result" id="result_pass" value="PASS">
-                            <label class="btn flex-fill" for="result_pass"><i class="fas fa-check-circle me-1"></i> PASS</label>
+                            <input type="radio" class="btn-check" name="inspection_result" id="res_pending" value="PENDING">
+                            <label class="btn flex-fill text-secondary border-secondary" for="res_pending">PENDING</label>
+
+                            <input type="radio" class="btn-check" name="inspection_result" id="res_pass" value="PASS">
+                            <label class="btn flex-fill text-success border-success" for="res_pass"><i class="fas fa-check-circle me-1"></i> PASS</label>
 
                             <input type="radio" class="btn-check" name="inspection_result" id="result_fail" value="FAIL">
                             <label class="btn flex-fill" for="result_fail"><i class="fas fa-times-circle me-1"></i> FAIL</label>
@@ -310,6 +322,48 @@
                         <i class="fas fa-save me-1"></i> Save Result
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Update Modal -->
+<div class="modal fade" id="bulkUpdateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-light border-bottom-0 rounded-top" style="border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title fw-bold text-dark"><i class="fas fa-layer-group text-primary me-2"></i>Bulk Assign Ticket</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info py-2 small fw-bold mb-3">
+                    <i class="fas fa-info-circle me-1"></i> Updating <span id="bulkUpdateCount" class="badge bg-primary">0</span> POs
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-muted">Ticket Number (เลขตั๋ว)</label>
+                    <input type="text" id="bulk_ticket_number" class="form-control" placeholder="Ticket No...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-muted">Inspector (คนตรวจ)</label>
+                    <select id="bulk_qa_inspector" class="form-select qc-user-select">
+                        <option value="">- Select -</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-muted text-uppercase mb-2">Inspection Type</label>
+                    <div class="custom-segmented w-100">
+                        <input type="radio" class="btn-check" name="bulk_inspect_type" id="bulk_type_remote" value="Remote">
+                        <label class="btn flex-fill" for="bulk_type_remote">Remote</label>
+                        <input type="radio" class="btn-check" name="bulk_inspect_type" id="bulk_type_onsite" value="On-site">
+                        <label class="btn flex-fill" for="bulk_type_onsite">On-site</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top-0 rounded-bottom" style="border-radius: 0 0 16px 16px;">
+                <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary fw-bold px-4" id="btnSaveBulk" onclick="saveBulkUpdate()">
+                    <i class="fas fa-save me-1"></i> Update Selected
+                </button>
             </div>
         </div>
     </div>
