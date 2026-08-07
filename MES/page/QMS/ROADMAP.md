@@ -9,6 +9,16 @@
 - Enhanced table column alignment and added "Inspection Date" column for better context.
 - Implemented robust remove logic: simple removal for WAITING items, and strict force-confirmation for IN_PROGRESS/DONE items to protect QA data integrity while preserving Sales data.
 
+**QA/QC Calendar Redesign & Features Update:**
+- **Reorder Tabs:** `NCR/CAR` > `Concession` > `QA/QC Planner` > `QA/QC Schedule` for better workflow.
+- **Replace FullCalendar:** Switched to Custom CSS Grid for better performance and customization.
+- **Fix Modal Backdrop Bug:** Centralized modals in `qa_schedule_modals.php` to fix Z-index conflicts.
+- **Assign Jobs:** Drag-and-drop jobs from "Pending Jobs" sidebar directly onto the calendar grid.
+- **Reschedule Jobs:** Drag-and-drop existing event pills across days in the calendar to reschedule.
+- **View Day Jobs:** Clicking a day cell opens a Daily Jobs Modal showing all jobs for that day with statuses.
+- **Bulk Update in Day View:** Support selecting multiple jobs in the Day Jobs Modal to assign tickets and inspectors in one go.
+- **Scope & Conflict Fixes:** Removed old tab-switching logic and resolved JS reference errors.
+
 **Pending / Next Steps:**
 - Gather feedback from QA/QC team after initial trial usage.
 - Potentially add detailed reporting or export-to-Excel functionality if requested by QA team.

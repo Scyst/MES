@@ -163,7 +163,6 @@ $pageIcon = "fas fa-shield-alt";
     <?php include_once './components/caseDetailOffcanvas.php'; ?>
     <?php include_once './components/qa_schedule_modals.php'; ?>
 
-    <script src="../../utils/libs/fullcalendar.global.min.js"></script>
     <script src="./script/qms_core.js?v=<?php echo time(); ?>"></script>
     <?php include_once './components/qa_schedule_script.php'; ?>
     <?php include_once './components/concession_script.php'; ?>
