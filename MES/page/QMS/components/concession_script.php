@@ -49,6 +49,11 @@ function loadConcessionList() {
 function openConcessionModal() {
     document.getElementById('formConcession').reset();
     document.getElementById('formConcession').classList.remove('was-validated');
+    document.getElementById('concession_id').value = '';
+    document.getElementById('concession_action').value = 'create';
+    document.getElementById('concessionModalTitle').innerHTML = '<i class="fas fa-file-alt me-2"></i>New Customer Concession Request';
+    document.getElementById('concessionSubmitBtn').innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Request';
+    
     const modal = new bootstrap.Modal(document.getElementById('concessionModal'));
     modal.show();
 }
@@ -61,7 +66,8 @@ function saveConcession() {
     }
     
     const formData = new FormData(form);
-    fetch('./api/concession_api.php?action=create', {
+    const action = document.getElementById('concession_action').value;
+    fetch('./api/concession_api.php?action=' + action, {
         method: 'POST',
         body: formData
     })
@@ -108,12 +114,44 @@ function viewConcession(id) {
                 <a href="print_concession.php?ids=${data.id}" target="_blank" class="btn btn-outline-secondary me-auto">
                     <i class="fas fa-print me-1"></i> Print PDF
                 </a>
+                <button type="button" class="btn btn-primary" onclick="editConcession(${data.id})"><i class="fas fa-edit me-1"></i> Edit</button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             `;
             document.getElementById('concessionDetailFooter').innerHTML = footerHtml;
             
             const modal = new bootstrap.Modal(document.getElementById('concessionDetailModal'));
             modal.show();
+        }
+    });
+}
+
+function editConcession(id) {
+    bootstrap.Modal.getInstance(document.getElementById('concessionDetailModal')).hide();
+    
+    fetch(`./api/concession_api.php?action=get&id=${id}`)
+    .then(r => r.json())
+    .then(res => {
+        if(res.success) {
+            const data = res.data;
+            document.getElementById('formConcession').reset();
+            document.getElementById('formConcession').classList.remove('was-validated');
+            
+            document.getElementById('concession_id').value = data.id;
+            document.getElementById('concession_action').value = 'update';
+            document.getElementById('concessionModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Concession Request';
+            document.getElementById('concessionSubmitBtn').innerHTML = '<i class="fas fa-save me-2"></i>Save Changes';
+            
+            const form = document.getElementById('formConcession');
+            for (const key in data) {
+                if (form.elements[key]) {
+                    form.elements[key].value = data[key];
+                }
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('concessionModal'));
+            modal.show();
+        } else {
+            Swal.fire('Error', res.message, 'error');
         }
     });
 }

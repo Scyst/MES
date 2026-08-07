@@ -46,11 +46,13 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold"><i class="fas fa-file-alt me-2"></i>New Customer Concession Request</h5>
+                <h5 class="modal-title fw-bold" id="concessionModalTitle"><i class="fas fa-file-alt me-2"></i>New Customer Concession Request</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-light">
                 <form id="formConcession" class="needs-validation" novalidate>
+                    <input type="hidden" name="id" id="concession_id">
+                    <input type="hidden" name="action" id="concession_action" value="create">
                     <div class="row">
                         <!-- Header section -->
                         <div class="col-md-4 mb-3">
@@ -154,7 +156,7 @@
             </div>
             <div class="modal-footer bg-white">
                 <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" onclick="saveConcession()">
+                <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" id="concessionSubmitBtn" onclick="saveConcession()">
                     <i class="fas fa-paper-plane me-2"></i>Submit Request
                 </button>
             </div>

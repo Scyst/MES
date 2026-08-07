@@ -3,6 +3,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../db.php';
 require_once '../../../auth/check_auth.php';
+require_once '../../components/php/logger.php';
 
 $action = $_REQUEST['action'] ?? '';
 
@@ -64,6 +65,60 @@ try {
         $stmt->execute($params);
 
         echo json_encode(['success' => true, 'message' => 'Concession Request Created Successfully', 'request_no' => $request_no]);
+    }
+    elseif ($action === 'update') {
+        $id = $_POST['id'] ?? '';
+        if (!$id) throw new Exception("Missing ID for update");
+
+        // Get old data for audit log
+        $stmtOld = $pdo->prepare("SELECT * FROM QMS_CONCESSION WHERE id = ?");
+        $stmtOld->execute([$id]);
+        $oldData = $stmtOld->fetch(PDO::FETCH_ASSOC);
+        if (!$oldData) throw new Exception("Concession not found");
+
+        $sql = "UPDATE QMS_CONCESSION SET 
+                    issued_by_dept = ?, request_to = ?, subject = ?, person_name = ?, 
+                    part_name = ?, part_no = ?, order_no = ?, qty = ?, lot_no = ?, 
+                    model_name = ?, serial_no = ?, mfg_date = ?, difference_detail = ?, 
+                    reason_for_adopt = ?, root_cause = ?, measure_tentative = ?, 
+                    measure_permanent = ?, is_report_needed = ?, updated_at = GETDATE()
+                WHERE id = ?";
+        
+        $params = [
+            $_POST['issued_by_dept'] ?? '',
+            $_POST['request_to'] ?? '',
+            $_POST['subject'] ?? '',
+            $_POST['person_name'] ?? '',
+            $_POST['part_name'] ?? '',
+            $_POST['part_no'] ?? '',
+            $_POST['order_no'] ?? '',
+            $_POST['qty'] ?? 0,
+            $_POST['lot_no'] ?? '',
+            $_POST['model_name'] ?? '',
+            $_POST['serial_no'] ?? '',
+            !empty($_POST['mfg_date']) ? $_POST['mfg_date'] : null,
+            $_POST['difference_detail'] ?? '',
+            $_POST['reason_for_adopt'] ?? '',
+            $_POST['root_cause'] ?? '',
+            $_POST['measure_tentative'] ?? '',
+            $_POST['measure_permanent'] ?? '',
+            isset($_POST['is_report_needed']) && $_POST['is_report_needed'] == '1' ? 1 : 0,
+            $id
+        ];
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        // Get new data for log
+        $stmtNew = $pdo->prepare("SELECT * FROM QMS_CONCESSION WHERE id = ?");
+        $stmtNew->execute([$id]);
+        $newData = $stmtNew->fetch(PDO::FETCH_ASSOC);
+
+        if (function_exists('writeLog')) {
+            writeLog($pdo, 'UPDATE', 'QMS_CONCESSION', $id, $oldData, $newData, "User edited concession {$oldData['request_no']}");
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Concession Updated Successfully']);
     }
     elseif ($action === 'get') {
         $id = $_GET['id'] ?? '';
