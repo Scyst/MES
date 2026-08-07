@@ -3,7 +3,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../db.php';
 require_once '../../../auth/check_auth.php';
-require_once '../../../config/logger.php';
+require_once __DIR__ . '/../../components/php/logger.php';
 
 $action = $_REQUEST['action'] ?? '';
 
