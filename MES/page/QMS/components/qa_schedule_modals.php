@@ -347,6 +347,19 @@
                 <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-light p-3">
+                <div id="viewDayJobsToolbar" class="d-flex justify-content-between align-items-center mb-3 bg-white p-2 rounded shadow-sm d-none">
+                    <div class="form-check mb-0 ms-2">
+                        <input class="form-check-input" type="checkbox" id="selectAllDayPo" style="transform: scale(1.2); cursor:pointer;" onclick="toggleSelectAllDayPo(this)">
+                        <label class="form-check-label fw-bold ms-1" for="selectAllDayPo" style="cursor:pointer;">Select All</label>
+                    </div>
+                    <div>
+                        <span class="text-muted small me-3"><span id="dayBulkCount" class="fw-bold text-primary">0</span> selected</span>
+                        <button class="btn btn-sm btn-primary fw-bold d-none shadow-sm" id="btnDayBulkUpdate" onclick="openBulkUpdateModalFromDayView()">
+                            <i class="fas fa-layer-group me-1"></i> Bulk Update
+                        </button>
+                    </div>
+                </div>
+                
                 <div class="row" id="viewDayJobsContainer">
                     <!-- Cards will be injected here -->
                 </div>

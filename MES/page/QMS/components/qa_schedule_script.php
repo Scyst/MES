@@ -962,11 +962,13 @@ function updateBulkCount() {
     }
 }
 
+let bulkUpdatePoIds = [];
+
 function openBulkUpdateModal() {
-    const count = document.querySelectorAll('.po-checkbox:checked').length;
-    if (count === 0) return;
+    bulkUpdatePoIds = Array.from(document.querySelectorAll('.po-checkbox:checked')).map(cb => cb.value);
+    if (bulkUpdatePoIds.length === 0) return;
     
-    document.getElementById('bulkUpdateCount').innerText = count;
+    document.getElementById('bulkUpdateCount').innerText = bulkUpdatePoIds.length;
     document.getElementById('bulk_ticket_number').value = '';
     document.getElementById('bulk_qa_inspector').value = '';
     document.querySelectorAll('input[name="bulk_inspect_type"]').forEach(el => el.checked = false);
@@ -975,8 +977,41 @@ function openBulkUpdateModal() {
     modal.show();
 }
 
+function openBulkUpdateModalFromDayView() {
+    bulkUpdatePoIds = Array.from(document.querySelectorAll('.day-po-checkbox:checked')).map(cb => cb.value);
+    if (bulkUpdatePoIds.length === 0) return;
+    
+    document.getElementById('bulkUpdateCount').innerText = bulkUpdatePoIds.length;
+    document.getElementById('bulk_ticket_number').value = '';
+    document.getElementById('bulk_qa_inspector').value = '';
+    document.querySelectorAll('input[name="bulk_inspect_type"]').forEach(el => el.checked = false);
+    
+    bootstrap.Modal.getInstance(document.getElementById('viewDayJobsModal')).hide();
+    const modal = new bootstrap.Modal(document.getElementById('bulkUpdateModal'));
+    modal.show();
+}
+
+function updateDayBulkCount() {
+    const count = document.querySelectorAll('.day-po-checkbox:checked').length;
+    const btn = document.getElementById('btnDayBulkUpdate');
+    if (btn) {
+        document.getElementById('dayBulkCount').innerText = count;
+        if (count > 0) {
+            btn.classList.remove('d-none');
+        } else {
+            btn.classList.add('d-none');
+        }
+    }
+}
+
+function toggleSelectAllDayPo(el) {
+    const isChecked = el.checked;
+    document.querySelectorAll('.day-po-checkbox').forEach(cb => cb.checked = isChecked);
+    updateDayBulkCount();
+}
+
 function saveBulkUpdate() {
-    const poIds = Array.from(document.querySelectorAll('.po-checkbox:checked')).map(cb => cb.value);
+    const poIds = bulkUpdatePoIds;
     if (poIds.length === 0) return;
     
     const ticket = document.getElementById('bulk_ticket_number').value;
@@ -1202,8 +1237,18 @@ function viewDayJobs(dateStr) {
     
     if (dayEvents.length === 0) {
         emptyMsg.classList.remove('d-none');
+        document.getElementById('viewDayJobsToolbar').classList.add('d-none');
     } else {
         emptyMsg.classList.add('d-none');
+        document.getElementById('viewDayJobsToolbar').classList.remove('d-none');
+        
+        // Reset checkbox counter
+        const btnDayBulk = document.getElementById('btnDayBulkUpdate');
+        if (btnDayBulk) btnDayBulk.classList.add('d-none');
+        const dayBulkCount = document.getElementById('dayBulkCount');
+        if (dayBulkCount) dayBulkCount.innerText = '0';
+        const selectAllDay = document.getElementById('selectAllDayPo');
+        if (selectAllDay) selectAllDay.checked = false;
         
         let html = '';
         dayEvents.forEach(evt => {
@@ -1227,9 +1272,12 @@ function viewDayJobs(dateStr) {
 
             html += `
                 <div class="col-md-6 mb-3">
-                    <div class="card shadow-sm border-0 h-100" style="cursor:pointer;" onclick="openUpdateModalFromDayView(${po.id})">
-                        <div class="card-body">
-                            <h6 class="fw-bold text-primary mb-1">${po.po_number} <span class="badge bg-info ms-2">${po.sku || ''}</span></h6>
+                    <div class="card shadow-sm border-0 h-100 position-relative">
+                        <div class="position-absolute" style="top: 10px; right: 10px; z-index: 10;">
+                            <input class="form-check-input day-po-checkbox" type="checkbox" value="${po.id}" style="transform: scale(1.3); cursor:pointer;" onclick="updateDayBulkCount()">
+                        </div>
+                        <div class="card-body" style="cursor:pointer;" onclick="openUpdateModalFromDayView(${po.id})">
+                            <h6 class="fw-bold text-primary mb-1 pe-4">${po.po_number} <span class="badge bg-info ms-2">${po.sku || ''}</span></h6>
                             <p class="small text-muted mb-2">${po.description || '-'}</p>
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="small fw-bold">Qty: ${po.quantity}</span>
