@@ -14,21 +14,18 @@ function loadConcessionList() {
                 
                 let html = '';
                 res.data.forEach(req => {
-                    let statusBadge = '<span class="badge bg-secondary">PENDING</span>';
-                    if (req.status === 'PENDING_APPROVAL') statusBadge = '<span class="badge bg-warning text-dark">WAITING APPROVAL</span>';
-                    if (req.status === 'APPROVED') statusBadge = '<span class="badge bg-success">APPROVED</span>';
-                    if (req.status === 'REJECTED') statusBadge = '<span class="badge bg-danger">REJECTED</span>';
-
                     html += `
-                        <tr onclick="viewConcession(${req.id})" style="cursor: pointer;" title="View & Print">
-                            <td class="px-3 fw-bold text-primary">${req.request_no}</td>
-                            <td>${req.request_date}</td>
-                            <td>
+                        <tr style="cursor: pointer;" title="View & Print">
+                            <td class="text-center" onclick="event.stopPropagation()">
+                                <input type="checkbox" class="form-check-input concession-checkbox" value="${req.id}" onchange="updateConcessionBulkCount()">
+                            </td>
+                            <td class="px-3 fw-bold text-primary" onclick="viewConcession(${req.id})">${req.request_no}</td>
+                            <td onclick="viewConcession(${req.id})">${req.request_date}</td>
+                            <td onclick="viewConcession(${req.id})">
                                 <div><strong>${req.subject}</strong></div>
                                 <div class="small text-muted">${req.part_name}</div>
                             </td>
-                            <td class="fw-bold">${req.qty ? Number(req.qty).toLocaleString() : '-'}</td>
-                            <td>${statusBadge}</td>
+                            <td class="fw-bold text-center" onclick="viewConcession(${req.id})">${req.qty ? Number(req.qty).toLocaleString() : '-'}</td>
                         </tr>
                     `;
                 });
@@ -94,49 +91,17 @@ function viewConcession(id) {
                     <tr><th class="bg-light">Tentative Measure</th><td class="text-warning">${data.measure_tentative}</td></tr>
                     <tr><th class="bg-light">Permanent Measure</th><td class="text-success">${data.measure_permanent}</td></tr>
                 </table>
-                
-                <h6 class="fw-bold mt-4">Approvals</h6>
-                <table class="table table-bordered text-center">
-                    <thead class="bg-light">
-                        <tr>
-                            <th>Approver 1</th>
-                            <th>Approver 2</th>
-                            <th>Approver 3</th>
-                            <th>Approver 4</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>${renderApproval(data.approver_1_name, data.approver_1_status, data.approver_1_date)}</td>
-                            <td>${renderApproval(data.approver_2_name, data.approver_2_status, data.approver_2_date)}</td>
-                            <td>${renderApproval(data.approver_3_name, data.approver_3_status, data.approver_3_date)}</td>
-                            <td>${renderApproval(data.approver_4_name, data.approver_4_status, data.approver_4_date)}</td>
-                        </tr>
-                    </tbody>
-                </table>
             `;
             
             document.getElementById('concessionDetailContent').innerHTML = html;
             
-            // Build footer actions (Approve buttons) based on status
+            // Build footer actions
             let footerHtml = `
-                <a href="print_concession.php?id=${data.id}" target="_blank" class="btn btn-outline-secondary me-auto">
+                <a href="print_concession.php?ids=${data.id}" target="_blank" class="btn btn-outline-secondary me-auto">
                     <i class="fas fa-print me-1"></i> Print PDF
                 </a>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             `;
-            if(data.status !== 'APPROVED' && data.status !== 'REJECTED') {
-                // Find next pending approver level
-                let nextLevel = 1;
-                if(data.approver_1_status === 'Approve') nextLevel = 2;
-                if(data.approver_2_status === 'Approve') nextLevel = 3;
-                if(data.approver_3_status === 'Approve') nextLevel = 4;
-                
-                footerHtml += `
-                    <button type="button" class="btn btn-danger" onclick="approveConcession(${data.id}, ${nextLevel}, 'Not Approve')"><i class="fas fa-times me-1"></i> Reject (L${nextLevel})</button>
-                    <button type="button" class="btn btn-success" onclick="approveConcession(${data.id}, ${nextLevel}, 'Approve')"><i class="fas fa-check me-1"></i> Approve (L${nextLevel})</button>
-                `;
-            }
             document.getElementById('concessionDetailFooter').innerHTML = footerHtml;
             
             const modal = new bootstrap.Modal(document.getElementById('concessionDetailModal'));
@@ -199,4 +164,32 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+function toggleSelectAllConcession(source) {
+    const checkboxes = document.querySelectorAll('.concession-checkbox');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    updateConcessionBulkCount();
+}
+
+function updateConcessionBulkCount() {
+    const checkedBoxes = document.querySelectorAll('.concession-checkbox:checked');
+    const allBoxes = document.querySelectorAll('.concession-checkbox');
+    
+    if (allBoxes.length > 0) {
+        document.getElementById('selectAllConcession').checked = (checkedBoxes.length === allBoxes.length);
+    } else {
+        document.getElementById('selectAllConcession').checked = false;
+    }
+}
+
+function bulkPrintConcession() {
+    const checkedBoxes = document.querySelectorAll('.concession-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        Swal.fire('No selection', 'Please select at least one request to print.', 'info');
+        return;
+    }
+    
+    const ids = Array.from(checkedBoxes).map(cb => cb.value).join(',');
+    window.open(`print_concession.php?ids=${ids}`, '_blank');
+}
 </script>

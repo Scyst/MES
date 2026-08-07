@@ -6,13 +6,13 @@ require_once('../../auth/check_auth.php');
 requirePermission(['view_qms', 'view_production']);
 
 $is_blank = (isset($_GET['mode']) && $_GET['mode'] === 'blank');
-$id = $_GET['id'] ?? 0;
+$ids_str = $_GET['ids'] ?? ($_GET['id'] ?? '');
 
-$data = [];
+$records = [];
 
 if ($is_blank) {
     // --- Blank Mode ---
-    $data = [
+    $records[] = [
         'request_no' => '....................',
         'request_date' => null,
         'issued_by_dept' => '', 'request_to' => '',
@@ -29,21 +29,17 @@ if ($is_blank) {
         'approver_4_name' => '', 'approver_4_status' => '', 'approver_4_date' => null,
     ];
 } else {
-    if (!$id) die('Error: Missing ID');
+    $ids_arr = array_filter(explode(',', $ids_str), 'is_numeric');
+    if (empty($ids_arr)) die('Error: Missing ID');
     
-    $sql = "SELECT * FROM QMS_CONCESSION WITH (NOLOCK) WHERE id = ?";
+    $placeholders = implode(',', array_fill(0, count($ids_arr), '?'));
+    $sql = "SELECT * FROM QMS_CONCESSION WITH (NOLOCK) WHERE id IN ($placeholders)";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$id]);
-    $data = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt->execute($ids_arr);
+    $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if (!$data) die('Error: Concession Data not found');
+    if (empty($records)) die('Error: Concession Data not found');
 }
-
-// Format variables
-$show_date = $is_blank || empty($data['request_date']) ? '....../....../......' : date('d/m/Y', strtotime($data['request_date']));
-$show_mfg_date = empty($data['mfg_date']) ? '' : date('d/m/Y', strtotime($data['mfg_date']));
-$qty = $data['qty'];
-$show_qty = $is_blank ? '' : (floor($qty) == $qty ? number_format((float)$qty) : rtrim(rtrim(number_format((float)$qty, 4), '0'), '.'));
 
 function getRealName($pdo, $name) {
     if (empty($name)) return $name;
@@ -53,48 +49,26 @@ function getRealName($pdo, $name) {
     return $row ? $row['real_name'] : $name;
 }
 
-$person_name = getRealName($pdo, $data['person_name']);
-
-function renderApprover($pdo, $name, $status, $dateStr) {
-    if (!$status) {
-        return '
-            <div class="signature-box">
-                <div class="sig-space"></div>
-                <div class="sig-line">...................................................</div>
-                <div class="sig-date">Date ....../....../......</div>
-                <div class="sig-status">
-                    [  ] Approve &nbsp;&nbsp; [  ] Not Approve
-                </div>
-            </div>
-        ';
-    }
-    
-    $dt = $dateStr ? date('d / m / Y', strtotime($dateStr)) : '....../....../......';
-    $stAppr = $status == 'Approve' ? '[ / ] Approve' : '[  ] Approve';
-    $stNotAppr = $status == 'Not Approve' ? '[ / ] Not Approve' : '[  ] Not Approve';
-    $realName = getRealName($pdo, $name);
-    
+function renderApproverBlank() {
     return '
         <div class="signature-box">
             <div class="sig-space"></div>
-            <div class="sig-line" style="text-decoration: underline;">&nbsp;&nbsp;&nbsp;' . htmlspecialchars($realName) . '&nbsp;&nbsp;&nbsp;</div>
-            <div class="sig-date">Date ' . $dt . '</div>
+            <div class="sig-line">...................................................</div>
+            <div class="sig-date">Date ....../....../......</div>
             <div class="sig-status">
-                ' . $stAppr . ' &nbsp;&nbsp; ' . $stNotAppr . '
+                [  ] Approve &nbsp;&nbsp; [  ] Not Approve
             </div>
         </div>
     ';
 }
 
-$chkReportNeed = $data['is_report_needed'] ? '[ / ] Need' : '[  ] Need';
-$chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Need';
-
+$title = $is_blank ? 'Concession_Blank' : 'Concession_Print';
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>Concession_<?php echo $is_blank ? 'Blank' : htmlspecialchars($data['request_no']); ?></title>
+    <title><?php echo htmlspecialchars($title); ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../utils/libs/fontawesome/css/all.min.css">
     <style>
@@ -120,6 +94,11 @@ $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Ne
             position: relative; 
             box-sizing: border-box; 
             box-shadow: 0 0 10px rgba(0,0,0,0.5); 
+            page-break-after: always;
+        }
+        
+        .page:last-child {
+            page-break-after: auto;
         }
 
         .no-print { position: fixed; top: 15px; right: 20px; z-index: 9999; }
@@ -159,7 +138,6 @@ $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Ne
         
         .font-bold { font-weight: 700; }
         .text-red { color: #dc2626; }
-        /* Removed text-blue to match TCPDF standard black ink */
         
         .text-xs { font-size: 10px; }
         .text-sm { font-size: 11px; }
@@ -186,12 +164,7 @@ $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Ne
         .modal { display: none !important; }
     </style>
     <script>
-        // Dummy bootstrap object to prevent inactivity script errors on print page
-        var bootstrap = {
-            Modal: function() {
-                return { show: function(){}, hide: function(){} };
-            }
-        };
+        var bootstrap = { Modal: function() { return { show: function(){}, hide: function(){} }; } };
     </script>
 </head>
 <body>
@@ -202,6 +175,16 @@ $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Ne
         </button>
     </div>
 
+    <?php foreach ($records as $data): 
+        $show_date = $is_blank || empty($data['request_date']) ? '....../....../......' : date('d/m/Y', strtotime($data['request_date']));
+        $show_mfg_date = empty($data['mfg_date']) ? '' : date('d/m/Y', strtotime($data['mfg_date']));
+        $qty = $data['qty'];
+        $show_qty = $is_blank ? '' : (floor($qty) == $qty ? number_format((float)$qty) : rtrim(rtrim(number_format((float)$qty, 4), '0'), '.'));
+        $person_name = getRealName($pdo, $data['person_name']);
+        
+        $chkReportNeed = $data['is_report_needed'] ? '[ / ] Need' : '[  ] Need';
+        $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Need';
+    ?>
     <div class="page">
         <!-- Header -->
         <table class="table-bordered" style="margin-bottom: 15px;">
@@ -338,16 +321,16 @@ $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Ne
             </tr>
             <tr>
                 <td class="align-middle">
-                    <?php echo renderApprover($pdo, $data['approver_1_name'], $data['approver_1_status'], $data['approver_1_date']); ?>
+                    <?php echo renderApproverBlank(); ?>
                 </td>
                 <td class="align-middle">
-                    <?php echo renderApprover($pdo, $data['approver_2_name'], $data['approver_2_status'], $data['approver_2_date']); ?>
+                    <?php echo renderApproverBlank(); ?>
                 </td>
                 <td class="align-middle">
-                    <?php echo renderApprover($pdo, $data['approver_3_name'], $data['approver_3_status'], $data['approver_3_date']); ?>
+                    <?php echo renderApproverBlank(); ?>
                 </td>
                 <td class="align-middle">
-                    <?php echo renderApprover($pdo, $data['approver_4_name'], $data['approver_4_status'], $data['approver_4_date']); ?>
+                    <?php echo renderApproverBlank(); ?>
                 </td>
             </tr>
         </table>
@@ -356,16 +339,7 @@ $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Ne
             FM-QCS-006 / R02 : 07/07/22
         </div>
     </div>
+    <?php endforeach; ?>
 
-    <script>
-        // Auto print prompt after a slight delay, optional but helpful
-        /*
-        window.onload = function() {
-            setTimeout(function() {
-                window.print();
-            }, 500);
-        };
-        */
-    </script>
 </body>
 </html>

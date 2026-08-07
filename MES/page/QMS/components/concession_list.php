@@ -5,6 +5,9 @@
         <input type="text" id="concessionSearch" class="form-control border-0 bg-white" placeholder="ค้นหา Request No, ลูกค้า, สินค้า..." style="font-size: 0.95rem;">
     </div>
     <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-primary d-none d-lg-block fw-bold shadow-sm" onclick="bulkPrintConcession()">
+            <i class="fas fa-print me-1"></i> Print Selected
+        </button>
         <a href="print_concession.php?mode=blank" target="_blank" class="btn btn-sm btn-outline-secondary d-none d-lg-block fw-bold shadow-sm">
             <i class="fas fa-print me-1"></i> Print Blank
         </a>
@@ -17,13 +20,13 @@
 <div class="card table-card shadow-sm border-0 flex-grow-1 desktop-view h-100 d-flex flex-column">
     <div class="table-responsive-custom h-100">
         <table class="table table-hover align-middle mb-0" id="concessionTable">
-                <thead class="table-light text-secondary small">
+                <thead class="table-light text-secondary small text-uppercase">
                     <tr>
+                        <th class="px-3 py-2 text-center" style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllConcession" onchange="toggleSelectAllConcession(this)"></th>
                         <th class="px-3">Request No.</th>
                         <th>Date</th>
                         <th>Subject / Part Name</th>
-                        <th>Qty</th>
-                        <th>Status</th>
+                        <th class="text-center">Qty</th>
                     </tr>
                 </thead>
                 <tbody id="concessionBody">
