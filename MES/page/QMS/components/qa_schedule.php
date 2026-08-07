@@ -121,13 +121,13 @@
         </div>
     </div>
     
-    <div class="d-flex align-items-center gap-2">
-        <button class="btn btn-sm btn-primary fw-bold px-3 shadow-sm d-none" id="btnBulkUpdate" onclick="openBulkUpdateModal()">
+    <div class="d-flex gap-2 ms-auto">
+        <button class="btn btn-sm btn-primary fw-bold px-3 shadow-sm d-none rounded-pill" id="btnBulkUpdate" onclick="openBulkUpdateModal()">
             <i class="fas fa-layer-group me-1"></i> Bulk Update (<span id="bulkCount">0</span>)
         </button>
-    </div>
-    
-    <div class="d-flex gap-2 ms-auto">
+        <button class="btn btn-sm btn-success fw-bold px-3 shadow-sm rounded-pill" onclick="openCreateTicketModal()">
+            <i class="fas fa-ticket-alt me-1"></i> Create Ticket
+        </button>
         <button class="btn btn-sm btn-outline-secondary rounded-pill fw-bold shadow-sm px-3" onclick="window.print()">
             <i class="fas fa-print me-1"></i> Print
         </button>
@@ -143,9 +143,11 @@
                 <thead class="bg-primary text-white small text-uppercase">
                     <tr>
                         <th class="px-3 py-2 text-center" style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllPo" onchange="toggleSelectAllPo(this)"></th>
+                        <th class="px-3 py-2 text-start" style="width: 130px;">Ticket No.</th>
                         <th class="px-3 py-2 text-start" style="width: 180px;">PO Number</th>
                         <th class="py-2 text-start">Item Details</th>
-                        <th class="py-2 text-center" style="width: 90px;">Qty</th>
+                        <th class="py-2 text-center" style="width: 80px;">Qty</th>
+                        <th class="py-2 text-center" style="width: 80px;">Sampling</th>
                         <th class="py-2 text-center" style="width: 120px;">DC Location</th>
                         <th class="py-2 text-center" style="width: 120px;">Inspection Date</th>
                         <th class="py-2 text-center" style="width: 120px;">Loading Date</th>
@@ -230,9 +232,7 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold small text-muted">Inspector (คนตรวจ)</label>
-                            <select name="qa_inspector" id="inspect_qa_inspector" class="form-select qc-user-select">
-                                <option value="">- Select -</option>
-                            </select>
+                            <input type="text" name="qa_inspector" id="inspect_qa_inspector" class="form-control" list="qc-users-list" placeholder="- Type or Select -">
                         </div>
                     </div>
 
@@ -345,9 +345,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold small text-muted">Inspector (คนตรวจ)</label>
-                    <select id="bulk_qa_inspector" class="form-select qc-user-select">
-                        <option value="">- Select -</option>
-                    </select>
+                    <input type="text" id="bulk_qa_inspector" class="form-control" list="qc-users-list" placeholder="- Type or Select -">
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold small text-muted text-uppercase mb-2">Inspection Type</label>
@@ -368,3 +366,76 @@
         </div>
     </div>
 </div>
+
+<!-- Create Ticket Modal -->
+<div class="modal fade" id="createTicketModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-success text-white border-bottom-0 rounded-top" style="border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title fw-bold"><i class="fas fa-ticket-alt me-2"></i>Create New Ticket</h5>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <div class="row bg-white p-3 rounded shadow-sm mb-3">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold small text-muted">Ticket Number *</label>
+                        <input type="text" id="create_ticket_number" class="form-control" placeholder="Ticket No...">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold small text-muted">Inspector (คนตรวจ)</label>
+                        <input type="text" id="create_qa_inspector" class="form-control" list="qc-users-list" placeholder="- Type or Select -">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold small text-muted">Inspection Type</label>
+                        <div class="custom-segmented w-100">
+                            <input type="radio" class="btn-check" name="create_inspect_type" id="create_type_remote" value="Remote">
+                            <label class="btn flex-fill" for="create_type_remote">Remote</label>
+                            <input type="radio" class="btn-check" name="create_inspect_type" id="create_type_onsite" value="On-site">
+                            <label class="btn flex-fill" for="create_type_onsite">On-site</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add PO section -->
+                <div class="bg-white p-3 rounded shadow-sm">
+                    <h6 class="fw-bold mb-3"><i class="fas fa-list-ul text-primary me-2"></i>Add POs to Ticket</h6>
+                    
+                    <div class="input-group mb-3 position-relative">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                        <input type="text" id="createTicketSearchPo" class="form-control border-start-0" placeholder="Type PO number (min 3 chars)..." autocomplete="off" onkeyup="searchPoForTicket(event)">
+                        <button class="btn btn-outline-secondary" type="button" onclick="searchPoForTicket(new Event('keyup', {key:'Enter'}))">Search</button>
+                        
+                        <!-- Suggestion box -->
+                        <div id="createTicketSuggestBox" class="list-group position-absolute w-100 shadow-sm" style="display:none; z-index: 1050; top: 100%; max-height: 250px; overflow-y: auto;">
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive" style="max-height: 200px;">
+                        <table class="table table-sm table-bordered table-hover mb-0" id="createTicketPoTable">
+                            <thead class="bg-light text-muted small text-uppercase sticky-top">
+                                <tr>
+                                    <th>PO Number</th>
+                                    <th>SKU</th>
+                                    <th class="text-center" style="width: 50px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr id="createTicketEmptyRow">
+                                    <td colspan="3" class="text-center text-muted py-3 small">No PO added yet. Search above to add.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-white border-top-0 rounded-bottom" style="border-radius: 0 0 16px 16px;">
+                <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success fw-bold px-4" id="btnSaveCreateTicket" onclick="saveNewTicket()">
+                    <i class="fas fa-save me-1"></i> Create & Link
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<datalist id="qc-users-list"></datalist>

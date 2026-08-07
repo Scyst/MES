@@ -55,6 +55,10 @@ function loadQASchedule(filterType = null) {
                     if (po.inspection_status === 'IN_PROGRESS') statusBadge = '<span class="badge bg-warning text-dark">IN PROGRESS</span>';
                     if (po.inspection_status === 'DONE') statusBadge = '<span class="badge bg-success">DONE</span>';
                     
+                    let typeBadge = '';
+                    if (po.inspect_type === 'Remote') typeBadge = '<span class="badge bg-info mt-1 d-block" style="width:fit-content; margin:0 auto;">Remote</span>';
+                    if (po.inspect_type === 'On-site') typeBadge = '<span class="badge bg-primary mt-1 d-block" style="width:fit-content; margin:0 auto;">On-site</span>';
+
                     let resultBadge = '';
                     if (po.inspection_result === 'PASS') resultBadge = '<span class="badge bg-success ms-1">PASS</span>';
                     if (po.inspection_result === 'FAIL') resultBadge = '<span class="badge bg-danger ms-1">FAIL</span>';
@@ -79,24 +83,26 @@ function loadQASchedule(filterType = null) {
                             <td class="text-center" onclick="event.stopPropagation()">
                                 <input type="checkbox" class="form-check-input po-checkbox" value="${po.id}" onchange="updateBulkCount()">
                             </td>
+                            <td class="text-center text-secondary">${po.ticket_number || '-'}</td>
                             <td class="px-3 fw-bold text-primary text-start">${po.po_number}</td>
                             <td class="text-start">
                                 <div><strong>${po.sku}</strong></div>
                                 <div class="small text-muted">${po.description} (${po.color})</div>
                             </td>
                             <td class="fw-bold text-center">${po.quantity ? Number(po.quantity).toLocaleString() : '-'}</td>
+                            <td class="text-center text-muted">-</td>
                             <td class="text-center">${po.dc_location || '-'}</td>
                             <td class="text-center fw-bold text-dark">${po.inspection_date ? po.inspection_date.substring(0, 10) : '-'}</td>
                             <td class="text-center">${po.loading_date ? po.loading_date : '-'}</td>
                             <td class="text-center fw-bold text-secondary">${po.loading_week || '-'}</td>
                             <td class="text-center" onclick="event.stopPropagation()">${inspectorCell}</td>
-                            <td class="text-center">${statusBadge} ${resultBadge}</td>
+                            <td class="text-center">${statusBadge} ${resultBadge} ${typeBadge}</td>
                         </tr>
                     `;
                 });
                 tbody.innerHTML = html;
             } else {
-                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">${res.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-danger">${res.message}</td></tr>`;
             }
         }).catch(err => {
             alert('Network Error');
@@ -576,14 +582,14 @@ function loadQcUsers() {
         .then(r => r.json())
         .then(res => {
             if(res.success && res.data) {
-                const selects = document.querySelectorAll('.qc-user-select');
-                selects.forEach(select => {
-                    select.innerHTML = '<option value="">- Select -</option>';
+                const datalist = document.getElementById('qc-users-list');
+                if(datalist) {
+                    datalist.innerHTML = '';
                     res.data.forEach(user => {
                         const name = user.aka ? `${user.fullname} (${user.aka})` : user.fullname;
-                        select.innerHTML += `<option value="${user.fullname}">${name}</option>`;
+                        datalist.innerHTML += `<option value="${user.fullname}">${name}</option>`;
                     });
-                });
+                }
             }
         });
 }
@@ -667,4 +673,161 @@ function saveBulkUpdate() {
 document.addEventListener('DOMContentLoaded', () => {
     loadQcUsers();
 });
+// Create Ticket Logic
+let createTicketPoList = [];
+
+function openCreateTicketModal() {
+    createTicketPoList = [];
+    document.getElementById('create_ticket_number').value = '';
+    document.getElementById('create_qa_inspector').value = '';
+    document.querySelectorAll('input[name="create_inspect_type"]').forEach(el => el.checked = false);
+    document.getElementById('createTicketSearchPo').value = '';
+    renderCreateTicketPoTable();
+    
+    const modal = new bootstrap.Modal(document.getElementById('createTicketModal'));
+    modal.show();
+}
+
+function searchPoForTicket(event) {
+    const term = event.target.value.trim();
+    const box = document.getElementById('createTicketSuggestBox');
+    
+    if (term.length < 3) {
+        box.style.display = 'none';
+        return;
+    }
+    
+    if (event.key === 'Enter') {
+        fetch(`./api/qa_schedule_api.php?action=search_po&search=${encodeURIComponent(term)}`)
+            .then(r => r.json())
+            .then(res => {
+                if(res.success && res.data.length > 0) {
+                    addPoToTicket(res.data[0]);
+                    event.target.value = '';
+                    box.style.display = 'none';
+                }
+            });
+        return;
+    }
+    
+    box.innerHTML = '<div class="list-group-item text-center"><i class="fas fa-spinner fa-spin text-primary"></i> Searching...</div>';
+    box.style.display = 'block';
+    
+    fetch(`./api/qa_schedule_api.php?action=search_po&search=${encodeURIComponent(term)}`)
+        .then(r => r.json())
+        .then(res => {
+            if(res.success) {
+                if(res.data.length === 0) {
+                    box.innerHTML = '<div class="list-group-item text-muted text-center small">No PO found.</div>';
+                    return;
+                }
+                
+                let html = '';
+                res.data.forEach(po => {
+                    html += `
+                        <button type="button" class="list-group-item list-group-item-action text-start p-2" onclick='addPoToTicket(${JSON.stringify(po).replace(/'/g, "&#39;")})'>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>${po.po_number}</strong>
+                                <span class="badge bg-light text-dark border">${po.sku}</span>
+                            </div>
+                            <div class="small text-muted mt-1">Qty: ${po.quantity}</div>
+                        </button>
+                    `;
+                });
+                box.innerHTML = html;
+            }
+        });
+}
+
+function addPoToTicket(po) {
+    if(!createTicketPoList.find(p => p.id === po.id)) {
+        createTicketPoList.push(po);
+        renderCreateTicketPoTable();
+    }
+    document.getElementById('createTicketSearchPo').value = '';
+    document.getElementById('createTicketSuggestBox').style.display = 'none';
+}
+
+function removePoFromTicket(id) {
+    createTicketPoList = createTicketPoList.filter(p => p.id !== id);
+    renderCreateTicketPoTable();
+}
+
+function renderCreateTicketPoTable() {
+    const tbody = document.querySelector('#createTicketPoTable tbody');
+    if (createTicketPoList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3 small">No PO added yet. Search above to add.</td></tr>`;
+        return;
+    }
+    
+    let html = '';
+    createTicketPoList.forEach(po => {
+        html += `
+            <tr>
+                <td class="fw-bold text-primary">${po.po_number}</td>
+                <td>${po.sku}</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removePoFromTicket(${po.id})"><i class="fas fa-times"></i></button>
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
+function saveNewTicket() {
+    const ticket = document.getElementById('create_ticket_number').value.trim();
+    if (!ticket) {
+        alert("Please enter a Ticket Number.");
+        return;
+    }
+    if (createTicketPoList.length === 0) {
+        alert("Please add at least one PO to the ticket.");
+        return;
+    }
+    
+    const inspector = document.getElementById('create_qa_inspector').value;
+    const type = document.querySelector('input[name="create_inspect_type"]:checked');
+    
+    const btn = document.getElementById('btnSaveCreateTicket');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+    
+    const poIds = createTicketPoList.map(p => p.id);
+    
+    const formData = new FormData();
+    formData.append('po_ids', JSON.stringify(poIds));
+    formData.append('ticket_number', ticket);
+    formData.append('qa_inspector', inspector);
+    if (type) formData.append('inspect_type', type.value);
+    
+    fetch('./api/qa_schedule_api.php?action=bulk_update_ticket', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+        if(res.success) {
+            bootstrap.Modal.getInstance(document.getElementById('createTicketModal')).hide();
+            loadQASchedule();
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Ticket Created Successfully',
+                showConfirmButton: false,
+                timer: 2000
+            });
+        } else {
+            alert('Error: ' + res.message);
+        }
+    })
+    .catch(err => {
+        alert('Network Error');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save me-1"></i> Create & Link';
+    });
+}
 </script>

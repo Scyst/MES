@@ -171,7 +171,7 @@ try {
         echo json_encode(['success' => true, 'message' => 'Inspector assigned successfully.']);
     }
     elseif ($action === 'get_qc_users') {
-        $sql = "SELECT id, fullname, username, aka FROM USERS WITH (NOLOCK) WHERE role = 'qc' AND is_active = 1 ORDER BY fullname ASC";
+        $sql = "SELECT id, fullname, username, aka FROM USERS WITH (NOLOCK) WHERE role = 'qc' AND is_active = 1 AND fullname IS NOT NULL AND fullname != '' ORDER BY fullname ASC";
         $stmt = $pdo->query($sql);
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode(['success' => true, 'data' => $users]);
