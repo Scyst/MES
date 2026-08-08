@@ -131,6 +131,8 @@ async function fetchData() {
                         
                         try {
                             document.getElementById('briefMpTotal').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                            document.getElementById('briefMpPresent').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                            document.getElementById('briefMpLeave').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                             
                             const formData = new FormData();
                             formData.append('action', 'get_morning_brief');
