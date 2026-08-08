@@ -188,6 +188,20 @@ function accessory_product_label(string $code): string {
                     <div id="modelLoadStatus" class="model-status model-idle">● ยังไม่ได้โหลด</div>
                 </div>
 
+                <!-- ── REQUIRED CLASSES ───────────────── -->
+                <div class="ctrl-section" id="reqClassesSection">
+                    <h6 class="section-title"><i class="fas fa-list-check"></i> REQUIRED CLASSES</h6>
+                    <div id="requiredClassesContainer" class="req-classes-grid mb-2">
+                        <span class="small text-secondary">(โหลด Model ก่อน)</span>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-secondary flex-grow-1"
+                                onclick="webSelectAllClasses()">เลือกทั้งหมด</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary flex-grow-1"
+                                onclick="webSelectNoClasses()">ไม่เลือกเลย</button>
+                    </div>
+                </div>
+
                 <!-- ── CONFIDENCE + IO MODULE ────────── -->
                 <div class="ctrl-section">
                     <h6 class="section-title"><i class="fas fa-sliders"></i> CONFIDENCE</h6>
@@ -416,7 +430,7 @@ if (document.body.dataset.canEdit !== '1') {
     document.querySelectorAll(
         '.ctrl-card input, .ctrl-card select, .ctrl-card button, .ctrl-card textarea'
     ).forEach(function (el) {
-        if (el.id !== 'productSelect') {
+        if (el.id !== 'productSelect' && !el.closest('#reqClassesSection')) {
             el.disabled = true;
         }
     });

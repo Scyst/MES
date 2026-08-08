@@ -18,6 +18,8 @@ function escHtml(s) {
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+let _currentModelClassesStr = "";
+
 let _prev       = {};
 let _lastStatus = {};
 
@@ -66,6 +68,7 @@ function setConnStatus(online) {
 
 function updateStatus(s) {
     document.getElementById('fpsBadge').textContent = `FPS: ${s.fps}`;
+    updateRequiredClassesUI(s);
 
     // shared derived state used by both badge and status list
     const _required = s.required_classes ?? [];
@@ -765,6 +768,83 @@ function reconnectCamera() {
     icon?.classList.add('fa-spin');
     setTimeout(() => icon?.classList.remove('fa-spin'), 2000);
     img.src = _camUrl('/stream') + '&t=' + Date.now();
+}
+
+
+// ── Required Classes Checkboxes UI & Sync ────────────────────────────────────
+function updateRequiredClassesUI(s) {
+    const container = document.getElementById('requiredClassesContainer');
+    if (!container) return;
+
+    const modelClasses = s.model_classes || [];
+    const required     = s.required_classes || [];
+    const classesKey   = JSON.stringify(modelClasses);
+
+    if (modelClasses.length === 0) {
+        if (_currentModelClassesStr !== "empty") {
+            container.innerHTML = '<span class="small text-secondary">(โหลด Model ก่อน)</span>';
+            _currentModelClassesStr = "empty";
+        }
+        return;
+    }
+
+    if (_currentModelClassesStr !== classesKey) {
+        _currentModelClassesStr = classesKey;
+        container.innerHTML = '';
+        modelClasses.forEach(cls => {
+            const lbl = document.createElement('label');
+            lbl.className = 'req-chk-item d-flex align-items-center gap-1';
+
+            const chk = document.createElement('input');
+            chk.type = 'checkbox';
+            chk.className = 'form-check-input my-0';
+            chk.value = cls;
+            chk.checked = required.includes(cls);
+            chk.onchange = sendRequiredClassesToServer;
+
+            const span = document.createElement('span');
+            span.className = 'text-truncate';
+            span.textContent = cls;
+
+            lbl.appendChild(chk);
+            lbl.appendChild(span);
+            container.appendChild(lbl);
+        });
+        return;
+    }
+
+    const inputs = container.querySelectorAll('input[type="checkbox"]');
+    inputs.forEach(chk => {
+        if (document.activeElement !== chk) {
+            chk.checked = required.includes(chk.value);
+        }
+    });
+}
+
+function webSelectAllClasses() {
+    const inputs = document.querySelectorAll('#requiredClassesContainer input[type="checkbox"]');
+    inputs.forEach(chk => chk.checked = true);
+    sendRequiredClassesToServer();
+}
+
+function webSelectNoClasses() {
+    const inputs = document.querySelectorAll('#requiredClassesContainer input[type="checkbox"]');
+    inputs.forEach(chk => chk.checked = false);
+    sendRequiredClassesToServer();
+}
+
+async function sendRequiredClassesToServer() {
+    const inputs = document.querySelectorAll('#requiredClassesContainer input[type="checkbox"]:checked');
+    const selectedClasses = Array.from(inputs).map(chk => chk.value);
+
+    try {
+        await fetch(_camUrl('/api/settings'), {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ required_classes: selectedClasses }),
+            signal:  AbortSignal.timeout(5000),
+        });
+    } catch (_) {}
 }
 
 
