@@ -3,6 +3,7 @@ import axios from 'axios';
 import { FiCheckSquare, FiClock, FiAlertCircle, FiCheck, FiPlay, FiMoreHorizontal, FiTarget, FiActivity, FiSearch, FiPlus } from 'react-icons/fi';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
+import { getCoverImage } from '../utils/imageUtils';
 
 export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTask, onTaskClick, onCreateTask }) {
   const [filterProject, setFilterProject] = useState('all');
@@ -302,13 +303,21 @@ function HeavyTaskCard({ task, onStatusChange, onSaveTask, onTaskClick }) {
     }
   };
 
+  const coverImage = getCoverImage(task.Attachments || task.attachments);
+
   return (
     <div 
       onClick={() => onTaskClick && onTaskClick(task)}
       className="bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all relative group overflow-hidden cursor-pointer"
     >
-      {isUrgent && <div className="absolute top-0 left-0 w-1.5 h-full bg-rose-500"></div>}
+      {isUrgent && <div className="absolute top-0 left-0 w-1.5 h-full bg-rose-500 z-10"></div>}
       
+      {coverImage && (
+        <div className="-mx-5 -mt-5 mb-4 h-32 md:h-40 overflow-hidden rounded-t-2xl">
+          <img src={coverImage} alt="Cover" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+        </div>
+      )}
+
       <div className="flex justify-between items-start gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">

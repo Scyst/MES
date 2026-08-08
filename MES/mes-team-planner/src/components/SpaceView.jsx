@@ -3,6 +3,7 @@ import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTr
 import axios from 'axios';
 import { canManageSpace } from '../utils/permissions';
 import { resolveAssigneeName } from '../utils/userUtils';
+import { getCoverImage } from '../utils/imageUtils';
 import WorkloadWidget from './workload/WorkloadWidget';
 
 export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], users = [], currentUser, refreshData, onEditSpace, onDeleteSpace, openInviteModal, onTaskClick, onCreateTask, onCreateProject, onProjectClick, onSaveTask }) {
@@ -173,9 +174,15 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
               const totalItems = Array.isArray(checklist) ? checklist.length : 0;
               const doneItems = Array.isArray(checklist) ? checklist.filter(c => c && c.isDone).length : 0;
               const progress = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
+              const coverImage = getCoverImage(proj?.Attachments);
               
               return (
                 <div key={proj?.Id || `proj-${idx}`} onClick={() => onProjectClick && onProjectClick(proj)} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 hover:shadow-soft transition-all cursor-pointer">
+                  {coverImage && (
+                    <div className="-mx-4 -mt-4 mb-3 h-24 overflow-hidden rounded-t-2xl">
+                      <img src={coverImage} alt="Cover" className="w-full h-full object-cover transition-transform hover:scale-105" />
+                    </div>
+                  )}
                   <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{String(proj?.Title || 'ไม่มีชื่อ')}</h4>
                   <p className="text-xs text-slate-500 mt-1 line-clamp-2 min-h-[32px]">{String(proj?.Description || 'ไม่มีรายละเอียด')}</p>
                   <div className="mt-4">
@@ -212,14 +219,19 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
             <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
               {teamTasks.map((task, idx) => {
                 const assigneeName = resolveAssigneeName(task.Assignee, users);
+                const coverImage = getCoverImage(task?.Attachments || task?.attachments);
                 return (
                 <div 
                   key={task?.Id || `task-${idx}`} 
                   onClick={() => onTaskClick && onTaskClick(task)}
                   className="flex gap-3 items-start border border-transparent hover:border-slate-200 dark:hover:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30 p-2 rounded-xl transition-colors group"
                 >
-                  <div className="mt-0.5">
-                    <div className={`w-2 h-2 rounded-full ${task?.Status === 'Done' ? 'bg-emerald-500' : task?.Status === 'In Progress' ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
+                  <div className="mt-0.5 shrink-0">
+                    {coverImage ? (
+                      <img src={coverImage} alt="Cover" className="w-6 h-6 rounded object-cover" />
+                    ) : (
+                      <div className={`w-2 h-2 rounded-full ${task?.Status === 'Done' ? 'bg-emerald-500' : task?.Status === 'In Progress' ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-tight truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{String(task?.Title || 'ไม่มีชื่องาน')}</p>

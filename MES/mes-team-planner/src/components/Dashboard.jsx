@@ -1,8 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { FiActivity, FiUserCheck, FiAlertCircle, FiCheckCircle, FiClock, FiBarChart2, FiTrendingUp, FiPieChart, FiFolderPlus, FiFilePlus, FiUserPlus, FiCalendar, FiBriefcase, FiDownload } from 'react-icons/fi';
-import { format, subDays } from 'date-fns';
+import { FiActivity, FiUserCheck, FiAlertCircle, FiCheckCircle, FiClock, FiBarChart2, FiTrendingUp, FiPieChart, FiFolderPlus, FiFilePlus, FiUserPlus, FiCalendar, FiBriefcase, FiDownload, FiMoreHorizontal, FiArrowRight, FiCheckSquare } from 'react-icons/fi';
+import { format, subDays, isBefore, startOfToday, parseISO, differenceInDays } from 'date-fns';
 import axios from 'axios';
 import { resolveAssigneeName } from '../utils/userUtils';
+import { canEditProject } from '../utils/permissions';
+import { getCoverImage } from '../utils/imageUtils';
 import ExportModal from './ExportModal';
 
 export default function Dashboard({ tasks = [], events = [], activities = [], loading, users = [], currentUser, onNav, openTaskModal, openProjectModal, openSpaceModal, onTaskClick, onProjectClick, openInviteModal }) {
@@ -204,10 +206,15 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
             <ul className="space-y-2 overflow-y-auto custom-scrollbar pr-1 flex-1">
               {todaysTasks.map(task => {
                 const assigneeName = resolveAssigneeName(task.Assignee, users);
+                const coverImage = getCoverImage(task.attachments || task.Attachments);
                 return (
                 <li key={task.Id} onClick={() => onTaskClick && onTaskClick(task)} className="group flex items-center justify-between text-slate-700 dark:text-slate-300 text-sm bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/50 dark:hover:bg-slate-700/50 px-3 py-2 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-all cursor-pointer">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></div>
+                    {coverImage ? (
+                      <img src={coverImage} alt="Cover" className="w-8 h-8 rounded object-cover shrink-0" />
+                    ) : (
+                      <div className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></div>
+                    )}
                     <span className="truncate font-medium">{task.Title}</span>
                   </div>
                   <div className="flex items-center gap-3 shrink-0 ml-4">
@@ -242,9 +249,15 @@ export default function Dashboard({ tasks = [], events = [], activities = [], lo
                 const totalItems = checklist.length;
                 const doneItems = checklist.filter(c => c.isDone).length;
                 const progress = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
+                const coverImage = getCoverImage(proj.Attachments);
                 
                 return (
                   <div key={proj.Id} onClick={() => onProjectClick && onProjectClick(proj)} className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-slate-700 flex flex-col gap-2 transition-all cursor-pointer">
+                    {coverImage && (
+                      <div className="-mx-3 -mt-3 mb-1 h-20 overflow-hidden rounded-t-lg">
+                        <img src={coverImage} alt="Cover" className="w-full h-full object-cover" />
+                      </div>
+                    )}
                     <div className="flex justify-between items-center">
                       <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{proj.Title}</span>
                       <span className="text-[11px] font-mono font-bold text-emerald-500">{progress}%</span>

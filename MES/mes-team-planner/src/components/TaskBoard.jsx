@@ -4,6 +4,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import AddTaskModal from './AddTaskModal';
 import UserAvatar from './UserAvatar';
 import { canEditTask } from '../utils/permissions';
+import { getCoverImage } from '../utils/imageUtils';
 
 const cols = [
   { id: 'todo', title: 'To Do', color: 'border-slate-500', bg: 'bg-transparent', titleColor: 'text-slate-700 dark:text-slate-300' },
@@ -214,6 +215,7 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
                         
                         const tagsList = (task.tags || '').split(',').map(t => t.trim()).filter(Boolean);
                         const isEditable = canEditTask(currentUser, task);
+                        const coverImage = getCoverImage(task.attachments || task.Attachments);
                         
                         return (
                         <Draggable key={task.Id} draggableId={task.Id.toString()} index={index} isDragDisabled={!isEditable}>
@@ -225,6 +227,11 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
                               style={{ ...provided.draggableProps.style }}
                               className={`bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-soft transition-all border border-slate-200 dark:border-slate-700 border-l-4 ${pMeta.border} ${snapshot.isDragging ? 'ring-2 ring-emerald-500/20 opacity-90 scale-[1.02]' : ''}`}
                             >
+                              {coverImage && (
+                                <div className="-mx-4 -mt-4 mb-3 h-32 md:h-40 overflow-hidden rounded-t-xl rounded-tr-xl">
+                                  <img src={coverImage} alt="Cover" className="w-full h-full object-cover transition-transform hover:scale-105" />
+                                </div>
+                              )}
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   {task.Visibility === 'private' ? (
