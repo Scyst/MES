@@ -58,8 +58,22 @@
             display: flex;
             flex-direction: row;
             align-items: center;
-            overflow: hidden;
+            position: relative;
         }
+
+        .micro-text {
+            position: absolute;
+            font-size: 7px;
+            color: #999;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            user-select: none;
+        }
+        .micro-top { top: 2px; left: 50%; transform: translateX(-50%); }
+        .micro-bottom { bottom: 2px; left: 50%; transform: translateX(-50%); }
+        .micro-left { left: 8px; top: 50%; transform: translate(-50%, -50%) rotate(-90deg); transform-origin: center; }
+        .micro-right { right: -2px; top: 50%; transform: translate(50%, -50%) rotate(90deg); transform-origin: center; }
+
 
         .tag-card:last-child {
             page-break-after: auto;

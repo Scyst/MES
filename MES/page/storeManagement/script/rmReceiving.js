@@ -153,7 +153,7 @@ async function loadHistory() {
             if (row.actual_receive_date) {
                 receiveDate = typeof formatDateForPrint === 'function' ? escapeHTML(formatDateForPrint(row.actual_receive_date)) : escapeHTML(String(row.actual_receive_date).substring(0,10));
             }
-            let rowDataEncoded = encodeURIComponent(JSON.stringify(row));
+            let rowDataEncoded = encodeURIComponent(JSON.stringify(row)).replace(/'/g, "%27");
             
             // 🛡️ XSS Protection Variables
             const safeSerialNo = escapeHTML(row.serial_no);

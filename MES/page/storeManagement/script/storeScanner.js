@@ -437,6 +437,10 @@ window.renderPrintTags = function(tags) {
         
         let tagHTML = `
         <div class="tag-card">
+            <div class="micro-text micro-top">${safeSerial}</div>
+            <div class="micro-text micro-bottom">${safeSerial}</div>
+            <div class="micro-text micro-left">${safeSerial}</div>
+            <div class="micro-text micro-right">${safeSerial}</div>
             <div class="tag-details">
                 <div class="t-title">${escapeHTML(tag.item_no)}</div>
                 <div class="t-sub">${escapeHTML(tag.category || '')}</div>
@@ -503,6 +507,10 @@ window.renderMasterPalletTag = function(masterData) {
 
     let tagHTML = `
     <div class="tag-card">
+        <div class="micro-text micro-top">${safeMasterPalletNo}</div>
+        <div class="micro-text micro-bottom">${safeMasterPalletNo}</div>
+        <div class="micro-text micro-left">${safeMasterPalletNo}</div>
+        <div class="micro-text micro-right">${safeMasterPalletNo}</div>
         <div class="tag-details">
             <div class="t-title" style="border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 4px;"><i class="fas fa-layer-group"></i> PALLET TAG</div>
             <div class="t-sub" style="font-size: 1rem; color: #000;">${displayItemNo}</div>
