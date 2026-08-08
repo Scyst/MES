@@ -78,7 +78,12 @@ THEMES = {
 T = dict(THEMES["Cyberpunk"])
 FONT = "Consolas"
 HISTORY_MAX = 90
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sysmon_config.json")
+
+APPDATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "SystemMonitor")
+os.makedirs(APPDATA_DIR, exist_ok=True)
+CONFIG_PATH = os.path.join(APPDATA_DIR, "sysmon_config.json")
+DB_PATH = os.path.join(APPDATA_DIR, "history.db")
+
 
 def load_config():
     try:
@@ -337,17 +342,19 @@ class GlowGauge(tk.Canvas):
 class SparkGraph(tk.Canvas):
     def __init__(self, master, color=None, h=62, **kw):
         super().__init__(master, height=h, bg=T["BG_CARD"], highlightthickness=0, **kw)
-        self.color = color or T["ACCENT"]
+        self.color = color
         self.H = h
         self.data = collections.deque([0.0]*HISTORY_MAX, maxlen=HISTORY_MAX)
         self._label = ""
-        self._resize_id = None
+        self._grid = [self.create_line(0,0,0,0, dash=(2,6)) for _ in range(3)]
+        self._poly = self.create_polygon(0,0,0,0,0,0, outline="")
+        self._line = self.create_line(0,0,0,0, width=2, smooth=True)
+        self._text_val = self.create_text(0,0, anchor="ne", font=(FONT, 9, "bold"))
+        self._text_lbl = self.create_text(0,0, anchor="nw", font=(FONT, 8))
         self.bind("<Configure>", self._on_cfg)
 
     def _on_cfg(self, e):
-        if self._resize_id:
-            self.after_cancel(self._resize_id)
-        self._resize_id = self.after(60, self._draw)
+        self._draw()
 
     def push(self, value, label=""):
         self.data.append(max(0, min(100, float(value))))
@@ -355,38 +362,38 @@ class SparkGraph(tk.Canvas):
         self._draw()
 
     def _draw(self):
-        self.delete("all")
         w = self.winfo_width()
         h = self.H
         if w < 20: return
         pad = 4
         pts = list(self.data)
         n = len(pts)
+        c = self.color or T["ACCENT"]
 
-        for pct in (25, 50, 75):
+        for i, pct in enumerate((25, 50, 75)):
             y = h - pad - pct*(h-2*pad)/100
-            self.create_line(pad, y, w-pad, y, fill=T["TEXT_DARK"], dash=(2,6))
-
-        for i in range(1, n):
-            x1 = pad + (i-1)*(w-2*pad)/(n-1)
-            x2 = pad + i*(w-2*pad)/(n-1)
-            y1 = h - pad - pts[i-1]*(h-2*pad)/100
-            y2 = h - pad - pts[i]*(h-2*pad)/100
-            self.create_polygon(x1,y1, x2,y2, x2,h-pad, x1,h-pad,
-                                fill=dim_color(self.color, 0.10), outline="")
+            self.coords(self._grid[i], pad, y, w-pad, y)
+            self.itemconfig(self._grid[i], fill=T["TEXT_DARK"])
 
         coords = []
         for i, v in enumerate(pts):
             coords.extend([pad + i*(w-2*pad)/(n-1), h - pad - v*(h-2*pad)/100])
+        
         if len(coords) >= 4:
-            self.create_line(*coords, fill=self.color, width=2, smooth=True)
+            self.coords(self._line, *coords)
+            self.itemconfig(self._line, fill=c)
+            
+            poly_coords = coords[:]
+            poly_coords.extend([coords[-2], h-pad, coords[0], h-pad])
+            self.coords(self._poly, *poly_coords)
+            self.itemconfig(self._poly, fill=dim_color(c, 0.10))
 
         cur = pts[-1] if pts else 0
-        self.create_text(w-6, 6, text=f"{cur:.0f}%", anchor="ne",
-                         fill=self.color, font=(FONT, 9, "bold"))
-        if self._label:
-            self.create_text(6, 6, text=self._label, anchor="nw",
-                             fill=T["TEXT_DIM"], font=(FONT, 8))
+        self.coords(self._text_val, w-6, 6)
+        self.itemconfig(self._text_val, text=f"{cur:.0f}%", fill=c)
+        
+        self.coords(self._text_lbl, 6, 6)
+        self.itemconfig(self._text_lbl, text=self._label, fill=T["TEXT_DIM"])
 
     def recolor(self):
         self.config(bg=T["BG_CARD"])
@@ -402,20 +409,25 @@ class CoreBars(tk.Canvas):
         h = rows * (self.bar_h + self.gap) + self.gap + 4
         super().__init__(master, height=h, bg=T["BG_CARD"], highlightthickness=0, **kw)
         self._vals = [0.0] * num_cores
-        self._resize_id = None
+        
+        self._items = []
+        for i in range(num_cores):
+            lbl_id = self.create_text(0,0, anchor="w", font=(FONT, 8))
+            bg_id = self.create_rectangle(0,0,0,0, outline="")
+            fg_id = self.create_rectangle(0,0,0,0, outline="")
+            val_id = self.create_text(0,0, anchor="w", font=(FONT, 7))
+            self._items.append((lbl_id, bg_id, fg_id, val_id))
+            
         self.bind("<Configure>", self._on_cfg)
 
     def _on_cfg(self, e):
-        if self._resize_id:
-            self.after_cancel(self._resize_id)
-        self._resize_id = self.after(60, self._draw)
+        self._draw()
 
     def set(self, values):
         self._vals = values[:self.num]
         self._draw()
 
     def _draw(self):
-        self.delete("all")
         w = self.winfo_width()
         if w < 40: return
         col_w = w // 4
@@ -424,19 +436,23 @@ class CoreBars(tk.Canvas):
             r = i // 4
             x0 = c * col_w + 8
             y0 = r * (self.bar_h + self.gap) + self.gap + 2
-            bw = col_w - 56
-            color = severity_color(v)
-            self.create_text(x0, y0 + self.bar_h//2, anchor="w",
-                             text=f"C{i}", fill=T["TEXT_DIM"], font=(FONT, 8))
+            bw = max(1, col_w - 56)
+            
+            lbl_id, bg_id, fg_id, val_id = self._items[i]
+            
+            self.coords(lbl_id, x0, y0 + self.bar_h//2)
+            self.itemconfig(lbl_id, text=f"C{i}", fill=T["TEXT_DIM"])
+            
             bx = x0 + 24
-            self.create_rectangle(bx, y0, bx+bw, y0+self.bar_h,
-                                  fill=T["TEXT_DARK"], outline="")
-            fw = bw * v / 100
-            if fw > 1:
-                self.create_rectangle(bx, y0, bx+fw, y0+self.bar_h,
-                                      fill=color, outline="")
-            self.create_text(bx+bw+4, y0+self.bar_h//2, anchor="w",
-                             text=f"{v:.0f}%", fill=T["TEXT_DIM"], font=(FONT, 7))
+            self.coords(bg_id, bx, y0, bx+bw, y0+self.bar_h)
+            self.itemconfig(bg_id, fill=T["TEXT_DARK"])
+            
+            fw = max(0.1, bw * v / 100)
+            self.coords(fg_id, bx, y0, bx+fw, y0+self.bar_h)
+            self.itemconfig(fg_id, fill=severity_color(v))
+            
+            self.coords(val_id, bx+bw+4, y0+self.bar_h//2)
+            self.itemconfig(val_id, text=f"{v:.0f}%", fill=T["TEXT_DIM"])
 
     def recolor(self):
         self.config(bg=T["BG_CARD"])
@@ -832,6 +848,13 @@ class App(tk.Tk):
         self.ctx.add_checkbutton(label="🔔  Alerts (CPU/RAM > 90%)",
                                   variable=self._alerts_var,
                                   command=self._toggle_alerts)
+
+        # Autostart toggle
+        self._autostart_var = tk.BooleanVar(value=self._check_autostart())
+        self.ctx.add_checkbutton(label="🚀  Run at Startup",
+                                  variable=self._autostart_var,
+                                  command=self._toggle_autostart)
+        
         self.ctx.add_separator()
         self.ctx.add_command(label="❌  Exit", command=self._quit)
 
@@ -908,6 +931,35 @@ class App(tk.Tk):
         self._alerts_enabled = self._alerts_var.get()
         self._alerts._enabled = self._alerts_enabled
         save_config({"theme": self._current_theme, "alerts": self._alerts_enabled})
+        if self._alerts_enabled:
+            self._alerts._send("🔔 Alerts Enabled", "ระบบแจ้งเตือนทำงานแล้ว!")
+
+    # ──────────────────────────────────────────────────────────────────────────
+    #  AUTO-START
+    # ──────────────────────────────────────────────────────────────────────────
+    def _check_autostart(self):
+        try:
+            startup_path = os.path.join(os.environ.get("APPDATA"), r"Microsoft\Windows\Start Menu\Programs\Startup\SystemMonitor.vbs")
+            return os.path.exists(startup_path)
+        except Exception: return False
+
+    def _toggle_autostart(self):
+        try:
+            startup_path = os.path.join(os.environ.get("APPDATA"), r"Microsoft\Windows\Start Menu\Programs\Startup\SystemMonitor.vbs")
+            if self._autostart_var.get():
+                exe_path = os.path.abspath(sys.argv[0])
+                with open(startup_path, "w") as f:
+                    if exe_path.endswith('.py'):
+                        f.write(f'Set WshShell = CreateObject("WScript.Shell")\nWshShell.Run "pythonw ""{exe_path}""", 0, False')
+                    else:
+                        f.write(f'Set WshShell = CreateObject("WScript.Shell")\nWshShell.Run """{exe_path}""", 0, False')
+                messagebox.showinfo("🚀 Auto-Start", f"ตั้งค่าให้เปิดอัตโนมัติสำเร็จ!\nโปรแกรมจะเริ่มทำงานทุกครั้งที่เปิดเครื่อง\n\nตำแหน่งไฟล์ Shortcut:\n{startup_path}")
+            else:
+                if os.path.exists(startup_path):
+                    os.remove(startup_path)
+                messagebox.showinfo("❌ Auto-Start", "ปิดใช้งานการเปิดอัตโนมัติเรียบร้อยแล้ว")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to toggle auto-start:\n{e}")
 
     # ──────────────────────────────────────────────────────────────────────────
     #  MODES
@@ -1022,6 +1074,11 @@ class App(tk.Tk):
         threading.Thread(target=self._loop_gpu,   daemon=True).start()
         threading.Thread(target=self._loop_gpu3d, daemon=True).start()
         threading.Thread(target=self._detect_gpu, daemon=True).start()
+        
+        # Start DB and Web Server
+        init_db()
+        threading.Thread(target=self._loop_db, daemon=True).start()
+        threading.Thread(target=start_web_server, daemon=True).start()
 
     def _detect_gpu(self):
         self._gpu_vendor = detect_gpu_vendor()
@@ -1158,6 +1215,91 @@ class App(tk.Tk):
                 pass
         self.destroy()
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  DATABASE & WEB SERVER
+# ═══════════════════════════════════════════════════════════════════════════════
+import sqlite3
+
+def init_db():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS history
+                     (timestamp REAL, cpu REAL, ram REAL, gpu REAL)''')
+        c.execute('DELETE FROM history WHERE timestamp < ?', (time.time() - 7*86400,))
+        conn.commit()
+        conn.close()
+    except Exception: pass
+
+def _loop_db(self):
+    while self._running:
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            gpu_val = self._gpu_util if (self._gpu_util > 0 or self._gpu_vendor == "NVIDIA") else self._gpu_3d
+            c.execute("INSERT INTO history VALUES (?, ?, ?, ?)",
+                      (time.time(), getattr(self.g_cpu, '_tgt', 0), getattr(self.g_ram, '_tgt', 0), gpu_val))
+            conn.commit()
+            conn.close()
+        except Exception: pass
+        time.sleep(10)
+App._loop_db = _loop_db
+
+def start_web_server():
+    try:
+        from flask import Flask, jsonify
+        import logging
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.ERROR)
+        
+        flask_app = Flask(__name__)
+
+        @flask_app.route('/')
+        def index():
+            return """<!DOCTYPE html><html><head><title>System Monitor Dashboard</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+            body { background: #080c14; color: #00d4ff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
+            .card { background: #0e1525; border: 1px solid #172038; border-radius: 8px; padding: 20px; margin-bottom: 20px; max-width: 500px; margin-left: auto; margin-right: auto;}
+            h2 { color: #fff; margin-top: 0; text-align: center;}
+            .stat { display: flex; justify-content: space-between; font-size: 1.2rem; margin: 15px 0; border-bottom: 1px solid #172038; padding-bottom: 5px;}
+            .val { font-weight: bold; }
+            </style></head>
+            <body>
+            <div class="card">
+                <h2>◈ System Monitor Pro</h2>
+                <div class="stat"><span>CPU</span> <span class="val" id="cpu">...</span></div>
+                <div class="stat"><span>RAM</span> <span class="val" id="ram" style="color: #a855f7">...</span></div>
+                <div class="stat"><span>GPU</span> <span class="val" id="gpu" style="color: #22c55e">...</span></div>
+                <p style="text-align:center; color:#64748b; font-size:0.8rem; margin-top:30px;">Live Data (Updated every 2s)</p>
+            </div>
+            <script>
+            setInterval(() => {
+                fetch('/api/current').then(r=>r.json()).then(d => {
+                    document.getElementById('cpu').innerText = d.cpu.toFixed(0) + '%';
+                    document.getElementById('ram').innerText = d.ram.toFixed(0) + '%';
+                    document.getElementById('gpu').innerText = d.gpu.toFixed(0) + '%';
+                }).catch(e=>console.log(e));
+            }, 2000);
+            </script>
+            </body></html>"""
+
+        @flask_app.route('/api/current')
+        def current():
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute("SELECT cpu, ram, gpu FROM history ORDER BY timestamp DESC LIMIT 1")
+                row = c.fetchone()
+                conn.close()
+                if row: return jsonify({"cpu": row[0], "ram": row[1], "gpu": row[2]})
+            except Exception: pass
+            return jsonify({"cpu": 0, "ram": 0, "gpu": 0})
+
+        flask_app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+    except Exception as e:
+        print("Web server failed:", e)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 if __name__ == "__main__":
