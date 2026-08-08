@@ -153,7 +153,10 @@ function App() {
     
     // Background polling every 30 seconds (reduced from 15s to cut server load 50%)
     const interval = setInterval(() => {
-      refreshData(true);
+      // Only fetch if tab is active to save CPU and Server resources
+      if (!document.hidden) {
+        refreshData(true);
+      }
     }, 30000);
     
     return () => clearInterval(interval);

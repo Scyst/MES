@@ -29,6 +29,9 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
   const [filterAssignee, setFilterAssignee] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Column display limits
+  const [colLimits, setColLimits] = useState({ 'todo': 20, 'in-progress': 20, 'done': 20 });
+
   // Filtered tasks
   const filteredTasks = useMemo(() => {
     return tasks.filter(t => {
@@ -178,14 +181,12 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
         <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 flex-1 snap-x snap-mandatory custom-scrollbar">
           {cols.map(col => {
             let colTasks = filteredTasks.filter(t => t.Status === col.id);
-            const isDoneLimited = col.id === 'done' && !searchQuery && colTasks.length > 30;
             if (col.id === 'done' && !searchQuery) {
               colTasks.sort((a, b) => {
                 const dateA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
                 const dateB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
                 return dateB - dateA || (b.Id || 0) - (a.Id || 0);
               });
-              colTasks = colTasks.slice(0, 30);
             }
             return (
               <div key={col.id} className={`snap-center w-[85vw] md:w-auto md:flex-1 shrink-0 min-w-[280px] md:min-w-[300px] flex flex-col bg-transparent rounded-2xl border-t-[3px] ${col.color}`}>
@@ -206,7 +207,7 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
                       {...provided.droppableProps}
                       className={`p-3 flex-1 overflow-y-auto space-y-3 transition-colors ${snapshot.isDraggingOver ? 'bg-slate-100/30 dark:bg-slate-800/30' : ''}`}
                     >
-                      {colTasks.map((task, index) => {
+                      {colTasks.slice(0, colLimits[col.id] || 20).map((task, index) => {
                         const pMeta = PRIORITY_META[task.priority || 'normal'] || PRIORITY_META.normal;
                         
                         let subtasks = [];
@@ -243,12 +244,10 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
                                       <FiGlobe /> Public
                                     </span>
                                   )}
-                                  {/* Priority badge */}
                                   <span className="flex items-center gap-1 text-[10px] md:text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                                     <div className={`w-2 h-2 rounded-full ${pMeta.dot}`}></div>
                                     {pMeta.label}
                                   </span>
-                                  {/* Recurrence Icon */}
                                   {task.recurrence && task.recurrence !== 'none' && (
                                     <span className="flex items-center gap-1 text-[10px] md:text-[11px] font-bold uppercase tracking-wider text-sky-400" title={`ทำซ้ำ: ${task.recurrence}`}>
                                       <FiRefreshCw />
@@ -266,12 +265,10 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
                                 {task.Title}
                               </h4>
                               
-                              {/* Description preview */}
                               {task.description && (
                                 <p className="text-slate-500 text-xs md:text-sm mb-2 line-clamp-2 leading-relaxed">{task.description}</p>
                               )}
                               
-                              {/* Tags */}
                               {tagsList.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mb-2">
                                   {tagsList.map((tag, idx) => (
@@ -337,17 +334,18 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
                         </Draggable>
                       )})}
                       {provided.placeholder}
-                      {isDoneLimited && (
-                        <div className="text-center py-2 mt-2">
-                          <span className="text-xs text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">
-                            แสดงเฉพาะ 30 รายการล่าสุด
-                          </span>
-                        </div>
-                      )}
                       {colTasks.length === 0 && !snapshot.isDraggingOver && (
-                        <div className="h-24 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex items-center justify-center text-slate-500 text-sm">
+                        <div className="text-center p-8 text-slate-400 dark:text-slate-500 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl m-2">
                           Drop tasks here
                         </div>
+                      )}
+                      {colTasks.length > (colLimits[col.id] || 20) && (
+                        <button 
+                          onClick={() => setColLimits(prev => ({ ...prev, [col.id]: (prev[col.id] || 20) + 20 }))}
+                          className="w-full py-3 mt-4 border border-slate-200 dark:border-slate-700 border-dashed rounded-xl text-sm font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                        >
+                          Show More ({colTasks.length - (colLimits[col.id] || 20)} remaining)
+                        </button>
                       )}
                     </div>
                   )}

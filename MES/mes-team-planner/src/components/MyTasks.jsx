@@ -261,6 +261,8 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
 }
 
 function TaskSection({ title, tasks, colorClass, headerColor, icon: Icon, onStatusChange, onSaveTask, onTaskClick }) {
+  const [displayCount, setDisplayCount] = useState(20);
+
   if (tasks.length === 0) return null;
 
   return (
@@ -270,9 +272,18 @@ function TaskSection({ title, tasks, colorClass, headerColor, icon: Icon, onStat
         <span className="bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 rounded-full text-xs text-slate-600 dark:text-slate-300">{tasks.length}</span>
       </h3>
       <div className="space-y-4">
-        {tasks.map(task => (
+        {tasks.slice(0, displayCount).map(task => (
           <HeavyTaskCard key={task.Id} task={task} onStatusChange={onStatusChange} onSaveTask={onSaveTask} onTaskClick={onTaskClick} />
         ))}
+
+        {tasks.length > displayCount && (
+          <button 
+            onClick={() => setDisplayCount(prev => prev + 20)}
+            className="w-full py-3 mt-2 border border-slate-200 dark:border-slate-700 border-dashed rounded-xl text-sm font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+          >
+            Show More ({tasks.length - displayCount} remaining)
+          </button>
+        )}
       </div>
     </div>
   );
