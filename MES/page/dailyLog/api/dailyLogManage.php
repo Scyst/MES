@@ -29,9 +29,14 @@ try {
             $reqTeam = $_POST['team'] ?? ($_SESSION['user']['team_group'] ?? null);
             if ($reqTeam === 'ALL') $reqTeam = null;
 
-            $currentHour = (int)date('H');
-            $actualProdDate = ($currentHour < 8) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d');
-            $yesterday = date('Y-m-d', strtotime('-1 day', strtotime($actualProdDate)));
+            $reqDate = $_POST['brief_date'] ?? $_GET['brief_date'] ?? null;
+            if (!empty($reqDate)) {
+                $yesterday = $reqDate;
+            } else {
+                $currentHour = (int)date('H');
+                $actualProdDate = ($currentHour < 8) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d');
+                $yesterday = date('Y-m-d', strtotime('-1 day', strtotime($actualProdDate)));
+            }
             
             // --- [1] Manpower Data ---
             $mpQuery = "SELECT COUNT(L.emp_id) as total,
@@ -126,6 +131,7 @@ try {
 
             $morningBrief = [
                 'date_text' => date('d/m/Y', strtotime($yesterday)),
+                'raw_date' => $yesterday,
                 'mp_total' => $mp['total'] ?? 0,
                 'mp_present' => $mp['present'] ?? 0,
                 'mp_leave' => $mp['leave_count'] ?? 0,
@@ -213,9 +219,14 @@ try {
         $morningBrief = null;
         if (in_array($userRole, ['admin', 'creator', 'supervisor'])) {
                 
-                $currentHour = (int)date('H');
-                $actualProdDate = ($currentHour < 8) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d');
-                $yesterday = date('Y-m-d', strtotime('-1 day', strtotime($actualProdDate)));
+                $reqDate = $_POST['brief_date'] ?? $_GET['brief_date'] ?? null;
+                if (!empty($reqDate)) {
+                    $yesterday = $reqDate;
+                } else {
+                    $currentHour = (int)date('H');
+                    $actualProdDate = ($currentHour < 8) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d');
+                    $yesterday = date('Y-m-d', strtotime('-1 day', strtotime($actualProdDate)));
+                }
                 
                 $myTeam = $_SESSION['user']['team_group'] ?? null;
 
@@ -320,6 +331,7 @@ try {
 
                 $morningBrief = [
                     'date_text' => date('d/m/Y', strtotime($yesterday)),
+                    'raw_date' => $yesterday,
                     'mp_total' => $mp['total'] ?? 0,
                     'mp_present' => $mp['present'] ?? 0,
                     'mp_leave' => $mp['leave_count'] ?? 0,

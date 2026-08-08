@@ -12,7 +12,8 @@
                         <h5 class="modal-title fw-bold mb-0">Morning Brief</h5>
                         <small class="opacity-75">สรุปผลงานวันที่ <span id="briefDateText"></span></small>
                     </div>
-                    <div class="ms-auto pe-3">
+                    <div class="ms-auto pe-3 d-flex gap-2">
+                        <input type="date" id="briefDateFilter" class="form-control form-control-sm border-0 bg-white bg-opacity-25 text-white fw-bold" style="width: 130px;" title="เลือกวันที่">
                         <select id="briefTeamFilter" class="form-select form-select-sm border-0 bg-white bg-opacity-25 text-white fw-bold" style="width: 120px;">
                             <option value="ALL" class="text-dark">All Teams</option>
                             <option value="TEAM 1" class="text-dark">TEAM 1</option>

@@ -15,16 +15,20 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState('ALL');
+  const [selectedDate, setSelectedDate] = useState(initialData?.raw_date || '');
   const [dontShowToday, setDontShowToday] = useState(false);
 
   useEffect(() => {
     setData(initialData);
+    if (initialData?.raw_date) {
+      setSelectedDate(initialData.raw_date);
+    }
   }, [initialData]);
 
-  const fetchBrief = async (team) => {
+  const fetchBrief = async (team, date) => {
     setLoading(true);
     try {
-      const res = await dailyLogApi.getMorningBrief(team);
+      const res = await dailyLogApi.getMorningBrief(team, date);
       if (res.success && res.data) {
         setData(res.data);
       }
@@ -38,7 +42,13 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
   const handleTeamChange = (e) => {
     const team = e.target.value;
     setSelectedTeam(team);
-    fetchBrief(team);
+    fetchBrief(team, selectedDate);
+  };
+
+  const handleDateChange = (e) => {
+    const date = e.target.value;
+    setSelectedDate(date);
+    fetchBrief(selectedTeam, date);
   };
 
   const handleClose = () => {
@@ -74,6 +84,13 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
               <div className="text-white/70 text-sm">สรุปผลงานวันที่ {data.date_text}</div>
             </div>
             <div className="flex items-center gap-3">
+              <input 
+                type="date" 
+                value={selectedDate}
+                onChange={handleDateChange}
+                className="bg-white/20 border-0 rounded px-3 py-1.5 text-sm font-bold text-white focus:ring-2 focus:ring-white/50 outline-none cursor-pointer"
+                title="เลือกวันที่"
+              />
               <select 
                 value={selectedTeam}
                 onChange={handleTeamChange}

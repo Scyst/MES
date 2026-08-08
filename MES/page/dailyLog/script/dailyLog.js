@@ -82,6 +82,9 @@ async function fetchData() {
                     const populateBriefData = (brief) => {
                         if (!brief) return;
                         document.getElementById('briefDateText').innerText = brief.date_text;
+                        if (document.getElementById('briefDateFilter')) {
+                            document.getElementById('briefDateFilter').value = brief.raw_date;
+                        }
                         document.getElementById('briefMpTotal').innerText = brief.mp_total;
                         document.getElementById('briefMpPresent').innerText = brief.mp_present;
                         document.getElementById('briefMpLeave').innerText = brief.mp_leave;
@@ -122,30 +125,39 @@ async function fetchData() {
                     const morningBriefModal = new bootstrap.Modal(morningBriefModalEl);
 
                     // 1. ตั้งค่า Default Team และดักจับ Event
+                    const fetchMorningBrief = async () => {
+                        const team = document.getElementById('briefTeamFilter') ? document.getElementById('briefTeamFilter').value : 'ALL';
+                        const date = document.getElementById('briefDateFilter') ? document.getElementById('briefDateFilter').value : '';
+                        
+                        try {
+                            document.getElementById('briefMpTotal').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                            
+                            const formData = new FormData();
+                            formData.append('action', 'get_morning_brief');
+                            formData.append('team', team);
+                            if (date) formData.append('brief_date', date);
+                            
+                            const response = await fetch(API_URL, { method: 'POST', body: formData });
+                            const newRes = await response.json();
+                            
+                            if (newRes.success && newRes.data) {
+                                populateBriefData(newRes.data);
+                            }
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    };
+
                     const teamFilter = document.getElementById('briefTeamFilter');
                     if (teamFilter) {
                         const myTeam = res.data.myTeamGroup || 'ALL';
                         teamFilter.value = myTeam;
-                        
-                        teamFilter.addEventListener('change', async (e) => {
-                            const val = e.target.value;
-                            try {
-                                document.getElementById('briefMpTotal').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                                
-                                const formData = new FormData();
-                                formData.append('action', 'get_morning_brief');
-                                formData.append('team', val);
-                                
-                                const response = await fetch(API_URL, { method: 'POST', body: formData });
-                                const newRes = await response.json();
-                                
-                                if (newRes.success && newRes.data) {
-                                    populateBriefData(newRes.data);
-                                }
-                            } catch (err) {
-                                console.error(err);
-                            }
-                        });
+                        teamFilter.addEventListener('change', fetchMorningBrief);
+                    }
+                    
+                    const dateFilter = document.getElementById('briefDateFilter');
+                    if (dateFilter) {
+                        dateFilter.addEventListener('change', fetchMorningBrief);
                     }
 
                     // 2. ตรวจสอบการเด้งอัตโนมัติ

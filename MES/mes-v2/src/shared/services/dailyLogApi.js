@@ -28,11 +28,13 @@ export const dailyLogApi = {
   /**
    * Fetch the morning brief (production summary)
    * @param {string} team - The selected team filter ('ALL', etc.)
+   * @param {string} date - Optional date string (YYYY-MM-DD)
    */
-  getMorningBrief: async (team = 'ALL') => {
+  getMorningBrief: async (team = 'ALL', date = null) => {
     const params = new URLSearchParams();
     params.append('action', 'get_morning_brief');
     params.append('team', team);
+    if (date) params.append('brief_date', date);
     
     const response = await postApi(API_URL, params);
     return response.data;
