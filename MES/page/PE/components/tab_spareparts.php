@@ -98,6 +98,12 @@
                     <select class="pe-filter-select" id="spFilterLocation" onchange="SparePartsModule.loadData()">
                         <option value="">ทุกคลัง</option>
                     </select>
+                    <select class="pe-filter-select ms-2" id="spFilterStatus" onchange="SparePartsModule.filterTable()">
+                        <option value="">ทุกสถานะ (All)</option>
+                        <option value="NORMAL">ปกติ (Normal)</option>
+                        <option value="LOW">ใกล้หมด (Low Stock)</option>
+                        <option value="OUT">หมด (Out of Stock)</option>
+                    </select>
                     <div class="pe-filter-spacer"></div>
                     <div class="d-flex gap-2 flex-wrap align-items-center">
                         <button class="pe-btn pe-btn-success pe-btn-sm" onclick="SparePartsModule.openReceiveModal()">

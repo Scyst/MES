@@ -62,9 +62,22 @@ const SparePartsModule = (() => {
         const tableBody = document.getElementById('spTableBody');
         if (!gridBody || !tableBody) return;
         const locFilter = document.getElementById('spFilterLocation')?.value || '';
+        const statusFilter = document.getElementById('spFilterStatus')?.value || '';
 
         let filtered = allData;
         if (locFilter) filtered = filtered.filter(r => r.location_id == locFilter);
+        
+        if (statusFilter) {
+            filtered = filtered.filter(r => {
+                const minStock = parseFloat(r.min_stock) || 0;
+                const onHand = parseFloat(r.onhand_qty) || 0;
+                if (statusFilter === 'OUT') return onHand <= 0;
+                if (statusFilter === 'LOW') return minStock > 0 && onHand <= minStock && onHand > 0;
+                if (statusFilter === 'NORMAL') return onHand > minStock || (minStock === 0 && onHand > 0);
+                return true;
+            });
+        }
+
         if (searchQuery) {
             filtered = filtered.filter(r =>
                 (r.item_code || '').toLowerCase().includes(searchQuery) ||
