@@ -32,6 +32,15 @@ const SparePartsModule = (() => {
                     locSel.add(new Option(l.location_name, l.location_id));
                 });
             }
+            
+            // Suppliers filter
+            const supSel = document.getElementById('spFilterSupplier');
+            if (supSel && supSel.options.length <= 1) {
+                const suppliers = [...new Set(allData.map(d => d.supplier).filter(s => s && s.trim() !== ''))].sort();
+                suppliers.forEach(s => {
+                    supSel.add(new Option(s, s));
+                });
+            }
 
             document.getElementById('spLastSync').textContent = new Date().toLocaleTimeString('th-TH');
             renderTable();
@@ -63,17 +72,32 @@ const SparePartsModule = (() => {
         if (!gridBody || !tableBody) return;
         const locFilter = document.getElementById('spFilterLocation')?.value || '';
         const statusFilter = document.getElementById('spFilterStatus')?.value || '';
+        const supFilter = document.getElementById('spFilterSupplier')?.value || '';
+        const priceFilter = document.getElementById('spFilterPrice')?.value || '';
 
         let filtered = allData;
         if (locFilter) filtered = filtered.filter(r => r.location_id == locFilter);
+        if (supFilter) filtered = filtered.filter(r => r.supplier === supFilter);
+        
+        if (priceFilter) {
+            filtered = filtered.filter(r => {
+                const p = parseFloat(r.unit_price) || 0;
+                if (priceFilter === 'LOW') return p < 1000;
+                if (priceFilter === 'MID') return p >= 1000 && p <= 10000;
+                if (priceFilter === 'HIGH') return p > 10000;
+                return true;
+            });
+        }
         
         if (statusFilter) {
             filtered = filtered.filter(r => {
                 const minStock = parseFloat(r.min_stock) || 0;
+                const maxStock = parseFloat(r.max_stock) || 0;
                 const onHand = parseFloat(r.onhand_qty) || 0;
                 if (statusFilter === 'OUT') return onHand <= 0;
                 if (statusFilter === 'LOW') return minStock > 0 && onHand <= minStock && onHand > 0;
-                if (statusFilter === 'NORMAL') return onHand > minStock || (minStock === 0 && onHand > 0);
+                if (statusFilter === 'OVERSTOCK') return maxStock > 0 && onHand > maxStock;
+                if (statusFilter === 'NORMAL') return onHand > minStock && (maxStock === 0 || onHand <= maxStock);
                 return true;
             });
         }
@@ -96,8 +120,10 @@ const SparePartsModule = (() => {
 
         filtered.forEach(r => {
             const minStock = parseFloat(r.min_stock) || 0;
+            const maxStock = parseFloat(r.max_stock) || 0;
             const onHand = parseFloat(r.onhand_qty) || 0;
             const isLow = minStock > 0 && onHand <= minStock;
+            const isOver = maxStock > 0 && onHand > maxStock;
             
             // Grid HTML
             let imagePath = r.image_path || (allMasterData && allMasterData.find(x => x.item_id == r.item_id)?.image_path) || null;
@@ -107,8 +133,9 @@ const SparePartsModule = (() => {
 
             gridHtml += `
             <div class="col">
-                <div class="card h-100 shadow-sm border-0 position-relative ${isLow ? 'border border-danger' : ''}">
+                <div class="card h-100 shadow-sm border-0 position-relative ${isLow ? 'border border-danger' : (isOver ? 'border border-warning' : '')}">
                     ${isLow ? '<span class="badge bg-danger position-absolute top-0 start-0 m-2 shadow" style="z-index:2;"><i class="fas fa-exclamation-triangle"></i> Low Stock</span>' : ''}
+                    ${isOver ? '<span class="badge bg-warning text-dark position-absolute top-0 start-0 m-2 shadow" style="z-index:2;"><i class="fas fa-arrow-up"></i> Overstock</span>' : ''}
                     ${imgHtml}
                     <div class="card-body d-flex flex-column p-3">
                         <div class="text-muted pe-text-xs fw-bold mb-1">${PEApp.escapeHtml(r.item_code)}</div>
@@ -135,17 +162,21 @@ const SparePartsModule = (() => {
             </div>`;
 
             // Table HTML
+            let statusBadge = '<span class="pe-badge pe-status-active" style="font-size:10px;">OK</span>';
+            if (isLow) statusBadge = '<span class="pe-badge pe-priority-high" style="font-size:10px;"><i class="fas fa-exclamation-triangle me-1"></i>Low</span>';
+            else if (isOver) statusBadge = '<span class="pe-badge pe-priority-medium" style="font-size:10px;"><i class="fas fa-arrow-up me-1"></i>Over</span>';
+            
             tableHtml += `
-            <tr ${isLow ? 'style="background:var(--pe-danger-light);"' : ''}>
+            <tr ${isLow ? 'style="background:var(--pe-danger-light);"' : (isOver ? 'style="background:var(--pe-warning-light);"' : '')}>
                 <td class="pe-fw-bold">${PEApp.escapeHtml(r.item_code)}</td>
                 <td>${PEApp.escapeHtml(r.item_name)}</td>
                 <td class="pe-text-sm pe-text-muted">${PEApp.escapeHtml(r.description || '-')}</td>
                 <td class="pe-text-sm">${PEApp.escapeHtml(r.location_name || '-')}</td>
                 <td class="pe-text-center pe-text-sm">${PEApp.formatNumber(r.min_stock)} / ${PEApp.formatNumber(r.max_stock)}</td>
-                <td class="pe-text-end pe-fw-bold ${isLow ? 'pe-text-danger' : ''}">${PEApp.formatNumber(r.onhand_qty)}</td>
+                <td class="pe-text-end pe-fw-bold ${isLow ? 'pe-text-danger' : (isOver ? 'pe-text-warning' : '')}">${PEApp.formatNumber(r.onhand_qty)}</td>
                 <td class="pe-text-center pe-text-sm">${PEApp.escapeHtml(r.uom || '-')}</td>
                 <td class="pe-text-center">
-                    ${isLow ? '<span class="pe-badge pe-priority-high" style="font-size:10px;"><i class="fas fa-exclamation-triangle me-1"></i>Low</span>' : '<span class="pe-badge pe-status-active" style="font-size:10px;">OK</span>'}
+                    ${statusBadge}
                 </td>
             </tr>`;
         });

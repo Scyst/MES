@@ -98,11 +98,21 @@
                     <select class="pe-filter-select" id="spFilterLocation" onchange="SparePartsModule.loadData()">
                         <option value="">ทุกคลัง</option>
                     </select>
-                    <select class="pe-filter-select ms-2" id="spFilterStatus" onchange="SparePartsModule.filterTable()">
+                    <select class="pe-filter-select ms-2" id="spFilterStatus" onchange="SparePartsModule.filterTable()" style="max-width: 130px;">
                         <option value="">ทุกสถานะ (All)</option>
                         <option value="NORMAL">ปกติ (Normal)</option>
                         <option value="LOW">ใกล้หมด (Low Stock)</option>
                         <option value="OUT">หมด (Out of Stock)</option>
+                        <option value="OVERSTOCK">ล้นคลัง (Overstock)</option>
+                    </select>
+                    <select class="pe-filter-select ms-2" id="spFilterSupplier" onchange="SparePartsModule.filterTable()" style="max-width: 150px;">
+                        <option value="">ทุก Supplier</option>
+                    </select>
+                    <select class="pe-filter-select ms-2" id="spFilterPrice" onchange="SparePartsModule.filterTable()" style="max-width: 140px;">
+                        <option value="">ทุกช่วงราคา</option>
+                        <option value="LOW">ต่ำกว่า 1,000</option>
+                        <option value="MID">1,000 - 10,000</option>
+                        <option value="HIGH">มากกว่า 10,000</option>
                     </select>
                     <div class="pe-filter-spacer"></div>
                     <div class="d-flex gap-2 flex-wrap align-items-center">

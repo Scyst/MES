@@ -20,7 +20,7 @@ try {
         case 'get_onhand':
             $sql = "SELECT 
                         i.item_id, i.item_code, i.item_name, i.description, i.uom, 
-                        i.unit_price, i.image_path, l.location_id, l.location_name, 
+                        i.unit_price, i.image_path, i.supplier, l.location_id, l.location_name, 
                         i.min_stock, i.max_stock, 
                         ISNULL(o.quantity, 0) AS onhand_qty
                     FROM dbo.MT_ITEMS i WITH (NOLOCK)
