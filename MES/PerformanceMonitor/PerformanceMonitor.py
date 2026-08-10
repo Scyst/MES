@@ -642,8 +642,11 @@ class App(tk.Tk):
         self._prevent_minimize = True
         self._ram_total_mb = psutil.virtual_memory().total / 1048576
         
-        # Start in Desktop Widget Mode by default
-        self.after(100, self._to_desktop)
+        # Start in Desktop Widget Mode by default, and maximize it
+        def _default_startup():
+            self._to_desktop()
+            self._maximize()
+        self.after(100, _default_startup)
 
     def _on_unmap(self, event):
         if event.widget == self and self._prevent_minimize and not getattr(self, '_mini_mode', False):
