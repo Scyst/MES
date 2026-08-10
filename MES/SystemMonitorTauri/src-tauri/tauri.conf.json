@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "SystemMonitorPro",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.mes.sysmon",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -13,10 +13,12 @@
     "windows": [
       {
         "title": "System Monitor Pro",
-        "width": 800,
-        "height": 600,
+        "width": 1024,
+        "height": 768,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": true,
+        "decorations": false,
+        "transparent": true
       }
     ],
     "security": {

@@ -1,14 +1,27 @@
-use tauri::{Manager, Emitter};
-use sysinfo::{System, ProcessRefreshKind, UpdateKind, RefreshKind, CpuRefreshKind};
-use serde::{Serialize, Deserialize};
+use tauri::Emitter;
+use sysinfo::{System, Networks};
+use serde::{Serialize};
 use std::time::Duration;
 use std::thread;
 
-#[derive(Serialize, Clone)]
+#[derive(Clone, serde::Serialize)]
 struct SysPayload {
     cpu_percent: f32,
+    cpu_cores: Vec<f32>,
     ram_used_mb: f64,
     ram_total_mb: f64,
+    net_down_kbps: f64,
+    net_up_kbps: f64,
+    disk_read_kbps: f64,
+    disk_write_kbps: f64,
+    cpu_name: String,
+    cpu_freq: u64,
+    disk_total_gb: f64,
+    disk_used_gb: f64,
+    hostname: String,
+    os: String,
+    uptime: u64,
+    total_processes: usize,
     processes: Vec<ProcInfo>,
 }
 
@@ -18,6 +31,8 @@ struct ProcInfo {
     name: String,
     cpu: f32,
     ram_mb: f64,
+    disk_total_mb: f64,
+    threads: usize,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -36,12 +51,12 @@ pub fn run() {
 
             // Spawn background thread to poll system
             thread::spawn(move || {
-                let mut sys = System::new_with_specifics(
-                    RefreshKind::new()
-                        .with_cpu(CpuRefreshKind::everything())
-                        .with_memory()
-                        .with_processes(ProcessRefreshKind::new().with_cpu())
-                );
+                let mut sys = System::new_all();
+                let mut networks = Networks::new_with_refreshed_list();
+                let mut disks = sysinfo::Disks::new_with_refreshed_list();
+                
+                let mut prev_total_disk_read = 0u64;
+                let mut prev_total_disk_write = 0u64;
                 
                 // Sleep once so CPU measurement is accurate
                 thread::sleep(Duration::from_millis(500));
@@ -49,34 +64,99 @@ pub fn run() {
                 loop {
                     sys.refresh_cpu_all();
                     sys.refresh_memory();
-                    sys.refresh_processes_specifics(ProcessRefreshKind::new().with_cpu().with_memory());
+                    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+                    networks.refresh(true);
+                    disks.refresh(true);
                     
-                    let global_cpu = sys.global_cpu_info().cpu_usage();
+                    let global_cpu = sys.global_cpu_usage();
+                    let cpu_cores: Vec<f32> = sys.cpus().iter().map(|c| c.cpu_usage()).collect();
+                    
+                    let cpu_name = sys.cpus().first().map(|c| c.brand().to_string()).unwrap_or_else(|| "Unknown CPU".to_string());
+                    let cpu_freq = sys.cpus().first().map(|c| c.frequency()).unwrap_or(0);
+
                     let ram_u = sys.used_memory() as f64 / 1_048_576.0;
                     let ram_t = sys.total_memory() as f64 / 1_048_576.0;
                     
+                    let mut net_down_bytes = 0u64;
+                    let mut net_up_bytes = 0u64;
+                    for (_name, data) in &networks {
+                        net_down_bytes += data.received();
+                        net_up_bytes += data.transmitted();
+                    }
+                    let net_down_kbps = (net_down_bytes as f64) / 1024.0;
+                    let net_up_kbps = (net_up_bytes as f64) / 1024.0;
+                    
+                    let mut disk_total_bytes = 0u64;
+                    let mut disk_used_bytes = 0u64;
+                    for disk in &disks {
+                        disk_total_bytes += disk.total_space();
+                        let used = disk.total_space().saturating_sub(disk.available_space());
+                        disk_used_bytes += used;
+                    }
+                    let disk_total_gb = (disk_total_bytes as f64) / 1_073_741_824.0;
+                    let disk_used_gb = (disk_used_bytes as f64) / 1_073_741_824.0;
+
                     let mut proc_vec = Vec::new();
+                    let mut current_total_disk_read = 0u64;
+                    let mut current_total_disk_write = 0u64;
+                    
                     for (pid, process) in sys.processes() {
                         let c = process.cpu_usage();
                         let m = process.memory() as f64 / 1_048_576.0;
+                        let du = process.disk_usage();
+                        
+                        current_total_disk_read += du.read_bytes;
+                        current_total_disk_write += du.written_bytes;
+                        
                         if c > 0.0 || m > 10.0 {
                             proc_vec.push(ProcInfo {
                                 pid: pid.as_u32(),
-                                name: process.name().to_string(),
+                                name: process.name().to_string_lossy().to_string(),
                                 cpu: c,
                                 ram_mb: m,
+                                disk_total_mb: ((du.read_bytes + du.written_bytes) as f64) / 1_048_576.0,
+                                threads: process.tasks().map(|t| t.len()).unwrap_or(0),
                             });
                         }
                     }
                     
+                    let disk_read_kbps = if prev_total_disk_read > 0 && current_total_disk_read >= prev_total_disk_read {
+                        ((current_total_disk_read - prev_total_disk_read) as f64) / 1024.0
+                    } else { 0.0 };
+                    
+                    let disk_write_kbps = if prev_total_disk_write > 0 && current_total_disk_write >= prev_total_disk_write {
+                        ((current_total_disk_write - prev_total_disk_write) as f64) / 1024.0
+                    } else { 0.0 };
+                    
+                    prev_total_disk_read = current_total_disk_read;
+                    prev_total_disk_write = current_total_disk_write;
+                    
                     // Sort by CPU
                     proc_vec.sort_by(|a, b| b.cpu.partial_cmp(&a.cpu).unwrap_or(std::cmp::Ordering::Equal));
-                    proc_vec.truncate(18); // top 18
+                    proc_vec.truncate(20); // top 20
                     
+                    let hostname = sysinfo::System::host_name().unwrap_or_else(|| "UNKNOWN_HOST".to_string());
+                    let os = sysinfo::System::long_os_version().unwrap_or_else(|| "Unknown OS".to_string());
+                    let uptime = sysinfo::System::uptime();
+                    let total_processes = sys.processes().len();
+
                     let payload = SysPayload {
                         cpu_percent: global_cpu,
+                        cpu_cores,
                         ram_used_mb: ram_u,
                         ram_total_mb: ram_t,
+                        net_down_kbps,
+                        net_up_kbps,
+                        disk_read_kbps,
+                        disk_write_kbps,
+                        cpu_name,
+                        cpu_freq,
+                        disk_total_gb,
+                        disk_used_gb,
+                        hostname,
+                        os,
+                        uptime,
+                        total_processes,
                         processes: proc_vec,
                     };
                     
