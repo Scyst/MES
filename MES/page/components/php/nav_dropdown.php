@@ -53,6 +53,7 @@
                     <li><a class="dropdown-item-icon py-1" href="../loadingReport/customerPortal.php" target="_blank"><i class="fas fa-search-location fa-fw"></i><span>Customer Tracking</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../fleetLog/fleetLog.php"><i class="fas fa-truck-moving fa-fw"></i><span>Transport & Logistics</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../areaAccess/areaAccess.php"><i class="fas fa-user-shield fa-fw"></i><span>Area Access Log</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../cctv_downloader/cctv_downloaderUI.php"><i class="fas fa-video fa-fw"></i><span>CCTV Downloader</span></a></li>
                 </ul>
             </div>
         </li>
@@ -185,6 +186,7 @@
             <a class="list-group-item list-group-item-action text-dark" href="../loadingReport/customerPortal.php" target="_blank"><i class="fas fa-search-location fa-fw me-3"></i> Customer Tracking</a>
             <a class="list-group-item list-group-item-action text-dark" href="../fleetLog/fleetLog.php"><i class="fas fa-truck-moving fa-fw me-3"></i> Transport & Logistics</a>
             <a class="list-group-item list-group-item-action text-dark" href="../areaAccess/areaAccess.php"><i class="fas fa-user-shield fa-fw me-3"></i> Area Access Log</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../cctv_downloader/cctv_downloaderUI.php"><i class="fas fa-video fa-fw me-3"></i> CCTV Downloader</a>
 
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">QUALITY & MAINTENANCE</div>
             <a class="list-group-item list-group-item-action text-dark" href="../QMS/qmsDashboard.php"><i class="fas fa-check-circle fa-fw me-3"></i> iQMS (Quality)</a>

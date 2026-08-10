@@ -32,7 +32,7 @@ async function fetchAPI(endpoint, options = {}) {
 
 export const authAPI = {
   getMe: () => fetchAPI('/auth/me.php'),
-  loginPassenger: (empId) => fetchAPI('/auth/login.php', { method: 'POST', body: JSON.stringify({ empId }) }),
+  loginPassenger: (profile) => fetchAPI('/auth/login.php', { method: 'POST', body: JSON.stringify({ empId: profile.empId, name: profile.name }) }),
   logoutPassenger: () => fetchAPI('/auth/logout.php', { method: 'POST' }),
 };
 

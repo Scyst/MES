@@ -1,13 +1,25 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { BusFront, Ticket, UserCircle } from 'lucide-react';
+import { BusFront, Ticket, UserCircle, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * EmployeeLayout — Shell layout for the employee-facing app.
  * Provides a sticky bottom navigation bar (mobile-first).
  */
 const EmployeeLayout = () => {
+  const { passengerProfile } = useAuth();
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans transition-colors duration-300">
+      
+      {/* Unverified Banner */}
+      {passengerProfile && passengerProfile.isVerified === false && (
+        <div className="bg-amber-500 text-white px-4 py-2 text-xs font-bold flex items-center justify-center gap-2 text-center sticky top-0 z-50 shadow-sm">
+          <AlertTriangle size={16} className="shrink-0" />
+          <span>บัญชีของคุณอยู่ระหว่างตรวจสอบกับฝ่ายบุคคล (ยังสามารถจองรถได้ปกติ)</span>
+        </div>
+      )}
+
       {/* Page Content */}
       <div className="flex-1 pb-20">
         <Outlet />

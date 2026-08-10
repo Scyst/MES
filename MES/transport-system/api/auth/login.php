@@ -11,6 +11,7 @@ if ($method !== 'POST') {
 
 $input = getJsonInput();
 $empId = $input['empId'] ?? '';
+$empName = $input['name'] ?? '';
 
 if (empty($empId)) {
     sendResponse(false, null, "กรุณาระบุรหัสพนักงาน", 400);
@@ -23,18 +24,33 @@ try {
     $stmt->execute([$empId]);
     $emp = $stmt->fetch();
     
-    // Fallback: If not in sync table, we will still allow login but they might need to provide their name later
-    $name = $emp ? $emp['emp_name'] : $empId;
-    $bu = $emp ? $emp['bu_id'] : '';
-    
-    if ($emp && !$emp['is_active']) {
-        sendResponse(false, null, "พนักงานท่านนี้พ้นสภาพ หรือไม่อยู่ในสถานะ Active", 403);
+    $isVerified = false;
+    $finalName = "";
+    $bu = "";
+
+    if ($emp) {
+        if (!$emp['is_active']) {
+            sendResponse(false, null, "พนักงานท่านนี้พ้นสภาพ หรือไม่อยู่ในสถานะ Active", 403);
+        }
+        $isVerified = true;
+        $finalName = $emp['emp_name'];
+        $bu = $emp['bu_id'];
+    } else {
+        // Fallback: Grace Period (Soft Verification)
+        if (preg_match('/^[0-9]{5,7}$/', $empId)) {
+            $isVerified = false;
+            $finalName = !empty($empName) ? $empName : "Pending Verification";
+            $bu = "Unknown";
+        } else {
+            sendResponse(false, null, "รูปแบบรหัสพนักงานไม่ถูกต้อง", 401);
+        }
     }
 
     $payload = [
         'empId' => $empId,
-        'name' => $name,
+        'name' => $finalName,
         'bu' => $bu,
+        'isVerified' => $isVerified,
         'iat' => time()
     ];
     

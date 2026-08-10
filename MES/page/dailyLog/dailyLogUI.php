@@ -192,6 +192,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('Customer Tracking', 'ระบบค้นหาเอกสารสำหรับลูกค้า (Public)', '<i class="fas fa-search-location"></i>', '../loadingReport/customerPortal.php', '', $themeWh);
                         renderServiceLink('Transport & Logistics', 'บัญชีเที่ยวรถและค่าขนส่ง', '<i class="fas fa-truck-moving"></i>', '../fleetLog/fleetLog.php', 'view_sales', $themeWh);
                         renderServiceLink('Area Access', 'บันทึกเข้า-ออกพื้นที่หวงห้าม', '<i class="fas fa-user-shield"></i>', '../areaAccess/areaAccess.php', 'view_warehouse', $themeWh);
+                        renderServiceLink('CCTV Downloader', 'ดาวน์โหลดข้อมูลกล้องวงจรปิด', '<i class="fas fa-video"></i>', '../cctv_downloader/cctv_downloaderUI.php', 'view_warehouse', $themeWh);
                         ?>
                     </div>
                 </div>

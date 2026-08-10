@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
 
   const loginPassenger = async (profileData) => {
     try {
-      const res = await authAPI.loginPassenger(profileData.empId);
+      const res = await authAPI.loginPassenger(profileData);
       setPassengerProfile(res);
       return { success: true };
     } catch (err) {
