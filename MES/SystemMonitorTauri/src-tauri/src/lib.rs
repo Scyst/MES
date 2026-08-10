@@ -53,7 +53,14 @@ fn get_gpu_name() -> String {
             }
         }
         if !lines.is_empty() {
-            return lines.join(" + ");
+            let mut best = lines[0].clone();
+            for l in &lines {
+                let lower = l.to_lowercase();
+                if lower.contains("nvidia") || lower.contains("amd") {
+                    best = l.clone();
+                }
+            }
+            return best;
         }
     }
     "Unknown GPU".to_string()

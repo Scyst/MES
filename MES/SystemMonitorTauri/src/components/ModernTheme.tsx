@@ -30,7 +30,7 @@ const ModernCircularGauge = ({ value, max, label, subtext, color, icon: Icon }: 
         {Icon && <Icon size={12} style={{ color: color }} />}
         <span className="text-xs font-bold text-white/70 uppercase tracking-widest">{label}</span>
       </div>
-      <div className="text-[10px] text-white/40 mt-0.5 font-medium tracking-wider z-10">{subtext}</div>
+      <div className="text-[10px] text-white/40 mt-0.5 font-medium tracking-wider z-10 truncate max-w-[95%] text-center px-1" title={subtext}>{subtext}</div>
     </div>
   );
 };
@@ -52,10 +52,6 @@ export const ModernTheme = ({
     const m = Math.floor((seconds % 3600) / 60);
     return `${d}d ${h}h ${m}m`;
   };
-
-  const half = Math.ceil(sys.cpu_cores.length / 2);
-  const leftCores = sys.cpu_cores.slice(0, half);
-  const rightCores = sys.cpu_cores.slice(half);
 
   return (
     <div className="h-screen w-screen bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#0f172a] text-slate-200 overflow-hidden flex flex-col p-4 gap-4 font-sans select-none relative">
@@ -95,7 +91,7 @@ export const ModernTheme = ({
       <div className="flex gap-4 shrink-0 z-10">
         <ModernCircularGauge value={sys.cpu_percent} max={100} label="CPU" subtext={`${sys.cpu_freq} MHz`} color="#38bdf8" icon={Cpu} />
         <ModernCircularGauge value={sys.ram_used_mb} max={sys.ram_total_mb} label="RAM" subtext={`${(sys.ram_used_mb/1024).toFixed(1)} / ${(sys.ram_total_mb/1024).toFixed(1)} GB`} color="#a855f7" icon={Layers} />
-        <ModernCircularGauge value={sys.gpu_util || 0} max={100} label="GPU" subtext={sys.gpu_name ? sys.gpu_name.substring(0, 15) : "Detecting..."} color="#f43f5e" icon={Activity} />
+        <ModernCircularGauge value={sys.gpu_util || 0} max={100} label="GPU" subtext={sys.gpu_name ? sys.gpu_name : "Detecting..."} color="#f43f5e" icon={Activity} />
         <ModernCircularGauge value={sys.disk_used_gb} max={sys.disk_total_gb} label="DISK" subtext={`${(sys.disk_total_gb - sys.disk_used_gb).toFixed(1)} GB Free`} color="#f59e0b" icon={HardDrive} />
         <ModernCircularGauge value={100} max={100} label="POWER" subtext={`Stable`} color="#10b981" icon={Zap} />
       </div>
@@ -105,25 +101,14 @@ export const ModernTheme = ({
         {/* CORES */}
         <div className="w-[30%] bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col shadow-lg relative overflow-hidden">
           <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl" />
-          <div className="text-xs font-bold text-white/60 mb-3 tracking-widest uppercase flex items-center gap-2">
+          <div className="text-xs font-bold text-white/60 mb-3 tracking-widest uppercase flex items-center gap-2 shrink-0">
             <Cpu size={14} className="text-indigo-400" /> Logical Cores
           </div>
-          <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto custom-scrollbar pr-2 items-start content-start">
-            <div className="flex flex-col gap-1.5">
-              {leftCores.map((c, i) => (
-                <div key={`l-${i}`} className="flex items-center gap-2 group">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 items-start">
+              {sys.cpu_cores.map((c, i) => (
+                <div key={`c-${i}`} className="flex items-center gap-2 group">
                   <span className="text-[10px] font-bold text-white/40 w-5">C{i}</span>
-                  <div className="flex-1 h-1.5 bg-black/40 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-300" style={{ width: `${c}%`, backgroundColor: c > 85 ? '#f43f5e' : c > 50 ? '#f59e0b' : '#38bdf8' }} />
-                  </div>
-                  <span className="text-[9px] font-mono text-white/50 w-6 text-right">{c.toFixed(0)}%</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              {rightCores.map((c, i) => (
-                <div key={`r-${i}`} className="flex items-center gap-2 group">
-                  <span className="text-[10px] font-bold text-white/40 w-5">C{i + half}</span>
                   <div className="flex-1 h-1.5 bg-black/40 rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-300" style={{ width: `${c}%`, backgroundColor: c > 85 ? '#f43f5e' : c > 50 ? '#f59e0b' : '#38bdf8' }} />
                   </div>
@@ -134,8 +119,8 @@ export const ModernTheme = ({
           </div>
         </div>
 
-        {/* 4 CHARTS GRID */}
-        <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-4">
+        {/* 5 CHARTS GRID */}
+        <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto custom-scrollbar pr-1 content-start pb-1">
           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col shadow-lg relative">
             <div className="flex justify-between items-center mb-1">
               <span className="text-[10px] font-bold text-white/60 tracking-widest uppercase flex items-center gap-1"><Cpu size={10} className="text-sky-400"/> CPU</span>
@@ -195,6 +180,22 @@ export const ModernTheme = ({
                   <YAxis hide />
                   <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} labelStyle={{ display: 'none' }} />
                   <Area type="monotone" dataKey="net" stroke="#10b981" strokeWidth={2} fillOpacity={0.15} fill="#10b981" isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col shadow-lg relative min-h-[80px]">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-[10px] font-bold text-white/60 tracking-widest uppercase flex items-center gap-1"><Flame size={10} className="text-rose-400"/> GPU</span>
+              <span className="text-xs font-black text-rose-400">{sys.gpu_util.toFixed(1)}%</span>
+            </div>
+            <div className="flex-1 min-h-0 w-full relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={history}>
+                  <YAxis domain={[0, 100]} hide />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} labelStyle={{ display: 'none' }} />
+                  <Area type="monotone" dataKey="gpu" stroke="#f43f5e" strokeWidth={2} fillOpacity={0.15} fill="#f43f5e" isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

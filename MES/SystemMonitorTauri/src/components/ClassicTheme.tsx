@@ -49,10 +49,6 @@ export const ClassicTheme = ({
     return `${d}d ${h}h ${m}m`;
   };
 
-  const half = Math.ceil(sys.cpu_cores.length / 2);
-  const leftCores = sys.cpu_cores.slice(0, half);
-  const rightCores = sys.cpu_cores.slice(half);
-
   return (
     <div className="h-screen w-screen bg-[#060810]/90 text-[#cbd5e1] overflow-hidden flex flex-col p-3 gap-3 font-mono select-none text-xs">
       
@@ -108,31 +104,18 @@ export const ClassicTheme = ({
       </div>
 
       {/* 3. CPU CORES MATRIX */}
-      <div className="bg-[#0a0f18] border border-[#1a2b50]/40 rounded p-2 shrink-0">
-        <div className="text-[10px] text-[#64748b] mb-2 uppercase">CPU Cores</div>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-          <div className="flex flex-col gap-1">
-            {leftCores.map((c, i) => (
-              <div key={`l-${i}`} className="flex items-center text-[10px]">
-                <span className="w-6 text-[#475569]">C{i}</span>
-                <div className="flex-1 h-2 bg-[#111827] mx-2">
-                  <div className="h-full bg-[#00d4ff]" style={{ width: `${c}%` }} />
-                </div>
-                <span className="w-8 text-right text-[#64748b]">{c.toFixed(0)}%</span>
+      <div className="bg-[#0a0f18] border border-[#1a2b50]/40 rounded p-2 shrink-0 flex flex-col h-[100px]">
+        <div className="text-[10px] text-[#64748b] mb-2 uppercase shrink-0">CPU Cores</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-1 overflow-y-auto custom-scrollbar flex-1 content-start pr-1">
+          {sys.cpu_cores.map((c, i) => (
+            <div key={`c-${i}`} className="flex items-center text-[10px]">
+              <span className="w-6 text-[#475569]">C{i}</span>
+              <div className="flex-1 h-2 bg-[#111827] mx-2">
+                <div className="h-full bg-[#00d4ff]" style={{ width: `${c}%` }} />
               </div>
-            ))}
-          </div>
-          <div className="flex flex-col gap-1">
-            {rightCores.map((c, i) => (
-              <div key={`r-${i}`} className="flex items-center text-[10px]">
-                <span className="w-6 text-[#475569]">C{i + half}</span>
-                <div className="flex-1 h-2 bg-[#111827] mx-2">
-                  <div className="h-full bg-[#00d4ff]" style={{ width: `${c}%` }} />
-                </div>
-                <span className="w-8 text-right text-[#64748b]">{c.toFixed(0)}%</span>
-              </div>
-            ))}
-          </div>
+              <span className="w-8 text-right text-[#64748b]">{c.toFixed(0)}%</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -157,6 +140,17 @@ export const ClassicTheme = ({
               <YAxis domain={[0, 100]} hide />
               <Tooltip contentStyle={{ backgroundColor: '#0b1120', border: '1px solid #1a2b50', borderRadius: '4px' }} labelStyle={{ display: 'none' }} />
               <Area type="step" dataKey="ram" stroke="#a855f7" strokeWidth={1.5} fillOpacity={0.1} fill="#a855f7" isAnimationActive={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex-1 bg-[#0a0f18] border border-[#1a2b50]/40 rounded relative p-1">
+          <div className="absolute top-1 left-2 text-[10px] text-[#475569] z-10">GPU</div>
+          <div className="absolute top-1 right-2 text-[10px] text-[#f43f5e] z-10">{sys.gpu_util.toFixed(0)}%</div>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={history}>
+              <YAxis domain={[0, 100]} hide />
+              <Tooltip contentStyle={{ backgroundColor: '#0b1120', border: '1px solid #1a2b50', borderRadius: '4px' }} labelStyle={{ display: 'none' }} />
+              <Area type="monotone" dataKey="gpu" stroke="#f43f5e" strokeWidth={1.5} fillOpacity={0.1} fill="#f43f5e" isAnimationActive={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
