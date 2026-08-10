@@ -96,16 +96,14 @@ export const ModernTheme = ({
         <ModernCircularGauge value={100} max={100} label="POWER" subtext={`Stable`} color="#10b981" icon={Zap} />
       </div>
 
-      {/* 3. CORES & CHARTS */}
-      <div className="flex gap-4 shrink-0 z-10 h-[180px]">
-        {/* CORES */}
-        <div className="w-[30%] bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col shadow-lg relative overflow-hidden">
+      {/* 3. CORES */}
+      <div className="w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col shadow-lg relative overflow-hidden shrink-0 z-10 max-h-[120px]">
           <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl" />
           <div className="text-xs font-bold text-white/60 mb-3 tracking-widest uppercase flex items-center gap-2 shrink-0">
             <Cpu size={14} className="text-indigo-400" /> Logical Cores
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 items-start">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-1 items-start">
               {sys.cpu_cores.map((c, i) => (
                 <div key={`c-${i}`} className="flex items-center gap-2 group">
                   <span className="text-[10px] font-bold text-white/40 w-5">C{i}</span>
@@ -119,8 +117,8 @@ export const ModernTheme = ({
           </div>
         </div>
 
-        {/* 5 CHARTS GRID */}
-        <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto custom-scrollbar pr-1 content-start pb-1">
+      {/* 4. CHARTS GRID */}
+      <div className="w-full grid grid-cols-5 gap-4 shrink-0 z-10 h-28">
           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col shadow-lg relative">
             <div className="flex justify-between items-center mb-1">
               <span className="text-[10px] font-bold text-white/60 tracking-widest uppercase flex items-center gap-1"><Cpu size={10} className="text-sky-400"/> CPU</span>
@@ -201,7 +199,6 @@ export const ModernTheme = ({
             </div>
           </div>
         </div>
-      </div>
 
       {/* 4. STATS ROW */}
       <div className="flex gap-4 shrink-0 z-10">
