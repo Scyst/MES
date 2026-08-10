@@ -5,11 +5,11 @@ import type { SysPayload } from './types';
 
 import { ClassicTheme } from './components/ClassicTheme';
 import { ModernTheme } from './components/ModernTheme';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { invoke } from '@tauri-apps/api/core';
 
 export default function App() {
   const [sys, setSys] = useState<SysPayload | null>(null);
-  const [history, setHistory] = useState<{time: string, cpu: number, ram: number}[]>([]);
+  const [history, setHistory] = useState<{time: string, cpu: number, ram: number, disk: number, net: number}[]>([]);
   const [theme, setTheme] = useState<'modern' | 'classic'>('modern');
   
   useEffect(() => {
@@ -21,6 +21,8 @@ export default function App() {
           time: new Date().toLocaleTimeString(),
           cpu: event.payload.cpu_percent,
           ram: (event.payload.ram_used_mb / event.payload.ram_total_mb) * 100,
+          disk: event.payload.disk_read_kbps + event.payload.disk_write_kbps,
+          net: event.payload.net_down_kbps + event.payload.net_up_kbps,
         }];
         return newHist.slice(-60);
       });
@@ -38,7 +40,7 @@ export default function App() {
   );
 
   const handleClose = async () => {
-    await getCurrentWindow().close();
+    await invoke('exit_app');
   };
 
   const toggleTheme = () => {

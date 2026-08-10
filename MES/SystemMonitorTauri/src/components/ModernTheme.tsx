@@ -108,36 +108,38 @@ export const ModernTheme = ({
           <div className="text-xs font-bold text-white/60 mb-3 tracking-widest uppercase flex items-center gap-2">
             <Cpu size={14} className="text-indigo-400" /> Logical Cores
           </div>
-          <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-1.5 overflow-y-auto custom-scrollbar pr-2 items-start content-start">
+          <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto custom-scrollbar pr-2 items-start content-start">
             <div className="flex flex-col gap-1.5">
               {leftCores.map((c, i) => (
                 <div key={`l-${i}`} className="flex items-center gap-2 group">
-                  <span className="text-[9px] font-bold text-white/40 w-5">C{i}</span>
+                  <span className="text-[10px] font-bold text-white/40 w-5">C{i}</span>
                   <div className="flex-1 h-1.5 bg-black/40 rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-300" style={{ width: `${c}%`, backgroundColor: c > 85 ? '#f43f5e' : c > 50 ? '#f59e0b' : '#38bdf8' }} />
                   </div>
+                  <span className="text-[9px] font-mono text-white/50 w-6 text-right">{c.toFixed(0)}%</span>
                 </div>
               ))}
             </div>
             <div className="flex flex-col gap-1.5">
               {rightCores.map((c, i) => (
                 <div key={`r-${i}`} className="flex items-center gap-2 group">
-                  <span className="text-[9px] font-bold text-white/40 w-5">C{i + half}</span>
+                  <span className="text-[10px] font-bold text-white/40 w-5">C{i + half}</span>
                   <div className="flex-1 h-1.5 bg-black/40 rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-300" style={{ width: `${c}%`, backgroundColor: c > 85 ? '#f43f5e' : c > 50 ? '#f59e0b' : '#38bdf8' }} />
                   </div>
+                  <span className="text-[9px] font-mono text-white/50 w-6 text-right">{c.toFixed(0)}%</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* CHARTS */}
-        <div className="flex-1 flex gap-4">
-          <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col shadow-lg relative">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-bold text-white/60 tracking-widest uppercase">CPU History</span>
-              <span className="text-sm font-black text-sky-400">{sys.cpu_percent.toFixed(1)}%</span>
+        {/* 4 CHARTS GRID */}
+        <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-4">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col shadow-lg relative">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-[10px] font-bold text-white/60 tracking-widest uppercase flex items-center gap-1"><Cpu size={10} className="text-sky-400"/> CPU</span>
+              <span className="text-xs font-black text-sky-400">{sys.cpu_percent.toFixed(1)}%</span>
             </div>
             <div className="flex-1 min-h-0 w-full relative">
               <ResponsiveContainer width="100%" height="100%">
@@ -149,10 +151,11 @@ export const ModernTheme = ({
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col shadow-lg relative">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-bold text-white/60 tracking-widest uppercase">RAM History</span>
-              <span className="text-sm font-black text-purple-400">{((sys.ram_used_mb / sys.ram_total_mb) * 100).toFixed(1)}%</span>
+          
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col shadow-lg relative">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-[10px] font-bold text-white/60 tracking-widest uppercase flex items-center gap-1"><Layers size={10} className="text-purple-400"/> RAM</span>
+              <span className="text-xs font-black text-purple-400">{((sys.ram_used_mb / sys.ram_total_mb) * 100).toFixed(1)}%</span>
             </div>
             <div className="flex-1 min-h-0 w-full relative">
               <ResponsiveContainer width="100%" height="100%">
@@ -160,6 +163,38 @@ export const ModernTheme = ({
                   <YAxis domain={[0, 100]} hide />
                   <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} labelStyle={{ display: 'none' }} />
                   <Area type="step" dataKey="ram" stroke="#a855f7" strokeWidth={2} fillOpacity={0.15} fill="#a855f7" isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col shadow-lg relative">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-[10px] font-bold text-white/60 tracking-widest uppercase flex items-center gap-1"><HardDrive size={10} className="text-amber-400"/> DISK I/O</span>
+              <span className="text-xs font-black text-amber-400">{(sys.disk_read_kbps + sys.disk_write_kbps).toFixed(0)} KB/s</span>
+            </div>
+            <div className="flex-1 min-h-0 w-full relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={history}>
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} labelStyle={{ display: 'none' }} />
+                  <Area type="monotone" dataKey="disk" stroke="#f59e0b" strokeWidth={2} fillOpacity={0.15} fill="#f59e0b" isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col shadow-lg relative">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-[10px] font-bold text-white/60 tracking-widest uppercase flex items-center gap-1"><Activity size={10} className="text-emerald-400"/> NETWORK I/O</span>
+              <span className="text-xs font-black text-emerald-400">{(sys.net_down_kbps + sys.net_up_kbps).toFixed(0)} KB/s</span>
+            </div>
+            <div className="flex-1 min-h-0 w-full relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={history}>
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} labelStyle={{ display: 'none' }} />
+                  <Area type="monotone" dataKey="net" stroke="#10b981" strokeWidth={2} fillOpacity={0.15} fill="#10b981" isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
