@@ -641,6 +641,9 @@ class App(tk.Tk):
         self.bind("<Unmap>", self._on_unmap)
         self._prevent_minimize = True
         self._ram_total_mb = psutil.virtual_memory().total / 1048576
+        
+        # Start in Desktop Widget Mode by default
+        self.after(100, self._to_desktop)
 
     def _on_unmap(self, event):
         if event.widget == self and self._prevent_minimize and not getattr(self, '_mini_mode', False):
@@ -980,9 +983,14 @@ class App(tk.Tk):
         self.update_idletasks()
         try:
             hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+            # Set parent to Progman (Desktop) so Win+D ignores it
+            progman = ctypes.windll.user32.FindWindowW("Progman", None)
+            if progman:
+                ctypes.windll.user32.SetParent(hwnd, progman)
+                
             GWL_EXSTYLE = -20
             ex = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-            ex |= 0x00000080 | 0x08000000  # TOOLWINDOW + NOACTIVATE
+            ex = (ex | 0x00000080 | 0x08000000) & ~0x00040000
             ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, ex)
         except Exception: pass
         self.attributes("-alpha", 0.88)
@@ -996,6 +1004,12 @@ class App(tk.Tk):
                 hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
                 ctypes.windll.user32.SetWindowPos(hwnd, 1, 0, 0, 0, 0,
                                                    0x0001|0x0002|0x0010)
+                # Enforce TOOLWINDOW and NOAPPWINDOW to completely hide from taskbar
+                GWL_EXSTYLE = -20
+                ex = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+                new_ex = (ex | 0x00000080 | 0x08000000) & ~0x00040000
+                if ex != new_ex:
+                    ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new_ex)
             except Exception: pass
             self.after(800, self._keep_bottom)
 
@@ -1010,6 +1024,9 @@ class App(tk.Tk):
         try:
             self.update_idletasks()
             hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+            # Restore parent
+            ctypes.windll.user32.SetParent(hwnd, 0)
+            
             GWL_EXSTYLE = -20
             ex = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
             ex &= ~0x00000080
