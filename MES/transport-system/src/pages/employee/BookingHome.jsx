@@ -51,10 +51,17 @@ const BookingHome = () => {
       
       setBookings(bookingsData || []);
       setMasterRoutes(routesData || []);
-      setTimeSlots(timeSlotsData || []);
       
-      if (timeSlotsData && timeSlotsData.length > 0 && !selectedTimeSlot) {
-        setSelectedTimeSlot(timeSlotsData[0].id);
+      // Sort time slots chronologically
+      const sortedTimeSlots = (timeSlotsData || []).sort((a, b) => {
+        const timeA = a.time || '';
+        const timeB = b.time || '';
+        return timeA.localeCompare(timeB);
+      });
+      setTimeSlots(sortedTimeSlots);
+      
+      if (sortedTimeSlots.length > 0 && !selectedTimeSlot) {
+        setSelectedTimeSlot(sortedTimeSlots[0].id);
       }
     } catch (err) {
       setError(err.message || 'โหลดข้อมูลล้มเหลว');

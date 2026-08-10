@@ -49,5 +49,5 @@ export default function App() {
     return <ClassicTheme sys={sys} history={history} onClose={handleClose} onToggleTheme={toggleTheme} />;
   }
 
-  return <ModernTheme sys={sys} onClose={handleClose} onToggleTheme={toggleTheme} />;
+  return <ModernTheme sys={sys} history={history} onClose={handleClose} onToggleTheme={toggleTheme} />;
 }

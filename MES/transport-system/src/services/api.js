@@ -31,7 +31,9 @@ async function fetchAPI(endpoint, options = {}) {
 }
 
 export const authAPI = {
-  getMe: () => fetchAPI('/me.php'),
+  getMe: () => fetchAPI('/auth/me.php'),
+  loginPassenger: (empId) => fetchAPI('/auth/login.php', { method: 'POST', body: JSON.stringify({ empId }) }),
+  logoutPassenger: () => fetchAPI('/auth/logout.php', { method: 'POST' }),
 };
 
 export const masterAPI = {
@@ -75,4 +77,11 @@ export const bookingsAPI = {
   boardPassenger: (id) => fetchAPI('/bookings.php', { method: 'PUT', body: JSON.stringify({ id, action: 'BOARD' }) }),
   smartBoardPassenger: (data) => fetchAPI('/bookings.php', { method: 'PUT', body: JSON.stringify({ ...data, action: 'SMART_BOARD' }) }),
   assignBookingsToSchedule: (scheduleId, bookingIds) => fetchAPI('/bookings.php', { method: 'PUT', body: JSON.stringify({ action: 'ASSIGN_SCHEDULE', scheduleId, bookingIds }) }),
+};
+
+export const reportsAPI = {
+  getDashboard: (targetDate) => {
+    const query = targetDate ? `?targetDate=${targetDate}` : '';
+    return fetchAPI(`/reports/dashboard.php${query}`);
+  }
 };

@@ -56,9 +56,9 @@ const ProfilePage = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    loginPassenger(profile);
+    await loginPassenger(profile);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };

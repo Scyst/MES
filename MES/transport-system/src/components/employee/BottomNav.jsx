@@ -3,17 +3,14 @@ import { Home, Ticket, User } from 'lucide-react';
 
 const BottomNav = () => {
   const location = useLocation();
-  const activeTicketId = localStorage.getItem('my_ticket_id');
-  
   const navItems = [
     { name: 'หน้าหลัก', path: '/booking', icon: Home, exact: true },
     { 
-      name: 'ตั๋วของฉัน', 
-      path: activeTicketId ? `/booking/ticket/${activeTicketId}` : '#', 
-      icon: Ticket,
-      disabled: !activeTicketId
+      name: 'ประวัติจองรถ', 
+      path: '/booking/history', 
+      icon: Ticket
     },
-    { name: 'โปรไฟล์', path: '/profile', icon: User, disabled: true }
+    { name: 'โปรไฟล์', path: '/booking/profile', icon: User }
   ];
 
   return (

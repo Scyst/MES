@@ -2,14 +2,20 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { BusFront, Users, QrCode, AlertCircle, Building2, MapPin, Clock, X, CheckCircle, UserPlus, Info, Download, Calendar as CalendarIcon, LayoutDashboard, RefreshCw } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { schedulesAPI, bookingsAPI } from '../../services/api';
+import { reportsAPI, bookingsAPI } from '../../services/api';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
 const AUTO_REFRESH_INTERVAL = 30_000;
 
 const AdminDashboard = () => {
-  const [trips, setTrips] = useState([]);
-  const [bookings, setBookings] = useState([]);
+  const [dashboardData, setDashboardData] = useState({
+    trips: [],
+    totalBookingsToday: 0,
+    totalScansToday: 0,
+    unscannedBookings: [],
+    pendingAssignmentBookings: [],
+    billingData: []
+  });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedTripDetails, setSelectedTripDetails] = useState(null);
@@ -29,19 +35,22 @@ const AdminDashboard = () => {
   const loadData = useCallback(async (animate = false) => {
     if (animate) setIsRefreshing(true);
     try {
-      const [allSchedules, allBookings] = await Promise.all([
-        schedulesAPI.getSchedules(),
-        bookingsAPI.getBookings({}),
-      ]);
-      setTrips(allSchedules || []);
-      setBookings(allBookings || []);
+      const data = await reportsAPI.getDashboard(selectedDate);
+      setDashboardData(data || {
+        trips: [],
+        totalBookingsToday: 0,
+        totalScansToday: 0,
+        unscannedBookings: [],
+        pendingAssignmentBookings: [],
+        billingData: []
+      });
       setLastUpdated(new Date());
     } catch (err) {
       // Keep stale data on error
     } finally {
       if (animate) setTimeout(() => setIsRefreshing(false), 600);
     }
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => { loadData(false); }, [loadData]);
 
@@ -65,52 +74,7 @@ const AdminDashboard = () => {
     return () => observer.disconnect();
   }, []);
 
-  // ─── Stats derived from selected date ───────────────────────────────────────
-  const todayTrips = trips.filter(t => {
-    const tripDate = t.date || (t.departureTime ? t.departureTime.split(' ')[0] : '');
-    return tripDate === selectedDate;
-  });
-
-  const todayTripIds = new Set(todayTrips.map(t => t.id));
-  const todayBookings = bookings.filter(b => todayTripIds.has(b.scheduledTripId) && b.status !== 'CANCELLED');
-  const pendingAssignmentBookings = bookings.filter(b => !b.scheduledTripId && b.targetDate === selectedDate && b.status === 'BOOKED');
-  
-  const totalBookingsToday = todayBookings.length + pendingAssignmentBookings.length;
-  const totalScansToday = todayBookings.filter(b => b.status === 'BOARDED').length;
-  const unscannedBookings = todayBookings.filter(b => b.status === 'BOOKED');
-
-  // ─── Fair Billing Calculation ────────────────────────────────────────────────
-  const buBillingRaw = {};
-
-  todayTrips.forEach(trip => {
-    const baseCost = trip.baseCost || 1500;
-    const tripBookings = bookings.filter(b => b.scheduledTripId === trip.id);
-    const boardedBookings = tripBookings.filter(b => b.status === 'BOARDED');
-    const boardedCount = boardedBookings.length;
-
-    if (boardedCount > 0) {
-      const costPerHead = baseCost / boardedCount;
-      boardedBookings.forEach(b => {
-        if (!buBillingRaw[b.bu]) buBillingRaw[b.bu] = { amount: 0, count: 0 };
-        buBillingRaw[b.bu].amount += costPerHead;
-        buBillingRaw[b.bu].count += 1;
-      });
-    } else {
-      const departureTime = trip.departureTime || '';
-      const isPast = departureTime && new Date(departureTime) < new Date();
-      if (isPast || selectedDate < new Date().toISOString().split('T')[0]) {
-        const centralKey = 'ส่วนกลาง (รถเปล่า)';
-        if (!buBillingRaw[centralKey]) buBillingRaw[centralKey] = { amount: 0, count: 0 };
-        buBillingRaw[centralKey].amount += baseCost;
-      }
-    }
-  });
-
-  const billingData = Object.keys(buBillingRaw).map(bu => ({
-    name: bu,
-    amount: Math.round(buBillingRaw[bu].amount),
-    count: buBillingRaw[bu].count
-  })).sort((a, b) => b.amount - a.amount);
+  const { trips: todayTrips, totalBookingsToday, totalScansToday, unscannedBookings, pendingAssignmentBookings, billingData } = dashboardData;
 
   // ─── Export CSV ───────────────────────────────────────────────────────────────
   const handleExportCSV = () => {
@@ -139,15 +103,20 @@ const AdminDashboard = () => {
   };
 
   // ─── Trip Modal ───────────────────────────────────────────────────────────────
-  const openTripModal = (trip) => {
-    const tripBookings = bookings.filter(b => b.scheduledTripId === trip.id);
-    setSelectedTripDetails({
-      trip,
-      boarded: tripBookings.filter(b => b.status === 'BOARDED' && !b.isExtra),
-      extra: tripBookings.filter(b => b.status === 'BOARDED' && b.isExtra),
-      unscanned: tripBookings.filter(b => b.status === 'BOOKED'),
-    });
-    setModalTab('boarded');
+  const openTripModal = async (trip) => {
+    try {
+      // Fetch bookings dynamically for this specific trip
+      const tripBookings = await bookingsAPI.getBookings({ scheduleId: trip.id, targetDate: selectedDate });
+      setSelectedTripDetails({
+        trip,
+        boarded: (tripBookings || []).filter(b => b.status === 'BOARDED' && !b.isExtra),
+        extra: (tripBookings || []).filter(b => b.status === 'BOARDED' && b.isExtra),
+        unscanned: (tripBookings || []).filter(b => b.status === 'BOOKED'),
+      });
+      setModalTab('boarded');
+    } catch (err) {
+      showToast('ไม่สามารถดึงข้อมูลผู้โดยสารได้', 'warning');
+    }
   };
 
   return (
@@ -280,8 +249,8 @@ const AdminDashboard = () => {
                   </div>
                 ) : (
                   todayTrips.map(trip => {
-                    const tripBoardedCount = bookings.filter(b => b.scheduledTripId === trip.id && b.status === 'BOARDED').length;
                     const bookedCount = trip.bookedCount || 0;
+                    const tripBoardedCount = trip.boardedCount || 0;
                     const capacity = trip.capacity || 1;
                     const percent = Math.round((bookedCount / capacity) * 100);
                     const boardedPercent = Math.round((tripBoardedCount / capacity) * 100);
@@ -423,7 +392,7 @@ const AdminDashboard = () => {
               ) : (
                 <ul className="divide-y divide-gray-100 dark:divide-gray-800">
                   {unscannedBookings.map(booking => {
-                    const trip = trips.find(t => t.id === booking.scheduledTripId);
+                    const trip = todayTrips.find(t => t.id === booking.scheduledTripId);
                     return (
                       <li key={booking.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                         <div className="flex justify-between items-start">

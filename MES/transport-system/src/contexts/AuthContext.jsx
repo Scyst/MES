@@ -8,14 +8,9 @@ export function AuthProvider({ children }) {
   const [me, setMe] = useState(null);
   const [loadingMe, setLoadingMe] = useState(true);
 
-  const [passengerProfile, setPassengerProfile] = useState(() => {
-    const saved = localStorage.getItem('passengerProfile');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [passengerProfile, setPassengerProfile] = useState(null);
   
-  const [driverVehicleId, setDriverVehicleId] = useState(() => {
-    return localStorage.getItem('driver_vehicle_id') || null;
-  });
+  const [driverVehicleId, setDriverVehicleId] = useState(null);
 
   // Fetch me.php in background just for session keep-alive, but don't overwrite if local exists
   useEffect(() => {
@@ -27,7 +22,6 @@ export function AuthProvider({ children }) {
         if (me && me.username && !passengerProfile) {
           const profile = { empId: me.username, name: me.username, department: '' };
           setPassengerProfile(profile);
-          localStorage.setItem('passengerProfile', JSON.stringify(profile));
         }
       } catch (err) {
         setMe(null);
@@ -38,31 +32,35 @@ export function AuthProvider({ children }) {
     checkBackendSession();
   }, []);
 
-  const updatePassengerProfile = (profile) => {
-    setPassengerProfile(profile);
-    if (profile) {
-      localStorage.setItem('passengerProfile', JSON.stringify(profile));
-    } else {
-      localStorage.removeItem('passengerProfile');
+  const loginPassenger = async (profileData) => {
+    try {
+      const res = await authAPI.loginPassenger(profileData.empId);
+      setPassengerProfile(res);
+      return { success: true };
+    } catch (err) {
+      console.error("Login failed", err);
+      // Fallback for demo/offline logic if backend fails
+      setPassengerProfile(profileData);
+      return { success: false, message: err.message };
     }
   };
 
-  const loginPassenger = (profileData) => {
-    updatePassengerProfile(profileData);
-  };
-
-  const logoutPassenger = () => {
-    updatePassengerProfile(null);
+  const logoutPassenger = async () => {
+    try {
+      await authAPI.logoutPassenger();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setPassengerProfile(null);
+    }
   };
 
   const loginDriver = (vehicleId) => {
     setDriverVehicleId(vehicleId);
-    localStorage.setItem('driver_vehicle_id', vehicleId);
   };
 
   const logoutDriver = () => {
     setDriverVehicleId(null);
-    localStorage.removeItem('driver_vehicle_id');
   };
 
   return (

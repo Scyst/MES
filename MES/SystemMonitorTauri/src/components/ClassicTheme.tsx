@@ -56,8 +56,11 @@ export const ClassicTheme = ({
   return (
     <div className="h-screen w-screen bg-[#060810]/90 text-[#cbd5e1] overflow-hidden flex flex-col p-3 gap-3 font-mono select-none text-xs">
       
+      {/* DRAG REGION BACKGROUND LAYER */}
+      <div data-tauri-drag-region className="absolute top-0 left-0 w-full h-8 z-0 cursor-move" />
+
       {/* 1. TOP BANNER */}
-      <div className="flex justify-between items-end shrink-0 border-b border-[#1a2b50]/60 pb-1" data-tauri-drag-region>
+      <div className="flex justify-between items-end shrink-0 border-b border-[#1a2b50]/60 pb-1 z-10">
         <div className="flex items-center gap-2 pointer-events-none">
           <Zap size={16} className="text-[#00d4ff]" />
           <h1 className="text-base font-bold tracking-widest text-[#00d4ff]">SYSTEM MONITOR</h1>
@@ -66,10 +69,10 @@ export const ClassicTheme = ({
         <div className="flex items-center gap-4 text-[#64748b] text-[10px]">
           <div>Uptime: {formatUptime(sys.uptime)}</div>
           <div className="text-[#e2e8f0] font-bold tracking-wider">{new Date().toLocaleTimeString()}</div>
-          <button onClick={onToggleTheme} className="ml-2 px-2 py-1 bg-[#1a2b50]/60 hover:bg-[#1a2b50] rounded text-[#00d4ff] transition-colors cursor-pointer z-50">
+          <button onClick={onToggleTheme} className="ml-2 px-2 py-1 bg-[#1a2b50]/60 hover:bg-[#1a2b50] rounded text-[#00d4ff] transition-colors cursor-pointer relative z-50">
             Switch Theme
           </button>
-          <button onClick={onClose} className="px-2 py-1 bg-red-500/20 hover:bg-red-500/40 rounded text-red-400 transition-colors cursor-pointer z-50">
+          <button onClick={onClose} className="px-2 py-1 bg-red-500/20 hover:bg-red-500/40 rounded text-red-400 transition-colors cursor-pointer relative z-50">
             ✕
           </button>
         </div>
