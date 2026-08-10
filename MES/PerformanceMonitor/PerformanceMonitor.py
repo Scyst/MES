@@ -1163,6 +1163,7 @@ class App(tk.Tk):
                 bav = bt is not None
 
                 top = self._top_procs
+                pc = getattr(self, '_process_count', 0)
 
                 # Alerts
                 self._alerts.check(cpu_t, ram.percent)
