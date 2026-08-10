@@ -1139,18 +1139,15 @@ class App(tk.Tk):
                 pc = len(psutil.pids())
 
                 procs = []
-                for p in psutil.process_iter(["pid","name","memory_info","status","num_threads"]):
+                for p in psutil.process_iter(["pid","name","memory_info","status","num_threads","io_counters"]):
                     try:
                         i = p.info
-                        m = i["memory_info"].rss / 1048576
+                        m = i["memory_info"].rss / 1048576 if i.get("memory_info") else 0
                         c = p.cpu_percent(interval=None) / (psutil.cpu_count() or 1)
                         th = i.get("num_threads") or 0
                         
-                        try:
-                            io = p.io_counters()
-                            disk_io = (io.read_bytes + io.write_bytes) / 1048576
-                        except (psutil.AccessDenied, AttributeError, psutil.ZombieProcess):
-                            disk_io = 0.0
+                        io = i.get("io_counters")
+                        disk_io = (io.read_bytes + io.write_bytes) / 1048576 if io else 0.0
                             
                         procs.append((i["pid"], i["name"], c, m, disk_io, th, i.get("status","")))
                     except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
