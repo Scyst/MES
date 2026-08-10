@@ -638,6 +638,13 @@ class App(tk.Tk):
         self._tray_icon = create_tray_icon(self)
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.bind("<Unmap>", self._on_unmap)
+        self._prevent_minimize = True
+        self._ram_total_mb = psutil.virtual_memory().total / 1048576
+
+    def _on_unmap(self, event):
+        if event.widget == self and self._prevent_minimize and not getattr(self, '_mini_mode', False):
+            self.deiconify()
 
     # ──────────────────────────────────────────────────────────────────────────
     #  UI
@@ -761,10 +768,10 @@ class App(tk.Tk):
         tf = tk.Frame(root, bg=T["BG"])
         tf.pack(fill="both", expand=True, padx=16, pady=(4,12))
 
-        cols = ("PID", "Name", "CPU %", "RAM (MB)", "Status")
+        cols = ("PID", "Name", "CPU", "RAM", "Disk (MB Total)", "Threads")
         self.tree = ttk.Treeview(tf, columns=cols, show="headings",
                                   selectmode="browse", height=12)
-        cw_map = {"PID":70,"Name":360,"CPU %":90,"RAM (MB)":110,"Status":90}
+        cw_map = {"PID":60,"Name":280,"CPU":110,"RAM":170,"Disk (MB Total)":100,"Threads":60}
         for c in cols:
             self.tree.heading(c, text=c)
             self.tree.column(c, width=cw_map[c],
@@ -1013,9 +1020,11 @@ class App(tk.Tk):
                 self._mini_widget.destroy()
                 self._mini_widget = None
             self._mini_mode = False
+            self._prevent_minimize = True
             self.deiconify()
         else:
             # open mini, hide main
+            self._prevent_minimize = False
             self._mini_mode = True
             self.withdraw()
             self._mini_widget = MiniWidget(self)
@@ -1045,6 +1054,7 @@ class App(tk.Tk):
 
     def _tray_show(self):
         """Toggle visibility from tray."""
+        self._prevent_minimize = True
         if self._mini_mode:
             self._toggle_mini()
         elif self.state() == "withdrawn":
@@ -1056,6 +1066,7 @@ class App(tk.Tk):
     def _on_close(self):
         """Minimize to tray instead of closing (if tray available)."""
         if self._tray_icon:
+            self._prevent_minimize = False
             self.withdraw()
         else:
             self._quit()
@@ -1128,12 +1139,20 @@ class App(tk.Tk):
                 pc = len(psutil.pids())
 
                 procs = []
-                for p in psutil.process_iter(["pid","name","memory_info","status"]):
+                for p in psutil.process_iter(["pid","name","memory_info","status","num_threads"]):
                     try:
                         i = p.info
                         m = i["memory_info"].rss / 1048576
                         c = p.cpu_percent(interval=None) / (psutil.cpu_count() or 1)
-                        procs.append((i["pid"], i["name"], c, m, i.get("status","")))
+                        th = i.get("num_threads") or 0
+                        
+                        try:
+                            io = p.io_counters()
+                            disk_io = (io.read_bytes + io.write_bytes) / 1048576
+                        except (psutil.AccessDenied, AttributeError, psutil.ZombieProcess):
+                            disk_io = 0.0
+                            
+                        procs.append((i["pid"], i["name"], c, m, disk_io, th, i.get("status","")))
                     except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                         pass
 
@@ -1190,10 +1209,16 @@ class App(tk.Tk):
 
         for item in self.tree.get_children():
             self.tree.delete(item)
-        for i, (pid, name, cp, mem, st) in enumerate(top):
+        for i, (pid, name, cp, mem, disk_io, th, st) in enumerate(top):
             tag = "hot" if cp > 15 else ("odd" if i % 2 else "even")
+            
+            cp_str = f"{cp:.1f}% / 100%"
+            ram_pct = (mem / self._ram_total_mb) * 100 if self._ram_total_mb else 0
+            mem_str = f"{mem:.0f} MB / {self._ram_total_mb:.0f} MB ({ram_pct:.1f}%)"
+            disk_str = f"{disk_io:.1f}" if disk_io > 0 else "0.0"
+            
             self.tree.insert("","end",
-                             values=(pid, name, f"{cp:.1f}", f"{mem:.1f}", st or "—"),
+                             values=(pid, name, cp_str, mem_str, disk_str, th),
                              tags=(tag,))
 
         # update mini widget
