@@ -983,11 +983,6 @@ class App(tk.Tk):
         self.update_idletasks()
         try:
             hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-            # Set parent to Progman (Desktop) so Win+D ignores it
-            progman = ctypes.windll.user32.FindWindowW("Progman", None)
-            if progman:
-                ctypes.windll.user32.SetParent(hwnd, progman)
-                
             GWL_EXSTYLE = -20
             ex = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
             ex = (ex | 0x00000080 | 0x08000000) & ~0x00040000
@@ -1004,6 +999,11 @@ class App(tk.Tk):
                 hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
                 ctypes.windll.user32.SetWindowPos(hwnd, 1, 0, 0, 0, 0,
                                                    0x0001|0x0002|0x0010)
+                
+                # If Win+D hides the window, forcefully show it back!
+                if not ctypes.windll.user32.IsWindowVisible(hwnd):
+                    ctypes.windll.user32.ShowWindow(hwnd, 8) # SW_SHOWNA
+                    
                 # Enforce TOOLWINDOW and NOAPPWINDOW to completely hide from taskbar
                 GWL_EXSTYLE = -20
                 ex = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
@@ -1024,8 +1024,6 @@ class App(tk.Tk):
         try:
             self.update_idletasks()
             hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-            # Restore parent
-            ctypes.windll.user32.SetParent(hwnd, 0)
             
             GWL_EXSTYLE = -20
             ex = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
