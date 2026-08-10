@@ -617,11 +617,14 @@ class App(tk.Tk):
         self._last_dio      = psutil.disk_io_counters()
         self._last_dio_t    = time.time()
         self._gpu_vendor    = "detecting"
-        self._gpu_util      = 0
-        self._gpu_mem_u     = 0
-        self._gpu_mem_t     = 0
-        self._gpu_temp      = 0
-        self._gpu_3d        = 0.0
+        self._gpu_util = 0
+        self._gpu_mem_u = 0
+        self._gpu_mem_t = 0
+        self._gpu_temp = 0
+        self._gpu_3d = 0
+        self._top_procs = []
+        
+        self.sort_var = tk.StringVar(value="CPU")
         self._num_cores     = psutil.cpu_count(logical=True) or 4
         self._cpu_name      = get_cpu_name()
         self._tray_icon     = None
@@ -1104,6 +1107,7 @@ class App(tk.Tk):
     # ──────────────────────────────────────────────────────────────────────────
     def _start_threads(self):
         threading.Thread(target=self._loop_main,  daemon=True).start()
+        threading.Thread(target=self._loop_processes, daemon=True).start()
         threading.Thread(target=self._loop_gpu,   daemon=True).start()
         threading.Thread(target=self._loop_gpu3d, daemon=True).start()
         threading.Thread(target=self._detect_gpu, daemon=True).start()
@@ -1158,9 +1162,25 @@ class App(tk.Tk):
                 bpl = bt.power_plugged if bt else False
                 bav = bt is not None
 
-                pc = len(psutil.pids())
+                top = self._top_procs
 
+                # Alerts
+                self._alerts.check(cpu_t, ram.percent)
+
+                self.after(0, self._update, cpu_t, cpu_c, cpu_f, ram, disk,
+                           dl, ul, rd_kb, wr_kb,
+                           self._gpu_util, self._gpu_mem_u, self._gpu_mem_t,
+                           self._gpu_temp, self._gpu_3d,
+                           bp, bpl, bav, pc, top)
+            except Exception:
+                time.sleep(1)
+
+    def _loop_processes(self):
+        while self._running:
+            try:
+                pc = len(psutil.pids())
                 procs = []
+                # Fetching io_counters on Windows is VERY slow (WMI). We run it in a separate thread.
                 for p in psutil.process_iter(["pid","name","memory_info","status","num_threads","io_counters"]):
                     try:
                         i = p.info
@@ -1177,18 +1197,13 @@ class App(tk.Tk):
 
                 sk = 3 if self.sort_var.get() == "RAM" else 2
                 procs.sort(key=lambda x: x[sk], reverse=True)
-                top = procs[:18]
-
-                # Alerts
-                self._alerts.check(cpu_t, ram.percent)
-
-                self.after(0, self._update, cpu_t, cpu_c, cpu_f, ram, disk,
-                           dl, ul, rd_kb, wr_kb,
-                           self._gpu_util, self._gpu_mem_u, self._gpu_mem_t,
-                           self._gpu_temp, self._gpu_3d,
-                           bp, bpl, bav, pc, top)
+                self._top_procs = procs[:18]
+                self._process_count = pc
             except Exception:
-                time.sleep(1)
+                pass
+            
+            # Cool down the CPU! (Prevents the app from burning 100% of a core)
+            time.sleep(4)
 
     # ──────────────────────────────────────────────────────────────────────────
     #  UPDATE UI
