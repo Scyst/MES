@@ -644,7 +644,7 @@ class App(tk.Tk):
 
     def _on_unmap(self, event):
         if event.widget == self and self._prevent_minimize and not getattr(self, '_mini_mode', False):
-            self.deiconify()
+            self.after(50, self.deiconify)
 
     # ──────────────────────────────────────────────────────────────────────────
     #  UI
@@ -974,7 +974,9 @@ class App(tk.Tk):
     def _to_desktop(self):
         if self._desktop_mode: return
         self._desktop_mode = True
+        self.withdraw()
         self.overrideredirect(True)
+        self.deiconify()
         self.update_idletasks()
         try:
             hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
@@ -1000,7 +1002,9 @@ class App(tk.Tk):
     def _to_window(self):
         if not self._desktop_mode: return
         self._desktop_mode = False
+        self.withdraw()
         self.overrideredirect(False)
+        self.deiconify()
         self.attributes("-alpha", self._opacity)
         self.mode_lbl.config(text="", fg=T["TEXT_MUTED"])
         try:
