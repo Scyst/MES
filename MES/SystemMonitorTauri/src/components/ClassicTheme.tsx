@@ -57,7 +57,7 @@ export const ClassicTheme = ({
     <div className="h-screen w-screen bg-[#060810]/90 text-[#cbd5e1] overflow-hidden flex flex-col p-3 gap-3 font-mono select-none text-xs">
       
       {/* DRAG REGION BACKGROUND LAYER */}
-      <div data-tauri-drag-region className="absolute top-0 left-0 w-full h-8 z-0 cursor-move" />
+      <div data-tauri-drag-region className="absolute top-0 left-0 w-[calc(100%-200px)] h-8 z-0 cursor-move" />
 
       {/* 1. TOP BANNER */}
       <div className="flex justify-between items-end shrink-0 border-b border-[#1a2b50]/60 pb-1 z-10">
