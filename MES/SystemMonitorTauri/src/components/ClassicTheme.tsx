@@ -76,7 +76,7 @@ export const ClassicTheme = ({
       
       <div className="flex justify-between text-[10px] text-[#475569] uppercase tracking-wide">
         <div>SCAN_PE_Naphat • {sys.cpu_name} @ {(sys.cpu_freq / 1000).toFixed(2)}GHz • {(sys.ram_total_mb / 1024).toFixed(0)} GB RAM • {sys.os}</div>
-        <div>GPU: detecting...</div>
+        <div className="truncate max-w-[40%]" title={sys.gpus ? sys.gpus.map(g => g.name).join(' + ') : 'detecting...'}>GPU: {sys.gpus ? sys.gpus.map(g => g.name).join(' + ') : 'detecting...'}</div>
       </div>
 
       {/* 2. CIRCULAR GAUGES */}
@@ -145,12 +145,14 @@ export const ClassicTheme = ({
         </div>
         <div className="flex-1 bg-[#0a0f18] border border-[#1a2b50]/40 rounded relative p-1">
           <div className="absolute top-1 left-2 text-[10px] text-[#475569] z-10">GPU</div>
-          <div className="absolute top-1 right-2 text-[10px] text-[#f43f5e] z-10">{sys.gpu_util.toFixed(0)}%</div>
+          <div className="absolute top-1 right-2 text-[10px] text-[#f43f5e] z-10">{sys.gpus && sys.gpus.length > 0 ? sys.gpus.map(g => `${g.util.toFixed(0)}%`).join(' / ') : '0%'}</div>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={history}>
               <YAxis domain={[0, 100]} hide />
               <Tooltip contentStyle={{ backgroundColor: '#0b1120', border: '1px solid #1a2b50', borderRadius: '4px' }} labelStyle={{ display: 'none' }} />
-              <Area type="monotone" dataKey="gpu" stroke="#f43f5e" strokeWidth={1.5} fillOpacity={0.1} fill="#f43f5e" isAnimationActive={false} />
+              {sys.gpus && sys.gpus.map((gpu, i) => (
+                <Area key={`gpu-classic-${i}`} type="monotone" dataKey={`gpu${i}`} stroke={gpu.is_nvidia ? "#10b981" : "#f43f5e"} strokeWidth={1.5} fillOpacity={0.1} fill={gpu.is_nvidia ? "#10b981" : "#f43f5e"} isAnimationActive={false} />
+              ))}
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -188,7 +190,7 @@ export const ClassicTheme = ({
         </div>
         <div className="flex-1 border-r border-[#1a2b50]/40 p-2 flex items-center justify-between">
           <div>
-            <div className="text-[#e2e8f0] font-bold">{sys.gpu_temp > 0 ? `${sys.gpu_temp.toFixed(1)} °C` : '--'}</div>
+            <div className="text-[#e2e8f0] font-bold">{sys.gpus && sys.gpus.length > 0 ? sys.gpus.filter(g => g.temp > 0).map(g => `${g.temp.toFixed(1)} °C`).join(' / ') || '--' : '--'}</div>
             <div className="text-[10px] text-[#64748b]">GPU Temp</div>
           </div>
           <Flame className="text-[#ef4444]" size={16} />

@@ -7,6 +7,15 @@ export interface ProcInfo {
   threads: number;
 }
 
+export interface GpuInfo {
+  name: string;
+  util: number;
+  mem_used: number;
+  mem_total: number;
+  temp: number;
+  is_nvidia: boolean;
+}
+
 export interface SysPayload {
   cpu_percent: number;
   cpu_cores: number[];
@@ -26,9 +35,5 @@ export interface SysPayload {
   uptime: number;
   total_processes: number;
   processes: ProcInfo[];
-  gpu_name: string;
-  gpu_util: number;
-  gpu_mem_used: number;
-  gpu_mem_total: number;
-  gpu_temp: number;
+  gpus: GpuInfo[];
 }

@@ -87,11 +87,13 @@ export const ModernTheme = ({
         </div>
       </div>
 
-      {/* 2. CIRCULAR GAUGES (5 COLUMNS) */}
+      {/* 2. CIRCULAR GAUGES */}
       <div className="flex gap-4 shrink-0 z-10">
         <ModernCircularGauge value={sys.cpu_percent} max={100} label="CPU" subtext={`${sys.cpu_freq} MHz`} color="#38bdf8" icon={Cpu} />
         <ModernCircularGauge value={sys.ram_used_mb} max={sys.ram_total_mb} label="RAM" subtext={`${(sys.ram_used_mb/1024).toFixed(1)} / ${(sys.ram_total_mb/1024).toFixed(1)} GB`} color="#a855f7" icon={Layers} />
-        <ModernCircularGauge value={sys.gpu_util || 0} max={100} label="GPU" subtext={sys.gpu_name ? sys.gpu_name : "Detecting..."} color="#f43f5e" icon={Activity} />
+        {sys.gpus && sys.gpus.map((gpu, i) => (
+          <ModernCircularGauge key={`gpu-${i}`} value={gpu.util || 0} max={100} label={`GPU ${i}`} subtext={gpu.name ? gpu.name : "Detecting..."} color={gpu.is_nvidia ? "#10b981" : "#f43f5e"} icon={Activity} />
+        ))}
         <ModernCircularGauge value={sys.disk_used_gb} max={sys.disk_total_gb} label="DISK" subtext={`${(sys.disk_total_gb - sys.disk_used_gb).toFixed(1)} GB Free`} color="#f59e0b" icon={HardDrive} />
         <ModernCircularGauge value={100} max={100} label="POWER" subtext={`Stable`} color="#10b981" icon={Zap} />
       </div>
@@ -186,14 +188,16 @@ export const ModernTheme = ({
           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col shadow-lg relative min-h-[80px]">
             <div className="flex justify-between items-center mb-1">
               <span className="text-[10px] font-bold text-white/60 tracking-widest uppercase flex items-center gap-1"><Flame size={10} className="text-rose-400"/> GPU</span>
-              <span className="text-xs font-black text-rose-400">{sys.gpu_util.toFixed(1)}%</span>
+              <span className="text-xs font-black text-rose-400">{sys.gpus && sys.gpus.length > 0 ? sys.gpus.map(g => `${g.util.toFixed(1)}%`).join(' / ') : '0.0%'}</span>
             </div>
             <div className="flex-1 min-h-0 w-full relative">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={history}>
                   <YAxis domain={[0, 100]} hide />
                   <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} labelStyle={{ display: 'none' }} />
-                  <Area type="monotone" dataKey="gpu" stroke="#f43f5e" strokeWidth={2} fillOpacity={0.15} fill="#f43f5e" isAnimationActive={false} />
+                  {sys.gpus && sys.gpus.map((gpu, i) => (
+                    <Area key={`gpu-area-${i}`} type="monotone" dataKey={`gpu${i}`} stroke={gpu.is_nvidia ? "#10b981" : "#f43f5e"} strokeWidth={2} fillOpacity={0.15} fill={gpu.is_nvidia ? "#10b981" : "#f43f5e"} isAnimationActive={false} />
+                  ))}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -207,7 +211,7 @@ export const ModernTheme = ({
           { label: "Upload", val: `${sys.net_up_kbps.toFixed(0)} KB/s`, icon: ArrowUp, color: "text-blue-400" },
           { label: "Disk Read", val: `${sys.disk_read_kbps.toFixed(0)} KB/s`, icon: HardDrive, color: "text-amber-400" },
           { label: "Disk Write", val: `${sys.disk_write_kbps.toFixed(0)} KB/s`, icon: HardDrive, color: "text-orange-400" },
-          { label: "Temperature", val: sys.gpu_temp > 0 ? `${sys.gpu_temp.toFixed(1)} °C` : "--", icon: Flame, color: "text-rose-400" },
+          { label: "Temperature", val: sys.gpus && sys.gpus.length > 0 ? sys.gpus.filter(g => g.temp > 0).map(g => `${g.temp.toFixed(1)} °C`).join(' / ') || '--' : '--', icon: Flame, color: "text-rose-400" },
           { label: "Processes", val: sys.total_processes, icon: Layers, color: "text-indigo-400" }
         ].map((s, i) => (
           <div key={i} className="flex-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-3 flex items-center justify-between shadow-lg">

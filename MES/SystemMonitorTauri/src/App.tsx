@@ -9,7 +9,7 @@ import { invoke } from '@tauri-apps/api/core';
 
 export default function App() {
   const [sys, setSys] = useState<SysPayload | null>(null);
-  const [history, setHistory] = useState<{time: string, cpu: number, ram: number, gpu: number, disk: number, net: number}[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
   const [theme, setTheme] = useState<'modern' | 'classic'>('modern');
   
   useEffect(() => {
@@ -17,14 +17,18 @@ export default function App() {
       setSys(event.payload);
       
       setHistory(prev => {
-        const newHist = [...prev, {
+        const histItem: any = {
           time: new Date().toLocaleTimeString(),
           cpu: event.payload.cpu_percent,
           ram: (event.payload.ram_used_mb / event.payload.ram_total_mb) * 100,
-          gpu: event.payload.gpu_util || 0,
           disk: event.payload.disk_read_kbps + event.payload.disk_write_kbps,
           net: event.payload.net_down_kbps + event.payload.net_up_kbps,
-        }];
+        };
+        event.payload.gpus.forEach((gpu, i) => {
+          histItem[`gpu${i}`] = gpu.util;
+        });
+
+        const newHist = [...prev, histItem];
         return newHist.slice(-60);
       });
     });

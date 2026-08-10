@@ -23,11 +23,17 @@ struct SysPayload {
     uptime: u64,
     total_processes: usize,
     processes: Vec<ProcInfo>,
-    gpu_name: String,
-    gpu_util: f64,
-    gpu_mem_used: f64,
-    gpu_mem_total: f64,
-    gpu_temp: f64,
+    gpus: Vec<GpuInfo>,
+}
+
+#[derive(Serialize, Clone)]
+struct GpuInfo {
+    name: String,
+    util: f64,
+    mem_used: f64,
+    mem_total: f64,
+    temp: f64,
+    is_nvidia: bool,
 }
 
 #[derive(Serialize, Clone)]
@@ -40,30 +46,23 @@ struct ProcInfo {
     threads: usize,
 }
 
-fn get_gpu_name() -> String {
+fn get_gpus_names() -> Vec<String> {
+    let mut gpus = Vec::new();
     if let Ok(output) = std::process::Command::new("wmic")
         .args(["path", "win32_VideoController", "get", "name"])
         .output() {
         let out = String::from_utf8_lossy(&output.stdout);
-        let mut lines = Vec::new();
         for line in out.lines() {
             let l = line.trim();
             if !l.is_empty() && l != "Name" {
-                lines.push(l.to_string());
+                gpus.push(l.to_string());
             }
-        }
-        if !lines.is_empty() {
-            let mut best = lines[0].clone();
-            for l in &lines {
-                let lower = l.to_lowercase();
-                if lower.contains("nvidia") || lower.contains("amd") {
-                    best = l.clone();
-                }
-            }
-            return best;
         }
     }
-    "Unknown GPU".to_string()
+    if gpus.is_empty() {
+        gpus.push("Unknown GPU".to_string());
+    }
+    gpus
 }
 
 fn get_nvidia_info() -> Option<(f64, f64, f64, f64)> {
@@ -114,7 +113,7 @@ pub fn run() {
                 let mut prev_total_disk_read = 0u64;
                 let mut prev_total_disk_write = 0u64;
                 
-                let gpu_name = get_gpu_name();
+                let gpu_names = get_gpus_names();
                 
                 // Sleep once so CPU measurement is accurate
                 thread::sleep(Duration::from_millis(500));
@@ -198,15 +197,31 @@ pub fn run() {
                     let uptime = sysinfo::System::uptime();
                     let total_processes = sys.processes().len();
 
-                    let mut gpu_util = 0.0;
-                    let mut gpu_mem_used = 0.0;
-                    let mut gpu_mem_total = 0.0;
-                    let mut gpu_temp = 0.0;
-                    if let Some((u, mu, mt, t)) = get_nvidia_info() {
-                        gpu_util = u;
-                        gpu_mem_used = mu;
-                        gpu_mem_total = mt;
-                        gpu_temp = t;
+                    let mut gpus = Vec::new();
+                    for name in &gpu_names {
+                        let is_nvidia = name.to_lowercase().contains("nvidia");
+                        if is_nvidia {
+                            if let Some((u, mu, mt, t)) = get_nvidia_info() {
+                                gpus.push(GpuInfo {
+                                    name: name.clone(),
+                                    util: u,
+                                    mem_used: mu,
+                                    mem_total: mt,
+                                    temp: t,
+                                    is_nvidia: true,
+                                });
+                                continue;
+                            }
+                        }
+                        // Default / non-NVIDIA fallback
+                        gpus.push(GpuInfo {
+                            name: name.clone(),
+                            util: 0.0,
+                            mem_used: 0.0,
+                            mem_total: 100.0,
+                            temp: 0.0,
+                            is_nvidia: false,
+                        });
                     }
 
                     let payload = SysPayload {
@@ -227,11 +242,7 @@ pub fn run() {
                         uptime,
                         total_processes,
                         processes: proc_vec,
-                        gpu_name: gpu_name.clone(),
-                        gpu_util,
-                        gpu_mem_used,
-                        gpu_mem_total,
-                        gpu_temp,
+                        gpus,
                     };
                     
                     let _ = app_handle.emit("sysinfo", payload);
