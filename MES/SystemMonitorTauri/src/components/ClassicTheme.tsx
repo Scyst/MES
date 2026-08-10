@@ -192,10 +192,10 @@ export const ClassicTheme = ({
           </div>
           <HardDrive className="text-[#f59e0b]" size={16} />
         </div>
-        <div className="flex-1 p-2 flex items-center justify-between">
+        <div className="flex-1 border-r border-[#1a2b50]/40 p-2 flex items-center justify-between">
           <div>
-            <div className="text-[#e2e8f0] font-bold">{(sys as any).temp_c ? (sys as any).temp_c.toFixed(1) : '--'} °C</div>
-            <div className="text-[10px] text-[#64748b]">CPU Temp</div>
+            <div className="text-[#e2e8f0] font-bold">{sys.gpu_temp > 0 ? `${sys.gpu_temp.toFixed(1)} °C` : '--'}</div>
+            <div className="text-[10px] text-[#64748b]">GPU Temp</div>
           </div>
           <Flame className="text-[#ef4444]" size={16} />
         </div>
@@ -215,15 +215,15 @@ export const ClassicTheme = ({
           <div className="text-[10px] text-[#64748b]">Sort: <span className="text-[#cbd5e1]">CPU</span></div>
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse table-fixed">
             <thead className="sticky top-0 bg-[#0a0f18] z-20">
               <tr className="text-[10px] text-[#00d4ff] uppercase tracking-wider border-b border-[#1a2b50]/40">
-                <th className="py-1 px-4 font-normal w-20 text-center">PID</th>
-                <th className="py-1 px-4 font-normal">Name</th>
-                <th className="py-1 px-4 font-normal text-center w-32">CPU</th>
-                <th className="py-1 px-4 font-normal text-center w-64">RAM</th>
-                <th className="py-1 px-4 font-normal text-center w-32">Disk (MB total)</th>
-                <th className="py-1 px-4 font-normal text-center w-24">Threads</th>
+                <th className="py-1 px-4 font-normal w-[10%] text-center">PID</th>
+                <th className="py-1 px-4 font-normal w-[20%]">Name</th>
+                <th className="py-1 px-4 font-normal text-center w-[20%]">CPU</th>
+                <th className="py-1 px-4 font-normal text-center w-[30%]">RAM</th>
+                <th className="py-1 px-4 font-normal text-center w-[10%]">Disk (MB)</th>
+                <th className="py-1 px-4 font-normal text-center w-[10%]">Threads</th>
               </tr>
             </thead>
             <tbody>

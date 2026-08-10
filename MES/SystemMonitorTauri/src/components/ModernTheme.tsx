@@ -95,7 +95,7 @@ export const ModernTheme = ({
       <div className="flex gap-4 shrink-0 z-10">
         <ModernCircularGauge value={sys.cpu_percent} max={100} label="CPU" subtext={`${sys.cpu_freq} MHz`} color="#38bdf8" icon={Cpu} />
         <ModernCircularGauge value={sys.ram_used_mb} max={sys.ram_total_mb} label="RAM" subtext={`${(sys.ram_used_mb/1024).toFixed(1)} / ${(sys.ram_total_mb/1024).toFixed(1)} GB`} color="#a855f7" icon={Layers} />
-        <ModernCircularGauge value={0} max={100} label="GPU" subtext={`Detecting...`} color="#f43f5e" icon={Activity} />
+        <ModernCircularGauge value={sys.gpu_util || 0} max={100} label="GPU" subtext={sys.gpu_name ? sys.gpu_name.substring(0, 15) : "Detecting..."} color="#f43f5e" icon={Activity} />
         <ModernCircularGauge value={sys.disk_used_gb} max={sys.disk_total_gb} label="DISK" subtext={`${(sys.disk_total_gb - sys.disk_used_gb).toFixed(1)} GB Free`} color="#f59e0b" icon={HardDrive} />
         <ModernCircularGauge value={100} max={100} label="POWER" subtext={`Stable`} color="#10b981" icon={Zap} />
       </div>
@@ -209,7 +209,7 @@ export const ModernTheme = ({
           { label: "Upload", val: `${sys.net_up_kbps.toFixed(0)} KB/s`, icon: ArrowUp, color: "text-blue-400" },
           { label: "Disk Read", val: `${sys.disk_read_kbps.toFixed(0)} KB/s`, icon: HardDrive, color: "text-amber-400" },
           { label: "Disk Write", val: `${sys.disk_write_kbps.toFixed(0)} KB/s`, icon: HardDrive, color: "text-orange-400" },
-          { label: "Temperature", val: sys.temp_c ? `${sys.temp_c.toFixed(1)} °C` : "--", icon: Flame, color: "text-rose-400" },
+          { label: "Temperature", val: sys.gpu_temp > 0 ? `${sys.gpu_temp.toFixed(1)} °C` : "--", icon: Flame, color: "text-rose-400" },
           { label: "Processes", val: sys.total_processes, icon: Layers, color: "text-indigo-400" }
         ].map((s, i) => (
           <div key={i} className="flex-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-3 flex items-center justify-between shadow-lg">
@@ -230,15 +230,15 @@ export const ModernTheme = ({
           </span>
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-          <table className="w-full text-left border-collapse text-sm">
+          <table className="w-full text-left border-collapse text-sm table-fixed">
             <thead className="sticky top-0 bg-[#0f172a]/90 backdrop-blur-md z-20">
               <tr className="text-[9px] text-white/40 uppercase tracking-widest border-b border-white/5">
-                <th className="py-2 px-4 font-bold rounded-tl-lg">Process</th>
-                <th className="py-2 px-4 font-bold text-center">PID</th>
-                <th className="py-2 px-4 font-bold text-center">CPU</th>
-                <th className="py-2 px-4 font-bold text-center">Memory</th>
-                <th className="py-2 px-4 font-bold text-center">Disk (MB)</th>
-                <th className="py-2 px-4 font-bold text-center rounded-tr-lg">Threads</th>
+                <th className="py-2 px-4 font-bold rounded-tl-lg w-[30%]">Process</th>
+                <th className="py-2 px-4 font-bold text-center w-[15%]">PID</th>
+                <th className="py-2 px-4 font-bold text-center w-[15%]">CPU</th>
+                <th className="py-2 px-4 font-bold text-center w-[15%]">Memory</th>
+                <th className="py-2 px-4 font-bold text-center w-[15%]">Disk (MB)</th>
+                <th className="py-2 px-4 font-bold text-center rounded-tr-lg w-[10%]">Threads</th>
               </tr>
             </thead>
             <tbody className="text-slate-300">

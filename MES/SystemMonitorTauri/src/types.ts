@@ -26,4 +26,9 @@ export interface SysPayload {
   uptime: number;
   total_processes: number;
   processes: ProcInfo[];
+  gpu_name: string;
+  gpu_util: number;
+  gpu_mem_used: number;
+  gpu_mem_total: number;
+  gpu_temp: number;
 }

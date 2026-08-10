@@ -23,6 +23,11 @@ struct SysPayload {
     uptime: u64,
     total_processes: usize,
     processes: Vec<ProcInfo>,
+    gpu_name: String,
+    gpu_util: f64,
+    gpu_mem_used: f64,
+    gpu_mem_total: f64,
+    gpu_temp: f64,
 }
 
 #[derive(Serialize, Clone)]
@@ -33,6 +38,44 @@ struct ProcInfo {
     ram_mb: f64,
     disk_total_mb: f64,
     threads: usize,
+}
+
+fn get_gpu_name() -> String {
+    if let Ok(output) = std::process::Command::new("wmic")
+        .args(["path", "win32_VideoController", "get", "name"])
+        .output() {
+        let out = String::from_utf8_lossy(&output.stdout);
+        let mut lines = Vec::new();
+        for line in out.lines() {
+            let l = line.trim();
+            if !l.is_empty() && l != "Name" {
+                lines.push(l.to_string());
+            }
+        }
+        if !lines.is_empty() {
+            return lines.join(" + ");
+        }
+    }
+    "Unknown GPU".to_string()
+}
+
+fn get_nvidia_info() -> Option<(f64, f64, f64, f64)> {
+    use std::os::windows::process::CommandExt;
+    if let Ok(output) = std::process::Command::new("nvidia-smi")
+        .args(["--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu", "--format=csv,noheader,nounits"])
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW
+        .output() {
+        let out = String::from_utf8_lossy(&output.stdout);
+        let parts: Vec<&str> = out.trim().split(',').collect();
+        if parts.len() >= 4 {
+            let u = parts[0].trim().parse::<f64>().unwrap_or(0.0);
+            let mu = parts[1].trim().parse::<f64>().unwrap_or(0.0);
+            let mt = parts[2].trim().parse::<f64>().unwrap_or(0.0);
+            let t = parts[3].trim().parse::<f64>().unwrap_or(0.0);
+            return Some((u, mu, mt, t));
+        }
+    }
+    None
 }
 
 #[tauri::command]
@@ -63,6 +106,8 @@ pub fn run() {
                 
                 let mut prev_total_disk_read = 0u64;
                 let mut prev_total_disk_write = 0u64;
+                
+                let gpu_name = get_gpu_name();
                 
                 // Sleep once so CPU measurement is accurate
                 thread::sleep(Duration::from_millis(500));
@@ -146,6 +191,17 @@ pub fn run() {
                     let uptime = sysinfo::System::uptime();
                     let total_processes = sys.processes().len();
 
+                    let mut gpu_util = 0.0;
+                    let mut gpu_mem_used = 0.0;
+                    let mut gpu_mem_total = 0.0;
+                    let mut gpu_temp = 0.0;
+                    if let Some((u, mu, mt, t)) = get_nvidia_info() {
+                        gpu_util = u;
+                        gpu_mem_used = mu;
+                        gpu_mem_total = mt;
+                        gpu_temp = t;
+                    }
+
                     let payload = SysPayload {
                         cpu_percent: global_cpu,
                         cpu_cores,
@@ -164,6 +220,11 @@ pub fn run() {
                         uptime,
                         total_processes,
                         processes: proc_vec,
+                        gpu_name: gpu_name.clone(),
+                        gpu_util,
+                        gpu_mem_used,
+                        gpu_mem_total,
+                        gpu_temp,
                     };
                     
                     let _ = app_handle.emit("sysinfo", payload);
