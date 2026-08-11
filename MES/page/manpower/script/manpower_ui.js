@@ -295,6 +295,15 @@ const UI = {
                 metaLine = row.line_name;
                 metaShift = shiftId;
             }
+            else if (viewMode === 'PAYMENT_LINE') {
+                mainKey = row.line_name || 'Unassigned';
+                subKeyName = `${row.shift_name} ${row.team_group ? '(' + row.team_group + ')' : ''}`;
+                const rType = (row.rate_type || 'DAILY').toUpperCase();
+                itemKeyName = (rType.includes('MONTHLY') ? 'Monthly' : 'Daily') + ' - ' + (row.emp_type || 'General');
+                metaType = rType.includes('MONTHLY') ? 'Monthly' : 'Daily';
+                metaLine = mainKey;
+                metaShift = shiftId;
+            }
             else if (viewMode === 'TYPE') {
                 mainKey = row.emp_type || 'Uncategorized'; subKeyName = row.line_name || '-'; itemKeyName = `${row.shift_name} (${row.team_group})`; metaLine = row.line_name; metaType = mainKey;
             } else if (viewMode === 'SHIFT') {
@@ -396,10 +405,10 @@ const UI = {
             nameHtml = `<i class="fas fa-chart-pie me-2"></i>${label}`;
             canClick = true;
         } else if (isParent) {
-            let icon = (viewMode === 'PAYMENT') ? 'fa-coins text-warning' : (viewMode === 'TYPE' ? 'fa-user-tag' : (viewMode === 'SHIFT' ? 'fa-clock' : 'fa-layer-group'));
+            let icon = (viewMode === 'PAYMENT' || viewMode === 'PAYMENT_LINE') ? 'fa-coins text-warning' : (viewMode === 'TYPE' ? 'fa-user-tag' : (viewMode === 'SHIFT' ? 'fa-clock' : 'fa-layer-group'));
             nameHtml = `${chevron}<i class="fas ${icon} me-2 opacity-50"></i>${label}`;
             canClick = true;
-            if (viewMode === 'LINE' || viewMode === 'GROUP') { tLine = rawName; }
+            if (viewMode === 'LINE' || viewMode === 'GROUP' || viewMode === 'PAYMENT_LINE') { tLine = rawName; }
             else if (viewMode === 'TYPE') { tType = rawName; }
             else if (viewMode === 'SHIFT') { tShift = (rawName.includes('Day')) ? '1' : '2'; }
             else if (viewMode === 'PAYMENT') { tType = rawName.includes('Monthly') ? 'RATE:MONTHLY' : 'RATE:DAILY'; }
@@ -415,7 +424,7 @@ const UI = {
         const hoverClass = canClick ? 'cursor-pointer-cell' : '';
 
         let columnsHtml = '';
-        if (viewMode === 'PAYMENT') {
+        if (viewMode === 'PAYMENT' || viewMode === 'PAYMENT_LINE') {
             const cellClass = "text-end align-middle font-monospace " + hoverClass;
             const payableCount = (stats.present || 0) + (stats.late || 0) + (stats.leave || 0);
 
@@ -504,9 +513,10 @@ const UI = {
         }
 
         const thead = document.querySelector('#manpowerTable thead tr');
-        if (viewMode === 'PAYMENT') {
+        if (viewMode === 'PAYMENT' || viewMode === 'PAYMENT_LINE') {
+            const firstCol = viewMode === 'PAYMENT' ? 'Payment / Line' : 'Group / Line';
             thead.innerHTML = `
-                <th class="ps-3">Payment / Line</th>
+                <th class="ps-3">${firstCol}</th>
                 <th class="text-center">HC</th>
                 <th class="text-center text-success">Present</th>
                 <th class="text-center text-warning">Late</th>
