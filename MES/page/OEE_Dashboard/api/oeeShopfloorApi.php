@@ -126,11 +126,20 @@ try {
             $stmt->execute($stopParams);
             $stopResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $partCond = ["t.transaction_timestamp >= ?", "t.transaction_timestamp < ?"];
-            $partParams = [$actualStartDate, $actualEndDate];
+            
+            $partParams = [];
+            $modelFilter = "";
+            if ($model) { 
+                $modelFilter = "AND r2.model = ?"; 
+                $partParams[] = $model; 
+            }
+            $partParams[] = $actualStartDate;
+            $partParams[] = $actualEndDate;
+
             $partCond[] = "t.transaction_type LIKE 'PRODUCTION_%'";
 
             if ($line) { $partCond[] = "l.production_line = ?"; $partParams[] = $line; }
-            if ($model) { $partCond[] = "r.model = ?"; $partParams[] = $model; }
+            if ($model) { $partCond[] = "r.model IS NOT NULL"; }
             if ($machine) { $partCond[] = "t.machine_id = ?"; $partParams[] = $machine; }
             if ($team) { 
                 $partCond[] = "(u.team_group = ? OR t.notes LIKE ?)"; 
@@ -149,7 +158,12 @@ try {
                         FROM " . TRANSACTIONS_TABLE . " t WITH (NOLOCK)
                         JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON t.parameter_id = i.item_id
                         LEFT JOIN " . LOCATIONS_TABLE . " l WITH (NOLOCK) ON t.to_location_id = l.location_id
-                        LEFT JOIN " . ROUTES_TABLE . " r WITH (NOLOCK) ON t.parameter_id = r.item_id AND l.production_line = r.line
+                        OUTER APPLY (
+                            SELECT TOP 1 r2.model
+                            FROM " . ROUTES_TABLE . " r2 WITH (NOLOCK)
+                            WHERE r2.item_id = t.parameter_id AND r2.line = l.production_line
+                            {$modelFilter}
+                        ) r
                         LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON t.created_by_user_id = u.id
                         {$partWhere} 
                         AND t.quantity > 0
