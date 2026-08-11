@@ -136,11 +136,14 @@ export default function MachineCockpit({ type = 'machine' }) {
     if (activeTeam.length > 0) {
       const teamNames = activeTeam.map(t => t.name || t.fullname || t.username).join(', ');
       combinedNotes = combinedNotes ? `${combinedNotes} [TEAM: ${teamNames}]` : `[TEAM: ${teamNames}]`;
+      const teamIds = activeTeam.map(t => t.id).join(',');
+      formData.append('team_user_ids', teamIds);
     }
     if (combinedNotes) formData.append('notes', combinedNotes);
+    formData.append('csrf_token', localStorage.getItem('csrf_token') || '');
 
     try {
-      const res = await fetch(`${API_BASE_URL}/production_logs.php`, { method: 'POST', body: formData });
+      const res = await fetch(`${API_BASE_URL}/production_logs.php`, { method: 'POST', body: formData, credentials: 'include' });
       const json = await res.json();
       if (json.success) {
         setQty(0);
@@ -157,9 +160,10 @@ export default function MachineCockpit({ type = 'machine' }) {
     if (type === 'machine') formData.append('machine_id', id);
     else formData.append('location_id', id);
     formData.append('transaction_id', transactionId);
+    formData.append('csrf_token', localStorage.getItem('csrf_token') || '');
 
     try {
-      const res = await fetch(`${API_BASE_URL}/production_logs.php`, { method: 'POST', body: formData });
+      const res = await fetch(`${API_BASE_URL}/production_logs.php`, { method: 'POST', body: formData, credentials: 'include' });
       const json = await res.json();
       if (json.success) fetchHistory();
       else alert("Failed to void: " + json.message);
@@ -177,10 +181,13 @@ export default function MachineCockpit({ type = 'machine' }) {
     if (activeTeam.length > 0) {
       const teamNames = activeTeam.map(t => t.name || t.fullname || t.username).join(', ');
       formData.append('notes', `[TEAM_OVERRIDE: ${teamNames}]`);
+      const teamIds = activeTeam.map(t => t.id).join(',');
+      formData.append('team_user_ids', teamIds);
     }
+    formData.append('csrf_token', localStorage.getItem('csrf_token') || '');
 
     try {
-      const res = await fetch(`${API_BASE_URL}/production_logs.php`, { method: 'POST', body: formData });
+      const res = await fetch(`${API_BASE_URL}/production_logs.php`, { method: 'POST', body: formData, credentials: 'include' });
       const json = await res.json();
       if (json.success) {
         setShowEditModal(false);

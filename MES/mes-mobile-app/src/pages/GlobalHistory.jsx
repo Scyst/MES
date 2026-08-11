@@ -39,8 +39,9 @@ export default function GlobalHistory() {
       const fd = new FormData();
       fd.append('action', 'void');
       fd.append('transaction_id', txn.transaction_id);
+      fd.append('csrf_token', localStorage.getItem('csrf_token') || '');
 
-      const res = await fetch(`${API_BASE_URL}/production_logs.php`, { method: 'POST', body: fd });
+      const res = await fetch(`${API_BASE_URL}/production_logs.php`, { method: 'POST', body: fd, credentials: 'include' });
       const json = await res.json();
       if (json.success) {
         fetchHistory();
@@ -56,12 +57,19 @@ export default function GlobalHistory() {
     if (editQty <= 0) return alert('จำนวนต้องมากกว่า 0');
     
     try {
+      const activeTeam = JSON.parse(localStorage.getItem('mes_active_team') || '[]');
       const fd = new FormData();
       fd.append('action', 'edit');
       fd.append('transaction_id', editTxn.transaction_id);
       fd.append('qty', editQty);
+      fd.append('csrf_token', localStorage.getItem('csrf_token') || '');
+      
+      if (activeTeam.length > 0) {
+        const teamIds = activeTeam.map(t => t.id).join(',');
+        fd.append('team_user_ids', teamIds);
+      }
 
-      const res = await fetch(`${API_BASE_URL}/production_logs.php`, { method: 'POST', body: fd });
+      const res = await fetch(`${API_BASE_URL}/production_logs.php`, { method: 'POST', body: fd, credentials: 'include' });
       const json = await res.json();
       if (json.success) {
         setShowEditModal(false);

@@ -1,13 +1,31 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { BusFront, Ticket, UserCircle, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useEffect } from 'react';
 
 /**
  * EmployeeLayout — Shell layout for the employee-facing app.
  * Provides a sticky bottom navigation bar (mobile-first).
  */
 const EmployeeLayout = () => {
-  const { passengerProfile } = useAuth();
+  const { passengerProfile, loadingMe } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Protect routes: Redirect to profile (login) if not authenticated
+  useEffect(() => {
+    if (!loadingMe && !passengerProfile && location.pathname !== '/booking/profile') {
+      navigate('/booking/profile', { replace: true, state: { alert: true } });
+    }
+  }, [loadingMe, passengerProfile, location.pathname, navigate]);
+
+  if (loadingMe) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans transition-colors duration-300">

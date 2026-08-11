@@ -26,6 +26,10 @@ function App() {
         const data = await res.json();
         
         if (data.success) {
+          if (data.csrf_token) {
+            localStorage.setItem('csrf_token', data.csrf_token);
+          }
+          
           // Ensure logged-in user is in the active team
           let team = JSON.parse(localStorage.getItem('mes_active_team') || '[]');
           if (!team.some(m => m.id === data.user.id)) {

@@ -124,6 +124,7 @@ try {
         $timeSlot = $_POST['time_slot'] ?? null; // format: "08:00:00|08:59:59"
         $sapNo = $_POST['sap_no'] ?? null;
         $customNotes = $_POST['notes'] ?? '';
+        $teamUserIds = $_POST['team_user_ids'] ?? null;
 
         if ($qty <= 0) throw new Exception("Quantity must be greater than 0");
 
@@ -145,7 +146,7 @@ try {
             $pdo->prepare($sql)->execute([$add_actual, $add_hold, $add_scrap, $jobId]);
 
             // Execute Production SP to deduct BOM & Update Stock
-            $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?, @machine_id = ?");
+            $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?, @machine_id = ?, @team_user_ids = ?");
             $ts = date('Y-m-d H:i:s');
             
             // Parse timeSlot if provided
@@ -163,9 +164,9 @@ try {
             $locToUse = $locationId ?: $job['location_id'];
             $lotToUse = $lotNo ?: $job['job_no'];
 
-            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile', $machineId]);
-            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile', $machineId]);
-            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile', $machineId]);
+            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile', $machineId, $teamUserIds]);
+            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile', $machineId, $teamUserIds]);
+            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile', $machineId, $teamUserIds]);
 
         } else {
             // Old Flow: Direct insert without Job
@@ -191,6 +192,21 @@ try {
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$transType, $qty, $userId, $note, $machineId, $locationId, $lotNo, $itemId]);
+            $newTxnId = $pdo->lastInsertId();
+            
+            if ($teamUserIds && trim($teamUserIds) !== '') {
+                $ids = array_filter(explode(',', $teamUserIds));
+                $teamSize = count($ids);
+                if ($teamSize > 0) {
+                    $ratio = 1.0 / $teamSize;
+                    $teamStmt = $pdo->prepare("INSERT INTO STOCK_TRANSACTION_USERS (transaction_id, user_id, head_count_ratio) VALUES (?, ?, ?)");
+                    foreach ($ids as $tid) {
+                        $teamStmt->execute([$newTxnId, trim($tid), $ratio]);
+                    }
+                }
+            } else {
+                $pdo->prepare("INSERT INTO STOCK_TRANSACTION_USERS (transaction_id, user_id, head_count_ratio) VALUES (?, ?, ?)")->execute([$newTxnId, $userId, 1.0]);
+            }
         }
 
         echo json_encode(['success' => true, 'message' => "Logged $qty $type"]);
@@ -238,6 +254,7 @@ try {
     else if ($action === 'edit') {
         $transactionId = $_POST['transaction_id'] ?? null;
         $newQty = (float)($_POST['qty'] ?? 0);
+        $teamUserIds = $_POST['team_user_ids'] ?? null;
         if (!$transactionId || $newQty <= 0) throw new Exception("Invalid parameters");
 
         // Simple approach: Delete old transaction (void) and insert new one
@@ -286,16 +303,16 @@ try {
                 $sql = "UPDATE PRODUCTION_JOBS SET actual_qty = ISNULL(actual_qty, 0) + ?, hold_qty = ISNULL(hold_qty, 0) + ?, scrap_qty = ISNULL(scrap_qty, 0) + ? WHERE job_id = ?";
                 $pdo->prepare($sql)->execute([$add_actual, $add_hold, $add_scrap, $job['job_id']]);
 
-                $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?, @machine_id = ?");
+                $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?, @machine_id = ?, @team_user_ids = ?");
                 $ts = date('Y-m-d H:i:s');
                 $st = $job['start_time'] ? date('H:i:s', strtotime($job['start_time'])) : date('H:i:s');
                 $et = date('H:i:s');
                 $note = $oldTxn['notes'] . " (Edited)";
                 $locToUse = $locationId ?: $job['location_id'];
 
-                if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $machineId]);
-                if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $machineId]);
-                if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $machineId]);
+                if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $machineId, $teamUserIds]);
+                if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $machineId, $teamUserIds]);
+                if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $machineId, $teamUserIds]);
             }
         } else {
             $note = $oldTxn['notes'] . " (Edited)";
@@ -305,6 +322,21 @@ try {
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$oldTxn['transaction_type'], $newQty, $userId, $note, $machineId, $locationId]);
+            $newTxnId = $pdo->lastInsertId();
+
+            if ($teamUserIds && trim($teamUserIds) !== '') {
+                $ids = array_filter(explode(',', $teamUserIds));
+                $teamSize = count($ids);
+                if ($teamSize > 0) {
+                    $ratio = 1.0 / $teamSize;
+                    $teamStmt = $pdo->prepare("INSERT INTO STOCK_TRANSACTION_USERS (transaction_id, user_id, head_count_ratio) VALUES (?, ?, ?)");
+                    foreach ($ids as $tid) {
+                        $teamStmt->execute([$newTxnId, trim($tid), $ratio]);
+                    }
+                }
+            } else {
+                $pdo->prepare("INSERT INTO STOCK_TRANSACTION_USERS (transaction_id, user_id, head_count_ratio) VALUES (?, ?, ?)")->execute([$newTxnId, $userId, 1.0]);
+            }
         }
 
         echo json_encode(['success' => true, 'message' => "Record edited"]);

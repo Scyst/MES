@@ -1,5 +1,6 @@
 <?php
 // transport-system/api/schedules.php
+require_once 'auth/check_auth.php';
 require_once 'db.php';
 
 $method = $_SERVER['REQUEST_METHOD'];

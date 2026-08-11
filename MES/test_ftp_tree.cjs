@@ -1,6 +1,4 @@
 const ftp = require('basic-ftp');
-const path = require('path');
-const fs = require('fs');
 
 const FTP_CONFIG = {
     host: "10.0.0.2",
@@ -9,21 +7,8 @@ const FTP_CONFIG = {
     secure: false
 };
 
-async function backupFtp() {
-    const now = new Date();
-    const timestamp = now.getFullYear() +
-        String(now.getMonth() + 1).padStart(2, '0') +
-        String(now.getDate()).padStart(2, '0') + '_' +
-        String(now.getHours()).padStart(2, '0') +
-        String(now.getMinutes()).padStart(2, '0');
-        
-    const localBackupDir = path.join('E:', 'MES', 'Backups', `FullServer_${timestamp}`);
-    
-    if (!fs.existsSync(localBackupDir)) {
-        fs.mkdirSync(localBackupDir, { recursive: true });
-    }
-
-    console.log(`Starting deep sequential backup to ${localBackupDir}`);
+async function listFtpTree() {
+    console.log(`Starting FTP tree traversal test...`);
     
     let client = new ftp.Client();
     
@@ -42,33 +27,24 @@ async function backupFtp() {
         return;
     }
 
-    // Queue for Breadth-First Traversal of directories
     const queue = [{ remotePath: '/', retries: 0 }];
+    const tree = [];
     
     while (queue.length > 0) {
         const { remotePath, retries } = queue.shift();
-        const localPath = path.join(localBackupDir, remotePath === '/' ? '' : remotePath);
         
-        if (!fs.existsSync(localPath)) {
-            fs.mkdirSync(localPath, { recursive: true });
-        }
-
         try {
-            console.log(`[Process] Scanning directory: ${remotePath}`);
+            console.log(`[Scan] Scanning directory: ${remotePath}`);
+            tree.push(remotePath);
             const list = await client.list(remotePath);
             
             for (const item of list) {
                 if (item.name === "." || item.name === "..") continue;
                 
                 const itemRemotePath = remotePath.endsWith('/') ? remotePath + item.name : remotePath + '/' + item.name;
-                const itemLocalPath = path.join(localPath, item.name);
                 
                 if (item.isDirectory) {
-                    // Add subfolder to queue to process its contents later
                     queue.push({ remotePath: itemRemotePath, retries: 0 });
-                } else if (item.isFile) {
-                    console.log(`[Backup] Downloading file: ${itemRemotePath}`);
-                    await client.downloadTo(itemLocalPath, itemRemotePath);
                 }
             }
         } catch (err) {
@@ -81,7 +57,6 @@ async function backupFtp() {
                 } catch (connErr) {
                     console.error(`[Error] Reconnection failed: ${connErr.message}`);
                 }
-                // Push back to front of queue to retry immediately
                 queue.unshift({ remotePath, retries: retries + 1 });
             } else {
                 console.error(`[Error] Skipping ${remotePath} after 3 failed attempts.`);
@@ -93,7 +68,8 @@ async function backupFtp() {
         client.close();
     }
     
-    console.log(`FTP Backup completed to ${localBackupDir}`);
+    console.log(`\n--- FTP Traversal Completed ---`);
+    console.log(`Total directories found: ${tree.length}`);
 }
 
-backupFtp();
+listFtpTree();

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { UserCircle, Save, Sun, Moon, Building2, Phone, Briefcase, CheckCircle2, Lock } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { UserCircle, Save, Sun, Moon, Building2, Phone, Briefcase, CheckCircle2, Lock, X } from 'lucide-react';
 import { masterAPI, authAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -21,6 +22,15 @@ const ProfilePage = () => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.alert) {
+      setShowModal(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const initProfile = async () => {
@@ -238,6 +248,27 @@ const ProfilePage = () => {
         </div>
 
       </div>
+
+      {/* Required Profile Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 w-full max-w-sm shadow-xl text-center border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock size={32} />
+            </div>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">กรุณายืนยันตัวตน</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              เพื่อเข้าใช้งานระบบจองรถ กรุณากรอกรหัสพนักงานและชื่อของคุณให้เรียบร้อย
+            </p>
+            <button
+              onClick={() => setShowModal(false)}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors"
+            >
+              ตกลง
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

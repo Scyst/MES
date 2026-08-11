@@ -222,12 +222,18 @@ const BookingHome = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
               <p className="text-gray-500 font-bold mt-3">กำลังโหลดข้อมูล...</p>
             </div>
-          ) : filteredRoutes.length === 0 ? (
-            <div className="text-center py-10 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
-              <BusFront size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="text-gray-500 dark:text-gray-400 font-bold">ไม่พบเส้นทาง</p>
+          ) : error ? (
+            <div className="text-center py-10 bg-red-50 text-red-600 rounded-2xl col-span-full border border-red-200">
+               <p className="font-bold text-lg">Error: {error}</p>
             </div>
           ) : (
+            <>
+              {filteredRoutes.length === 0 ? (
+                <div className="text-center py-10 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+                  <BusFront size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400 font-bold">ไม่พบเส้นทาง</p>
+                </div>
+              ) : (
             filteredRoutes.map(route => {
               const currentEmpId = passengerProfile?.empId || '';
               const myBooking = bookings.find(b => b.routeId === route.id && b.targetDate === selectedDate && b.timeSlotId === selectedTimeSlot && b.empId === currentEmpId && b.status !== 'CANCELLED');
@@ -268,6 +274,8 @@ const BookingHome = () => {
                 </div>
               );
             })
+              )}
+            </>
           )}
         </div>
       </div>

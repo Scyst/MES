@@ -99,6 +99,13 @@ const AdminLayout = () => {
         <div className="flex items-center gap-1 sm:gap-2">
           
           <button 
+            onClick={() => navigate('/driver')}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors mr-2"
+          >
+            แอปคนขับ <ExternalLink size={14} />
+          </button>
+
+          <button 
             onClick={() => navigate('/booking')}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors mr-2"
           >
@@ -183,6 +190,14 @@ const AdminLayout = () => {
           </div>
 
           <div className="p-4 mt-auto border-t border-gray-200 dark:border-gray-700">
+             <button 
+                onClick={() => navigate('/driver')}
+                className="flex lg:hidden items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors mb-2"
+             >
+                <ExternalLink size={18} />
+                <span>ไปหน้าแอปคนขับ</span>
+             </button>
+
              <button 
                 onClick={() => navigate('/booking')}
                 className="flex lg:hidden items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors mb-2"

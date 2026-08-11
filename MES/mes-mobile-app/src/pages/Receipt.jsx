@@ -41,11 +41,13 @@ export default function Receipt() {
     formData.append('to_location_id', toLoc);
     if (fromLoc) formData.append('from_location_id', fromLoc);
     if (transferId) formData.append('lot_no', transferId);
+    formData.append('csrf_token', localStorage.getItem('csrf_token') || '');
 
     try {
       const res = await fetch(`${API_BASE_URL}/receipt.php`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'include'
       });
       const json = await res.json();
       

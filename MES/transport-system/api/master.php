@@ -1,7 +1,14 @@
 <?php
 // transport-system/api/master.php
-require_once '../../auth/check_auth.php';
 require_once 'db.php';
+
+$method = $_SERVER['REQUEST_METHOD'];
+$type = $_GET['type'] ?? '';
+
+// Allow unauthenticated GET requests for fleet (Driver Login) and departments (Passenger Login)
+if ($method !== 'GET' || !in_array($type, ['fleet', 'departments'])) {
+    require_once 'auth/check_auth.php';
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $type = $_GET['type'] ?? ''; // e.g., ?type=fleet, ?type=routes, ?type=time-slots, ?type=departments
