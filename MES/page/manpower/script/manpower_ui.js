@@ -2066,6 +2066,103 @@ const Actions = {
         App.loadData();
     },
 
+    async batchReset() {
+        const checkboxes = document.querySelectorAll('.log-checkbox:checked');
+        if (checkboxes.length === 0) return UI.showToast("กรุณาเลือกพนักงาน", "warning");
+
+        if (!confirm(`ยืนยันการล้างข้อมูลสำหรับ ${checkboxes.length} คน? (ข้อมูลจะกลับไปอิงตาม API ล่าสุด)`)) return;
+
+        UI.showLoader();
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const cb of checkboxes) {
+            const tr = cb.closest('tr');
+            const logId = tr.dataset.logid;
+            if (logId && logId !== '0') {
+                try {
+                    const res = await fetch('api/api_daily_operations.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'delete_log', log_id: logId })
+                    });
+                    const json = await res.json();
+                    if (json.success) successCount++;
+                    else failCount++;
+                } catch(e) { failCount++; }
+            }
+        }
+        
+        const date = document.getElementById('filterDate').value;
+        try { await API.triggerSync(date); } catch(e) {}
+
+        UI.hideLoader();
+        if (successCount > 0) UI.showToast(`✅ ล้างข้อมูลสำเร็จ ${successCount} รายการ`, "success");
+        if (failCount > 0) UI.showToast(`❌ ล้มเหลว ${failCount} รายการ (คุณต้องมีสิทธิ์ Admin ถ้ามีการสแกนเวลาแล้ว)`, "danger");
+
+        const checkAll = document.getElementById('checkAllLogs');
+        if (checkAll) checkAll.checked = false;
+        this.updateBatchSelectedCount();
+        await this.fetchDetailData();
+        App.loadData();
+    },
+
+    async batchSwapShiftDetail() {
+        const checkboxes = document.querySelectorAll('.log-checkbox:checked');
+        if (checkboxes.length === 0) return UI.showToast("กรุณาเลือกพนักงาน", "warning");
+        
+        const { value: newShiftId } = await Swal.fire({
+            title: 'เปลี่ยนกะพนักงานที่เลือก',
+            input: 'select',
+            inputOptions: { '1': 'DAY (กะเช้า)', '2': 'NIGHT (กะดึก)' },
+            inputPlaceholder: 'เลือกกะใหม่',
+            showCancelButton: true
+        });
+
+        if (!newShiftId) return;
+
+        const { isConfirmed: applyFuture } = await Swal.fire({
+            title: 'อัปเดตสำหรับอนาคตด้วยหรือไม่?',
+            text: 'ต้องการให้พนักงานกลุ่มนี้เปลี่ยนกะเริ่มต้นในวันถัดๆ ไปด้วยหรือไม่',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'ใช่, เปลี่ยนถาวร',
+            cancelButtonText: 'ไม่, เปลี่ยนแค่วันนี้'
+        });
+
+        const logs = [];
+        for (const cb of checkboxes) {
+            const tr = cb.closest('tr');
+            const logId = tr.dataset.logid;
+            if (logId && logId !== '0') logs.push({ log_id: logId, new_shift_id: newShiftId });
+        }
+
+        if (logs.length === 0) return UI.showToast("ไม่พบ Log ID ที่สามารถเปลี่ยนกะได้ (ต้องมีประวัติในระบบแล้ว)", "warning");
+
+        UI.showLoader();
+        try {
+            const res = await fetch('api/api_daily_operations.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'batch_quick_swap_shift', logs: logs, apply_future: applyFuture })
+            });
+            const json = await res.json();
+            if (json.success) UI.showToast("✅ เปลี่ยนกะสำเร็จ", "success");
+            else UI.showToast("❌ ล้มเหลว: " + json.message, "danger");
+        } catch (err) { UI.showToast("❌ เกิดข้อผิดพลาด", "danger"); }
+        
+        UI.hideLoader();
+        const checkAll = document.getElementById('checkAllLogs');
+        if (checkAll) checkAll.checked = false;
+        this.updateBatchSelectedCount();
+        await this.fetchDetailData();
+        App.loadData();
+    },
+
+    async batchUpdateMasterShift() {
+        this.batchSwapShiftDetail(); // Reuse the same function since it handles both
+    },
+
     openEditLogModal(masterJsonString) {
         const data = JSON.parse(decodeURIComponent(masterJsonString));
         
@@ -2489,7 +2586,11 @@ const Actions = {
                     const shiftHtml = isDay ? `<span class="badge bg-primary shadow-sm">DAY</span>` : `<span class="badge bg-dark shadow-sm">NIGHT</span>`;
                     
                     let detectMsg;
-                    if (row.detect_type === 'DAY_BUT_NIGHT_SCAN') {
+                    if (row.detect_type === 'DAY_ABNORMAL_SCAN') {
+                        detectMsg = '☀️ เวลาสแกนกะเช้าผิดปกติ (อาจเป็นกะดึก)';
+                    } else if (row.detect_type === 'NIGHT_ABNORMAL_SCAN') {
+                        detectMsg = '🌙 เวลาสแกนกะดึกผิดปกติ (อาจเป็นกะเช้า)';
+                    } else if (row.detect_type === 'DAY_BUT_NIGHT_SCAN') {
                         detectMsg = '🌙 กะเช้าแต่สแกนเข้าช่วงบ่าย-ค่ำ (น่าจะเป็นกะดึก)';
                     } else if (row.detect_type === 'LATE_SUSPECT') {
                         detectMsg = '⏰ สถานะสาย — อาจเกิดจากลืมสลับกะ (เวลาเข้าอาจเป็นเวลาออกงานจริง)';

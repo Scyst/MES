@@ -273,19 +273,23 @@ try {
 
             $date = $input['date'] ?? '';
             $line = $input['line'] ?? '';
+            $hard_reset = !empty($input['hard_reset']) && $input['hard_reset'] === true;
 
             if (empty($date)) throw new Exception("Date is required.");
 
             $pdo->beginTransaction();
 
+            $verifiedCondition = $hard_reset ? "" : " AND (L.is_verified = 0 OR L.is_verified IS NULL)";
+            $verifiedConditionGlobal = $hard_reset ? "" : " AND (is_verified = 0 OR is_verified IS NULL)";
+
             if (!empty($line) && $line !== 'ALL') {
                 $sql = "DELETE L FROM dbo.MANPOWER_DAILY_LOGS L
                         LEFT JOIN dbo.MANPOWER_EMPLOYEES E ON L.emp_id = E.emp_id
-                        WHERE L.log_date = ? AND (L.actual_line = ? OR E.line = ?)";
+                        WHERE L.log_date = ? AND (L.actual_line = ? OR E.line = ?)" . $verifiedCondition;
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$date, $line, $line]);
             } else {
-                $stmt = $pdo->prepare("DELETE FROM dbo.MANPOWER_DAILY_LOGS WHERE log_date = ?");
+                $stmt = $pdo->prepare("DELETE FROM dbo.MANPOWER_DAILY_LOGS WHERE log_date = ?" . $verifiedConditionGlobal);
                 $stmt->execute([$date]);
             }
             
@@ -410,27 +414,124 @@ try {
             $pdo->beginTransaction();
             $successCount = 0;
             
+            // 1. Gather distinct dates and emp_ids
+            $minDate = '2099-12-31';
+            $maxDate = '1970-01-01';
+            $logDetails = [];
+            
             foreach ($logs as $log) {
                 $logId = $log['log_id'] ?? '';
                 $newShiftId = $log['new_shift_id'] ?? '';
                 if (empty($logId) || empty($newShiftId)) continue;
                 
-                $stmt = $pdo->prepare("SELECT L.emp_id, L.log_date, L.scan_in_time, S.start_time FROM dbo.MANPOWER_DAILY_LOGS L CROSS JOIN dbo.MANPOWER_SHIFTS S WHERE L.log_id = ? AND S.shift_id = ?");
+                $stmt = $pdo->prepare("SELECT L.emp_id, L.log_date, S.start_time FROM dbo.MANPOWER_DAILY_LOGS L CROSS JOIN dbo.MANPOWER_SHIFTS S WHERE L.log_id = ? AND S.shift_id = ?");
                 $stmt->execute([$logId, $newShiftId]);
                 $details = $stmt->fetch(PDO::FETCH_ASSOC);
-                if (!$details) continue;
+                if ($details) {
+                    $details['new_shift_id'] = $newShiftId;
+                    $details['log_id'] = $logId;
+                    $logDetails[] = $details;
+                    
+                    if ($details['log_date'] < $minDate) $minDate = $details['log_date'];
+                    if ($details['log_date'] > $maxDate) $maxDate = $details['log_date'];
+                }
+            }
+            
+            if (empty($logDetails)) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'message' => "No valid logs found"]);
+                break;
+            }
+            
+            // 2. Fetch API for the date range
+            $apiStartDate = date('Y-m-d', strtotime('-1 day', strtotime($minDate)));
+            $apiEndDate   = date('Y-m-d', strtotime('+1 day', strtotime($maxDate)));
+            
+            $apiUrl = "https://oem.sncformer.com/oem-calendar/oem-web-link/api/api.php?router=/man-power-painting&sdate={$apiStartDate}&edate={$apiEndDate}";
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $apiUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $apiResponse = curl_exec($ch);
+            curl_close($ch);
+            
+            $rawList = json_decode($apiResponse, true) ?? [];
+            $allScansByEmp = [];
+            foreach ($rawList as $row) {
+                $empId = strval($row['EMPID']);
+                $ts = strtotime($row['TIMEINOUT']);
+                if ($ts && date('Y', $ts) > 2020) {
+                    $allScansByEmp[$empId][] = $ts;
+                }
+            }
+            foreach ($allScansByEmp as $empId => &$scans) {
+                sort($scans);
+                $scans = array_values(array_unique($scans));
+            }
+            unset($scans);
+            
+            // Fetch shift config
+            $shiftConfig = [];
+            $stmtShifts = $pdo->query("SELECT shift_id, start_time FROM dbo.MANPOWER_SHIFTS");
+            while ($r = $stmtShifts->fetch(PDO::FETCH_ASSOC)) { $shiftConfig[$r['shift_id']] = $r['start_time']; }
+            
+            // 3. Process each log
+            foreach ($logDetails as $details) {
+                $logId = $details['log_id'];
+                $newShiftId = $details['new_shift_id'];
+                $empId = $details['emp_id'];
+                $dateStr = $details['log_date'];
+                
+                $startTime = $shiftConfig[$newShiftId] ?? '08:00:00';
+                $sh = 8;
+                if (preg_match('/(?:T| )(\d{2}):/', $startTime, $m)) $sh = (int)$m[1];
+                else if (preg_match('/^(\d{2}):/', $startTime, $m)) $sh = (int)$m[1];
+                $isNight = ($sh >= 15 || $sh < 3);
+                
+                if (!$isNight) {
+                    $inWinStart  = strtotime("$dateStr 05:00:00");
+                    $inWinEnd    = strtotime("$dateStr 12:59:59");
+                    $outWinStart = strtotime("$dateStr 13:00:00");
+                    $outWinEnd   = strtotime("$dateStr 23:59:59");
+                } else {
+                    $inWinStart  = strtotime("$dateStr 15:00:00");
+                    $inWinEnd    = strtotime("$dateStr 23:59:59");
+                    $nextDate    = date('Y-m-d', strtotime('+1 day', strtotime($dateStr)));
+                    $outWinStart = strtotime("$nextDate 00:00:00");
+                    $outWinEnd   = strtotime("$nextDate 12:59:59");
+                }
+                
+                $scanIn = null;
+                $scanOut = null;
+                if (isset($allScansByEmp[$empId])) {
+                    foreach ($allScansByEmp[$empId] as $ts) {
+                        if ($ts > $inWinEnd) break;
+                        if ($ts >= $inWinStart) { $scanIn = $ts; break; }
+                    }
+                    foreach ($allScansByEmp[$empId] as $ts) {
+                        if ($ts > $outWinEnd) break;
+                        if ($ts >= $outWinStart) { $scanOut = $ts; }
+                    }
+                }
+                
+                $inTimeStr = $scanIn ? date('Y-m-d H:i:s', $scanIn) : null;
+                $outTimeStr = $scanOut ? date('Y-m-d H:i:s', $scanOut) : null;
                 
                 $status = 'WAITING';
-                if ($details['scan_in_time']) {
-                    $status = (strtotime(date('H:i:s', strtotime($details['scan_in_time']))) > strtotime($details['start_time'])) ? 'LATE' : 'PRESENT';
-                } else if ($details['log_date'] < date('Y-m-d')) {
+                if ($scanIn) {
+                    $shiftStartTs = strtotime("$dateStr $startTime");
+                    $status = ($scanIn > $shiftStartTs) ? 'LATE' : 'PRESENT';
+                } else if ($scanOut) {
+                    $status = 'PRESENT';
+                } else if ($dateStr < date('Y-m-d')) {
                     $status = 'ABSENT';
                 }
                 
-                $pdo->prepare("UPDATE dbo.MANPOWER_DAILY_LOGS SET shift_id = ?, status = ?, updated_at = GETDATE() WHERE log_id = ?")->execute([$newShiftId, $status, $logId]);
+                $pdo->prepare("UPDATE dbo.MANPOWER_DAILY_LOGS SET shift_id = ?, scan_in_time = ?, scan_out_time = ?, status = ?, updated_at = GETDATE() WHERE log_id = ?")
+                    ->execute([$newShiftId, $inTimeStr, $outTimeStr, $status, $logId]);
                 
                 if ($applyFuture) {
-                    $pdo->prepare("UPDATE dbo.MANPOWER_EMPLOYEES SET default_shift_id = ?, last_sync_at = GETDATE() WHERE emp_id = ?")->execute([$newShiftId, $details['emp_id']]);
+                    $pdo->prepare("UPDATE dbo.MANPOWER_EMPLOYEES SET default_shift_id = ?, last_sync_at = GETDATE() WHERE emp_id = ?")->execute([$newShiftId, $empId]);
                     
                     $pdo->prepare("
                         UPDATE L
@@ -443,15 +544,15 @@ try {
                         FROM dbo.MANPOWER_DAILY_LOGS L
                         JOIN dbo.MANPOWER_SHIFTS S ON S.shift_id = ?
                         WHERE L.emp_id = ? AND L.log_date >= ? AND L.log_id != ?
-                    ")->execute([$newShiftId, $newShiftId, $details['emp_id'], $details['log_date'], $logId]);
+                    ")->execute([$newShiftId, $newShiftId, $empId, $dateStr, $logId]);
                 }
                 
-                $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?")->execute([$details['log_date'], $applyFuture ? date('Y-m-d', strtotime('+3 days')) : $details['log_date']]);
+                $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?")->execute([$dateStr, $applyFuture ? date('Y-m-d', strtotime('+3 days')) : $dateStr]);
                 $successCount++;
             }
             
             $pdo->commit();
-            echo json_encode(['success' => true, 'message' => "Batch swapped $successCount shifts successfully"]);
+            echo json_encode(['success' => true, 'message' => "Batch swapped & recalculated $successCount shifts successfully"]);
             break;
 
         case 'fetch_raw_central_scans':
@@ -509,6 +610,17 @@ try {
                        CONVERT(VARCHAR(5), L.scan_out_time, 108) as scan_out,
                        L.status,
                        CASE 
+                           WHEN L.shift_id = 1 AND L.scan_in_time IS NOT NULL AND (
+                               CAST(L.scan_in_time AS TIME) BETWEEN '16:00:00' AND '16:59:59' OR
+                               CAST(L.scan_in_time AS TIME) BETWEEN '19:00:00' AND '19:59:59' OR
+                               CAST(L.scan_in_time AS TIME) BETWEEN '08:01:00' AND '09:00:59' OR
+                               CAST(L.scan_in_time AS TIME) BETWEEN '05:00:00' AND '06:00:59'
+                           ) THEN 'DAY_ABNORMAL_SCAN'
+                           WHEN L.shift_id = 2 AND L.scan_in_time IS NOT NULL AND (
+                               CAST(L.scan_in_time AS TIME) BETWEEN '07:00:00' AND '07:59:59' OR
+                               CAST(L.scan_in_time AS TIME) BETWEEN '17:00:00' AND '18:00:59' OR
+                               CAST(L.scan_in_time AS TIME) BETWEEN '20:01:00' AND '21:00:59'
+                           ) THEN 'NIGHT_ABNORMAL_SCAN'
                            WHEN L.shift_id = 1 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '13:00:00' THEN 'DAY_BUT_NIGHT_SCAN'
                            WHEN L.status = 'LATE' AND L.scan_in_time IS NOT NULL THEN 'LATE_SUSPECT'
                            WHEN L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL THEN 'ORPHAN_OUT'
@@ -525,6 +637,19 @@ try {
                       (L.status = 'LATE' AND L.scan_in_time IS NOT NULL)
                       OR
                       (L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL AND L.status IN ('PRESENT','LATE'))
+                      OR
+                      (L.shift_id = 1 AND L.scan_in_time IS NOT NULL AND (
+                          CAST(L.scan_in_time AS TIME) BETWEEN '16:00:00' AND '16:59:59' OR
+                          CAST(L.scan_in_time AS TIME) BETWEEN '19:00:00' AND '19:59:59' OR
+                          CAST(L.scan_in_time AS TIME) BETWEEN '08:01:00' AND '09:00:59' OR
+                          CAST(L.scan_in_time AS TIME) BETWEEN '05:00:00' AND '06:00:59'
+                      ))
+                      OR
+                      (L.shift_id = 2 AND L.scan_in_time IS NOT NULL AND (
+                          CAST(L.scan_in_time AS TIME) BETWEEN '07:00:00' AND '07:59:59' OR
+                          CAST(L.scan_in_time AS TIME) BETWEEN '17:00:00' AND '18:00:59' OR
+                          CAST(L.scan_in_time AS TIME) BETWEEN '20:01:00' AND '21:00:59'
+                      ))
                   )
                 ORDER BY L.log_date DESC, L.scan_in_time DESC
             ";

@@ -1,4 +1,4 @@
-﻿// page/manpower/script/manpower_api.js
+// page/manpower/script/manpower_api.js
 "use strict";
 
 const API = {
@@ -80,21 +80,17 @@ const API = {
         });
         return await res.json();
     },
-    async clearDailyLog(date) {
+    async clearDailyLog(date, isHardReset = false) {
         try {
-            const response = await fetch('api/api_daily_operations.php', {
+            const res = await fetch('api/api_daily_operations.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'clear_day',
-                    date: date,
-                    line: 'ALL' // ลบทุกไลน์ของวันนั้น
-                })
+                body: JSON.stringify({ action: 'clear_day', date: date, hard_reset: isHardReset })
             });
-            return await response.json();
+            return await res.json();
         } catch (error) {
-            console.error("Clear Data Error:", error);
-            throw error;
+            console.error("clearDailyLog Error:", error);
+            return { success: false, message: error.message };
         }
-    }
+    },
 };

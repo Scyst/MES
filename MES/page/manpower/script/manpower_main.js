@@ -175,24 +175,32 @@ const App = {
         const targetDate = document.getElementById('filterDate').value;
         
         const confirmResult = await Swal.fire({
-            title: 'ยืนยันการรีเซ็ตข้อมูล?',
-            html: `คำเตือน: คุณต้องการ "ล้างข้อมูล" และ "ดึงใหม่" ของวันที่ <b>${targetDate}</b> ใช่หรือไม่?<br><br><span class="text-danger fw-bold">ข้อมูลการแก้ไข Manual (Remark/Status) จะหายไปทั้งหมด!</span>`,
+            title: 'เลือกระบบการรีเซ็ตข้อมูล',
+            html: `คุณกำลังจะรีเซ็ตข้อมูลของวันที่ <b>${targetDate}</b><br><br>
+                   <b>1. Soft Reset (แนะนำ)</b><br>ล้างเฉพาะข้อมูลที่ระบบสร้างขึ้นอัตโนมัติ <u>ข้อมูลที่ยืนยันแล้วหรือแก้ไข Manual จะไม่หายไป</u><br><br>
+                   <b>2. Hard Reset</b><br><span class="text-danger fw-bold">ลบข้อมูลทั้งหมดทิ้งแล้วดึงใหม่ ข้อมูลที่แก้ไขจะหายไปทั้งหมด!</span>`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
+            showDenyButton: true,
+            confirmButtonColor: '#3085d6',
+            denyButtonColor: '#d33',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: 'ใช่, ล้างข้อมูลและดึงใหม่',
-            cancelButtonText: 'ยกเลิก'
+            confirmButtonText: 'Soft Reset',
+            denyButtonText: 'Hard Reset',
+            cancelButtonText: 'ยกเลิก',
+            width: 600
         });
 
-        if (!confirmResult.isConfirmed) {
+        if (!confirmResult.isConfirmed && !confirmResult.isDenied) {
             return;
         }
 
+        const isHardReset = confirmResult.isDenied;
+
         UI.showLoader(); 
         try {
-            console.log("1. Clearing data...");
-            const clearRes = await API.clearDailyLog(targetDate);
+            console.log("1. Clearing data (Hard Reset: " + isHardReset + ")...");
+            const clearRes = await API.clearDailyLog(targetDate, isHardReset);
             if (!clearRes.success) throw new Error("Clear Failed: " + clearRes.message);
 
             console.log("2. Syncing new data...");
