@@ -632,7 +632,6 @@ function renderProductionHistoryTable(data) {
                                     <tr>
                                         <td class="text-center text-muted align-middle" style="font-size: 0.8rem;">${index + 1}</td>
                                         <td class="text-start fw-bold text-dark align-middle" style="font-size: 0.8rem;"><i class="fas fa-user-circle text-secondary me-2"></i>${member.name}</td>
-                                        <td class="text-end text-muted align-middle" style="font-size: 0.8rem;">฿${wage.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td class="text-end fw-bold text-primary align-middle" style="font-size: 0.8rem;">฿${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td class="text-center align-middle" style="font-size: 0.8rem;">${ratioBadge}</td>
                                     </tr>`;
@@ -654,7 +653,6 @@ function renderProductionHistoryTable(data) {
                                                 <tr>
                                                     <th class="text-center py-2 bg-light align-middle" style="width: 50px; font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">#</th>
                                                     <th class="text-start py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Name</th>
-                                                    <th class="text-end py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Base Wage</th>
                                                     <th class="text-end py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Earned Value</th>
                                                     <th class="text-center py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Ratio Added</th>
                                                 </tr>
@@ -897,9 +895,8 @@ function renderEmployeeSummaryTable(data) {
 
         tr.innerHTML = `
             <td class="text-start" data-label="Name">${row.name || 'N/A'}</td>
+            <td class="text-center" data-label="Line">${row.line || '-'}</td>
             <td class="text-center" data-label="Team">${row.team_group || 'N/A'}</td>
-            <td class="text-center" data-label="Dept / Line">${row.department || '-'} / ${row.line || '-'}</td>
-            <td class="text-end" data-label="Total Wage (฿)">${wage.toLocaleString()}</td>
             <td class="text-end fw-bold text-primary" data-label="Earned Value (฿)">${earned.toLocaleString()}</td>
             <td class="text-end" data-label="Ratio / Grade">
                 ${wage > 0 ? `<span class="fw-bold">${ratio.toFixed(2)}</span> <span class="badge ${badgeClass} ms-1" style="width: 30px;">${badgeText}</span>` : '-'}
@@ -1034,6 +1031,15 @@ function openAddPartModal() {
             document.getElementById('out_item_id').value = lastData.item_id || '';
             if (lastData.item_id) {
                 selectedOutItem = allItems.find(item => item.item_id == lastData.item_id) || null;
+            }
+            if (lastData.team_user_ids && lastData.team_user_ids.length > 0) {
+                setTeamUserSelection('out', lastData.team_user_ids);
+            } else {
+                setTeamUserSelection('out', []);
+            }
+            if (lastData.override_team) {
+                const overrideInput = document.getElementById('out_override_team');
+                if (overrideInput) overrideInput.value = lastData.override_team;
             }
         }
     } catch (e) { }
@@ -1558,7 +1564,9 @@ async function handleFormSubmit(event) {
                     item_id: baseData.item_id,
                     item_display_text: searchInputValue,
                     location_id: baseData.location_id,
-                    machine_id: baseData.machine_id
+                    machine_id: baseData.machine_id,
+                    team_user_ids: data.team_user_ids ? data.team_user_ids.split(',').map(Number).filter(Boolean) : [],
+                    override_team: data.override_team || ''
                 };
                 localStorage.setItem('inventoryUILastEntry_OUT', JSON.stringify(lastEntryData));
 

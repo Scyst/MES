@@ -105,9 +105,26 @@ const MyTicket = () => {
   const handleBoarding = async (qrData) => {
     setLoading(true);
     try {
-      // In a real app, qrData might contain the vehicle ID or Schedule ID.
-      // For now, any scan assumes boarding this ticket's schedule.
-      await bookingsAPI.boardPassenger(ticketId);
+      if (!qrData || qrData === 'SIMULATED_QR') {
+        if (schedule) {
+          await bookingsAPI.boardPassenger(ticketId);
+        } else {
+          alert("โหมดจำลอง: คุณต้องถูกจัดลงรถก่อนจึงจะเช็คอินด้วยปุ่มนี้ได้");
+          setLoading(false);
+          return;
+        }
+      } else {
+        let me = null;
+        try { me = await authAPI.getMe(); } catch(e) {}
+        const empId = me?.username || passengerProfile?.empId || '';
+        
+        await bookingsAPI.smartBoardPassenger({ 
+          scheduleId: qrData, 
+          empId,
+          name: passengerProfile?.name || '',
+          bu: passengerProfile?.bu || ''
+        });
+      }
       setBooking(prev => ({ ...prev, status: 'BOARDED' }));
       setTimeout(() => setShowSurvey(true), 1500);
     } catch (err) {
@@ -205,14 +222,14 @@ const MyTicket = () => {
           
           <div className={`rounded-3xl flex-1 flex flex-col items-center justify-center p-8 relative overflow-hidden border border-gray-200 dark:border-gray-700 ${isBoarded ? 'bg-emerald-50 dark:bg-emerald-900/10' : 'bg-gray-900'}`}>
             
-            {!schedule ? (
-              <div className="text-center py-10 w-full h-full flex flex-col items-center justify-center">
-                <Clock size={80} className="text-gray-500 dark:text-gray-400 mx-auto mb-6 opacity-50" />
-                <h3 className="text-2xl font-black text-gray-400 dark:text-gray-500 mb-2">รอการจัดรถ</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-500 font-bold mb-8">แอดมินกำลังจัดเตรียมรถสำหรับรอบนี้</p>
-              </div>
-            ) : !isBoarded ? (
+            {!isBoarded ? (
               <>
+                {!schedule && (
+                  <div className="text-center w-full mb-6 bg-blue-900/40 p-4 rounded-xl border border-blue-500/30">
+                    <h3 className="text-lg font-black text-blue-300 mb-1">รอการจัดรถ</h3>
+                    <p className="text-xs text-blue-200/70 font-bold">แอดมินกำลังจัดเตรียมรถ หรือคุณสามารถสแกน QR หน้ารถเพื่อจับคู่รถได้ทันที</p>
+                  </div>
+                )}
                 {!isScanning ? (
                   <>
                     {/* Idle State - Ready to Scan */}
