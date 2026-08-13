@@ -91,21 +91,10 @@ elseif ($method === 'POST') {
             }
         }
         
-        // Check capacity if booking into a specific schedule
+        // Capacity check removed to allow flexible over-boarding
+        // The UI will still show red when over capacity, but the API won't block it.
         if (!$isExtra && $scheduledTripId) {
-            $stmt = $pdo->prepare("
-                SELECT f.capacity, (SELECT COUNT(*) FROM TRANSPORT_BOOKINGS b WHERE b.schedule_id = s.id AND b.status != 'CANCELLED') as currentCount
-                FROM TRANSPORT_SCHEDULES s
-                JOIN TRANSPORT_FLEET f ON s.vehicle_id = f.id
-                WHERE s.id = ?
-            ");
-            $stmt->execute([$scheduledTripId]);
-            $tripInfo = $stmt->fetch();
-            
-            if ($tripInfo && $tripInfo['currentCount'] >= $tripInfo['capacity']) {
-                $pdo->rollBack();
-                sendResponse(false, null, "ขออภัย รถรอบนี้เต็มแล้ว", 400);
-            }
+            // (Capacity logic removed)
         }
         
         $sql = "INSERT INTO TRANSPORT_BOOKINGS (id, schedule_id, route_id, time_slot_id, target_date, emp_id, emp_name, bu_id, status, is_extra, boarded_at) 
@@ -202,10 +191,8 @@ elseif ($method === 'PUT') {
                 sendResponse(false, null, "ไม่พบข้อมูลรอบรถ", 404);
             }
             
-            if ($tripInfo['currentCount'] >= $tripInfo['capacity']) {
-                $pdo->rollBack();
-                sendResponse(false, null, "ขออภัย รถรอบนี้เต็มแล้ว", 400);
-            }
+            // Capacity check removed to allow flexible over-boarding
+            // UI will indicate over-capacity, but API will allow it.
             
             $dbRouteId = $tripInfo['route_id'];
             $dbTargetDate = $tripInfo['trip_date'];
