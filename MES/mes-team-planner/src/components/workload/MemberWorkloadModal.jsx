@@ -181,7 +181,7 @@ export default function MemberWorkloadModal({ isOpen, onClose, user }) {
                            </p>
                         </div>
                         <div className="text-xs text-slate-400 shrink-0 flex items-center gap-1">
-                          <FiClock /> {new Date(c.time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                          <FiClock /> {new Date(c.time).toLocaleTimeString('th-TH', { hour12: false, hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
                     ))}

@@ -312,7 +312,7 @@ export default function ChatWidget({ currentUser, tasks = [], projects = [], onS
                               <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{room.DisplayName}</p>
                               {room.LastMessageTime && (
                                 <span className="text-[10px] text-slate-400 shrink-0 ml-2">
-                                  {new Date(room.LastMessageTime).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
+                                  {new Date(room.LastMessageTime).toLocaleTimeString('th-TH', {hour12: false, hour: '2-digit', minute:'2-digit'})}
                                 </span>
                               )}
                             </div>
@@ -354,7 +354,7 @@ export default function ChatWidget({ currentUser, tasks = [], projects = [], onS
                             )}
                           </div>
                           <span className="text-[9px] text-slate-400 mt-1 opacity-70">
-                            {new Date(msg.CreatedAt).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
+                            {new Date(msg.CreatedAt).toLocaleTimeString('th-TH', {hour12: false, hour: '2-digit', minute:'2-digit'})}
                           </span>
                         </div>
                       );

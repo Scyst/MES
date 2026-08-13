@@ -162,7 +162,7 @@ export default function NotificationWidget({ currentUser, tasks, onSaveTask, onD
                         </p>
                         {room.latestComment && (
                           <span className="text-[10px] text-slate-400 shrink-0 mt-0.5 whitespace-nowrap">
-                            {new Date(room.latestComment.CreatedAt).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
+                            {new Date(room.latestComment.CreatedAt).toLocaleTimeString('th-TH', {hour12: false, hour: '2-digit', minute:'2-digit'})}
                           </span>
                         )}
                       </div>

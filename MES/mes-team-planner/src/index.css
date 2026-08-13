@@ -101,3 +101,15 @@
 .theme-transitioning * {
   transition: background-color 0.4s ease-in-out, border-color 0.4s ease-in-out, color 0.4s ease-in-out, fill 0.4s ease-in-out, stroke 0.4s ease-in-out !important;
 }
+
+/* ═══ Force 24-hour time format on all time inputs (no AM/PM) ═══ */
+/* Hides the AM/PM segment rendered by WebKit/Blink regardless of OS locale */
+input[type="time"]::-webkit-datetime-edit-ampm-field {
+  display: none;
+}
+
+/* Force date inputs to display as DD/MM/YYYY (en-GB format) */
+/* Combined with lang="en-GB" on the input element, this ensures consistent date format */
+input[type="date"]::-webkit-datetime-edit {
+  /* Keep default — lang="en-GB" attribute on the element controls the display order */
+}
