@@ -173,6 +173,9 @@ try {
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="transaction-log-tab" data-bs-toggle="tab" data-bs-target="#transaction-log-pane" type="button" role="tab"><i class="fas fa-history me-1"></i> All Txn Log</button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="employee-summary-tab" data-bs-toggle="tab" data-bs-target="#employee-summary-pane" type="button" role="tab"><i class="fas fa-users me-1"></i> Daily Summary</button>
+                    </li>
                 </ul>
 
                 <div class="row g-2 align-items-center mb-3">
@@ -394,6 +397,24 @@ try {
                             </table>
                         </div>
                         <ul class="pagination pagination-sm justify-content-end mt-3 mb-0" id="transactionLogPagination"></ul>
+                    </div>
+
+                    <div class="tab-pane fade" id="employee-summary-pane" role="tabpanel">
+                        <div class="table-scrollable border rounded-3">
+                            <table class="table table-sm table-hover table-bordered mb-0 text-nowrap table-settings">
+                                <thead class="table-light text-center sticky-top" style="z-index: 2;">
+                                    <tr class="text-secondary bg-light">
+                                        <th class="py-2">Name</th>
+                                        <th class="py-2">Team</th>
+                                        <th class="py-2 text-end px-3">Daily Wage (฿)</th>
+                                        <th class="py-2 text-end px-3 text-primary">Earned Value (฿)</th>
+                                        <th class="py-2 text-end">Ratio / Grade</th>
+                                        <th class="py-2 text-center">Txn Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="employeeSummaryTableBody"></tbody>
+                            </table>
+                        </div>
                     </div>
 
                 </div> </div>

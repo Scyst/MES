@@ -27,17 +27,17 @@ let g_CurrentPCTransferOrder = null;
 function populateTeamUserDropdown(users, prefix) {
     const listEl = document.getElementById(`${prefix}_team_user_list`);
     if (!listEl) return;
-    
+
     listEl.innerHTML = '';
-    
+
     // Add Search Input
     const searchLi = document.createElement('li');
     searchLi.className = 'px-2 pb-2 mb-2 border-bottom sticky-top bg-white';
     searchLi.innerHTML = `<input type="text" class="form-control form-control-sm" placeholder="ค้นหาชื่อ..." id="${prefix}_team_user_search">`;
     listEl.appendChild(searchLi);
-    
+
     const searchInput = searchLi.querySelector('input');
-    searchInput.addEventListener('input', function(e) {
+    searchInput.addEventListener('input', function (e) {
         const term = e.target.value.toLowerCase();
         const items = listEl.querySelectorAll('.team-user-item');
         items.forEach(item => {
@@ -49,23 +49,23 @@ function populateTeamUserDropdown(users, prefix) {
     users.forEach(u => {
         const li = document.createElement('li');
         li.className = 'dropdown-item p-1 team-user-item';
-        
+
         const div = document.createElement('div');
         div.className = 'form-check m-0';
-        
+
         const input = document.createElement('input');
         input.className = 'form-check-input ms-0 me-2 team-user-checkbox';
         input.type = 'checkbox';
         input.value = u.id;
         input.id = `${prefix}_team_user_${u.id}`;
-        
+
         const label = document.createElement('label');
         label.className = 'form-check-label w-100 d-block small';
         label.htmlFor = `${prefix}_team_user_${u.id}`;
         label.textContent = u.fullname ? `${u.fullname} (${u.username})` : u.username;
-        
+
         input.addEventListener('change', () => updateTeamUserUI(prefix));
-        
+
         div.appendChild(input);
         div.appendChild(label);
         li.appendChild(div);
@@ -78,14 +78,14 @@ function updateTeamUserUI(prefix) {
     const btnTextEl = document.getElementById(`${prefix}_team_user_text`);
     const countEl = document.getElementById(`${prefix}_team_user_count`);
     const hiddenInput = document.getElementById(`${prefix}_team_user_ids`);
-    
+
     if (!listEl || !hiddenInput) return;
-    
+
     const checkboxes = listEl.querySelectorAll('.team-user-checkbox:checked');
     const ids = Array.from(checkboxes).map(cb => cb.value);
-    
+
     hiddenInput.value = ids.join(',');
-    
+
     if (ids.length === 0) {
         btnTextEl.textContent = '-- อิงตามผู้ล็อกอิน --';
         countEl.textContent = '1';
@@ -101,16 +101,16 @@ function updateTeamUserUI(prefix) {
 function setTeamUserSelection(prefix, userIds) {
     const listEl = document.getElementById(`${prefix}_team_user_list`);
     if (!listEl) return;
-    
+
     const checkboxes = listEl.querySelectorAll('.team-user-checkbox');
     checkboxes.forEach(cb => {
         cb.checked = userIds.includes(Number(cb.value)) || userIds.includes(String(cb.value));
     });
-    
+
     updateTeamUserUI(prefix);
 }
 
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     if (e.target.closest('#out_team_user_list') || e.target.closest('#edit_production_team_user_list')) {
         e.stopPropagation();
     }
@@ -148,7 +148,7 @@ function initializeFilters() {
             if (document.getElementById('filterLine')) document.getElementById('filterLine').value = filters.line || '';
             if (document.getElementById('filterTeam')) document.getElementById('filterTeam').value = filters.team || '';
             if (document.getElementById('filterMachine')) document.getElementById('filterMachine').value = filters.machine_id || '';
-        } catch(e) {
+        } catch (e) {
             document.getElementById("filterStartDate").value = dateStr;
             document.getElementById("filterEndDate").value = dateStr;
         }
@@ -171,6 +171,7 @@ function handleFilterChange() {
         case 'wip-onhand-tab': fetchWipOnHandReport(1); break;
         case 'stock-count-tab': fetchStockInventoryReport(1); break;
         case 'transaction-log-tab': fetchAllTransactions(1); break;
+        case 'employee-summary-tab': fetchEmployeeSummary(); break;
     }
 }
 
@@ -187,7 +188,7 @@ function updateFilterVisibility(activeTabId) {
     dateRangeEl.style.display = 'none';
     if (lineEl) lineEl.style.display = 'none';
     if (teamEl) teamEl.style.display = 'none';
-    searchEl.placeholder = 'Search...'; 
+    searchEl.placeholder = 'Search...';
 
     switch (activeTabId) {
         case 'production-variance-tab':
@@ -200,7 +201,15 @@ function updateFilterVisibility(activeTabId) {
             if (teamEl) teamEl.style.display = 'block';
             searchEl.placeholder = 'Search Part No, SAP, Lot, Location...';
             break;
-            
+
+        case 'employee-summary-tab':
+            searchEl.style.display = 'block';
+            dateRangeEl.style.display = 'flex';
+            if (lineEl) lineEl.style.display = 'block';
+            if (teamEl) teamEl.style.display = 'block';
+            searchEl.placeholder = 'Search Name...';
+            break;
+
         case 'production-history-tab':
             searchEl.style.display = 'block';
             typeEl.style.display = 'block';
@@ -248,7 +257,7 @@ function updateControls(activeTabId) {
             `;
             summaryContainer.innerHTML = '<div id="grandSummary" class="summary-grand-total"></div>';
             break;
-            
+
         case 'entry-history-tab':
             buttonGroup.innerHTML = `
                 <button class="btn btn-sm btn-outline-primary fw-bold shadow-sm" onclick="exportHistoryToExcel()"><i class="fas fa-file-excel me-1"></i> Export</button>
@@ -256,7 +265,7 @@ function updateControls(activeTabId) {
                 ${canAdd ? '<button class="btn btn-sm btn-success fw-bold shadow-sm" onclick="openAddEntryModal(this)"><i class="fas fa-plus me-1"></i> Add (IN)</button>' : ''}
             `;
             break;
-            
+
         case 'wip-onhand-tab':
         case 'wip-by-lot-tab':
             buttonGroup.innerHTML = `<button class="btn btn-sm btn-outline-primary fw-bold shadow-sm" onclick="exportWipReportToExcel()"><i class="fas fa-file-excel me-1"></i> Export</button>`;
@@ -266,7 +275,7 @@ function updateControls(activeTabId) {
 
 function applyTimeMask(event) {
     const input = event.target;
-    let value = input.value.replace(/\D/g, ''); 
+    let value = input.value.replace(/\D/g, '');
 
     if (value.length > 2) value = value.substring(0, 2) + ':' + value.substring(2);
     if (value.length > 5) value = value.substring(0, 5) + ':' + value.substring(5);
@@ -292,7 +301,7 @@ function setupEntryAutocomplete() {
 
         if (value.length < 2) return;
 
-        const filteredItems = allItems.filter(item => 
+        const filteredItems = allItems.filter(item =>
             item.sap_no.toLowerCase().includes(value) ||
             item.part_no.toLowerCase().includes(value) ||
             (item.part_description || '').toLowerCase().includes(value)
@@ -334,7 +343,7 @@ function setupProductionAutocomplete() {
 
         if (value.length < 2) return;
 
-        const filteredItems = allItems.filter(item => 
+        const filteredItems = allItems.filter(item =>
             item.sap_no.toLowerCase().includes(value) ||
             item.part_no.toLowerCase().includes(value) ||
             (item.part_description || '').toLowerCase().includes(value)
@@ -354,7 +363,7 @@ function setupProductionAutocomplete() {
         });
         resultsWrapper.style.display = filteredItems.length > 0 ? 'block' : 'none';
     });
-    
+
     document.addEventListener('click', (e) => {
         if (e.target !== searchInput) resultsWrapper.style.display = 'none';
     });
@@ -367,10 +376,10 @@ function setupProductionAutocomplete() {
 async function fetchProductionVarianceReport(page = 1) {
     varianceCurrentPage = page;
     showSpinner();
-    
+
     const searchString = document.getElementById('filterSearch').value;
     const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
-                                
+
     const params = {
         page: page,
         'search_terms[]': searchTerms,
@@ -409,7 +418,7 @@ function renderProductionVarianceTable(data) {
         const variance = Math.floor(row.variance) || 0;
         let textColorClass = '';
 
-        if (variance < 0) textColorClass = 'text-danger'; 
+        if (variance < 0) textColorClass = 'text-danger';
         else if (variance === 0) textColorClass = 'text-success';
         else textColorClass = 'text-warning';
 
@@ -430,10 +439,10 @@ function renderProductionVarianceTable(data) {
 async function fetchWipReportByLot(page = 1) {
     wipByLotCurrentPage = page;
     showSpinner();
-    
+
     const searchString = document.getElementById('filterSearch').value;
     const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
-                                
+
     const params = {
         page: page,
         'search_terms[]': searchTerms,
@@ -465,10 +474,10 @@ function renderWipReportByLotTable(data) {
         const variance = Math.floor(row.on_hand_by_lot) || 0; // Using on_hand_by_lot from updated API
         let textColorClass = '';
 
-        if (variance < 0) textColorClass = 'text-danger'; 
+        if (variance < 0) textColorClass = 'text-danger';
         else if (variance === 0) textColorClass = 'text-success';
         else textColorClass = 'text-warning';
-        
+
         tr.innerHTML = `
             <td class="text-start" data-label="SAP No.">${row.sap_no}</td>
             <td class="text-start" data-label="Part Number">${row.part_no}</td>
@@ -523,7 +532,7 @@ function renderReceiptHistoryTable(data) {
         tr.addEventListener('click', () => editTransaction(row.transaction_id, 'entry'));
 
         const transactionDate = new Date(row.transaction_timestamp);
-        
+
         tr.innerHTML = `
             <td class="text-start" data-label="Date">${transactionDate.toLocaleDateString('en-GB')}</td>
             <td class="text-start" data-label="Time">${transactionDate.toTimeString().substring(0, 8)}</td>
@@ -546,10 +555,10 @@ async function fetchProductionHistory(page = 1) {
 
     const searchString = document.getElementById('filterSearch').value;
     const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
-    
+
     const params = {
         page: page,
-        'search_terms[]': searchTerms, 
+        'search_terms[]': searchTerms,
         count_type: document.getElementById('filterCountType').value,
         startDate: document.getElementById('filterStartDate').value,
         endDate: document.getElementById('filterEndDate').value,
@@ -571,12 +580,12 @@ async function fetchProductionHistory(page = 1) {
 function renderProductionHistoryTable(data) {
     const tbody = document.getElementById('partTableBody');
     tbody.innerHTML = '';
-    
+
     if (!data || data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="10" class="text-center">No production history found.</td></tr>`;
         return;
     }
-    
+
     data.forEach(row => {
         const tr = document.createElement('tr');
         tr.dataset.transactionId = row.transaction_id;
@@ -586,9 +595,9 @@ function renderProductionHistoryTable(data) {
         const transactionDate = new Date(row.transaction_timestamp);
         const dateStr = transactionDate.toLocaleDateString('en-GB');
         const timeStr = (row.end_time && row.end_time.substring(0, 8) !== '00:00:00')
-                        ? row.end_time.substring(0, 8)
-                        : transactionDate.toTimeString().substring(0, 8);
-        
+            ? row.end_time.substring(0, 8)
+            : transactionDate.toTimeString().substring(0, 8);
+
         tr.innerHTML = `
             <td class="text-start" data-label="Date">${dateStr}</td>
             <td class="text-start" data-label="Time">${timeStr}</td>
@@ -602,50 +611,44 @@ function renderProductionHistoryTable(data) {
             <td class="text-center" data-label="Type">${row.count_type}</td>
             <td class="text-center" data-label="User">
                 ${(() => {
-                    const createdBy = row.created_by || 'N/A';
-                    let teamBadge = '';
-                    
-                    if (row.team_users) {
-                        try {
-                            const teamData = JSON.parse(row.team_users);
-                            if (teamData.length > 1 || (teamData.length === 1 && teamData[0].name !== createdBy)) {
-                                let totalValue = 0;
-                                
-                                const htmlItems = teamData.map((member, index) => {
-                                    const value = parseFloat(member.earned_value) || 0;
-                                    const wage = parseFloat(member.daily_wage) || 0;
-                                    const ratio = wage > 0 ? (value / wage).toFixed(2) : '0.00';
-                                    totalValue += value;
-                                    
-                                    let ratioBadge = '';
-                                    if (ratio < 1) {
-                                        ratioBadge = `<span class="badge bg-danger text-white">Low (${ratio}x)</span>`;
-                                    } else if (ratio < 1.5) {
-                                        ratioBadge = `<span class="badge bg-warning text-dark">Fair (${ratio}x)</span>`;
-                                    } else {
-                                        ratioBadge = `<span class="badge bg-success text-white">Good (${ratio}x)</span>`;
-                                    }
-                                    
-                                    return `
+                const createdBy = row.created_by || 'N/A';
+                let teamBadge = '';
+
+                if (row.team_users) {
+                    try {
+                        const teamData = JSON.parse(row.team_users);
+                        if (teamData.length > 1 || (teamData.length === 1 && teamData[0].name !== createdBy)) {
+                            let totalValue = 0;
+
+                            const htmlItems = teamData.map((member, index) => {
+                                const value = parseFloat(member.earned_value) || 0;
+                                const wage = parseFloat(member.daily_wage) || 0;
+                                const ratio = wage > 0 ? (value / wage).toFixed(2) : '0.00';
+                                totalValue += value;
+
+                                const ratioBadge = `<span class="badge bg-success text-white px-2 py-1" style="font-size: 0.75rem; letter-spacing: 0.5px;"><i class="fas fa-plus me-1" style="font-size: 0.6rem;"></i>${ratio}</span>`;
+
+                                return `
                                     <tr>
                                         <td class="text-center text-muted align-middle" style="font-size: 0.8rem;">${index + 1}</td>
                                         <td class="text-start fw-bold text-dark align-middle" style="font-size: 0.8rem;"><i class="fas fa-user-circle text-secondary me-2"></i>${member.name}</td>
-                                        <td class="text-end text-muted align-middle" style="font-size: 0.8rem;">฿${wage.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                        <td class="text-end fw-bold text-primary align-middle" style="font-size: 0.8rem;">฿${value.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                        <td class="text-end text-muted align-middle" style="font-size: 0.8rem;">฿${wage.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        <td class="text-end fw-bold text-primary align-middle" style="font-size: 0.8rem;">฿${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td class="text-center align-middle" style="font-size: 0.8rem;">${ratioBadge}</td>
                                     </tr>`;
-                                }).join('');
+                            }).join('');
 
-                                const summaryHeader = `
+                            const summaryHeader = `
                                 <div class="d-flex justify-content-between align-items-center bg-light p-2 border-bottom">
-                                    <span class="text-secondary fw-bold" style="font-size: 0.85rem;"><i class="fas fa-coins me-2"></i>Total Work Value</span>
-                                    <span class="fw-bold text-primary" style="font-size: 1rem;">฿${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                    <span class="text-secondary fw-bold" style="font-size: 0.85rem;"><i class="fas fa-coins me-2"></i>Total Work Value <span class="badge bg-secondary ms-1">${teamData.length} คน</span></span>
+                                    <span class="fw-bold text-primary" style="font-size: 1rem;">฿${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                 </div>`;
 
-                                const htmlContainer = `
+                            const htmlContainer = `
                                 <div class="text-start">
+                                    <h5 class="mb-2 mt-2 text-secondary pb-2 text-center" style="border-bottom: 2px solid #f0f0f0;"><i class="fas fa-users text-primary me-2"></i>ผลการปฏิบัติงานทีม</h5>
                                     ${summaryHeader}
-                                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                    <div class="table-responsive mt-2" style="max-height: 400px; overflow-y: auto;">
                                         <table class="table table-sm table-hover table-bordered mb-0 text-nowrap table-settings" style="border-top: none;">
                                             <thead class="bg-light text-secondary text-uppercase" style="position: sticky; top: 0; z-index: 1;">
                                                 <tr>
@@ -653,7 +656,7 @@ function renderProductionHistoryTable(data) {
                                                     <th class="text-start py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Name</th>
                                                     <th class="text-end py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Base Wage</th>
                                                     <th class="text-end py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Earned Value</th>
-                                                    <th class="text-center py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Ratio</th>
+                                                    <th class="text-center py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Ratio Added</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -662,19 +665,19 @@ function renderProductionHistoryTable(data) {
                                         </table>
                                     </div>
                                 </div>`;
-                                const encodedHtml = htmlContainer.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '').replace(/\r/g, '');
-                                teamBadge = `<span class="badge bg-info text-dark ms-1 shadow-sm team-badge" style="cursor:pointer; transition: 0.2s;" onmouseover="this.classList.add('bg-primary', 'text-white'); this.classList.remove('bg-info', 'text-dark');" onmouseout="this.classList.add('bg-info', 'text-dark'); this.classList.remove('bg-primary', 'text-white');" onclick="Swal.fire({title: '👥 ผลการปฏิบัติงาน (${teamData.length} คน)', html: '${encodedHtml}', width: '700px', confirmButtonText: 'ปิด'})" title="คลิกดูรายละเอียดผลงาน"><i class="fas fa-users"></i> Team (${teamData.length})</span>`;
-                            }
-                        } catch (e) {
-                            console.error("Failed to parse team_users JSON:", e);
+                            const encodedHtml = htmlContainer.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '').replace(/\r/g, '');
+                            teamBadge = `<span class="badge bg-info text-dark ms-1 shadow-sm team-badge" style="cursor:pointer; transition: 0.2s;" onmouseover="this.classList.add('bg-primary', 'text-white'); this.classList.remove('bg-info', 'text-dark');" onmouseout="this.classList.add('bg-info', 'text-dark'); this.classList.remove('bg-primary', 'text-white');" onclick="Swal.fire({html: '${encodedHtml}', width: '700px', showCloseButton: true, confirmButtonText: 'ปิด', confirmButtonColor: '#6c757d'})" title="คลิกดูรายละเอียดผลงาน"><i class="fas fa-users"></i> Team (${teamData.length})</span>`;
                         }
+                    } catch (e) {
+                        console.error("Failed to parse team_users JSON:", e);
                     }
-                    return `<span>${createdBy}</span> ${teamBadge}`;
-                })()}
+                }
+                return `<span>${createdBy}</span> ${teamBadge}`;
+            })()}
             </td>
             <td class="text-center" data-label="Notes">${row.notes ? row.notes.replace(/\[(?:TEAM_OVERRIDE|Job):.*?\]/g, '').trim() : ''}</td>
         `;
-        
+
         tr.addEventListener('click', (e) => {
             if (e.target.closest('.team-badge')) return;
             editTransaction(row.transaction_id, 'production');
@@ -719,7 +722,7 @@ function renderWipOnHandTable(data) {
         tr.addEventListener('click', () => openAdjustStockModal(row));
 
         const onHandQty = Math.floor(row.quantity) || 0;
-        
+
         tr.innerHTML = `
             <td class="text-start" data-label="Location">${row.location_name}</td>
             <td class="text-center" data-label="SAP No.">${row.sap_no}</td>
@@ -787,7 +790,7 @@ async function fetchAllTransactions(page = 1) {
 
     const searchString = document.getElementById('filterSearch').value;
     const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
-                                
+
     const params = {
         page: page,
         'search_terms[]': searchTerms,
@@ -827,7 +830,7 @@ function renderAllTransactionsTable(data) {
         } else if (quantity < 0) {
             quantityClass = 'text-danger';
         }
-        
+
         tr.innerHTML = `
             <td class="text-start" data-label="Date & Time">${transactionDate.toLocaleString('en-GB')}</td>
             <td class="text-start" data-label="From">${row.source_location || 'N/A'}</td>
@@ -844,13 +847,75 @@ function renderAllTransactionsTable(data) {
     });
 }
 
+async function fetchEmployeeSummary() {
+    showSpinner();
+    const searchString = document.getElementById('filterSearch').value;
+    const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
+    const params = {
+        'search_terms[]': searchTerms,
+        startDate: document.getElementById('filterStartDate').value,
+        endDate: document.getElementById('filterEndDate').value,
+        line: document.getElementById('filterLine')?.value || '',
+        team: document.getElementById('filterTeam')?.value || '',
+    };
+    try {
+        const result = await sendRequest(INVENTORY_API_URL, 'get_employee_daily_summary', 'GET', null, params);
+        if (result.success) {
+            renderEmployeeSummaryTable(result.data);
+        } else {
+            document.getElementById('employeeSummaryTableBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">${result.message || 'Error loading summary'}</td></tr>`;
+        }
+    } catch (e) {
+        document.getElementById('employeeSummaryTableBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error fetching summary</td></tr>`;
+    } finally {
+        hideSpinner();
+    }
+}
+
+function renderEmployeeSummaryTable(data) {
+    const tbody = document.getElementById('employeeSummaryTableBody');
+    tbody.innerHTML = '';
+    if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center">No employee records found for this period.</td></tr>`;
+        return;
+    }
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        const wage = Math.floor(row.daily_wage || 0);
+        const earned = Math.floor(row.total_earned_value || 0);
+        let ratio = 0;
+        let badgeClass = 'bg-secondary';
+        let badgeText = 'N/A';
+
+        if (wage > 0) {
+            ratio = earned / wage;
+            if (ratio >= 1.5) { badgeClass = 'bg-success'; badgeText = 'A'; }
+            else if (ratio >= 1.0) { badgeClass = 'bg-primary'; badgeText = 'B'; }
+            else if (ratio >= 0.8) { badgeClass = 'bg-warning text-dark'; badgeText = 'C'; }
+            else { badgeClass = 'bg-danger'; badgeText = 'D'; }
+        }
+
+        tr.innerHTML = `
+            <td class="text-start" data-label="Name">${row.name || 'N/A'}</td>
+            <td class="text-center" data-label="Team">${row.team_group || 'N/A'}</td>
+            <td class="text-end" data-label="Daily Wage (฿)">${wage.toLocaleString()}</td>
+            <td class="text-end fw-bold text-primary" data-label="Earned Value (฿)">${earned.toLocaleString()}</td>
+            <td class="text-end" data-label="Ratio / Grade">
+                ${wage > 0 ? `<span class="fw-bold">${(ratio * 100).toFixed(2)}%</span> <span class="badge ${badgeClass} ms-1" style="width: 30px;">${badgeText}</span>` : '-'}
+            </td>
+            <td class="text-center" data-label="Txn Count">${row.transaction_count}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
 // =================================================================
 // SECTION: MODAL HANDLING
 // =================================================================
 
 async function populateModalDatalists() {
     const result = await sendRequest(INVENTORY_API_URL, 'get_initial_data', 'GET');
-     if (result.success) {
+    if (result.success) {
         allItems = result.items;
         allLocations = result.locations || [];
         allMachines = result.machines || [];
@@ -858,7 +923,7 @@ async function populateModalDatalists() {
         const inToLocationSelect = document.getElementById('entry_to_location_id');
         const inFromLocationSelect = document.getElementById('entry_from_location_id');
         const outLocationSelect = document.getElementById('out_location_id');
-        
+
         const editInFromLocationSelect = document.getElementById('edit_entry_from_location_id');
         const editInToLocationSelect = document.getElementById('edit_entry_to_location_id');
         const editOutLocationSelect = document.getElementById('edit_production_location_id');
@@ -871,14 +936,14 @@ async function populateModalDatalists() {
         if (outLocationSelect) {
             outLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
         }
-        
+
         if (editInFromLocationSelect) {
             editInFromLocationSelect.innerHTML = '<option value="">-- Select Source --</option>' + optionsHtml;
         }
         if (editInToLocationSelect) {
             editInToLocationSelect.innerHTML = '<option value="">-- Select Destination --</option>' + optionsHtml;
         }
-        
+
         if (editOutLocationSelect) {
             editOutLocationSelect.innerHTML = '<option value="">-- Select Location --</option>' + optionsHtml;
         }
@@ -888,7 +953,7 @@ async function populateModalDatalists() {
             inFromLocationSelect.innerHTML = fromOptionsHtml;
         }
 
-        
+
         if (outLocationSelect) {
             outLocationSelect.addEventListener('change', () => renderMachineDropdown('out_machine_id', 'out_location_id'));
         }
@@ -898,7 +963,7 @@ async function populateModalDatalists() {
 
         renderMachineDropdown('out_machine_id', 'out_location_id');
         renderMachineDropdown('edit_production_machine_id', 'edit_production_location_id');
-        
+
         if (result.users && result.users.length > 0) {
             populateTeamUserDropdown(result.users, 'out');
             populateTeamUserDropdown(result.users, 'edit_production');
@@ -915,7 +980,7 @@ function renderMachineDropdown(machineSelectId, locationSelectId) {
     const selectedLocation = allLocations.find(l => l.location_id == selectedLocationId);
     const productionLine = selectedLocation ? selectedLocation.production_line : null;
 
-    const sortedMachines = [...allMachines].sort((a, b) => a.machine_name.localeCompare(b.machine_name, undefined, {numeric: true, sensitivity: 'base'}));
+    const sortedMachines = [...allMachines].sort((a, b) => a.machine_name.localeCompare(b.machine_name, undefined, { numeric: true, sensitivity: 'base' }));
 
     let optionsHtml = '<option value="">-- ไม่ระบุ --</option>';
 
@@ -928,7 +993,7 @@ function renderMachineDropdown(machineSelectId, locationSelectId) {
             optionsHtml += lineMachines.map(m => `<option value="${m.machine_id}">${m.machine_name} (${m.line || 'N/A'})</option>`).join('');
             optionsHtml += `</optgroup>`;
         }
-        
+
         if (otherMachines.length > 0) {
             optionsHtml += `<optgroup label="เครื่องจักรอื่นๆ">`;
             optionsHtml += otherMachines.map(m => `<option value="${m.machine_id}">${m.machine_name} (${m.line || 'N/A'})</option>`).join('');
@@ -955,7 +1020,7 @@ function openAddPartModal() {
     searchInput.value = '';
 
     try {
-        const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_OUT')); 
+        const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_OUT'));
         if (lastData) {
             const locationSelect = document.getElementById('out_location_id');
             if (locationSelect) {
@@ -970,8 +1035,8 @@ function openAddPartModal() {
                 selectedOutItem = allItems.find(item => item.item_id == lastData.item_id) || null;
             }
         }
-    } catch(e) {}
-    
+    } catch (e) { }
+
     const now = new Date();
     document.getElementById('out_log_date').value = now.toISOString().split('T')[0];
     new bootstrap.Modal(document.getElementById('addPartModal')).show();
@@ -979,24 +1044,24 @@ function openAddPartModal() {
 
 function openAddEntryModal() {
     const form = document.getElementById('addEntryForm');
-    if(form) form.reset();
-    
+    if (form) form.reset();
+
     selectedInItem = null;
     document.getElementById('entry_item_id').value = '';
     document.getElementById('entry_item_search').value = '';
-    
+
     g_CurrentPCTransferOrder = null;
     const transferInput = document.getElementById('entry_transfer_id_input');
     const transferUuidHidden = document.getElementById('entry_transfer_uuid');
     if (transferInput) transferInput.value = '';
     if (transferUuidHidden) transferUuidHidden.value = '';
-    
+
     unlockEntryForm();
 
     const now = new Date();
     document.getElementById('entry_log_date').value = now.toISOString().split('T')[0];
     document.getElementById('entry_log_time').value = now.toTimeString().substring(0, 8);
-    
+
     try {
         const lastData = JSON.parse(localStorage.getItem('inventoryUILastEntry_IN'));
         if (lastData) {
@@ -1012,8 +1077,8 @@ function openAddEntryModal() {
                 document.getElementById('entry_to_location_id').value = lastData.to_location_id;
             }
         }
-    } catch(e) {}
-    
+    } catch (e) { }
+
     updateAvailableStockDisplay();
     new bootstrap.Modal(document.getElementById('addEntryModal')).show();
 }
@@ -1053,19 +1118,19 @@ async function autoFillFromTransferOrder_PC() {
         if (!result.success) throw new Error(result.message);
 
         const order = result.data;
-        g_CurrentPCTransferOrder = order; 
+        g_CurrentPCTransferOrder = order;
 
         if (order.status !== 'PENDING') {
             throw new Error(`This transfer is already ${order.status}.`);
         }
 
-        selectedInItem = { 
-            item_id: order.item_id, 
-            sap_no: order.sap_no, 
-            part_no: order.part_no, 
-            part_description: order.part_description 
+        selectedInItem = {
+            item_id: order.item_id,
+            sap_no: order.sap_no,
+            part_no: order.part_no,
+            part_description: order.part_description
         };
-        
+
         document.getElementById('entry_item_search').value = `${order.sap_no} | ${order.part_no}`;
         document.getElementById('entry_item_id').value = order.item_id;
         document.getElementById('entry_lot_no').value = order.transfer_uuid;
@@ -1076,7 +1141,7 @@ async function autoFillFromTransferOrder_PC() {
         document.getElementById('entry_transfer_uuid').value = order.transfer_uuid;
 
         lockEntryForm();
-        
+
         await updateAvailableStockDisplay();
         showToast("Transfer order loaded. Please confirm.", 'var(--bs-success)');
 
@@ -1084,8 +1149,8 @@ async function autoFillFromTransferOrder_PC() {
         showToast(error.message, 'var(--bs-danger)');
         g_CurrentPCTransferOrder = null;
         document.getElementById('entry_transfer_uuid').value = '';
-        unlockEntryForm(); 
-        selectedInItem = null; 
+        unlockEntryForm();
+        selectedInItem = null;
     } finally {
         hideSpinner();
     }
@@ -1098,7 +1163,7 @@ async function openStockDetailModal(itemId, partNo) {
 
     modalTitle.textContent = `Stock Details for: ${partNo}`;
     modalBody.innerHTML = '<tr><td colspan="2" class="text-center">Loading details...</td></tr>';
-    
+
     const modal = new bootstrap.Modal(modalElement);
     modal.show();
 
@@ -1128,7 +1193,7 @@ function handleDeleteFromModal(type) {
         transactionId = modal.querySelector('#edit_entry_transaction_id').value;
         deleteBtn = modal.querySelector('#deleteEntryFromModalBtn');
         transferUuid = deleteBtn.dataset.transferUuid || null;
-        
+
     } else {
         modalId = 'editProductionModal';
         const modal = document.getElementById(modalId);
@@ -1144,7 +1209,7 @@ function handleDeleteFromModal(type) {
 
     const modalInstance = bootstrap.Modal.getInstance(document.getElementById(modalId));
     if (modalInstance) modalInstance.hide();
-    
+
     deleteOrReverseTransaction(transactionId, transferUuid, type);
 }
 
@@ -1167,7 +1232,7 @@ async function deleteOrReverseTransaction(transactionId, transferUuid, type) {
     try {
         const result = await sendRequest(apiEndpoint, action, 'POST', body);
         showToast(result.message, result.success ? 'var(--bs-success)' : 'var(--bs-danger)');
-        
+
         if (result.success) {
             if (type === 'entry' || transferUuid) {
                 await fetchReceiptHistory(receiptHistoryCurrentPage);
@@ -1194,7 +1259,7 @@ async function openVarianceDetailModal(itemId, locationId, partNo, lotNo = null)
 
     inTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
     outTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
-    
+
     const modal = new bootstrap.Modal(modalElement);
     modal.show();
 
@@ -1226,7 +1291,7 @@ async function openVarianceDetailModal(itemId, locationId, partNo, lotNo = null)
         inTableBody.innerHTML = '<tr><td colspan="3" class="text-center">No IN records found.</td></tr>';
     }
     totalInSpan.textContent = totalIn.toLocaleString();
-    
+
     outTableBody.innerHTML = '';
     let totalOut = 0;
     if (result.success && result.data.out_records.length > 0) {
@@ -1252,7 +1317,7 @@ function openAdjustStockModal(itemData) {
     if (!modal) return;
 
     modal.querySelector('#adjust_item_id').value = itemData.item_id;
-    modal.querySelector('#adjust_location_id').value = itemData.location_id || itemData.onhand_location_id; 
+    modal.querySelector('#adjust_location_id').value = itemData.location_id || itemData.onhand_location_id;
 
     modal.querySelector('#adjust_item_display').value = `${itemData.sap_no} | ${itemData.part_no}`;
     modal.querySelector('#adjust_location_display').value = itemData.location_name;
@@ -1289,7 +1354,7 @@ async function openSummaryModal() {
 
     if (result.success && result.summary && result.summary.length > 0) {
         modalBody.innerHTML = '';
-        
+
         result.summary.forEach(row => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -1302,7 +1367,7 @@ async function openSummaryModal() {
         });
 
         let overallGrandTotal = 0;
-        
+
         result.grand_total.forEach(row => {
             const quantity = Math.floor(row.total_quantity) || 0;
             overallGrandTotal += quantity;
@@ -1315,7 +1380,7 @@ async function openSummaryModal() {
             modalBody.appendChild(tr);
         });
 
-        if (result.grand_total.length > 1) { 
+        if (result.grand_total.length > 1) {
             const tr = document.createElement('tr');
             tr.className = 'table-dark fw-bold';
             tr.innerHTML = `
@@ -1333,7 +1398,7 @@ async function openHistorySummaryModal() {
     const modalBody = document.getElementById('historySummaryTableBody');
     if (!modalBody) return;
     modalBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading summary...</td></tr>';
-    
+
     const summaryModal = new bootstrap.Modal(document.getElementById('historySummaryModal'));
     summaryModal.show();
 
@@ -1381,10 +1446,10 @@ async function handleAdjustStockSubmit(event) {
     event.preventDefault();
     const form = event.target;
     const submitBtn = form.querySelector('button[type="submit"]');
-    
+
     submitBtn.disabled = true;
     showSpinner();
-    
+
     try {
         const data = Object.fromEntries(new FormData(form).entries());
         const result = await sendRequest(INVENTORY_API_URL, 'adjust_single_stock', 'POST', data);
@@ -1409,9 +1474,9 @@ async function updateAvailableStockDisplay() {
     if (!selectedInItem || !fromLocationId) return;
 
     display.textContent = 'Loading...';
-    const result = await sendRequest(INVENTORY_API_URL, 'get_stock_onhand', 'GET', null, { 
-        item_id: selectedInItem.item_id, 
-        location_id: fromLocationId 
+    const result = await sendRequest(INVENTORY_API_URL, 'get_stock_onhand', 'GET', null, {
+        item_id: selectedInItem.item_id,
+        location_id: fromLocationId
     });
 
     if (result.success) {
@@ -1431,25 +1496,25 @@ async function handleFormSubmit(event) {
     const form = event.target;
     const action = form.dataset.action;
     const submitBtn = form.querySelector('button[type="submit"]');
-    
-    submitBtn.disabled = true; 
+
+    submitBtn.disabled = true;
     showSpinner();
-    
+
     try {
         if (action === 'addPart') {
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
-            
+
             const locationId = document.getElementById('out_location_id').value;
             if (!locationId) throw new Error("กรุณาเลือก Location");
-            
+
             const timeSlot = formData.get('time_slot');
             if (!timeSlot || !timeSlot.includes('|')) throw new Error("ช่วงเวลาไม่ถูกต้อง");
             const [startTime, endTime] = timeSlot.split('|');
 
             const baseData = {
                 item_id: data.item_id,
-                location_id: locationId, 
+                location_id: locationId,
                 machine_id: data.machine_id,
                 lot_no: data.lot_no,
                 log_date: data.log_date,
@@ -1460,7 +1525,7 @@ async function handleFormSubmit(event) {
                 team_user_ids: data.team_user_ids,
                 defect_source: data.defect_source
             };
-            
+
             const transactions = [];
             const qtyFg = Math.floor(data.quantity_fg) || 0;
             const qtyHold = Math.floor(data.quantity_hold) || 0;
@@ -1477,8 +1542,8 @@ async function handleFormSubmit(event) {
                 const res = await sendRequest(INVENTORY_API_URL, 'execute_production', 'POST', trans);
                 if (!res.success) { allSuccess = false; throw new Error(res.message); }
             }
-            
-            if (allSuccess) { 
+
+            if (allSuccess) {
                 Swal.fire({
                     title: 'บันทึกการผลิตสำเร็จ!',
                     text: 'ระบบได้ตัดสต็อกวัตถุดิบตามสูตรเรียบร้อยแล้ว',
@@ -1486,7 +1551,7 @@ async function handleFormSubmit(event) {
                     timer: 1500,
                     showConfirmButton: false
                 });
-                
+
                 const searchInputValue = document.getElementById('out_item_search').value;
                 let lastEntryData = {
                     item_id: baseData.item_id,
@@ -1495,40 +1560,40 @@ async function handleFormSubmit(event) {
                     machine_id: baseData.machine_id
                 };
                 localStorage.setItem('inventoryUILastEntry_OUT', JSON.stringify(lastEntryData));
-                
+
                 bootstrap.Modal.getInstance(form.closest('.modal')).hide();
-                await fetchProductionHistory(productionHistoryCurrentPage); 
+                await fetchProductionHistory(productionHistoryCurrentPage);
             }
 
         } else if (action === 'addEntry') {
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
-            const transferUuid = data.transfer_uuid; 
+            const transferUuid = data.transfer_uuid;
 
             if (transferUuid) {
                 if (!data.to_location_id) throw new Error("กรุณาเลือก Location ปลายทาง (To)");
 
                 if (g_CurrentPCTransferOrder && g_CurrentPCTransferOrder.to_location_id != data.to_location_id) {
-                     throw new Error(`Location ไม่ตรงกับใบโอน (ใบโอนนี้สำหรับ ${g_CurrentPCTransferOrder.to_location_name})`);
+                    throw new Error(`Location ไม่ตรงกับใบโอน (ใบโอนนี้สำหรับ ${g_CurrentPCTransferOrder.to_location_name})`);
                 }
 
                 const body = {
                     transfer_uuid: transferUuid,
                     confirmed_quantity: Math.floor(data.confirmed_quantity)
                 };
-                
+
                 const res = await sendRequest(TRANSFER_API_URL, 'confirm_transfer', 'POST', body);
                 if (!res.success) throw new Error(res.message);
 
                 showToast("ยืนยันการรับของสำเร็จ!", 'var(--bs-success)');
-                
+
                 bootstrap.Modal.getInstance(form.closest('.modal')).hide();
-                await fetchReceiptHistory(receiptHistoryCurrentPage); 
+                await fetchReceiptHistory(receiptHistoryCurrentPage);
                 selectedInItem = null;
 
             } else {
                 if (!data.to_location_id) throw new Error("กรุณาเลือก Location ปลายทาง (To)");
-                
+
                 data.quantity = Math.floor(data.confirmed_quantity); // For receiving without transfer order
                 const res = await sendRequest(INVENTORY_API_URL, 'execute_receipt', 'POST', data);
                 if (!res.success) throw new Error(res.message);
@@ -1543,7 +1608,7 @@ async function handleFormSubmit(event) {
                     to_location_id: data.to_location_id
                 };
                 localStorage.setItem('inventoryUILastEntry_IN', JSON.stringify(lastEntryData));
-                
+
                 bootstrap.Modal.getInstance(form.closest('.modal')).hide();
                 await fetchReceiptHistory(receiptHistoryCurrentPage);
                 selectedInItem = null;
@@ -1564,14 +1629,14 @@ async function handleFormSubmit(event) {
         }
     } catch (error) {
         const errorMessage = error.message || 'An unexpected error occurred.';
-        
+
         if (errorMessage.includes("ใบโอนย้ายนี้ถูกประมวลผลไปแล้ว") || errorMessage.includes("ไม่พบใบโอนย้ายนี้")) {
             showToast(errorMessage, 'var(--bs-danger)');
             unlockEntryForm();
             document.getElementById('entry_transfer_id_input').value = '';
             document.getElementById('entry_transfer_uuid').value = '';
             g_CurrentPCTransferOrder = null;
-            selectedInItem = null; 
+            selectedInItem = null;
 
         } else if (errorMessage.includes('วัตถุดิบในจุดจัดเก็บ')) {
             const errorHtml = errorMessage.replace(/\n/g, '<br>');
@@ -1600,7 +1665,7 @@ async function handleFormSubmit(event) {
         }
     } finally {
         hideSpinner();
-        submitBtn.disabled = false; 
+        submitBtn.disabled = false;
     }
 }
 
@@ -1645,20 +1710,20 @@ async function editTransaction(transactionId, type) {
             if (type === 'entry') {
                 modalId = 'editEntryModal';
                 modal = new bootstrap.Modal(document.getElementById(modalId));
-                
+
                 deleteBtn = document.getElementById('deleteEntryFromModalBtn');
                 saveBtn = document.querySelector('#editEntryForm button[data-action="save"]');
 
                 document.getElementById('edit_entry_transaction_id').value = data.transaction_id;
                 document.getElementById('edit_entry_item_display').value = `${data.sap_no} | ${data.part_no}`;
-                
+
                 document.getElementById('edit_entry_from_location_id').value = data.from_location_id || "";
                 document.getElementById('edit_entry_to_location_id').value = data.to_location_id;
-                
+
                 document.getElementById('edit_entry_quantity').value = Math.floor(data.quantity);
                 document.getElementById('edit_entry_lot_no').value = data.reference_id;
                 document.getElementById('edit_entry_notes').value = data.notes ? data.notes.replace(/\[(?:TEAM_OVERRIDE|Job):.*?\]/g, '').trim() : '';
-                
+
                 if (data.transaction_timestamp) {
                     const dateObj = new Date(data.transaction_timestamp);
                     const year = dateObj.getFullYear();
@@ -1676,25 +1741,25 @@ async function editTransaction(transactionId, type) {
                 modal = new bootstrap.Modal(document.getElementById(modalId));
                 deleteBtn = document.getElementById('deleteProductionFromModalBtn');
                 saveBtn = modal._element.querySelector('button[type="submit"]');
-                
+
                 document.getElementById('edit_production_transaction_id').value = data.transaction_id;
                 document.getElementById('edit_production_item_display').value = `${data.sap_no} | ${data.part_no}`;
-                document.getElementById('edit_production_location_id').value = data.to_location_id; 
+                document.getElementById('edit_production_location_id').value = data.to_location_id;
                 renderMachineDropdown('edit_production_machine_id', 'edit_production_location_id');
                 document.getElementById('edit_production_machine_id').value = data.machine_id || '';
                 document.getElementById('edit_production_quantity').value = Math.floor(data.quantity);
                 document.getElementById('edit_production_lot_no').value = data.reference_id;
                 document.getElementById('edit_production_count_type').value = data.transaction_type.replace('PRODUCTION_', '');
-                
+
                 let overrideTeamMatch = data.notes ? data.notes.match(/\[TEAM_OVERRIDE:\s*(.*?)\]/) : null;
                 if (overrideTeamMatch && overrideTeamMatch[1]) {
                     document.getElementById('edit_out_override_team').value = overrideTeamMatch[1].trim();
                 } else {
                     document.getElementById('edit_out_override_team').value = '';
                 }
-                
+
                 document.getElementById('edit_production_notes').value = data.notes ? data.notes.replace(/\[(?:TEAM_OVERRIDE|Job):.*?\]/g, '').trim() : '';
-                
+
                 if (data.team_user_ids && data.team_user_ids.length > 0) {
                     setTeamUserSelection('edit_production', data.team_user_ids);
                 } else {
@@ -1709,11 +1774,11 @@ async function editTransaction(transactionId, type) {
             }
 
             if (data.transaction_type === 'INTERNAL_TRANSFER' || data.transaction_type === 'REVERSAL_TRANSFER') {
-                deleteBtn.textContent = 'Reversal'; 
+                deleteBtn.textContent = 'Reversal';
                 deleteBtn.classList.remove('btn-danger');
                 deleteBtn.classList.add('btn-warning');
-                deleteBtn.dataset.transferUuid = data.reference_id; 
-                if (saveBtn) saveBtn.style.display = 'none'; 
+                deleteBtn.dataset.transferUuid = data.reference_id;
+                if (saveBtn) saveBtn.style.display = 'none';
 
                 if (type === 'entry') setEntryModalReadOnly(true);
 
@@ -1721,8 +1786,8 @@ async function editTransaction(transactionId, type) {
                 deleteBtn.textContent = 'Delete';
                 deleteBtn.classList.remove('btn-warning');
                 deleteBtn.classList.add('btn-danger');
-                deleteBtn.dataset.transferUuid = ''; 
-                if (saveBtn) saveBtn.style.display = 'inline-block'; 
+                deleteBtn.dataset.transferUuid = '';
+                if (saveBtn) saveBtn.style.display = 'inline-block';
 
                 if (type === 'entry') setEntryModalReadOnly(false);
             }
@@ -1742,12 +1807,12 @@ async function openHourlyProductionModal() {
     const tableFoot = document.getElementById('hourly-production-tfoot');
     const subTitle = document.getElementById('hourly-production-subtitle');
     const navContainer = document.getElementById('hourly-production-nav');
-    
+
     tableHead.innerHTML = '';
     tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Loading hourly data...</td></tr>';
     tableFoot.innerHTML = '';
     navContainer.innerHTML = '';
-    
+
     const startDate = document.getElementById('filterStartDate').value;
     const endDate = document.getElementById('filterEndDate').value;
     subTitle.textContent = `แสดงผลสรุปยอดรวม ตั้งแต่วันที่: ${startDate} ถึง ${endDate} (อ้างอิงกะ 8:00 - 8:00)`;
@@ -1757,7 +1822,7 @@ async function openHourlyProductionModal() {
 
     const searchString = document.getElementById('filterSearch').value;
     const searchTerms = searchString.split(',').map(term => term.trim()).filter(term => term.length > 0);
-                                
+
     const params = {
         startDate: startDate,
         endDate: endDate,
@@ -1778,30 +1843,30 @@ async function openHourlyProductionModal() {
     result.data.forEach(row => {
         const dateKey = row.ProductionDate;
         const hour = parseInt(row.hour_of_day);
-        const pivotKey = `${row.part_no} (${row.sap_no})`; 
-        
+        const pivotKey = `${row.part_no} (${row.sap_no})`;
+
         const counts = {
             fg: Math.floor(row.Qty_FG),
             hold: Math.floor(row.Qty_HOLD),
             scrap: Math.floor(row.Qty_SCRAP)
         };
-        
+
         if (!dataByDate[dateKey]) {
             dataByDate[dateKey] = {
-                pivotData: {},      
+                pivotData: {},
                 pivotKeys: new Set(),
                 totalsByPivotKey: {}
             };
         }
-        
+
         const dayData = dataByDate[dateKey];
         dayData.pivotKeys.add(pivotKey);
-        
+
         if (!dayData.totalsByPivotKey[pivotKey]) dayData.totalsByPivotKey[pivotKey] = { fg: 0, hold: 0, scrap: 0 };
         if (!dayData.pivotData[hour]) dayData.pivotData[hour] = {};
 
         dayData.pivotData[hour][pivotKey] = counts;
-        
+
         dayData.totalsByPivotKey[pivotKey].fg += counts.fg;
         dayData.totalsByPivotKey[pivotKey].hold += counts.hold;
         dayData.totalsByPivotKey[pivotKey].scrap += counts.scrap;
@@ -1829,8 +1894,8 @@ async function openHourlyProductionModal() {
 
     function renderTableForDate(dateKey) {
         const dayData = dataByDate[dateKey];
-        const sortedPivotKeys = Array.from(dayData ? dayData.pivotKeys : new Set()).sort(); 
-        
+        const sortedPivotKeys = Array.from(dayData ? dayData.pivotKeys : new Set()).sort();
+
         let headerHtml = '<tr><th class="text-center" style="width: 150px;">Time</th>';
         sortedPivotKeys.forEach(key => {
             headerHtml += `<th class="text-center" style="min-width: 180px;">${key}</th>`;
@@ -1846,7 +1911,7 @@ async function openHourlyProductionModal() {
         hoursInDay.forEach(hour => {
             const hourLabel = `${String(hour).padStart(2, '0')}:00 - ${String(hour).padStart(2, '0')}:59`;
             bodyHtml += `<tr><td class="text-center fw-medium" style="width: 150px;">${hourLabel}</td>`;
-            
+
             const hourData = dayData ? (dayData.pivotData[hour] || {}) : {};
 
             sortedPivotKeys.forEach(key => {
@@ -1858,7 +1923,7 @@ async function openHourlyProductionModal() {
 
         let footerHtml = '<tr><th class="text-end" style="width: 150px;">Total</th>';
         const totals = dayData ? dayData.totalsByPivotKey : {};
-        
+
         sortedPivotKeys.forEach(key => {
             footerHtml += createCellHtml(totals[key], true);
         });
@@ -1878,21 +1943,21 @@ async function openHourlyProductionModal() {
         button.textContent = dateKey;
         button.addEventListener('click', (e) => {
             e.preventDefault();
-            renderTableForDate(e.target.dataset.dateKey); 
+            renderTableForDate(e.target.dataset.dateKey);
         });
         navContainer.appendChild(button);
     });
     if (dates.length > 0) {
         renderTableForDate(dates[0]);
     } else {
-         tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No production data found for this period.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No production data found for this period.</td></tr>';
     }
 }
 
 function updateMobileFab(activeTabId) {
     const fabContainer = document.getElementById('mobileFabContainer');
     const fabBtn = document.getElementById('mobileFabBtn');
-    
+
     if (!fabContainer || !fabBtn) return;
 
     const newFabBtn = fabBtn.cloneNode(true);
@@ -1925,7 +1990,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('form[data-action]').forEach(form => {
         form.addEventListener('submit', handleFormSubmit);
     });
-    
+
     document.getElementById('adjustStockForm')?.addEventListener('submit', handleAdjustStockSubmit);
     document.getElementById('deleteEntryFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('entry'));
     document.getElementById('deleteProductionFromModalBtn')?.addEventListener('click', () => handleDeleteFromModal('production'));
@@ -1943,7 +2008,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterTeam')?.addEventListener('change', handleFilterChange);
     document.getElementById('filterMachine')?.addEventListener('change', handleFilterChange);
     document.getElementById('entry_from_location_id')?.addEventListener('change', updateAvailableStockDisplay);
-    
+
     document.querySelectorAll('#mainTab .nav-link').forEach(tab => {
         tab.addEventListener('shown.bs.tab', (event) => {
             const activeTabId = event.target.id;

@@ -1516,6 +1516,86 @@ try {
             }
             break;
 
+        case 'get_employee_daily_summary':
+            $conditions = [];
+            $params = [];
+            
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                // Admin sees all
+            } else if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "(loc.production_line = ? OR tu.line = ?)";
+                $params[] = $currentUser['line'];
+                $params[] = $currentUser['line'];
+            } else {
+                $conditions[] = "stu.user_id = ?";
+                $params[] = $currentUser['id'];
+            }
+            
+            if (!empty($_GET['team'])) {
+                $conditions[] = "tu.team_group = ?";
+                $params[] = $_GET['team'];
+            }
+            if (!empty($_GET['startDate'])) {
+                $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
+                $params[] = $_GET['startDate'];
+            }
+            if (!empty($_GET['endDate'])) {
+                $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
+                $params[] = $_GET['endDate'];
+            }
+            if (!empty($_GET['line'])) {
+                $conditions[] = "loc.production_line = ?";
+                $params[] = $_GET['line'];
+            }
+
+            $conditions[] = "t.transaction_type LIKE 'PRODUCTION_%'";
+            $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
+            
+            $sql = "
+            SELECT 
+                stu.user_id,
+                ISNULL(NULLIF(tu.fullname, ''), tu.username) AS name,
+                tu.team_group,
+                COALESCE(
+                    CASE 
+                        WHEN pr.rate_type LIKE 'MONTHLY%' THEN pr.hourly_rate / 30.0 
+                        ELSE pr.hourly_rate 
+                    END, 
+                    (SELECT TOP 1 CASE WHEN rate_type LIKE 'MONTHLY%' THEN hourly_rate / 30.0 ELSE hourly_rate END FROM MANPOWER_CATEGORY_MAPPING WHERE keyword = 'พนักงานประจำ' OR category_name = 'พนักงานประจำ'),
+                    350.0
+                ) AS daily_wage,
+                SUM(
+                    stu.head_count_ratio * (t.quantity * (
+                        ISNULL(t.std_cost_dl_snapshot, ISNULL(i.Cost_DL, 0)) + 
+                        ISNULL(t.std_cost_oh_snapshot, (ISNULL(i.Cost_OH_Machine, 0) + ISNULL(i.Cost_OH_Utilities, 0) + ISNULL(i.Cost_OH_Indirect, 0) + ISNULL(i.Cost_OH_Staff, 0) + ISNULL(i.Cost_OH_Accessory, 0) + ISNULL(i.Cost_OH_Others, 0)))
+                    ))
+                ) AS total_earned_value,
+                COUNT(DISTINCT t.transaction_id) as transaction_count
+            FROM dbo.STOCK_TRANSACTION_USERS stu
+            INNER JOIN dbo." . TRANSACTIONS_TABLE . " t ON stu.transaction_id = t.transaction_id
+            INNER JOIN dbo." . USERS_TABLE . " tu ON stu.user_id = tu.id
+            LEFT JOIN dbo." . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
+            LEFT JOIN dbo." . LOCATIONS_TABLE . " loc ON ISNULL(t.to_location_id, t.from_location_id) = loc.location_id
+            LEFT JOIN dbo.MANPOWER_EMPLOYEES emp ON tu.emp_id = emp.emp_id COLLATE Thai_CI_AS
+            OUTER APPLY (SELECT TOP 1 * FROM MANPOWER_CATEGORY_MAPPING WHERE emp.position LIKE '%' + keyword + '%' COLLATE Thai_CI_AS ORDER BY display_order DESC) pr
+            $whereClause
+            GROUP BY 
+                stu.user_id, 
+                tu.username, 
+                tu.fullname, 
+                tu.team_group,
+                pr.rate_type,
+                pr.hourly_rate
+            ORDER BY total_earned_value DESC
+            ";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $data]);
+            break;
+
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => "Action '{$action}' is not handled."]);
