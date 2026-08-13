@@ -23,6 +23,99 @@ let selectedInItem = null;
 let selectedOutItem = null;
 let g_CurrentPCTransferOrder = null;
 
+// --- Team User Logic ---
+function populateTeamUserDropdown(users, prefix) {
+    const listEl = document.getElementById(`${prefix}_team_user_list`);
+    if (!listEl) return;
+    
+    listEl.innerHTML = '';
+    
+    // Add Search Input
+    const searchLi = document.createElement('li');
+    searchLi.className = 'px-2 pb-2 mb-2 border-bottom sticky-top bg-white';
+    searchLi.innerHTML = `<input type="text" class="form-control form-control-sm" placeholder="ค้นหาชื่อ..." id="${prefix}_team_user_search">`;
+    listEl.appendChild(searchLi);
+    
+    const searchInput = searchLi.querySelector('input');
+    searchInput.addEventListener('input', function(e) {
+        const term = e.target.value.toLowerCase();
+        const items = listEl.querySelectorAll('.team-user-item');
+        items.forEach(item => {
+            const label = item.querySelector('label').textContent.toLowerCase();
+            item.style.display = label.includes(term) ? '' : 'none';
+        });
+    });
+
+    users.forEach(u => {
+        const li = document.createElement('li');
+        li.className = 'dropdown-item p-1 team-user-item';
+        
+        const div = document.createElement('div');
+        div.className = 'form-check m-0';
+        
+        const input = document.createElement('input');
+        input.className = 'form-check-input ms-0 me-2 team-user-checkbox';
+        input.type = 'checkbox';
+        input.value = u.id;
+        input.id = `${prefix}_team_user_${u.id}`;
+        
+        const label = document.createElement('label');
+        label.className = 'form-check-label w-100 d-block small';
+        label.htmlFor = `${prefix}_team_user_${u.id}`;
+        label.textContent = u.fullname ? `${u.fullname} (${u.username})` : u.username;
+        
+        input.addEventListener('change', () => updateTeamUserUI(prefix));
+        
+        div.appendChild(input);
+        div.appendChild(label);
+        li.appendChild(div);
+        listEl.appendChild(li);
+    });
+}
+
+function updateTeamUserUI(prefix) {
+    const listEl = document.getElementById(`${prefix}_team_user_list`);
+    const btnTextEl = document.getElementById(`${prefix}_team_user_text`);
+    const countEl = document.getElementById(`${prefix}_team_user_count`);
+    const hiddenInput = document.getElementById(`${prefix}_team_user_ids`);
+    
+    if (!listEl || !hiddenInput) return;
+    
+    const checkboxes = listEl.querySelectorAll('.team-user-checkbox:checked');
+    const ids = Array.from(checkboxes).map(cb => cb.value);
+    
+    hiddenInput.value = ids.join(',');
+    
+    if (ids.length === 0) {
+        btnTextEl.textContent = '-- อิงตามผู้ล็อกอิน --';
+        countEl.textContent = '1';
+        countEl.className = 'badge bg-secondary';
+    } else {
+        const names = Array.from(checkboxes).map(cb => cb.nextElementSibling.textContent.split(' ')[0]);
+        btnTextEl.textContent = names.join(', ');
+        countEl.textContent = ids.length;
+        countEl.className = 'badge bg-primary';
+    }
+}
+
+function setTeamUserSelection(prefix, userIds) {
+    const listEl = document.getElementById(`${prefix}_team_user_list`);
+    if (!listEl) return;
+    
+    const checkboxes = listEl.querySelectorAll('.team-user-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = userIds.includes(Number(cb.value)) || userIds.includes(String(cb.value));
+    });
+    
+    updateTeamUserUI(prefix);
+}
+
+document.addEventListener('click', function(e) {
+    if (e.target.closest('#out_team_user_list') || e.target.closest('#edit_production_team_user_list')) {
+        e.stopPropagation();
+    }
+});
+
 // =================================================================
 // SECTION: CORE & UTILITY FUNCTIONS
 // =================================================================
@@ -489,7 +582,6 @@ function renderProductionHistoryTable(data) {
         tr.dataset.transactionId = row.transaction_id;
         tr.style.cursor = 'pointer';
         tr.title = 'Click to edit';
-        tr.addEventListener('click', () => editTransaction(row.transaction_id, 'production'));
 
         const transactionDate = new Date(row.transaction_timestamp);
         const dateStr = transactionDate.toLocaleDateString('en-GB');
@@ -508,10 +600,85 @@ function renderProductionHistoryTable(data) {
             <td class="text-center" data-label="Location">${row.location_name || 'N/A'}</td>
             <td class="text-center" data-label="Quantity">${Math.floor(row.quantity).toLocaleString()}</td>
             <td class="text-center" data-label="Type">${row.count_type}</td>
-            <td class="text-center" data-label="User">${row.created_by || 'N/A'}</td>
+            <td class="text-center" data-label="User">
+                ${(() => {
+                    const createdBy = row.created_by || 'N/A';
+                    let teamBadge = '';
+                    
+                    if (row.team_users) {
+                        try {
+                            const teamData = JSON.parse(row.team_users);
+                            if (teamData.length > 1 || (teamData.length === 1 && teamData[0].name !== createdBy)) {
+                                let totalValue = 0;
+                                
+                                const htmlItems = teamData.map((member, index) => {
+                                    const value = parseFloat(member.earned_value) || 0;
+                                    const wage = parseFloat(member.daily_wage) || 0;
+                                    const ratio = wage > 0 ? (value / wage).toFixed(2) : '0.00';
+                                    totalValue += value;
+                                    
+                                    let ratioBadge = '';
+                                    if (ratio < 1) {
+                                        ratioBadge = `<span class="badge bg-danger text-white">Low (${ratio}x)</span>`;
+                                    } else if (ratio < 1.5) {
+                                        ratioBadge = `<span class="badge bg-warning text-dark">Fair (${ratio}x)</span>`;
+                                    } else {
+                                        ratioBadge = `<span class="badge bg-success text-white">Good (${ratio}x)</span>`;
+                                    }
+                                    
+                                    return `
+                                    <tr>
+                                        <td class="text-center text-muted align-middle" style="font-size: 0.8rem;">${index + 1}</td>
+                                        <td class="text-start fw-bold text-dark align-middle" style="font-size: 0.8rem;"><i class="fas fa-user-circle text-secondary me-2"></i>${member.name}</td>
+                                        <td class="text-end text-muted align-middle" style="font-size: 0.8rem;">฿${wage.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                        <td class="text-end fw-bold text-primary align-middle" style="font-size: 0.8rem;">฿${value.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                        <td class="text-center align-middle" style="font-size: 0.8rem;">${ratioBadge}</td>
+                                    </tr>`;
+                                }).join('');
+
+                                const summaryHeader = `
+                                <div class="d-flex justify-content-between align-items-center bg-light p-2 border-bottom">
+                                    <span class="text-secondary fw-bold" style="font-size: 0.85rem;"><i class="fas fa-coins me-2"></i>Total Work Value</span>
+                                    <span class="fw-bold text-primary" style="font-size: 1rem;">฿${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                </div>`;
+
+                                const htmlContainer = `
+                                <div class="text-start">
+                                    ${summaryHeader}
+                                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover table-bordered mb-0 text-nowrap table-settings" style="border-top: none;">
+                                            <thead class="bg-light text-secondary text-uppercase" style="position: sticky; top: 0; z-index: 1;">
+                                                <tr>
+                                                    <th class="text-center py-2 bg-light align-middle" style="width: 50px; font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">#</th>
+                                                    <th class="text-start py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Name</th>
+                                                    <th class="text-end py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Base Wage</th>
+                                                    <th class="text-end py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Earned Value</th>
+                                                    <th class="text-center py-2 bg-light align-middle" style="font-size: 0.75rem; letter-spacing: 0.5px; border-top: none;">Ratio</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${htmlItems}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>`;
+                                const encodedHtml = htmlContainer.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '').replace(/\r/g, '');
+                                teamBadge = `<span class="badge bg-info text-dark ms-1 shadow-sm team-badge" style="cursor:pointer; transition: 0.2s;" onmouseover="this.classList.add('bg-primary', 'text-white'); this.classList.remove('bg-info', 'text-dark');" onmouseout="this.classList.add('bg-info', 'text-dark'); this.classList.remove('bg-primary', 'text-white');" onclick="Swal.fire({title: '👥 ผลการปฏิบัติงาน (${teamData.length} คน)', html: '${encodedHtml}', width: '700px', confirmButtonText: 'ปิด'})" title="คลิกดูรายละเอียดผลงาน"><i class="fas fa-users"></i> Team (${teamData.length})</span>`;
+                            }
+                        } catch (e) {
+                            console.error("Failed to parse team_users JSON:", e);
+                        }
+                    }
+                    return `<span>${createdBy}</span> ${teamBadge}`;
+                })()}
+            </td>
             <td class="text-center" data-label="Notes">${row.notes ? row.notes.replace(/\[(?:TEAM_OVERRIDE|Job):.*?\]/g, '').trim() : ''}</td>
         `;
         
+        tr.addEventListener('click', (e) => {
+            if (e.target.closest('.team-badge')) return;
+            editTransaction(row.transaction_id, 'production');
+        });
         tbody.appendChild(tr);
     });
 }
@@ -731,6 +898,11 @@ async function populateModalDatalists() {
 
         renderMachineDropdown('out_machine_id', 'out_location_id');
         renderMachineDropdown('edit_production_machine_id', 'edit_production_location_id');
+        
+        if (result.users && result.users.length > 0) {
+            populateTeamUserDropdown(result.users, 'out');
+            populateTeamUserDropdown(result.users, 'edit_production');
+        }
     }
 }
 
@@ -1285,6 +1457,7 @@ async function handleFormSubmit(event) {
                 end_time: endTime,
                 notes: data.notes,
                 override_team: data.override_team,
+                team_user_ids: data.team_user_ids,
                 defect_source: data.defect_source
             };
             
@@ -1512,7 +1685,21 @@ async function editTransaction(transactionId, type) {
                 document.getElementById('edit_production_quantity').value = Math.floor(data.quantity);
                 document.getElementById('edit_production_lot_no').value = data.reference_id;
                 document.getElementById('edit_production_count_type').value = data.transaction_type.replace('PRODUCTION_', '');
+                
+                let overrideTeamMatch = data.notes ? data.notes.match(/\[TEAM_OVERRIDE:\s*(.*?)\]/) : null;
+                if (overrideTeamMatch && overrideTeamMatch[1]) {
+                    document.getElementById('edit_out_override_team').value = overrideTeamMatch[1].trim();
+                } else {
+                    document.getElementById('edit_out_override_team').value = '';
+                }
+                
                 document.getElementById('edit_production_notes').value = data.notes ? data.notes.replace(/\[(?:TEAM_OVERRIDE|Job):.*?\]/g, '').trim() : '';
+                
+                if (data.team_user_ids && data.team_user_ids.length > 0) {
+                    setTeamUserSelection('edit_production', data.team_user_ids);
+                } else {
+                    setTeamUserSelection('edit_production', []);
+                }
                 if (data.transaction_timestamp) {
                     const datePart = data.transaction_timestamp.split(' ')[0];
                     document.getElementById('edit_production_log_date').value = datePart;

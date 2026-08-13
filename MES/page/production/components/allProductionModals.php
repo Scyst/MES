@@ -172,7 +172,27 @@
                         <div class="p-3 bg-white rounded shadow-sm border">
                             <div class="row g-2">
                                 <div class="col-12">
-                                    <label class="form-label fw-bold small text-muted mb-1">ผู้ปฏิบัติงาน (Team) <span class="badge bg-secondary" id="out_team_user_count">1</span></label>
+                                    <?php
+                                        $isAdmin = isset($currentUserForJS['role']) && strtolower($currentUserForJS['role']) === 'admin';
+                                        $hasTeam = !empty($currentUserForJS['team_group']);
+                                        $disableOverride = !$isAdmin ? 'disabled' : '';
+                                    ?>
+                                    <label class="form-label fw-bold small text-muted mb-1">Team (Override)</label>
+                                    <select id="out_override_team" name="override_team" class="form-select form-select-sm bg-light text-secondary" <?php echo $disableOverride; ?>>
+                                        <option value="">-- อิงตามผู้ใช้งาน (<?php echo htmlspecialchars($currentUserForJS['team_group'] ?? 'ไม่มีทีม'); ?>) --</option>
+                                        <?php if(isset($teamGroups) && is_array($teamGroups)): ?>
+                                            <?php foreach ($teamGroups as $team): ?>
+                                                <option value="<?php echo htmlspecialchars($team); ?>"><?php echo htmlspecialchars($team); ?></option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </select>
+                                    <?php if (!$isAdmin && !$hasTeam): ?>
+                                        <div class="alert alert-warning p-1 mt-1 mb-0 small text-center fw-bold"><i class="fas fa-exclamation-triangle"></i> คุณไม่มีทีม กรุณาติดต่อแอดมิน</div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <input type="hidden" id="out_team_user_ids" name="team_user_ids" value="">
+                                    <label class="form-label fw-bold small text-muted mb-1">ผู้ปฏิบัติงาน (รายคน) <span class="badge bg-secondary" id="out_team_user_count">1</span></label>
                                     <div class="dropdown">
                                         <button class="btn btn-sm btn-outline-secondary w-100 text-start d-flex justify-content-between align-items-center bg-light" type="button" id="out_team_user_btn" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
                                             <span id="out_team_user_text" class="text-truncate text-secondary">-- อิงตามผู้ล็อกอิน --</span>
@@ -332,7 +352,19 @@
                                     <input type="text" class="form-control form-control-sm bg-light text-dark" id="edit_production_lot_no" name="lot_no" placeholder="Lot / Ref No.">
                                 </div>
                                 <div class="col-12 mt-2">
-                                    <label class="form-label fw-bold small text-muted mb-1">ผู้ปฏิบัติงาน (Team) <span class="badge bg-secondary" id="edit_production_team_user_count">1</span></label>
+                                    <label class="form-label fw-bold small text-muted mb-1">Team (Override)</label>
+                                    <select id="edit_out_override_team" name="override_team" class="form-select form-select-sm bg-light text-secondary" <?php echo $disableOverride; ?>>
+                                        <option value="">-- อิงตามผู้ใช้งาน --</option>
+                                        <?php if(isset($teamGroups) && is_array($teamGroups)): ?>
+                                            <?php foreach ($teamGroups as $team): ?>
+                                                <option value="<?php echo htmlspecialchars($team); ?>"><?php echo htmlspecialchars($team); ?></option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </select>
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <input type="hidden" id="edit_production_team_user_ids" name="team_user_ids" value="">
+                                    <label class="form-label fw-bold small text-muted mb-1">ผู้ปฏิบัติงาน (รายคน) <span class="badge bg-secondary" id="edit_production_team_user_count">1</span></label>
                                     <div class="dropdown">
                                         <button class="btn btn-sm btn-outline-secondary w-100 text-start d-flex justify-content-between align-items-center bg-light" type="button" id="edit_production_team_user_btn" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
                                             <span id="edit_production_team_user_text" class="text-truncate text-secondary">-- อิงตามผู้ล็อกอิน --</span>

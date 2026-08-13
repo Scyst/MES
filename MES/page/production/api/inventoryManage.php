@@ -214,7 +214,30 @@ try {
                     FORMAT(t.end_time, N'HH\:mm\:ss') as end_time,
                     (SELECT location_name FROM " . LOCATIONS_TABLE . " WHERE location_id = t.from_location_id) as source_location,
                     (SELECT location_name FROM " . LOCATIONS_TABLE . " WHERE location_id = t.to_location_id) as destination_location,
-                    m.machine_name
+                    m.machine_name,
+                    (
+                        SELECT 
+                            ISNULL(NULLIF(tu.fullname, ''), tu.username) AS name,
+                            stu.head_count_ratio AS ratio,
+                            COALESCE(
+                                CASE 
+                                    WHEN pr.rate_type LIKE 'MONTHLY%' THEN pr.hourly_rate / 30.0 
+                                    ELSE pr.hourly_rate 
+                                END, 
+                                (SELECT TOP 1 CASE WHEN rate_type LIKE 'MONTHLY%' THEN hourly_rate / 30.0 ELSE hourly_rate END FROM MANPOWER_CATEGORY_MAPPING WHERE keyword = 'พนักงานประจำ' OR category_name = 'พนักงานประจำ'),
+                                350.0
+                            ) AS daily_wage,
+                            stu.head_count_ratio * (t.quantity * (
+                                ISNULL(t.std_cost_dl_snapshot, ISNULL(i.Cost_DL, 0)) + 
+                                ISNULL(t.std_cost_oh_snapshot, (ISNULL(i.Cost_OH_Machine, 0) + ISNULL(i.Cost_OH_Utilities, 0) + ISNULL(i.Cost_OH_Indirect, 0) + ISNULL(i.Cost_OH_Staff, 0) + ISNULL(i.Cost_OH_Accessory, 0) + ISNULL(i.Cost_OH_Others, 0)))
+                            )) AS earned_value
+                        FROM dbo.STOCK_TRANSACTION_USERS stu
+                        INNER JOIN " . USERS_TABLE . " tu ON stu.user_id = tu.id
+                        LEFT JOIN MANPOWER_EMPLOYEES emp ON tu.emp_id = emp.emp_id COLLATE Thai_CI_AS
+                        OUTER APPLY (SELECT TOP 1 * FROM MANPOWER_CATEGORY_MAPPING WHERE emp.position LIKE '%' + keyword + '%' COLLATE Thai_CI_AS ORDER BY display_order DESC) pr
+                        WHERE stu.transaction_id = t.transaction_id
+                        FOR JSON PATH
+                    ) AS team_users
                 " . $baseSql . "
                 ORDER BY t.transaction_timestamp DESC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
