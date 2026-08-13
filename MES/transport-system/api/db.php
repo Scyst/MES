@@ -22,7 +22,12 @@ if (file_exists($envPath)) {
         if (strpos(trim($line), '#') === 0) continue;
         if (strpos($line, '=') !== false) {
             list($key, $value) = explode('=', $line, 2);
-            putenv(trim($key) . '=' . trim($value));
+            $k = trim($key);
+            $v = trim($value);
+            $_ENV[$k] = $v;
+            if (!defined($k)) {
+                define($k, $v);
+            }
         }
     }
 } else {
@@ -34,7 +39,7 @@ function getDB() {
     static $pdo = null;
     if ($pdo === null) {
         try {
-            $host = defined('DB_HOST') ? DB_HOST : (getenv('DB_SERVER') ?: '127.0.0.1');
+            $host = defined('DB_HOST') ? DB_HOST : (defined('DB_SERVER') ? DB_SERVER : (getenv('DB_SERVER') ?: '127.0.0.1'));
             $dbName = defined('DB_DATABASE') ? DB_DATABASE : (getenv('DB_DATABASE') ?: 'IIOT_TOOLBOX');
             $user = defined('DB_USER') ? DB_USER : (getenv('DB_USER') ?: 'TOOLBOX');
             $pass = defined('DB_PASSWORD') ? DB_PASSWORD : (getenv('DB_PASSWORD') ?: '');
