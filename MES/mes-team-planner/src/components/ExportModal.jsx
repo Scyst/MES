@@ -160,6 +160,7 @@ export default function ExportModal({ isOpen, onClose, tasks, projects, currentU
             {exportDateRange === 'custom' && (
               <div className="flex gap-2 mb-3 animate-fade-in items-center">
                 <input 
+                  lang="en-GB"
                   type="date" 
                   value={customStartDate} 
                   onChange={e => setCustomStartDate(e.target.value)}
@@ -167,6 +168,7 @@ export default function ExportModal({ isOpen, onClose, tasks, projects, currentU
                 />
                 <span className="text-slate-500">-</span>
                 <input 
+                  lang="en-GB"
                   type="date" 
                   value={customEndDate} 
                   onChange={e => setCustomEndDate(e.target.value)}

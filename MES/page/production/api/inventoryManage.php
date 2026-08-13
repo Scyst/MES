@@ -41,7 +41,9 @@ try {
             $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
             $machinesStmt = $pdo->query("SELECT machine_id, machine_name, machine_code, line FROM " . PE_MACHINES_TABLE . " WHERE is_active = 1 ORDER BY machine_name");
             $machines = $machinesStmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['success' => true, 'locations' => $locations, 'items' => $items, 'machines' => $machines]);
+            $usersStmt = $pdo->query("SELECT id, username, fullname, team_group FROM " . USERS_TABLE . " WHERE is_active = 1 ORDER BY ISNULL(NULLIF(fullname, ''), username)");
+            $users = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'locations' => $locations, 'items' => $items, 'machines' => $machines, 'users' => $users]);
             break;
 
         case 'execute_receipt':
@@ -602,6 +604,11 @@ try {
             $notes = trim($input['notes'] ?? '');
             $machine_id = !empty($input['machine_id']) ? (int)$input['machine_id'] : null;
             
+            $team_user_ids = $input['team_user_ids'] ?? null;
+            if (is_array($team_user_ids)) {
+                $team_user_ids = implode(',', $team_user_ids);
+            }
+
             $override_team = trim($input['override_team'] ?? '');
             $current_user_team = $currentUser['team_group'] ?? '';
             if (!empty($override_team) && $override_team !== $current_user_team) {
@@ -639,7 +646,9 @@ try {
                         @start_time = ?, 
                         @end_time = ?, 
                         @user_id = ?, 
-                        @username = ?
+                        @username = ?,
+                        @machine_id = ?,
+                        @team_user_ids = ?
                 ");
                 
                 $stmt->execute([
@@ -653,7 +662,9 @@ try {
                     $start_time, 
                     $end_time, 
                     $currentUser['id'], 
-                    $currentUser['username']
+                    $currentUser['username'],
+                    $machine_id,
+                    $team_user_ids
                 ]);
                 
                 $getTxnStmt = $pdo->prepare("SELECT TOP 1 transaction_id FROM " . TRANSACTIONS_TABLE . " WHERE parameter_id = ? AND transaction_type = ? AND created_by_user_id = ? ORDER BY transaction_id DESC");
@@ -703,6 +714,11 @@ try {
             $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$transaction) throw new Exception("Transaction not found.");
+            
+            $teamStmt = $pdo->prepare("SELECT user_id FROM STOCK_TRANSACTION_USERS WHERE transaction_id = ?");
+            $teamStmt->execute([$transaction_id]);
+            $team_user_ids = $teamStmt->fetchAll(PDO::FETCH_COLUMN);
+            $transaction['team_user_ids'] = $team_user_ids;
 
             echo json_encode(['success' => true, 'data' => $transaction]);
             break;
@@ -771,6 +787,11 @@ try {
                     $new_log_date = $input['log_date'] ?? null;
                     $new_start_time = $input['start_time'] ?? null;
                     $new_end_time = $input['end_time'] ?? null;
+                    
+                    $team_user_ids = $input['team_user_ids'] ?? null;
+                    if ($team_user_ids && !is_array($team_user_ids)) {
+                        $team_user_ids = array_filter(array_map('trim', explode(',', $team_user_ids)));
+                    }
 
                     if (empty($new_log_date)) {
                         throw new Exception("Log Date is required for update.");
@@ -804,6 +825,21 @@ try {
                     ]);
 
                     $spStock->execute([$old_transaction['parameter_id'], $new_location_id, $new_quantity]);
+
+                    // Update STOCK_TRANSACTION_USERS
+                    if (strpos($new_transaction_type, 'PRODUCTION_') === 0) {
+                        $pdo->prepare("DELETE FROM STOCK_TRANSACTION_USERS WHERE transaction_id = ?")->execute([$transaction_id]);
+                        if ($team_user_ids && is_array($team_user_ids) && count($team_user_ids) > 0) {
+                            $teamSize = count($team_user_ids);
+                            $ratio = 1.0 / $teamSize;
+                            $teamStmt = $pdo->prepare("INSERT INTO STOCK_TRANSACTION_USERS (transaction_id, user_id, head_count_ratio) VALUES (?, ?, ?)");
+                            foreach ($team_user_ids as $tid) {
+                                $teamStmt->execute([$transaction_id, trim($tid), $ratio]);
+                            }
+                        } else {
+                            $pdo->prepare("INSERT INTO STOCK_TRANSACTION_USERS (transaction_id, user_id, head_count_ratio) VALUES (?, ?, ?)")->execute([$transaction_id, $currentUser['id'], 1.0]);
+                        }
+                    }
 
                     // Sync logic for SCRAP replacements
                     if ($old_transaction['transaction_type'] === 'PRODUCTION_SCRAP' && $new_transaction_type === 'PRODUCTION_SCRAP') {

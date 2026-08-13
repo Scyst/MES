@@ -172,23 +172,16 @@
                         <div class="p-3 bg-white rounded shadow-sm border">
                             <div class="row g-2">
                                 <div class="col-12">
-                                    <?php
-                                        $isAdmin = isset($currentUserForJS['role']) && strtolower($currentUserForJS['role']) === 'admin';
-                                        $hasTeam = !empty($currentUserForJS['team_group']);
-                                        $disableOverride = !$isAdmin ? 'disabled' : '';
-                                    ?>
-                                    <label class="form-label fw-bold small text-muted mb-1">Team (Override)</label>
-                                    <select id="out_override_team" name="override_team" class="form-select form-select-sm bg-light text-secondary" <?php echo $disableOverride; ?>>
-                                        <option value="">-- อิงตามผู้ใช้งาน (<?php echo htmlspecialchars($currentUserForJS['team_group'] ?? 'ไม่มีทีม'); ?>) --</option>
-                                        <?php if(isset($teamGroups) && is_array($teamGroups)): ?>
-                                            <?php foreach ($teamGroups as $team): ?>
-                                                <option value="<?php echo htmlspecialchars($team); ?>"><?php echo htmlspecialchars($team); ?></option>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </select>
-                                    <?php if (!$isAdmin && !$hasTeam): ?>
-                                        <div class="alert alert-warning p-1 mt-1 mb-0 small text-center fw-bold"><i class="fas fa-exclamation-triangle"></i> คุณไม่มีทีม กรุณาติดต่อแอดมิน</div>
-                                    <?php endif; ?>
+                                    <label class="form-label fw-bold small text-muted mb-1">ผู้ปฏิบัติงาน (Team) <span class="badge bg-secondary" id="out_team_user_count">1</span></label>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary w-100 text-start d-flex justify-content-between align-items-center bg-light" type="button" id="out_team_user_btn" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                                            <span id="out_team_user_text" class="text-truncate text-secondary">-- อิงตามผู้ล็อกอิน --</span>
+                                            <i class="fas fa-chevron-down ms-2"></i>
+                                        </button>
+                                        <ul class="dropdown-menu w-100 shadow-sm p-2" aria-labelledby="out_team_user_btn" style="max-height: 250px; overflow-y: auto;" id="out_team_user_list">
+                                            <div class="text-center small text-muted">กำลังโหลด...</div>
+                                        </ul>
+                                    </div>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label fw-bold small text-muted mb-1">ล็อต / อ้างอิง</label>
@@ -337,6 +330,18 @@
                                 </div>
                                 <div class="col-12 mt-2">
                                     <input type="text" class="form-control form-control-sm bg-light text-dark" id="edit_production_lot_no" name="lot_no" placeholder="Lot / Ref No.">
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <label class="form-label fw-bold small text-muted mb-1">ผู้ปฏิบัติงาน (Team) <span class="badge bg-secondary" id="edit_production_team_user_count">1</span></label>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary w-100 text-start d-flex justify-content-between align-items-center bg-light" type="button" id="edit_production_team_user_btn" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                                            <span id="edit_production_team_user_text" class="text-truncate text-secondary">-- อิงตามผู้ล็อกอิน --</span>
+                                            <i class="fas fa-chevron-down ms-2"></i>
+                                        </button>
+                                        <ul class="dropdown-menu w-100 shadow-sm p-2" aria-labelledby="edit_production_team_user_btn" style="max-height: 250px; overflow-y: auto;" id="edit_production_team_user_list">
+                                            <div class="text-center small text-muted">กำลังโหลด...</div>
+                                        </ul>
+                                    </div>
                                 </div>
                                 <div class="col-12 mt-2">
                                     <textarea class="form-control form-control-sm text-dark" id="edit_production_notes" name="notes" rows="1" placeholder="หมายเหตุ..."></textarea>

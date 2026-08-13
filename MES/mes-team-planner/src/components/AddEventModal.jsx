@@ -103,7 +103,7 @@ export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSe
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">วันที่</label>
-              <input required type="date" name="date" value={formData.date} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg px-4 py-2 outline-none" />
+              <input lang="en-GB" required type="date" name="date" value={formData.date} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg px-4 py-2 outline-none" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ประเภท</label>
