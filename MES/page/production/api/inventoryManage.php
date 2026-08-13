@@ -41,7 +41,18 @@ try {
             $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
             $machinesStmt = $pdo->query("SELECT machine_id, machine_name, machine_code, line FROM " . PE_MACHINES_TABLE . " WHERE is_active = 1 ORDER BY machine_name");
             $machines = $machinesStmt->fetchAll(PDO::FETCH_ASSOC);
-            $usersStmt = $pdo->query("SELECT id, username, fullname, team_group FROM " . USERS_TABLE . " WHERE is_active = 1 ORDER BY ISNULL(NULLIF(fullname, ''), username)");
+            $usersStmt = $pdo->query("
+                SELECT 
+                    u.id, 
+                    u.username, 
+                    ISNULL(NULLIF(emp.name_th, ''), ISNULL(NULLIF(u.fullname, ''), u.username)) AS fullname, 
+                    ISNULL(TS.hc_group, ISNULL(NULLIF(emp.team_group, ''), u.team_group)) AS team_group
+                FROM " . USERS_TABLE . " u
+                LEFT JOIN dbo.MANPOWER_EMPLOYEES emp ON u.emp_id = emp.emp_id COLLATE Thai_CI_AS
+                LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS ON emp.department_api = TS.department_api COLLATE Thai_CI_AS
+                WHERE u.is_active = 1 AND (emp.emp_id IS NOT NULL OR u.id = " . intval($currentUser['id']) . ")
+                ORDER BY ISNULL(NULLIF(emp.name_th, ''), ISNULL(NULLIF(u.fullname, ''), u.username))
+            ");
             $users = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'locations' => $locations, 'items' => $items, 'machines' => $machines, 'users' => $users]);
             break;
@@ -855,12 +866,22 @@ try {
                         if ($team_user_ids && is_array($team_user_ids) && count($team_user_ids) > 0) {
                             $teamSize = count($team_user_ids);
                             $ratio = 1.0 / $teamSize;
-                            $teamStmt = $pdo->prepare("INSERT INTO STOCK_TRANSACTION_USERS (transaction_id, user_id, head_count_ratio) VALUES (?, ?, ?)");
+                            $teamStmt = $pdo->prepare("
+                                INSERT INTO STOCK_TRANSACTION_USERS (transaction_id, user_id, emp_id, head_count_ratio) 
+                                SELECT ?, id, emp_id, ? 
+                                FROM " . USERS_TABLE . " 
+                                WHERE id = ?
+                            ");
                             foreach ($team_user_ids as $tid) {
-                                $teamStmt->execute([$transaction_id, trim($tid), $ratio]);
+                                $teamStmt->execute([$transaction_id, $ratio, trim($tid)]);
                             }
                         } else {
-                            $pdo->prepare("INSERT INTO STOCK_TRANSACTION_USERS (transaction_id, user_id, head_count_ratio) VALUES (?, ?, ?)")->execute([$transaction_id, $currentUser['id'], 1.0]);
+                            $pdo->prepare("
+                                INSERT INTO STOCK_TRANSACTION_USERS (transaction_id, user_id, emp_id, head_count_ratio) 
+                                SELECT ?, id, emp_id, ? 
+                                FROM " . USERS_TABLE . " 
+                                WHERE id = ?
+                            ")->execute([$transaction_id, 1.0, $currentUser['id']]);
                         }
                     }
 
@@ -1559,8 +1580,8 @@ try {
             $sql = "
             SELECT 
                 stu.user_id,
-                ISNULL(NULLIF(tu.fullname, ''), tu.username) AS name,
-                tu.team_group,
+                ISNULL(NULLIF(emp.name_th, ''), ISNULL(NULLIF(tu.fullname, ''), tu.username)) AS name,
+                ISNULL(TS.hc_group, ISNULL(NULLIF(emp.team_group, ''), tu.team_group)) AS team_group,
                 emp.department_api AS department,
                 emp.line,
                 COALESCE(
@@ -1610,7 +1631,8 @@ try {
             INNER JOIN dbo." . USERS_TABLE . " tu ON stu.user_id = tu.id
             LEFT JOIN dbo." . ITEMS_TABLE . " i ON t.parameter_id = i.item_id
             LEFT JOIN dbo." . LOCATIONS_TABLE . " loc ON ISNULL(t.to_location_id, t.from_location_id) = loc.location_id
-            LEFT JOIN dbo.MANPOWER_EMPLOYEES emp ON tu.emp_id = emp.emp_id COLLATE Thai_CI_AS
+            LEFT JOIN dbo.MANPOWER_EMPLOYEES emp ON stu.emp_id = emp.emp_id COLLATE Thai_CI_AS
+            LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS ON emp.department_api = TS.department_api COLLATE Thai_CI_AS
             OUTER APPLY (SELECT TOP 1 * FROM MANPOWER_CATEGORY_MAPPING WHERE emp.position LIKE '%' + keyword + '%' COLLATE Thai_CI_AS ORDER BY display_order DESC) pr
             $whereClause
             GROUP BY 
@@ -1618,6 +1640,9 @@ try {
                 tu.username, 
                 tu.fullname, 
                 tu.team_group,
+                emp.name_th,
+                emp.team_group,
+                TS.hc_group,
                 emp.department_api,
                 emp.line,
                 emp.emp_id,
