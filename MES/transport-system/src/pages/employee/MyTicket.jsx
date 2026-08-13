@@ -5,6 +5,7 @@ import SurveyModal from '../../components/employee/SurveyModal';
 import ConfirmModal from '../../components/ConfirmModal';
 import { bookingsAPI, schedulesAPI, authAPI, masterAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const MyTicket = () => {
   const { ticketId } = useParams();
@@ -19,6 +20,7 @@ const MyTicket = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [scannerError, setScannerError] = useState('');
 
   useEffect(() => {
     const loadTicket = async () => {
@@ -59,17 +61,65 @@ const MyTicket = () => {
     loadTicket();
   }, [ticketId]);
 
-  const handleSimulateScanBus = async () => {
+  // Clean up scanner on unmount
+  useEffect(() => {
+    return () => {
+      stopScanner();
+    };
+  }, []);
+
+  let html5QrCode = null;
+
+  const startScanner = async () => {
     setIsScanning(true);
+    setScannerError('');
     try {
-      await bookingsAPI.boardPassenger(ticketId);
-      setBooking(prev => ({ ...prev, status: 'BOARDED' }));
-      setTimeout(() => setShowSurvey(true), 500);
+      html5QrCode = new Html5Qrcode("qr-reader");
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          // Success Callback
+          stopScanner();
+          handleBoarding(decodedText);
+        },
+        (errorMessage) => {
+          // Ignore general read errors (it fires constantly when searching)
+        }
+      );
     } catch (err) {
-      // Silently fail — scanner animation still stops
-    } finally {
+      setScannerError('ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการเข้าถึงกล้อง');
       setIsScanning(false);
     }
+  };
+
+  const stopScanner = () => {
+    if (html5QrCode && html5QrCode.isScanning) {
+      html5QrCode.stop().then(() => {
+        html5QrCode.clear();
+      }).catch(err => console.log(err));
+    }
+    setIsScanning(false);
+  };
+
+  const handleBoarding = async (qrData) => {
+    setLoading(true);
+    try {
+      // In a real app, qrData might contain the vehicle ID or Schedule ID.
+      // For now, any scan assumes boarding this ticket's schedule.
+      await bookingsAPI.boardPassenger(ticketId);
+      setBooking(prev => ({ ...prev, status: 'BOARDED' }));
+      setTimeout(() => setShowSurvey(true), 1500);
+    } catch (err) {
+      alert(err.message || "เกิดข้อผิดพลาดในการเช็คอิน");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Keep this for testing/fallback if camera fails
+  const handleSimulateScanBus = async () => {
+    handleBoarding('SIMULATED_QR');
   };
 
   const handleCancelBooking = async () => {
@@ -163,48 +213,67 @@ const MyTicket = () => {
               </div>
             ) : !isBoarded ? (
               <>
-                {/* Simulated Camera Viewfinder */}
-                <div className="relative w-64 h-64 mb-8">
-                  <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-white/80 rounded-tl-xl"></div>
-                  <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-white/80 rounded-tr-xl"></div>
-                  <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-white/80 rounded-bl-xl"></div>
-                  <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-white/80 rounded-br-xl"></div>
-                  
-                  {isScanning && (
-                    <div className="absolute inset-0 bg-blue-500/20 flex flex-col">
-                      <div className="w-full h-1 bg-blue-400 shadow-[0_0_8px_2px_rgba(59,130,246,0.8)] animate-[scan_1.5s_ease-in-out_infinite]"></div>
+                {!isScanning ? (
+                  <>
+                    {/* Idle State - Ready to Scan */}
+                    <div className="relative w-64 h-64 mb-8">
+                      <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-white/80 rounded-tl-xl"></div>
+                      <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-white/80 rounded-tr-xl"></div>
+                      <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-white/80 rounded-bl-xl"></div>
+                      <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-white/80 rounded-br-xl"></div>
+                      
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <ScanLine size={48} className="text-white/30" />
+                      </div>
                     </div>
-                  )}
+                    
+                    {scannerError && <p className="text-red-400 text-sm font-bold mb-4 text-center">{scannerError}</p>}
+                    
+                    <p className="text-white/80 font-medium text-center mb-6">
+                      เล็งกล้องไปที่ QR Code หน้ารถเพื่อเช็คอิน
+                    </p>
 
-                  {!isScanning && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <ScanLine size={48} className="text-white/30" />
-                    </div>
-                  )}
-                </div>
-                
-                <p className="text-white/80 font-medium text-center mb-6">
-                  {isScanning ? 'กำลังตรวจสอบ QR Code ของรถ...' : 'เล็งกล้องไปที่ QR Code หน้ารถเพื่อเช็คอิน'}
-                </p>
-
-                <button 
-                  onClick={handleSimulateScanBus}
-                  disabled={isScanning}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 text-base transition-all shadow-sm active:scale-95"
-                >
-                  {isScanning ? (
-                    <span className="animate-pulse flex items-center gap-2"><ScanLine className="animate-spin" /> กำลังสแกน...</span>
-                  ) : (
-                    <>
+                    <button 
+                      onClick={startScanner}
+                      className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 text-base transition-all shadow-sm active:scale-95"
+                    >
                       <ScanLine size={22} />
                       เปิดกล้องสแกน QR รถ
-                    </>
-                  )}
-                </button>
+                    </button>
+                    
+                    {/* Hidden fallback button for testing */}
+                    <button onClick={handleSimulateScanBus} className="text-gray-600 text-xs mt-4 underline opacity-50">จำลองการสแกน (Dev)</button>
+                  </>
+                ) : (
+                  <>
+                    {/* Active Scanner View */}
+                    <div className="w-full h-64 mb-8 rounded-2xl overflow-hidden relative shadow-lg">
+                      <div id="qr-reader" className="w-full h-full bg-black"></div>
+                      {/* Scan Line Overlay */}
+                      <div className="absolute inset-0 pointer-events-none z-10 flex flex-col">
+                         <div className="w-full h-1 bg-blue-500 shadow-[0_0_10px_3px_rgba(59,130,246,0.8)] animate-[scan_2s_ease-in-out_infinite]"></div>
+                      </div>
+                    </div>
+                    
+                    <p className="text-white/80 font-medium text-center mb-6 animate-pulse">
+                      กำลังค้นหา QR Code...
+                    </p>
+
+                    <button 
+                      onClick={stopScanner}
+                      className="w-full py-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 text-base transition-all shadow-sm active:scale-95"
+                    >
+                      ยกเลิกการสแกน
+                    </button>
+                  </>
+                )}
               </>
             ) : (
-              <div className="text-center py-10 w-full h-full flex flex-col items-center justify-center">
-                <CheckCircle size={80} className="text-emerald-500 dark:text-emerald-400 mx-auto mb-6" />
+              <div className="text-center py-10 w-full h-full flex flex-col items-center justify-center relative">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-20"></div>
+                  <CheckCircle size={80} className="text-emerald-500 dark:text-emerald-400 mx-auto mb-6 relative z-10 animate-[bounce_1s_ease-in-out]" />
+                </div>
                 <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-400 mb-2">เช็คอินสำเร็จ</h3>
                 <p className="text-sm text-emerald-600 dark:text-emerald-500 font-bold mb-8">บันทึกข้อมูลการเดินทางของคุณแล้ว</p>
                 

@@ -1535,13 +1535,18 @@ try {
                 $conditions[] = "tu.team_group = ?";
                 $params[] = $_GET['team'];
             }
+            $startDateCondition = "";
             if (!empty($_GET['startDate'])) {
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
                 $params[] = $_GET['startDate'];
+                $sDate = date('Y-m-d', strtotime($_GET['startDate']));
+                $startDateCondition .= " AND ml.log_date >= '$sDate'";
             }
             if (!empty($_GET['endDate'])) {
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
                 $params[] = $_GET['endDate'];
+                $eDate = date('Y-m-d', strtotime($_GET['endDate']));
+                $startDateCondition .= " AND ml.log_date <= '$eDate'";
             }
             if (!empty($_GET['line'])) {
                 $conditions[] = "loc.production_line = ?";
@@ -1556,13 +1561,42 @@ try {
                 stu.user_id,
                 ISNULL(NULLIF(tu.fullname, ''), tu.username) AS name,
                 tu.team_group,
+                emp.department_api AS department,
+                emp.line,
                 COALESCE(
-                    CASE 
-                        WHEN pr.rate_type LIKE 'MONTHLY%' THEN pr.hourly_rate / 30.0 
-                        ELSE pr.hourly_rate 
-                    END, 
-                    (SELECT TOP 1 CASE WHEN rate_type LIKE 'MONTHLY%' THEN hourly_rate / 30.0 ELSE hourly_rate END FROM MANPOWER_CATEGORY_MAPPING WHERE keyword = 'พนักงานประจำ' OR category_name = 'พนักงานประจำ'),
-                    350.0
+                    (
+                        SELECT SUM(
+                            COALESCE(
+                                CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN cm.hourly_rate / 30.0 ELSE cm.hourly_rate END,
+                                350.0
+                            )
+                            +
+                            (
+                                CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL 
+                                THEN 
+                                    CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) > 570 
+                                    THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5 
+                                    ELSE 0 END
+                                ELSE 0 END
+                            )
+                            * 
+                            (COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN (cm.hourly_rate / 30.0) / 8.0 ELSE cm.hourly_rate / 8.0 END, 350.0 / 8.0) * 1.5)
+                        )
+                        FROM dbo.MANPOWER_DAILY_LOGS ml
+                        LEFT JOIN dbo.MANPOWER_SHIFTS ms ON ms.shift_id = ISNULL(ml.shift_id, emp.default_shift_id)
+                        OUTER APPLY (SELECT TOP 1 * FROM dbo.MANPOWER_CATEGORY_MAPPING WHERE emp.position LIKE '%' + keyword + '%' COLLATE Thai_CI_AS ORDER BY display_order DESC) cm
+                        WHERE ml.emp_id = emp.emp_id COLLATE Thai_CI_AS
+                          AND ml.status IN ('PRESENT', 'LATE')
+                          $startDateCondition
+                    ),
+                    COALESCE(
+                        CASE 
+                            WHEN pr.rate_type LIKE 'MONTHLY%' THEN pr.hourly_rate / 30.0 
+                            ELSE pr.hourly_rate 
+                        END, 
+                        (SELECT TOP 1 CASE WHEN rate_type LIKE 'MONTHLY%' THEN hourly_rate / 30.0 ELSE hourly_rate END FROM dbo.MANPOWER_CATEGORY_MAPPING WHERE keyword = 'พนักงานประจำ' OR category_name = 'พนักงานประจำ'),
+                        350.0
+                    ) * COUNT(DISTINCT CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE))
                 ) AS daily_wage,
                 SUM(
                     stu.head_count_ratio * (t.quantity * (
@@ -1584,6 +1618,11 @@ try {
                 tu.username, 
                 tu.fullname, 
                 tu.team_group,
+                emp.department_api,
+                emp.line,
+                emp.emp_id,
+                emp.default_shift_id,
+                emp.position,
                 pr.rate_type,
                 pr.hourly_rate
             ORDER BY total_earned_value DESC

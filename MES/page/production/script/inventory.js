@@ -898,10 +898,11 @@ function renderEmployeeSummaryTable(data) {
         tr.innerHTML = `
             <td class="text-start" data-label="Name">${row.name || 'N/A'}</td>
             <td class="text-center" data-label="Team">${row.team_group || 'N/A'}</td>
-            <td class="text-end" data-label="Daily Wage (฿)">${wage.toLocaleString()}</td>
+            <td class="text-center" data-label="Dept / Line">${row.department || '-'} / ${row.line || '-'}</td>
+            <td class="text-end" data-label="Total Wage (฿)">${wage.toLocaleString()}</td>
             <td class="text-end fw-bold text-primary" data-label="Earned Value (฿)">${earned.toLocaleString()}</td>
             <td class="text-end" data-label="Ratio / Grade">
-                ${wage > 0 ? `<span class="fw-bold">${(ratio * 100).toFixed(2)}%</span> <span class="badge ${badgeClass} ms-1" style="width: 30px;">${badgeText}</span>` : '-'}
+                ${wage > 0 ? `<span class="fw-bold">${ratio.toFixed(2)}</span> <span class="badge ${badgeClass} ms-1" style="width: 30px;">${badgeText}</span>` : '-'}
             </td>
             <td class="text-center" data-label="Txn Count">${row.transaction_count}</td>
         `;

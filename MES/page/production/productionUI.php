@@ -406,7 +406,8 @@ try {
                                     <tr class="text-secondary bg-light">
                                         <th class="py-2">Name</th>
                                         <th class="py-2">Team</th>
-                                        <th class="py-2 text-end px-3">Daily Wage (฿)</th>
+                                        <th class="py-2">Dept / Line</th>
+                                        <th class="py-2 text-end px-3">Total Wage (฿)</th>
                                         <th class="py-2 text-end px-3 text-primary">Earned Value (฿)</th>
                                         <th class="py-2 text-end">Ratio / Grade</th>
                                         <th class="py-2 text-center">Txn Count</th>
