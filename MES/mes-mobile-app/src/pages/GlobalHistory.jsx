@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { History, Trash2, Edit2, Check, X, Search, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+const MySwal = withReactContent(Swal);
 
 export default function GlobalHistory() {
   const [history, setHistory] = useState([]);
@@ -33,7 +37,17 @@ export default function GlobalHistory() {
   }, [API_BASE_URL]);
 
   const handleVoid = async (txn) => {
-    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการยกเลิกจำนวน ${txn.quantity} จาก ${txn.machine_name || txn.location_name}?`)) return;
+    const result = await MySwal.fire({
+      title: 'ยกเลิกรายการ?',
+      text: `คุณแน่ใจหรือไม่ว่าต้องการยกเลิกจำนวน ${txn.quantity} จาก ${txn.machine_name || txn.location_name}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'ใช่, ยกเลิกเลย',
+      cancelButtonText: 'ปิด'
+    });
+    if (!result.isConfirmed) return;
     
     try {
       const fd = new FormData();
@@ -45,16 +59,17 @@ export default function GlobalHistory() {
       const json = await res.json();
       if (json.success) {
         fetchHistory();
+        MySwal.fire({ icon: 'success', title: 'สำเร็จ', text: "ยกเลิกรายการสำเร็จ", timer: 1500, showConfirmButton: false });
       } else {
-        alert("Failed to void: " + json.message);
+        MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: "Failed to void: " + json.message });
       }
     } catch (e) {
-      alert("Error voiding record.");
+      MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: "Error voiding record." });
     }
   };
 
   const handleEditSubmit = async () => {
-    if (editQty <= 0) return alert('จำนวนต้องมากกว่า 0');
+    if (editQty <= 0) { MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: 'จำนวนต้องมากกว่า 0' }); return; }
     
     try {
       const activeTeam = JSON.parse(localStorage.getItem('mes_active_team') || '[]');
@@ -74,11 +89,12 @@ export default function GlobalHistory() {
       if (json.success) {
         setShowEditModal(false);
         fetchHistory();
+        MySwal.fire({ icon: 'success', title: 'สำเร็จ', text: "แก้ไขรายการสำเร็จ", timer: 1500, showConfirmButton: false });
       } else {
-        alert("Failed to edit: " + json.message);
+        MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: "Failed to edit: " + json.message });
       }
     } catch (e) {
-      alert("Error editing record.");
+      MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: "Error editing record." });
     }
   };
 
@@ -165,7 +181,7 @@ export default function GlobalHistory() {
                           const namesText = tuArr.map(t => t.name).join('\n');
                           return (
                             <span 
-                              onClick={() => alert(`รายชื่อพนักงานในทีม:\n\n${namesText}`)}
+                              onClick={() => MySwal.fire({ title: 'รายชื่อพนักงานในทีม', text: namesText, icon: 'info' })}
                               className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 cursor-pointer"
                             >
                               <UserPlus size={10} className="mr-1" /> Team ({tuArr.length})

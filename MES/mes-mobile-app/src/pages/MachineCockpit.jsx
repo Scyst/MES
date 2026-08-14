@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Plus, UserPlus, CheckCircle2, AlertOctagon, Clock, Trash2, RefreshCcw, Edit2, Check, X } from 'lucide-react';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+const MySwal = withReactContent(Swal);
 
 export default function MachineCockpit({ type = 'machine' }) {
   const { id } = useParams();
@@ -124,8 +128,8 @@ export default function MachineCockpit({ type = 'machine' }) {
   }, [id, type]);
 
   const submitLog = async (logType) => {
-    if (qty <= 0) { alert("กรุณาระบุจำนวนมากกว่า 0 (Please enter a quantity greater than 0)"); return; }
-    if (!selectedJob && activeJobs.length > 0) { alert("กรุณาเลือกใบสั่งผลิต (Please select a Job Order)"); return; }
+    if (qty <= 0) { MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: "กรุณาระบุจำนวนมากกว่า 0 (Please enter a quantity greater than 0)" }); return; }
+    if (!selectedJob && activeJobs.length > 0) { MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: "กรุณาเลือกใบสั่งผลิต (Please select a Job Order)" }); return; }
 
     const formData = new FormData();
     formData.append('action', 'log');
@@ -155,12 +159,24 @@ export default function MachineCockpit({ type = 'machine' }) {
         setQty(0);
         fetchHistory();
         if (selectedJob) fetchJobs(type === 'location' ? id : machineData?.location_id); // Refresh active job qty
-      } else { alert("Failed to log: " + json.message); }
-    } catch (e) { alert("Error: " + e.message); }
+        MySwal.fire({ icon: 'success', title: 'สำเร็จ', text: "บันทึกยอดสำเร็จ", timer: 1500, showConfirmButton: false });
+      } else { MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: "Failed to log: " + json.message }); }
+    } catch (e) { MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: "Error: " + e.message }); }
   };
 
   const voidLog = async (transactionId) => {
-    if (!window.confirm("คุณแน่ใจหรือไม่ว่าต้องการยกเลิกรายการนี้? (Are you sure you want to void this record?)")) return;
+    const result = await MySwal.fire({
+      title: 'ยกเลิกรายการ?',
+      text: "คุณแน่ใจหรือไม่ว่าต้องการยกเลิกรายการนี้?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'ใช่, ยกเลิกเลย',
+      cancelButtonText: 'ปิด'
+    });
+    if (!result.isConfirmed) return;
+    
     const formData = new FormData();
     formData.append('action', 'void');
     if (type === 'machine') formData.append('machine_id', id);
@@ -171,9 +187,11 @@ export default function MachineCockpit({ type = 'machine' }) {
     try {
       const res = await fetch(`${API_BASE_URL}/production_logs.php`, { method: 'POST', body: formData, credentials: 'include' });
       const json = await res.json();
-      if (json.success) fetchHistory();
-      else alert("Failed to void: " + json.message);
-    } catch (e) { alert("Error: " + e.message); }
+      if (json.success) {
+        fetchHistory();
+        MySwal.fire({ icon: 'success', title: 'สำเร็จ', text: "ยกเลิกรายการสำเร็จ", timer: 1500, showConfirmButton: false });
+      } else MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: "Failed to void: " + json.message });
+    } catch (e) { MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: "Error: " + e.message }); }
   };
 
   const submitEdit = async () => {
@@ -196,8 +214,9 @@ export default function MachineCockpit({ type = 'machine' }) {
       if (json.success) {
         setShowEditModal(false);
         fetchHistory();
-      } else alert("Failed to edit: " + json.message);
-    } catch (e) { alert("Error: " + e.message); }
+        MySwal.fire({ icon: 'success', title: 'สำเร็จ', text: "แก้ไขรายการสำเร็จ", timer: 1500, showConfirmButton: false });
+      } else MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: "Failed to edit: " + json.message });
+    } catch (e) { MySwal.fire({ icon: 'error', title: 'แจ้งเตือน', text: "Error: " + e.message }); }
   };
 
   const toggleTeamMember = (member) => {
@@ -400,7 +419,7 @@ export default function MachineCockpit({ type = 'machine' }) {
                               const namesText = tuArr.map(t => t.name).join('\n');
                               return (
                                 <span 
-                                  onClick={() => alert(`รายชื่อพนักงานในทีม:\n\n${namesText}`)}
+                                  onClick={() => MySwal.fire({ title: 'รายชื่อพนักงานในทีม', text: namesText, icon: 'info' })}
                                   className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 cursor-pointer"
                                 >
                                   <UserPlus size={10} className="mr-1" /> Team ({tuArr.length})
