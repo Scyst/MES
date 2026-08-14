@@ -142,8 +142,6 @@ export default function MachineCockpit({ type = 'machine' }) {
     
     let combinedNotes = notes;
     if (activeTeam.length > 0) {
-      const teamNames = activeTeam.map(t => t.name || t.fullname || t.username).join(', ');
-      combinedNotes = combinedNotes ? `${combinedNotes} [TEAM: ${teamNames}]` : `[TEAM: ${teamNames}]`;
       const teamIds = activeTeam.map(t => t.id).join(',');
       formData.append('team_user_ids', teamIds);
     }
@@ -187,8 +185,6 @@ export default function MachineCockpit({ type = 'machine' }) {
     formData.append('transaction_id', editTxn.transaction_id);
     formData.append('qty', editQty);
     if (activeTeam.length > 0) {
-      const teamNames = activeTeam.map(t => t.name || t.fullname || t.username).join(', ');
-      formData.append('notes', `[TEAM_OVERRIDE: ${teamNames}]`);
       const teamIds = activeTeam.map(t => t.id).join(',');
       formData.append('team_user_ids', teamIds);
     }
