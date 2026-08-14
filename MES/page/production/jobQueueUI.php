@@ -1,5 +1,6 @@
 <?php 
 // MES/page/production/jobQueueUI.php
+require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../components/init.php';
 
 if (!hasPermission('view_production') && !hasPermission('manage_production')) {
