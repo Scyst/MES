@@ -643,6 +643,30 @@ try {
                 $team_user_ids = implode(',', $team_user_ids);
             }
 
+            $job_no = trim($input['job_no'] ?? '');
+            $job = null;
+            if ($job_no !== '') {
+                $stmt = $pdo->prepare("SELECT job_id, status, item_id, location_id, start_time, job_no FROM PRODUCTION_JOBS WITH (NOLOCK) WHERE job_no = ?");
+                $stmt->execute([$job_no]);
+                $job = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($job) {
+                    if (in_array(strtoupper($job['status']), ['COMPLETED', 'CLOSED'])) {
+                        http_response_code(400);
+                        echo json_encode(['success' => false, 'message' => "Cannot log transaction for a closed/completed Job."]);
+                        exit;
+                    }
+                    if (!empty($lot_no)) {
+                        $notes = "[Lot: " . $lot_no . "] " . $notes;
+                    }
+                    $lot_no = $job['job_no'];
+                } else {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => "Job No not found."]);
+                    exit;
+                }
+            }
+
             $override_team = trim($input['override_team'] ?? '');
             $current_user_team = $currentUser['team_group'] ?? '';
             if (!empty($override_team) && $override_team !== $current_user_team) {
@@ -700,6 +724,14 @@ try {
                     $machine_id,
                     $team_user_ids
                 ]);
+
+                if ($job) {
+                    $add_actual = $count_type === 'FG' ? $quantity : 0;
+                    $add_hold = $count_type === 'HOLD' ? $quantity : 0;
+                    $add_scrap = $count_type === 'SCRAP' ? $quantity : 0;
+                    $sql = "UPDATE PRODUCTION_JOBS SET actual_qty = ISNULL(actual_qty, 0) + ?, hold_qty = ISNULL(hold_qty, 0) + ?, scrap_qty = ISNULL(scrap_qty, 0) + ? WHERE job_id = ?";
+                    $pdo->prepare($sql)->execute([$add_actual, $add_hold, $add_scrap, $job['job_id']]);
+                }
                 
                 $getTxnStmt = $pdo->prepare("SELECT TOP 1 transaction_id FROM " . TRANSACTIONS_TABLE . " WHERE parameter_id = ? AND transaction_type = ? AND created_by_user_id = ? ORDER BY transaction_id DESC");
                 $getTxnStmt->execute([$fg_item_id, 'PRODUCTION_' . $count_type, $currentUser['id']]);

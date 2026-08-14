@@ -120,6 +120,10 @@
                                         ?>
                                     </select>
                                 </div>
+                                <div class="col-12 mt-2">
+                                    <label class="form-label fw-bold small text-muted mb-1">เลขที่ใบสั่งผลิต (Job No.) <span class="text-muted">(Optional)</span></label>
+                                    <input type="text" id="out_job_no" name="job_no" class="form-control form-control-sm border-primary fw-bold" placeholder="ระบุเลข Job เพื่อลิ้งก์ข้อมูล...">
+                                </div>
                                 <div class="col-12 position-relative mt-2">
                                     <label class="form-label fw-bold small text-muted mb-1">ชิ้นส่วน (SAP No.) <span class="text-danger">*</span></label>
                                     <input type="text" id="out_item_search" class="form-control form-control-sm border-primary fw-bold" name="item_search" autocomplete="off" required placeholder="ค้นหา...">

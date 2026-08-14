@@ -186,9 +186,9 @@ try {
             $locToUse = $locationId ?: $job['location_id'];
             $lotToUse = $lotNo ?: $job['job_no'];
 
-            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $lotToUse, $note, $ts, $st, $et, $userId, 'Toolbox', $machineId, $teamUserIds]);
-            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $lotToUse, $note, $ts, $st, $et, $userId, 'Toolbox', $machineId, $teamUserIds]);
-            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $lotToUse, $note, $ts, $st, $et, $userId, 'Toolbox', $machineId, $teamUserIds]);
+            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile', $machineId, $teamUserIds]);
+            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile', $machineId, $teamUserIds]);
+            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $lotToUse, $note, $ts, $st, $et, $userId, 'Mobile', $machineId, $teamUserIds]);
 
         } else {
             // Old Flow: Direct insert without Job
@@ -254,17 +254,19 @@ try {
 
         $jobId = null;
         if ($jobNo) {
-            $stmt = $pdo->prepare("SELECT job_id FROM PRODUCTION_JOBS WHERE job_no = ?");
+            $stmt = $pdo->prepare("SELECT job_id, status FROM PRODUCTION_JOBS WHERE job_no = ?");
             $stmt->execute([$jobNo]);
-            $jobId = $stmt->fetchColumn();
+            $jobData = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($jobData) {
+                if (in_array(strtoupper($jobData['status']), ['COMPLETED', 'CLOSED'])) {
+                    throw new Exception("Cannot void transaction for a closed/completed Job.");
+                }
+                $jobId = $jobData['job_id'];
+            }
         }
 
-        if ($jobId) {
-            $stmt = $pdo->prepare("EXEC dbo.sp_Job_DeleteTransaction @txn_id = ?, @job_id = ?, @user_id = ?");
-            $stmt->execute([$transactionId, $jobId, 1]); // Assume user 1 for now
-        } else {
-            $pdo->prepare("DELETE FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?")->execute([$transactionId]);
-        }
+        $stmt = $pdo->prepare("EXEC dbo.sp_Job_DeleteTransaction @txn_id = ?, @job_id = ?, @user_id = ?");
+        $stmt->execute([$transactionId, $jobId, $userId]);
 
         echo json_encode(['success' => true, 'message' => "Record voided"]);
     }
@@ -291,28 +293,38 @@ try {
         $jobNo = $oldTxn['reference_id'];
         $typeStr = str_replace('PRODUCTION_', '', $oldTxn['transaction_type']); // FG, HOLD, SCRAP
 
-        // Step 1: Void Old
+        // Step 1: Fetch old team users to preserve them
+        $stmt = $pdo->prepare("SELECT user_id FROM STOCK_TRANSACTION_USERS WHERE transaction_id = ?");
+        $stmt->execute([$transactionId]);
+        $oldTeamIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $preservedTeamUserIds = implode(',', $oldTeamIds);
+
+        // Step 2: Void Old
         $jobId = null;
         if ($jobNo) {
-            $stmt = $pdo->prepare("SELECT job_id FROM PRODUCTION_JOBS WHERE job_no = ?");
+            $stmt = $pdo->prepare("SELECT job_id, status FROM PRODUCTION_JOBS WHERE job_no = ?");
             $stmt->execute([$jobNo]);
-            $jobId = $stmt->fetchColumn();
+            $jobData = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($jobData) {
+                if (in_array(strtoupper($jobData['status']), ['COMPLETED', 'CLOSED'])) {
+                    throw new Exception("Cannot edit transaction for a closed/completed Job.");
+                }
+                $jobId = $jobData['job_id'];
+            }
         }
 
-        if ($jobId) {
-            $stmt = $pdo->prepare("EXEC dbo.sp_Job_DeleteTransaction @txn_id = ?, @job_id = ?, @user_id = ?");
-            $stmt->execute([$transactionId, $jobId, 1]);
-        } else {
-            $pdo->prepare("DELETE FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?")->execute([$transactionId]);
-        }
+        $stmt = $pdo->prepare("EXEC dbo.sp_Job_DeleteTransaction @txn_id = ?, @job_id = ?, @user_id = ?");
+        $stmt->execute([$transactionId, $jobId, $userId]);
 
-        // Step 2: Insert New (using the same logic as 'log')
+        // Step 3: Insert New (using the same logic as 'log')
         $job = null;
         if ($jobNo) {
             $stmt = $pdo->prepare("SELECT job_id, item_id, location_id, start_time, job_no FROM PRODUCTION_JOBS WITH (NOLOCK) WHERE job_no = ?");
             $stmt->execute([$jobNo]);
             $job = $stmt->fetch(PDO::FETCH_ASSOC);
         }
+
+        $oldTimestamp = date('Y-m-d H:i:s', strtotime($oldTxn['transaction_timestamp']));
 
         if ($job) {
             $add_actual = $typeStr === 'FG' ? $newQty : 0;
@@ -323,16 +335,15 @@ try {
             $pdo->prepare($sql)->execute([$add_actual, $add_hold, $add_scrap, $job['job_id']]);
 
             $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?, @machine_id = ?, @team_user_ids = ?");
-            $ts = date('Y-m-d H:i:s');
             $st = $job['start_time'] ? date('H:i:s', strtotime($job['start_time'])) : date('H:i:s');
-            $et = date('H:i:s');
+            $et = date('H:i:s', strtotime($oldTxn['transaction_timestamp']));
             $note = $oldTxn['notes'] . " (Edited)";
             $locToUse = $locationId ?: $oldTxn['to_location_id'];
             $macToUse = $machineId ?: $oldTxn['machine_id'];
 
-            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $note, $ts, $st, $et, $userId, 'Toolbox', $macToUse, $teamUserIds]);
-            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $note, $ts, $st, $et, $userId, 'Toolbox', $macToUse, $teamUserIds]);
-            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $note, $ts, $st, $et, $userId, 'Toolbox', $macToUse, $teamUserIds]);
+            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $note, $oldTimestamp, $st, $et, $userId, 'Mobile', $macToUse, $preservedTeamUserIds]);
+            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $note, $oldTimestamp, $st, $et, $userId, 'Mobile', $macToUse, $preservedTeamUserIds]);
+            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $note, $oldTimestamp, $st, $et, $userId, 'Mobile', $macToUse, $preservedTeamUserIds]);
         } else {
             $note = $oldTxn['notes'] . " (Edited)";
             $macToUse = $machineId ?: $oldTxn['machine_id'];
@@ -340,7 +351,7 @@ try {
             
             $sql = "INSERT INTO " . TRANSACTIONS_TABLE . " 
                     (transaction_type, quantity, created_by_user_id, notes, transaction_timestamp, machine_id, from_location_id, to_location_id, reference_id, parameter_id)
-                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?, ?, ?)";
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -348,6 +359,7 @@ try {
                 $newQty, 
                 $userId, 
                 $note, 
+                $oldTimestamp, 
                 $macToUse, 
                 $oldTxn['from_location_id'], 
                 $locToUse, 
@@ -356,8 +368,8 @@ try {
             ]);
             $newTxnId = $pdo->lastInsertId();
 
-            if ($teamUserIds && trim($teamUserIds) !== '') {
-                $ids = array_filter(explode(',', $teamUserIds));
+            if ($preservedTeamUserIds && trim($preservedTeamUserIds) !== '') {
+                $ids = array_filter(explode(',', $preservedTeamUserIds));
                 $teamSize = count($ids);
                 if ($teamSize > 0) {
                     $ratio = 1.0 / $teamSize;

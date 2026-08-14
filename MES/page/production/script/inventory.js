@@ -1531,6 +1531,7 @@ async function handleFormSubmit(event) {
                 log_date: data.log_date,
                 start_time: startTime,
                 end_time: endTime,
+                job_no: data.job_no || null,
                 notes: data.notes,
                 override_team: data.override_team,
                 team_user_ids: data.team_user_ids,
