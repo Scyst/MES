@@ -338,10 +338,17 @@ export default function MachineCockpit({ type = 'machine' }) {
                 className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 transition-colors text-sm"
               >
                 <option value="">-- ปัจจุบัน / ไม่ระบุ --</option>
-                <option value="08:00:00|08:59:59">08:00 - 09:00</option>
-                <option value="09:00:00|09:59:59">09:00 - 10:00</option>
-                <option value="10:00:00|10:59:59">10:00 - 11:00</option>
-                <option value="11:00:00|11:59:59">11:00 - 12:00</option>
+                {Array.from({ length: 24 }).map((_, i) => {
+                  const hour = (i + 8) % 24;
+                  const nextHour = (hour + 1) % 24;
+                  const h1 = hour.toString().padStart(2, '0');
+                  const h2 = nextHour.toString().padStart(2, '0');
+                  return (
+                    <option key={h1} value={`${h1}:00:00|${h1}:59:59`}>
+                      {`${h1}:00 - ${h2}:00`}
+                    </option>
+                  );
+                })}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
