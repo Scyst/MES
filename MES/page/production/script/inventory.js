@@ -543,7 +543,7 @@ function renderReceiptHistoryTable(data) {
             <td class="text-center" data-label="Lot. / Ref.">${row.lot_no || ''}</td>
             <td class="text-center" data-label="Quantity">${Math.floor(row.quantity).toLocaleString()}</td>
             <td class="text-center" data-label="User">${row.created_by || 'N/A'}</td>
-            <td class="text-center" data-label="Notes">${row.notes ? row.notes.replace(/\[(?:TEAM_OVERRIDE|Job):.*?\]/g, '').trim() : ''}</td>
+            <td class="text-center" data-label="Notes">${row.notes ? row.notes.replace(/\[(?:TEAM_OVERRIDE|TEAM|Job):.*?\]/gi, '').trim() : ''}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -673,7 +673,7 @@ function renderProductionHistoryTable(data) {
                 return `<span>${createdBy}</span> ${teamBadge}`;
             })()}
             </td>
-            <td class="text-center" data-label="Notes">${row.notes ? row.notes.replace(/\[(?:TEAM_OVERRIDE|Job):.*?\]/g, '').trim() : ''}</td>
+            <td class="text-center" data-label="Notes">${row.notes ? row.notes.replace(/\[(?:TEAM_OVERRIDE|TEAM|Job):.*?\]/gi, '').trim() : ''}</td>
         `;
 
         tr.addEventListener('click', (e) => {
@@ -839,7 +839,7 @@ function renderAllTransactionsTable(data) {
             <td class="text-center fw-bold ${quantityClass}" data-label="Change">${quantityPrefix}${quantity.toLocaleString()}</td>
             <td class="text-center" data-label="Type"><span class="badge bg-secondary">${row.transaction_type}</span></td>
             <td class="text-center" data-label="User">${row.created_by || 'N/A'}</td> 
-            <td class="text-center" data-label="Notes">${row.notes ? row.notes.replace(/\[(?:TEAM_OVERRIDE|Job):.*?\]/g, '').trim() : ''}</td>
+            <td class="text-center" data-label="Notes">${row.notes ? row.notes.replace(/\[(?:TEAM_OVERRIDE|TEAM|Job):.*?\]/gi, '').trim() : ''}</td>
         `;
         tbody.appendChild(tr);
     });

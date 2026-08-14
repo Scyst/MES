@@ -18,10 +18,15 @@ if (!defined('MANPOWER_EMPLOYEES_TABLE')) {
 }
 
 try {
-    $sql = "SELECT id, emp_id as employee_id, name_th as name, position 
-            FROM " . MANPOWER_EMPLOYEES_TABLE . " 
-            WHERE is_active = 1
-            ORDER BY name_th ASC";
+    $sql = "SELECT 
+            u.id, 
+            emp.emp_id as employee_id, 
+            ISNULL(NULLIF(emp.name_th, ''), ISNULL(NULLIF(u.fullname, ''), u.username)) AS name, 
+            emp.position 
+        FROM " . USERS_TABLE . " u
+        LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " emp ON u.emp_id = emp.emp_id COLLATE Thai_CI_AS
+        WHERE u.is_active = 1 AND emp.emp_id IS NOT NULL
+        ORDER BY ISNULL(NULLIF(emp.name_th, ''), ISNULL(NULLIF(u.fullname, ''), u.username)) ASC";
             
     $stmt = $pdo->query($sql);
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
