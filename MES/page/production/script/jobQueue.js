@@ -859,7 +859,19 @@ async function viewJobLogs(jobNo, jobId, partNo = '', partName = '') {
             if (cleanNotes === '') cleanNotes = '-';
             
             let notesHtml = cleanNotes !== '-' ? `<span class="text-muted" style="font-size: 0.85rem; white-space: normal; display: block; line-height: 1.4;">${cleanNotes}</span>` : '<span class="text-black-50 small">-</span>';
-            let creatorHtml = log.creator_name ? `<span class="text-dark fw-bold" style="font-size: 0.85rem;"><i class="fas fa-user-circle me-1 text-secondary"></i>${log.creator_name}</span>` : '<span class="text-black-50 small">-</span>';
+            
+            let teamUsersHtml = '';
+            if (log.team_users) {
+                try {
+                    let tuArr = typeof log.team_users === 'string' ? JSON.parse(log.team_users) : log.team_users;
+                    if (Array.isArray(tuArr) && tuArr.length > 0) {
+                        let names = tuArr.map(t => t.name).join(', ');
+                        teamUsersHtml = `<div class="text-muted mt-1" style="font-size: 0.75rem;"><i class="fas fa-users me-1"></i>${names}</div>`;
+                    }
+                } catch(e){}
+            }
+
+            let creatorHtml = log.creator_name ? `<div class="text-dark fw-bold" style="font-size: 0.85rem;"><i class="fas fa-user-circle me-1 text-secondary"></i>${log.creator_name}</div>${teamUsersHtml}` : '<span class="text-black-50 small">-</span>';
 
             tbody.insertAdjacentHTML('beforeend', `
                 <tr style="transition: all 0.2s;">
