@@ -865,13 +865,15 @@ async function viewJobLogs(jobNo, jobId, partNo = '', partName = '') {
                 try {
                     let tuArr = typeof log.team_users === 'string' ? JSON.parse(log.team_users) : log.team_users;
                     if (Array.isArray(tuArr) && tuArr.length > 0) {
-                        let names = tuArr.map(t => t.name).join(', ');
-                        teamUsersHtml = `<div class="text-muted mt-1" style="font-size: 0.75rem;"><i class="fas fa-users me-1"></i>${names}</div>`;
+                        let namesHtml = tuArr.map(t => `<div class="p-2 border-bottom text-start"><i class="fas fa-user-circle me-2 text-primary"></i>${t.name}</div>`).join('');
+                        let encodedHtml = btoa(encodeURIComponent(`<div class="fs-5 mb-3 fw-bold text-dark border-bottom pb-2">รายชื่อพนักงานในทีม</div><div class="text-start" style="max-height: 250px; overflow-y: auto;">${namesHtml}</div>`));
+                        
+                        teamUsersHtml = `<span class="badge bg-info text-dark ms-2 shadow-sm" style="cursor:pointer; transition: 0.2s; font-size: 0.7rem;" onmouseover="this.classList.add('bg-primary', 'text-white'); this.classList.remove('bg-info', 'text-dark');" onmouseout="this.classList.add('bg-info', 'text-dark'); this.classList.remove('bg-primary', 'text-white');" onclick="Swal.fire({html: decodeURIComponent(atob('${encodedHtml}')), width: '400px', showCloseButton: true, showConfirmButton: false})" title="คลิกดูรายชื่อพนักงานในทีม"><i class="fas fa-users me-1"></i>Team (${tuArr.length})</span>`;
                     }
                 } catch(e){}
             }
 
-            let creatorHtml = log.creator_name ? `<div class="text-dark fw-bold" style="font-size: 0.85rem;"><i class="fas fa-user-circle me-1 text-secondary"></i>${log.creator_name}</div>${teamUsersHtml}` : '<span class="text-black-50 small">-</span>';
+            let creatorHtml = log.creator_name ? `<div class="text-dark fw-bold d-flex align-items-center" style="font-size: 0.85rem;"><i class="fas fa-user-circle me-1 text-secondary"></i><span>${log.creator_name}</span>${teamUsersHtml}</div>` : '<span class="text-black-50 small">-</span>';
 
             tbody.insertAdjacentHTML('beforeend', `
                 <tr style="transition: all 0.2s;">
