@@ -340,10 +340,11 @@ function setupProductionAutocomplete() {
         const value = searchInput.value.toLowerCase();
         resultsWrapper.innerHTML = '';
         selectedOutItem = null;
-        const jobSelect = document.getElementById('out_job_no');
-        if (jobSelect) jobSelect.innerHTML = '<option value="">-- ไม่ระบุ --</option>';
 
-        if (value.length < 2) return;
+        if (value.length < 2) {
+            fetchJobsForItem(null); // Fetch all jobs if search is cleared
+            return;
+        }
 
         const filteredItems = allItems.filter(item =>
             item.sap_no.toLowerCase().includes(value) ||
@@ -370,24 +371,54 @@ function setupProductionAutocomplete() {
     document.addEventListener('click', (e) => {
         if (e.target !== searchInput) resultsWrapper.style.display = 'none';
     });
+
+    const jobSelect = document.getElementById('out_job_no');
+    if (jobSelect) {
+        jobSelect.addEventListener('change', () => {
+            const selectedOpt = jobSelect.options[jobSelect.selectedIndex];
+            if (selectedOpt && selectedOpt.value) {
+                const itemId = selectedOpt.dataset.itemId;
+                const sapNo = selectedOpt.dataset.sapNo;
+                const partNo = selectedOpt.dataset.partNo;
+                
+                if (itemId) {
+                    searchInput.value = `${sapNo} | ${partNo}`;
+                    document.getElementById('out_item_id').value = itemId;
+                    selectedOutItem = allItems.find(i => i.item_id == itemId) || null;
+                }
+            }
+        });
+    }
 }
 
-async function fetchJobsForItem(itemId) {
+async function fetchJobsForItem(itemId = null) {
     const select = document.getElementById('out_job_no');
     if (!select) return;
+    
+    // Store currently selected job to restore if possible
+    const currentSelectedJob = select.value;
+    
     select.innerHTML = '<option value="">Loading...</option>';
     try {
-        const res = await sendRequest(INVENTORY_API_URL, 'get_active_jobs', 'GET', null, { item_id: itemId });
+        const queryParams = itemId ? { item_id: itemId } : {};
+        const res = await sendRequest(INVENTORY_API_URL, 'get_active_jobs', 'GET', null, queryParams);
         select.innerHTML = '<option value="">-- ไม่ระบุ --</option>';
         if (res.success && res.data.length > 0) {
             res.data.forEach(job => {
                 const opt = document.createElement('option');
                 opt.value = job.job_no;
+                opt.dataset.itemId = job.item_id;
+                opt.dataset.sapNo = job.sap_no;
+                opt.dataset.partNo = job.part_no;
                 const locName = job.location_name ? job.location_name : 'ไม่มี Line';
                 opt.textContent = `${job.job_no} [${job.status}] - Target: ${Math.floor(job.target_qty)} (${locName})`;
                 select.appendChild(opt);
             });
-            if (res.data.length >= 1) {
+            
+            // Try to restore previous selection, or auto-select if only 1 job
+            if (currentSelectedJob && [...select.options].some(o => o.value === currentSelectedJob)) {
+                select.value = currentSelectedJob;
+            } else if (itemId && res.data.length >= 1) {
                 select.selectedIndex = 1;
             }
         }
@@ -1061,8 +1092,7 @@ function openAddPartModal() {
                 selectedOutItem = allItems.find(item => item.item_id == lastData.item_id) || null;
                 fetchJobsForItem(lastData.item_id);
             } else {
-                const jobSelect = document.getElementById('out_job_no');
-                if (jobSelect) jobSelect.innerHTML = '<option value="">-- ไม่ระบุ --</option>';
+                fetchJobsForItem(null);
             }
             if (lastData.team_user_ids && lastData.team_user_ids.length > 0) {
                 setTeamUserSelection('out', lastData.team_user_ids);
@@ -1074,9 +1104,11 @@ function openAddPartModal() {
                 if (overrideInput) overrideInput.value = lastData.override_team;
             }
         } else {
+            fetchJobsForItem(null);
             setTeamUserSelection('out', (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? [currentUser.id] : []);
         }
     } catch (e) {
+        fetchJobsForItem(null);
         setTeamUserSelection('out', (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? [currentUser.id] : []);
     }
 
