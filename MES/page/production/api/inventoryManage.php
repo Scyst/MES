@@ -818,6 +818,11 @@ try {
                             $new_notes = $matches[1] . " " . trim($new_notes);
                         }
                     }
+                    if (!empty($old_transaction['notes']) && preg_match('/(\[Job:\s*[^\]]+\])/', $old_transaction['notes'], $matchesJob)) {
+                        if (strpos($new_notes, '[Job:') === false) {
+                            $new_notes = trim($new_notes) . " " . $matchesJob[1];
+                        }
+                    }
                     $new_log_date = $input['log_date'] ?? null;
                     $new_start_time = $input['start_time'] ?? null;
                     $new_end_time = $input['end_time'] ?? null;
@@ -882,6 +887,31 @@ try {
                                 FROM " . USERS_TABLE . " 
                                 WHERE id = ?
                             ")->execute([$transaction_id, 1.0, $currentUser['id']]);
+                        }
+                        
+                        // Sync with PRODUCTION_JOBS
+                        if (preg_match('/\[Job:\s*(.+?)\]/i', $new_notes, $matches)) {
+                            $job_no = trim($matches[1]);
+                            
+                            $old_qty = (float)$old_transaction['quantity'];
+                            $old_ttype = $old_transaction['transaction_type'];
+                            $old_col = null;
+                            if ($old_ttype === 'PRODUCTION_FG') $old_col = 'actual_qty';
+                            elseif ($old_ttype === 'PRODUCTION_HOLD') $old_col = 'hold_qty';
+                            elseif ($old_ttype === 'PRODUCTION_SCRAP') $old_col = 'scrap_qty';
+                            
+                            if ($old_col) {
+                                $pdo->prepare("UPDATE PRODUCTION_JOBS SET $old_col = ISNULL($old_col, 0) - ? WHERE job_no = ?")->execute([$old_qty, $job_no]);
+                            }
+                            
+                            $new_col = null;
+                            if ($new_transaction_type === 'PRODUCTION_FG') $new_col = 'actual_qty';
+                            elseif ($new_transaction_type === 'PRODUCTION_HOLD') $new_col = 'hold_qty';
+                            elseif ($new_transaction_type === 'PRODUCTION_SCRAP') $new_col = 'scrap_qty';
+                            
+                            if ($new_col) {
+                                $pdo->prepare("UPDATE PRODUCTION_JOBS SET $new_col = ISNULL($new_col, 0) + ? WHERE job_no = ?")->execute([$new_quantity, $job_no]);
+                            }
                         }
                     }
 
@@ -1080,6 +1110,21 @@ try {
                         WHERE status = 'PENDING' AND CHARINDEX('[TXN:' + CAST(? AS VARCHAR) + ']', notes) > 0
                     ");
                     $delReqStmt->execute([$transaction_id]);
+                }
+                
+                // Sync with PRODUCTION_JOBS
+                if (preg_match('/\[Job:\s*(.+?)\]/i', $transaction['notes'], $matches)) {
+                    $job_no = trim($matches[1]);
+                    $qty = (float)$transaction['quantity'];
+                    $ttype = $transaction['transaction_type'];
+                    $col = null;
+                    if ($ttype === 'PRODUCTION_FG') $col = 'actual_qty';
+                    elseif ($ttype === 'PRODUCTION_HOLD') $col = 'hold_qty';
+                    elseif ($ttype === 'PRODUCTION_SCRAP') $col = 'scrap_qty';
+                    
+                    if ($col) {
+                        $pdo->prepare("UPDATE PRODUCTION_JOBS SET $col = ISNULL($col, 0) - ? WHERE job_no = ?")->execute([$qty, $job_no]);
+                    }
                 }
 
                 $pdo->commit();
