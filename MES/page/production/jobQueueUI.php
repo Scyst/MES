@@ -11,6 +11,15 @@ $canManage = hasPermission('manage_production');
 $canAdd = hasPermission('add_production') || hasPermission('manage_production');
 $currentUserForJS = $_SESSION['user'] ?? null;
 
+// Fetch Distinct Teams
+$teamGroups = [];
+try {
+    $stmt = $pdo->query("SELECT DISTINCT team_group FROM " . USERS_TABLE . " WHERE team_group IS NOT NULL AND team_group != '' ORDER BY team_group");
+    $teamGroups = $stmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    // Ignore if table/column missing
+}
+
 $pageTitle = "Live Job Queue | MES TOOLBOX";
 ?>
 
@@ -219,10 +228,32 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
                 </div>
                 <div class="modal-body pt-2">
                     <input type="hidden" id="record_job_id">
-                    <div class="text-center mb-4">
+                    <div class="text-center mb-3">
                         <span class="badge bg-light text-primary border border-primary px-3 py-2 fs-6 rounded-pill" id="record_job_no"></span>
                     </div>
-                    
+
+                    <div class="row g-2 mb-3 px-1">
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-muted mb-1">วันที่</label>
+                            <input type="date" id="record_log_date" name="log_date" class="form-control form-control-sm text-center" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-muted mb-1">ช่วงเวลาผลิต</label>
+                            <select id="record_time_slot" name="time_slot" class="form-select form-select-sm text-center fw-bold text-primary">
+                                <?php
+                                    date_default_timezone_set('Asia/Bangkok');
+                                    $current_hour = (int)date('H');
+                                    for ($h = 0; $h < 24; $h++) {
+                                        $start_h = str_pad($h, 2, '0', STR_PAD_LEFT);
+                                        $end_h = str_pad(($h + 1) % 24, 2, '0', STR_PAD_LEFT);
+                                        $slot_value = "{$start_h}:00:00|{$start_h}:59:59";
+                                        $selected = ($h == $current_hour) ? 'selected' : '';
+                                        echo "<option value=\"{$slot_value}\" {$selected}>{$start_h}:00 - {$end_h}:00</option>";
+                                    }
+                                ?>
+                            </select>
+                        </div>
+                    </div>
                     <div class="mb-3 p-3 rounded-3" style="background-color: #f0fdf4; border: 1px solid #c3e6cb;">
                         <label class="form-label fw-bold text-success mb-1"><i class="fas fa-check-circle me-1"></i> ยอดงานดี (FG)</label>
                         <input type="number" id="input_actual_qty" class="form-control form-control-lg text-center fw-bold text-success border-success" min="0" step="any" placeholder="0">
@@ -237,6 +268,43 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
                         <label class="form-label fw-bold text-danger mb-1"><i class="fas fa-times-circle me-1"></i> ยอดของเสีย (Scrap)</label>
                         <input type="number" id="input_scrap_qty" class="form-control form-control-lg text-center fw-bold text-danger border-danger mb-2" min="0" step="any" placeholder="0">
                         <input type="text" id="input_scrap_reason" class="form-control form-control-sm text-center text-danger border-danger bg-white" placeholder="ระบุสาเหตุของเสีย (ถ้ามี)">
+                    </div>
+
+                    <div class="p-3 bg-white rounded-3 shadow-sm border mb-3">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <?php
+                                    $isAdmin = isset($currentUserForJS['role']) && strtolower($currentUserForJS['role']) === 'admin';
+                                    $hasTeam = !empty($currentUserForJS['team_group']);
+                                    $disableOverride = !$isAdmin ? 'disabled' : '';
+                                ?>
+                                <label class="form-label fw-bold small text-muted mb-1">Team (Override)</label>
+                                <select id="record_override_team" class="form-select form-select-sm bg-light text-secondary" <?php echo $disableOverride; ?>>
+                                    <option value="">-- อิงตามผู้ใช้งาน (<?php echo htmlspecialchars($currentUserForJS['team_group'] ?? 'ไม่มีทีม'); ?>) --</option>
+                                    <?php if(isset($teamGroups) && is_array($teamGroups)): ?>
+                                        <?php foreach ($teamGroups as $team): ?>
+                                            <option value="<?php echo htmlspecialchars($team); ?>"><?php echo htmlspecialchars($team); ?></option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                                <?php if (!$isAdmin && !$hasTeam): ?>
+                                    <div class="alert alert-warning p-1 mt-1 mb-0 small text-center fw-bold"><i class="fas fa-exclamation-triangle"></i> คุณไม่มีทีม กรุณาติดต่อแอดมิน</div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <input type="hidden" id="record_team_user_ids" value="">
+                                <label class="form-label fw-bold small text-muted mb-1">ผู้ปฏิบัติงาน (รายคน) <span class="badge bg-secondary" id="record_team_user_count">1</span></label>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary w-100 text-start d-flex justify-content-between align-items-center bg-light" type="button" id="record_team_user_btn" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                                        <span id="record_team_user_text" class="text-truncate text-secondary">-- อิงตามผู้ล็อกอิน --</span>
+                                        <i class="fas fa-chevron-down ms-2"></i>
+                                    </button>
+                                    <ul class="dropdown-menu w-100 shadow-sm p-2" aria-labelledby="record_team_user_btn" style="max-height: 200px; overflow-y: auto;" id="record_team_user_list">
+                                        <div class="text-center small text-muted">กำลังโหลด...</div>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-white border-top-0 pt-0 justify-content-center">

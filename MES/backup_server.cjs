@@ -8,6 +8,43 @@ const FTP_CONFIG = {
     password: "O@m11o1toolBox",
     secure: false
 };
+const BACKUP_ROOT = path.join('E:', 'MES', 'Backups');
+const RETENTION_DAYS = 7;
+
+function getLatestBackupFolder() {
+    if (!fs.existsSync(BACKUP_ROOT)) return null;
+    
+    const folders = fs.readdirSync(BACKUP_ROOT)
+        .filter(name => name.startsWith('FullServer_'))
+        .map(name => path.join(BACKUP_ROOT, name))
+        .filter(dir => fs.statSync(dir).isDirectory());
+        
+    if (folders.length === 0) return null;
+    
+    // Sort descending by name (since name has YYYYMMDD_HHMM)
+    folders.sort((a, b) => b.localeCompare(a));
+    return folders[0];
+}
+
+function cleanupOldBackups() {
+    if (!fs.existsSync(BACKUP_ROOT)) return;
+    
+    const folders = fs.readdirSync(BACKUP_ROOT)
+        .filter(name => name.startsWith('FullServer_'))
+        .map(name => path.join(BACKUP_ROOT, name))
+        .filter(dir => fs.statSync(dir).isDirectory());
+        
+    const now = Date.now();
+    const maxAgeMs = RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    
+    for (const folder of folders) {
+        const stats = fs.statSync(folder);
+        if (now - stats.mtimeMs > maxAgeMs) {
+            console.log(`[Cleanup] Deleting old backup folder: ${folder}`);
+            fs.rmSync(folder, { recursive: true, force: true });
+        }
+    }
+}
 
 async function backupFtp() {
     const now = new Date();
@@ -17,7 +54,14 @@ async function backupFtp() {
         String(now.getHours()).padStart(2, '0') +
         String(now.getMinutes()).padStart(2, '0');
         
-    const localBackupDir = path.join('E:', 'MES', 'Backups', `FullServer_${timestamp}`);
+    const localBackupDir = path.join(BACKUP_ROOT, `FullServer_${timestamp}`);
+    const latestBackupDir = getLatestBackupFolder();
+    
+    if (latestBackupDir) {
+        console.log(`[Info] Found previous backup at ${latestBackupDir}. Will use hard links for unchanged files.`);
+    } else {
+        console.log(`[Info] No previous backup found. Full download will be performed.`);
+    }
     
     if (!fs.existsSync(localBackupDir)) {
         fs.mkdirSync(localBackupDir, { recursive: true });
@@ -42,12 +86,14 @@ async function backupFtp() {
         return;
     }
 
-    // Queue for Breadth-First Traversal of directories
     const queue = [{ remotePath: '/', retries: 0 }];
+    let linkedFilesCount = 0;
+    let downloadedFilesCount = 0;
     
     while (queue.length > 0) {
         const { remotePath, retries } = queue.shift();
-        const localPath = path.join(localBackupDir, remotePath === '/' ? '' : remotePath);
+        const relativePath = remotePath === '/' ? '' : remotePath;
+        const localPath = path.join(localBackupDir, relativePath);
         
         if (!fs.existsSync(localPath)) {
             fs.mkdirSync(localPath, { recursive: true });
@@ -60,15 +106,40 @@ async function backupFtp() {
             for (const item of list) {
                 if (item.name === "." || item.name === "..") continue;
                 
-                const itemRemotePath = remotePath.endsWith('/') ? remotePath + item.name : remotePath + '/' + item.name;
-                const itemLocalPath = path.join(localPath, item.name);
+                const itemRelative = relativePath ? relativePath + '/' + item.name : item.name;
+                const itemRemotePath = '/' + itemRelative;
+                const itemLocalPath = path.join(localBackupDir, itemRelative);
                 
                 if (item.isDirectory) {
-                    // Add subfolder to queue to process its contents later
                     queue.push({ remotePath: itemRemotePath, retries: 0 });
                 } else if (item.isFile) {
-                    console.log(`[Backup] Downloading file: ${itemRemotePath}`);
-                    await client.downloadTo(itemLocalPath, itemRemotePath);
+                    let fileReused = false;
+                    
+                    // Incremental Sync Logic
+                    if (latestBackupDir) {
+                        const previousLocalPath = path.join(latestBackupDir, itemRelative);
+                        if (fs.existsSync(previousLocalPath)) {
+                            const prevStats = fs.statSync(previousLocalPath);
+                            // Compare file size (FTP returns size in item.size)
+                            if (prevStats.size === item.size) {
+                                try {
+                                    // Create a hard link to save space and skip download
+                                    fs.linkSync(previousLocalPath, itemLocalPath);
+                                    console.log(`[Link] Reused file (Hard Link): ${itemRemotePath}`);
+                                    linkedFilesCount++;
+                                    fileReused = true;
+                                } catch (e) {
+                                    console.error(`[Error] Hard link failed for ${itemRemotePath}, falling back to download.`);
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (!fileReused) {
+                        console.log(`[Backup] Downloading new/changed file: ${itemRemotePath}`);
+                        await client.downloadTo(itemLocalPath, itemRemotePath);
+                        downloadedFilesCount++;
+                    }
                 }
             }
         } catch (err) {
@@ -81,7 +152,6 @@ async function backupFtp() {
                 } catch (connErr) {
                     console.error(`[Error] Reconnection failed: ${connErr.message}`);
                 }
-                // Push back to front of queue to retry immediately
                 queue.unshift({ remotePath, retries: retries + 1 });
             } else {
                 console.error(`[Error] Skipping ${remotePath} after 3 failed attempts.`);
@@ -93,7 +163,16 @@ async function backupFtp() {
         client.close();
     }
     
-    console.log(`FTP Backup completed to ${localBackupDir}`);
+    console.log(`\nFTP Backup completed to ${localBackupDir}`);
+    console.log(`Summary: ${downloadedFilesCount} downloaded, ${linkedFilesCount} hard linked.`);
+    
+    // Auto-cleanup
+    try {
+        console.log(`\nRunning cleanup for backups older than ${RETENTION_DAYS} days...`);
+        cleanupOldBackups();
+    } catch (err) {
+        console.error(`[Error] Cleanup failed: ${err.message}`);
+    }
 }
 
 backupFtp();

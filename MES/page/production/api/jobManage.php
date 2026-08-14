@@ -214,19 +214,63 @@ try {
             $sql = "UPDATE PRODUCTION_JOBS SET actual_qty = ISNULL(actual_qty, 0) + ?, hold_qty = ISNULL(hold_qty, 0) + ?, scrap_qty = ISNULL(scrap_qty, 0) + ? WHERE job_id = ?";
             $pdo->prepare($sql)->execute([$add_actual, $add_hold, $add_scrap, $job_id]);
 
-            $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?");
-            $ts = date('Y-m-d H:i:s');
-            $st = $job['start_time'] ? date('H:i:s', strtotime($job['start_time'])) : date('H:i:s');
-            $et = date('H:i:s');
+            $team_user_ids = $input['team_user_ids'] ?? null;
+            if (is_array($team_user_ids)) {
+                $team_user_ids = implode(',', $team_user_ids);
+            }
+
+            $override_team = trim($input['override_team'] ?? '');
+            $current_user_team = $currentUser['team_group'] ?? '';
+            $notesPrefix = "";
+            if (!empty($override_team) && $override_team !== $current_user_team) {
+                $notesPrefix = "[TEAM_OVERRIDE: " . $override_team . "] ";
+            }
+
+            $spProd = $pdo->prepare("
+                EXEC dbo.sp_ExecuteProduction 
+                    @item_id = ?, 
+                    @location_id = ?, 
+                    @quantity = ?, 
+                    @count_type = ?, 
+                    @lot_no = ?, 
+                    @notes = ?, 
+                    @timestamp = ?, 
+                    @start_time = ?, 
+                    @end_time = ?, 
+                    @user_id = ?, 
+                    @username = ?,
+                    @machine_id = ?,
+                    @team_user_ids = ?
+            ");
+            
+            $log_date = !empty($input['log_date']) ? $input['log_date'] : date('Y-m-d');
+            
+            if (!empty($input['time_slot'])) {
+                $parts = explode('|', $input['time_slot']);
+                $st = $parts[0] ?? date('H:i:s');
+                $et = $parts[1] ?? date('H:i:s');
+                $ts = $log_date . ' ' . $et;
+            } else {
+                $ts = date('Y-m-d H:i:s');
+                $st = $job['start_time'] ? date('H:i:s', strtotime($job['start_time'])) : date('H:i:s');
+                $et = date('H:i:s');
+            }
             
             // ใช้ lot_no ถ้ามีการระบุไว้ตอนสร้างงาน ถ้าไม่มีให้ใช้ job_no เป็นค่าอ้างอิงแทน
             $transactionLot = !empty($job['lot_no']) ? $job['lot_no'] : $job['job_no'];
             
-            if ($add_actual > 0) $spProd->execute([$job['item_id'], $job['location_id'], $add_actual, 'FG', $transactionLot, 'Output [Job: ' . $job['job_no'] . ']', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
-            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $job['location_id'], $add_hold, 'HOLD', $transactionLot, 'Hold [Job: ' . $job['job_no'] . ']', $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
+            if ($add_actual > 0) {
+                $note = $notesPrefix . 'Output [Job: ' . $job['job_no'] . ']';
+                $spProd->execute([$job['item_id'], $job['location_id'], $add_actual, 'FG', $transactionLot, $note, $ts, $st, $et, $currentUser['id'], $currentUser['username'], null, $team_user_ids]);
+            }
+            if ($add_hold > 0) {
+                $note = $notesPrefix . 'Hold [Job: ' . $job['job_no'] . ']';
+                $spProd->execute([$job['item_id'], $job['location_id'], $add_hold, 'HOLD', $transactionLot, $note, $ts, $st, $et, $currentUser['id'], $currentUser['username'], null, $team_user_ids]);
+            }
             if ($add_scrap > 0) {
-                $scrapNote = $scrap_reason !== '' ? "Scrap ({$scrap_reason}) [Job: " . $job['job_no'] . "]" : 'Scrap [Job: ' . $job['job_no'] . ']';
-                $spProd->execute([$job['item_id'], $job['location_id'], $add_scrap, 'SCRAP', $transactionLot, $scrapNote, $ts, $st, $et, $currentUser['id'], $currentUser['username']]);
+                $baseScrap = $scrap_reason !== '' ? "Scrap ({$scrap_reason})" : "Scrap";
+                $note = $notesPrefix . $baseScrap . ' [Job: ' . $job['job_no'] . ']';
+                $spProd->execute([$job['item_id'], $job['location_id'], $add_scrap, 'SCRAP', $transactionLot, $note, $ts, $st, $et, $currentUser['id'], $currentUser['username'], null, $team_user_ids]);
             }
 
             if ($add_hold > 0) {

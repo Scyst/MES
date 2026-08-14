@@ -587,6 +587,26 @@ function openRecordModal(jobId, jobNo) {
         holdInputContainer.style.display = 'block';
     }
     
+    // Initialize date and time slot
+    const now = new Date();
+    document.getElementById('record_log_date').value = now.toISOString().split('T')[0];
+    const currentHour = now.getHours().toString().padStart(2, '0');
+    const recordTimeSlot = document.getElementById('record_time_slot');
+    if (recordTimeSlot) {
+        Array.from(recordTimeSlot.options).forEach(opt => {
+            if (opt.value.startsWith(currentHour + ':')) {
+                recordTimeSlot.value = opt.value;
+            }
+        });
+    }
+
+    // Reset team
+    const overrideTeamSelect = document.getElementById('record_override_team');
+    if (overrideTeamSelect && !overrideTeamSelect.disabled) {
+        overrideTeamSelect.value = '';
+    }
+    loadRecordTeamUsers();
+    
     new bootstrap.Modal(document.getElementById('recordOutputModal')).show();
 }
 
@@ -596,7 +616,11 @@ async function submitRecordOutput() {
         actual_qty: document.getElementById('input_actual_qty').value || 0,
         hold_qty: document.getElementById('input_hold_qty').value || 0,
         scrap_qty: document.getElementById('input_scrap_qty').value || 0,
-        scrap_reason: document.getElementById('input_scrap_reason') ? document.getElementById('input_scrap_reason').value : ''
+        scrap_reason: document.getElementById('input_scrap_reason') ? document.getElementById('input_scrap_reason').value : '',
+        log_date: document.getElementById('record_log_date') ? document.getElementById('record_log_date').value : '',
+        time_slot: document.getElementById('record_time_slot') ? document.getElementById('record_time_slot').value : '',
+        override_team: document.getElementById('record_override_team') ? document.getElementById('record_override_team').value : '',
+        team_user_ids: document.getElementById('record_team_user_ids') ? document.getElementById('record_team_user_ids').value : ''
     };
 
     if (payload.actual_qty <= 0 && payload.hold_qty <= 0 && payload.scrap_qty <= 0) {
@@ -924,3 +948,128 @@ async function deleteTxn(txnId, jobId) {
         Swal.fire('Error', res.message, 'error');
     }
 }
+// =================================================================================================
+// TEAM USER SELECTION FOR RECORD MODAL
+// =================================================================================================
+async function loadRecordTeamUsers() {
+    const listEl = document.getElementById('record_team_user_list');
+    if (!listEl) return;
+
+    listEl.innerHTML = '<div class="text-center small text-muted">กำลังโหลด...</div>';
+    
+    let team = document.getElementById('record_override_team')?.value || '';
+    
+    try {
+        const response = await fetch(`../production/api/inventoryManage.php?action=get_team_users&team=${team}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            populateRecordTeamUserDropdown(result.users);
+            
+            // Auto-select logged-in user if no override and users array has length 1
+            if (!team && typeof currentUser !== 'undefined' && currentUser && currentUser.id) {
+                setRecordTeamUserSelection([currentUser.id]);
+            } else {
+                setRecordTeamUserSelection([]);
+            }
+        } else {
+            listEl.innerHTML = '<div class="text-center small text-danger"></div>';
+        }
+    } catch (e) {
+        listEl.innerHTML = '<div class="text-center small text-danger">เกิดข้อผิดพลาด</div>';
+    }
+}
+
+function populateRecordTeamUserDropdown(users) {
+    const listEl = document.getElementById('record_team_user_list');
+    if (!listEl) return;
+
+    listEl.innerHTML = '';
+
+    // Add Search Input
+    const searchLi = document.createElement('li');
+    searchLi.className = 'px-2 pb-2 mb-2 border-bottom sticky-top bg-white';
+    searchLi.innerHTML = '<input type="text" class="form-control form-control-sm" placeholder="ค้นหา..." id="record_team_user_search">';
+    listEl.appendChild(searchLi);
+
+    const searchInput = searchLi.querySelector('input');
+    searchInput.addEventListener('input', function (e) {
+        const term = e.target.value.toLowerCase();
+        const items = listEl.querySelectorAll('.team-user-item');
+        items.forEach(item => {
+            const label = item.querySelector('label').textContent.toLowerCase();
+            item.style.display = label.includes(term) ? '' : 'none';
+        });
+    });
+
+    users.forEach(u => {
+        const li = document.createElement('li');
+        li.className = 'dropdown-item p-1 team-user-item';
+
+        const div = document.createElement('div');
+        div.className = 'form-check m-0';
+
+        const input = document.createElement('input');
+        input.className = 'form-check-input ms-0 me-2 team-user-checkbox';
+        input.type = 'checkbox';
+        input.value = u.id;
+        input.id = `record_team_user_${u.id}`;
+
+        const label = document.createElement('label');
+        label.className = 'form-check-label w-100 d-block small';
+        label.htmlFor = `record_team_user_${u.id}`;
+        label.textContent = u.fullname ? `${u.fullname} (${u.username})` : u.username;
+
+        input.addEventListener('change', () => updateRecordTeamUserUI());
+
+        div.appendChild(input);
+        div.appendChild(label);
+        li.appendChild(div);
+        listEl.appendChild(li);
+    });
+}
+
+function updateRecordTeamUserUI() {
+    const listEl = document.getElementById('record_team_user_list');
+    const btnTextEl = document.getElementById('record_team_user_text');
+    const countEl = document.getElementById('record_team_user_count');
+    const hiddenInput = document.getElementById('record_team_user_ids');
+
+    if (!listEl || !hiddenInput) return;
+
+    const checkboxes = listEl.querySelectorAll('.team-user-checkbox:checked');
+    const ids = Array.from(checkboxes).map(cb => cb.value);
+
+    hiddenInput.value = ids.join(',');
+
+    if (ids.length === 0) {
+        btnTextEl.textContent = '-- ไม่ระบุ --';
+        countEl.textContent = '1';
+        countEl.className = 'badge bg-secondary';
+    } else {
+        const names = Array.from(checkboxes).map(cb => cb.nextElementSibling.textContent.split(' ')[0]);
+        btnTextEl.textContent = names.join(', ');
+        countEl.textContent = ids.length;
+        countEl.className = 'badge bg-primary';
+    }
+}
+
+function setRecordTeamUserSelection(userIds) {
+    const listEl = document.getElementById('record_team_user_list');
+    if (!listEl) return;
+
+    const checkboxes = listEl.querySelectorAll('.team-user-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = userIds.includes(Number(cb.value)) || userIds.includes(String(cb.value));
+    });
+
+    updateRecordTeamUserUI();
+}
+
+document.addEventListener('click', function (e) {
+    if (e.target.closest('#record_team_user_list')) {
+        e.stopPropagation();
+    }
+});
+
+document.getElementById('record_override_team')?.addEventListener('change', loadRecordTeamUsers);

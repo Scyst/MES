@@ -19,8 +19,13 @@ export function AuthProvider({ children }) {
         const me = await authAPI.getMe();
         setMe(me);
         // If we have a backend session but no local profile, we can auto-fill some things
-        if (me && me.username && !passengerProfile) {
-          const profile = { empId: me.username, name: me.username, department: '' };
+        const fetchedEmpId = me?.empId || me?.username;
+        if (fetchedEmpId && !passengerProfile) {
+          const profile = { 
+            empId: fetchedEmpId, 
+            name: me?.name || fetchedEmpId, 
+            department: me?.bu || me?.department || '' 
+          };
           setPassengerProfile(profile);
         }
       } catch (err) {
