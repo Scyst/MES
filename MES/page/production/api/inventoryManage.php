@@ -1660,6 +1660,34 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
+        case 'get_team_users':
+            $team = $_GET['team'] ?? '';
+            
+            $sql = "SELECT 
+                    u.id, 
+                    u.username, 
+                    ISNULL(NULLIF(emp.name_th, ''), ISNULL(NULLIF(u.fullname, ''), u.username)) AS fullname, 
+                    ISNULL(TS.hc_group, ISNULL(NULLIF(emp.team_group, ''), u.team_group)) AS team_group
+                FROM " . USERS_TABLE . " u
+                LEFT JOIN dbo.MANPOWER_EMPLOYEES emp ON u.emp_id = emp.emp_id COLLATE Thai_CI_AS
+                LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS ON emp.department_api = TS.department_api COLLATE Thai_CI_AS
+                WHERE u.is_active = 1 AND (emp.emp_id IS NOT NULL OR u.id = " . intval($currentUser['id']) . ")";
+            
+            $params = [];
+            if ($team !== '') {
+                $sql .= " AND ISNULL(TS.hc_group, ISNULL(NULLIF(emp.team_group, ''), u.team_group)) = ?";
+                $params[] = $team;
+            }
+            
+            $sql .= " ORDER BY ISNULL(NULLIF(emp.name_th, ''), ISNULL(NULLIF(u.fullname, ''), u.username))";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode(['success' => true, 'users' => $users]);
+            break;
+
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => "Action '{$action}' is not handled."]);
