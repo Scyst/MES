@@ -30,6 +30,64 @@ const WEEK_DAYS = [
   { value: 0, label: 'อา' },
 ];
 
+const TimeInput24 = ({ name, value, onChange, disabled, className }) => {
+  const [inputType, setInputType] = React.useState('text');
+
+  const handleChange = (e) => {
+    let val = e.target.value;
+    if (inputType === 'text') {
+      val = val.replace(/[^0-9:]/g, '');
+      if (val.length > 5) val = val.slice(0, 5);
+      
+      // Auto-insert colon
+      if (val.length === 3 && !val.includes(':')) {
+        val = val.slice(0, 2) + ':' + val.slice(2);
+      }
+    }
+    
+    onChange({ target: { name, value: val } });
+  };
+
+  const handleBlur = (e) => {
+    setInputType('text');
+    let val = e.target.value;
+    if (val && !val.includes(':')) {
+      val = val.replace(/[^0-9]/g, '');
+      if (val.length > 0) {
+        if (val.length <= 2) {
+          val = val.padEnd(4, '0');
+        } else if (val.length === 3) {
+          val = val.padEnd(4, '0');
+        }
+        const h = Math.min(parseInt(val.slice(0, 2) || '0', 10), 23).toString().padStart(2, '0');
+        const m = Math.min(parseInt(val.slice(2, 4) || '0', 10), 59).toString().padStart(2, '0');
+        val = `${h}:${m}`;
+      }
+    }
+    if (!val) val = '00:00';
+    onChange({ target: { name, value: val } });
+  };
+
+  const handleFocus = () => {
+    setInputType('time');
+  };
+
+  return (
+    <input
+      type={inputType}
+      name={name}
+      value={value}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onFocus={handleFocus}
+      disabled={disabled}
+      placeholder="HH:MM"
+      className={className}
+      maxLength={5}
+    />
+  );
+};
+
 export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initialData, currentUser, tasks = [], users = [], isProjectTask = false, projectId = null }) {
   const [activeTab, setActiveTab] = useState('general');
   const [comments, setComments] = useState([]);
@@ -494,7 +552,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <input lang="en-GB" disabled={!isEditable} type="date" name="startDate" value={formData.startDate || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm" />
-                    <input lang="en-GB" disabled={!isEditable} type="time" name="startTime" value={formData.startTime || '09:00'} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm" />
+                    <TimeInput24 disabled={!isEditable} name="startTime" value={formData.startTime || '09:00'} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm" />
                   </div>
                 </div>
                 <div>
@@ -503,7 +561,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <input lang="en-GB" disabled={!isEditable} type="date" name="dueDate" value={formData.dueDate || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all text-sm" />
-                    <input lang="en-GB" disabled={!isEditable} type="time" name="endTime" value={formData.endTime || '18:00'} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all text-sm" />
+                    <TimeInput24 disabled={!isEditable} name="endTime" value={formData.endTime || '18:00'} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all text-sm" />
                   </div>
                 </div>
               </div>
