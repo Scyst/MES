@@ -600,12 +600,19 @@ function openRecordModal(jobId, jobNo) {
         });
     }
 
-    // Reset team
+    // Restore or Reset team
     const overrideTeamSelect = document.getElementById('record_override_team');
+    let lastData = null;
+    try { lastData = JSON.parse(localStorage.getItem('jobQueueUILastEntry')); } catch(e){}
+    
     if (overrideTeamSelect && !overrideTeamSelect.disabled) {
-        overrideTeamSelect.value = '';
+        if (lastData && lastData.override_team) {
+            overrideTeamSelect.value = lastData.override_team;
+        } else {
+            overrideTeamSelect.value = '';
+        }
     }
-    loadRecordTeamUsers();
+    loadRecordTeamUsers(true);
     
     new bootstrap.Modal(document.getElementById('recordOutputModal')).show();
 }
@@ -638,6 +645,10 @@ async function submitRecordOutput() {
         const res = await response.json();
         
         if (res.success) {
+            localStorage.setItem('jobQueueUILastEntry', JSON.stringify({
+                override_team: payload.override_team,
+                team_user_ids: payload.team_user_ids ? payload.team_user_ids.split(',').map(Number) : []
+            }));
             bootstrap.Modal.getInstance(document.getElementById('recordOutputModal')).hide();
             fetchJobs(true);
             if(typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
@@ -951,7 +962,7 @@ async function deleteTxn(txnId, jobId) {
 // =================================================================================================
 // TEAM USER SELECTION FOR RECORD MODAL
 // =================================================================================================
-async function loadRecordTeamUsers() {
+async function loadRecordTeamUsers(isInit = false) {
     const listEl = document.getElementById('record_team_user_list');
     if (!listEl) return;
 
@@ -966,8 +977,13 @@ async function loadRecordTeamUsers() {
         if (result.success) {
             populateRecordTeamUserDropdown(result.users);
             
+            let lastData = null;
+            try { lastData = JSON.parse(localStorage.getItem('jobQueueUILastEntry')); } catch(e){}
+
             // Auto-select logged-in user if no override and users array has length 1
-            if (!team && typeof currentUser !== 'undefined' && currentUser && currentUser.id) {
+            if (isInit && lastData && lastData.team_user_ids && lastData.team_user_ids.length > 0) {
+                setRecordTeamUserSelection(lastData.team_user_ids);
+            } else if (!team && typeof currentUser !== 'undefined' && currentUser && currentUser.id) {
                 setRecordTeamUserSelection([currentUser.id]);
             } else {
                 setRecordTeamUserSelection([]);
