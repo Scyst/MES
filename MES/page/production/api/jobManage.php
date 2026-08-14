@@ -425,8 +425,30 @@ try {
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$job_no, $lot_no ?: $job_no, "[Job: $job_no]", $baseline_time, $end_time, $item_id]);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            if (count($data) > 0) {
+                $txnIds = array_column($data, 'txn_id');
+                $inClause = implode(',', array_fill(0, count($txnIds), '?'));
+                $tuStmt = $pdo->prepare("SELECT stu.transaction_id, ISNULL(NULLIF(tu.fullname, ''), tu.username) AS name
+                                         FROM dbo.STOCK_TRANSACTION_USERS stu
+                                         INNER JOIN " . USERS_TABLE . " tu ON stu.user_id = tu.id
+                                         WHERE stu.transaction_id IN ($inClause)");
+                $tuStmt->execute($txnIds);
+                $tuData = $tuStmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                $tuMap = [];
+                foreach ($tuData as $tu) {
+                    $tuMap[$tu['transaction_id']][] = ['name' => $tu['name']];
+                }
+                
+                foreach ($data as &$row) {
+                    $tid = $row['txn_id'];
+                    $row['team_users'] = isset($tuMap[$tid]) ? json_encode($tuMap[$tid]) : null;
+                }
+            }
+            
+            echo json_encode(['success' => true, 'data' => $data]);
             break;
 
         case 'get_all_jobs':
