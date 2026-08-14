@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { History, Trash2, Edit2, Check, X, Search } from 'lucide-react';
+import { History, Trash2, Edit2, Check, X, Search, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function GlobalHistory() {
@@ -155,7 +155,27 @@ export default function GlobalHistory() {
                     {log.machine_name || log.location_name || 'ลงยอดด้วยมือ'}
                   </p>
                   {log.job_no && <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">Job: {log.job_no}</p>}
-                  {getDisplayName(log) && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">By: {getDisplayName(log)}</p>}
+                  <div className="flex items-center flex-wrap gap-2 mt-1">
+                    {getDisplayName(log) && <p className="text-xs text-gray-500 dark:text-gray-400">By: {getDisplayName(log)}</p>}
+                    {(() => {
+                      if (!log.team_users) return null;
+                      try {
+                        const tuArr = typeof log.team_users === 'string' ? JSON.parse(log.team_users) : log.team_users;
+                        if (Array.isArray(tuArr) && tuArr.length > 0) {
+                          const namesText = tuArr.map(t => t.name).join('\n');
+                          return (
+                            <span 
+                              onClick={() => alert(`รายชื่อพนักงานในทีม:\n\n${namesText}`)}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 cursor-pointer"
+                            >
+                              <UserPlus size={10} className="mr-1" /> Team ({tuArr.length})
+                            </span>
+                          );
+                        }
+                      } catch (e) { return null; }
+                      return null;
+                    })()}
+                  </div>
                   {log.notes && (
                     <div className="text-xs text-gray-400 dark:text-gray-600 mt-1 italic whitespace-pre-wrap">
                       {log.notes.replace(/\[TEAM_OVERRIDE:\s*[^\]]+\]\s*/g, '')}

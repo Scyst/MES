@@ -386,7 +386,27 @@ export default function MachineCockpit({ type = 'machine' }) {
                         {log.transaction_type === 'PRODUCTION_FG' ? 'ยอดดี (FG)' : log.transaction_type === 'PRODUCTION_HOLD' ? 'ยอดรอ (Hold)' : 'ยอดเสีย (Scrap)'}: +{Number(log.quantity)}
                       </p>
                       {log.job_no && <p className="text-xs font-bold text-blue-600 dark:text-blue-300">Job: {log.job_no}</p>}
-                      <p className="text-xs text-gray-500">{new Date(log.transaction_timestamp).toLocaleTimeString()}</p>
+                      <div className="flex items-center flex-wrap gap-2 mt-1">
+                        <p className="text-xs text-gray-500">{new Date(log.transaction_timestamp).toLocaleTimeString()}</p>
+                        {(() => {
+                          if (!log.team_users) return null;
+                          try {
+                            const tuArr = typeof log.team_users === 'string' ? JSON.parse(log.team_users) : log.team_users;
+                            if (Array.isArray(tuArr) && tuArr.length > 0) {
+                              const namesText = tuArr.map(t => t.name).join('\n');
+                              return (
+                                <span 
+                                  onClick={() => alert(`รายชื่อพนักงานในทีม:\n\n${namesText}`)}
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 cursor-pointer"
+                                >
+                                  <UserPlus size={10} className="mr-1" /> Team ({tuArr.length})
+                                </span>
+                              );
+                            }
+                          } catch (e) { return null; }
+                          return null;
+                        })()}
+                      </div>
                     </div>
                     <div className="flex space-x-1">
                       <button 

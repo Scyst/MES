@@ -39,6 +39,27 @@ if (!defined('TRANSACTIONS_TABLE')) {
     require_once __DIR__ . '/../../config/config.php';
 }
 
+function attachTeamUsers($pdo, $data) {
+    if (count($data) === 0) return $data;
+    $txnIds = array_column($data, 'transaction_id');
+    $inClause = implode(',', array_fill(0, count($txnIds), '?'));
+    $tuStmt = $pdo->prepare("SELECT stu.transaction_id, ISNULL(NULLIF(tu.fullname, ''), tu.username) AS name
+                             FROM dbo.STOCK_TRANSACTION_USERS stu
+                             INNER JOIN USERS tu ON stu.user_id = tu.id
+                             WHERE stu.transaction_id IN ($inClause)");
+    $tuStmt->execute($txnIds);
+    $tuData = $tuStmt->fetchAll(PDO::FETCH_ASSOC);
+    $tuMap = [];
+    foreach ($tuData as $tu) {
+        $tuMap[$tu['transaction_id']][] = ['name' => $tu['name']];
+    }
+    foreach ($data as &$row) {
+        $tid = $row['transaction_id'];
+        $row['team_users'] = isset($tuMap[$tid]) ? json_encode($tuMap[$tid]) : null;
+    }
+    return $data;
+}
+
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $machineId = $_GET['machine_id'] ?? $_POST['machine_id'] ?? null;
 
@@ -61,7 +82,8 @@ try {
                 ORDER BY t.transaction_timestamp DESC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$machineId]);
-        $history = $stmt->fetchAll();
+        $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $history = attachTeamUsers($pdo, $history);
         
         echo json_encode(['success' => true, 'data' => $history]);
     }
@@ -91,7 +113,8 @@ try {
                 ORDER BY t.transaction_timestamp DESC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($idArray);
-        $history = $stmt->fetchAll();
+        $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $history = attachTeamUsers($pdo, $history);
         
         echo json_encode(['success' => true, 'data' => $history]);
     }
@@ -107,7 +130,8 @@ try {
                 AND CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) = CAST(DATEADD(HOUR, -8, GETDATE()) AS DATE)
                 ORDER BY t.transaction_timestamp DESC";
         $stmt = $pdo->query($sql);
-        $history = $stmt->fetchAll();
+        $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $history = attachTeamUsers($pdo, $history);
         
         echo json_encode(['success' => true, 'data' => $history]);
     }
