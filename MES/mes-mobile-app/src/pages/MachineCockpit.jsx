@@ -104,7 +104,15 @@ export default function MachineCockpit({ type = 'machine' }) {
     try {
       const res = await fetch(`${API_BASE_URL}/team.php`);
       const json = await res.json();
-      if (json.success) setTeamMembers(json.data);
+      if (json.success) {
+        setTeamMembers(json.data);
+        
+        // Auto-clean ghost members from localStorage (e.g. after ID mapping updates)
+        setActiveTeam(prev => {
+          const validIds = new Set(json.data.map(m => m.id));
+          return prev.filter(m => validIds.has(m.id));
+        });
+      }
     } catch (e) { console.error(e); }
   };
 
@@ -441,8 +449,8 @@ export default function MachineCockpit({ type = 'machine' }) {
               <button onClick={() => setShowTeamModal(false)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"><X size={24} /></button>
             </div>
             
-            {/* Search Input */}
-            <div className="mb-4">
+            {/* Search Input & Action */}
+            <div className="mb-4 flex space-x-2">
               <input 
                 type="text" 
                 placeholder="ค้นหาชื่อ หรือ รหัสพนักงาน..."
@@ -450,6 +458,14 @@ export default function MachineCockpit({ type = 'machine' }) {
                 onChange={(e) => setTeamSearch(e.target.value)}
                 className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors"
               />
+              {activeTeam.length > 0 && (
+                <button 
+                  onClick={() => setActiveTeam([])}
+                  className="px-4 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl flex-shrink-0 transition-colors font-bold whitespace-nowrap"
+                >
+                  ล้างรายชื่อ
+                </button>
+              )}
             </div>
 
             <div className="max-h-96 overflow-y-auto space-y-2 pr-2 scrollbar-hide">
