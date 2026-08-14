@@ -1035,14 +1035,18 @@ function openAddPartModal() {
             if (lastData.team_user_ids && lastData.team_user_ids.length > 0) {
                 setTeamUserSelection('out', lastData.team_user_ids);
             } else {
-                setTeamUserSelection('out', []);
+                setTeamUserSelection('out', (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? [currentUser.id] : []);
             }
             if (lastData.override_team) {
                 const overrideInput = document.getElementById('out_override_team');
                 if (overrideInput) overrideInput.value = lastData.override_team;
             }
+        } else {
+            setTeamUserSelection('out', (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? [currentUser.id] : []);
         }
-    } catch (e) { }
+    } catch (e) {
+        setTeamUserSelection('out', (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? [currentUser.id] : []);
+    }
 
     const now = new Date();
     document.getElementById('out_log_date').value = now.toISOString().split('T')[0];
