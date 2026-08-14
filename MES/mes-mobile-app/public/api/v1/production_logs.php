@@ -181,10 +181,7 @@ try {
                 list($st, $et) = explode('|', $timeSlot);
             }
 
-            $note = "[MACHINE:" . ($machineId ?: 'NONE') . "] Mobile App";
-            if ($customNotes) {
-                $note .= " | " . $customNotes;
-            }
+            $note = $customNotes ?: '';
             
             $locToUse = $locationId ?: $job['location_id'];
             $lotToUse = $lotNo ?: $job['job_no'];
@@ -199,9 +196,8 @@ try {
             if ($type === 'SCRAP') $transType = 'PRODUCTION_SCRAP';
             else if ($type === 'HOLD') $transType = 'PRODUCTION_HOLD';
 
-            $note = "Mobile App Entry";
-            if ($timeSlot) $note .= " [TIME: $timeSlot]";
-            if ($customNotes) $note .= " | " . $customNotes;
+            $note = $customNotes ?: '';
+            if ($timeSlot) $note .= ($note ? " | " : "") . "[TIME: $timeSlot]";
             
             // Resolve SAP No to Item ID if provided
             $itemId = null;
