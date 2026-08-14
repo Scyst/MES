@@ -252,18 +252,16 @@ try {
         $stmt->execute([$transactionId]);
         $jobNo = $stmt->fetchColumn();
 
-        if ($jobNo && str_starts_with($jobNo, 'WK-')) {
-            // Get Job ID from Job No
+        $jobId = null;
+        if ($jobNo) {
             $stmt = $pdo->prepare("SELECT job_id FROM PRODUCTION_JOBS WHERE job_no = ?");
             $stmt->execute([$jobNo]);
             $jobId = $stmt->fetchColumn();
+        }
 
-            if ($jobId) {
-                $stmt = $pdo->prepare("EXEC dbo.sp_Job_DeleteTransaction @txn_id = ?, @job_id = ?, @user_id = ?");
-                $stmt->execute([$transactionId, $jobId, 1]); // Assume user 1 for now
-            } else {
-                $pdo->prepare("DELETE FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?")->execute([$transactionId]);
-            }
+        if ($jobId) {
+            $stmt = $pdo->prepare("EXEC dbo.sp_Job_DeleteTransaction @txn_id = ?, @job_id = ?, @user_id = ?");
+            $stmt->execute([$transactionId, $jobId, 1]); // Assume user 1 for now
         } else {
             $pdo->prepare("DELETE FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?")->execute([$transactionId]);
         }
@@ -294,47 +292,47 @@ try {
         $typeStr = str_replace('PRODUCTION_', '', $oldTxn['transaction_type']); // FG, HOLD, SCRAP
 
         // Step 1: Void Old
-        if ($jobNo && str_starts_with($jobNo, 'WK-')) {
+        $jobId = null;
+        if ($jobNo) {
             $stmt = $pdo->prepare("SELECT job_id FROM PRODUCTION_JOBS WHERE job_no = ?");
             $stmt->execute([$jobNo]);
             $jobId = $stmt->fetchColumn();
+        }
 
-            if ($jobId) {
-                $stmt = $pdo->prepare("EXEC dbo.sp_Job_DeleteTransaction @txn_id = ?, @job_id = ?, @user_id = ?");
-                $stmt->execute([$transactionId, $jobId, 1]);
-            } else {
-                $pdo->prepare("DELETE FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?")->execute([$transactionId]);
-            }
+        if ($jobId) {
+            $stmt = $pdo->prepare("EXEC dbo.sp_Job_DeleteTransaction @txn_id = ?, @job_id = ?, @user_id = ?");
+            $stmt->execute([$transactionId, $jobId, 1]);
         } else {
             $pdo->prepare("DELETE FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?")->execute([$transactionId]);
         }
 
         // Step 2: Insert New (using the same logic as 'log')
-        if ($jobNo && str_starts_with($jobNo, 'WK-')) {
-            $stmt = $pdo->prepare("SELECT job_id, item_id, location_id, start_time FROM PRODUCTION_JOBS WITH (NOLOCK) WHERE job_no = ?");
+        $job = null;
+        if ($jobNo) {
+            $stmt = $pdo->prepare("SELECT job_id, item_id, location_id, start_time, job_no FROM PRODUCTION_JOBS WITH (NOLOCK) WHERE job_no = ?");
             $stmt->execute([$jobNo]);
             $job = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
 
-            if ($job) {
-                $add_actual = $typeStr === 'FG' ? $newQty : 0;
-                $add_hold = $typeStr === 'HOLD' ? $newQty : 0;
-                $add_scrap = $typeStr === 'SCRAP' ? $newQty : 0;
+        if ($job) {
+            $add_actual = $typeStr === 'FG' ? $newQty : 0;
+            $add_hold = $typeStr === 'HOLD' ? $newQty : 0;
+            $add_scrap = $typeStr === 'SCRAP' ? $newQty : 0;
 
-                $sql = "UPDATE PRODUCTION_JOBS SET actual_qty = ISNULL(actual_qty, 0) + ?, hold_qty = ISNULL(hold_qty, 0) + ?, scrap_qty = ISNULL(scrap_qty, 0) + ? WHERE job_id = ?";
-                $pdo->prepare($sql)->execute([$add_actual, $add_hold, $add_scrap, $job['job_id']]);
+            $sql = "UPDATE PRODUCTION_JOBS SET actual_qty = ISNULL(actual_qty, 0) + ?, hold_qty = ISNULL(hold_qty, 0) + ?, scrap_qty = ISNULL(scrap_qty, 0) + ? WHERE job_id = ?";
+            $pdo->prepare($sql)->execute([$add_actual, $add_hold, $add_scrap, $job['job_id']]);
 
-                $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?, @machine_id = ?, @team_user_ids = ?");
-                $ts = date('Y-m-d H:i:s');
-                $st = $job['start_time'] ? date('H:i:s', strtotime($job['start_time'])) : date('H:i:s');
-                $et = date('H:i:s');
-                $note = $oldTxn['notes'] . " (Edited)";
-                $locToUse = $locationId ?: $oldTxn['to_location_id'];
-                $macToUse = $machineId ?: $oldTxn['machine_id'];
+            $spProd = $pdo->prepare("EXEC dbo.sp_ExecuteProduction @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?, @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?, @user_id = ?, @username = ?, @machine_id = ?, @team_user_ids = ?");
+            $ts = date('Y-m-d H:i:s');
+            $st = $job['start_time'] ? date('H:i:s', strtotime($job['start_time'])) : date('H:i:s');
+            $et = date('H:i:s');
+            $note = $oldTxn['notes'] . " (Edited)";
+            $locToUse = $locationId ?: $oldTxn['to_location_id'];
+            $macToUse = $machineId ?: $oldTxn['machine_id'];
 
-                if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $macToUse, $teamUserIds]);
-                if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $macToUse, $teamUserIds]);
-                if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $macToUse, $teamUserIds]);
-            }
+            if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $macToUse, $teamUserIds]);
+            if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $macToUse, $teamUserIds]);
+            if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $macToUse, $teamUserIds]);
         } else {
             $note = $oldTxn['notes'] . " (Edited)";
             $macToUse = $machineId ?: $oldTxn['machine_id'];
