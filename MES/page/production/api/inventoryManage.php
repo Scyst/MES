@@ -627,6 +627,33 @@ try {
             echo json_encode(['success' => true, 'data' => $data, 'total' => $total, 'page' => $page]);
             break;
 
+        case 'get_active_jobs':
+            $item_id = isset($_GET['item_id']) ? (int)$_GET['item_id'] : 0;
+            $line = $currentUser['line'] ?? '';
+            $params = [];
+            $where = "j.status IN ('PENDING', 'RUNNING', 'PAUSED')";
+            
+            if ($item_id > 0) {
+                $where .= " AND j.item_id = ?";
+                $params[] = $item_id;
+            }
+            
+            if ($currentUser['role'] !== 'admin' && $currentUser['role'] !== 'creator' && !empty($line)) {
+                $where .= " AND l.production_line = ?";
+                $params[] = $line;
+            }
+            
+            $sql = "SELECT j.job_id, j.job_no, j.target_qty, j.actual_qty, j.status, l.location_name
+                    FROM PRODUCTION_JOBS j WITH (NOLOCK)
+                    LEFT JOIN " . LOCATIONS_TABLE . " l ON j.location_id = l.location_id
+                    WHERE $where
+                    ORDER BY j.queue_order ASC, j.created_at ASC";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+
         case 'execute_production':
             $fg_item_id = (int)($input['item_id'] ?? 0);
             $location_id = (int)($input['location_id'] ?? 0);

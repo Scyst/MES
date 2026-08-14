@@ -340,6 +340,8 @@ function setupProductionAutocomplete() {
         const value = searchInput.value.toLowerCase();
         resultsWrapper.innerHTML = '';
         selectedOutItem = null;
+        const jobSelect = document.getElementById('out_job_no');
+        if (jobSelect) jobSelect.innerHTML = '<option value="">-- ไม่ระบุ --</option>';
 
         if (value.length < 2) return;
 
@@ -357,6 +359,7 @@ function setupProductionAutocomplete() {
                 searchInput.value = `${item.sap_no} | ${item.part_no}`;
                 selectedOutItem = item;
                 document.getElementById('out_item_id').value = item.item_id;
+                fetchJobsForItem(item.item_id);
                 resultsWrapper.innerHTML = '';
             });
             resultsWrapper.appendChild(resultItem);
@@ -367,6 +370,31 @@ function setupProductionAutocomplete() {
     document.addEventListener('click', (e) => {
         if (e.target !== searchInput) resultsWrapper.style.display = 'none';
     });
+}
+
+async function fetchJobsForItem(itemId) {
+    const select = document.getElementById('out_job_no');
+    if (!select) return;
+    select.innerHTML = '<option value="">Loading...</option>';
+    try {
+        const res = await sendRequest(INVENTORY_API_URL, 'get_active_jobs', 'GET', null, { item_id: itemId });
+        select.innerHTML = '<option value="">-- ไม่ระบุ --</option>';
+        if (res.success && res.data.length > 0) {
+            res.data.forEach(job => {
+                const opt = document.createElement('option');
+                opt.value = job.job_no;
+                const locName = job.location_name ? job.location_name : 'ไม่มี Line';
+                opt.textContent = `${job.job_no} [${job.status}] - Target: ${Math.floor(job.target_qty)} (${locName})`;
+                select.appendChild(opt);
+            });
+            if (res.data.length >= 1) {
+                select.selectedIndex = 1;
+            }
+        }
+    } catch (e) {
+        select.innerHTML = '<option value="">-- ไม่ระบุ --</option>';
+        console.error('Failed to fetch active jobs:', e);
+    }
 }
 
 // =================================================================
@@ -1031,6 +1059,10 @@ function openAddPartModal() {
             document.getElementById('out_item_id').value = lastData.item_id || '';
             if (lastData.item_id) {
                 selectedOutItem = allItems.find(item => item.item_id == lastData.item_id) || null;
+                fetchJobsForItem(lastData.item_id);
+            } else {
+                const jobSelect = document.getElementById('out_job_no');
+                if (jobSelect) jobSelect.innerHTML = '<option value="">-- ไม่ระบุ --</option>';
             }
             if (lastData.team_user_ids && lastData.team_user_ids.length > 0) {
                 setTeamUserSelection('out', lastData.team_user_ids);
