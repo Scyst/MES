@@ -156,11 +156,14 @@ try {
         if ($jobId) {
             // New Flow: Log against a specific Job Order
             // Fetch Job details
-            $stmt = $pdo->prepare("SELECT job_no, item_id, location_id, start_time FROM PRODUCTION_JOBS WITH (NOLOCK) WHERE job_id = ?");
+            $stmt = $pdo->prepare("SELECT job_no, item_id, location_id, start_time, status FROM PRODUCTION_JOBS WITH (NOLOCK) WHERE job_id = ?");
             $stmt->execute([$jobId]);
             $job = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$job) throw new Exception("Job not found");
+            if (in_array(strtoupper($job['status']), ['COMPLETED', 'CLOSED'])) {
+                throw new Exception("Cannot log transaction for a closed/completed Job.");
+            }
 
             $add_actual = $type === 'FG' ? $qty : 0;
             $add_hold = $type === 'HOLD' ? $qty : 0;
