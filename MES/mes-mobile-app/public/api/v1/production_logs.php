@@ -62,10 +62,11 @@ function attachTeamUsers($pdo, $data) {
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $machineId = $_GET['machine_id'] ?? $_POST['machine_id'] ?? null;
+$locationId = $_GET['location_id'] ?? $_POST['location_id'] ?? null;
 
 try {
-    if (!$machineId && !in_array($action, ['team_history', 'global_history', 'void', 'edit'])) {
-        throw new Exception("Machine ID is required");
+    if (!$machineId && !$locationId && !in_array($action, ['team_history', 'global_history', 'void', 'edit'])) {
+        throw new Exception("Machine ID or Location ID is required");
     }
 
     // 1. Fetch History
@@ -76,12 +77,12 @@ try {
                 ISNULL(NULLIF(u.fullname, ''), u.username) AS user_name, t.notes, t.reference_id as job_no 
                 FROM " . TRANSACTIONS_TABLE . " t
                 LEFT JOIN " . USERS_TABLE . " u ON t.created_by_user_id = u.id
-                WHERE t.machine_id = ? 
+                WHERE " . ($machineId ? "t.machine_id = ?" : "t.to_location_id = ?") . " 
                 AND t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
                 AND CAST(t.transaction_timestamp AS DATE) = CAST(GETDATE() AS DATE)
                 ORDER BY t.transaction_timestamp DESC";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$machineId]);
+        $stmt->execute([$machineId ?: $locationId]);
         $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $history = attachTeamUsers($pdo, $history);
         
