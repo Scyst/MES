@@ -178,10 +178,10 @@ export default function GlobalHistory() {
                       try {
                         const tuArr = typeof log.team_users === 'string' ? JSON.parse(log.team_users) : log.team_users;
                         if (Array.isArray(tuArr) && tuArr.length > 0) {
-                          const namesHtml = `<div class="text-left mt-2 grid grid-cols-2 gap-x-2 gap-y-2">` + tuArr.map(t => `<div class="flex items-center text-sm" title="${t.name}"><span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2 flex-shrink-0"></span><span class="truncate">${t.name}</span></div>`).join('') + `</div>`;
+                          const namesHtml = `<div class="text-left mt-2 grid grid-cols-2 gap-x-4 gap-y-3">` + tuArr.map(t => `<div class="flex items-center text-base" title="${t.name}"><span class="w-2 h-2 bg-blue-500 rounded-full mr-3 flex-shrink-0"></span><span class="truncate">${t.name}</span></div>`).join('') + `</div>`;
                           return (
                             <span 
-                              onClick={() => MySwal.fire({ title: 'รายชื่อพนักงานในทีม', html: namesHtml, icon: 'info' })}
+                              onClick={() => MySwal.fire({ title: 'รายชื่อพนักงานในทีม', html: namesHtml })}
                               className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 cursor-pointer"
                             >
                               <UserPlus size={10} className="mr-1" /> Team ({tuArr.length})
