@@ -279,8 +279,7 @@ try {
         if (!$transactionId || $newQty <= 0) throw new Exception("Invalid parameters");
 
         // Simple approach: Delete old transaction (void) and insert new one
-        // Check if transaction has a Job No
-        $stmt = $pdo->prepare("SELECT reference_id, transaction_type, notes, created_by_user_id FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
+        $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
         $stmt->execute([$transactionId]);
         $oldTxn = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -329,20 +328,34 @@ try {
                 $st = $job['start_time'] ? date('H:i:s', strtotime($job['start_time'])) : date('H:i:s');
                 $et = date('H:i:s');
                 $note = $oldTxn['notes'] . " (Edited)";
-                $locToUse = $locationId ?: $job['location_id'];
+                $locToUse = $locationId ?: $oldTxn['to_location_id'];
+                $macToUse = $machineId ?: $oldTxn['machine_id'];
 
-                if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $machineId, $teamUserIds]);
-                if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $machineId, $teamUserIds]);
-                if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $machineId, $teamUserIds]);
+                if ($add_actual > 0) $spProd->execute([$job['item_id'], $locToUse, $add_actual, 'FG', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $macToUse, $teamUserIds]);
+                if ($add_hold > 0)   $spProd->execute([$job['item_id'], $locToUse, $add_hold, 'HOLD', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $macToUse, $teamUserIds]);
+                if ($add_scrap > 0)  $spProd->execute([$job['item_id'], $locToUse, $add_scrap, 'SCRAP', $job['job_no'], $note, $ts, $st, $et, $userId, 'Mobile', $macToUse, $teamUserIds]);
             }
         } else {
             $note = $oldTxn['notes'] . " (Edited)";
+            $macToUse = $machineId ?: $oldTxn['machine_id'];
+            $locToUse = $locationId ?: $oldTxn['to_location_id'];
+            
             $sql = "INSERT INTO " . TRANSACTIONS_TABLE . " 
-                    (transaction_type, quantity, created_by_user_id, notes, transaction_timestamp, machine_id, to_location_id)
-                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?)";
+                    (transaction_type, quantity, created_by_user_id, notes, transaction_timestamp, machine_id, from_location_id, to_location_id, reference_id, parameter_id)
+                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?, ?, ?)";
             
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$oldTxn['transaction_type'], $newQty, $userId, $note, $machineId, $locationId]);
+            $stmt->execute([
+                $oldTxn['transaction_type'], 
+                $newQty, 
+                $userId, 
+                $note, 
+                $macToUse, 
+                $oldTxn['from_location_id'], 
+                $locToUse, 
+                $oldTxn['reference_id'], 
+                $oldTxn['parameter_id']
+            ]);
             $newTxnId = $pdo->lastInsertId();
 
             if ($teamUserIds && trim($teamUserIds) !== '') {
