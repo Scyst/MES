@@ -178,7 +178,7 @@ export default function GlobalHistory() {
                       try {
                         const tuArr = typeof log.team_users === 'string' ? JSON.parse(log.team_users) : log.team_users;
                         if (Array.isArray(tuArr) && tuArr.length > 0) {
-                          const namesHtml = `<div class="text-left"><ul class="list-disc pl-5 mt-2">` + tuArr.map(t => `<li class="mb-1">${t.name}</li>`).join('') + `</ul></div>`;
+                          const namesHtml = `<div class="text-left mt-2 grid grid-cols-2 gap-x-2 gap-y-2">` + tuArr.map(t => `<div class="flex items-center text-sm" title="${t.name}"><span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2 flex-shrink-0"></span><span class="truncate">${t.name}</span></div>`).join('') + `</div>`;
                           return (
                             <span 
                               onClick={() => MySwal.fire({ title: 'รายชื่อพนักงานในทีม', html: namesHtml, icon: 'info' })}
