@@ -62,8 +62,12 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
 
         <?php if (isset($_SESSION['user'])): ?>
         <div class="dropdown d-none d-md-block">
-            <a href="#" class="text-decoration-none text-secondary d-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false" title="บัญชีผู้ใช้" style="transition: color 0.2s;">
-                <i class="fas fa-user-circle fa-2x profile-icon-hover"></i>
+            <a class="nav-link dropdown-toggle text-secondary d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-user-circle fa-lg me-2 profile-icon-hover" style="transition: color 0.2s;"></i> 
+                <span class="d-none d-md-inline small fw-bold">
+                    <?php echo htmlspecialchars($fullName); ?>
+                </span>
+                <span id="topHeaderQuickGrade" class="badge ms-2 d-none" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.1);"></span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end shadow border border-light mt-2 p-2" style="min-width: 260px; border-radius: 12px;">
                 <li class="text-center p-3 border-bottom mb-2 bg-light rounded">
@@ -148,12 +152,30 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                         const grade = json.data.grade;
                         gradeEl.textContent = grade;
                         
+                        // Update dropdown badge
                         gradeEl.className = 'badge';
-                        if (grade === 'A') gradeEl.classList.add('bg-success');
-                        else if (grade === 'B') gradeEl.classList.add('bg-primary');
-                        else if (grade === 'C') gradeEl.classList.add('bg-warning', 'text-dark');
-                        else if (grade === 'D') gradeEl.classList.add('bg-danger');
-                        else gradeEl.classList.add('bg-secondary');
+                        // Update quick badge (visible without click)
+                        const quickBadge = document.getElementById('topHeaderQuickGrade');
+                        quickBadge.classList.remove('d-none');
+                        quickBadge.textContent = 'เกรด: ' + grade;
+                        quickBadge.className = 'badge ms-2';
+                        
+                        if (grade === 'A') {
+                            gradeEl.classList.add('bg-success');
+                            quickBadge.classList.add('bg-success');
+                        } else if (grade === 'B') {
+                            gradeEl.classList.add('bg-primary');
+                            quickBadge.classList.add('bg-primary');
+                        } else if (grade === 'C') {
+                            gradeEl.classList.add('bg-warning', 'text-dark');
+                            quickBadge.classList.add('bg-warning', 'text-dark');
+                        } else if (grade === 'D') {
+                            gradeEl.classList.add('bg-danger');
+                            quickBadge.classList.add('bg-danger');
+                        } else {
+                            gradeEl.classList.add('bg-secondary');
+                            quickBadge.classList.add('bg-secondary');
+                        }
 
                         // Income
                         document.getElementById('headerIncomeDisplay').textContent = '฿' + json.data.income_per_head.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
