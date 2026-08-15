@@ -107,14 +107,80 @@
                         </div>
                     </div>
                     
-                </div> <div class="form-check d-flex align-items-center justify-content-center mt-4">
+                    <!-- My Performance Card -->
+                    <div class="col-12" id="briefPersonalPerformanceCard" style="display: none;">
+                        <div class="bg-white p-3 rounded-4 shadow-sm border border-primary border-opacity-25 mt-2">
+                            <div class="small text-primary fw-bold text-uppercase mb-3">
+                                <i class="fas fa-user-check me-2"></i>ผลงานส่วนตัว (เดือนนี้)
+                            </div>
+                            <div class="d-flex justify-content-around text-center">
+                                <div>
+                                    <h4 class="fw-bold mb-0 text-dark" id="briefMyGrade">-</h4>
+                                    <small class="text-muted">Grade</small>
+                                </div>
+                                <div class="text-success border-start border-end px-4">
+                                    <h4 class="fw-bold mb-0" id="briefMyIncome">฿0.00</h4>
+                                    <small class="text-muted">รายได้พิเศษ</small>
+                                </div>
+                                <div class="text-info">
+                                    <h4 class="fw-bold mb-0" id="briefMyRatio">0%</h4>
+                                    <small class="text-muted">Ratio</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div> 
+                
+                <div class="form-check d-flex align-items-center justify-content-center mt-4">
                     <input class="form-check-input me-2 mt-0" type="checkbox" id="dontShowToday" style="transform: scale(1.2); cursor: pointer;">
                     <label class="form-check-label text-muted small user-select-none" for="dontShowToday" style="cursor: pointer;">
                         ไม่ต้องแสดงอีกในวันนี้
                     </label>
                 </div>
             </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const briefModal = document.getElementById('morningBriefModal');
+    if (briefModal) {
+        let personalDataFetched = false;
+        briefModal.addEventListener('show.bs.modal', function () {
+            if (personalDataFetched) return; // Fetch only once per page load
             
+            const baseUrl = '<?php echo defined("BASE_URL") ? BASE_URL : "/MES/MES"; ?>';
+            fetch(`${baseUrl}/page/manpower/api/api_my_performance.php`)
+                .then(r => r.json())
+                .then(json => {
+                    if (json.success) {
+                        const card = document.getElementById('briefPersonalPerformanceCard');
+                        card.style.display = 'block';
+                        
+                        if (json.data.has_data) {
+                            document.getElementById('briefMyGrade').textContent = json.data.grade;
+                            
+                            const gradeEl = document.getElementById('briefMyGrade');
+                            if (json.data.grade === 'A') gradeEl.className = 'fw-bold mb-0 text-success';
+                            else if (json.data.grade === 'B') gradeEl.className = 'fw-bold mb-0 text-primary';
+                            else if (json.data.grade === 'C') gradeEl.className = 'fw-bold mb-0 text-warning';
+                            else if (json.data.grade === 'D') gradeEl.className = 'fw-bold mb-0 text-danger';
+
+                            document.getElementById('briefMyIncome').textContent = '฿' + json.data.income_per_head.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            document.getElementById('briefMyRatio').textContent = json.data.income_ratio.toFixed(1) + '%';
+                        } else {
+                            document.getElementById('briefMyGrade').textContent = '-';
+                            document.getElementById('briefMyIncome').textContent = '-';
+                            document.getElementById('briefMyRatio').textContent = '-';
+                        }
+                        personalDataFetched = true;
+                    }
+                })
+                .catch(e => console.error("Error fetching personal performance for morning brief:", e));
+        });
+    }
+});
+</script>
+
             <div class="modal-footer border-0 bg-light pt-0 pb-4 justify-content-center">
                 <button type="button" class="btn btn-dark px-5 py-2 rounded-pill shadow-sm fw-bold" data-bs-dismiss="modal">
                     ปิดหน้าต่างสรุป
