@@ -138,8 +138,8 @@ const App = {
                 <tr>
                     <td class="fw-bold text-primary">${emp.emp_id}</td>
                     <td class="text-start">
-                        <div class="fw-bold text-dark">${emp.name_th}</div>
-                        <div class="small text-muted">${emp.team_group || '-'} | ${emp.line || '-'}</div>
+                        <span class="fw-bold text-dark me-2">${emp.name_th}</span>
+                        <span class="small text-muted">(${emp.team_group || '-'} | ${emp.line || '-'})</span>
                     </td>
                     <td>
                         <span class="badge bg-light text-dark border">${emp.position || '-'}</span>
@@ -148,20 +148,22 @@ const App = {
                         <div class="fw-bold text-secondary">${parseFloat(emp.total_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</div>
                     </td>
                     <td>
-                        <div class="fw-bold text-success">${parseFloat(emp.income_per_head || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</div>
-                        <div class="small text-muted mt-1">Ratio: <strong class="${parseFloat(emp.ratio||0) >= 1 ? 'text-primary' : 'text-danger'}">${parseFloat(emp.ratio||0).toFixed(2)}</strong></div>
+                        <span class="fw-bold text-success me-2">${parseFloat(emp.income_per_head || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</span>
+                        <span class="small text-muted">| Ratio: <strong class="${parseFloat(emp.ratio||0) >= 1 ? 'text-primary' : 'text-danger'}">${parseFloat(emp.ratio||0).toFixed(2)}</strong></span>
                     </td>
                     <td>
-                        <select class="form-select form-select-sm d-inline-block grade-select ${this.getGradeClass(emp.grade)}" 
-                                data-empid="${emp.emp_id}" 
-                                onchange="App.updateGradeState('${emp.emp_id}', this.value, this)">
-                            <option value="" class="grade-empty">Select</option>
-                            <option value="A" class="grade-A" ${emp.grade === 'A' ? 'selected' : ''}>A</option>
-                            <option value="B" class="grade-B" ${emp.grade === 'B' ? 'selected' : ''}>B</option>
-                            <option value="C" class="grade-C" ${emp.grade === 'C' ? 'selected' : ''}>C</option>
-                            <option value="D" class="grade-D" ${emp.grade === 'D' ? 'selected' : ''}>D</option>
-                        </select>
-                        <div class="mt-1">${systemGradeBadge}</div>
+                        <div class="d-flex align-items-center justify-content-center">
+                            <select class="form-select form-select-sm d-inline-block grade-select ${this.getGradeClass(emp.grade)}" 
+                                    data-empid="${emp.emp_id}" 
+                                    onchange="App.updateGradeState('${emp.emp_id}', this.value, this)">
+                                <option value="" class="grade-empty">Select</option>
+                                <option value="A" class="grade-A" ${emp.grade === 'A' ? 'selected' : ''}>A</option>
+                                <option value="B" class="grade-B" ${emp.grade === 'B' ? 'selected' : ''}>B</option>
+                                <option value="C" class="grade-C" ${emp.grade === 'C' ? 'selected' : ''}>C</option>
+                                <option value="D" class="grade-D" ${emp.grade === 'D' ? 'selected' : ''}>D</option>
+                            </select>
+                            ${systemGradeBadge}
+                        </div>
                     </td>
                     <td>
                         <input type="text" class="form-control form-control-sm text-center" 

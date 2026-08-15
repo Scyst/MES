@@ -81,15 +81,15 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                         <select id="filterLine" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0 ps-1" style="width: 120px; cursor: pointer; box-shadow: none;">
                             <option value="ALL">ALL LINES</option>
                         </select>
-                        <button class="btn btn-sm btn-outline-secondary ms-2 rounded-circle" style="width: 28px; height: 28px; padding: 0;" id="btnCriteriaSettings" title="Criteria Settings">
-                            <i class="fas fa-cog"></i>
+                        <button class="btn btn-light btn-sm text-secondary fw-bold px-2 py-1 rounded shadow-sm ms-2" onclick="App.loadData()" title="Reload Data">
+                            <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
 
                     <div class="vr mx-1 text-muted opacity-25 my-1"></div>
 
-                    <button class="btn btn-light btn-sm text-secondary fw-bold px-2 py-1 rounded shadow-sm ms-1" onclick="App.loadData()" title="Reload Data">
-                        <i class="fas fa-sync-alt"></i>
+                    <button class="btn btn-sm btn-outline-secondary ms-1 rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; padding: 0;" id="btnCriteriaSettings" title="Criteria Settings">
+                        <i class="fas fa-cog"></i>
                     </button>
                     
                     <button class="btn btn-success btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="App.saveGrades()" title="Save All Grades">
