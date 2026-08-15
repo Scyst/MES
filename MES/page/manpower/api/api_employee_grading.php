@@ -33,7 +33,7 @@ try {
             INNER JOIN (
                 SELECT DISTINCT emp_id 
                 FROM dbo.MANPOWER_DAILY_LOGS WITH (NOLOCK)
-                WHERE log_date LIKE :period1 + '%'
+                WHERE CONVERT(VARCHAR(7), log_date, 120) = :period1
             ) L ON L.emp_id = E.emp_id
             LEFT JOIN dbo.EMPLOYEE_GRADES G WITH (NOLOCK) 
                 ON E.emp_id = G.emp_id AND G.evaluation_period = :period2
@@ -49,7 +49,7 @@ try {
                 FROM dbo.STOCK_TRANSACTION_USERS stu WITH (NOLOCK)
                 INNER JOIN dbo.STOCK_TRANSACTIONS t WITH (NOLOCK) ON stu.transaction_id = t.transaction_id
                 LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
-                WHERE t.transaction_timestamp LIKE :period3 + '%'
+                WHERE CONVERT(VARCHAR(7), t.transaction_timestamp, 120) = :period3
                   AND t.transaction_type LIKE 'PRODUCTION_%'
                 GROUP BY stu.emp_id
             ) INC ON INC.emp_id = E.emp_id COLLATE Thai_CI_AS
