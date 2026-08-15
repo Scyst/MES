@@ -137,10 +137,10 @@ const App = {
             html += `
                 <tr>
                     <td class="fw-bold text-primary">${emp.emp_id}</td>
-                    <td class="text-start">
-                        <div class="d-flex align-items-center">
-                            <span class="fw-bold text-dark me-2">${emp.name_th}</span>
-                            <span class="text-muted small">
+                    <td class="text-start px-3">
+                        <div class="d-flex align-items-center justify-content-between w-100">
+                            <span class="fw-bold text-dark text-truncate pe-2">${emp.name_th}</span>
+                            <span class="text-muted small text-nowrap">
                                 (${emp.team_group || '-'} <span class="mx-1">|</span> ${emp.line || '-'})
                             </span>
                         </div>

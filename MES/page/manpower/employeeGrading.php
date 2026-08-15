@@ -181,12 +181,12 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                             <thead class="table-light sticky-top shadow-sm" style="z-index: 10;">
                                 <tr>
                                     <th style="width: 10%;" class="sortable" data-sort="emp_id" role="button">Emp ID <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 25%;" class="sortable" data-sort="name_th" role="button">Name & Department <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 20%;" class="sortable" data-sort="name_th" role="button">Name & Department <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 10%;" class="sortable" data-sort="position" role="button">Position <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 12%;" class="sortable" data-sort="total_wage" role="button">Total Wage <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 13%;" class="sortable" data-sort="ratio" role="button">Income & Ratio <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 15%; text-align: center;">Executive Grade</th>
-                                    <th style="width: 15%;">Notes</th>
+                                    <th style="width: 20%;">Notes</th>
                                 </tr>
                             </thead>
                             <tbody id="gradingTableBody">
