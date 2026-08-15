@@ -32,14 +32,17 @@ try {
             INNER JOIN (
                 SELECT DISTINCT emp_id 
                 FROM dbo.MANPOWER_DAILY_LOGS WITH (NOLOCK)
-                WHERE log_date LIKE :period + '%'
+                WHERE log_date LIKE :period1 + '%'
             ) L ON L.emp_id = E.emp_id
             LEFT JOIN dbo.EMPLOYEE_GRADES G WITH (NOLOCK) 
-                ON E.emp_id = G.emp_id AND G.evaluation_period = :period
+                ON E.emp_id = G.emp_id AND G.evaluation_period = :period2
             WHERE E.is_active = 1
         ";
         
-        $params = [':period' => $period];
+        $params = [
+            ':period1' => $period,
+            ':period2' => $period
+        ];
         
         if ($line !== 'ALL') {
             $sql .= " AND E.line = :line";
