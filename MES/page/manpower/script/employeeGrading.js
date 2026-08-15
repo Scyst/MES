@@ -12,6 +12,15 @@ const App = {
     init: async function() {
         this.bindEvents();
         await this.loadData();
+        
+        // Start Live Clock
+        setInterval(() => {
+            const clockEl = document.getElementById('live-clock');
+            if (clockEl) {
+                const now = new Date();
+                clockEl.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+            }
+        }, 1000);
     },
 
     bindEvents: function() {

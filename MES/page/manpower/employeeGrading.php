@@ -19,6 +19,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
 <head>
     <title><?php echo $pageTitle; ?></title>
     <?php include_once __DIR__ . '/../components/common_head.php'; ?>
+    <link rel="stylesheet" href="css/manpowerUI.css?v=<?php echo filemtime(__DIR__ . '/css/manpowerUI.css'); ?>">
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
@@ -45,47 +46,55 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
             
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                 <div class="d-flex align-items-center">
-                    <h5 class="m-0 fw-bold text-dark"><i class="fas fa-star text-warning me-2"></i> Employee Evaluation</h5>
+                    <h5 class="m-0 fw-bold text-dark d-none d-md-block me-3"><i class="fas fa-star text-warning me-2"></i> Grading</h5>
+                    <div id="last-update-time" class="d-flex align-items-center gap-2 text-secondary bg-white px-3 py-2 rounded shadow-sm border" style="font-size: 0.9rem;">
+                        <span class="position-relative d-flex h-2 w-2">
+                            <span class="position-absolute top-0 start-0 h-100 w-100 rounded-circle bg-success opacity-75 animate-ping" style="animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></span>
+                            <span class="position-relative d-inline-flex rounded-circle h-2 w-2 bg-success" style="width: 8px; height: 8px;"></span>
+                        </span>
+                        <span class="fw-bold text-dark">Live</span>
+                        <span class="text-muted small border-start ps-2 ms-1" id="live-clock">--:--:--</span>
+                    </div>
                 </div>
 
-                <div class="d-flex align-items-center bg-white p-2 rounded shadow-sm border dashboard-toolbar">
+                <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
                     <div class="d-flex align-items-center px-2">
                         <span class="text-muted small text-uppercase fw-bold me-2"><i class="far fa-calendar-alt"></i> Period:</span>
-                        <input type="month" id="filterPeriod" class="form-control form-control-sm border-1 text-primary fw-bold" 
+                        <input type="month" id="filterPeriod" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
                                value="<?php echo date('Y-m'); ?>" 
-                               style="width: 150px; cursor: pointer;">
+                               style="width: 130px; cursor: pointer;">
                     </div>
 
-                    <div class="vr mx-2 text-muted opacity-25 my-1"></div>
+                    <div class="vr mx-1 text-muted opacity-25 my-1"></div>
 
                     <div class="d-flex align-items-center px-2">
                         <span class="text-muted small text-uppercase fw-bold me-2"><i class="fas fa-users-cog"></i> Group:</span>
-                        <select id="filterHcGroup" class="form-select form-select-sm border-1 text-primary fw-bold" style="width: 120px; cursor: pointer;">
+                        <select id="filterHcGroup" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0 ps-1" style="width: 100px; cursor: pointer; box-shadow: none;">
                             <option value="TEAM 1">TEAM 1</option>
                             <option value="ALL">ALL GROUPS</option>
                         </select>
                     </div>
 
-                    <div class="vr mx-2 text-muted opacity-25 my-1"></div>
+                    <div class="vr mx-1 text-muted opacity-25 my-1"></div>
 
                     <div class="d-flex align-items-center px-2">
                         <span class="text-muted small text-uppercase fw-bold me-2"><i class="fas fa-industry"></i> Line:</span>
-                        <select id="filterLine" class="form-select form-select-sm border-1 text-primary fw-bold" style="width: 150px; cursor: pointer;">
+                        <select id="filterLine" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0 ps-1" style="width: 120px; cursor: pointer; box-shadow: none;">
                             <option value="ALL">ALL LINES</option>
                         </select>
-                        <button class="btn btn-sm btn-outline-secondary ms-2" id="btnCriteriaSettings" title="Criteria Settings">
-                            <i class="fas fa-cog"></i> Settings
+                        <button class="btn btn-sm btn-outline-secondary ms-2 rounded-circle" style="width: 28px; height: 28px; padding: 0;" id="btnCriteriaSettings" title="Criteria Settings">
+                            <i class="fas fa-cog"></i>
                         </button>
                     </div>
 
-                    <div class="vr mx-2 text-muted opacity-25 my-1"></div>
+                    <div class="vr mx-1 text-muted opacity-25 my-1"></div>
 
-                    <button class="btn btn-light btn-sm text-secondary fw-bold px-3 py-1 rounded shadow-sm" onclick="App.loadData()" title="Reload Data">
-                        <i class="fas fa-sync-alt me-1"></i> Refresh
+                    <button class="btn btn-light btn-sm text-secondary fw-bold px-2 py-1 rounded shadow-sm ms-1" onclick="App.loadData()" title="Reload Data">
+                        <i class="fas fa-sync-alt"></i>
                     </button>
                     
-                    <button class="btn btn-success btn-sm fw-bold px-4 py-1 rounded ms-2 shadow-sm" onclick="App.saveGrades()" title="Save All Grades">
-                        <i class="fas fa-save me-1"></i> Save Grades
+                    <button class="btn btn-success btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="App.saveGrades()" title="Save All Grades">
+                        <i class="fas fa-save me-1"></i> Save
                     </button>
                 </div>
             </div>
@@ -127,20 +136,27 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                 </div>
                 
                 <div class="col-xl-6 col-md-12">
-                    <div class="card shadow-sm border-info h-100">
+                    <div class="card shadow-sm kpi-card border-info h-100">
                         <div class="card-body p-3 d-flex flex-column justify-content-center">
-                            <h6 class="text-info fw-bold mb-2">Grade Distribution</h6>
-                            <div class="progress" style="height: 25px; font-weight: bold; font-size: 1rem;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <div class="text-uppercase text-info small fw-bold mb-1">Grade Distribution</div>
+                                </div>
+                                <div class="icon-circle bg-info-soft" style="width: 32px; height: 32px; font-size: 0.9rem;">
+                                    <i class="fas fa-chart-bar"></i>
+                                </div>
+                            </div>
+                            <div class="progress shadow-sm" style="height: 25px; font-weight: bold; font-size: 1rem; border-radius: 6px;">
                                 <div class="progress-bar bg-success" id="dist-A" style="width: 0%;" title="Grade A">0%</div>
                                 <div class="progress-bar bg-primary" id="dist-B" style="width: 0%;" title="Grade B">0%</div>
                                 <div class="progress-bar bg-warning text-dark" id="dist-C" style="width: 0%;" title="Grade C">0%</div>
                                 <div class="progress-bar bg-danger" id="dist-D" style="width: 0%;" title="Grade D">0%</div>
                             </div>
-                            <div class="d-flex justify-content-between mt-2 small text-muted">
-                                <span><span class="badge bg-success">A</span> Excellent</span>
-                                <span><span class="badge bg-primary">B</span> Good</span>
-                                <span><span class="badge bg-warning text-dark">C</span> Fair</span>
-                                <span><span class="badge bg-danger">D</span> Needs Improvement</span>
+                            <div class="d-flex justify-content-between mt-2 small text-muted px-1">
+                                <span><span class="badge bg-success-soft text-success border border-success-subtle">A</span> <span class="d-none d-md-inline">Excellent</span></span>
+                                <span><span class="badge bg-primary-soft text-primary border border-primary-subtle">B</span> <span class="d-none d-md-inline">Good</span></span>
+                                <span><span class="badge bg-warning-soft text-warning border border-warning-subtle">C</span> <span class="d-none d-md-inline">Fair</span></span>
+                                <span><span class="badge bg-danger-soft text-danger border border-danger-subtle">D</span> <span class="d-none d-md-inline">Improve</span></span>
                             </div>
                         </div>
                     </div>
