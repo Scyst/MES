@@ -27,7 +27,8 @@ try {
                 E.line, 
                 E.team_group,
                 G.grade,
-                G.notes
+                G.notes,
+                ISNULL(INC.income_per_head, 0) AS income_per_head
             FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
             INNER JOIN (
                 SELECT DISTINCT emp_id 
@@ -36,12 +37,29 @@ try {
             ) L ON L.emp_id = E.emp_id
             LEFT JOIN dbo.EMPLOYEE_GRADES G WITH (NOLOCK) 
                 ON E.emp_id = G.emp_id AND G.evaluation_period = :period2
+            LEFT JOIN (
+                SELECT 
+                    stu.emp_id,
+                    SUM(
+                        stu.head_count_ratio * (t.quantity * (
+                            ISNULL(t.std_cost_dl_snapshot, ISNULL(i.Cost_DL, 0)) + 
+                            ISNULL(t.std_cost_oh_snapshot, (ISNULL(i.Cost_OH_Machine, 0) + ISNULL(i.Cost_OH_Utilities, 0) + ISNULL(i.Cost_OH_Indirect, 0) + ISNULL(i.Cost_OH_Staff, 0) + ISNULL(i.Cost_OH_Accessory, 0) + ISNULL(i.Cost_OH_Others, 0)))
+                        ))
+                    ) AS income_per_head
+                FROM dbo.STOCK_TRANSACTION_USERS stu WITH (NOLOCK)
+                INNER JOIN dbo.STOCK_TRANSACTIONS t WITH (NOLOCK) ON stu.transaction_id = t.transaction_id
+                LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
+                WHERE t.transaction_timestamp LIKE :period3 + '%'
+                  AND t.transaction_type LIKE 'PRODUCTION_%'
+                GROUP BY stu.emp_id
+            ) INC ON INC.emp_id = E.emp_id COLLATE Thai_CI_AS
             WHERE E.is_active = 1
         ";
         
         $params = [
             ':period1' => $period,
-            ':period2' => $period
+            ':period2' => $period,
+            ':period3' => $period
         ];
         
         if ($line !== 'ALL') {
@@ -60,19 +78,15 @@ try {
         $stmt->execute($params);
         $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // TODO: Replace with real Income Per Head calculation when formula is confirmed.
         $results = [];
         foreach ($employees as $emp) {
-            // Mock Calculation
-            $mockIncome = rand(15000, 35000); // Mock value
-            
             $results[] = [
                 'emp_id' => $emp['emp_id'],
                 'name_th' => $emp['name_th'],
                 'position' => $emp['position'],
                 'line' => $emp['line'],
                 'team_group' => $emp['team_group'],
-                'income_per_head' => $mockIncome,
+                'income_per_head' => (float)$emp['income_per_head'],
                 'grade' => $emp['grade'] ?? '',
                 'notes' => $emp['notes'] ?? ''
             ];
