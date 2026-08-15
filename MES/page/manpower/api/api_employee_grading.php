@@ -13,6 +13,7 @@ if (!hasPermission('manage_manpower')) {
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $period = $_GET['period'] ?? date('Y-m'); // Default current month
 $line = $_GET['line'] ?? 'ALL';
+$hcGroup = $_GET['hcGroup'] ?? 'ALL';
 
 try {
     if ($action === 'get_grading_data') {
@@ -28,6 +29,11 @@ try {
                 G.grade,
                 G.notes
             FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+            INNER JOIN (
+                SELECT DISTINCT emp_id 
+                FROM dbo.MANPOWER_DAILY_LOGS WITH (NOLOCK)
+                WHERE log_date LIKE :period + '%'
+            ) L ON L.emp_id = E.emp_id
             LEFT JOIN dbo.EMPLOYEE_GRADES G WITH (NOLOCK) 
                 ON E.emp_id = G.emp_id AND G.evaluation_period = :period
             WHERE E.is_active = 1
@@ -38,6 +44,11 @@ try {
         if ($line !== 'ALL') {
             $sql .= " AND E.line = :line";
             $params[':line'] = $line;
+        }
+
+        if ($hcGroup !== 'ALL') {
+            $sql .= " AND E.department_api IN (SELECT department_api FROM dbo.MANPOWER_TEAM_SETTINGS WHERE hc_group = :hcGroup)";
+            $params[':hcGroup'] = $hcGroup;
         }
         
         $sql .= " ORDER BY E.line ASC, E.emp_id ASC";

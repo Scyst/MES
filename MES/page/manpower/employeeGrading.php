@@ -59,6 +59,16 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     <div class="vr mx-2 text-muted opacity-25 my-1"></div>
 
                     <div class="d-flex align-items-center px-2">
+                        <span class="text-muted small text-uppercase fw-bold me-2"><i class="fas fa-users-cog"></i> Group:</span>
+                        <select id="filterHcGroup" class="form-select form-select-sm border-1 text-primary fw-bold" style="width: 120px; cursor: pointer;">
+                            <option value="TEAM 1">TEAM 1</option>
+                            <option value="ALL">ALL GROUPS</option>
+                        </select>
+                    </div>
+
+                    <div class="vr mx-2 text-muted opacity-25 my-1"></div>
+
+                    <div class="d-flex align-items-center px-2">
                         <span class="text-muted small text-uppercase fw-bold me-2"><i class="fas fa-industry"></i> Line:</span>
                         <select id="filterLine" class="form-select form-select-sm border-1 text-primary fw-bold" style="width: 150px; cursor: pointer;">
                             <option value="ALL">ALL LINES</option>

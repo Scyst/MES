@@ -15,12 +15,14 @@ const App = {
 
     bindEvents: function() {
         document.getElementById('filterPeriod').addEventListener('change', () => this.loadData());
+        document.getElementById('filterHcGroup').addEventListener('change', () => this.loadData());
         document.getElementById('filterLine').addEventListener('change', () => this.renderTable());
     },
 
     loadData: async function() {
         try {
             const period = document.getElementById('filterPeriod').value;
+            const hcGroup = document.getElementById('filterHcGroup').value;
             
             Swal.fire({
                 title: 'Loading Data...',
@@ -28,7 +30,7 @@ const App = {
                 didOpen: () => Swal.showLoading()
             });
 
-            const response = await fetch(`api/api_employee_grading.php?action=get_grading_data&period=${period}`);
+            const response = await fetch(`api/api_employee_grading.php?action=get_grading_data&period=${period}&hcGroup=${hcGroup}`);
             const result = await response.json();
 
             if (!result.success) throw new Error(result.message);
