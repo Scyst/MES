@@ -139,14 +139,14 @@ const App = {
                     <td class="fw-bold text-primary">${emp.emp_id}</td>
                     <td class="text-start">
                         <div class="d-flex align-items-center">
-                            <span class="fw-bold text-dark me-2" style="font-size: 1.05rem;">${emp.name_th}</span>
-                            <span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 0.75rem;">
-                                ${emp.team_group || '-'} <span class="text-muted mx-1">|</span> ${emp.line || '-'}
+                            <span class="fw-bold text-dark me-2">${emp.name_th}</span>
+                            <span class="text-muted small">
+                                (${emp.team_group || '-'} <span class="mx-1">|</span> ${emp.line || '-'})
                             </span>
                         </div>
                     </td>
                     <td>
-                        <span class="badge bg-light text-dark border px-2 py-1" style="font-size: 0.85rem;">${emp.position || '-'}</span>
+                        <span class="fw-bold text-secondary">${emp.position || '-'}</span>
                     </td>
                     <td>
                         <div class="fw-bold text-secondary">${parseFloat(emp.total_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</div>
