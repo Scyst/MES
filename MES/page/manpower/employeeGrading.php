@@ -80,52 +80,57 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     </div>
                 </div>
 
-                <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
-                    <div class="d-flex align-items-center px-2">
-                        <div class="btn-segmented me-2">
+                <div class="d-flex align-items-center bg-white px-3 py-2 rounded-pill shadow-sm border dashboard-toolbar">
+                    <div class="d-flex align-items-center">
+                        <div class="btn-segmented me-3">
                             <input type="radio" class="btn-check" name="periodTypeToggle" id="btnPeriodMonthly" value="monthly" autocomplete="off" checked>
                             <label class="btn btn-sm rounded-pill px-3 mb-0 border-0" style="transition: all 0.2s;" for="btnPeriodMonthly">Month</label>
                           
                             <input type="radio" class="btn-check" name="periodTypeToggle" id="btnPeriodDaily" value="daily" autocomplete="off">
                             <label class="btn btn-sm rounded-pill px-3 mb-0 border-0" style="transition: all 0.2s;" for="btnPeriodDaily">Day</label>
                         </div>
+                        <i class="far fa-calendar-alt text-primary opacity-50 me-2"></i>
                         <input type="month" id="filterPeriodMonth" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
                                value="<?php echo date('Y-m'); ?>" 
-                               style="width: 110px; cursor: pointer;" title="Select Month">
+                               style="width: 110px; cursor: pointer; outline: none; box-shadow: none;" title="Select Month">
                         <input type="date" id="filterPeriodDate" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0 d-none" 
                                value="<?php echo date('Y-m-d'); ?>" 
-                               style="width: 110px; cursor: pointer;" title="Select Date">
+                               style="width: 110px; cursor: pointer; outline: none; box-shadow: none;" title="Select Date">
                     </div>
 
-                    <div class="vr mx-1 text-muted opacity-25 my-1"></div>
+                    <div class="vr mx-3 text-muted opacity-25 my-1"></div>
 
-                    <div class="d-flex align-items-center px-2">
-                        <select id="filterHcGroup" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0" style="width: 90px; cursor: pointer; box-shadow: none;" title="Select Group">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-users-cog text-primary opacity-50 me-2"></i>
+                        <select id="filterHcGroup" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0" style="width: 90px; cursor: pointer; box-shadow: none; outline: none;" title="Select Group">
                             <option value="TEAM 1">TEAM 1</option>
                             <option value="ALL">ALL GROUPS</option>
                         </select>
                     </div>
 
-                    <div class="vr mx-1 text-muted opacity-25 my-1"></div>
+                    <div class="vr mx-3 text-muted opacity-25 my-1"></div>
 
-                    <div class="d-flex align-items-center px-2">
-                        <select id="filterLine" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0" style="width: 100px; cursor: pointer; box-shadow: none;" title="Select Line">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-industry text-primary opacity-50 me-2"></i>
+                        <select id="filterLine" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0" style="width: 100px; cursor: pointer; box-shadow: none; outline: none;" title="Select Line">
                             <option value="ALL">ALL LINES</option>
                         </select>
-                        <button class="btn btn-light btn-sm text-secondary fw-bold px-2 py-1 rounded shadow-sm ms-2" onclick="App.loadData()" title="Reload Data">
+                        <button class="btn btn-light btn-sm text-secondary fw-bold rounded-circle shadow-sm ms-3 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; padding: 0;" onclick="App.loadData()" title="Reload Data">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
 
-                    <div class="vr mx-1 text-muted opacity-25 my-1"></div>
+                    <div class="vr mx-3 text-muted opacity-25 my-1"></div>
+                    
+                    <div class="d-flex align-items-center ms-auto">
+                        <button class="btn btn-light btn-sm text-secondary rounded-circle shadow-sm d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; padding: 0;" id="btnCriteriaSettings" title="Criteria Settings">
+                            <i class="fas fa-cog"></i>
+                        </button>
 
-                    <button class="btn btn-sm btn-outline-secondary ms-1 rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; padding: 0;" id="btnCriteriaSettings" title="Criteria Settings">
-                        <i class="fas fa-cog"></i>
-                    </button>
-
-                    <button class="btn btn-warning btn-sm fw-bold px-3 py-1 rounded ms-2 shadow-sm text-dark" onclick="App.autoGrade()" title="Apply System Grades">
-                        <i class="fas fa-magic me-1"></i> Auto Grade
-                    </button>
+                        <button class="btn btn-warning btn-sm fw-bold px-4 rounded-pill shadow-sm text-dark d-flex align-items-center justify-content-center" style="height: 32px;" onclick="App.autoGrade()" title="Apply System Grades">
+                            <i class="fas fa-magic me-2"></i> Auto Grade
+                        </button>
+                    </div>
                 </div>
             </div>
 
