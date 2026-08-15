@@ -139,26 +139,35 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
         fetch(`${baseUrl}/page/manpower/api/api_my_performance.php`)
             .then(res => res.json())
             .then(json => {
-                if (json.success && json.data.has_data) {
+                if (json.success) {
                     card.classList.remove('d-none');
                     
-                    // Grade
-                    const gradeEl = document.getElementById('headerGradeDisplay');
-                    const grade = json.data.grade;
-                    gradeEl.textContent = grade;
-                    
-                    gradeEl.className = 'badge';
-                    if (grade === 'A') gradeEl.classList.add('bg-success');
-                    else if (grade === 'B') gradeEl.classList.add('bg-primary');
-                    else if (grade === 'C') gradeEl.classList.add('bg-warning', 'text-dark');
-                    else if (grade === 'D') gradeEl.classList.add('bg-danger');
-                    else gradeEl.classList.add('bg-secondary');
+                    if (json.data.has_data) {
+                        // Grade
+                        const gradeEl = document.getElementById('headerGradeDisplay');
+                        const grade = json.data.grade;
+                        gradeEl.textContent = grade;
+                        
+                        gradeEl.className = 'badge';
+                        if (grade === 'A') gradeEl.classList.add('bg-success');
+                        else if (grade === 'B') gradeEl.classList.add('bg-primary');
+                        else if (grade === 'C') gradeEl.classList.add('bg-warning', 'text-dark');
+                        else if (grade === 'D') gradeEl.classList.add('bg-danger');
+                        else gradeEl.classList.add('bg-secondary');
 
-                    // Income
-                    document.getElementById('headerIncomeDisplay').textContent = '฿' + json.data.income_per_head.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                    
-                    // Ratio
-                    document.getElementById('headerRatioDisplay').textContent = json.data.income_ratio.toFixed(1) + '%';
+                        // Income
+                        document.getElementById('headerIncomeDisplay').textContent = '฿' + json.data.income_per_head.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        
+                        // Ratio
+                        document.getElementById('headerRatioDisplay').textContent = json.data.income_ratio.toFixed(1) + '%';
+                    } else {
+                        // No Data
+                        document.getElementById('headerGradeDisplay').textContent = '-';
+                        document.getElementById('headerIncomeDisplay').textContent = 'ไม่มีข้อมูล';
+                        document.getElementById('headerIncomeDisplay').classList.replace('text-primary', 'text-muted');
+                        document.getElementById('headerRatioDisplay').textContent = '-';
+                        document.getElementById('headerRatioDisplay').classList.replace('text-success', 'text-muted');
+                    }
                 }
             })
             .catch(err => console.error("Error fetching my performance:", err));
