@@ -134,6 +134,17 @@ try {
                 } else {
                     $systemGrade = 'D';
                 }
+            } else {
+                // Default fallback if no criteria is set
+                if ($ratio >= 2.0) {
+                    $systemGrade = 'A';
+                } else if ($ratio >= 1.5) {
+                    $systemGrade = 'B';
+                } else if ($ratio >= 1.0) {
+                    $systemGrade = 'C';
+                } else {
+                    $systemGrade = 'D';
+                }
             }
             
             $results[] = [

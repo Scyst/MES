@@ -91,6 +91,10 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     <button class="btn btn-sm btn-outline-secondary ms-1 rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; padding: 0;" id="btnCriteriaSettings" title="Criteria Settings">
                         <i class="fas fa-cog"></i>
                     </button>
+
+                    <button class="btn btn-warning btn-sm fw-bold px-3 py-1 rounded ms-2 shadow-sm text-dark" onclick="App.autoGrade()" title="Apply System Grades">
+                        <i class="fas fa-magic me-1"></i> Auto Grade
+                    </button>
                     
                     <button class="btn btn-success btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="App.saveGrades()" title="Save All Grades">
                         <i class="fas fa-save me-1"></i> Save
