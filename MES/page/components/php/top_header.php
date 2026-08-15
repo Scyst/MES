@@ -71,6 +71,21 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                     <h6 class="mb-0 fw-bold text-dark"><?php echo htmlspecialchars($fullName); ?></h6>
                     <small class="text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;"><?php echo htmlspecialchars($userRole); ?></small>
                 </li>
+                <!-- Performance Summary -->
+                <li class="px-3 py-2 border-bottom mb-2 d-none" id="headerPerformanceCard">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small fw-bold text-muted">ผลงานเดือนนี้</span>
+                        <span class="badge bg-secondary" id="headerGradeDisplay">-</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small text-secondary">รายได้พิเศษ:</span>
+                        <span class="small fw-bold text-primary" id="headerIncomeDisplay">฿0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small text-secondary">Ratio:</span>
+                        <span class="small fw-bold text-success" id="headerRatioDisplay">0%</span>
+                    </div>
+                </li>
                 <li>
                     <a class="dropdown-item rounded py-2 d-flex align-items-center" href="#" id="theme-switcher-btn">
                         <i class="fas fa-adjust fa-fw me-3 text-muted"></i> สลับธีมระบบ
@@ -114,6 +129,40 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
     }
     setInterval(updateRealTimeClock, 1000);
     updateRealTimeClock();
+    
+    // ดึงข้อมูลผลงานพนักงาน
+    document.addEventListener("DOMContentLoaded", function() {
+        const baseUrl = '<?php echo defined("BASE_URL") ? BASE_URL : "/MES/MES"; ?>';
+        const card = document.getElementById('headerPerformanceCard');
+        if (!card) return;
+
+        fetch(`${baseUrl}/page/manpower/api/api_my_performance.php`)
+            .then(res => res.json())
+            .then(json => {
+                if (json.success && json.data.has_data) {
+                    card.classList.remove('d-none');
+                    
+                    // Grade
+                    const gradeEl = document.getElementById('headerGradeDisplay');
+                    const grade = json.data.grade;
+                    gradeEl.textContent = grade;
+                    
+                    gradeEl.className = 'badge';
+                    if (grade === 'A') gradeEl.classList.add('bg-success');
+                    else if (grade === 'B') gradeEl.classList.add('bg-primary');
+                    else if (grade === 'C') gradeEl.classList.add('bg-warning', 'text-dark');
+                    else if (grade === 'D') gradeEl.classList.add('bg-danger');
+                    else gradeEl.classList.add('bg-secondary');
+
+                    // Income
+                    document.getElementById('headerIncomeDisplay').textContent = '฿' + json.data.income_per_head.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    
+                    // Ratio
+                    document.getElementById('headerRatioDisplay').textContent = json.data.income_ratio.toFixed(1) + '%';
+                }
+            })
+            .catch(err => console.error("Error fetching my performance:", err));
+    });
 </script>
 
 <style>
