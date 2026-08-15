@@ -1,6 +1,6 @@
 <?php
 // page/manpower/api/api_employee_grading.php
-require_once __DIR__ . '/../../../db.php';
+require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../components/init.php';
 
 header('Content-Type: application/json');
