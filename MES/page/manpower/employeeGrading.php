@@ -98,7 +98,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                                style="width: 110px; cursor: pointer; outline: none; box-shadow: none;" title="Select Date">
                     </div>
 
-                    <div class="vr mx-3 text-muted opacity-25 my-1"></div>
+                    <div class="vr mx-1 text-muted opacity-25 my-1"></div>
 
                     <div class="d-flex align-items-center">
                         <i class="fas fa-users-cog text-primary opacity-50 me-2"></i>
@@ -108,7 +108,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                         </select>
                     </div>
 
-                    <div class="vr mx-3 text-muted opacity-25 my-1"></div>
+                    <div class="vr mx-1 text-muted opacity-25 my-1"></div>
 
                     <div class="d-flex align-items-center">
                         <i class="fas fa-industry text-primary opacity-50 me-2"></i>
@@ -120,7 +120,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                         </button>
                     </div>
 
-                    <div class="vr mx-3 text-muted opacity-25 my-1"></div>
+                    <div class="vr mx-1 text-muted opacity-25 my-1"></div>
                     
                     <div class="d-flex align-items-center ms-auto">
                         <button class="btn btn-light btn-sm text-secondary rounded-circle shadow-sm d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; padding: 0;" id="btnCriteriaSettings" title="Criteria Settings">
