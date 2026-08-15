@@ -1016,10 +1016,17 @@ function populateRecordTeamUserDropdown(users) {
 
     listEl.innerHTML = '';
 
-    // Add Search Input
+    // Add Search Input and Clear Button
     const searchLi = document.createElement('li');
     searchLi.className = 'px-2 pb-2 mb-2 border-bottom sticky-top bg-white';
-    searchLi.innerHTML = '<input type="text" class="form-control form-control-sm" placeholder="ค้นหา..." id="record_team_user_search">';
+    searchLi.innerHTML = `
+        <div class="d-flex gap-2">
+            <input type="text" class="form-control form-control-sm" placeholder="ค้นหาชื่อ..." id="record_team_user_search">
+            <button type="button" class="btn btn-sm btn-outline-danger" id="record_team_user_clear" title="ล้างผู้ใช้งานทั้งหมด">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    `;
     listEl.appendChild(searchLi);
 
     const searchInput = searchLi.querySelector('input');
@@ -1030,6 +1037,14 @@ function populateRecordTeamUserDropdown(users) {
             const label = item.querySelector('label').textContent.toLowerCase();
             item.style.display = label.includes(term) ? '' : 'none';
         });
+    });
+
+    const clearBtn = searchLi.querySelector('#record_team_user_clear');
+    clearBtn.addEventListener('click', function(e) {
+        e.stopPropagation(); // prevent closing dropdown
+        const checkboxes = listEl.querySelectorAll('.team-user-checkbox');
+        checkboxes.forEach(cb => cb.checked = false);
+        updateRecordTeamUserUI();
     });
 
     users.forEach(u => {
