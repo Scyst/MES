@@ -156,13 +156,21 @@ try {
         if ($jobId) {
             // New Flow: Log against a specific Job Order
             // Fetch Job details
-            $stmt = $pdo->prepare("SELECT job_no, item_id, location_id, start_time, status FROM PRODUCTION_JOBS WITH (NOLOCK) WHERE job_id = ?");
+            $stmt = $pdo->prepare("SELECT job_no, item_id, location_id, start_time, status, target_qty, actual_qty FROM PRODUCTION_JOBS WITH (NOLOCK) WHERE job_id = ?");
             $stmt->execute([$jobId]);
             $job = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$job) throw new Exception("Job not found");
             if (in_array(strtoupper($job['status']), ['COMPLETED', 'CLOSED'])) {
                 throw new Exception("Cannot log transaction for a closed/completed Job.");
+            }
+
+            if ($type === 'FG') {
+                $current_actual = (float)($job['actual_qty'] ?? 0);
+                $target = (float)($job['target_qty'] ?? 0);
+                if (($current_actual + $qty) > $target) {
+                    throw new Exception("Over-production detected. Target: {$target}, Current Actual: {$current_actual}, Attempted: {$qty}. Cannot exceed target quantity.");
+                }
             }
 
             $add_actual = $type === 'FG' ? $qty : 0;
@@ -322,7 +330,7 @@ try {
         // Step 3: Insert New (using the same logic as 'log')
         $job = null;
         if ($jobNo) {
-            $stmt = $pdo->prepare("SELECT job_id, item_id, location_id, start_time, job_no FROM PRODUCTION_JOBS WITH (NOLOCK) WHERE job_no = ?");
+            $stmt = $pdo->prepare("SELECT job_id, item_id, location_id, start_time, job_no, target_qty, actual_qty FROM PRODUCTION_JOBS WITH (NOLOCK) WHERE job_no = ?");
             $stmt->execute([$jobNo]);
             $job = $stmt->fetch(PDO::FETCH_ASSOC);
         }
@@ -330,6 +338,14 @@ try {
         $oldTimestamp = date('Y-m-d H:i:s', strtotime($oldTxn['transaction_timestamp']));
 
         if ($job) {
+            if ($typeStr === 'FG') {
+                $current_actual = (float)($job['actual_qty'] ?? 0);
+                $target = (float)($job['target_qty'] ?? 0);
+                if (($current_actual + $newQty) > $target) {
+                    throw new Exception("Over-production detected. Target: {$target}, Current Actual: {$current_actual}, Attempted: {$newQty}. Cannot exceed target quantity.");
+                }
+            }
+
             $add_actual = $typeStr === 'FG' ? $newQty : 0;
             $add_hold = $typeStr === 'HOLD' ? $newQty : 0;
             $add_scrap = $typeStr === 'SCRAP' ? $newQty : 0;
