@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, X, Monitor, MonitorUp, PictureInPicture2, Palette, BellRing } from 'lucide-react';
+import { Settings, X, Monitor, MonitorUp, PictureInPicture2, Palette, BellRing, Sun, Server, Play, CheckCircle2, AlertCircle } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 
 interface SettingsModalProps {
@@ -16,6 +16,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [notifyCpu, setNotifyCpu] = useState(90);
   const [notifyRam, setNotifyRam] = useState(90);
+  const [opacity, setOpacity] = useState<number>(() => {
+    return parseInt(localStorage.getItem('widget_opacity') || '204', 10);
+  });
+  const [backendRunning, setBackendRunning] = useState<boolean | null>(null);
 
   useEffect(() => {
     const savedCpu = localStorage.getItem('notify_cpu_threshold');
@@ -23,6 +27,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (savedCpu) setNotifyCpu(parseInt(savedCpu, 10));
     if (savedRam) setNotifyRam(parseInt(savedRam, 10));
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    // Poll backend status while modal is open
+    const checkStatus = async () => {
+      try {
+        const isRunning: boolean = await invoke('check_backend_status');
+        setBackendRunning(isRunning);
+      } catch (e) {
+        setBackendRunning(false);
+      }
+    };
+    checkStatus();
+    const interval = setInterval(checkStatus, 3000);
+    return () => clearInterval(interval);
+  }, [isOpen]);
+
+  const handleStartBackend = async () => {
+    try {
+      await invoke('start_backend');
+      // Optimistically set to true, next poll will verify
+      setBackendRunning(true);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleSaveNotification = (type: 'cpu' | 'ram', val: string) => {
     const num = parseInt(val, 10);
@@ -43,11 +74,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     
     if (mode === 'widget') {
       await invoke('set_widget_mode');
+      // Apply saved opacity immediately
+      await invoke('set_opacity', { alpha: opacity });
     } else if (mode === 'mini') {
       await invoke('set_mini_mode');
+      await invoke('set_opacity', { alpha: 255 }); // Mini always opaque
     } else {
       await invoke('set_window_mode');
+      await invoke('set_opacity', { alpha: 255 });
     }
+  };
+
+  const handleOpacityChange = async (val: number) => {
+    setOpacity(val);
+    localStorage.setItem('widget_opacity', val.toString());
+    await invoke('set_opacity', { alpha: val });
   };
 
   if (!isOpen) return null;
@@ -152,6 +193,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
           </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-3 text-[#e2e8f0]">
+              <Server size={14} className="text-[#10b981]" />
+              <h3 className="font-bold uppercase tracking-wide">Data Logger Service</h3>
+            </div>
+            <div className="bg-[#1a2b50]/10 p-3 rounded border border-[#1a2b50]/40 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {backendRunning === true ? (
+                  <CheckCircle2 size={16} className="text-[#10b981]" />
+                ) : (
+                  <AlertCircle size={16} className="text-[#ef4444]" />
+                )}
+                <div>
+                  <div className="font-bold text-[#e2e8f0]">Backend API & Logger</div>
+                  <div className="text-[10px] text-[#64748b]">
+                    {backendRunning === true ? 'Running normally in background' : 'Service is stopped or crashed'}
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={handleStartBackend}
+                disabled={backendRunning === true}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded border transition-colors ${backendRunning === true ? 'bg-transparent border-[#1a2b50]/40 text-[#64748b] cursor-not-allowed' : 'bg-[#00d4ff]/10 border-[#00d4ff] text-[#00d4ff] hover:bg-[#00d4ff]/20 cursor-pointer'}`}
+              >
+                <Play size={12} />
+                {backendRunning === true ? 'ACTIVE' : 'START'}
+              </button>
+            </div>
+          </div>
+
+          {/* OPACITY (Widget mode only) */}
+          {currentMode === 'widget' && (
+            <div>
+              <div className="flex items-center gap-2 mb-3 text-[#e2e8f0]">
+                <Sun size={14} className="text-[#38bdf8]" />
+                <h3 className="font-bold uppercase tracking-wide">Widget Opacity</h3>
+              </div>
+              <div className="space-y-2 bg-[#1a2b50]/10 p-3 rounded border border-[#1a2b50]/40">
+                <div className="flex justify-between items-center">
+                  <span>Transparency</span>
+                  <span className="text-[#e2e8f0] font-bold">{Math.round((opacity / 255) * 100)}%</span>
+                </div>
+                <input
+                  type="range" min={51} max={255} value={opacity}
+                  onChange={(e) => handleOpacityChange(parseInt(e.target.value, 10))}
+                  className="w-full accent-[#38bdf8] cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-[#64748b]">
+                  <span>20%</span><span>100%</span>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
 

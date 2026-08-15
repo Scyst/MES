@@ -37,3 +37,15 @@ export interface SysPayload {
   processes: ProcInfo[];
   gpus: GpuInfo[];
 }
+
+export interface ServerStatus {
+  timestamp: string;
+  ping: number | null;
+  http: number | null;
+  dbConnect: number | null;
+  dbQuery: number | null;
+  ftp: number | null;
+  nodered: number | null;
+  ram: number | null;
+  error: string | null;
+}

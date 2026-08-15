@@ -1,14 +1,47 @@
 use serde::Serialize;
+use std::sync::atomic::{AtomicIsize, Ordering};
 use std::thread;
 use std::time::Duration;
 use sysinfo::{Networks, System};
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 
+use winapi::shared::minwindef::{BOOL, LPARAM, WPARAM, LRESULT};
 use winapi::shared::windef::HWND;
 use winapi::um::winuser::{
-    GetParent, GetWindowLongW, SetWindowLongW, SetWindowPos, ShowWindow, IsWindowVisible,
-    GWL_EXSTYLE, WS_EX_TOOLWINDOW, WS_EX_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SW_SHOWNA
+    EnumWindows, FindWindowExW, FindWindowW, GetParent, GetSystemMetrics,
+    GetWindowLongW, SendMessageTimeoutW, SetParent,
+    SetWindowLongW, SetWindowPos,
+    GWL_EXSTYLE, SM_CXSCREEN, SM_CYSCREEN, SMTO_NORMAL,
+    SWP_FRAMECHANGED,
+    WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+    SetLayeredWindowAttributes, LWA_ALPHA,
+    SWP_NOZORDER,
+    SystemParametersInfoW, SPI_SETDESKWALLPAPER, SPIF_UPDATEINIFILE,
 };
+
+// Stores WorkerW handle so we can unparent later
+static WORKER_W: AtomicIsize = AtomicIsize::new(0);
+
+/// Encodes a &str to null-terminated UTF-16 Vec
+fn wide(s: &str) -> Vec<u16> {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    OsStr::new(s).encode_wide().chain(std::iter::once(0)).collect()
+}
+
+/// EnumWindows callback: finds the WorkerW layer that lives behind desktop icons
+unsafe extern "system" fn find_worker_w(hwnd: HWND, _param: LPARAM) -> BOOL {
+    let shell_class = wide("SHELLDLL_DefView");
+    let worker_class = wide("WorkerW");
+    let shell_def = FindWindowExW(hwnd, std::ptr::null_mut(), shell_class.as_ptr(), std::ptr::null());
+    if !shell_def.is_null() {
+        let ww = FindWindowExW(std::ptr::null_mut(), hwnd, worker_class.as_ptr(), std::ptr::null());
+        if !ww.is_null() {
+            WORKER_W.store(ww as isize, Ordering::SeqCst);
+        }
+    }
+    1 // TRUE — continue enumeration
+}
 
 #[derive(Clone, serde::Serialize)]
 struct SysPayload {
@@ -100,82 +133,200 @@ fn exit_app() {
     std::process::exit(0);
 }
 
+/// Restores the window to a normal bordered window and unparents it from WorkerW
 #[tauri::command]
 fn set_window_mode(window: tauri::Window) {
     let _ = window.set_always_on_top(false);
     let _ = window.set_decorations(true);
     let _ = window.set_skip_taskbar(false);
-    let _ = window.unminimize();
+
     if let Ok(hwnd) = window.hwnd() {
         unsafe {
             let hwnd_ptr = hwnd.0 as HWND;
             let parent = GetParent(hwnd_ptr);
             let target = if parent.is_null() { hwnd_ptr } else { parent };
+
+            // Unparent from WorkerW if previously attached
+            SetParent(target, std::ptr::null_mut());
+
+            // Remove tool-window / no-activate styles
             let mut ex = GetWindowLongW(target, GWL_EXSTYLE);
             ex &= !(WS_EX_TOOLWINDOW as i32);
             ex &= !(WS_EX_NOACTIVATE as i32);
+            ex &= !(WS_EX_LAYERED as i32);
             SetWindowLongW(target, GWL_EXSTYLE, ex);
+
+            // Restore full opacity
+            SetLayeredWindowAttributes(target, 0, 255, LWA_ALPHA);
+
+            // Force Windows to redraw the desktop wallpaper and remove the empty WorkerW layer
+            SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, std::ptr::null_mut(), SPIF_UPDATEINIFILE);
         }
     }
+
+    // Restore window to maximized state
+    let _ = window.set_fullscreen(false);
+    let _ = window.maximize();
 }
 
+/// Resizes window to a compact top-right floating bar (Always on Top)
 #[tauri::command]
 fn set_mini_mode(window: tauri::Window) {
     let _ = window.set_always_on_top(true);
     let _ = window.set_decorations(false);
     let _ = window.set_skip_taskbar(true);
+
     if let Ok(hwnd) = window.hwnd() {
         unsafe {
             let hwnd_ptr = hwnd.0 as HWND;
             let parent = GetParent(hwnd_ptr);
             let target = if parent.is_null() { hwnd_ptr } else { parent };
+
+            // Unparent from WorkerW in case we were in widget mode
+            SetParent(target, std::ptr::null_mut());
+
+            // Remove toolwindow style so it's truly floating
+            // DO NOT add WS_EX_NOACTIVATE here, otherwise Tauri drag (HTCAPTION) will not work!
             let mut ex = GetWindowLongW(target, GWL_EXSTYLE);
             ex &= !(WS_EX_TOOLWINDOW as i32);
             ex &= !(WS_EX_NOACTIVATE as i32);
             SetWindowLongW(target, GWL_EXSTYLE, ex);
+
+            // Force Windows to redraw the desktop wallpaper and remove the empty WorkerW layer (if coming from Widget mode)
+            SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, std::ptr::null_mut(), SPIF_UPDATEINIFILE);
+
+            // Position: top-right corner of primary screen
+            let screen_w = GetSystemMetrics(SM_CXSCREEN);
+            let bar_w: i32 = 720;
+            let bar_h: i32 = 52;
+            let x = screen_w - bar_w - 16;
+            let y = 16;
+            SetWindowPos(
+                target,
+                usize::MAX as HWND, // HWND_TOPMOST = -1 (all bits set)
+                x, y, bar_w, bar_h,
+                SWP_FRAMECHANGED,
+            );
         }
     }
 }
 
+/// Uses the "Progman trick" to embed the window behind desktop icons (like Wallpaper Engine)
 #[tauri::command]
 fn set_widget_mode(window: tauri::Window) {
     let _ = window.set_always_on_top(false);
     let _ = window.set_decorations(false);
     let _ = window.set_skip_taskbar(true);
+
     if let Ok(hwnd) = window.hwnd() {
         unsafe {
             let hwnd_ptr = hwnd.0 as HWND;
             let parent = GetParent(hwnd_ptr);
             let target = if parent.is_null() { hwnd_ptr } else { parent };
+
+            // 1. Find Progman and tell it to spawn the WorkerW layer
+            let progman_class = wide("Progman");
+            let progman = FindWindowW(progman_class.as_ptr(), std::ptr::null());
+            if !progman.is_null() {
+                let mut result: usize = 0;
+                SendMessageTimeoutW(
+                    progman, 0x052C, 0, 0, SMTO_NORMAL, 1000,
+                    &mut result as *mut usize as *mut _,
+                );
+            }
+
+            // 2. Find the WorkerW that has SHELLDLL_DefView as a child
+            WORKER_W.store(0, Ordering::SeqCst);
+            EnumWindows(Some(find_worker_w), 0);
+            let ww = WORKER_W.load(Ordering::SeqCst) as HWND;
+
+            if !ww.is_null() {
+                // 3. Parent our window into WorkerW → it now lives behind desktop icons
+                SetParent(target, ww);
+
+                // 4. Stretch to full screen
+                let screen_w = GetSystemMetrics(SM_CXSCREEN);
+                let screen_h = GetSystemMetrics(SM_CYSCREEN);
+                SetWindowPos(
+                    target,
+                    std::ptr::null_mut(),
+                    0, 0, screen_w, screen_h,
+                    SWP_NOZORDER | SWP_FRAMECHANGED,
+                );
+            }
+
+            // 5. Remove no-activate/toolwindow styles (desktop layer doesn't need them)
             let mut ex = GetWindowLongW(target, GWL_EXSTYLE);
-            ex |= WS_EX_TOOLWINDOW as i32;
-            ex |= WS_EX_NOACTIVATE as i32;
+            ex &= !(WS_EX_TOOLWINDOW as i32);
+            ex |= WS_EX_LAYERED as i32;
             SetWindowLongW(target, GWL_EXSTYLE, ex);
-            
-            let hwnd_isize = target as isize;
-            std::thread::spawn(move || {
-                loop {
-                    std::thread::sleep(std::time::Duration::from_millis(800));
-                    let h = hwnd_isize as HWND;
-                    let current_ex = GetWindowLongW(h, GWL_EXSTYLE);
-                    if current_ex & (WS_EX_TOOLWINDOW as i32) == 0 {
-                        break;
-                    }
-                    if IsWindowVisible(h) == 0 {
-                        let _ = ShowWindow(h, SW_SHOWNA);
-                    }
-                    let _ = SetWindowPos(h, 1 as HWND, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                }
-            });
         }
     }
+}
+
+/// Sets window alpha opacity (0 = invisible, 255 = opaque)
+#[tauri::command]
+fn set_opacity(window: tauri::Window, alpha: u8) {
+    if let Ok(hwnd) = window.hwnd() {
+        unsafe {
+            let hwnd_ptr = hwnd.0 as HWND;
+            let parent = GetParent(hwnd_ptr);
+            let target = if parent.is_null() { hwnd_ptr } else { parent };
+
+            // Ensure WS_EX_LAYERED is set
+            let mut ex = GetWindowLongW(target, GWL_EXSTYLE);
+            ex |= WS_EX_LAYERED as i32;
+            SetWindowLongW(target, GWL_EXSTYLE, ex);
+
+            SetLayeredWindowAttributes(target, 0, alpha, LWA_ALPHA);
+        }
+    }
+}
+
+#[tauri::command]
+fn check_backend_status() -> bool {
+    let mut sys = sysinfo::System::new_all();
+    sys.refresh_all();
+    let mut is_dashboard_running = false;
+    let mut is_logger_running = false;
+    let mut is_backup_running = false;
+    for (_pid, process) in sys.processes() {
+        let name = process.name().to_string_lossy().to_lowercase();
+        if name.contains("node") {
+            let cmd_vec: Vec<String> = process.cmd().iter().map(|s| s.to_string_lossy().into_owned()).collect();
+            let cmd = cmd_vec.join(" ");
+            if cmd.contains("performance_dashboard.cjs") {
+                is_dashboard_running = true;
+            }
+            if cmd.contains("performance_logger.cjs") {
+                is_logger_running = true;
+            }
+            if cmd.contains("backup_server.cjs") {
+                is_backup_running = true;
+            }
+        }
+    }
+    is_dashboard_running && is_logger_running && is_backup_running
+}
+
+#[tauri::command]
+fn start_backend() -> bool {
+    let app_data = std::env::var("APPDATA").unwrap_or_default();
+    let vbs_path = format!("{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\mes_performance_tracker.vbs", app_data);
+    std::process::Command::new("wscript")
+        .arg(vbs_path)
+        .spawn()
+        .is_ok()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
-        .invoke_handler(tauri::generate_handler![exit_app, set_window_mode, set_mini_mode, set_widget_mode])
+        .invoke_handler(tauri::generate_handler![
+            exit_app, set_window_mode, set_mini_mode, set_widget_mode, set_opacity,
+            check_backend_status, start_backend
+        ])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -186,6 +337,121 @@ pub fn run() {
             }
 
             let app_handle = app.handle().clone();
+            // ─── System Tray (raw Shell_NotifyIconW — no windres needed) ─────
+            {
+                let tray_app = app.handle().clone();
+                thread::spawn(move || {
+                    use std::mem;
+                    use winapi::um::libloaderapi::GetModuleHandleW;
+                    use winapi::um::shellapi::{
+                        Shell_NotifyIconW, NOTIFYICONDATAW,
+                        NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE,
+                    };
+                    use winapi::um::winuser::*;
+
+                    const WM_TRAY: u32 = WM_USER + 1;
+                    const WM_SHOW_MENU: u32 = WM_USER + 2;
+                    const CMD_WINDOW: usize = 1001;
+                    const CMD_MINI:   usize = 1002;
+                    const CMD_WIDGET: usize = 1003;
+                    const CMD_EXIT:   usize = 1004;
+
+                    unsafe extern "system" fn tray_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+                        if msg == WM_TRAY {
+                            let evt = (lparam as usize & 0xFFFF) as u32;
+                            if evt == WM_LBUTTONUP || evt == WM_RBUTTONUP || evt == WM_LBUTTONDOWN || evt == WM_RBUTTONDOWN {
+                                PostMessageW(hwnd, WM_SHOW_MENU, 0, 0);
+                            }
+                            return 0;
+                        }
+                        DefWindowProcW(hwnd, msg, wparam, lparam)
+                    }
+
+                    unsafe {
+                        let class_name: Vec<u16> = "SysMonTrayClass\0".encode_utf16().collect();
+                        let mut wc: WNDCLASSEXW = mem::zeroed();
+                        wc.cbSize = mem::size_of::<WNDCLASSEXW>() as u32;
+                        wc.lpfnWndProc = Some(tray_wnd_proc);
+                        wc.hInstance = GetModuleHandleW(std::ptr::null());
+                        wc.lpszClassName = class_name.as_ptr();
+                        RegisterClassExW(&wc);
+
+                        // Create a real (but hidden) top-level window.
+                        // HWND_MESSAGE cannot be made foreground, which breaks TrackPopupMenu.
+                        let hwnd = CreateWindowExW(
+                            0, class_name.as_ptr(), std::ptr::null(),
+                            WS_POPUP, 0, 0, 0, 0,
+                            std::ptr::null_mut(), std::ptr::null_mut(),
+                            GetModuleHandleW(std::ptr::null()), std::ptr::null_mut(),
+                        );
+                        if hwnd.is_null() { return; }
+                        ShowWindow(hwnd, SW_HIDE); // keep invisible
+
+                        // Register tray icon
+                        let mut nid: NOTIFYICONDATAW = mem::zeroed();
+                        nid.cbSize = mem::size_of::<NOTIFYICONDATAW>() as u32;
+                        nid.hWnd = hwnd;
+                        nid.uID = 1;
+                        nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+                        nid.uCallbackMessage = WM_TRAY;
+                        nid.hIcon = LoadIconW(std::ptr::null_mut(), IDI_APPLICATION);
+                        let tip: Vec<u16> = "SystemMonitorPro\0".encode_utf16().collect();
+                        let tl = tip.len().min(nid.szTip.len());
+                        nid.szTip[..tl].copy_from_slice(&tip[..tl]);
+                        Shell_NotifyIconW(NIM_ADD, &mut nid);
+
+                        // Message pump
+                        let mut msg: MSG = mem::zeroed();
+                        loop {
+                            if GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) <= 0 { break; }
+
+                            if msg.message == WM_SHOW_MENU {
+                                // Build popup menu
+                                let hmenu = CreatePopupMenu();
+                                macro_rules! add_item {
+                                    ($id:expr, $label:expr) => {{
+                                        let w: Vec<u16> = concat!($label, "\0").encode_utf16().collect();
+                                        AppendMenuW(hmenu, MF_STRING, $id, w.as_ptr());
+                                    }};
+                                }
+                                add_item!(CMD_WINDOW, "Window Mode");
+                                add_item!(CMD_MINI,   "Mini Bar (Always-on-Top)");
+                                add_item!(CMD_WIDGET, "Desktop Widget");
+                                AppendMenuW(hmenu, MF_SEPARATOR, 0, std::ptr::null());
+                                add_item!(CMD_EXIT, "Exit");
+
+                                let mut pt: winapi::shared::windef::POINT = mem::zeroed();
+                                GetCursorPos(&mut pt);
+                                SetForegroundWindow(hwnd);
+
+                                let cmd = TrackPopupMenu(
+                                    hmenu,
+                                    TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_BOTTOMALIGN,
+                                    pt.x, pt.y, 0, hwnd, std::ptr::null(),
+                                ) as usize;
+                                
+                                PostMessageW(hwnd, WM_NULL, 0, 0); // Force menu to close if clicked away
+                                DestroyMenu(hmenu);
+
+                                match cmd {
+                                    CMD_EXIT => std::process::exit(0),
+                                    CMD_WINDOW => { let _ = tray_app.emit("tray_cmd", "window_mode"); }
+                                    CMD_MINI   => { let _ = tray_app.emit("tray_cmd", "mini_mode"); }
+                                    CMD_WIDGET => { let _ = tray_app.emit("tray_cmd", "widget_mode"); }
+                                    _ => {}
+                                }
+                            }
+
+                            TranslateMessage(&msg);
+                            DispatchMessageW(&msg);
+                        }
+
+                        Shell_NotifyIconW(NIM_DELETE, &mut nid);
+                    }
+                });
+            }
+            // ─────────────────────────────────────────────────────────────────
+
 
             // Spawn background thread to poll system
             thread::spawn(move || {
@@ -290,7 +556,7 @@ pub fn run() {
                             .partial_cmp(&a.cpu)
                             .unwrap_or(std::cmp::Ordering::Equal)
                     });
-                    proc_vec.truncate(20); // top 20
+                    proc_vec.truncate(15); // top 15
 
                     let hostname =
                         sysinfo::System::host_name().unwrap_or_else(|| "UNKNOWN_HOST".to_string());
@@ -349,7 +615,7 @@ pub fn run() {
 
                     let _ = app_handle.emit("sysinfo", payload);
 
-                    thread::sleep(Duration::from_millis(1000));
+                    thread::sleep(Duration::from_millis(3000));
                 }
             });
 
