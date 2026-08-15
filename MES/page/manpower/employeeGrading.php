@@ -41,8 +41,8 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
 
     <?php include_once __DIR__ . '/../components/php/top_header.php'; ?>
 
-    <main id="main-content">
-        <div class="container-fluid p-3">
+    <main id="main-content" class="d-flex flex-column" style="min-height: calc(100vh - 65px);">
+        <div class="container-fluid p-3 d-flex flex-column flex-grow-1">
             
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                 <div class="d-flex align-items-center">
@@ -170,18 +170,19 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
             </div>
 
             <!-- Table Card -->
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 60vh;">
+            <div class="card shadow-sm border-0 mb-3 flex-grow-1 d-flex flex-column" style="min-height: calc(100vh - 280px);">
+                <div class="card-body p-0 d-flex flex-column h-100">
+                    <div class="table-responsive flex-grow-1">
                         <table class="table table-hover table-striped mb-0 text-center align-middle" id="gradingTable">
-                            <thead class="table-light">
+                            <thead class="table-light sticky-top shadow-sm" style="z-index: 10;">
                                 <tr>
-                                    <th style="width: 15%;" class="sortable" data-sort="emp_id" role="button">Emp ID <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 20%;" class="sortable" data-sort="name_th" role="button">Name <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 15%;" class="sortable" data-sort="position" role="button">Position <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 15%;" class="sortable" data-sort="ratio" role="button">Income & Ratio <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 10%;" class="sortable" data-sort="emp_id" role="button">Emp ID <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 25%;" class="sortable" data-sort="name_th" role="button">Name & Department <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 10%;" class="sortable" data-sort="position" role="button">Position <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 12%;" class="sortable" data-sort="total_wage" role="button">Total Wage <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 13%;" class="sortable" data-sort="ratio" role="button">Income & Ratio <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 15%; text-align: center;">Executive Grade</th>
-                                    <th style="width: 20%;">Notes</th>
+                                    <th style="width: 15%;">Notes</th>
                                 </tr>
                             </thead>
                             <tbody id="gradingTableBody">

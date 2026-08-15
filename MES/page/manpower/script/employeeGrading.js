@@ -139,10 +139,13 @@ const App = {
                     <td class="fw-bold text-primary">${emp.emp_id}</td>
                     <td class="text-start">
                         <div class="fw-bold text-dark">${emp.name_th}</div>
-                        <div class="small text-muted">${emp.group_name || '-'} | ${emp.line_name || '-'}</div>
+                        <div class="small text-muted">${emp.team_group || '-'} | ${emp.line || '-'}</div>
                     </td>
                     <td>
                         <span class="badge bg-light text-dark border">${emp.position || '-'}</span>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-secondary">${parseFloat(emp.total_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</div>
                     </td>
                     <td>
                         <div class="fw-bold text-success">${parseFloat(emp.income_per_head || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</div>
@@ -171,7 +174,7 @@ const App = {
         });
 
         if (filtered.length === 0) {
-            html = `<tr><td colspan="6" class="text-muted py-4">No employees found for this selection.</td></tr>`;
+            html = `<tr><td colspan="7" class="text-muted py-4">No employees found for this selection.</td></tr>`;
         }
 
         tbody.innerHTML = html;
