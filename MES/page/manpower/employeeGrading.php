@@ -34,6 +34,30 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
         .grade-C { color: #ffc107; background-color: #fff3cd; border-color: #ffecb5; }
         .grade-D { color: #dc3545; background-color: #f8d7da; border-color: #f5c2c7; }
         .grade-empty { color: #6c757d; }
+        
+        /* Segmented Control Toggle */
+        .btn-segmented {
+            background-color: #f1f3f5;
+            border-radius: 50rem;
+            padding: 3px;
+            display: inline-flex;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .btn-segmented .btn-check:checked + .btn {
+            background-color: #ffffff;
+            color: #0d6efd;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            font-weight: 700;
+        }
+        .btn-segmented .btn:not(:checked) {
+            color: #6c757d;
+            border: none;
+            font-weight: 600;
+        }
+        .btn-segmented .btn:not(:checked):hover {
+            color: #495057;
+            background-color: rgba(255,255,255,0.5);
+        }
     </style>
 </head>
 
@@ -58,27 +82,25 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
 
                 <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
                     <div class="d-flex align-items-center px-2">
-                        <span class="text-muted small text-uppercase fw-bold me-2"><i class="far fa-calendar-alt"></i> Period:</span>
-                        <div class="btn-group btn-group-sm me-2 shadow-sm" role="group">
+                        <div class="btn-segmented me-2">
                             <input type="radio" class="btn-check" name="periodTypeToggle" id="btnPeriodMonthly" value="monthly" autocomplete="off" checked>
-                            <label class="btn btn-outline-primary fw-bold px-3" for="btnPeriodMonthly">Month</label>
+                            <label class="btn btn-sm rounded-pill px-3 mb-0 border-0" style="transition: all 0.2s;" for="btnPeriodMonthly">Month</label>
                           
                             <input type="radio" class="btn-check" name="periodTypeToggle" id="btnPeriodDaily" value="daily" autocomplete="off">
-                            <label class="btn btn-outline-primary fw-bold px-3" for="btnPeriodDaily">Day</label>
+                            <label class="btn btn-sm rounded-pill px-3 mb-0 border-0" style="transition: all 0.2s;" for="btnPeriodDaily">Day</label>
                         </div>
                         <input type="month" id="filterPeriodMonth" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
                                value="<?php echo date('Y-m'); ?>" 
-                               style="width: 120px; cursor: pointer;">
+                               style="width: 110px; cursor: pointer;" title="Select Month">
                         <input type="date" id="filterPeriodDate" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0 d-none" 
                                value="<?php echo date('Y-m-d'); ?>" 
-                               style="width: 120px; cursor: pointer;">
+                               style="width: 110px; cursor: pointer;" title="Select Date">
                     </div>
 
                     <div class="vr mx-1 text-muted opacity-25 my-1"></div>
 
                     <div class="d-flex align-items-center px-2">
-                        <span class="text-muted small text-uppercase fw-bold me-2"><i class="fas fa-users-cog"></i> Group:</span>
-                        <select id="filterHcGroup" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0 ps-1" style="width: 100px; cursor: pointer; box-shadow: none;">
+                        <select id="filterHcGroup" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0" style="width: 90px; cursor: pointer; box-shadow: none;" title="Select Group">
                             <option value="TEAM 1">TEAM 1</option>
                             <option value="ALL">ALL GROUPS</option>
                         </select>
@@ -87,8 +109,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     <div class="vr mx-1 text-muted opacity-25 my-1"></div>
 
                     <div class="d-flex align-items-center px-2">
-                        <span class="text-muted small text-uppercase fw-bold me-2"><i class="fas fa-industry"></i> Line:</span>
-                        <select id="filterLine" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0 ps-1" style="width: 120px; cursor: pointer; box-shadow: none;">
+                        <select id="filterLine" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0" style="width: 100px; cursor: pointer; box-shadow: none;" title="Select Line">
                             <option value="ALL">ALL LINES</option>
                         </select>
                         <button class="btn btn-light btn-sm text-secondary fw-bold px-2 py-1 rounded shadow-sm ms-2" onclick="App.loadData()" title="Reload Data">
@@ -104,10 +125,6 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
 
                     <button class="btn btn-warning btn-sm fw-bold px-3 py-1 rounded ms-2 shadow-sm text-dark" onclick="App.autoGrade()" title="Apply System Grades">
                         <i class="fas fa-magic me-1"></i> Auto Grade
-                    </button>
-                    
-                    <button class="btn btn-success btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="App.saveGrades()" title="Save All Grades">
-                        <i class="fas fa-save me-1"></i> Save
                     </button>
                 </div>
             </div>
