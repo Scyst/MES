@@ -59,10 +59,13 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                 <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
                     <div class="d-flex align-items-center px-2">
                         <span class="text-muted small text-uppercase fw-bold me-2"><i class="far fa-calendar-alt"></i> Period:</span>
-                        <select id="periodType" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0 me-1" style="width: 75px; cursor: pointer; box-shadow: none;">
-                            <option value="monthly">Monthly</option>
-                            <option value="daily">Daily</option>
-                        </select>
+                        <div class="btn-group btn-group-sm me-2 shadow-sm" role="group">
+                            <input type="radio" class="btn-check" name="periodTypeToggle" id="btnPeriodMonthly" value="monthly" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary fw-bold px-3" for="btnPeriodMonthly">Month</label>
+                          
+                            <input type="radio" class="btn-check" name="periodTypeToggle" id="btnPeriodDaily" value="daily" autocomplete="off">
+                            <label class="btn btn-outline-primary fw-bold px-3" for="btnPeriodDaily">Day</label>
+                        </div>
                         <input type="month" id="filterPeriodMonth" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
                                value="<?php echo date('Y-m'); ?>" 
                                style="width: 120px; cursor: pointer;">

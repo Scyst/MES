@@ -24,11 +24,13 @@ const App = {
     },
 
     bindEvents: function() {
-        document.getElementById('periodType').addEventListener('change', (e) => {
-            const isDaily = e.target.value === 'daily';
-            document.getElementById('filterPeriodMonth').classList.toggle('d-none', isDaily);
-            document.getElementById('filterPeriodDate').classList.toggle('d-none', !isDaily);
-            this.loadData();
+        document.querySelectorAll('input[name="periodTypeToggle"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const isDaily = e.target.value === 'daily';
+                document.getElementById('filterPeriodMonth').classList.toggle('d-none', isDaily);
+                document.getElementById('filterPeriodDate').classList.toggle('d-none', !isDaily);
+                this.loadData();
+            });
         });
         document.getElementById('filterPeriodMonth').addEventListener('change', () => this.loadData());
         document.getElementById('filterPeriodDate').addEventListener('change', () => this.loadData());
@@ -46,7 +48,7 @@ const App = {
 
     loadData: async function() {
         try {
-            const periodType = document.getElementById('periodType').value;
+            const periodType = document.querySelector('input[name="periodTypeToggle"]:checked').value;
             const period = periodType === 'daily' 
                 ? document.getElementById('filterPeriodDate').value 
                 : document.getElementById('filterPeriodMonth').value;
@@ -289,7 +291,7 @@ const App = {
     },
 
     saveGrades: async function() {
-        const periodType = document.getElementById('periodType').value;
+        const periodType = document.querySelector('input[name="periodTypeToggle"]:checked').value;
         const period = periodType === 'daily' 
             ? document.getElementById('filterPeriodDate').value 
             : document.getElementById('filterPeriodMonth').value;
