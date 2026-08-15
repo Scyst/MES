@@ -28,7 +28,10 @@ try {
                 E.team_group,
                 G.grade,
                 G.notes,
-                ISNULL(INC.income_per_head, 0) AS income_per_head
+                ISNULL(INC.income_per_head, 0) AS income_per_head,
+                C.threshold_a,
+                C.threshold_b,
+                C.threshold_c
             FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
             INNER JOIN (
                 SELECT DISTINCT emp_id 
@@ -53,6 +56,7 @@ try {
                   AND t.transaction_type LIKE 'PRODUCTION_%'
                 GROUP BY stu.emp_id
             ) INC ON INC.emp_id = E.emp_id COLLATE Thai_CI_AS
+            LEFT JOIN dbo.EMPLOYEE_GRADING_CRITERIA C WITH (NOLOCK) ON C.line = E.line
             WHERE E.is_active = 1
         ";
         
@@ -80,13 +84,30 @@ try {
         
         $results = [];
         foreach ($employees as $emp) {
+            $income = (float)$emp['income_per_head'];
+            
+            // Calculate System Grade
+            $systemGrade = 'N/A';
+            if (isset($emp['threshold_a']) && $emp['threshold_a'] > 0) {
+                if ($income >= $emp['threshold_a']) {
+                    $systemGrade = 'A';
+                } else if ($income >= $emp['threshold_b']) {
+                    $systemGrade = 'B';
+                } else if ($income >= $emp['threshold_c']) {
+                    $systemGrade = 'C';
+                } else {
+                    $systemGrade = 'D';
+                }
+            }
+            
             $results[] = [
                 'emp_id' => $emp['emp_id'],
                 'name_th' => $emp['name_th'],
                 'position' => $emp['position'],
                 'line' => $emp['line'],
                 'team_group' => $emp['team_group'],
-                'income_per_head' => (float)$emp['income_per_head'],
+                'income_per_head' => $income,
+                'system_grade' => $systemGrade,
                 'grade' => $emp['grade'] ?? '',
                 'notes' => $emp['notes'] ?? ''
             ];
@@ -134,11 +155,70 @@ try {
         }
         
         $pdo->commit();
-        echo json_encode(['success' => true, 'message' => 'Grades saved successfully.']);
+        echo json_encode(['success' => true]);
+        exit;
+    }
+    else if ($action === 'get_criteria') {
+        $line = $_GET['line'] ?? '';
+        
+        $sql = "SELECT threshold_a, threshold_b, threshold_c FROM dbo.EMPLOYEE_GRADING_CRITERIA WITH (NOLOCK) WHERE line = :line";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':line' => $line]);
+        $criteria = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$criteria) {
+            $criteria = [
+                'threshold_a' => 0,
+                'threshold_b' => 0,
+                'threshold_c' => 0
+            ];
+        }
+        
+        echo json_encode(['success' => true, 'data' => $criteria]);
+        exit;
+    }
+    else if ($action === 'save_criteria') {
+        $line = $_POST['line'] ?? '';
+        $thresholdA = $_POST['threshold_a'] ?? 0;
+        $thresholdB = $_POST['threshold_b'] ?? 0;
+        $thresholdC = $_POST['threshold_c'] ?? 0;
+        
+        if (empty($line)) throw new Exception("Line is required");
+        
+        $sql = "
+            IF EXISTS (SELECT 1 FROM dbo.EMPLOYEE_GRADING_CRITERIA WHERE line = :line)
+            BEGIN
+                UPDATE dbo.EMPLOYEE_GRADING_CRITERIA 
+                SET threshold_a = :a, threshold_b = :b, threshold_c = :c, updated_at = GETDATE(), updated_by = :user_id
+                WHERE line = :line2
+            END
+            ELSE
+            BEGIN
+                INSERT INTO dbo.EMPLOYEE_GRADING_CRITERIA (line, threshold_a, threshold_b, threshold_c, updated_by)
+                VALUES (:line3, :a2, :b2, :c2, :user_id2)
+            END
+        ";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':line' => $line,
+            ':a' => $thresholdA,
+            ':b' => $thresholdB,
+            ':c' => $thresholdC,
+            ':user_id' => $currentUser['id'] ?? null,
+            ':line2' => $line,
+            ':line3' => $line,
+            ':a2' => $thresholdA,
+            ':b2' => $thresholdB,
+            ':c2' => $thresholdC,
+            ':user_id2' => $currentUser['id'] ?? null
+        ]);
+        
+        echo json_encode(['success' => true, 'message' => 'Criteria updated successfully']);
         exit;
     }
     
-    throw new Exception("Unknown action.");
+    throw new Exception("Invalid action");
     
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {

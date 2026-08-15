@@ -5,7 +5,8 @@
 const App = {
     state: {
         employees: [],
-        lines: new Set()
+        lines: new Set(),
+        currentSort: { col: 'emp_id', dir: 'asc' }
     },
 
     init: async function() {
@@ -17,6 +18,14 @@ const App = {
         document.getElementById('filterPeriod').addEventListener('change', () => this.loadData());
         document.getElementById('filterHcGroup').addEventListener('change', () => this.loadData());
         document.getElementById('filterLine').addEventListener('change', () => this.renderTable());
+        
+        document.getElementById('btnSaveGrades').addEventListener('click', () => this.saveGrades());
+        document.getElementById('btnCriteriaSettings').addEventListener('click', () => this.openCriteriaModal());
+        document.getElementById('btnSaveCriteria').addEventListener('click', () => this.saveCriteria());
+        
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => this.handleSort(th.dataset.sort));
+        });
     },
 
     loadData: async function() {
@@ -74,6 +83,33 @@ const App = {
             filtered = this.state.employees.filter(e => e.line === lineFilter);
         }
 
+        // Sorting logic
+        filtered.sort((a, b) => {
+            let valA = a[this.state.currentSort.col];
+            let valB = b[this.state.currentSort.col];
+            
+            if (this.state.currentSort.col === 'income_per_head') {
+                valA = parseFloat(valA) || 0;
+                valB = parseFloat(valB) || 0;
+            } else if (typeof valA === 'string') {
+                valA = valA.toLowerCase();
+                valB = valB.toLowerCase();
+            }
+
+            if (valA < valB) return this.state.currentSort.dir === 'asc' ? -1 : 1;
+            if (valA > valB) return this.state.currentSort.dir === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        // Update sort icons
+        document.querySelectorAll('th.sortable i').forEach(icon => {
+            icon.className = 'fas fa-sort text-muted ms-1';
+        });
+        const activeTh = document.querySelector(`th[data-sort="${this.state.currentSort.col}"] i`);
+        if (activeTh) {
+            activeTh.className = `fas fa-sort-${this.state.currentSort.dir === 'asc' ? 'up' : 'down'} text-primary ms-1`;
+        }
+
         let html = '';
         let totalIncome = 0;
         let gradeCount = { A: 0, B: 0, C: 0, D: 0 };
@@ -84,13 +120,22 @@ const App = {
                 gradeCount[emp.grade]++;
             }
 
+            let systemGradeBadge = '';
+            if (emp.system_grade && emp.system_grade !== 'N/A') {
+                const colors = { A: 'success', B: 'primary', C: 'warning', D: 'danger' };
+                const c = colors[emp.system_grade] || 'secondary';
+                systemGradeBadge = `<span class="badge bg-${c}-subtle text-${c} border border-${c}-subtle ms-2" title="System Recommended Grade">SYS: ${emp.system_grade}</span>`;
+            }
+
             html += `
                 <tr>
                     <td class="fw-bold">${emp.emp_id}</td>
                     <td class="text-start">${emp.name_th}</td>
                     <td><span class="badge bg-secondary">${emp.position || '-'}</span></td>
-                    <td><span class="badge bg-info text-dark">${emp.line || '-'}</span></td>
-                    <td class="text-end pe-4 fw-bold text-success">${Number(emp.income_per_head).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="text-end pe-4 fw-bold text-success">
+                        ${Number(emp.income_per_head).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        ${systemGradeBadge}
+                    </td>
                     <td>
                         <select class="form-select form-select-sm mx-auto grade-select ${this.getGradeClass(emp.grade)}" 
                                 onchange="App.updateGradeState('${emp.emp_id}', this)">
@@ -246,6 +291,80 @@ const App = {
             Swal.fire('Saved!', result.message, 'success');
         } catch (error) {
             Swal.fire('Error', error.message, 'error');
+        }
+    },
+    
+    handleSort: function(col) {
+        if (this.state.currentSort.col === col) {
+            this.state.currentSort.dir = this.state.currentSort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.state.currentSort.col = col;
+            this.state.currentSort.dir = 'asc';
+        }
+        this.renderTable();
+    },
+
+    openCriteriaModal: async function() {
+        const line = document.getElementById('filterLine').value;
+        if (!line || line === 'ALL') {
+            Swal.fire('Warning', 'Please select a specific Line first.', 'warning');
+            return;
+        }
+
+        document.getElementById('criteriaLineLabel').innerText = line;
+        
+        try {
+            Swal.fire({ title: 'Loading...', didOpen: () => Swal.showLoading() });
+            
+            const response = await fetch(`api/api_employee_grading.php?action=get_criteria&line=${line}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                document.getElementById('critA').value = result.data.threshold_a;
+                document.getElementById('critB').value = result.data.threshold_b;
+                document.getElementById('critC').value = result.data.threshold_c;
+                
+                Swal.close();
+                const modal = new bootstrap.Modal(document.getElementById('criteriaModal'));
+                modal.show();
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (e) {
+            Swal.fire('Error', e.message, 'error');
+        }
+    },
+
+    saveCriteria: async function() {
+        const line = document.getElementById('filterLine').value;
+        const a = document.getElementById('critA').value;
+        const b = document.getElementById('critB').value;
+        const c = document.getElementById('critC').value;
+        
+        try {
+            const formData = new URLSearchParams();
+            formData.append('action', 'save_criteria');
+            formData.append('line', line);
+            formData.append('threshold_a', a);
+            formData.append('threshold_b', b);
+            formData.append('threshold_c', c);
+
+            const response = await fetch('api/api_employee_grading.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                bootstrap.Modal.getInstance(document.getElementById('criteriaModal')).hide();
+                Swal.fire('Saved', 'Criteria updated successfully', 'success');
+                this.loadData(); // Reload data to apply new system_grade
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (e) {
+            Swal.fire('Error', e.message, 'error');
         }
     }
 };

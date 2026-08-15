@@ -73,6 +73,9 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                         <select id="filterLine" class="form-select form-select-sm border-1 text-primary fw-bold" style="width: 150px; cursor: pointer;">
                             <option value="ALL">ALL LINES</option>
                         </select>
+                        <button class="btn btn-sm btn-outline-secondary ms-2" id="btnCriteriaSettings" title="Criteria Settings">
+                            <i class="fas fa-cog"></i> Settings
+                        </button>
                     </div>
 
                     <div class="vr mx-2 text-muted opacity-25 my-1"></div>
@@ -149,15 +152,14 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                 <div class="card-body p-0">
                     <div class="table-responsive" style="max-height: 60vh;">
                         <table class="table table-hover table-striped mb-0 text-center align-middle" id="gradingTable">
-                            <thead class="table-dark sticky-top">
+                            <thead class="table-light">
                                 <tr>
-                                    <th width="10%">Emp ID</th>
-                                    <th width="20%" class="text-start">Name</th>
-                                    <th width="15%">Position</th>
-                                    <th width="10%">Line</th>
-                                    <th width="15%" class="text-end pe-4">Income Per Head (THB)</th>
-                                    <th width="15%">Grade</th>
-                                    <th width="15%">Notes</th>
+                                    <th style="width: 15%;" class="sortable" data-sort="emp_id" role="button">Emp ID <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 20%;" class="sortable" data-sort="name_th" role="button">Name <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 15%;" class="sortable" data-sort="position" role="button">Position <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 15%;" class="sortable" data-sort="income_per_head" role="button">Income Per Head <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 15%; text-align: center;">Executive Grade</th>
+                                    <th style="width: 20%;">Notes</th>
                                 </tr>
                             </thead>
                             <tbody id="gradingTableBody">
@@ -170,6 +172,47 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
 
         </div>
     </main>
+
+    <!-- Save Button Container (Sticky Bottom) -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
+        <button id="btnSaveGrades" class="btn btn-primary btn-lg rounded-pill shadow-lg px-4 fw-bold">
+            <i class="fas fa-save me-2"></i> Save Grades
+        </button>
+    </div>
+
+    <!-- Criteria Settings Modal -->
+    <div class="modal fade" id="criteriaModal" tabindex="-1" aria-labelledby="criteriaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light border-bottom-0">
+                    <h5 class="modal-title fw-bold text-dark" id="criteriaModalLabel"><i class="fas fa-sliders-h text-primary me-2"></i> Grading Criteria</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">Set minimum Income Per Head (THB) for <strong id="criteriaLineLabel" class="text-primary"></strong></p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-success small">Grade A Threshold (>=)</label>
+                        <input type="number" class="form-control" id="critA" placeholder="e.g. 50000">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-primary small">Grade B Threshold (>=)</label>
+                        <input type="number" class="form-control" id="critB" placeholder="e.g. 35000">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-warning small">Grade C Threshold (>=)</label>
+                        <input type="number" class="form-control" id="critC" placeholder="e.g. 20000">
+                    </div>
+                    <div class="text-muted small">
+                        <i class="fas fa-info-circle me-1"></i> Below Grade C will be <strong class="text-danger">D</strong>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4" id="btnSaveCriteria">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="script/employeeGrading.js?v=<?php echo time(); ?>"></script>
 </body>
