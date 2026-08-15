@@ -29,6 +29,7 @@ try {
                 G.grade,
                 G.notes,
                 ISNULL(INC.income_per_head, 0) AS income_per_head,
+                ISNULL(WAGE.total_wage, 350.0) AS total_wage,
                 C.threshold_a,
                 C.threshold_b,
                 C.threshold_c
@@ -56,6 +57,38 @@ try {
                   AND t.transaction_type LIKE 'PRODUCTION_%'
                 GROUP BY stu.emp_id
             ) INC ON INC.emp_id = E.emp_id COLLATE Thai_CI_AS
+            LEFT JOIN (
+                SELECT 
+                    ml.emp_id,
+                    SUM(
+                        COALESCE(
+                            CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN cm.hourly_rate / 30.0 ELSE cm.hourly_rate END,
+                            350.0
+                        )
+                        +
+                        (
+                            CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL 
+                            THEN 
+                                CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) > 570 
+                                THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5 
+                                ELSE 0 END
+                            ELSE 0 END
+                        )
+                        * 
+                        (COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN (cm.hourly_rate / 30.0) / 8.0 ELSE cm.hourly_rate / 8.0 END, 350.0 / 8.0) * 1.5)
+                    ) AS total_wage
+                FROM dbo.MANPOWER_DAILY_LOGS ml WITH (NOLOCK)
+                LEFT JOIN dbo.MANPOWER_EMPLOYEES emp WITH (NOLOCK) ON ml.emp_id = emp.emp_id COLLATE Thai_CI_AS
+                LEFT JOIN dbo.MANPOWER_SHIFTS ms WITH (NOLOCK) ON ms.shift_id = ISNULL(ml.shift_id, emp.default_shift_id)
+                OUTER APPLY (
+                    SELECT TOP 1 * FROM dbo.MANPOWER_CATEGORY_MAPPING WITH (NOLOCK) 
+                    WHERE emp.position LIKE '%' + keyword + '%' COLLATE Thai_CI_AS 
+                    ORDER BY display_order DESC
+                ) cm
+                WHERE CONVERT(VARCHAR(7), ml.log_date, 120) = :period4
+                  AND ml.status IN ('PRESENT', 'LATE')
+                GROUP BY ml.emp_id
+            ) WAGE ON WAGE.emp_id = E.emp_id COLLATE Thai_CI_AS
             LEFT JOIN dbo.EMPLOYEE_GRADING_CRITERIA C WITH (NOLOCK) ON C.line = E.line
             WHERE E.is_active = 1
         ";
@@ -63,7 +96,8 @@ try {
         $params = [
             ':period1' => $period,
             ':period2' => $period,
-            ':period3' => $period
+            ':period3' => $period,
+            ':period4' => $period
         ];
         
         if ($line !== 'ALL') {
@@ -85,15 +119,17 @@ try {
         $results = [];
         foreach ($employees as $emp) {
             $income = (float)$emp['income_per_head'];
+            $wage = (float)$emp['total_wage'];
+            $ratio = $wage > 0 ? ($income / $wage) : 0;
             
-            // Calculate System Grade
+            // Calculate System Grade based on Ratio
             $systemGrade = 'N/A';
             if (isset($emp['threshold_a']) && $emp['threshold_a'] > 0) {
-                if ($income >= $emp['threshold_a']) {
+                if ($ratio >= $emp['threshold_a']) {
                     $systemGrade = 'A';
-                } else if ($income >= $emp['threshold_b']) {
+                } else if ($ratio >= $emp['threshold_b']) {
                     $systemGrade = 'B';
-                } else if ($income >= $emp['threshold_c']) {
+                } else if ($ratio >= $emp['threshold_c']) {
                     $systemGrade = 'C';
                 } else {
                     $systemGrade = 'D';
@@ -107,6 +143,8 @@ try {
                 'line' => $emp['line'],
                 'team_group' => $emp['team_group'],
                 'income_per_head' => $income,
+                'total_wage' => $wage,
+                'ratio' => round($ratio, 2),
                 'system_grade' => $systemGrade,
                 'grade' => $emp['grade'] ?? '',
                 'notes' => $emp['notes'] ?? ''

@@ -88,7 +88,7 @@ const App = {
             let valA = a[this.state.currentSort.col];
             let valB = b[this.state.currentSort.col];
             
-            if (this.state.currentSort.col === 'income_per_head') {
+            if (this.state.currentSort.col === 'income_per_head' || this.state.currentSort.col === 'ratio') {
                 valA = parseFloat(valA) || 0;
                 valB = parseFloat(valB) || 0;
             } else if (typeof valA === 'string') {
@@ -132,9 +132,12 @@ const App = {
                     <td class="fw-bold">${emp.emp_id}</td>
                     <td class="text-start">${emp.name_th}</td>
                     <td><span class="badge bg-secondary">${emp.position || '-'}</span></td>
-                    <td class="text-end pe-4 fw-bold text-success">
-                        ${Number(emp.income_per_head).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                        ${systemGradeBadge}
+                    <td class="text-end pe-4 fw-bold">
+                        <div class="text-success mb-1" style="font-size: 0.95em;">฿${Number(emp.income_per_head).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                        <div class="text-primary small">
+                            <i class="fas fa-chart-line me-1"></i>Ratio: ${emp.ratio !== undefined ? Number(emp.ratio).toFixed(2) : '0.00'}
+                            ${systemGradeBadge}
+                        </div>
                     </td>
                     <td>
                         <select class="form-select form-select-sm mx-auto grade-select ${this.getGradeClass(emp.grade)}" 
@@ -329,9 +332,9 @@ const App = {
                         html += `
                             <tr data-line="${line}">
                                 <td class="fw-bold text-start ps-3">${line}</td>
-                                <td><input type="number" class="form-control form-control-sm text-center crit-a" value="${crit.threshold_a || ''}" placeholder="e.g. 50000"></td>
-                                <td><input type="number" class="form-control form-control-sm text-center crit-b" value="${crit.threshold_b || ''}" placeholder="e.g. 35000"></td>
-                                <td><input type="number" class="form-control form-control-sm text-center crit-c" value="${crit.threshold_c || ''}" placeholder="e.g. 20000"></td>
+                                <td><input type="number" step="0.1" class="form-control form-control-sm text-center crit-a" value="${crit.threshold_a || ''}" placeholder="e.g. 2.0"></td>
+                                <td><input type="number" step="0.1" class="form-control form-control-sm text-center crit-b" value="${crit.threshold_b || ''}" placeholder="e.g. 1.5"></td>
+                                <td><input type="number" step="0.1" class="form-control form-control-sm text-center crit-c" value="${crit.threshold_c || ''}" placeholder="e.g. 1.0"></td>
                             </tr>
                         `;
                     });

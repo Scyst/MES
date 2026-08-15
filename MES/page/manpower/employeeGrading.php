@@ -157,7 +157,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                                     <th style="width: 15%;" class="sortable" data-sort="emp_id" role="button">Emp ID <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 20%;" class="sortable" data-sort="name_th" role="button">Name <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 15%;" class="sortable" data-sort="position" role="button">Position <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 15%;" class="sortable" data-sort="income_per_head" role="button">Income Per Head <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 15%;" class="sortable" data-sort="ratio" role="button">Income & Ratio <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 15%; text-align: center;">Executive Grade</th>
                                     <th style="width: 20%;">Notes</th>
                                 </tr>
@@ -194,9 +194,9 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                             <thead class="table-dark sticky-top">
                                 <tr>
                                     <th style="width: 25%;">Line</th>
-                                    <th style="width: 25%;">Grade A (>=)</th>
-                                    <th style="width: 25%;">Grade B (>=)</th>
-                                    <th style="width: 25%;">Grade C (>=)</th>
+                                    <th style="width: 25%;">Ratio A (>=)</th>
+                                    <th style="width: 25%;">Ratio B (>=)</th>
+                                    <th style="width: 25%;">Ratio C (>=)</th>
                                 </tr>
                             </thead>
                             <tbody id="criteriaTableBody">
@@ -205,7 +205,8 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                         </table>
                     </div>
                     <div class="p-3 text-muted small bg-light border-top">
-                        <i class="fas fa-info-circle me-1"></i> Below Grade C will automatically be marked as <strong class="text-danger">D</strong>
+                        <i class="fas fa-info-circle me-1"></i> Below Grade C will automatically be marked as <strong class="text-danger">D</strong><br>
+                        <i class="fas fa-lightbulb me-1 mt-1 text-warning"></i> <strong>Ratio</strong> = Total Income / Total Wage (e.g. 2.0 = earned twice their wage)
                     </div>
                 </div>
                 <div class="modal-footer border-top-0">
