@@ -46,7 +46,6 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
             
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                 <div class="d-flex align-items-center">
-                    <h5 class="m-0 fw-bold text-dark d-none d-md-block me-3"><i class="fas fa-star text-warning me-2"></i> Grading</h5>
                     <div id="last-update-time" class="d-flex align-items-center gap-2 text-secondary bg-white px-3 py-2 rounded shadow-sm border" style="font-size: 0.9rem;">
                         <span class="position-relative d-flex h-2 w-2">
                             <span class="position-absolute top-0 start-0 h-100 w-100 rounded-circle bg-success opacity-75 animate-ping" style="animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></span>
@@ -135,28 +134,35 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     </div>
                 </div>
                 
-                <div class="col-xl-6 col-md-12">
+                <div class="col-xl-3 col-md-6">
                     <div class="card shadow-sm kpi-card border-info h-100">
-                        <div class="card-body p-3 d-flex flex-column justify-content-center">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center h-100">
                                 <div>
-                                    <div class="text-uppercase text-info small fw-bold mb-1">Grade Distribution</div>
+                                    <div class="text-uppercase text-info small fw-bold mb-1">Avg Ratio</div>
+                                    <h2 class="text-info" id="kpi-avg-ratio">0.00</h2>
+                                    <div class="small text-muted mt-1 pt-1">Multiplier</div>
                                 </div>
-                                <div class="icon-circle bg-info-soft" style="width: 32px; height: 32px; font-size: 0.9rem;">
-                                    <i class="fas fa-chart-bar"></i>
+                                <div class="icon-circle bg-info-soft">
+                                    <i class="fas fa-balance-scale"></i>
                                 </div>
                             </div>
-                            <div class="progress shadow-sm" style="height: 25px; font-weight: bold; font-size: 1rem; border-radius: 6px;">
-                                <div class="progress-bar bg-success" id="dist-A" style="width: 0%;" title="Grade A">0%</div>
-                                <div class="progress-bar bg-primary" id="dist-B" style="width: 0%;" title="Grade B">0%</div>
-                                <div class="progress-bar bg-warning text-dark" id="dist-C" style="width: 0%;" title="Grade C">0%</div>
-                                <div class="progress-bar bg-danger" id="dist-D" style="width: 0%;" title="Grade D">0%</div>
-                            </div>
-                            <div class="d-flex justify-content-between mt-2 small text-muted px-1">
-                                <span><span class="badge bg-success-soft text-success border border-success-subtle">A</span> <span class="d-none d-md-inline">Excellent</span></span>
-                                <span><span class="badge bg-primary-soft text-primary border border-primary-subtle">B</span> <span class="d-none d-md-inline">Good</span></span>
-                                <span><span class="badge bg-warning-soft text-warning border border-warning-subtle">C</span> <span class="d-none d-md-inline">Fair</span></span>
-                                <span><span class="badge bg-danger-soft text-danger border border-danger-subtle">D</span> <span class="d-none d-md-inline">Improve</span></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6">
+                    <div class="card shadow-sm kpi-card border-warning h-100">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center h-100">
+                                <div>
+                                    <div class="text-uppercase text-warning small fw-bold mb-1">Total Income</div>
+                                    <h2 class="text-dark" id="kpi-total-income">0</h2>
+                                    <div class="small text-muted mt-1 pt-1">THB Generated</div>
+                                </div>
+                                <div class="icon-circle bg-warning-soft">
+                                    <i class="fas fa-coins"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -190,9 +196,9 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
     </main>
 
     <!-- Save Button Container (Sticky Bottom) -->
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
-        <button id="btnSaveGrades" class="btn btn-primary btn-lg rounded-pill shadow-lg px-4 fw-bold">
-            <i class="fas fa-save me-2"></i> Save Grades
+    <div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1000;">
+        <button id="btnSaveGrades" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem;" title="Save Grades">
+            <i class="fas fa-save"></i>
         </button>
     </div>
 

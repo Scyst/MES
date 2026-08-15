@@ -121,13 +121,11 @@ const App = {
 
         let html = '';
         let totalIncome = 0;
-        let gradeCount = { A: 0, B: 0, C: 0, D: 0 };
+        let totalWage = 0;
         
         filtered.forEach(emp => {
             totalIncome += parseFloat(emp.income_per_head) || 0;
-            if (emp.grade && gradeCount[emp.grade] !== undefined) {
-                gradeCount[emp.grade]++;
-            }
+            totalWage += parseFloat(emp.total_wage) || 0;
 
             let systemGradeBadge = '';
             if (emp.system_grade && emp.system_grade !== 'N/A') {
@@ -138,30 +136,34 @@ const App = {
 
             html += `
                 <tr>
-                    <td class="fw-bold">${emp.emp_id}</td>
-                    <td class="text-start">${emp.name_th}</td>
-                    <td><span class="badge bg-secondary">${emp.position || '-'}</span></td>
-                    <td class="text-end pe-4 fw-bold">
-                        <div class="text-success mb-1" style="font-size: 0.95em;">฿${Number(emp.income_per_head).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-                        <div class="text-primary small">
-                            <i class="fas fa-chart-line me-1"></i>Ratio: ${emp.ratio !== undefined ? Number(emp.ratio).toFixed(2) : '0.00'}
-                            ${systemGradeBadge}
-                        </div>
+                    <td class="fw-bold text-primary">${emp.emp_id}</td>
+                    <td class="text-start">
+                        <div class="fw-bold text-dark">${emp.name_th}</div>
+                        <div class="small text-muted">${emp.group_name || '-'} | ${emp.line_name || '-'}</div>
                     </td>
                     <td>
-                        <select class="form-select form-select-sm mx-auto grade-select ${this.getGradeClass(emp.grade)}" 
-                                onchange="App.updateGradeState('${emp.emp_id}', this)">
-                            <option value="" class="grade-empty">-</option>
+                        <span class="badge bg-light text-dark border">${emp.position || '-'}</span>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-success">${parseFloat(emp.income_per_head || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</div>
+                        <div class="small text-muted mt-1">Ratio: <strong class="${parseFloat(emp.ratio||0) >= 1 ? 'text-primary' : 'text-danger'}">${parseFloat(emp.ratio||0).toFixed(2)}</strong></div>
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm d-inline-block grade-select ${this.getGradeClass(emp.grade)}" 
+                                data-empid="${emp.emp_id}" 
+                                onchange="App.updateGradeState('${emp.emp_id}', this.value, this)">
+                            <option value="" class="grade-empty">Select</option>
                             <option value="A" class="grade-A" ${emp.grade === 'A' ? 'selected' : ''}>A</option>
                             <option value="B" class="grade-B" ${emp.grade === 'B' ? 'selected' : ''}>B</option>
                             <option value="C" class="grade-C" ${emp.grade === 'C' ? 'selected' : ''}>C</option>
                             <option value="D" class="grade-D" ${emp.grade === 'D' ? 'selected' : ''}>D</option>
                         </select>
+                        <div class="mt-1">${systemGradeBadge}</div>
                     </td>
                     <td>
                         <input type="text" class="form-control form-control-sm text-center" 
+                               placeholder="Add notes..." 
                                value="${emp.notes || ''}" 
-                               placeholder="Remarks..."
                                onchange="App.updateNotesState('${emp.emp_id}', this.value)">
                     </td>
                 </tr>
@@ -169,7 +171,7 @@ const App = {
         });
 
         if (filtered.length === 0) {
-            html = `<tr><td colspan="7" class="text-muted py-4">No employees found for this selection.</td></tr>`;
+            html = `<tr><td colspan="6" class="text-muted py-4">No employees found for this selection.</td></tr>`;
         }
 
         tbody.innerHTML = html;
@@ -180,21 +182,10 @@ const App = {
         const avgIncome = filtered.length > 0 ? (totalIncome / filtered.length) : 0;
         document.getElementById('kpi-avg-income').innerText = avgIncome.toLocaleString(undefined, {maximumFractionDigits: 0});
 
-        // Update Progress Bar
-        const totalGraded = gradeCount.A + gradeCount.B + gradeCount.C + gradeCount.D;
-        const calcDist = (count) => totalGraded > 0 ? ((count / totalGraded) * 100).toFixed(0) + '%' : '0%';
+        const avgRatio = totalWage > 0 ? (totalIncome / totalWage) : 0;
+        document.getElementById('kpi-avg-ratio').innerText = avgRatio.toFixed(2);
         
-        document.getElementById('dist-A').style.width = calcDist(gradeCount.A);
-        document.getElementById('dist-A').innerText = gradeCount.A > 0 ? calcDist(gradeCount.A) : '';
-        
-        document.getElementById('dist-B').style.width = calcDist(gradeCount.B);
-        document.getElementById('dist-B').innerText = gradeCount.B > 0 ? calcDist(gradeCount.B) : '';
-        
-        document.getElementById('dist-C').style.width = calcDist(gradeCount.C);
-        document.getElementById('dist-C').innerText = gradeCount.C > 0 ? calcDist(gradeCount.C) : '';
-        
-        document.getElementById('dist-D').style.width = calcDist(gradeCount.D);
-        document.getElementById('dist-D').innerText = gradeCount.D > 0 ? calcDist(gradeCount.D) : '';
+        document.getElementById('kpi-total-income').innerText = totalIncome.toLocaleString(undefined, {maximumFractionDigits: 0});
     },
 
     getGradeClass: function(grade) {
