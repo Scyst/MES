@@ -59,9 +59,16 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                 <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
                     <div class="d-flex align-items-center px-2">
                         <span class="text-muted small text-uppercase fw-bold me-2"><i class="far fa-calendar-alt"></i> Period:</span>
-                        <input type="month" id="filterPeriod" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
+                        <select id="periodType" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0 me-1" style="width: 75px; cursor: pointer; box-shadow: none;">
+                            <option value="monthly">Monthly</option>
+                            <option value="daily">Daily</option>
+                        </select>
+                        <input type="month" id="filterPeriodMonth" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
                                value="<?php echo date('Y-m'); ?>" 
-                               style="width: 130px; cursor: pointer;">
+                               style="width: 120px; cursor: pointer;">
+                        <input type="date" id="filterPeriodDate" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0 d-none" 
+                               value="<?php echo date('Y-m-d'); ?>" 
+                               style="width: 120px; cursor: pointer;">
                     </div>
 
                     <div class="vr mx-1 text-muted opacity-25 my-1"></div>
@@ -183,8 +190,8 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                                     <th style="width: 10%;" class="sortable" data-sort="emp_id" role="button">Emp ID <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 20%;" class="sortable" data-sort="name_th" role="button">Name & Department <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 10%;" class="sortable" data-sort="position" role="button">Position <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 12%;" class="sortable" data-sort="total_wage" role="button">Total Wage <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 13%;" class="sortable" data-sort="ratio" role="button">Income & Ratio <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 12%;" class="sortable" data-sort="total_wage" role="button">Total Wage <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 15%; text-align: center;">Executive Grade</th>
                                     <th style="width: 20%;">Notes</th>
                                 </tr>

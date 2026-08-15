@@ -24,7 +24,14 @@ const App = {
     },
 
     bindEvents: function() {
-        document.getElementById('filterPeriod').addEventListener('change', () => this.loadData());
+        document.getElementById('periodType').addEventListener('change', (e) => {
+            const isDaily = e.target.value === 'daily';
+            document.getElementById('filterPeriodMonth').classList.toggle('d-none', isDaily);
+            document.getElementById('filterPeriodDate').classList.toggle('d-none', !isDaily);
+            this.loadData();
+        });
+        document.getElementById('filterPeriodMonth').addEventListener('change', () => this.loadData());
+        document.getElementById('filterPeriodDate').addEventListener('change', () => this.loadData());
         document.getElementById('filterHcGroup').addEventListener('change', () => this.loadData());
         document.getElementById('filterLine').addEventListener('change', () => this.renderTable());
         
@@ -39,7 +46,10 @@ const App = {
 
     loadData: async function() {
         try {
-            const period = document.getElementById('filterPeriod').value;
+            const periodType = document.getElementById('periodType').value;
+            const period = periodType === 'daily' 
+                ? document.getElementById('filterPeriodDate').value 
+                : document.getElementById('filterPeriodMonth').value;
             const hcGroup = document.getElementById('filterHcGroup').value;
             
             Swal.fire({
@@ -149,11 +159,11 @@ const App = {
                         <span class="fw-bold text-secondary">${emp.position || '-'}</span>
                     </td>
                     <td>
-                        <div class="fw-bold text-secondary">${parseFloat(emp.total_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</div>
-                    </td>
-                    <td>
                         <span class="fw-bold text-success me-2">${parseFloat(emp.income_per_head || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</span>
                         <span class="small text-muted">| Ratio: <strong class="${parseFloat(emp.ratio||0) >= 1 ? 'text-primary' : 'text-danger'}">${parseFloat(emp.ratio||0).toFixed(2)}</strong></span>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-secondary">${parseFloat(emp.total_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</div>
                     </td>
                     <td>
                         <div class="d-flex align-items-center justify-content-center">
@@ -279,7 +289,10 @@ const App = {
     },
 
     saveGrades: async function() {
-        const period = document.getElementById('filterPeriod').value;
+        const periodType = document.getElementById('periodType').value;
+        const period = periodType === 'daily' 
+            ? document.getElementById('filterPeriodDate').value 
+            : document.getElementById('filterPeriodMonth').value;
         
         // Filter out employees that have a grade assigned
         const gradesToSave = this.state.employees

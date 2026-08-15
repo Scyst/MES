@@ -11,7 +11,8 @@ if (!hasPermission('manage_manpower')) {
 }
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
-$period = $_GET['period'] ?? date('Y-m'); // Default current month
+$period = $_GET['period'] ?? date('Y-m'); // Default current month (or date)
+$periodLength = strlen($period) == 10 ? 10 : 7;
 $line = $_GET['line'] ?? 'ALL';
 $hcGroup = $_GET['hcGroup'] ?? 'ALL';
 
@@ -37,7 +38,7 @@ try {
             INNER JOIN (
                 SELECT DISTINCT emp_id 
                 FROM dbo.MANPOWER_DAILY_LOGS WITH (NOLOCK)
-                WHERE CONVERT(VARCHAR(7), log_date, 120) = :period1
+                WHERE CONVERT(VARCHAR($periodLength), log_date, 120) = :period1
             ) L ON L.emp_id = E.emp_id
             LEFT JOIN dbo.EMPLOYEE_GRADES G WITH (NOLOCK) 
                 ON E.emp_id = G.emp_id AND G.evaluation_period = :period2
@@ -53,7 +54,7 @@ try {
                 FROM dbo.STOCK_TRANSACTION_USERS stu WITH (NOLOCK)
                 INNER JOIN dbo.STOCK_TRANSACTIONS t WITH (NOLOCK) ON stu.transaction_id = t.transaction_id
                 LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
-                WHERE CONVERT(VARCHAR(7), t.transaction_timestamp, 120) = :period3
+                WHERE CONVERT(VARCHAR($periodLength), t.transaction_timestamp, 120) = :period3
                   AND t.transaction_type LIKE 'PRODUCTION_%'
                 GROUP BY stu.emp_id
             ) INC ON INC.emp_id = E.emp_id COLLATE Thai_CI_AS
@@ -85,7 +86,7 @@ try {
                     WHERE emp.position LIKE '%' + keyword + '%' COLLATE Thai_CI_AS 
                     ORDER BY display_order DESC
                 ) cm
-                WHERE CONVERT(VARCHAR(7), ml.log_date, 120) = :period4
+                WHERE CONVERT(VARCHAR($periodLength), ml.log_date, 120) = :period4
                   AND ml.status IN ('PRESENT', 'LATE')
                 GROUP BY ml.emp_id
             ) WAGE ON WAGE.emp_id = E.emp_id COLLATE Thai_CI_AS
