@@ -305,24 +305,39 @@ const App = {
     },
 
     openCriteriaModal: async function() {
-        const line = document.getElementById('filterLine').value;
-        if (!line || line === 'ALL') {
-            Swal.fire('Warning', 'Please select a specific Line first.', 'warning');
-            return;
-        }
-
-        document.getElementById('criteriaLineLabel').innerText = line;
-        
         try {
             Swal.fire({ title: 'Loading...', didOpen: () => Swal.showLoading() });
             
-            const response = await fetch(`api/api_employee_grading.php?action=get_criteria&line=${line}`);
+            const response = await fetch(`api/api_employee_grading.php?action=get_criteria`);
             const result = await response.json();
             
             if (result.success) {
-                document.getElementById('critA').value = result.data.threshold_a;
-                document.getElementById('critB').value = result.data.threshold_b;
-                document.getElementById('critC').value = result.data.threshold_c;
+                const criteriaData = result.data || [];
+                // Map by line for quick lookup
+                const criteriaMap = {};
+                criteriaData.forEach(c => criteriaMap[c.line] = c);
+
+                const tbody = document.getElementById('criteriaTableBody');
+                let html = '';
+                
+                if (this.state.lines.size === 0) {
+                    html = '<tr><td colspan="4" class="text-muted py-3">No lines available in the current period.</td></tr>';
+                } else {
+                    const sortedLines = Array.from(this.state.lines).sort();
+                    sortedLines.forEach(line => {
+                        const crit = criteriaMap[line] || { threshold_a: '', threshold_b: '', threshold_c: '' };
+                        html += `
+                            <tr data-line="${line}">
+                                <td class="fw-bold text-start ps-3">${line}</td>
+                                <td><input type="number" class="form-control form-control-sm text-center crit-a" value="${crit.threshold_a || ''}" placeholder="e.g. 50000"></td>
+                                <td><input type="number" class="form-control form-control-sm text-center crit-b" value="${crit.threshold_b || ''}" placeholder="e.g. 35000"></td>
+                                <td><input type="number" class="form-control form-control-sm text-center crit-c" value="${crit.threshold_c || ''}" placeholder="e.g. 20000"></td>
+                            </tr>
+                        `;
+                    });
+                }
+                
+                tbody.innerHTML = html;
                 
                 Swal.close();
                 const modal = new bootstrap.Modal(document.getElementById('criteriaModal'));
@@ -336,18 +351,35 @@ const App = {
     },
 
     saveCriteria: async function() {
-        const line = document.getElementById('filterLine').value;
-        const a = document.getElementById('critA').value;
-        const b = document.getElementById('critB').value;
-        const c = document.getElementById('critC').value;
-        
+        const rows = document.querySelectorAll('#criteriaTableBody tr[data-line]');
+        if (rows.length === 0) return;
+
+        const criteriaArray = [];
+        let hasError = false;
+
+        rows.forEach(row => {
+            const line = row.dataset.line;
+            const a = row.querySelector('.crit-a').value;
+            const b = row.querySelector('.crit-b').value;
+            const c = row.querySelector('.crit-c').value;
+
+            // Only save if at least one field is filled, or if they just want to save 0
+            if (a !== '' || b !== '' || c !== '') {
+                criteriaArray.push({
+                    line: line,
+                    threshold_a: parseFloat(a) || 0,
+                    threshold_b: parseFloat(b) || 0,
+                    threshold_c: parseFloat(c) || 0
+                });
+            }
+        });
+
         try {
+            Swal.fire({ title: 'Saving...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
             const formData = new URLSearchParams();
             formData.append('action', 'save_criteria');
-            formData.append('line', line);
-            formData.append('threshold_a', a);
-            formData.append('threshold_b', b);
-            formData.append('threshold_c', c);
+            formData.append('criteria', JSON.stringify(criteriaArray));
 
             const response = await fetch('api/api_employee_grading.php', {
                 method: 'POST',

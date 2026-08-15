@@ -182,33 +182,35 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
 
     <!-- Criteria Settings Modal -->
     <div class="modal fade" id="criteriaModal" tabindex="-1" aria-labelledby="criteriaModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-light border-bottom-0">
-                    <h5 class="modal-title fw-bold text-dark" id="criteriaModalLabel"><i class="fas fa-sliders-h text-primary me-2"></i> Grading Criteria</h5>
+                    <h5 class="modal-title fw-bold text-dark" id="criteriaModalLabel"><i class="fas fa-sliders-h text-primary me-2"></i> Grading Criteria (All Lines)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <p class="small text-muted mb-3">Set minimum Income Per Head (THB) for <strong id="criteriaLineLabel" class="text-primary"></strong></p>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-success small">Grade A Threshold (>=)</label>
-                        <input type="number" class="form-control" id="critA" placeholder="e.g. 50000">
+                <div class="modal-body p-0">
+                    <div class="table-responsive" style="max-height: 50vh;">
+                        <table class="table table-hover table-striped mb-0 text-center align-middle">
+                            <thead class="table-dark sticky-top">
+                                <tr>
+                                    <th style="width: 25%;">Line</th>
+                                    <th style="width: 25%;">Grade A (>=)</th>
+                                    <th style="width: 25%;">Grade B (>=)</th>
+                                    <th style="width: 25%;">Grade C (>=)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="criteriaTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-primary small">Grade B Threshold (>=)</label>
-                        <input type="number" class="form-control" id="critB" placeholder="e.g. 35000">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-warning small">Grade C Threshold (>=)</label>
-                        <input type="number" class="form-control" id="critC" placeholder="e.g. 20000">
-                    </div>
-                    <div class="text-muted small">
-                        <i class="fas fa-info-circle me-1"></i> Below Grade C will be <strong class="text-danger">D</strong>
+                    <div class="p-3 text-muted small bg-light border-top">
+                        <i class="fas fa-info-circle me-1"></i> Below Grade C will automatically be marked as <strong class="text-danger">D</strong>
                     </div>
                 </div>
-                <div class="modal-footer border-top-0 bg-light">
+                <div class="modal-footer border-top-0">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary btn-sm px-4" id="btnSaveCriteria">Save</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4" id="btnSaveCriteria">Save All Criteria</button>
                 </div>
             </div>
         </div>

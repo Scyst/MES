@@ -159,31 +159,20 @@ try {
         exit;
     }
     else if ($action === 'get_criteria') {
-        $line = $_GET['line'] ?? '';
-        
-        $sql = "SELECT threshold_a, threshold_b, threshold_c FROM dbo.EMPLOYEE_GRADING_CRITERIA WITH (NOLOCK) WHERE line = :line";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([':line' => $line]);
-        $criteria = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$criteria) {
-            $criteria = [
-                'threshold_a' => 0,
-                'threshold_b' => 0,
-                'threshold_c' => 0
-            ];
-        }
+        $sql = "SELECT line, threshold_a, threshold_b, threshold_c FROM dbo.EMPLOYEE_GRADING_CRITERIA WITH (NOLOCK)";
+        $stmt = $pdo->query($sql);
+        $criteria = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         
         echo json_encode(['success' => true, 'data' => $criteria]);
         exit;
     }
     else if ($action === 'save_criteria') {
-        $line = $_POST['line'] ?? '';
-        $thresholdA = $_POST['threshold_a'] ?? 0;
-        $thresholdB = $_POST['threshold_b'] ?? 0;
-        $thresholdC = $_POST['threshold_c'] ?? 0;
+        $criteriaData = json_decode($_POST['criteria'] ?? '[]', true);
+        if (!is_array($criteriaData)) {
+            throw new Exception("Invalid criteria format");
+        }
         
-        if (empty($line)) throw new Exception("Line is required");
+        $pdo->beginTransaction();
         
         $sql = "
             IF EXISTS (SELECT 1 FROM dbo.EMPLOYEE_GRADING_CRITERIA WHERE line = :line)
@@ -200,20 +189,28 @@ try {
         ";
         
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':line' => $line,
-            ':a' => $thresholdA,
-            ':b' => $thresholdB,
-            ':c' => $thresholdC,
-            ':user_id' => $currentUser['id'] ?? null,
-            ':line2' => $line,
-            ':line3' => $line,
-            ':a2' => $thresholdA,
-            ':b2' => $thresholdB,
-            ':c2' => $thresholdC,
-            ':user_id2' => $currentUser['id'] ?? null
-        ]);
+        $userId = $currentUser['id'] ?? null;
         
+        foreach ($criteriaData as $c) {
+            $line = $c['line'] ?? '';
+            if (empty($line)) continue;
+            
+            $stmt->execute([
+                ':line' => $line,
+                ':a' => $c['threshold_a'] ?? 0,
+                ':b' => $c['threshold_b'] ?? 0,
+                ':c' => $c['threshold_c'] ?? 0,
+                ':user_id' => $userId,
+                ':line2' => $line,
+                ':line3' => $line,
+                ':a2' => $c['threshold_a'] ?? 0,
+                ':b2' => $c['threshold_b'] ?? 0,
+                ':c2' => $c['threshold_c'] ?? 0,
+                ':user_id2' => $userId
+            ]);
+        }
+        
+        $pdo->commit();
         echo json_encode(['success' => true, 'message' => 'Criteria updated successfully']);
         exit;
     }
