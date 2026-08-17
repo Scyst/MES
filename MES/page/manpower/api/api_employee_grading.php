@@ -208,6 +208,29 @@ try {
         echo json_encode(['success' => true]);
         exit;
     }
+    
+    if ($action === 'verify_password') {
+        $password = $_POST['password'] ?? '';
+        $username = $_SESSION['user']['username'] ?? '';
+        
+        if (empty($password) || empty($username)) {
+            throw new Exception("Missing password or session expired.");
+        }
+        
+        // Use the constant defined in init.php or fallback
+        $userTable = defined('USERS_TABLE') ? USERS_TABLE : 'dbo.USERS';
+        $sql = "SELECT password FROM " . $userTable . " WHERE username = ? AND is_active = 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$username]);
+        $hash = $stmt->fetchColumn();
+        
+        if ($hash && password_verify($password, $hash)) {
+            echo json_encode(['success' => true]);
+        } else {
+            throw new Exception("Incorrect password.");
+        }
+        exit;
+    }
     else if ($action === 'get_criteria') {
         $sql = "SELECT line, threshold_a, threshold_b, threshold_c FROM dbo.EMPLOYEE_GRADING_CRITERIA WITH (NOLOCK)";
         $stmt = $pdo->query($sql);

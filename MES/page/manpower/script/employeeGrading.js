@@ -240,10 +240,10 @@ const App = {
 
         // Prompt for Passcode
         const { value: pin } = await Swal.fire({
-            title: 'Enter Passcode',
+            title: 'Verify Identity',
             input: 'password',
-            inputLabel: 'Passcode is required to view sensitive wage data',
-            inputPlaceholder: 'Enter PIN...',
+            inputLabel: 'Please enter your login password to view sensitive wage data',
+            inputPlaceholder: 'Enter your password...',
             showCancelButton: true,
             confirmButtonText: 'Unlock',
             inputValidator: (value) => {
@@ -254,16 +254,32 @@ const App = {
         });
 
         if (pin) {
-            // TODO: In a real app, this should be verified against an API or env variable
-            // For now, hardcoded simple PIN '1234' for Executive view
-            if (pin === '1234') {
-                this.state.isWageVisible = true;
-                this.renderTable();
-            } else {
+            try {
+                Swal.fire({ title: 'Verifying...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                
+                const formData = new URLSearchParams();
+                formData.append('action', 'verify_password');
+                formData.append('password', pin);
+
+                const response = await fetch('api/api_employee_grading.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    Swal.close();
+                    this.state.isWageVisible = true;
+                    this.renderTable();
+                } else {
+                    throw new Error(result.message || 'Incorrect password.');
+                }
+            } catch (error) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Access Denied',
-                    text: 'Incorrect passcode.'
+                    text: error.message
                 });
             }
         }
