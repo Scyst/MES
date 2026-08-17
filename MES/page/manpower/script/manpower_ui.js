@@ -2647,14 +2647,15 @@ const Actions = {
     },
 
     async fetchRawCentralScans() {
-        const targetDate = document.getElementById('rawScanDate').value;
-        if (!targetDate) return Swal.fire('Warning', 'Please select a date', 'warning');
+        const startDate = document.getElementById('rawScanStartDate').value;
+        const endDate = document.getElementById('rawScanEndDate').value;
+        if (!startDate || !endDate) return Swal.fire('Warning', 'Please select a date range', 'warning');
 
         const tbody = document.getElementById('rawScansBody');
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div><br><small class="text-muted mt-2 d-block">Fetching raw data from central API...</small></td></tr>`;
 
         try {
-            const res = await fetch(`api/api_daily_operations.php?action=fetch_raw_central_scans&date=${targetDate}`);
+            const res = await fetch(`api/api_daily_operations.php?action=fetch_raw_central_scans&start_date=${startDate}&end_date=${endDate}`);
             const json = await res.json();
 
             if (json.success) {
