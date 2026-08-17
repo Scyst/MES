@@ -269,7 +269,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
     </div>
 
     <!-- Analytics Modal -->
-    <div class="modal fade" id="analyticsModal" tabindex="-1" aria-labelledby="analyticsModalLabel" aria-hidden="true">
+    <div class="modal fade" id="analyticsModal" aria-labelledby="analyticsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-light py-3">
