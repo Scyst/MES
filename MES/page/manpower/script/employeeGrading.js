@@ -341,8 +341,20 @@ const App = {
         setEl('analytics-period-label', `Period: ${periodVal || '—'} · ${filtered.length} employees`);
         setEl('analytics-stat-emp',     filtered.length);
         setEl('analytics-stat-ratio',   avgRatioAll.toFixed(2) + 'x');
-        setEl('analytics-stat-income',  (totalIncome/1000).toLocaleString(undefined,{maximumFractionDigits:1}) + 'k ฿');
-        setEl('analytics-stat-wage',    isVisible ? (totalWage/1000).toLocaleString(undefined,{maximumFractionDigits:1}) + 'k ฿' : '🔒 Hidden');
+        setEl('analytics-stat-income',  (totalIncome / 1000).toFixed(1) + 'k ฿');
+        setEl('analytics-stat-wage',    isVisible ? (totalWage / 1000).toFixed(1) + 'k ฿' : '******');
+        
+        // Update global toggle button in modal
+        const globalToggleBtn = document.getElementById('btnGlobalWageToggle');
+        if (globalToggleBtn) {
+            if (isVisible) {
+                globalToggleBtn.className = 'btn btn-sm btn-outline-danger rounded-pill d-flex align-items-center fw-bold';
+                globalToggleBtn.innerHTML = '<i class="fas fa-lock-open me-1"></i> <span>Lock Wage</span>';
+            } else {
+                globalToggleBtn.className = 'btn btn-sm btn-outline-warning rounded-pill d-flex align-items-center fw-bold';
+                globalToggleBtn.innerHTML = '<i class="fas fa-lock me-1"></i> <span>Unlock Wage</span>';
+            }
+        }
 
         const totalGraded = grades.A + grades.B + grades.C + grades.D;
         setEl('analytics-grade-total-badge', `${totalGraded} graded / ${filtered.length} total`);

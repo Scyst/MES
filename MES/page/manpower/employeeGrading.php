@@ -334,7 +334,13 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     <select id="analyticsLineFilter" class="form-select form-select-sm rounded-pill border" style="width: auto; min-width: 130px; font-size: 0.8rem;">
                         <option value="ALL">All Lines</option>
                     </select>
-                    <span class="text-muted small ms-auto" id="analytics-filter-count">Loading...</span>
+                    <div class="ms-auto d-flex align-items-center gap-3">
+                        <span class="text-muted small" id="analytics-filter-count">Loading...</span>
+                        <div class="vr text-muted opacity-25" style="height: 20px;"></div>
+                        <button class="btn btn-sm btn-outline-warning rounded-pill d-flex align-items-center fw-bold" id="btnGlobalWageToggle" onclick="App.toggleWageVisibility()" style="font-size: 0.75rem; min-width: 110px; justify-content: center;">
+                            <i class="fas fa-lock me-1"></i> <span>Unlock Wage</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="modal-body p-3" style="background: #f8f9fc;">
