@@ -500,10 +500,10 @@ const App = {
                 { name: 'DL (Base)', data: isVisible ? dlData : dlData.map(() => 0) },
                 { name: 'OT',        data: isVisible ? otData : otData.map(() => 0) }
             ],
-            chart: { type: 'bar', height: 280, stacked: true, toolbar: { show: false }, animations: { speed: 400 } },
+            chart: { type: 'bar', height: 380, stacked: true, toolbar: { show: false }, animations: { speed: 400 } },
             plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 2 } },
             colors: ['#4e73df', '#f6c23e'],
-            xaxis: { categories: shortLines, labels: { style: { fontSize: '10px' } } },
+            xaxis: { categories: shortLines, labels: { rotate: 0, style: { fontSize: '10px' } } },
             yaxis: { labels: { formatter: val => (val/1000).toFixed(0)+'k' } },
             dataLabels: { enabled: false },
             tooltip: {
@@ -520,10 +520,10 @@ const App = {
                 { name: 'DL (Base)', data: isVisible ? dlData : dlData.map(() => 0) },
                 { name: 'OT',        data: isVisible ? otData : otData.map(() => 0) }
             ],
-            chart: { type: 'bar', height: 280, stacked: true, stackType: '100%', toolbar: { show: false }, animations: { speed: 400 } },
+            chart: { type: 'bar', height: 380, stacked: true, stackType: '100%', toolbar: { show: false }, animations: { speed: 400 } },
             plotOptions: { bar: { horizontal: false, columnWidth: '60%', borderRadius: 2 } },
             colors: ['#4e73df', '#f6c23e'],
-            xaxis: { categories: shortLines, labels: { style: { fontSize: '10px' } } },
+            xaxis: { categories: shortLines, labels: { rotate: 0, style: { fontSize: '10px' } } },
             yaxis: { labels: { formatter: val => val + '%', style: { fontSize: '10px' } } },
             dataLabels: {
                 enabled: true,

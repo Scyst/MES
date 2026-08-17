@@ -451,7 +451,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                                     </div>
                                 </div>
                                 <!-- Labor Cost Breakdown -->
-                                <div class="col-12 col-xl-7">
+                                <div class="col-12 col-xl-6">
                                     <div class="card h-100 border-0 shadow-sm position-relative">
                                         <div class="card-body pb-1">
                                             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -470,7 +470,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                                     </div>
                                 </div>
                                 <!-- OT Ratio per Line -->
-                                <div class="col-12 col-xl-5">
+                                <div class="col-12 col-xl-6">
                                     <div class="card h-100 border-0 shadow-sm position-relative">
                                         <div class="card-body pb-1">
                                             <h6 class="card-title text-secondary fw-bold small text-uppercase mb-2">OT Cost Ratio per Line (%)</h6>
