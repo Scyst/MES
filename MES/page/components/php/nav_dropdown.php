@@ -89,6 +89,7 @@
                     <li><a class="dropdown-item-icon py-1" href="../planning/daily_meeting.php"><i class="fas fa-layer-group fa-fw"></i><span>Daily Command Center</span></a></li>
                     <?php endif; ?>
                     <li><a class="dropdown-item-icon py-1" href="../manpower/manpowerUI.php"><i class="fas fa-users-cog fa-fw"></i><span>Manpower Management</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../manpower/employeeGrading.php"><i class="fas fa-user-graduate fa-fw"></i><span>Income Per Head & Grading</span></a></li>
                     <?php if (in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
                     <li><a class="dropdown-item-icon py-1" href="../dailyPL/pl_entry.php"><i class="fas fa-donate fa-fw"></i><span>Daily P&L</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../autoInvoice/finance_dashboard.php"><i class="fas fa-file-invoice-dollar fa-fw"></i><span>Invoice Management</span></a></li>
@@ -202,6 +203,7 @@
             <a class="list-group-item list-group-item-action text-dark" href="../planning/daily_meeting.php"><i class="fas fa-layer-group fa-fw me-3"></i> Daily Command Center</a>
             <?php endif; ?>
             <a class="list-group-item list-group-item-action text-dark" href="../manpower/manpowerUI.php"><i class="fas fa-users-cog fa-fw me-3"></i> Manpower Management</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../manpower/employeeGrading.php"><i class="fas fa-user-graduate fa-fw me-3"></i> Income Per Head & Grading</a>
             <?php if (in_array($userRole, ['supervisor', 'admin', 'creator'])): ?>
             <a class="list-group-item list-group-item-action text-dark" href="../dailyPL/pl_entry.php"><i class="fas fa-donate fa-fw me-3"></i> Daily P&L</a>
             <a class="list-group-item list-group-item-action text-dark" href="../autoInvoice/finance_dashboard.php"><i class="fas fa-file-invoice-dollar fa-fw me-3"></i> Invoice Management</a>
