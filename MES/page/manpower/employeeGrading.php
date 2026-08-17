@@ -509,16 +509,16 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
     <div class="modal fade" id="criteriaModal" tabindex="-1" aria-labelledby="criteriaModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-light border-bottom-0">
-                    <h5 class="modal-title fw-bold text-dark" id="criteriaModalLabel"><i class="fas fa-sliders-h text-primary me-2"></i> Grading Criteria (All Lines)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header border-0 py-3 px-4" style="background: linear-gradient(135deg, #1a1f5e 0%, #2d3561 50%, #1e4fa3 100%);">
+                    <h5 class="modal-title fw-bold text-white mb-0" id="criteriaModalLabel"><i class="fas fa-sliders-h opacity-75 me-2"></i> Grading Criteria (All Lines)</h5>
+                    <button type="button" class="btn-close btn-close-white ms-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0">
                     <div class="table-responsive" style="max-height: 50vh;">
                         <table class="table table-hover table-striped mb-0 text-center align-middle">
-                            <thead class="table-dark sticky-top">
+                            <thead class="table-light sticky-top shadow-sm">
                                 <tr>
-                                    <th style="width: 25%;">Line</th>
+                                    <th class="ps-4 text-start" style="width: 25%;">Line</th>
                                     <th style="width: 25%;">Ratio A (>=)</th>
                                     <th style="width: 25%;">Ratio B (>=)</th>
                                     <th style="width: 25%;">Ratio C (>=)</th>

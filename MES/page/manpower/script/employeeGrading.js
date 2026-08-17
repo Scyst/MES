@@ -796,7 +796,7 @@ const App = {
                         const crit = criteriaMap[line] || { threshold_a: '', threshold_b: '', threshold_c: '' };
                         html += `
                             <tr data-line="${line}">
-                                <td class="fw-bold text-start ps-3">${line}</td>
+                                <td class="fw-bold text-start ps-4">${line}</td>
                                 <td><input type="number" step="0.1" class="form-control form-control-sm text-center crit-a" value="${crit.threshold_a || ''}" placeholder="e.g. 2.0"></td>
                                 <td><input type="number" step="0.1" class="form-control form-control-sm text-center crit-b" value="${crit.threshold_b || ''}" placeholder="e.g. 1.5"></td>
                                 <td><input type="number" step="0.1" class="form-control form-control-sm text-center crit-c" value="${crit.threshold_c || ''}" placeholder="e.g. 1.0"></td>
