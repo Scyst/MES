@@ -295,6 +295,19 @@ const App = {
 
         const isVisible = this.state.isWageVisible;
 
+        // Toggle Overlays for sensitive charts
+        const sensitiveOverlays = ['overlay-wage-breakdown', 'overlay-profitability', 'overlay-performance'];
+        sensitiveOverlays.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (isVisible) {
+                    el.classList.add('d-none');
+                } else {
+                    el.classList.remove('d-none');
+                }
+            }
+        });
+
         // 1. Labor Cost Breakdown (Stacked Bar)
         const wageBreakdownOptions = {
             series: [
@@ -374,6 +387,8 @@ const App = {
             series: scatterSeries,
             chart: { type: 'scatter', height: 250, zoom: { enabled: true, type: 'xy' }, toolbar: { show: false } },
             xaxis: { 
+                type: 'numeric',
+                tickAmount: 6,
                 title: { text: 'Total Wage (THB)' }, 
                 labels: { formatter: (val) => isVisible ? parseFloat(val).toLocaleString() : '***' } 
             },
