@@ -421,6 +421,7 @@ const App = {
         // Prompt for Passcode
         const { value: pin } = await Swal.fire({
             title: 'Verify Identity',
+            target: document.getElementById('analyticsModal'),
             input: 'password',
             inputLabel: 'Please enter your login password to view sensitive wage data',
             inputPlaceholder: 'Enter your password...',
