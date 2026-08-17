@@ -302,6 +302,9 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                             </div>
                         </div>
                     </div>
+                    <button type="button" class="btn btn-sm btn-outline-light ms-3 shadow-sm text-nowrap" onclick="App.saveAnalysisAsImage()">
+                        <i class="fas fa-camera me-1"></i> Save Picture
+                    </button>
                     <button type="button" class="btn-close btn-close-white ms-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 

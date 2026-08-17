@@ -833,6 +833,49 @@ const App = {
         } catch (e) {
             Swal.fire('Error', e.message, 'error');
         }
+    },
+
+    saveAnalysisAsImage: async function() {
+        if (typeof html2canvas === 'undefined') {
+            Swal.fire({ title: 'Loading Engine...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            try {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'script/html2canvas.min.js?v=1.4.1';
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            } catch (e) {
+                Swal.fire('Error', 'Failed to load Image Capture Library.', 'error');
+                return;
+            }
+            Swal.close();
+        }
+
+        const modalContent = document.querySelector('#analyticsModal .modal-content');
+        if (!modalContent) return;
+
+        Swal.fire({ title: 'Rendering Image...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        try {
+            const canvas = await html2canvas(modalContent, {
+                scale: 2, 
+                useCORS: true,
+                backgroundColor: '#ffffff'
+            });
+
+            const image = canvas.toDataURL("image/jpeg", 0.9);
+            const link = document.createElement('a');
+
+            const period = document.getElementById('filterPeriod').value || new Date().toISOString().split('T')[0];
+            link.download = `Grading_Analytics_${period}.jpg`;
+            link.href = image;
+            link.click();
+            Swal.close();
+        } catch (e) {
+            console.error(e);
+            Swal.fire('Error', 'Failed to capture image', 'error');
+        }
     }
 };
 
