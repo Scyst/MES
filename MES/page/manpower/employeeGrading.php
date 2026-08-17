@@ -20,6 +20,10 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
     <title><?php echo $pageTitle; ?></title>
     <?php include_once __DIR__ . '/../components/common_head.php'; ?>
     <link rel="stylesheet" href="css/manpowerUI.css?v=<?php echo filemtime(__DIR__ . '/css/manpowerUI.css'); ?>">
+    
+    <!-- ApexCharts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
@@ -123,6 +127,10 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     <div class="vr mx-1 text-muted opacity-25 my-1"></div>
                     
                     <div class="d-flex align-items-center ms-auto">
+                        <button class="btn btn-light btn-sm text-secondary rounded-circle shadow-sm d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; padding: 0;" data-bs-toggle="collapse" data-bs-target="#analyticsPanel" aria-expanded="false" aria-controls="analyticsPanel" title="Toggle Analytics">
+                            <i class="fas fa-chart-pie"></i>
+                        </button>
+                        
                         <button class="btn btn-light btn-sm text-secondary rounded-circle shadow-sm d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; padding: 0;" id="btnCriteriaSettings" title="Criteria Settings">
                             <i class="fas fa-cog"></i>
                         </button>
@@ -215,6 +223,58 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                                 </div>
                                 <div class="icon-circle bg-danger-soft text-danger">
                                     <i class="fas fa-money-bill-wave"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Panel (Collapsible) -->
+            <div class="collapse mb-3" id="analyticsPanel">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
+                        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-chart-line me-2"></i>Grading & Manpower Analytics</h6>
+                    </div>
+                    <div class="card-body bg-light p-3 pt-0 rounded-bottom">
+                        <div class="row g-3">
+                            <!-- Labor Cost Breakdown by Line (DL vs OT) -->
+                            <div class="col-12 col-xl-6">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-secondary fw-bold small text-uppercase mb-3">Labor Cost Breakdown by Line</h6>
+                                        <div id="chart-wage-breakdown" style="min-height: 250px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Profitability Ratio by Line -->
+                            <div class="col-12 col-xl-6">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-secondary fw-bold small text-uppercase mb-3">Profitability Ratio by Line</h6>
+                                        <div id="chart-profitability" style="min-height: 250px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Grade Distribution -->
+                            <div class="col-12 col-xl-4">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-secondary fw-bold small text-uppercase mb-3">Grade Distribution</h6>
+                                        <div id="chart-grade-dist" style="min-height: 250px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Employee Performance Matrix -->
+                            <div class="col-12 col-xl-8">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-secondary fw-bold small text-uppercase mb-3">Employee Performance Matrix</h6>
+                                        <div id="chart-performance" style="min-height: 250px;"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

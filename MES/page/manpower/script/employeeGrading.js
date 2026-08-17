@@ -247,6 +247,153 @@ const App = {
                     : 'fas fa-eye-slash ms-2 text-muted';
             }
         });
+
+        // Render Analytics Charts
+        this.renderCharts(filtered);
+    },
+
+    renderCharts: function(filtered) {
+        if (!window.ApexCharts) return;
+
+        // Group data by Line
+        const lineData = {};
+        let grades = { A: 0, B: 0, C: 0, D: 0, Unassigned: 0 };
+        
+        filtered.forEach(emp => {
+            const line = emp.line || 'Unknown';
+            if (!lineData[line]) {
+                lineData[line] = { dl: 0, ot: 0, wage: 0, income: 0, count: 0 };
+            }
+            lineData[line].dl += parseFloat(emp.dl_wage) || 0;
+            lineData[line].ot += parseFloat(emp.ot_wage) || 0;
+            lineData[line].wage += parseFloat(emp.total_wage) || 0;
+            lineData[line].income += parseFloat(emp.income_per_head) || 0;
+            lineData[line].count += 1;
+
+            if (emp.grade && ['A','B','C','D'].includes(emp.grade)) {
+                grades[emp.grade]++;
+            } else {
+                grades.Unassigned++;
+            }
+        });
+
+        const lines = Object.keys(lineData).sort();
+        const dlData = lines.map(l => parseFloat((lineData[l].dl / lineData[l].count).toFixed(2)));
+        const otData = lines.map(l => parseFloat((lineData[l].ot / lineData[l].count).toFixed(2)));
+        const avgWageData = lines.map(l => parseFloat((lineData[l].wage / lineData[l].count).toFixed(2)));
+        const avgIncomeData = lines.map(l => parseFloat((lineData[l].income / lineData[l].count).toFixed(2)));
+        const ratioData = lines.map(l => {
+            const wage = lineData[l].wage;
+            return wage > 0 ? parseFloat((lineData[l].income / wage).toFixed(2)) : 0;
+        });
+
+        // Destroy existing charts
+        if (this.charts) {
+            Object.values(this.charts).forEach(c => c && c.destroy());
+        }
+        this.charts = {};
+
+        const isVisible = this.state.isWageVisible;
+
+        // 1. Labor Cost Breakdown (Stacked Bar)
+        const wageBreakdownOptions = {
+            series: [
+                { name: 'Base Wage (DL)', data: isVisible ? dlData : dlData.map(()=>0) }, 
+                { name: 'Overtime (OT)', data: isVisible ? otData : otData.map(()=>0) }
+            ],
+            chart: { type: 'bar', height: 250, stacked: true, toolbar: { show: false } },
+            colors: ['#4e73df', '#f6c23e'],
+            xaxis: { categories: lines },
+            yaxis: { labels: { formatter: (val) => isVisible ? val.toLocaleString() + ' ฿' : '***' } },
+            dataLabels: { enabled: false },
+            tooltip: { y: { formatter: (val) => isVisible ? parseFloat(val).toLocaleString() + ' ฿' : 'Hidden' } }
+        };
+        this.charts.wageBreakdown = new ApexCharts(document.querySelector("#chart-wage-breakdown"), wageBreakdownOptions);
+        this.charts.wageBreakdown.render();
+
+        // 2. Profitability Ratio (Combo)
+        const profitabilityOptions = {
+            series: [
+                { name: 'Avg Income', type: 'column', data: avgIncomeData },
+                { name: 'Avg Wage', type: 'column', data: isVisible ? avgWageData : avgWageData.map(()=>0) },
+                { name: 'Ratio', type: 'line', data: isVisible ? ratioData : ratioData.map(()=>0) }
+            ],
+            chart: { height: 250, type: 'line', toolbar: { show: false } },
+            stroke: { width: [0, 0, 3] },
+            colors: ['#1cc88a', '#e74a3b', '#36b9cc'],
+            xaxis: { categories: lines },
+            yaxis: [
+                { seriesName: 'Avg Income', labels: { formatter: (val) => val.toLocaleString() + ' ฿' } },
+                { seriesName: 'Avg Wage', show: false },
+                { opposite: true, seriesName: 'Ratio', title: { text: 'Ratio' } }
+            ],
+            dataLabels: { enabled: false },
+            tooltip: {
+                shared: true,
+                intersect: false,
+                y: {
+                    formatter: function (y, { seriesIndex }) {
+                        if (typeof y !== "undefined") {
+                            if (seriesIndex === 0) return y.toLocaleString() + ' ฿';
+                            if (!isVisible) return 'Hidden';
+                            if (seriesIndex === 1) return y.toLocaleString() + ' ฿';
+                            if (seriesIndex === 2) return y;
+                        }
+                        return y;
+                    }
+                }
+            }
+        };
+        this.charts.profitability = new ApexCharts(document.querySelector("#chart-profitability"), profitabilityOptions);
+        this.charts.profitability.render();
+
+        // 3. Grade Distribution
+        const gradeData = [grades.A, grades.B, grades.C, grades.D, grades.Unassigned];
+        const gradeOptions = {
+            series: gradeData,
+            labels: ['Grade A', 'Grade B', 'Grade C', 'Grade D', 'Unassigned'],
+            chart: { type: 'donut', height: 250 },
+            colors: ['#1cc88a', '#4e73df', '#f6c23e', '#e74a3b', '#858796'],
+            dataLabels: { enabled: true, formatter: (val, opts) => opts.w.config.series[opts.seriesIndex] },
+            plotOptions: { pie: { donut: { size: '60%' } } }
+        };
+        this.charts.gradeDist = new ApexCharts(document.querySelector("#chart-grade-dist"), gradeOptions);
+        this.charts.gradeDist.render();
+
+        // 4. Performance Matrix (Scatter)
+        const scatterSeries = lines.map(line => {
+            const data = filtered.filter(e => e.line === line && parseFloat(e.total_wage) > 0).map(e => ({
+                x: isVisible ? parseFloat(e.total_wage) : 0,
+                y: parseFloat(e.income_per_head) || 0,
+                name: e.name_th
+            }));
+            return { name: line, data: data };
+        }).filter(s => s.data.length > 0);
+
+        const perfOptions = {
+            series: scatterSeries,
+            chart: { type: 'scatter', height: 250, zoom: { enabled: true, type: 'xy' }, toolbar: { show: false } },
+            xaxis: { 
+                title: { text: 'Total Wage (THB)' }, 
+                labels: { formatter: (val) => isVisible ? parseFloat(val).toLocaleString() : '***' } 
+            },
+            yaxis: { 
+                title: { text: 'Income Generated (THB)' }, 
+                labels: { formatter: (val) => parseFloat(val).toLocaleString() } 
+            },
+            tooltip: {
+                custom: function({series, seriesIndex, dataPointIndex, w}) {
+                    const data = w.config.series[seriesIndex].data[dataPointIndex];
+                    return `<div class="p-2 bg-white shadow-sm rounded border">
+                        <strong class="text-primary">${data.name}</strong><br/>
+                        <span class="text-success">Income: ${data.y.toLocaleString()} ฿</span><br/>
+                        <span class="text-danger">Wage: ${isVisible ? data.x.toLocaleString() + ' ฿' : 'Hidden'}</span>
+                    </div>`;
+                }
+            }
+        };
+        this.charts.performance = new ApexCharts(document.querySelector("#chart-performance"), perfOptions);
+        this.charts.performance.render();
     },
 
     toggleWageVisibility: async function() {
