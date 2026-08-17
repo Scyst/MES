@@ -148,7 +148,9 @@ document.addEventListener('DOMContentLoaded', function() {
         briefModal.addEventListener('show.bs.modal', function () {
             if (personalDataFetched) return; // Fetch only once per page load
             
-            const baseUrl = '<?php echo defined("BASE_URL") ? BASE_URL : "/MES/MES"; ?>';
+            let path = window.location.pathname;
+            let pageIndex = path.indexOf('/page/');
+            let baseUrl = pageIndex > 0 ? path.substring(0, pageIndex) : '';
             fetch(`${baseUrl}/page/manpower/api/api_my_performance.php`)
                 .then(r => r.json())
                 .then(json => {

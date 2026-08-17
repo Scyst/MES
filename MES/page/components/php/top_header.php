@@ -136,7 +136,10 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
     
     // ดึงข้อมูลผลงานพนักงาน
     document.addEventListener("DOMContentLoaded", function() {
-        const baseUrl = '<?php echo defined("BASE_URL") ? BASE_URL : "/MES/MES"; ?>';
+        let path = window.location.pathname;
+        let pageIndex = path.indexOf('/page/');
+        let baseUrl = pageIndex > 0 ? path.substring(0, pageIndex) : '';
+        
         const card = document.getElementById('headerPerformanceCard');
         if (!card) return;
 
