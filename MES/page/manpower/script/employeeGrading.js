@@ -135,10 +135,14 @@ const App = {
         let html = '';
         let totalIncome = 0;
         let totalWage = 0;
+        let totalDl = 0;
+        let totalOt = 0;
         
         filtered.forEach(emp => {
             totalIncome += parseFloat(emp.income_per_head) || 0;
             totalWage += parseFloat(emp.total_wage) || 0;
+            totalDl += parseFloat(emp.dl_wage) || 0;
+            totalOt += parseFloat(emp.ot_wage) || 0;
 
             let systemGradeBadge = '';
             if (emp.system_grade && emp.system_grade !== 'N/A') {
@@ -169,6 +173,13 @@ const App = {
                         <div class="fw-bold ${this.state.isWageVisible ? 'text-secondary' : 'text-muted opacity-50'}">
                             ${this.state.isWageVisible ? parseFloat(emp.total_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ฿' : '******'}
                         </div>
+                        ${this.state.isWageVisible ? `
+                        <div class="small mt-1" style="font-size: 0.75rem;">
+                            <span class="text-primary" title="Base Wage">DL: ${parseFloat(emp.dl_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                            <span class="mx-1 text-muted opacity-25">|</span>
+                            <span class="text-warning" title="Overtime Wage">OT: ${parseFloat(emp.ot_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                        </div>
+                        ` : ''}
                     </td>
                     <td>
                         <div class="d-flex align-items-center justify-content-center">
@@ -217,6 +228,13 @@ const App = {
             totalWageEl.innerText = this.state.isWageVisible 
                 ? totalWage.toLocaleString(undefined, {maximumFractionDigits: 0}) 
                 : '******';
+        }
+
+        const kpiSubtitleEl = document.getElementById('kpi-wage-subtitle');
+        if (kpiSubtitleEl) {
+            kpiSubtitleEl.innerHTML = this.state.isWageVisible
+                ? `<span class="text-primary fw-bold">DL: ${totalDl.toLocaleString(undefined, {maximumFractionDigits: 0})}</span> <span class="mx-1 opacity-25">|</span> <span class="text-warning fw-bold">OT: ${totalOt.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>`
+                : 'Base Wage (Hidden)';
         }
         
         // Update Eye Icons

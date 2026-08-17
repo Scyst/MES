@@ -31,6 +31,8 @@ try {
                 G.notes,
                 ISNULL(INC.income_per_head, 0) AS income_per_head,
                 ISNULL(WAGE.total_wage, 350.0) AS total_wage,
+                ISNULL(WAGE.dl_wage, 350.0) AS dl_wage,
+                ISNULL(WAGE.ot_wage, 0.0) AS ot_wage,
                 C.threshold_a,
                 C.threshold_b,
                 C.threshold_c
@@ -61,23 +63,41 @@ try {
             LEFT JOIN (
                 SELECT 
                     ml.emp_id,
-                    SUM(
-                        COALESCE(
-                            CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN cm.hourly_rate / 30.0 ELSE cm.hourly_rate END,
-                            350.0
-                        )
-                        +
-                        (
-                            CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL 
-                            THEN 
-                                CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) > 570 
-                                THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5 
+                        SUM(
+                            COALESCE(
+                                CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN cm.hourly_rate / 30.0 ELSE cm.hourly_rate END,
+                                350.0
+                            )
+                        ) AS dl_wage,
+                        SUM(
+                            (
+                                CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL 
+                                THEN 
+                                    CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) > 570 
+                                    THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5 
+                                    ELSE 0 END
                                 ELSE 0 END
-                            ELSE 0 END
-                        )
-                        * 
-                        (COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN (cm.hourly_rate / 30.0) / 8.0 ELSE cm.hourly_rate / 8.0 END, 350.0 / 8.0) * 1.5)
-                    ) AS total_wage
+                            )
+                            * 
+                            (COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN (cm.hourly_rate / 30.0) / 8.0 ELSE cm.hourly_rate / 8.0 END, 350.0 / 8.0) * 1.5)
+                        ) AS ot_wage,
+                        SUM(
+                            COALESCE(
+                                CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN cm.hourly_rate / 30.0 ELSE cm.hourly_rate END,
+                                350.0
+                            )
+                            +
+                            (
+                                CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL 
+                                THEN 
+                                    CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) > 570 
+                                    THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5 
+                                    ELSE 0 END
+                                ELSE 0 END
+                            )
+                            * 
+                            (COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN (cm.hourly_rate / 30.0) / 8.0 ELSE cm.hourly_rate / 8.0 END, 350.0 / 8.0) * 1.5)
+                        ) AS total_wage
                 FROM dbo.MANPOWER_DAILY_LOGS ml WITH (NOLOCK)
                 LEFT JOIN dbo.MANPOWER_EMPLOYEES emp WITH (NOLOCK) ON ml.emp_id = emp.emp_id COLLATE Thai_CI_AS
                 LEFT JOIN dbo.MANPOWER_SHIFTS ms WITH (NOLOCK) ON ms.shift_id = ISNULL(ml.shift_id, emp.default_shift_id)
@@ -156,6 +176,8 @@ try {
                 'team_group' => $emp['team_group'],
                 'income_per_head' => $income,
                 'total_wage' => $wage,
+                'dl_wage' => (float)($emp['dl_wage'] ?? 0),
+                'ot_wage' => (float)($emp['ot_wage'] ?? 0),
                 'ratio' => round($ratio, 2),
                 'system_grade' => $systemGrade,
                 'grade' => $emp['grade'] ?? '',

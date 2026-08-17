@@ -211,7 +211,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                                 <div>
                                     <div class="text-uppercase text-danger small fw-bold mb-1">Total Wage <i class="fas fa-eye-slash ms-1 text-muted" id="kpiWageEyeToggle" style="cursor: pointer;" onclick="App.toggleWageVisibility()" title="Show/Hide"></i></div>
                                     <h2 class="text-danger" id="kpi-total-wage">******</h2>
-                                    <div class="small text-muted mt-1 pt-1">Base Wage (Hidden)</div>
+                                    <div class="small text-muted mt-1 pt-1" id="kpi-wage-subtitle">Base Wage (Hidden)</div>
                                 </div>
                                 <div class="icon-circle bg-danger-soft text-danger">
                                     <i class="fas fa-money-bill-wave"></i>
