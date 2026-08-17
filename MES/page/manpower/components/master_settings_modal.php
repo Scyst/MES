@@ -42,7 +42,7 @@
                     
                     <!-- Central Raw Scans Tab -->
                       <div class="tab-pane fade h-100" id="v-pills-rawscans" role="tabpanel">
-                          <div class="card border-0 shadow-sm h-100 d-flex flex-column mt-3">
+                          <div class="card border-0 shadow-sm h-100 d-flex flex-column">
                               <div class="card-header bg-white border-bottom py-3">
                                   <div class="d-flex justify-content-between align-items-center mb-3">
                                       <div>
@@ -91,7 +91,7 @@
 
                       <!-- Shift Swap Audit Tab -->
                     <div class="tab-pane fade h-100" id="v-pills-swap" role="tabpanel">
-                        <div class="card border-0 shadow-sm h-100 d-flex flex-column mt-3">
+                        <div class="card border-0 shadow-sm h-100 d-flex flex-column">
                             <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                                 <div>
                                     <h5 class="m-0 fw-bold text-dark"><i class="fas fa-exchange-alt text-warning me-2"></i>Shift Swap Audit</h5>
