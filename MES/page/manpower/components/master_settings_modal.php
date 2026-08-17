@@ -59,7 +59,7 @@
                                       </button>
                                   </div>
                               </div>
-                              <div class="card-body p-0 flex-grow-1 overflow-auto bg-light" style="max-height: calc(100vh - 300px);">
+                              <div class="card-body p-0 flex-grow-1 overflow-auto bg-light">
                                   <table class="table table-hover align-middle mb-0 bg-white">
                                       <thead class="bg-light text-secondary small text-uppercase" style="position: sticky; top: 0; z-index: 1;">
                                           <tr>
