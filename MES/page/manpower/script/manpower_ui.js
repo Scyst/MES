@@ -3760,8 +3760,7 @@ const Actions = {
             if (this._isSalaryRevealed) {
                 rateHtml = rate;
             } else {
-                const encoded = btoa(item.hourly_rate.toString()).substring(0, 6).toUpperCase();
-                rateHtml = `<span class="font-monospace text-muted" style="user-select: none;" title="Locked">[SYS-${encoded}]</span>`;
+                rateHtml = `<span style="filter: blur(4px); user-select: none;">***</span>`;
             }
             const typeClass = item.rate_type === 'DAILY' ? 'success' : (item.rate_type === 'MONTHLY_NO_OT' ? 'warning' : 'primary');
             tbody.innerHTML += `<tr>
@@ -3797,19 +3796,45 @@ const Actions = {
             document.getElementById('salaryLockIcon').className = 'fas fa-lock ms-1 text-danger';
             this.renderMappingTable(this._mappingCache);
         } else {
-            const { value: password } = await Swal.fire({
-                title: 'Enter Password',
+            const { value: pin } = await Swal.fire({
+                title: 'Verify Identity',
                 input: 'password',
-                inputPlaceholder: 'Admin password (e.g. admin)',
+                inputLabel: 'Please enter your login password to view sensitive wage data',
+                inputPlaceholder: 'Enter your password...',
                 showCancelButton: true,
-                target: document.getElementById('masterSettingsModal') || document.body
+                confirmButtonText: 'Unlock',
+                target: document.getElementById('masterSettingsModal') || document.body,
+                inputValidator: (value) => {
+                    if (!value) return 'You need to write something!';
+                }
             });
-            if (password === 'admin' || password === '1234') {
-                this._isSalaryRevealed = true;
-                document.getElementById('salaryLockIcon').className = 'fas fa-unlock ms-1 text-success';
-                this.renderMappingTable(this._mappingCache);
-            } else if (password) {
-                Swal.fire('Error', 'Incorrect password', 'error');
+
+            if (pin) {
+                try {
+                    Swal.fire({ title: 'Verifying...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    
+                    const formData = new URLSearchParams();
+                    formData.append('action', 'verify_password');
+                    formData.append('password', pin);
+
+                    const response = await fetch('api/api_employee_grading.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: formData.toString()
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        this._isSalaryRevealed = true;
+                        document.getElementById('salaryLockIcon').className = 'fas fa-unlock ms-1 text-success';
+                        this.renderMappingTable(this._mappingCache);
+                        Swal.close();
+                    } else {
+                        Swal.fire('Error', result.message || 'Incorrect password', 'error');
+                    }
+                } catch (err) {
+                    Swal.fire('Error', 'Failed to connect to server', 'error');
+                }
             }
         }
     },
