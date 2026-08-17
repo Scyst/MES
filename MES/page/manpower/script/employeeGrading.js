@@ -6,7 +6,8 @@ const App = {
     state: {
         employees: [],
         lines: new Set(),
-        currentSort: { col: 'emp_id', dir: 'asc' }
+        currentSort: { col: 'emp_id', dir: 'asc' },
+        isWageVisible: false // Hide wage data by default
     },
 
     init: async function() {
@@ -165,7 +166,9 @@ const App = {
                         <span class="small text-muted">| Ratio: <strong class="${parseFloat(emp.ratio||0) >= 1 ? 'text-primary' : 'text-danger'}">${parseFloat(emp.ratio||0).toFixed(2)}</strong></span>
                     </td>
                     <td>
-                        <div class="fw-bold text-secondary">${parseFloat(emp.total_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</div>
+                        <div class="fw-bold ${this.state.isWageVisible ? 'text-secondary' : 'text-muted opacity-50'}">
+                            ${this.state.isWageVisible ? parseFloat(emp.total_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ฿' : '******'}
+                        </div>
                     </td>
                     <td>
                         <div class="d-flex align-items-center justify-content-center">
@@ -207,6 +210,63 @@ const App = {
         document.getElementById('kpi-avg-ratio').innerText = avgRatio.toFixed(2);
         
         document.getElementById('kpi-total-income').innerText = totalIncome.toLocaleString(undefined, {maximumFractionDigits: 0});
+        
+        // Update Total Wage KPI
+        const totalWageEl = document.getElementById('kpi-total-wage');
+        if (totalWageEl) {
+            totalWageEl.innerText = this.state.isWageVisible 
+                ? totalWage.toLocaleString(undefined, {maximumFractionDigits: 0}) 
+                : '******';
+        }
+        
+        // Update Eye Icons
+        const icons = ['kpiWageEyeToggle', 'thWageEyeToggle'];
+        icons.forEach(id => {
+            const icon = document.getElementById(id);
+            if (icon) {
+                icon.className = this.state.isWageVisible 
+                    ? 'fas fa-eye ms-2 text-primary' 
+                    : 'fas fa-eye-slash ms-2 text-muted';
+            }
+        });
+    },
+
+    toggleWageVisibility: async function() {
+        if (this.state.isWageVisible) {
+            this.state.isWageVisible = false;
+            this.renderTable();
+            return;
+        }
+
+        // Prompt for Passcode
+        const { value: pin } = await Swal.fire({
+            title: 'Enter Passcode',
+            input: 'password',
+            inputLabel: 'Passcode is required to view sensitive wage data',
+            inputPlaceholder: 'Enter PIN...',
+            showCancelButton: true,
+            confirmButtonText: 'Unlock',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'You need to write something!'
+                }
+            }
+        });
+
+        if (pin) {
+            // TODO: In a real app, this should be verified against an API or env variable
+            // For now, hardcoded simple PIN '1234' for Executive view
+            if (pin === '1234') {
+                this.state.isWageVisible = true;
+                this.renderTable();
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Access Denied',
+                    text: 'Incorrect passcode.'
+                });
+            }
+        }
     },
 
     getGradeClass: function(grade) {

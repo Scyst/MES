@@ -136,7 +136,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
 
             <!-- KPI Row -->
             <div class="row g-2 mb-3"> 
-                <div class="col-xl-3 col-md-6">
+                <div class="col-xl col-md-6">
                     <div class="card shadow-sm kpi-card border-primary h-100">
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center h-100">
@@ -153,7 +153,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     </div>
                 </div>
                 
-                <div class="col-xl-3 col-md-6">
+                <div class="col-xl col-md-6">
                     <div class="card shadow-sm kpi-card border-success h-100">
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center h-100">
@@ -170,7 +170,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     </div>
                 </div>
                 
-                <div class="col-xl-3 col-md-6">
+                <div class="col-xl col-md-6">
                     <div class="card shadow-sm kpi-card border-info h-100">
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center h-100">
@@ -187,7 +187,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     </div>
                 </div>
                 
-                <div class="col-xl-3 col-md-6">
+                <div class="col-xl col-md-6">
                     <div class="card shadow-sm kpi-card border-warning h-100">
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center h-100">
@@ -198,6 +198,23 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                                 </div>
                                 <div class="icon-circle bg-warning-soft">
                                     <i class="fas fa-coins"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl col-md-6">
+                    <div class="card shadow-sm kpi-card border-danger h-100">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center h-100">
+                                <div>
+                                    <div class="text-uppercase text-danger small fw-bold mb-1">Total Wage <i class="fas fa-eye-slash ms-1 text-muted" id="kpiWageEyeToggle" style="cursor: pointer;" onclick="App.toggleWageVisibility()" title="Show/Hide"></i></div>
+                                    <h2 class="text-danger" id="kpi-total-wage">******</h2>
+                                    <div class="small text-muted mt-1 pt-1">Base Wage (Hidden)</div>
+                                </div>
+                                <div class="icon-circle bg-danger-soft text-danger">
+                                    <i class="fas fa-money-bill-wave"></i>
                                 </div>
                             </div>
                         </div>
@@ -216,7 +233,11 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                                     <th style="width: 20%;" class="sortable" data-sort="name_th" role="button">Name & Department <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 10%;" class="sortable" data-sort="position" role="button">Position <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 13%;" class="sortable" data-sort="ratio" role="button">Income & Ratio <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 12%;" class="sortable" data-sort="total_wage" role="button">Total Wage <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 12%;" class="sortable" data-sort="total_wage" role="button">
+                                        Total Wage 
+                                        <i class="fas fa-eye-slash ms-2 text-muted" id="thWageEyeToggle" style="cursor: pointer;" onclick="event.stopPropagation(); App.toggleWageVisibility()" title="Show/Hide Wage"></i>
+                                        <i class="fas fa-sort text-muted ms-1"></i>
+                                    </th>
                                     <th style="width: 15%; text-align: center;">Executive Grade</th>
                                     <th style="width: 20%;">Notes</th>
                                 </tr>
