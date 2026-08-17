@@ -255,160 +255,261 @@ const App = {
     renderCharts: function(filtered) {
         if (!window.ApexCharts) return;
 
-        // Group data by Line
+        // --- Aggregate Data by Line ---
         const lineData = {};
         let grades = { A: 0, B: 0, C: 0, D: 0, Unassigned: 0 };
-        
+        let totalIncome = 0, totalWage = 0;
+
         filtered.forEach(emp => {
             const line = emp.line || 'Unknown';
             if (!lineData[line]) {
-                lineData[line] = { dl: 0, ot: 0, wage: 0, income: 0, count: 0 };
+                lineData[line] = { dl: 0, ot: 0, wage: 0, income: 0, count: 0, grades: { A:0, B:0, C:0, D:0 } };
             }
-            lineData[line].dl += parseFloat(emp.dl_wage) || 0;
-            lineData[line].ot += parseFloat(emp.ot_wage) || 0;
-            lineData[line].wage += parseFloat(emp.total_wage) || 0;
-            lineData[line].income += parseFloat(emp.income_per_head) || 0;
+            lineData[line].dl    += parseFloat(emp.dl_wage) || 0;
+            lineData[line].ot    += parseFloat(emp.ot_wage) || 0;
+            lineData[line].wage  += parseFloat(emp.total_wage) || 0;
+            lineData[line].income+= parseFloat(emp.income_per_head) || 0;
             lineData[line].count += 1;
-
+            totalIncome += parseFloat(emp.income_per_head) || 0;
+            totalWage   += parseFloat(emp.total_wage) || 0;
             if (emp.grade && ['A','B','C','D'].includes(emp.grade)) {
                 grades[emp.grade]++;
+                lineData[line].grades[emp.grade]++;
             } else {
                 grades.Unassigned++;
             }
         });
 
-        const lines = Object.keys(lineData).sort();
-        const dlData = lines.map(l => parseFloat((lineData[l].dl / lineData[l].count).toFixed(2)));
-        const otData = lines.map(l => parseFloat((lineData[l].ot / lineData[l].count).toFixed(2)));
-        const avgWageData = lines.map(l => parseFloat((lineData[l].wage / lineData[l].count).toFixed(2)));
-        const avgIncomeData = lines.map(l => parseFloat((lineData[l].income / lineData[l].count).toFixed(2)));
-        const ratioData = lines.map(l => {
-            const wage = lineData[l].wage;
-            return wage > 0 ? parseFloat((lineData[l].income / wage).toFixed(2)) : 0;
-        });
+        const lines        = Object.keys(lineData).sort();
+        const dlData       = lines.map(l => parseFloat((lineData[l].dl   / lineData[l].count).toFixed(2)));
+        const otData       = lines.map(l => parseFloat((lineData[l].ot   / lineData[l].count).toFixed(2)));
+        const avgWageData  = lines.map(l => parseFloat((lineData[l].wage / lineData[l].count).toFixed(2)));
+        const avgIncomeData= lines.map(l => parseFloat((lineData[l].income/lineData[l].count).toFixed(2)));
+        const ratioData    = lines.map(l => lineData[l].wage > 0 ? parseFloat((lineData[l].income / lineData[l].wage).toFixed(2)) : 0);
 
-        // Destroy existing charts
+        // --- Update Analytics Modal Header Stats ---
+        const avgRatioAll = totalWage > 0 ? (totalIncome / totalWage) : 0;
+        const isVisible   = this.state.isWageVisible;
+        const periodType  = document.querySelector('input[name="periodTypeToggle"]:checked')?.value;
+        const periodVal   = periodType === 'daily'
+            ? document.getElementById('filterPeriodDate')?.value
+            : document.getElementById('filterPeriodMonth')?.value;
+
+        const setEl = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+        setEl('analytics-period-label', `Period: ${periodVal || '—'} · ${filtered.length} employees`);
+        setEl('analytics-stat-emp',     filtered.length);
+        setEl('analytics-stat-ratio',   avgRatioAll.toFixed(2) + 'x');
+        setEl('analytics-stat-income',  (totalIncome/1000).toLocaleString(undefined,{maximumFractionDigits:1}) + 'k ฿');
+        setEl('analytics-stat-wage',    isVisible ? (totalWage/1000).toLocaleString(undefined,{maximumFractionDigits:1}) + 'k ฿' : '🔒 Hidden');
+
+        // Update wage tab banner
+        const totalGraded = grades.A + grades.B + grades.C + grades.D;
+        setEl('analytics-grade-total-badge', `${totalGraded} graded / ${filtered.length} total`);
+        setEl('wage-tab-total-badge', isVisible ? `Total: ${totalWage.toLocaleString(undefined,{maximumFractionDigits:0})} ฿` : '🔒 Locked');
+        const wageUnlockBanner = document.getElementById('wage-unlock-banner');
+        if (wageUnlockBanner) wageUnlockBanner.classList.toggle('d-none', isVisible);
+
+        // --- Destroy Old Charts ---
         if (this.charts) {
             Object.values(this.charts).forEach(c => c && c.destroy());
         }
         this.charts = {};
 
-        const isVisible = this.state.isWageVisible;
-
-        // Toggle Overlays for sensitive charts
-        const sensitiveOverlays = ['overlay-wage-breakdown', 'overlay-profitability', 'overlay-performance'];
+        // --- Toggle Overlays ---
+        const sensitiveOverlays = ['overlay-wage-breakdown', 'overlay-profitability', 'overlay-performance', 'overlay-ot-ratio'];
         sensitiveOverlays.forEach(id => {
             const el = document.getElementById(id);
-            if (el) {
-                if (isVisible) {
-                    el.classList.add('d-none');
-                } else {
-                    el.classList.remove('d-none');
-                }
-            }
+            if (el) el.classList.toggle('d-none', isVisible);
         });
 
-        // 1. Labor Cost Breakdown (Stacked Bar)
-        const wageBreakdownOptions = {
-            series: [
-                { name: 'Base Wage (DL)', data: isVisible ? dlData : dlData.map(()=>0) }, 
-                { name: 'Overtime (OT)', data: isVisible ? otData : otData.map(()=>0) }
-            ],
-            chart: { type: 'bar', height: 250, stacked: true, toolbar: { show: false } },
-            colors: ['#4e73df', '#f6c23e'],
-            xaxis: { categories: lines },
-            yaxis: { labels: { formatter: (val) => isVisible ? val.toLocaleString() + ' ฿' : '***' } },
-            dataLabels: { enabled: false },
-            tooltip: { y: { formatter: (val) => isVisible ? parseFloat(val).toLocaleString() + ' ฿' : 'Hidden' } }
-        };
-        this.charts.wageBreakdown = new ApexCharts(document.querySelector("#chart-wage-breakdown"), wageBreakdownOptions);
-        this.charts.wageBreakdown.render();
-
-        // 2. Profitability Ratio (Combo)
-        const profitabilityOptions = {
-            series: [
-                { name: 'Avg Income', type: 'column', data: avgIncomeData },
-                { name: 'Avg Wage', type: 'column', data: isVisible ? avgWageData : avgWageData.map(()=>0) },
-                { name: 'Ratio', type: 'line', data: isVisible ? ratioData : ratioData.map(()=>0) }
-            ],
-            chart: { height: 250, type: 'line', toolbar: { show: false } },
-            stroke: { width: [0, 0, 3] },
-            colors: ['#1cc88a', '#e74a3b', '#36b9cc'],
-            xaxis: { categories: lines },
-            yaxis: [
-                { seriesName: 'Avg Income', labels: { formatter: (val) => val.toLocaleString() + ' ฿' } },
-                { seriesName: 'Avg Wage', show: false },
-                { opposite: true, seriesName: 'Ratio', title: { text: 'Ratio' } }
-            ],
-            dataLabels: { enabled: false },
-            tooltip: {
-                shared: true,
-                intersect: false,
-                y: {
-                    formatter: function (y, { seriesIndex }) {
-                        if (typeof y !== "undefined") {
-                            if (seriesIndex === 0) return y.toLocaleString() + ' ฿';
-                            if (!isVisible) return 'Hidden';
-                            if (seriesIndex === 1) return y.toLocaleString() + ' ฿';
-                            if (seriesIndex === 2) return y;
-                        }
-                        return y;
+        // ── Chart 1: Grade Distribution (Donut) ──────────────────────────────
+        const gradeColors = ['#1cc88a','#4e73df','#f6c23e','#e74a3b','#adb5bd'];
+        this.charts.gradeDist = new ApexCharts(document.querySelector('#chart-grade-dist'), {
+            series: [grades.A, grades.B, grades.C, grades.D, grades.Unassigned],
+            labels: ['Grade A','Grade B','Grade C','Grade D','Unassigned'],
+            chart: { type: 'donut', height: 260, animations: { speed: 400 } },
+            colors: gradeColors,
+            dataLabels: {
+                enabled: true,
+                formatter: (val, opts) => {
+                    const count = opts.w.config.series[opts.seriesIndex];
+                    return count > 0 ? count : '';
+                },
+                style: { fontSize: '12px', fontWeight: '700' }
+            },
+            plotOptions: { pie: { donut: {
+                size: '65%',
+                labels: {
+                    show: true,
+                    total: {
+                        show: true,
+                        label: 'Total',
+                        fontSize: '13px',
+                        color: '#6c757d',
+                        formatter: () => filtered.length + ' emp'
                     }
                 }
-            }
-        };
-        this.charts.profitability = new ApexCharts(document.querySelector("#chart-profitability"), profitabilityOptions);
-        this.charts.profitability.render();
-
-        // 3. Grade Distribution
-        const gradeData = [grades.A, grades.B, grades.C, grades.D, grades.Unassigned];
-        const gradeOptions = {
-            series: gradeData,
-            labels: ['Grade A', 'Grade B', 'Grade C', 'Grade D', 'Unassigned'],
-            chart: { type: 'donut', height: 250 },
-            colors: ['#1cc88a', '#4e73df', '#f6c23e', '#e74a3b', '#858796'],
-            dataLabels: { enabled: true, formatter: (val, opts) => opts.w.config.series[opts.seriesIndex] },
-            plotOptions: { pie: { donut: { size: '60%' } } }
-        };
-        this.charts.gradeDist = new ApexCharts(document.querySelector("#chart-grade-dist"), gradeOptions);
+            }}},
+            legend: { position: 'bottom', fontSize: '12px' },
+            tooltip: { y: { formatter: val => val + ' employees' } }
+        });
         this.charts.gradeDist.render();
 
-        // 4. Performance Matrix (Scatter)
+        // ── Chart 2: Grade by Line (Heatmap) ─────────────────────────────────
+        const gradeLabels = ['A','B','C','D'];
+        const heatmapSeries = gradeLabels.map(g => ({
+            name: `Grade ${g}`,
+            data: lines.map(l => ({ x: l, y: lineData[l].grades[g] || 0 }))
+        }));
+        this.charts.gradeHeatmap = new ApexCharts(document.querySelector('#chart-grade-heatmap'), {
+            series: heatmapSeries,
+            chart: { type: 'heatmap', height: 260, toolbar: { show: false }, animations: { speed: 400 } },
+            colors: ['#1cc88a','#4e73df','#f6c23e','#e74a3b'],
+            dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: '700' } },
+            xaxis: { labels: { style: { fontSize: '11px' } } },
+            tooltip: { y: { formatter: val => val + ' employees' } },
+            legend: { position: 'top' }
+        });
+        this.charts.gradeHeatmap.render();
+
+        // ── Chart 3: Profitability Combo (Income vs Wage + Ratio line) ────────
+        this.charts.profitability = new ApexCharts(document.querySelector('#chart-profitability'), {
+            series: [
+                { name: 'Avg Income',   type: 'column', data: avgIncomeData },
+                { name: 'Avg Wage',     type: 'column', data: isVisible ? avgWageData : avgWageData.map(() => 0) },
+                { name: 'Ratio (×)',    type: 'line',   data: isVisible ? ratioData   : ratioData.map(() => 0) }
+            ],
+            chart: { height: 240, type: 'line', toolbar: { show: false }, animations: { speed: 400 } },
+            stroke: { width: [0, 0, 3], curve: 'smooth' },
+            colors: ['#1cc88a','#e74a3b','#4e73df'],
+            xaxis: { categories: lines, labels: { style: { fontSize: '11px' } } },
+            yaxis: [
+                { seriesName: 'Avg Income', labels: { formatter: val => (val/1000).toFixed(1)+'k' }, title: { text: 'THB' } },
+                { seriesName: 'Avg Wage',  show: false },
+                { opposite: true, seriesName: 'Ratio (×)', title: { text: 'Ratio' }, min: 0, labels: { formatter: val => val.toFixed(1)+'x' } }
+            ],
+            annotations: {
+                yaxis: [{ y: 1, borderColor: '#e74a3b', strokeDashArray: 4, borderWidth: 2,
+                    label: { text: 'Breakeven (1.0x)', style: { background: '#ffe0e0', color: '#dc3545', fontSize: '10px' }, position: 'right' }
+                }]
+            },
+            dataLabels: { enabled: false },
+            plotOptions: { bar: { columnWidth: '55%', borderRadius: 3 } },
+            tooltip: {
+                shared: true, intersect: false,
+                y: { formatter: (y, { seriesIndex }) => {
+                    if (typeof y !== 'undefined') {
+                        if (seriesIndex === 0) return y.toLocaleString() + ' ฿';
+                        if (seriesIndex === 1) return isVisible ? y.toLocaleString() + ' ฿' : '🔒 Hidden';
+                        if (seriesIndex === 2) return isVisible ? y.toFixed(2) + 'x' : '🔒 Hidden';
+                    }
+                    return y;
+                }}
+            },
+            fill: { type: ['gradient','gradient','solid'], gradient: { shade:'light', type:'vertical', opacityFrom:0.85, opacityTo:0.4 } }
+        });
+        this.charts.profitability.render();
+
+        // ── Chart 4: Top 5 Performers ─────────────────────────────────────────
+        const sorted        = [...filtered].sort((a,b) => (parseFloat(b.income_per_head)||0) - (parseFloat(a.income_per_head)||0));
+        const top5          = sorted.slice(0, 5);
+        const bottom5       = sorted.slice(-5).reverse();
+        const shortName     = (name) => name.length > 18 ? name.substring(0,17)+'…' : name;
+
+        this.charts.topPerformers = new ApexCharts(document.querySelector('#chart-top-performers'), {
+            series: [{ name: 'Income', data: top5.map(e => parseFloat(e.income_per_head)||0) }],
+            chart: { type: 'bar', height: 260, toolbar: { show: false }, animations: { speed: 400 } },
+            plotOptions: { bar: { horizontal: true, borderRadius: 4, dataLabels: { position: 'right' } } },
+            colors: ['#1cc88a'],
+            fill: { type: 'gradient', gradient: { gradientToColors: ['#0a9b5e'], shade: 'light', type:'horizontal', stops:[0,100] } },
+            dataLabels: { enabled: true, formatter: val => (val/1000).toFixed(1)+'k ฿', offsetX: 4, style: { fontSize:'11px', colors:['#333'] } },
+            xaxis: { categories: top5.map(e => shortName(e.name_th)), labels: { formatter: val => (val/1000).toFixed(0)+'k' } },
+            tooltip: { y: { formatter: val => val.toLocaleString() + ' ฿' } },
+            grid: { borderColor: '#f0f0f0' }
+        });
+        this.charts.topPerformers.render();
+
+        // ── Chart 5: Bottom 5 Performers ─────────────────────────────────────
+        this.charts.bottomPerformers = new ApexCharts(document.querySelector('#chart-bottom-performers'), {
+            series: [{ name: 'Income', data: bottom5.map(e => parseFloat(e.income_per_head)||0) }],
+            chart: { type: 'bar', height: 260, toolbar: { show: false }, animations: { speed: 400 } },
+            plotOptions: { bar: { horizontal: true, borderRadius: 4, dataLabels: { position: 'right' } } },
+            colors: ['#e74a3b'],
+            fill: { type: 'gradient', gradient: { gradientToColors: ['#c0392b'], shade: 'light', type:'horizontal', stops:[0,100] } },
+            dataLabels: { enabled: true, formatter: val => (val/1000).toFixed(1)+'k ฿', offsetX: 4, style: { fontSize:'11px', colors:['#333'] } },
+            xaxis: { categories: bottom5.map(e => shortName(e.name_th)), labels: { formatter: val => (val/1000).toFixed(0)+'k' } },
+            tooltip: { y: { formatter: val => val.toLocaleString() + ' ฿' } },
+            grid: { borderColor: '#f0f0f0' }
+        });
+        this.charts.bottomPerformers.render();
+
+        // ── Chart 6: Performance Matrix (Scatter) ────────────────────────────
+        const avgWageAll   = filtered.length > 0 ? totalWage / filtered.length : 0;
+        const avgIncomeAll = filtered.length > 0 ? totalIncome / filtered.length : 0;
         const scatterSeries = lines.map(line => {
             const data = filtered.filter(e => e.line === line && parseFloat(e.total_wage) > 0).map(e => ({
                 x: isVisible ? parseFloat(e.total_wage) : 0,
                 y: parseFloat(e.income_per_head) || 0,
                 name: e.name_th
             }));
-            return { name: line, data: data };
+            return { name: line, data };
         }).filter(s => s.data.length > 0);
 
-        const perfOptions = {
+        this.charts.performance = new ApexCharts(document.querySelector('#chart-performance'), {
             series: scatterSeries,
-            chart: { type: 'scatter', height: 250, zoom: { enabled: true, type: 'xy' }, toolbar: { show: false } },
-            xaxis: { 
-                type: 'numeric',
-                tickAmount: 6,
-                title: { text: 'Total Wage (THB)' }, 
-                labels: { formatter: (val) => isVisible ? parseFloat(val).toLocaleString() : '***' } 
+            chart: { type: 'scatter', height: 260, zoom: { enabled: true, type: 'xy' }, toolbar: { show: false }, animations: { speed: 400 } },
+            xaxis: {
+                type: 'numeric', tickAmount: 6,
+                title: { text: 'Total Wage (THB)' },
+                labels: { formatter: val => isVisible ? (parseFloat(val)/1000).toFixed(0)+'k' : '***' }
             },
-            yaxis: { 
-                title: { text: 'Income Generated (THB)' }, 
-                labels: { formatter: (val) => parseFloat(val).toLocaleString() } 
+            yaxis: {
+                title: { text: 'Income (THB)' },
+                labels: { formatter: val => (parseFloat(val)/1000).toFixed(0)+'k' }
             },
+            annotations: isVisible ? {
+                xaxis: [{ x: avgWageAll, borderColor:'#6c757d', strokeDashArray:4, label:{ text:'Avg Wage', style:{fontSize:'10px'} } }],
+                yaxis: [{ y: avgIncomeAll, borderColor:'#6c757d', strokeDashArray:4, label:{ text:'Avg Income', style:{fontSize:'10px'} } }]
+            } : {},
+            markers: { size: 6, hover: { sizeOffset: 2 } },
             tooltip: {
-                custom: function({series, seriesIndex, dataPointIndex, w}) {
-                    const data = w.config.series[seriesIndex].data[dataPointIndex];
+                custom: ({ seriesIndex, dataPointIndex, w }) => {
+                    const d = w.config.series[seriesIndex].data[dataPointIndex];
                     return `<div class="p-2 bg-white shadow-sm rounded border">
-                        <strong class="text-primary">${data.name}</strong><br/>
-                        <span class="text-success">Income: ${data.y.toLocaleString()} ฿</span><br/>
-                        <span class="text-danger">Wage: ${isVisible ? data.x.toLocaleString() + ' ฿' : 'Hidden'}</span>
+                        <strong class="text-primary">${d.name}</strong><br/>
+                        <span class="text-success">Income: ${d.y.toLocaleString()} ฿</span><br/>
+                        <span class="text-danger">Wage: ${isVisible ? d.x.toLocaleString() + ' ฿' : '🔒 Hidden'}</span>
                     </div>`;
                 }
             }
-        };
-        this.charts.performance = new ApexCharts(document.querySelector("#chart-performance"), perfOptions);
+        });
         this.charts.performance.render();
+
+        // ── Chart 7: OT Ratio per Line (Radial / Pie) ────────────────────────
+        const otPct = lines.map(l => lineData[l].wage > 0 ? parseFloat(((lineData[l].ot / lineData[l].wage)*100).toFixed(1)) : 0);
+        this.charts.otRatio = new ApexCharts(document.querySelector('#chart-ot-ratio'), {
+            series: isVisible ? otPct : otPct.map(() => 0),
+            labels: lines,
+            chart: { type: 'radialBar', height: 270, toolbar: { show: false }, animations: { speed: 400 } },
+            plotOptions: { radialBar: {
+                offsetY: 0,
+                startAngle: -90, endAngle: 90,
+                hollow: { margin: 5, size: '40%' },
+                dataLabels: {
+                    name: { fontSize:'12px' },
+                    value: { fontSize:'13px', fontWeight:'700', formatter: val => isVisible ? val+'%' : '—' },
+                    total: { show: true, label:'Avg OT', formatter: () => {
+                        if (!isVisible) return '🔒';
+                        const avg = otPct.length > 0 ? (otPct.reduce((a,b)=>a+b,0)/otPct.length).toFixed(1) : 0;
+                        return avg+'%';
+                    }}
+                }
+            }},
+            colors: ['#f6c23e','#e74a3b','#4e73df','#1cc88a','#858796','#fd7e14'],
+            legend: { show: true, position: 'bottom' },
+            tooltip: { enabled: isVisible, y: { formatter: val => val+'% OT cost' } }
+        });
+        this.charts.otRatio.render();
     },
 
     toggleWageVisibility: async function() {
@@ -478,13 +579,12 @@ const App = {
         return `grade-${grade}`;
     },
 
-    updateGradeState: function(empId, selectElement) {
-        const newGrade = selectElement.value;
-        selectElement.className = `form-select form-select-sm mx-auto grade-select ${this.getGradeClass(newGrade)}`;
+    updateGradeState: function(empId, grade, selectElement) {
+        selectElement.className = `form-select form-select-sm mx-auto grade-select ${this.getGradeClass(grade)}`;
         
         const emp = this.state.employees.find(e => e.emp_id === empId);
         if (emp) {
-            emp.grade = newGrade;
+            emp.grade = grade;
         }
         
         // Minor re-render to update the distribution bar without resetting the inputs
