@@ -555,10 +555,13 @@ const App = {
             return;
         }
 
+        const modalEl = document.getElementById('analyticsModal');
+        const isModalOpen = modalEl && modalEl.classList.contains('show');
+
         // Prompt for Passcode
         const { value: pin } = await Swal.fire({
             title: 'Verify Identity',
-            target: document.getElementById('analyticsModal'),
+            target: isModalOpen ? modalEl : document.body,
             input: 'password',
             inputLabel: 'Please enter your login password to view sensitive wage data',
             inputPlaceholder: 'Enter your password...',
