@@ -556,16 +556,10 @@ try {
             break;
 
         case 'fetch_raw_central_scans':
-            $targetDate = $_GET['date'] ?? date('Y-m-d');
-            $apiStartDate = date('Y-m-d', strtotime('-1 day', strtotime($targetDate)));
-            $apiEndDate   = date('Y-m-d', strtotime('+1 day', strtotime($targetDate)));
+            $startDate = $_GET['start_date'] ?? date('Y-m-d');
+            $endDate = $_GET['end_date'] ?? date('Y-m-d', strtotime('+1 day', strtotime($startDate)));
             
-            // To be comprehensive, we can just fetch the requested date directly if they don't have night shift issues,
-            // but the original sync script fetches -1 and +1 days to cover night shifts crossing midnight.
-            // Let's stick to the target date itself and maybe +1 day to see the morning scan of a night shift.
-            $apiEndDate = date('Y-m-d', strtotime('+1 day', strtotime($targetDate)));
-            
-            $apiUrl = "https://oem.sncformer.com/oem-calendar/oem-web-link/api/api.php?router=/man-power-painting&sdate={$targetDate}&edate={$apiEndDate}";
+            $apiUrl = "https://oem.sncformer.com/oem-calendar/oem-web-link/api/api.php?router=/man-power-painting&sdate={$startDate}&edate={$endDate}";
             
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $apiUrl);

@@ -1466,12 +1466,12 @@ const Actions = {
     openMasterSettingsTab(tabId) {
         const modalEl = document.getElementById('masterSettingsModal');
         if (!modalEl) return;
-        
+
         let modal = bootstrap.Modal.getInstance(modalEl);
         if (!modal) {
             modal = new bootstrap.Modal(modalEl);
         }
-        
+
         // Only show if not already shown to avoid backdrop issues
         if (!modalEl.classList.contains('show')) {
             modal.show();
@@ -1490,7 +1490,7 @@ const Actions = {
         try {
             const res = await fetch(`api/api_master_data.php?action=read_team_settings`);
             const data = await res.json();
-            
+
             const tbody = document.getElementById('teamSettingsBody');
             if (data && data.success) {
                 if (data.data && data.data.length > 0) {
@@ -1516,7 +1516,7 @@ const Actions = {
         const tbody = document.getElementById('teamSettingsBody');
         const emptyMsg = tbody.querySelector('td.text-muted');
         if (emptyMsg) tbody.innerHTML = '';
-        
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>
@@ -1541,17 +1541,17 @@ const Actions = {
     async saveTeamSettings() {
         const rows = document.querySelectorAll('#teamSettingsBody tr');
         const settings = [];
-        
+
         let isValid = true;
         rows.forEach(tr => {
             const deptInput = tr.querySelector('.team-dept-input');
             const hcInput = tr.querySelector('.team-hc-input');
-            
+
             if (deptInput && hcInput) {
                 const dept = deptInput.value.trim();
                 const hc = hcInput.value.trim();
                 if (!dept) isValid = false;
-                
+
                 if (dept) {
                     settings.push({
                         department_api: dept,
@@ -1577,7 +1577,7 @@ const Actions = {
 
             const res = await fetch(`api/api_master_data.php`, { method: 'POST', body: fd });
             const result = await res.json();
-            
+
             if (result.success) {
                 UI.showToast("✅ Team Settings saved successfully!", "success");
                 bootstrap.Modal.getInstance(document.getElementById('teamSettingsModal')).hide();
@@ -1642,10 +1642,10 @@ const Actions = {
         const hcGroup = document.getElementById('filterHcGroup')?.value || 'ALL';
 
         if (this._structureCache.lines.length === 0) await this.initDropdowns();
-        
+
         const teamFilter = document.getElementById('filterDetailTeam');
         if (teamFilter && teamFilter.options.length <= 1) {
-            teamFilter.innerHTML = '<option value="">ทั้งหมด (All Teams)</option>' + 
+            teamFilter.innerHTML = '<option value="">ทั้งหมด (All Teams)</option>' +
                 this._structureCache.teams.map(t => `<option value="${t}">${t}</option>`).join('');
         }
         try {
@@ -1913,13 +1913,13 @@ const Actions = {
             const uid = row.emp_id;
             const logId = row.log_id || '0';
             const costVal = parseFloat(row.normal_cost || 0) + parseFloat(row.ot_cost || 0);
-            const costHtml = costVal > 0 ? `<span class="fw-bold ${costVal > 1000 ? 'text-primary' : 'text-dark'}">${costVal.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2})}</span>` : '<span class="text-muted">-</span>';
+            const costHtml = costVal > 0 ? `<span class="fw-bold ${costVal > 1000 ? 'text-primary' : 'text-dark'}">${costVal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>` : '<span class="text-muted">-</span>';
 
-            let inTimeDisplay = row.in_time ? row.in_time.substring(0,5) : '-';
-            let outTimeDisplay = row.out_time ? row.out_time.substring(0,5) : '-';
+            let inTimeDisplay = row.in_time ? row.in_time.substring(0, 5) : '-';
+            let outTimeDisplay = row.out_time ? row.out_time.substring(0, 5) : '-';
             let trClass = '';
             let needReviewHtml = '';
-            
+
             // เพิ่มการแจ้งเตือน "Need Manual Review" ถ้ามีสแกนเข้าแต่ไม่มีออก หรือมีออกแต่ไม่มีเข้า
             let isStillWorking = false;
             if (row.in_time && !row.out_time) {
@@ -1950,14 +1950,14 @@ const Actions = {
             const shiftDisplay = (row.shift_id == 1 || (!row.shift_id && row.default_shift_id == 1)) ? '<span class="badge bg-primary shadow-sm"><i class="fas fa-sun"></i> DAY</span>' : '<span class="badge bg-dark shadow-sm"><i class="fas fa-moon"></i> NIGHT</span>';
 
             const masterJson = encodeURIComponent(JSON.stringify(row));
-            
+
             const dFmt = (dStr) => {
                 if (!dStr) return '-';
                 const d = new Date(dStr);
                 return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear().toString().substr(-2)}`;
             };
 
-            const firstCellHtml = isHistoryMode 
+            const firstCellHtml = isHistoryMode
                 ? `<td class="text-center align-middle font-monospace text-primary fw-bold">${dFmt(row.log_date)}</td>`
                 : `<td class="text-center align-middle">
                         <input type="checkbox" class="form-check-input log-checkbox" value="${uid}" onchange="Actions.updateBatchSelectedCount()">
@@ -2083,7 +2083,7 @@ const Actions = {
         UI.showLoader();
         let successCount = 0;
         let failCount = 0;
-        
+
         for (const cb of checkboxes) {
             const tr = cb.closest('tr');
             const logId = tr.dataset.logid;
@@ -2097,12 +2097,12 @@ const Actions = {
                     const json = await res.json();
                     if (json.success) successCount++;
                     else failCount++;
-                } catch(e) { failCount++; }
+                } catch (e) { failCount++; }
             }
         }
-        
+
         const date = document.getElementById('filterDate').value;
-        try { await API.triggerSync(date); } catch(e) {}
+        try { await API.triggerSync(date); } catch (e) { }
 
         UI.hideLoader();
         if (successCount > 0) UI.showToast(`✅ ล้างข้อมูลสำเร็จ ${successCount} รายการ`, "success");
@@ -2118,7 +2118,7 @@ const Actions = {
     async batchSwapShiftDetail() {
         const checkboxes = document.querySelectorAll('.log-checkbox:checked');
         if (checkboxes.length === 0) return UI.showToast("กรุณาเลือกพนักงาน", "warning");
-        
+
         const { value: newShiftId } = await Swal.fire({
             title: 'เปลี่ยนกะพนักงานที่เลือก',
             input: 'select',
@@ -2158,7 +2158,7 @@ const Actions = {
             if (json.success) UI.showToast("✅ เปลี่ยนกะสำเร็จ", "success");
             else UI.showToast("❌ ล้มเหลว: " + json.message, "danger");
         } catch (err) { UI.showToast("❌ เกิดข้อผิดพลาด", "danger"); }
-        
+
         UI.hideLoader();
         const checkAll = document.getElementById('checkAllLogs');
         if (checkAll) checkAll.checked = false;
@@ -2173,9 +2173,9 @@ const Actions = {
 
     openEditLogModal(masterJsonString) {
         const data = JSON.parse(decodeURIComponent(masterJsonString));
-        
+
         const createOptions = (items, selectedVal) => items.map(val => `<option value="${val}" ${val == selectedVal ? 'selected' : ''}>${val}</option>`).join('');
-        
+
         document.getElementById('editLogLine').innerHTML = createOptions(this._structureCache.lines, data.actual_line || data.line);
         document.getElementById('editLogTeam').innerHTML = '<option value="-">-</option>' + createOptions(this._structureCache.teams, data.actual_team || data.team_group);
 
@@ -2184,8 +2184,8 @@ const Actions = {
         document.getElementById('editEmpName').value = data.name_th + ' (' + data.emp_id + ')';
         document.getElementById('editStatus').value = data.status || 'PRESENT';
         document.getElementById('editLogShift').value = data.shift_id || data.default_shift_id || '1';
-        
-        const formatTime = (t) => t ? t.substring(0,5) : '';
+
+        const formatTime = (t) => t ? t.substring(0, 5) : '';
         document.getElementById('editScanInTime').value = formatTime(data.in_time);
         document.getElementById('editScanOutTime').value = formatTime(data.out_time);
         document.getElementById('editRemark').value = data.remark || '';
@@ -2198,7 +2198,7 @@ const Actions = {
         const logId = document.getElementById('editLogId').value;
         const empId = document.getElementById('editEmpIdHidden').value;
         const dateStr = document.getElementById('filterDate').value;
-        
+
         const timeIn = document.getElementById('editScanInTime').value;
         const timeOut = document.getElementById('editScanOutTime').value;
 
@@ -2238,7 +2238,7 @@ const Actions = {
                 body: JSON.stringify(payload)
             });
             const json = await res.json();
-            
+
             if (json.success) {
                 bootstrap.Modal.getInstance(document.getElementById('editLogModal')).hide();
                 UI.showToast("บันทึกสำเร็จ", "success");
@@ -2283,7 +2283,7 @@ const Actions = {
         if (!input) return;
 
         let debounceTimer;
-        
+
         const filterFn = () => {
             clearTimeout(debounceTimer);
             const searchTerm = input.value.toLowerCase().trim();
@@ -2296,12 +2296,12 @@ const Actions = {
                     rows.forEach(row => {
                         const text = row.innerText.toLowerCase();
                         const rowTeam = (row.dataset.team || '').toLowerCase();
-                        
+
                         const isMatchSearch = searchTerm === '' || text.includes(searchTerm) || text.includes('loading');
                         const isMatchTeam = teamTerm === '' || rowTeam === teamTerm || text.includes('loading');
-                        
+
                         const isMatch = isMatchSearch && isMatchTeam;
-                        
+
                         if (isMatch) {
                             if (row.style.display === 'none') {
                                 row.style.display = '';
@@ -2471,12 +2471,12 @@ const Actions = {
             Swal.fire('Warning', 'Please select at least one record to swap.', 'warning');
             return;
         }
-        
+
         const logs = Array.from(checkboxes).map(cb => ({
             log_id: cb.value,
             new_shift_id: cb.getAttribute('data-new-shift-id')
         }));
-        
+
         const confirmResult = await Swal.fire({
             title: "Batch Shift Swap",
             html: `Are you sure you want to change shifts for <b>${logs.length}</b> records?<br><br>
@@ -2592,7 +2592,7 @@ const Actions = {
                 tbody.innerHTML = json.data.map(row => {
                     const isDay = row.shift_id == 1;
                     const shiftHtml = isDay ? `<span class="badge bg-primary shadow-sm">DAY</span>` : `<span class="badge bg-dark shadow-sm">NIGHT</span>`;
-                    
+
                     let detectMsg;
                     if (row.detect_type === 'DAY_ABNORMAL_SCAN') {
                         detectMsg = '☀️ เวลาสแกนกะเช้าผิดปกติ (อาจเป็นกะดึก)';
@@ -2607,7 +2607,7 @@ const Actions = {
                     } else {
                         detectMsg = '⚠️ เวลาสแกนผิดปกติ';
                     }
-                    
+
                     const btnLabel = isDay ? '🔁 สลับเป็นกะดึก' : '🔁 สลับเป็นกะเช้า';
                     const newShiftId = isDay ? 2 : 1;
                     const newShiftName = isDay ? 'NIGHT' : 'DAY';
@@ -2636,25 +2636,27 @@ const Actions = {
     },
 
     _rawScansData: [],
-    
+
     openRawScansTab() {
         this.openMasterSettingsTab('v-pills-rawscans-tab');
-        if (!document.getElementById('rawScanDate').value) {
-            document.getElementById('rawScanDate').value = new Date().toISOString().split('T')[0];
+        if (!document.getElementById('rawScanStartDate').value) {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('rawScanStartDate').value = today;
+            document.getElementById('rawScanEndDate').value = today;
         }
     },
-    
+
     async fetchRawCentralScans() {
         const targetDate = document.getElementById('rawScanDate').value;
         if (!targetDate) return Swal.fire('Warning', 'Please select a date', 'warning');
-        
+
         const tbody = document.getElementById('rawScansBody');
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div><br><small class="text-muted mt-2 d-block">Fetching raw data from central API...</small></td></tr>`;
-        
+
         try {
             const res = await fetch(`api/api_daily_operations.php?action=fetch_raw_central_scans&date=${targetDate}`);
             const json = await res.json();
-            
+
             if (json.success) {
                 this._rawScansData = json.data;
                 this.renderRawScans();
@@ -2666,30 +2668,30 @@ const Actions = {
             tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error connecting to server</td></tr>`;
         }
     },
-    
+
     filterRawScans() {
         this.renderRawScans();
     },
-    
+
     renderRawScans() {
         const tbody = document.getElementById('rawScansBody');
         const searchTerm = (document.getElementById('rawScanSearch').value || '').toLowerCase();
-        
+
         const filtered = this._rawScansData.filter(row => {
             const empId = (row.EMPID || '').toLowerCase();
             const name = (row.NAME || '').toLowerCase();
             return empId.includes(searchTerm) || name.includes(searchTerm);
         });
-        
+
         if (filtered.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No records found for this date</td></tr>`;
             return;
         }
-        
+
         tbody.innerHTML = filtered.map(row => {
             const timeInOut = row.TIMEINOUT ? row.TIMEINOUT.substring(11, 19) : '-';
             const logDate = row.TIMEINOUT ? row.TIMEINOUT.substring(0, 10) : '-';
-            
+
             return `<tr>
                 <td class="ps-4">
                     <span class="fw-bold text-primary font-monospace">${timeInOut}</span>
@@ -2734,7 +2736,7 @@ const Actions = {
 
             if (json.success) {
                 this._employeeCache = json.data;
-                
+
                 // Populate Team Filter with unique hc_group values
                 const teamFilter = document.getElementById('empFilterTeam');
                 if (teamFilter && teamFilter.options.length <= 1) {
@@ -3010,7 +3012,7 @@ const Actions = {
         // Page numbers
         let startPage = Math.max(1, currentPage - 2);
         let endPage = Math.min(totalPages, currentPage + 2);
-        
+
         if (startPage > 1) {
             pagination.innerHTML += `<li class="page-item"><button class="page-link" onclick="Actions.changeEmpPage(1)">1</button></li>`;
             if (startPage > 2) pagination.innerHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
@@ -3730,7 +3732,7 @@ const Actions = {
     renderMappingTable(list) {
         const tbody = document.getElementById('mappingBody'); tbody.innerHTML = '';
         list.forEach((item, index) => {
-            const rate = parseFloat(item.hourly_rate || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const rate = parseFloat(item.hourly_rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const rateHtml = this._isSalaryRevealed ? rate : `<span style="filter: blur(4px); user-select: none;">***</span>`;
             const typeClass = item.rate_type === 'DAILY' ? 'success' : (item.rate_type === 'MONTHLY_NO_OT' ? 'warning' : 'primary');
             tbody.innerHTML += `<tr>
@@ -3788,10 +3790,10 @@ const Actions = {
             Swal.fire('Warning', 'No data to export', 'warning');
             return;
         }
-        
+
         const headers = ['Keyword (Position)', 'Map to Type', 'Base Rate (THB)', 'Rate Type'];
         let csvContent = "data:text/csv;charset=utf-8,﻿" + headers.join(",") + "\n";
-        
+
         this._mappingCache.forEach(row => {
             const rate = parseFloat(row.hourly_rate || 0).toFixed(2);
             const type = row.rate_type || 'MONTHLY';
@@ -3803,14 +3805,15 @@ const Actions = {
             ];
             csvContent += r.join(",") + "\n";
         });
-        
+
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
         link.setAttribute("download", `Salary_Settings_Export_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);    },
+        document.body.removeChild(link);
+    },
     editMapping(index) {
         if (!this._isSalaryRevealed) return Swal.fire('Locked', 'Please unlock salary view first by clicking the lock icon.', 'warning');
         const item = this._mappingCache[index];
@@ -3818,7 +3821,7 @@ const Actions = {
         document.getElementById('newMapType').value = item.category_name || '';
         document.getElementById('newMapRate').value = item.hourly_rate || '';
         document.getElementById('newMapRateType').value = item.rate_type || 'MONTHLY';
-        
+
         this._mappingCache.splice(index, 1);
         this.renderMappingTable(this._mappingCache);
         document.getElementById('newMapKeyword').focus();
@@ -4160,7 +4163,7 @@ const Actions = {
                 fetch(`api/api_daily_operations.php?action=integrated_analysis&startDate=${start}&endDate=${end}&line=${encodeURIComponent(line)}&hcGroup=${encodeURIComponent(hcGroup)}`),
                 fetch(`api/api_daily_operations.php?action=read_kpi_summary&startDate=${start}&endDate=${end}`)
             ]);
-            
+
             const result = await analysisRes.json();
             const kpiResult = await kpiRes.json();
 
@@ -4219,7 +4222,7 @@ const Actions = {
                         `;
                     }
                 }
-                
+
                 // Update new dedicated KPI cards
                 UI.animateNumber('ia_rpt_new_joiners', newJoin);
                 UI.animateNumber('ia_rpt_resigned', resign);
@@ -4305,7 +4308,7 @@ const Actions = {
             // Trigger download
             const image = canvas.toDataURL("image/jpeg", 0.9);
             const link = document.createElement('a');
-            
+
             const start = document.getElementById('ia_startDate').value;
             const end = document.getElementById('ia_endDate').value;
             link.download = `Manpower_Analysis_${start}_to_${end}.jpg`;

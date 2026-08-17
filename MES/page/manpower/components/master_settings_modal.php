@@ -28,10 +28,10 @@
                         <button class="nav-link text-start py-3 fw-bold rounded-3" id="v-pills-map-tab" data-bs-toggle="pill" data-bs-target="#v-pills-map" type="button" role="tab" onclick="Actions.openMappingManager()">
                             <i class="fas fa-tags me-2"></i> Position Mapping
                         </button>
-                        <button class="nav-link text-start py-3 fw-bold rounded-3 bg-opacity-10 text-warning" id="v-pills-swap-tab" data-bs-toggle="pill" data-bs-target="#v-pills-swap" type="button" role="tab" onclick="Actions.openShiftSwapAudit()">
+                        <button class="nav-link text-start py-3 fw-bold rounded-3" id="v-pills-swap-tab" data-bs-toggle="pill" data-bs-target="#v-pills-swap" type="button" role="tab" onclick="Actions.openShiftSwapAudit()">
                             <i class="fas fa-exchange-alt me-2"></i> Shift Swap Audit
                         </button>
-                          <button class="nav-link text-start py-3 fw-bold rounded-3 bg-opacity-10 text-primary" id="v-pills-rawscans-tab" data-bs-toggle="pill" data-bs-target="#v-pills-rawscans" type="button" role="tab" onclick="Actions.openRawScansTab()">
+                          <button class="nav-link text-start py-3 fw-bold rounded-3" id="v-pills-rawscans-tab" data-bs-toggle="pill" data-bs-target="#v-pills-rawscans" type="button" role="tab" onclick="Actions.openRawScansTab()">
                               <i class="fas fa-satellite-dish me-2"></i> Central Raw Scans
                           </button>
                     </div>
@@ -51,15 +51,19 @@
                                       </div>
                                   </div>
                                   <div class="row g-2 align-items-end">
-                                      <div class="col-md-3">
-                                          <label class="form-label small fw-bold text-secondary mb-1">Target Date</label>
-                                          <input type="date" class="form-control form-control-sm" id="rawScanDate">
+                                      <div class="col-md-4">
+                                          <label class="form-label small fw-bold text-secondary mb-1">Target Date Range</label>
+                                          <div class="input-group input-group-sm">
+                                              <input type="date" class="form-control" id="rawScanStartDate">
+                                              <span class="input-group-text bg-light border-start-0 border-end-0">to</span>
+                                              <input type="date" class="form-control" id="rawScanEndDate">
+                                          </div>
                                       </div>
                                       <div class="col-md-3">
                                           <label class="form-label small fw-bold text-secondary mb-1">Search EMP ID / Name</label>
                                           <input type="text" class="form-control form-control-sm" id="rawScanSearch" placeholder="Search..." onkeyup="Actions.filterRawScans()">
                                       </div>
-                                      <div class="col-md-6 text-end">
+                                      <div class="col-md-5 text-end">
                                           <button class="btn btn-sm btn-primary shadow-sm px-4" onclick="Actions.fetchRawCentralScans()">
                                               <i class="fas fa-sync-alt me-2"></i> Fetch Data
                                           </button>
