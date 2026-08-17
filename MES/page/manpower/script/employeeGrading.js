@@ -175,9 +175,9 @@ const App = {
                         </div>
                         ${this.state.isWageVisible ? `
                         <div class="small mt-1" style="font-size: 0.75rem;">
-                            <span class="text-primary" title="Base Wage">DL: ${parseFloat(emp.dl_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                            <span class="text-secondary" title="Base Wage">DL: ${parseFloat(emp.dl_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                             <span class="mx-1 text-muted opacity-25">|</span>
-                            <span class="text-warning" title="Overtime Wage">OT: ${parseFloat(emp.ot_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                            <span class="text-secondary" title="Overtime Wage">OT: ${parseFloat(emp.ot_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                         </div>
                         ` : ''}
                     </td>
@@ -233,7 +233,7 @@ const App = {
         const kpiSubtitleEl = document.getElementById('kpi-wage-subtitle');
         if (kpiSubtitleEl) {
             kpiSubtitleEl.innerHTML = this.state.isWageVisible
-                ? `<span class="text-primary fw-bold">DL: ${totalDl.toLocaleString(undefined, {maximumFractionDigits: 0})}</span> <span class="mx-1 opacity-25">|</span> <span class="text-warning fw-bold">OT: ${totalOt.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>`
+                ? `<span class="text-secondary fw-bold">DL: ${totalDl.toLocaleString(undefined, {maximumFractionDigits: 0})}</span> <span class="mx-1 opacity-25">|</span> <span class="text-secondary fw-bold">OT: ${totalOt.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>`
                 : 'Base Wage (Hidden)';
         }
         
