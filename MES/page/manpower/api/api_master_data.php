@@ -272,7 +272,24 @@ try {
         case 'read_mappings':
             $stmt = $pdo->prepare("SELECT * FROM dbo.MANPOWER_CATEGORY_MAPPING ORDER BY category_name ASC, keyword ASC");
             $stmt->execute();
-            echo json_encode(['success' => true, 'categories' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Fetch unmapped positions
+            $unmappedStmt = $pdo->prepare("
+                SELECT DISTINCT position 
+                FROM dbo.MANPOWER_EMPLOYEES E 
+                WHERE position IS NOT NULL 
+                  AND position != ''
+                  AND NOT EXISTS (
+                      SELECT 1 
+                      FROM dbo.MANPOWER_CATEGORY_MAPPING M 
+                      WHERE E.position LIKE '%' + M.keyword + '%'
+                  )
+            ");
+            $unmappedStmt->execute();
+            $unmapped = $unmappedStmt->fetchAll(PDO::FETCH_COLUMN);
+
+            echo json_encode(['success' => true, 'categories' => $categories, 'unmapped_positions' => $unmapped]);
             break;
 
         case 'save_mappings':

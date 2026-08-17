@@ -3728,13 +3728,41 @@ const Actions = {
         this.openMasterSettingsTab('v-pills-map-tab');
         const res = await fetch('api/api_master_data.php?action=read_mappings');
         const json = await res.json();
-        if (json.success) this.renderMappingTable(json.categories);
+        if (json.success) {
+            this.renderMappingTable(json.categories);
+            this.renderUnmappedPositions(json.unmapped_positions || []);
+        }
+    },
+    renderUnmappedPositions(unmapped) {
+        const container = document.getElementById('unmappedPositionsContainer');
+        const list = document.getElementById('unmappedPositionsList');
+        if (!unmapped || unmapped.length === 0) {
+            container.classList.add('d-none');
+            return;
+        }
+        container.classList.remove('d-none');
+        list.innerHTML = unmapped.map(pos => 
+            `<button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="Actions.autoFillMappingKeyword('${pos}')">${pos}</button>`
+        ).join('');
+    },
+    autoFillMappingKeyword(keyword) {
+        const input = document.getElementById('newMapKeyword');
+        if (input) {
+            input.value = keyword;
+            input.focus();
+        }
     },
     renderMappingTable(list) {
         const tbody = document.getElementById('mappingBody'); tbody.innerHTML = '';
         list.forEach((item, index) => {
             const rate = parseFloat(item.hourly_rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const rateHtml = this._isSalaryRevealed ? rate : `<span style="filter: blur(4px); user-select: none;">***</span>`;
+            let rateHtml;
+            if (this._isSalaryRevealed) {
+                rateHtml = rate;
+            } else {
+                const encoded = btoa(item.hourly_rate.toString()).substring(0, 6).toUpperCase();
+                rateHtml = `<span class="font-monospace text-muted" style="user-select: none;" title="Locked">[SYS-${encoded}]</span>`;
+            }
             const typeClass = item.rate_type === 'DAILY' ? 'success' : (item.rate_type === 'MONTHLY_NO_OT' ? 'warning' : 'primary');
             tbody.innerHTML += `<tr>
                 <td class="ps-4 fw-bold">${item.keyword}</td>

@@ -278,6 +278,18 @@
                                     <button class="btn btn-sm btn-outline-success" onclick="Actions.exportSalarySettings()"><i class="fas fa-file-excel me-2"></i>Export Excel</button>
                                 </div>
                             </div>
+                            <!-- Unmapped Positions Section -->
+                            <div class="card-body bg-light border-bottom p-3 flex-shrink-0 flex-grow-0 d-none" id="unmappedPositionsContainer">
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="small fw-bold text-danger"><i class="fas fa-exclamation-triangle me-1"></i> Unmapped Positions Found</div>
+                                        <small class="text-muted">คลิกที่ป้ายด้านล่างเพื่อคัดลอกลงช่องเพิ่มรายการทันที</small>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2" id="unmappedPositionsList">
+                                        <!-- Badges will be injected here -->
+                                    </div>
+                                </div>
+                            </div>
                             <div class="card-body p-0 flex-grow-1 overflow-auto bg-white" style="max-height: calc(100vh - 250px);">
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="bg-light text-secondary small text-uppercase" style="position: sticky; top: 0; z-index: 1;">
