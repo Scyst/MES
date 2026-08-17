@@ -318,12 +318,15 @@ const App = {
         const avgIncomeData= lines.map(l => parseFloat((lineData[l].income/lineData[l].count).toFixed(0)));
         const ratioData    = lines.map(l => lineData[l].wage > 0 ? parseFloat((lineData[l].income / lineData[l].wage).toFixed(2)) : 0);
 
-        // Shared: horizontal x-axis labels, trimmed
-        const shortLine  = (name) => name.length > 9 ? name.substring(0, 8) + '…' : name;
+        // Shared: horizontal x-axis labels, trimmed aggressively to prevent overlap
+        const shortLine  = (name) => {
+            let n = name.replace('TOOLBOX_', 'TB_').replace('ASSEMBLY', 'ASSY').replace('ST.WELD', 'ST.W').replace('OFFICE', 'OFC');
+            return n.length > 7 ? n.substring(0, 6) + '.' : n;
+        };
         const shortLines = lines.map(shortLine);
         const xCatLabels = {
             rotate: 0, rotateAlways: false, trim: true,
-            maxWidth: 60, hideOverlappingLabels: true,
+            hideOverlappingLabels: false,
             style: { fontSize: '10px' }
         };
 
@@ -501,9 +504,10 @@ const App = {
                 { name: 'OT',        data: isVisible ? otData : otData.map(() => 0) }
             ],
             chart: { type: 'bar', height: 380, stacked: true, toolbar: { show: false }, animations: { speed: 400 } },
-            plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 2 } },
+            plotOptions: { bar: { horizontal: false, columnWidth: '65%', borderRadius: 2 } },
+            stroke: { width: 1, colors: ['#fff'] },
             colors: ['#4e73df', '#f6c23e'],
-            xaxis: { categories: shortLines, labels: { rotate: 0, style: { fontSize: '10px' } } },
+            xaxis: { categories: shortLines, labels: { ...xCatLabels } },
             yaxis: { labels: { formatter: val => (val/1000).toFixed(0)+'k' } },
             dataLabels: { enabled: false },
             tooltip: {
@@ -521,14 +525,15 @@ const App = {
                 { name: 'OT',        data: isVisible ? otData : otData.map(() => 0) }
             ],
             chart: { type: 'bar', height: 380, stacked: true, stackType: '100%', toolbar: { show: false }, animations: { speed: 400 } },
-            plotOptions: { bar: { horizontal: false, columnWidth: '60%', borderRadius: 2 } },
+            plotOptions: { bar: { horizontal: false, columnWidth: '70%', borderRadius: 2 } },
+            stroke: { width: 1, colors: ['#fff'] },
             colors: ['#4e73df', '#f6c23e'],
-            xaxis: { categories: shortLines, labels: { rotate: 0, style: { fontSize: '10px' } } },
+            xaxis: { categories: shortLines, labels: { ...xCatLabels } },
             yaxis: { labels: { formatter: val => val + '%', style: { fontSize: '10px' } } },
             dataLabels: {
                 enabled: true,
                 formatter: (val) => val > 8 ? val.toFixed(0) + '%' : '',
-                style: { fontSize: '11px', fontWeight: '600', colors: ['#fff'] }
+                style: { fontSize: '11px', fontWeight: '700' } // removed colors:['#fff'] for smart contrast
             },
             tooltip: {
                 y: { formatter: (val, { seriesIndex, dataPointIndex }) => {
