@@ -7,7 +7,8 @@ const App = {
         employees: [],
         lines: new Set(),
         currentSort: { col: 'emp_id', dir: 'asc' },
-        isWageVisible: false // Hide wage data by default
+        isWageVisible: false, // Hide wage data by default
+        analyticsLine: 'ALL'  // Analytics modal line filter
     },
 
     init: async function() {
@@ -44,6 +45,21 @@ const App = {
         
         document.querySelectorAll('th.sortable').forEach(th => {
             th.addEventListener('click', () => this.handleSort(th.dataset.sort));
+        });
+
+        // Analytics Modal: re-render charts on tab switch (fix hidden-tab resize issue)
+        document.getElementById('analyticsModal').addEventListener('shown.bs.modal', () => {
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 80);
+        });
+        document.querySelectorAll('#analyticsTabs .nav-link').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', () => {
+                setTimeout(() => window.dispatchEvent(new Event('resize')), 80);
+            });
+        });
+        // Analytics line filter
+        document.getElementById('analyticsLineFilter').addEventListener('change', (e) => {
+            this.state.analyticsLine = e.target.value;
+            this.renderCharts();
         });
     },
 
@@ -85,14 +101,20 @@ const App = {
             if (emp.line) this.state.lines.add(emp.line);
         });
 
+        const sortedLines = Array.from(this.state.lines).sort();
         let html = `<option value="ALL">ALL LINES</option>`;
-        Array.from(this.state.lines).sort().forEach(line => {
-            html += `<option value="${line}">${line}</option>`;
-        });
-        
+        sortedLines.forEach(line => { html += `<option value="${line}">${line}</option>`; });
         lineSelect.innerHTML = html;
-        if (this.state.lines.has(currentVal)) {
-            lineSelect.value = currentVal;
+        if (this.state.lines.has(currentVal)) lineSelect.value = currentVal;
+
+        // Also populate the analytics modal line filter
+        const analyticsFilter = document.getElementById('analyticsLineFilter');
+        if (analyticsFilter) {
+            const curAnalytics = analyticsFilter.value;
+            let aHtml = `<option value="ALL">All Lines</option>`;
+            sortedLines.forEach(line => { aHtml += `<option value="${line}">${line}</option>`; });
+            analyticsFilter.innerHTML = aHtml;
+            if (this.state.lines.has(curAnalytics)) analyticsFilter.value = curAnalytics;
         }
     },
 
@@ -248,8 +270,8 @@ const App = {
             }
         });
 
-        // Render Analytics Charts
-        this.renderCharts(filtered);
+        // Render Analytics Charts (uses its own filter from state.analyticsLine)
+        this.renderCharts();
     },
 
     renderCharts: function(filtered) {

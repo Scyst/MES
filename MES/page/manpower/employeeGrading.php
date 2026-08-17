@@ -327,6 +327,16 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     </ul>
                 </div>
 
+                <!-- Analytics Filter Bar -->
+                <div class="px-4 py-2 bg-white border-bottom d-flex align-items-center gap-2 flex-wrap">
+                    <i class="fas fa-filter text-muted" style="font-size:0.75rem;"></i>
+                    <small class="text-muted fw-semibold">Filter Charts:</small>
+                    <select id="analyticsLineFilter" class="form-select form-select-sm rounded-pill border" style="width: auto; min-width: 130px; font-size: 0.8rem;">
+                        <option value="ALL">All Lines</option>
+                    </select>
+                    <span class="text-muted small ms-auto" id="analytics-filter-count">Loading...</span>
+                </div>
+
                 <div class="modal-body p-3" style="background: #f8f9fc;">
                     <div class="tab-content">
 
