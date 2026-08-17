@@ -170,16 +170,16 @@ const App = {
                         <span class="small text-muted">| Ratio: <strong class="${parseFloat(emp.ratio||0) >= 1 ? 'text-primary' : 'text-danger'}">${parseFloat(emp.ratio||0).toFixed(2)}</strong></span>
                     </td>
                     <td>
-                        <div class="fw-bold ${this.state.isWageVisible ? 'text-secondary' : 'text-muted opacity-50'}">
-                            ${this.state.isWageVisible ? parseFloat(emp.total_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ฿' : '******'}
-                        </div>
                         ${this.state.isWageVisible ? `
-                        <div class="small mt-1" style="font-size: 0.75rem;">
-                            <span class="text-secondary" title="Base Wage">DL: ${parseFloat(emp.dl_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-                            <span class="mx-1 text-muted opacity-25">|</span>
-                            <span class="text-secondary" title="Overtime Wage">OT: ${parseFloat(emp.ot_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-                        </div>
-                        ` : ''}
+                            <span class="fw-bold text-secondary me-2">${parseFloat(emp.total_wage || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</span>
+                            <span class="small text-muted text-nowrap" style="font-size: 0.75rem;">
+                                (DL: ${parseFloat(emp.dl_wage || 0).toLocaleString(undefined, {maximumFractionDigits:0})}
+                                <span class="mx-1 text-secondary opacity-50">|</span>
+                                OT: ${parseFloat(emp.ot_wage || 0).toLocaleString(undefined, {maximumFractionDigits:0})})
+                            </span>
+                        ` : `
+                            <span class="fw-bold text-muted opacity-50">******</span>
+                        `}
                     </td>
                     <td>
                         <div class="d-flex align-items-center justify-content-center">
@@ -233,7 +233,7 @@ const App = {
         const kpiSubtitleEl = document.getElementById('kpi-wage-subtitle');
         if (kpiSubtitleEl) {
             kpiSubtitleEl.innerHTML = this.state.isWageVisible
-                ? `<span class="text-secondary fw-bold">DL: ${totalDl.toLocaleString(undefined, {maximumFractionDigits: 0})}</span> <span class="mx-1 opacity-25">|</span> <span class="text-secondary fw-bold">OT: ${totalOt.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>`
+                ? `<span class="text-secondary fw-bold">DL: ${totalDl.toLocaleString(undefined, {maximumFractionDigits: 0})}</span> <span class="mx-1 text-secondary opacity-50">|</span> <span class="text-secondary fw-bold">OT: ${totalOt.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>`
                 : 'Base Wage (Hidden)';
         }
         
