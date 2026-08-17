@@ -43,31 +43,20 @@
                     <!-- Central Raw Scans Tab -->
                       <div class="tab-pane fade h-100" id="v-pills-rawscans" role="tabpanel">
                           <div class="card border-0 shadow-sm h-100 d-flex flex-column">
-                              <div class="card-header bg-white border-bottom py-3">
-                                  <div class="d-flex justify-content-between align-items-center mb-3">
-                                      <div>
-                                          <h5 class="m-0 fw-bold text-dark"><i class="fas fa-satellite-dish me-2 text-primary"></i>Central Raw Scans</h5>
-                                          <small class="text-muted">ตรวจสอบประวัติการสแกนหน้าจากเครื่องของส่วนกลางโดยตรง</small>
-                                      </div>
+                              <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                                  <div>
+                                      <h5 class="m-0 fw-bold text-dark"><i class="fas fa-satellite-dish me-2 text-primary"></i>Central Raw Scans</h5>
+                                      <small class="text-muted">ตรวจสอบประวัติการสแกนหน้าจากเครื่องของส่วนกลางโดยตรง</small>
                                   </div>
-                                  <div class="row g-2 align-items-end">
-                                      <div class="col-md-4">
-                                          <label class="form-label small fw-bold text-secondary mb-1">Target Date Range</label>
-                                          <div class="input-group input-group-sm">
-                                              <input type="date" class="form-control" id="rawScanStartDate">
-                                              <span class="input-group-text bg-light border-start-0 border-end-0">to</span>
-                                              <input type="date" class="form-control" id="rawScanEndDate">
-                                          </div>
-                                      </div>
-                                      <div class="col-md-3">
-                                          <label class="form-label small fw-bold text-secondary mb-1">Search EMP ID / Name</label>
-                                          <input type="text" class="form-control form-control-sm" id="rawScanSearch" placeholder="Search..." onkeyup="Actions.filterRawScans()">
-                                      </div>
-                                      <div class="col-md-5 text-end">
-                                          <button class="btn btn-sm btn-primary shadow-sm px-4" onclick="Actions.fetchRawCentralScans()">
-                                              <i class="fas fa-sync-alt me-2"></i> Fetch Data
-                                          </button>
-                                      </div>
+                                  <div class="d-flex align-items-center gap-2">
+                                      <input type="text" class="form-control form-control-sm" style="width: 180px;" id="rawScanSearch" placeholder="Search EMP ID / Name..." onkeyup="Actions.filterRawScans()">
+                                      <span class="text-muted small align-self-center">From</span>
+                                      <input type="date" id="rawScanStartDate" class="form-control form-control-sm">
+                                      <span class="text-muted small align-self-center">To</span>
+                                      <input type="date" id="rawScanEndDate" class="form-control form-control-sm">
+                                      <button class="btn btn-sm btn-primary shadow-sm text-nowrap" onclick="Actions.fetchRawCentralScans()">
+                                          <i class="fas fa-sync-alt me-1"></i> Fetch
+                                      </button>
                                   </div>
                               </div>
                               <div class="card-body p-0 flex-grow-1 overflow-auto bg-light" style="max-height: calc(100vh - 300px);">
