@@ -70,7 +70,7 @@ async function fetchData() {
             renderNotifications(res.data.replyCount);
             
             const userRole = res.data.userRole;
-            if (['admin', 'creator', 'supervisor'].includes(userRole)) {
+            if (['admin', 'creator'].includes(userRole)) {
                 if (typeof renderAdminDashboard === 'function') {
                     renderAdminDashboard(res.data.dashboardData, res.data.factoryMood);
                 }
@@ -126,7 +126,7 @@ async function fetchData() {
 
                     // 1. ตั้งค่า Default Team และดักจับ Event
                     const fetchMorningBrief = async () => {
-                        const team = document.getElementById('briefTeamFilter') ? document.getElementById('briefTeamFilter').value : 'ALL';
+                        const team = document.getElementById('briefTeamFilter') ? document.getElementById('briefTeamFilter').value : 'TEAM 1';
                         const date = document.getElementById('briefDateFilter') ? document.getElementById('briefDateFilter').value : '';
                         
                         try {
@@ -152,7 +152,7 @@ async function fetchData() {
 
                     const teamFilter = document.getElementById('briefTeamFilter');
                     if (teamFilter) {
-                        const myTeam = res.data.myTeamGroup || 'ALL';
+                        const myTeam = res.data.myTeamGroup || 'TEAM 1';
                         teamFilter.value = myTeam;
                         teamFilter.addEventListener('change', fetchMorningBrief);
                     }

@@ -192,6 +192,12 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                         document.getElementById('headerIncomeDisplay').classList.replace('text-primary', 'text-muted');
                         document.getElementById('headerRatioDisplay').textContent = '-';
                         document.getElementById('headerRatioDisplay').classList.replace('text-success', 'text-muted');
+                        
+                        // Show quick badge as empty state
+                        const quickBadge = document.getElementById('topHeaderQuickGrade');
+                        quickBadge.classList.remove('d-none');
+                        quickBadge.textContent = '-';
+                        quickBadge.className = 'badge ms-2 bg-secondary bg-opacity-25 text-secondary';
                     }
                 }
             })

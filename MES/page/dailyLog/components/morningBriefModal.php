@@ -1,4 +1,4 @@
-<?php if (in_array($_SESSION['user']['role'] ?? '', ['admin', 'creator', 'supervisor'])): ?>
+<?php if (in_array($_SESSION['user']['role'] ?? '', ['admin', 'creator'])): ?>
 <div class="modal fade" id="morningBriefModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg"> 
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
@@ -15,9 +15,10 @@
                     <div class="ms-auto pe-3 d-flex gap-2">
                         <input type="date" id="briefDateFilter" class="form-control form-control-sm border-0 bg-white bg-opacity-25 text-white fw-bold" style="width: 130px;" title="เลือกวันที่">
                         <select id="briefTeamFilter" class="form-select form-select-sm border-0 bg-white bg-opacity-25 text-white fw-bold" style="width: 120px;">
-                            <option value="ALL" class="text-dark">All Teams</option>
-                            <option value="TEAM 1" class="text-dark">TEAM 1</option>
+                            <option value="TEAM 1" class="text-dark" selected>TEAM 1</option>
                             <option value="TEAM 2" class="text-dark">TEAM 2</option>
+                            <option value="EXCLUDE" class="text-dark">EXCLUDE</option>
+                            <option value="ALL" class="text-dark">All Teams</option>
                         </select>
                     </div>
                 </div>
@@ -29,8 +30,13 @@
                     
                     <div class="col-12">
                         <div class="bg-white p-3 rounded-4 shadow-sm border-start border-4 border-primary">
-                            <div class="small text-muted fw-bold text-uppercase mb-2">
-                                <i class="fas fa-users me-2"></i>Manpower Statistics
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="small text-muted fw-bold text-uppercase">
+                                    <i class="fas fa-users me-2"></i>Manpower Statistics
+                                </div>
+                                <a href="javascript:void(0)" onclick="window.location.href = (window.location.pathname.indexOf('/page/') > 0 ? window.location.pathname.substring(0, window.location.pathname.indexOf('/page/')) : '') + '/page/manpower/employeeGrading.php'" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1" style="font-size: 0.75rem;">
+                                    <i class="fas fa-star-half-alt me-1"></i>ประเมินเกรด
+                                </a>
                             </div>
                             <div class="d-flex justify-content-around text-center mt-2">
                                 <div>

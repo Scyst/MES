@@ -2,6 +2,10 @@
 // MES/page/dailyLog/dailyLogUI.php
 require_once __DIR__ . '/../components/init.php';
 
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Expires: 0");
 $isLoggedIn = isset($_SESSION['user']);
 $user = $isLoggedIn ? $_SESSION['user'] : null;
 $userRole = $isLoggedIn ? $user['role'] : 'guest';
@@ -60,7 +64,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <?php if (in_array($userRole, ['admin', 'creator', 'supervisor'])): ?>
+                <?php if (in_array($userRole, ['admin', 'creator'])): ?>
                     <button class="btn btn-link text-warning p-0 me-2" id="reopenBriefBtn" type="button" title="ดูสรุปประจำวัน">
                         <i class="fas fa-sun fa-lg"></i>
                     </button>
@@ -218,6 +222,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('Management Dashboard', 'แดชบอร์ดผู้บริหารระดับสูง', '<i class="fas fa-tachometer-alt"></i>', '../management/managementDashboard.php', 'view_executive', $themeExec);
                         renderServiceLink('Daily Command Center', 'ศูนย์สั่งการและติดตามสถานะ', '<i class="fas fa-layer-group"></i>', '../planning/daily_meeting.php', 'view_dashboard', $themeExec);
                         renderServiceLink('Manpower', 'จัดการกำลังคนประจำวัน', '<i class="fas fa-users-cog"></i>', '../manpower/manpowerUI.php', 'view_manpower', $themeExec);
+                        renderServiceLink('Employee Grading', 'ประเมินเกรดและรายได้พิเศษ', '<i class="fas fa-star-half-alt"></i>', '../manpower/employeeGrading.php', 'manage_manpower', $themeExec);
                         renderServiceLink('Mood Insight Report', 'รายงานวิเคราะห์ภาพรวมความรู้สึก', '<i class="fas fa-heartbeat"></i>', '../dailyLog/moodReport.php', 'view_executive', $themeExec);
                         renderServiceLink('Daily P&L', 'บันทึกและวิเคราะห์งบกำไรขาดทุน', '<i class="fas fa-donate"></i>', '../dailyPL/pl_entry.php', 'view_pl', $themeExec);
                         renderServiceLink('Invoice Management', 'ระบบออกบิลและจัดการเวอร์ชัน', '<i class="fas fa-file-invoice-dollar"></i>', '../autoInvoice/finance_dashboard.php', 'manage_invoice', $themeExec);

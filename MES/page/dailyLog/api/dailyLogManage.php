@@ -23,7 +23,7 @@ try {
 
         case 'get_morning_brief':
             $userRole = $_SESSION['user']['role'] ?? 'guest';
-            if (!in_array($userRole, ['admin', 'creator', 'supervisor'])) {
+            if (!in_array($userRole, ['admin', 'creator'])) {
                 throw new Exception("Permission denied");
             }
             $reqTeam = $_POST['team'] ?? ($_SESSION['user']['team_group'] ?? null);
@@ -50,6 +50,8 @@ try {
             if (!empty($reqTeam)) {
                 $mpQuery .= " AND ISNULL(TS.hc_group, '') = ?";
                 $mpParams[] = $reqTeam;
+            } else {
+                $mpQuery .= " AND ISNULL(TS.hc_group, '') != 'EXCLUDE'";
             }
             $stmtMp = $pdo->prepare($mpQuery);
             $stmtMp->execute($mpParams);
@@ -64,6 +66,8 @@ try {
             if (!empty($reqTeam)) {
                 $costQuery .= " WHERE hc_group = ?";
                 $costParams[] = $reqTeam;
+            } else {
+                $costQuery .= " WHERE ISNULL(hc_group, '') != 'EXCLUDE'";
             }
             $stmtCost = $pdo->prepare($costQuery);
             $stmtCost->execute($costParams);
@@ -104,6 +108,8 @@ try {
                 $prodQuery .= " AND (u.team_group = ? OR t.notes LIKE ?)";
                 $prodParams[] = $reqTeam;
                 $prodParams[] = '%[[]TEAM_OVERRIDE: ' . $reqTeam . ']%';
+            } else {
+                $prodQuery .= " AND ISNULL(u.team_group, '') != 'EXCLUDE'";
             }
             $prodQuery .= " GROUP BY ISNULL(r.model, i.part_no)
                             HAVING SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) > 0";
@@ -124,6 +130,8 @@ try {
             if (!empty($reqTeam)) {
                 $moodQuery .= " AND u.team_group = ?";
                 $moodParams[] = $reqTeam;
+            } else {
+                $moodQuery .= " AND ISNULL(u.team_group, '') != 'EXCLUDE'";
             }
             $stmtMood = $pdo->prepare($moodQuery);
             $stmtMood->execute($moodParams);
@@ -217,7 +225,7 @@ try {
 
         // [NEW] 1.3 Morning Brief Data
         $morningBrief = null;
-        if (in_array($userRole, ['admin', 'creator', 'supervisor'])) {
+        if (in_array($userRole, ['admin', 'creator'])) {
                 
                 $reqDate = $_POST['brief_date'] ?? $_GET['brief_date'] ?? null;
                 if (!empty($reqDate)) {
@@ -228,7 +236,8 @@ try {
                     $yesterday = date('Y-m-d', strtotime('-1 day', strtotime($actualProdDate)));
                 }
                 
-                $myTeam = $_SESSION['user']['team_group'] ?? null;
+                $myTeam = $_SESSION['user']['team_group'] ?? 'TEAM 1';
+                if ($myTeam === 'ALL') $myTeam = null;
 
                 // --- [1] Manpower Data ---
                 $mpQuery = "SELECT 
@@ -244,6 +253,8 @@ try {
                 if (!empty($myTeam)) {
                     $mpQuery .= " AND ISNULL(TS.hc_group, '') = ?";
                     $mpParams[] = $myTeam;
+                } else {
+                    $mpQuery .= " AND ISNULL(TS.hc_group, '') != 'EXCLUDE'";
                 }
 
                 $stmtMp = $pdo->prepare($mpQuery);
@@ -261,6 +272,8 @@ try {
                 if (!empty($myTeam)) {
                     $costQuery .= " WHERE hc_group = ?";
                     $costParams[] = $myTeam;
+                } else {
+                    $costQuery .= " WHERE ISNULL(hc_group, '') != 'EXCLUDE'";
                 }
 
                 $stmtCost = $pdo->prepare($costQuery);
@@ -302,6 +315,8 @@ try {
                     $prodQuery .= " AND (u.team_group = ? OR t.notes LIKE ?)";
                     $prodParams[] = $myTeam;
                     $prodParams[] = '%[[]TEAM_OVERRIDE: ' . $myTeam . ']%';
+                } else {
+                    $prodQuery .= " AND ISNULL(u.team_group, '') != 'EXCLUDE'";
                 }
                 $prodQuery .= " GROUP BY ISNULL(r.model, i.part_no)
                                 HAVING SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) > 0";
@@ -324,6 +339,8 @@ try {
                 if (!empty($myTeam)) {
                     $moodQuery .= " AND u.team_group = ?";
                     $moodParams[] = $myTeam;
+                } else {
+                    $moodQuery .= " AND ISNULL(u.team_group, '') != 'EXCLUDE'";
                 }
                 $stmtMood = $pdo->prepare($moodQuery);
                 $stmtMood->execute($moodParams);
