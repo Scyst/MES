@@ -79,8 +79,16 @@ const UI = {
         let sumPresent = 0, sumLate = 0, sumAbsent = 0, sumLeave = 0, sumPlan = 0;
 
         data.forEach(row => {
-            const line = row.line_name || 'Other';
-            if (!grouped[line]) grouped[line] = { plan: 0, actual: 0 };
+            let line = (row.line_name || 'Other').toUpperCase()
+                .replace('ASSEMBLY ', 'ASSY.')
+                .replace('INJECTION ', 'INJ.')
+                .replace('ROBOT', 'RBT.')
+                .replace('PAINTING', 'PNT.')
+                .replace('MAINTENANCE', 'MAINT.')
+                .replace('WAREHOUSE', 'W/H')
+                .trim();
+            if (line === 'OTHER') line = 'Other';
+            if (!grouped[line]) grouped[line] = { plan: 0, actual: 0, original: row.line_name };
 
             const plan = parseInt(row.plan || 0);
             const present = parseInt(row.present || 0);
@@ -132,7 +140,7 @@ const UI = {
                         data: dataPlan,
                         backgroundColor: '#4e73df',
                         borderRadius: 4,
-                        barPercentage: 0.6,
+                        barPercentage: 0.9,
                         categoryPercentage: 0.8
                     },
                     {
@@ -140,7 +148,7 @@ const UI = {
                         data: dataActual,
                         backgroundColor: actualColors,
                         borderRadius: 4,
-                        barPercentage: 0.6,
+                        barPercentage: 0.9,
                         categoryPercentage: 0.8
                     }
                 ]
@@ -149,7 +157,7 @@ const UI = {
                 onClick: (e, elements) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
-                        const lineName = labels[index];
+                        const lineName = grouped[labels[index]]?.original || labels[index];
                         if (lineName) Actions.openDetailModal(lineName, '', 'ALL', 'ALL');
                     }
                 },
