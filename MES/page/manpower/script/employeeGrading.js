@@ -631,15 +631,12 @@ const App = {
     },
 
     updateGradeState: function(empId, grade, selectElement) {
-        selectElement.className = `form-select form-select-sm mx-auto grade-select ${this.getGradeClass(grade)}`;
+        selectElement.className = `form-select form-select-sm d-inline-block grade-select ${this.getGradeClass(grade)}`;
         
         const emp = this.state.employees.find(e => e.emp_id === empId);
         if (emp) {
             emp.grade = grade;
         }
-        
-        // Minor re-render to update the distribution bar without resetting the inputs
-        this.updateDistributionBar();
     },
     
     updateNotesState: function(empId, notes) {
@@ -647,36 +644,6 @@ const App = {
         if (emp) {
             emp.notes = notes;
         }
-    },
-    
-    updateDistributionBar: function() {
-        const lineFilter = document.getElementById('filterLine').value;
-        let filtered = this.state.employees;
-        if (lineFilter !== 'ALL') {
-            filtered = this.state.employees.filter(e => e.line === lineFilter);
-        }
-        
-        let gradeCount = { A: 0, B: 0, C: 0, D: 0 };
-        filtered.forEach(emp => {
-            if (emp.grade && gradeCount[emp.grade] !== undefined) {
-                gradeCount[emp.grade]++;
-            }
-        });
-        
-        const totalGraded = gradeCount.A + gradeCount.B + gradeCount.C + gradeCount.D;
-        const calcDist = (count) => totalGraded > 0 ? ((count / totalGraded) * 100).toFixed(0) + '%' : '0%';
-        
-        document.getElementById('dist-A').style.width = calcDist(gradeCount.A);
-        document.getElementById('dist-A').innerText = gradeCount.A > 0 ? calcDist(gradeCount.A) : '';
-        
-        document.getElementById('dist-B').style.width = calcDist(gradeCount.B);
-        document.getElementById('dist-B').innerText = gradeCount.B > 0 ? calcDist(gradeCount.B) : '';
-        
-        document.getElementById('dist-C').style.width = calcDist(gradeCount.C);
-        document.getElementById('dist-C').innerText = gradeCount.C > 0 ? calcDist(gradeCount.C) : '';
-        
-        document.getElementById('dist-D').style.width = calcDist(gradeCount.D);
-        document.getElementById('dist-D').innerText = gradeCount.D > 0 ? calcDist(gradeCount.D) : '';
     },
 
     autoGrade: function() {
