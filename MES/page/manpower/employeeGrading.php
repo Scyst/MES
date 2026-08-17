@@ -266,76 +266,77 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
         <button id="btnSaveGrades" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem;" title="Save Grades">
             <i class="fas fa-save"></i>
         </button>
-        <!-- Analytics Modal -->
-        <div class="modal fade" id="analyticsModal" tabindex="-1" aria-labelledby="analyticsModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-                <div class="modal-content border-0 shadow">
-                    <div class="modal-header bg-light py-3">
-                        <h5 class="modal-title fw-bold text-primary" id="analyticsModalLabel">
-                            <i class="fas fa-chart-line me-2"></i>Grading & Manpower Analytics
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body bg-light p-3">
-                        <div class="row g-3">
-                            <!-- Labor Cost Breakdown by Line (DL vs OT) -->
-                            <div class="col-12 col-xl-6">
-                                <div class="card h-100 border-0 shadow-sm position-relative">
-                                    <div class="card-body">
-                                        <h6 class="card-title text-secondary fw-bold small text-uppercase mb-3">Labor Cost Breakdown by Line</h6>
-                                        <div id="chart-wage-breakdown" style="min-height: 250px;"></div>
-                                    </div>
-                                    <div id="overlay-wage-breakdown" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex flex-column align-items-center justify-content-center d-none" style="backdrop-filter: blur(2px); z-index: 10;">
-                                        <i class="fas fa-lock fa-2x text-muted mb-2"></i>
-                                        <p class="text-muted small mb-2 text-center">Wage data is protected.</p>
-                                        <button class="btn btn-sm btn-primary rounded-pill shadow-sm px-3" onclick="App.toggleWageVisibility()">
-                                            <i class="fas fa-key me-1"></i> Unlock Data
-                                        </button>
-                                    </div>
+    </div>
+
+    <!-- Analytics Modal -->
+    <div class="modal fade" id="analyticsModal" tabindex="-1" aria-labelledby="analyticsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light py-3">
+                    <h5 class="modal-title fw-bold text-primary" id="analyticsModalLabel">
+                        <i class="fas fa-chart-line me-2"></i>Grading & Manpower Analytics
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bg-light p-3">
+                    <div class="row g-3">
+                        <!-- Labor Cost Breakdown by Line (DL vs OT) -->
+                        <div class="col-12 col-xl-6">
+                            <div class="card h-100 border-0 shadow-sm position-relative">
+                                <div class="card-body">
+                                    <h6 class="card-title text-secondary fw-bold small text-uppercase mb-3">Labor Cost Breakdown by Line</h6>
+                                    <div id="chart-wage-breakdown" style="min-height: 250px;"></div>
+                                </div>
+                                <div id="overlay-wage-breakdown" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex flex-column align-items-center justify-content-center d-none" style="backdrop-filter: blur(2px); z-index: 10;">
+                                    <i class="fas fa-lock fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted small mb-2 text-center">Wage data is protected.</p>
+                                    <button class="btn btn-sm btn-primary rounded-pill shadow-sm px-3" onclick="App.toggleWageVisibility()">
+                                        <i class="fas fa-key me-1"></i> Unlock Data
+                                    </button>
                                 </div>
                             </div>
-                            
-                            <!-- Profitability Ratio by Line -->
-                            <div class="col-12 col-xl-6">
-                                <div class="card h-100 border-0 shadow-sm position-relative">
-                                    <div class="card-body">
-                                        <h6 class="card-title text-secondary fw-bold small text-uppercase mb-3">Profitability Ratio by Line</h6>
-                                        <div id="chart-profitability" style="min-height: 250px;"></div>
-                                    </div>
-                                    <div id="overlay-profitability" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex flex-column align-items-center justify-content-center d-none" style="backdrop-filter: blur(2px); z-index: 10;">
-                                        <i class="fas fa-lock fa-2x text-muted mb-2"></i>
-                                        <p class="text-muted small mb-2 text-center">Wage data is protected.</p>
-                                        <button class="btn btn-sm btn-primary rounded-pill shadow-sm px-3" onclick="App.toggleWageVisibility()">
-                                            <i class="fas fa-key me-1"></i> Unlock Data
-                                        </button>
-                                    </div>
+                        </div>
+                        
+                        <!-- Profitability Ratio by Line -->
+                        <div class="col-12 col-xl-6">
+                            <div class="card h-100 border-0 shadow-sm position-relative">
+                                <div class="card-body">
+                                    <h6 class="card-title text-secondary fw-bold small text-uppercase mb-3">Profitability Ratio by Line</h6>
+                                    <div id="chart-profitability" style="min-height: 250px;"></div>
+                                </div>
+                                <div id="overlay-profitability" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex flex-column align-items-center justify-content-center d-none" style="backdrop-filter: blur(2px); z-index: 10;">
+                                    <i class="fas fa-lock fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted small mb-2 text-center">Wage data is protected.</p>
+                                    <button class="btn btn-sm btn-primary rounded-pill shadow-sm px-3" onclick="App.toggleWageVisibility()">
+                                        <i class="fas fa-key me-1"></i> Unlock Data
+                                    </button>
                                 </div>
                             </div>
-                            
-                            <!-- Grade Distribution -->
-                            <div class="col-12 col-xl-4">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-body">
-                                        <h6 class="card-title text-secondary fw-bold small text-uppercase mb-3">Grade Distribution</h6>
-                                        <div id="chart-grade-dist" style="min-height: 250px;"></div>
-                                    </div>
+                        </div>
+                        
+                        <!-- Grade Distribution -->
+                        <div class="col-12 col-xl-4">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h6 class="card-title text-secondary fw-bold small text-uppercase mb-3">Grade Distribution</h6>
+                                    <div id="chart-grade-dist" style="min-height: 250px;"></div>
                                 </div>
                             </div>
-                            
-                            <!-- Employee Performance Matrix -->
-                            <div class="col-12 col-xl-8">
-                                <div class="card h-100 border-0 shadow-sm position-relative">
-                                    <div class="card-body">
-                                        <h6 class="card-title text-secondary fw-bold small text-uppercase mb-3">Employee Performance Matrix</h6>
-                                        <div id="chart-performance" style="min-height: 250px;"></div>
-                                    </div>
-                                    <div id="overlay-performance" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex flex-column align-items-center justify-content-center d-none" style="backdrop-filter: blur(2px); z-index: 10;">
-                                        <i class="fas fa-lock fa-2x text-muted mb-2"></i>
-                                        <p class="text-muted small mb-2 text-center">Wage data is protected.</p>
-                                        <button class="btn btn-sm btn-primary rounded-pill shadow-sm px-3" onclick="App.toggleWageVisibility()">
-                                            <i class="fas fa-key me-1"></i> Unlock Data
-                                        </button>
-                                    </div>
+                        </div>
+                        
+                        <!-- Employee Performance Matrix -->
+                        <div class="col-12 col-xl-8">
+                            <div class="card h-100 border-0 shadow-sm position-relative">
+                                <div class="card-body">
+                                    <h6 class="card-title text-secondary fw-bold small text-uppercase mb-3">Employee Performance Matrix</h6>
+                                    <div id="chart-performance" style="min-height: 250px;"></div>
+                                </div>
+                                <div id="overlay-performance" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex flex-column align-items-center justify-content-center d-none" style="backdrop-filter: blur(2px); z-index: 10;">
+                                    <i class="fas fa-lock fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted small mb-2 text-center">Wage data is protected.</p>
+                                    <button class="btn btn-sm btn-primary rounded-pill shadow-sm px-3" onclick="App.toggleWageVisibility()">
+                                        <i class="fas fa-key me-1"></i> Unlock Data
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -344,7 +345,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
             </div>
         </div>
     </div>
-
+        
     <!-- Criteria Settings Modal -->
     <div class="modal fade" id="criteriaModal" tabindex="-1" aria-labelledby="criteriaModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">

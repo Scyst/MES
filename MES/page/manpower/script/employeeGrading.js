@@ -451,7 +451,14 @@ const App = {
                 if (result.success) {
                     Swal.close();
                     this.state.isWageVisible = true;
-                    this.renderTable();
+                    this.renderTable(this.state.employees);
+                    
+                    // Fix Bootstrap backdrop bug when SweetAlert closes while a Modal is open
+                    setTimeout(() => {
+                        if (document.getElementById('analyticsModal').classList.contains('show')) {
+                            document.body.classList.add('modal-open');
+                        }
+                    }, 400);
                 } else {
                     throw new Error(result.message || 'Incorrect password.');
                 }
