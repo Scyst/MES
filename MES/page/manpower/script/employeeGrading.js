@@ -437,14 +437,14 @@ const App = {
         const makeBarChart = (data, color, gradientTo) => ({
             series: [{ name: 'Income', data: data.map(e => parseFloat(e.income_per_head)||0) }],
             chart: { type: 'bar', height: 260, toolbar: { show: false }, animations: { speed: 400 } },
-            plotOptions: { bar: { horizontal: true, borderRadius: 4, dataLabels: { position: 'right' } } },
+            plotOptions: { bar: { horizontal: true, borderRadius: 4, dataLabels: { position: 'center' } } },
             colors: [color],
             fill: { type: 'gradient', gradient: { gradientToColors: [gradientTo], shade: 'light', type:'horizontal', stops:[0,100] } },
-            dataLabels: { enabled: true, formatter: val => (val/1000).toFixed(1)+'k ฿', offsetX: 4, style: { fontSize:'11px', colors:['#333'] } },
+            dataLabels: { enabled: true, formatter: val => (val/1000).toFixed(1)+'k ฿', style: { fontSize:'11px', colors:['#fff'] } },
             xaxis: { categories: data.map(e => sName(e.name_th)), labels: { formatter: val => (val/1000).toFixed(0)+'k' } },
             yaxis: { labels: { style: { fontSize: '11px' } } },
             tooltip: { y: { formatter: val => val.toLocaleString() + ' ฿' } },
-            grid: { borderColor: '#f0f0f0', padding: { right: 50 } }
+            grid: { borderColor: '#f0f0f0', padding: { right: 10 } }
         });
 
         this.charts.topPerformers    = new ApexCharts(document.querySelector('#chart-top-performers'),    makeBarChart(top5,    '#1cc88a', '#0a9b5e'));
@@ -466,7 +466,7 @@ const App = {
 
         this.charts.performance = new ApexCharts(document.querySelector('#chart-performance'), {
             series: scatterSeries,
-            chart: { type: 'scatter', height: 260, zoom: { enabled: true, type: 'xy' }, toolbar: { show: false }, animations: { speed: 400 } },
+            chart: { type: 'scatter', height: 280, zoom: { enabled: true, type: 'xy' }, toolbar: { show: false }, animations: { speed: 400 } },
             xaxis: { type: 'numeric', tickAmount: 5,
                 title: { text: 'Total Wage (THB)' },
                 labels: { rotate: 0, formatter: val => isVisible ? (parseFloat(val)/1000).toFixed(0)+'k' : '***' }
@@ -494,21 +494,41 @@ const App = {
         });
         this.charts.performance.render();
 
-        // ── Chart 7: DL vs OT Stacked 100% Bar ────────────────────────────────
+        // ── Chart 7: DL vs OT Stacked Bar (Labor Cost Breakdown) ──────────────
+        this.charts.wageBreakdown = new ApexCharts(document.querySelector('#chart-wage-breakdown'), {
+            series: [
+                { name: 'DL (Base)', data: isVisible ? dlData : dlData.map(() => 0) },
+                { name: 'OT',        data: isVisible ? otData : otData.map(() => 0) }
+            ],
+            chart: { type: 'bar', height: 280, stacked: true, toolbar: { show: false }, animations: { speed: 400 } },
+            plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 2 } },
+            colors: ['#4e73df', '#f6c23e'],
+            xaxis: { categories: shortLines, labels: { style: { fontSize: '10px' } } },
+            yaxis: { labels: { formatter: val => (val/1000).toFixed(0)+'k' } },
+            dataLabels: { enabled: false },
+            tooltip: {
+                y: { formatter: (val) => isVisible ? val.toLocaleString() + ' ฿' : '🔒 Hidden' }
+            },
+            fill: { opacity: 1 },
+            legend: { position: 'top' }
+        });
+        this.charts.wageBreakdown.render();
+
+        // ── Chart 8: DL vs OT Stacked 100% Bar (Ratio) ────────────────────────
         this.charts.otRatio = new ApexCharts(document.querySelector('#chart-ot-ratio'), {
             series: [
                 { name: 'DL (Base)', data: isVisible ? dlData : dlData.map(() => 0) },
                 { name: 'OT',        data: isVisible ? otData : otData.map(() => 0) }
             ],
-            chart: { type: 'bar', height: 270, stacked: true, stackType: '100%', toolbar: { show: false }, animations: { speed: 400 } },
-            plotOptions: { bar: { horizontal: true, borderRadius: 3 } },
+            chart: { type: 'bar', height: 280, stacked: true, stackType: '100%', toolbar: { show: false }, animations: { speed: 400 } },
+            plotOptions: { bar: { horizontal: false, columnWidth: '60%', borderRadius: 2 } },
             colors: ['#4e73df', '#f6c23e'],
-            xaxis: { categories: shortLines, labels: { formatter: val => val + '%', style: { fontSize: '10px' } } },
-            yaxis: { labels: { style: { fontSize: '10px' } } },
+            xaxis: { categories: shortLines, labels: { style: { fontSize: '10px' } } },
+            yaxis: { labels: { formatter: val => val + '%', style: { fontSize: '10px' } } },
             dataLabels: {
                 enabled: true,
-                formatter: (val) => val > 8 ? val.toFixed(1) + '%' : '',
-                style: { fontSize: '10px', fontWeight: '600' }
+                formatter: (val) => val > 8 ? val.toFixed(0) + '%' : '',
+                style: { fontSize: '11px', fontWeight: '600', colors: ['#fff'] }
             },
             tooltip: {
                 y: { formatter: (val, { seriesIndex, dataPointIndex }) => {
