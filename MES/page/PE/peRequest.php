@@ -81,6 +81,7 @@ try {
                             <option value="Preventive">ป้องกัน (Preventive)</option>
                             <option value="Improvement">พัฒนา/ปรับปรุง (Improvement)</option>
                             <option value="Inspection">ตรวจสอบ (Inspection)</option>
+                            <option value="Setup">ตั้งเครื่อง/เปลี่ยนรุ่น (Setup)</option>
                         </select>
                     </div>
                     <div class="col-6">

@@ -250,7 +250,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (photoInput.files.length > 0 && !compressedImageBlob) {
+            Swal.fire({
+                title: 'กรุณายืนยันรูปภาพ',
+                text: 'คุณแนบรูปภาพแล้ว แต่ยังไม่ได้กดยืนยันการตัดรูปภาพ (Crop) กรุณากดยืนยันก่อนบันทึก',
+                icon: 'warning',
+                confirmButtonText: 'ตกลง'
+            });
+            return;
+        }
+
         const formData = new FormData(formWO);
+        
+        // Remove raw uncompressed photo from form data to prevent exceeding max upload limits
+        formData.delete('photo');
         const inputLine = formData.get('line');
 
         if (inputLine && VALID_LINES && !VALID_LINES.includes(inputLine)) {

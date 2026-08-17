@@ -55,7 +55,9 @@
                                     <select class="pe-form-select" id="woFrmType">
                                         <option value="Corrective">Corrective (แก้ไข)</option>
                                         <option value="Preventive">Preventive (ป้องกัน)</option>
+                                        <option value="Improvement">Improvement (พัฒนา/ปรับปรุง)</option>
                                         <option value="Inspection">Inspection (ตรวจสอบ)</option>
+                                        <option value="Setup">Setup (ตั้งเครื่อง)</option>
                                     </select>
                                 </div>
                             </div>
