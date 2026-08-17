@@ -246,7 +246,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                                         <i class="fas fa-eye-slash ms-2 text-muted" id="thWageEyeToggle" style="cursor: pointer;" onclick="event.stopPropagation(); App.toggleWageVisibility()" title="Show/Hide Wage"></i>
                                         <i class="fas fa-sort text-muted ms-1"></i>
                                     </th>
-                                    <th style="width: 15%; text-align: center;">Executive Grade</th>
+                                    <th style="width: 15%; text-align: center;" class="sortable" data-sort="grade" role="button">Executive Grade <i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 20%;">Notes</th>
                                 </tr>
                             </thead>

@@ -129,8 +129,8 @@ const App = {
 
         // Sorting logic
         filtered.sort((a, b) => {
-            let valA = a[this.state.currentSort.col];
-            let valB = b[this.state.currentSort.col];
+            let valA = a[this.state.currentSort.col] || '';
+            let valB = b[this.state.currentSort.col] || '';
             
             if (this.state.currentSort.col === 'income_per_head' || this.state.currentSort.col === 'ratio') {
                 valA = parseFloat(valA) || 0;
