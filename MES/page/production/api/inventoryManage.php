@@ -1794,6 +1794,40 @@ try {
             echo json_encode(['success' => true, 'users' => $users]);
             break;
 
+        case 'get_active_line_users':
+            $location_id = $_GET['location_id'] ?? 0;
+            
+            // First get the production_line from LOCATIONS_TABLE
+            $locStmt = $pdo->prepare("SELECT production_line FROM " . LOCATIONS_TABLE . " WHERE location_id = ?");
+            $locStmt->execute([$location_id]);
+            $production_line = $locStmt->fetchColumn();
+            
+            if (!$production_line) {
+                echo json_encode(['success' => false, 'message' => 'สถานที่/เครื่องจักรนี้ ยังไม่ได้ถูกผูกกับไลน์ผลิต (Production Line) ในระบบ']);
+                break;
+            }
+            
+            $sql = "SELECT 
+                    u.id, 
+                    u.username, 
+                    ISNULL(NULLIF(emp.name_th, ''), u.fullname) AS fullname
+                FROM dbo.MANPOWER_DAILY_LOGS dl
+                JOIN dbo.MANPOWER_EMPLOYEES emp ON dl.emp_id = emp.emp_id
+                JOIN " . USERS_TABLE . " u ON emp.emp_id = u.emp_id COLLATE Thai_CI_AS
+                WHERE dl.log_date >= CAST(DATEADD(day, -1, GETDATE()) AS DATE)
+                AND dl.actual_line = ?
+                AND dl.status = 'PRESENT'
+                AND dl.scan_out_time IS NULL
+                AND u.is_active = 1";
+                
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$production_line]);
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode(['success' => true, 'users' => $users]);
+            break;
+
+
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => "Action '{$action}' is not handled."]);
