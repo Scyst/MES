@@ -205,6 +205,7 @@ function renderTable() {
         else if(c.current_status === 'SENT_TO_CUSTOMER') { badgeClass = 'bg-warning text-dark border border-warning'; cardBorder = '#ffc107'; statusText = 'WAITING CAR'; }
         else if(c.current_status === 'CUSTOMER_REPLIED') { badgeClass = 'bg-info text-dark border border-info'; cardBorder = '#0dcaf0'; statusText = 'READY TO CLAIM'; }
         else if(c.current_status === 'CLOSED') { badgeClass = 'bg-success text-white'; cardBorder = '#198754'; }
+        else if(c.current_status === 'CANCELLED') { badgeClass = 'bg-secondary text-white text-decoration-line-through opacity-75'; cardBorder = '#6c757d'; statusText = 'VOID / CANCELLED'; }
 
         tableHTML += `
             <tr onclick="openCaseDetail(${c.case_id})">
@@ -277,9 +278,19 @@ function openCaseDetail(caseId) {
             else if(data.current_status === 'SENT_TO_CUSTOMER') { badgeClass = 'bg-warning text-dark'; statusText = 'WAITING CAR'; }
             else if(data.current_status === 'CUSTOMER_REPLIED') { badgeClass = 'bg-info text-dark'; statusText = 'READY TO CLAIM'; }
             else if(data.current_status === 'CLOSED') { badgeClass = 'bg-success text-white'; }
+            else if(data.current_status === 'CANCELLED') { badgeClass = 'bg-secondary text-white text-decoration-line-through opacity-75'; statusText = 'VOID / CANCELLED'; }
             
             document.getElementById('offcanvas_status').innerText = statusText;
             document.getElementById('offcanvas_status').className = `badge ${badgeClass} border`;
+
+            const btnCancel = document.getElementById('btnCancelCase');
+            if (btnCancel) {
+                if (data.current_status === 'CANCELLED' || data.current_status === 'CLOSED') {
+                    btnCancel.classList.add('d-none');
+                } else {
+                    btnCancel.classList.remove('d-none');
+                }
+            }
 
             if(document.getElementById('issue_case_id')) document.getElementById('issue_case_id').value = data.case_id;
             if(document.getElementById('claim_case_id')) document.getElementById('claim_case_id').value = data.case_id;
@@ -880,4 +891,57 @@ function closeCaseDetail() {
             bsOffcanvas.hide();
         }
     }
+}
+
+// ==========================================
+// ฟังก์ชันสำหรับ Cancel / Void Case (เปลี่ยนสถานะเป็น CANCELLED)
+// ==========================================
+function cancelQmsCase() {
+    if (!currentCaseData || !currentCaseData.case_id) {
+        showToast('No active case selected.', 'var(--bs-danger)');
+        return;
+    }
+
+    Swal.fire({
+        title: 'ยืนยันการยกเลิกเอกสาร?',
+        html: `คุณกำลังจะยกเลิก <b>${currentCaseData.car_no}</b><br><span class="text-danger small">เอกสารที่ถูกยกเลิกจะไม่สามารถกลับมาแก้ไขได้อีก</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-ban me-1"></i> ยืนยันการยกเลิก',
+        cancelButtonText: 'ปิด'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'กำลังยกเลิก...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const formData = new FormData();
+            formData.append('action', 'cancel_case');
+            formData.append('case_id', currentCaseData.case_id);
+            appendCsrfToken(formData); // แทรก CSRF Token ป้องกัน 403 Forbidden
+
+            fetch('./api/qms_action.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(res => {
+                if(res.success) {
+                    Swal.fire('ยกเลิกสำเร็จ!', 'สถานะเอกสารถูกเปลี่ยนเป็น Void แล้ว', 'success');
+                    closeCaseDetail();
+                    fetchQmsData();
+                } else {
+                    Swal.fire('Error', res.message || 'เกิดข้อผิดพลาด', 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+            });
+        }
+    });
 }

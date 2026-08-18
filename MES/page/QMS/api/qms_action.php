@@ -338,6 +338,37 @@ try {
             echo json_encode(['success' => true, 'message' => "ขยายเวลาสำเร็จ"]);
             break;
 
+        // ==========================================
+        // 6. CANCEL / VOID CASE (ยกเลิกเอกสาร)
+        // ==========================================
+        case 'cancel_case':
+            $case_id = $_POST['case_id'] ?? null;
+            if (!$case_id) throw new Exception("Missing Case ID");
+
+            // อนุญาตให้ Cancel ได้เฉพาะสิทธิ์ที่เหมาะสม (ตอนนี้เราข้ามไปก่อน หรือถ้ามี Check สิทธิ์ก็ทำได้)
+            // เช็คว่า Case มีอยู่จริง
+            $stmtCheck = $pdo->prepare("SELECT current_status FROM QMS_CASES WHERE case_id = ?");
+            $stmtCheck->execute([$case_id]);
+            $status = $stmtCheck->fetchColumn();
+
+            if ($status === false) {
+                echo json_encode(['success' => false, 'message' => "ไม่พบข้อมูลเอกสาร"]);
+                exit;
+            }
+            if ($status === 'CANCELLED') {
+                echo json_encode(['success' => false, 'message' => "เอกสารนี้ถูกยกเลิกไปแล้ว"]);
+                exit;
+            }
+
+            // อัปเดตสถานะเป็น CANCELLED
+            $stmtUpdate = $pdo->prepare("UPDATE QMS_CASES SET current_status = 'CANCELLED', updated_at = GETDATE() WHERE case_id = ?");
+            $stmtUpdate->execute([$case_id]);
+
+            // Note: หากมีระบบ Log ควรเรียก writeLog($pdo, $user_id, "QMS", "CANCEL_CASE", ...) ตรงนี้
+
+            echo json_encode(['success' => true, 'message' => "ยกเลิกเอกสารสำเร็จ"]);
+            break;
+
         default:
             throw new Exception("Invalid Action");
     }

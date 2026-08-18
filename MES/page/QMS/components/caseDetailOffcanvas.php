@@ -134,15 +134,20 @@
 <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="caseDetailOffcanvas">
     
     <div class="offcanvas-sticky-top border-bottom shadow-sm">
-        <div class="offcanvas-header py-3 px-3 px-md-4 align-items-start">
-            <div style="min-width: 0;" class="pe-2"> <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+        <div class="offcanvas-header py-3 px-3 px-md-4 align-items-start d-flex justify-content-between">
+            <div style="min-width: 0;" class="pe-2 flex-grow-1"> 
+                <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
                     <h4 class="mb-0 fw-bold text-dark font-monospace text-truncate" id="offcanvas_car_no" style="max-width: 100%;">CAR-xxxx-xxx</h4>
                     <span id="offcanvas_status" class="badge bg-secondary text-white border flex-shrink-0">...</span>
                 </div>
                 <div class="small text-secondary fw-bold text-truncate"><i class="fas fa-file-alt me-1"></i> Quality Case Details</div>
             </div>
-            
-            <button type="button" class="btn-close fs-4 mt-1 flex-shrink-0 bg-light rounded-circle p-2 shadow-sm" aria-label="Close" onclick="closeCaseDetail()"></button>
+            <div class="d-flex align-items-center gap-2 mt-1 flex-shrink-0">
+                <button type="button" class="btn btn-sm btn-outline-danger fw-bold rounded-pill shadow-sm" id="btnCancelCase" onclick="cancelQmsCase()" title="Void / Cancel this Case">
+                    <i class="fas fa-ban"></i><span class="d-none d-md-inline ms-1">Void</span>
+                </button>
+                <button type="button" class="btn-close fs-4 bg-light rounded-circle p-2 shadow-sm" aria-label="Close" onclick="closeCaseDetail()"></button>
+            </div>
         </div>
 
         <ul class="nav nav-tabs nav-justified px-3" id="qmsTabs" role="tablist">
