@@ -39,7 +39,10 @@ try {
         SELECT 
             G.grade,
             ISNULL(INC.income_per_head, 0) AS income_per_head,
-            ISNULL(WAGE.total_wage, 350.0) AS total_wage
+            ISNULL(WAGE.total_wage, 350.0) AS total_wage,
+            C.threshold_a,
+            C.threshold_b,
+            C.threshold_c
         FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
         LEFT JOIN (
             SELECT 
@@ -91,6 +94,7 @@ try {
         ) WAGE ON WAGE.emp_id = E.emp_id COLLATE Thai_CI_AS
         LEFT JOIN dbo.EMPLOYEE_GRADES G WITH (NOLOCK) 
             ON E.emp_id = G.emp_id AND G.evaluation_period = :period3
+        LEFT JOIN dbo.EMPLOYEE_GRADING_CRITERIA C WITH (NOLOCK) ON C.line = E.line
         WHERE E.emp_id = :empId3
     ";
             
@@ -107,12 +111,36 @@ try {
         $income = (float)$data['income_per_head'];
         $wage = (float)$data['total_wage'];
         $ratio = $wage > 0 ? ($income / $wage) : 0;
+        
+        $systemGrade = 'N/A';
+        if (!empty($data['threshold_a']) && $data['threshold_a'] > 0) {
+            if ($ratio >= $data['threshold_a']) {
+                $systemGrade = 'A';
+            } else if ($ratio >= $data['threshold_b']) {
+                $systemGrade = 'B';
+            } else if ($ratio >= $data['threshold_c']) {
+                $systemGrade = 'C';
+            } else {
+                $systemGrade = 'D';
+            }
+        } else {
+            if ($ratio >= 2.0) {
+                $systemGrade = 'A';
+            } else if ($ratio >= 1.5) {
+                $systemGrade = 'B';
+            } else if ($ratio >= 1.0) {
+                $systemGrade = 'C';
+            } else {
+                $systemGrade = 'D';
+            }
+        }
 
         echo json_encode([
             'success' => true,
             'data' => [
                 'has_data' => true,
                 'grade' => !empty($data['grade']) ? $data['grade'] : '-',
+                'system_grade' => $systemGrade,
                 'income_per_head' => $income,
                 'total_wage' => $wage,
                 'income_ratio' => $ratio

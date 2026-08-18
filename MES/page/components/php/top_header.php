@@ -70,13 +70,13 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                 <span id="topHeaderQuickGrade" class="badge ms-2 d-none" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.1);"></span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end shadow border border-light mt-2 p-2" style="min-width: 260px; border-radius: 12px;">
-                <li class="text-center p-3 border-bottom mb-2 bg-light rounded">
+                <li class="text-center p-3 border-bottom mb-0 bg-light rounded">
                     <i class="fas fa-user-circle fa-3x text-secondary mb-2"></i>
                     <h6 class="mb-0 fw-bold text-dark"><?php echo htmlspecialchars($fullName); ?></h6>
                     <small class="text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;"><?php echo htmlspecialchars($userRole); ?></small>
                 </li>
                 <!-- Performance Summary -->
-                <li class="px-3 py-2 border-bottom mb-2 d-none" id="headerPerformanceCard">
+                <li class="px-3 py-2 border-bottom my-2 d-none" id="headerPerformanceCard">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <span class="small fw-bold text-muted">เกรดประเมินเดือนนี้</span>
                         <span class="badge bg-secondary" id="headerGradeDisplay">รอประเมิน</span>
@@ -150,23 +150,24 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                     card.classList.remove('d-none');
                     
                     if (json.data.has_data) {
-                        const grade = json.data.grade;
+                        let grade = json.data.grade;
                         const gradeEl = document.getElementById('headerGradeDisplay');
+                        const quickBadge = document.getElementById('topHeaderQuickGrade');
                         
-                        // Check if grade is actually assigned
-                        if (grade && grade !== '-' && grade !== 'N/A') {
-                            gradeEl.textContent = grade;
-                        } else {
-                            gradeEl.textContent = 'รอประเมิน';
+                        let isSystemGrade = false;
+                        if (!grade || grade === '-' || grade === 'N/A') {
+                            if (json.data.system_grade && json.data.system_grade !== 'N/A') {
+                                grade = json.data.system_grade;
+                                isSystemGrade = true;
+                            }
                         }
                         
                         gradeEl.className = 'badge';
-                        // Update quick badge (visible without click)
-                        const quickBadge = document.getElementById('topHeaderQuickGrade');
                         
                         if (grade && grade !== '-' && grade !== 'N/A') {
+                            gradeEl.textContent = grade + (isSystemGrade ? ' (คาดการณ์)' : '');
                             quickBadge.classList.remove('d-none');
-                            quickBadge.textContent = 'เกรด: ' + grade;
+                            quickBadge.textContent = 'เกรด: ' + grade + (isSystemGrade ? '*' : '');
                             quickBadge.className = 'badge ms-2';
                             
                             if (grade === 'A') {
@@ -186,6 +187,7 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                                 quickBadge.classList.add('bg-secondary');
                             }
                         } else {
+                            gradeEl.textContent = 'รอประเมิน';
                             quickBadge.classList.add('d-none');
                             gradeEl.classList.add('bg-secondary');
                         }
