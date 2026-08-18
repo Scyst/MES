@@ -110,30 +110,6 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
 
 <?php include_once __DIR__ . '/nav_dropdown.php'; ?>
 
-<style>
-.portal-top-header {
-    background-color: var(--bs-body-bg, #fff);
-    height: 70px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 1.5rem;
-    position: sticky;
-    top: 0;
-    z-index: 1030;
-}
-.header-logo-box {
-    width: 45px;
-    height: 45px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.profile-icon-hover:hover {
-    color: var(--bs-primary) !important;
-}
-</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

@@ -104,8 +104,7 @@ $pageHeaderSubtitle = 'ติดตามสถานะการผลิตแ
 
     <div class="page-container">
         <main id="main-content">
-            <div class="content-wrapper p-3">
-                
+            <div class="content-wrapper p-3">   
                 <div class="top-controls-wrapper mb-3">
                     <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
                         
