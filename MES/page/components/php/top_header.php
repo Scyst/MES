@@ -78,16 +78,16 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                 <!-- Performance Summary -->
                 <li class="px-3 py-2 border-bottom mb-2 d-none" id="headerPerformanceCard">
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="small fw-bold text-muted">ผลงานเดือนนี้</span>
-                        <span class="badge bg-secondary" id="headerGradeDisplay">-</span>
+                        <span class="small fw-bold text-muted">เกรดประเมินเดือนนี้</span>
+                        <span class="badge bg-secondary" id="headerGradeDisplay">รอประเมิน</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="small text-secondary">รายได้พิเศษ:</span>
+                        <span class="small text-secondary">ค่าผลงาน:</span>
                         <span class="small fw-bold text-primary" id="headerIncomeDisplay">฿0.00</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="small text-secondary">Ratio:</span>
-                        <span class="small fw-bold text-success" id="headerRatioDisplay">0%</span>
+                        <span class="small fw-bold text-success" id="headerRatioDisplay">0.00</span>
                     </div>
                 </li>
                 <li>
@@ -150,12 +150,16 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                     card.classList.remove('d-none');
                     
                     if (json.data.has_data) {
-                        // Grade
-                        const gradeEl = document.getElementById('headerGradeDisplay');
                         const grade = json.data.grade;
-                        gradeEl.textContent = grade;
+                        const gradeEl = document.getElementById('headerGradeDisplay');
                         
-                        // Update dropdown badge
+                        // Check if grade is actually assigned
+                        if (grade && grade !== '-' && grade !== 'N/A') {
+                            gradeEl.textContent = grade;
+                        } else {
+                            gradeEl.textContent = 'รอประเมิน';
+                        }
+                        
                         gradeEl.className = 'badge';
                         // Update quick badge (visible without click)
                         const quickBadge = document.getElementById('topHeaderQuickGrade');
@@ -193,7 +197,7 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                         document.getElementById('headerRatioDisplay').textContent = json.data.income_ratio.toFixed(2);
                     } else {
                         // No Data
-                        document.getElementById('headerGradeDisplay').textContent = '-';
+                        document.getElementById('headerGradeDisplay').textContent = 'รอประเมิน';
                         document.getElementById('headerIncomeDisplay').textContent = 'ไม่มีข้อมูล';
                         document.getElementById('headerIncomeDisplay').classList.replace('text-primary', 'text-muted');
                         document.getElementById('headerRatioDisplay').textContent = '-';
