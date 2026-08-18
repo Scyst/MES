@@ -159,25 +159,31 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                         gradeEl.className = 'badge';
                         // Update quick badge (visible without click)
                         const quickBadge = document.getElementById('topHeaderQuickGrade');
-                        quickBadge.classList.remove('d-none');
-                        quickBadge.textContent = 'เกรด: ' + grade;
-                        quickBadge.className = 'badge ms-2';
                         
-                        if (grade === 'A') {
-                            gradeEl.classList.add('bg-success');
-                            quickBadge.classList.add('bg-success');
-                        } else if (grade === 'B') {
-                            gradeEl.classList.add('bg-primary');
-                            quickBadge.classList.add('bg-primary');
-                        } else if (grade === 'C') {
-                            gradeEl.classList.add('bg-warning', 'text-dark');
-                            quickBadge.classList.add('bg-warning', 'text-dark');
-                        } else if (grade === 'D') {
-                            gradeEl.classList.add('bg-danger');
-                            quickBadge.classList.add('bg-danger');
+                        if (grade && grade !== '-' && grade !== 'N/A') {
+                            quickBadge.classList.remove('d-none');
+                            quickBadge.textContent = 'เกรด: ' + grade;
+                            quickBadge.className = 'badge ms-2';
+                            
+                            if (grade === 'A') {
+                                gradeEl.classList.add('bg-success');
+                                quickBadge.classList.add('bg-success');
+                            } else if (grade === 'B') {
+                                gradeEl.classList.add('bg-primary');
+                                quickBadge.classList.add('bg-primary');
+                            } else if (grade === 'C') {
+                                gradeEl.classList.add('bg-warning', 'text-dark');
+                                quickBadge.classList.add('bg-warning', 'text-dark');
+                            } else if (grade === 'D') {
+                                gradeEl.classList.add('bg-danger');
+                                quickBadge.classList.add('bg-danger');
+                            } else {
+                                gradeEl.classList.add('bg-secondary');
+                                quickBadge.classList.add('bg-secondary');
+                            }
                         } else {
+                            quickBadge.classList.add('d-none');
                             gradeEl.classList.add('bg-secondary');
-                            quickBadge.classList.add('bg-secondary');
                         }
 
                         // Income
@@ -193,11 +199,9 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                         document.getElementById('headerRatioDisplay').textContent = '-';
                         document.getElementById('headerRatioDisplay').classList.replace('text-success', 'text-muted');
                         
-                        // Show quick badge as empty state
+                        // Hide quick badge
                         const quickBadge = document.getElementById('topHeaderQuickGrade');
-                        quickBadge.classList.remove('d-none');
-                        quickBadge.textContent = '-';
-                        quickBadge.className = 'badge ms-2 bg-secondary bg-opacity-25 text-secondary';
+                        quickBadge.classList.add('d-none');
                     }
                 }
             })
