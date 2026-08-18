@@ -348,10 +348,14 @@ const App = {
         const globalToggleBtn = document.getElementById('btnGlobalWageToggle');
         if (globalToggleBtn) {
             if (isVisible) {
-                globalToggleBtn.className = 'btn btn-sm btn-outline-danger rounded-pill d-flex align-items-center fw-bold';
+                globalToggleBtn.className = 'btn btn-sm border-0 rounded-pill d-flex align-items-center fw-bold px-3';
+                globalToggleBtn.style.backgroundColor = '#f8d7da';
+                globalToggleBtn.style.color = '#842029';
                 globalToggleBtn.innerHTML = '<i class="fas fa-lock-open me-1"></i> <span>Lock Wage</span>';
             } else {
-                globalToggleBtn.className = 'btn btn-sm btn-outline-warning rounded-pill d-flex align-items-center fw-bold';
+                globalToggleBtn.className = 'btn btn-sm border-0 rounded-pill d-flex align-items-center fw-bold px-3';
+                globalToggleBtn.style.backgroundColor = '#fff3cd';
+                globalToggleBtn.style.color = '#664d03';
                 globalToggleBtn.innerHTML = '<i class="fas fa-lock me-1"></i> <span>Unlock Wage</span>';
             }
         }
@@ -359,9 +363,6 @@ const App = {
         const totalGraded = grades.A + grades.B + grades.C + grades.D;
         setEl('analytics-grade-total-badge', `${totalGraded} graded / ${filtered.length} total`);
         setEl('wage-tab-total-badge', isVisible ? `Total: ${totalWage.toLocaleString(undefined,{maximumFractionDigits:0})} ฿` : '🔒 Locked');
-        const wageUnlockBanner = document.getElementById('wage-unlock-banner');
-        if (wageUnlockBanner) wageUnlockBanner.classList.toggle('d-none', isVisible);
-
         // --- Destroy Old Charts ---
         if (this.charts) Object.values(this.charts).forEach(c => c && c.destroy());
         this.charts = {};
@@ -863,11 +864,12 @@ const App = {
                 useCORS: true,
                 backgroundColor: '#ffffff'
             });
-
+            const periodType = document.querySelector('input[name="periodTypeToggle"]:checked').value;
+            const period = periodType === 'daily' 
+                ? document.getElementById('filterPeriodDate').value 
+                : document.getElementById('filterPeriodMonth').value;
             const image = canvas.toDataURL("image/jpeg", 0.9);
             const link = document.createElement('a');
-
-            const period = document.getElementById('filterPeriod').value || new Date().toISOString().split('T')[0];
             link.download = `Grading_Analytics_${period}.jpg`;
             link.href = image;
             link.click();

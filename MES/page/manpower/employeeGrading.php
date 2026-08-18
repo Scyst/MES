@@ -300,11 +300,18 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                                 <div class="text-white opacity-60 small" style="font-size:0.7rem;">TOTAL WAGE</div>
                                 <div class="text-white fw-bold" id="analytics-stat-wage">—</div>
                             </div>
+                            
+                            <!-- Save Picture Button (Icon Only) -->
+                            <button type="button" class="btn border-0 text-white rounded-3 d-flex align-items-center justify-content-center shadow-sm align-self-stretch px-3" 
+                                    style="background: rgba(255,255,255,0.15); backdrop-filter: blur(4px); transition: all 0.2s;" 
+                                    onclick="App.saveAnalysisAsImage()" 
+                                    onmouseover="this.style.background='rgba(255,255,255,0.25)'" 
+                                    onmouseout="this.style.background='rgba(255,255,255,0.15)'"
+                                    title="Save Picture">
+                                <i class="fas fa-camera fa-lg opacity-75"></i>
+                            </button>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-light ms-3 shadow-sm text-nowrap" onclick="App.saveAnalysisAsImage()">
-                        <i class="fas fa-camera me-1"></i> Save Picture
-                    </button>
                     <button type="button" class="btn-close btn-close-white ms-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
@@ -340,7 +347,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     <div class="ms-auto d-flex align-items-center gap-3">
                         <span class="text-muted small" id="analytics-filter-count">Loading...</span>
                         <div class="vr text-muted opacity-25" style="height: 20px;"></div>
-                        <button class="btn btn-sm btn-outline-warning rounded-pill d-flex align-items-center fw-bold" id="btnGlobalWageToggle" onclick="App.toggleWageVisibility()" style="font-size: 0.75rem; min-width: 110px; justify-content: center;">
+                        <button class="btn btn-sm border-0 rounded-pill d-flex align-items-center fw-bold px-3" id="btnGlobalWageToggle" onclick="App.toggleWageVisibility()" style="font-size: 0.75rem; min-width: 110px; justify-content: center; background-color: #fff3cd; color: #664d03;">
                             <i class="fas fa-lock me-1"></i> <span>Unlock Wage</span>
                         </button>
                     </div>
@@ -447,18 +454,6 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                         <!-- TAB 3: Wage Analysis -->
                         <div class="tab-pane fade" id="tab-wage">
                             <div class="row g-3">
-                                <!-- Unlock Banner -->
-                                <div class="col-12" id="wage-unlock-banner">
-                                    <div class="alert alert-warning d-flex align-items-center gap-3 mb-0 border-warning-subtle shadow-sm" role="alert">
-                                        <i class="fas fa-shield-alt fa-lg text-warning"></i>
-                                        <div class="flex-grow-1">
-                                            <strong>Wage data is protected.</strong> You need to unlock with your login password to view salary information.
-                                        </div>
-                                        <button class="btn btn-warning btn-sm rounded-pill px-3 fw-bold text-dark" onclick="App.toggleWageVisibility()">
-                                            <i class="fas fa-key me-1"></i> Unlock
-                                        </button>
-                                    </div>
-                                </div>
                                 <!-- Labor Cost Breakdown -->
                                 <div class="col-12 col-xl-6">
                                     <div class="card h-100 border-0 shadow-sm position-relative">
