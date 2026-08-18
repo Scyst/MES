@@ -1,5 +1,6 @@
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useState, useEffect } from 'react';
-import { Activity, Cpu, HardDrive, Zap, Flame, Layers, ArrowDown, ArrowUp, Globe, Database, Server, Wifi, LayoutDashboard, Cloud, Settings, LayoutList, Columns3, TrendingUp, CheckCircle2, AlertCircle } from 'lucide-react';
+import { DownloadCloud, Activity, Cpu, HardDrive, Zap, Flame, Layers, ArrowDown, ArrowUp, Globe, Database, Server, Wifi, LayoutDashboard, Cloud, Settings, LayoutList, Columns3, TrendingUp, CheckCircle2, AlertCircle } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import type { SysPayload, ServerStatus } from '../types';
 import { YAxis, XAxis, ResponsiveContainer, AreaChart, Area, Tooltip, CartesianGrid } from 'recharts';
@@ -43,14 +44,16 @@ export const ModernTheme = ({
   serverStatus,
   serverHistory,
   onClose,
-  onToggleTheme
+  onToggleTheme,
+  ecoMode
 }: { 
   sys: SysPayload, 
   history: {time: string, cpu: number, ram: number}[],
   serverStatus?: ServerStatus | null,
   serverHistory?: any[],
   onClose: () => void,
-  onToggleTheme: () => void
+  onToggleTheme: () => void,
+  ecoMode?: boolean
 }) => {
   const [activeTab, setActiveTab] = useState<'local' | 'server'>('local');
   const [serverLayout, setServerLayout] = useState<'row' | 'col' | 'combined'>('col');
@@ -59,8 +62,7 @@ export const ModernTheme = ({
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const isRunning: boolean = await invoke('check_backend_status');
-        setBackendRunning(isRunning);
+        try { await fetch('http://localhost:3000'); setBackendRunning(true); } catch(e) { setBackendRunning(false); }
       } catch (e) {
         setBackendRunning(false);
       }
@@ -81,11 +83,11 @@ export const ModernTheme = ({
     <div className="h-screen w-screen bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#0f172a] text-slate-200 overflow-hidden flex flex-col p-4 gap-4 font-sans select-none relative">
       
       {/* DRAG REGION */}
-      <div data-tauri-drag-region className="absolute top-0 left-0 w-[calc(100%-200px)] h-16 z-0 cursor-move" />
+      <div onMouseDown={() => getCurrentWindow().startDragging()} className="absolute top-0 left-0 w-[calc(100%-200px)] h-16 z-0 cursor-move" />
 
       {/* 1. HEADER */}
       <div className="flex justify-between items-center shrink-0 z-10 bg-white/5 backdrop-blur-md rounded-2xl px-4 py-2 border border-white/10 shadow-lg">
-        <div className="flex items-center gap-6 pointer-events-none">
+        <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-500/20 rounded-xl border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
               <Activity className="text-indigo-400" size={20} />
@@ -106,7 +108,7 @@ export const ModernTheme = ({
         <div className="flex items-center gap-2 pointer-events-auto z-50">
           
           {/* BACKEND STATUS INDICATOR */}
-          <div className="flex items-center gap-1.5 px-3 h-10 bg-black/20 rounded-xl border border-white/5" title="Backend Services (Logger, Dashboard, Backup)">
+          <div onClick={async () => { if(backendRunning !== true) { await invoke('start_backend'); setBackendRunning(true); } else { await invoke('stop_backend'); setBackendRunning(false); } }} className="flex items-center gap-1.5 px-3 h-10 bg-black/20 hover:bg-black/40 rounded-xl border border-white/5 cursor-pointer transition-colors" title="Click to Toggle Backend Services">
             {backendRunning === true ? (
               <><CheckCircle2 size={14} className="text-emerald-400" /><span className="text-[10px] font-bold text-emerald-400">ACTIVE</span></>
             ) : backendRunning === false ? (
@@ -117,7 +119,7 @@ export const ModernTheme = ({
           </div>
 
           {/* TABS (MOVED HERE) */}
-          <div className="flex gap-2 bg-black/20 p-1 rounded-xl border border-white/5 mr-2">
+          <div className="flex gap-2 bg-black/20 p-1 rounded-xl border border-white/5">
             <button 
               onClick={() => setActiveTab('local')}
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'local' ? 'bg-indigo-500/30 text-white shadow-sm border border-indigo-400/30' : 'text-white/40 hover:text-white/80 hover:bg-white/5'}`}
@@ -183,14 +185,18 @@ export const ModernTheme = ({
                   <span className="text-xs font-black text-sky-400">{sys.cpu_percent.toFixed(1)}%</span>
                 </div>
                 <div className="flex-1 min-h-0 w-full relative">
-                  <ResponsiveContainer width="100%" height="100%">
+                  {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={history}>
                       <YAxis domain={[0, 100]} hide />
                       <XAxis dataKey="time" hide />
-                      <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} labelStyle={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', marginBottom: '4px' }} />
+                      <Tooltip 
+    contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} 
+    labelStyle={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', marginBottom: '4px' }} 
+    labelFormatter={(label: any) => 'Time: ' + label}
+  />
                       <Area type="monotone" dataKey="cpu" stroke="#38bdf8" strokeWidth={2} fillOpacity={0.15} fill="#38bdf8" isAnimationActive={false} />
                     </AreaChart>
-                  </ResponsiveContainer>
+                  </ResponsiveContainer>}
                 </div>
               </div>
               
@@ -200,14 +206,14 @@ export const ModernTheme = ({
                   <span className="text-xs font-black text-purple-400">{((sys.ram_used_mb / sys.ram_total_mb) * 100).toFixed(1)}%</span>
                 </div>
                 <div className="flex-1 min-h-0 w-full relative">
-                  <ResponsiveContainer width="100%" height="100%">
+                  {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={history}>
                       <YAxis domain={[0, 100]} hide />
                       <XAxis dataKey="time" hide />
                       <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} labelStyle={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', marginBottom: '4px' }} />
                       <Area type="step" dataKey="ram" stroke="#a855f7" strokeWidth={2} fillOpacity={0.15} fill="#a855f7" isAnimationActive={false} />
                     </AreaChart>
-                  </ResponsiveContainer>
+                  </ResponsiveContainer>}
                 </div>
               </div>
 
@@ -217,14 +223,14 @@ export const ModernTheme = ({
                   <span className="text-xs font-black text-amber-400">{(sys.disk_read_kbps + sys.disk_write_kbps).toFixed(0)} KB/s</span>
                 </div>
                 <div className="flex-1 min-h-0 w-full relative">
-                  <ResponsiveContainer width="100%" height="100%">
+                  {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={history}>
                       <YAxis hide />
                       <XAxis dataKey="time" hide />
                       <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} labelStyle={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', marginBottom: '4px' }} />
                       <Area type="monotone" dataKey="disk" stroke="#f59e0b" strokeWidth={2} fillOpacity={0.15} fill="#f59e0b" isAnimationActive={false} />
                     </AreaChart>
-                  </ResponsiveContainer>
+                  </ResponsiveContainer>}
                 </div>
               </div>
 
@@ -234,14 +240,14 @@ export const ModernTheme = ({
                   <span className="text-xs font-black text-emerald-400">{(sys.net_down_kbps + sys.net_up_kbps).toFixed(0)} KB/s</span>
                 </div>
                 <div className="flex-1 min-h-0 w-full relative">
-                  <ResponsiveContainer width="100%" height="100%">
+                  {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={history}>
                       <YAxis hide />
                       <XAxis dataKey="time" hide />
                       <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} labelStyle={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', marginBottom: '4px' }} />
                       <Area type="monotone" dataKey="net" stroke="#10b981" strokeWidth={2} fillOpacity={0.15} fill="#10b981" isAnimationActive={false} />
                     </AreaChart>
-                  </ResponsiveContainer>
+                  </ResponsiveContainer>}
                 </div>
               </div>
 
@@ -251,7 +257,7 @@ export const ModernTheme = ({
                   <span className="text-xs font-black text-rose-400">{sys.gpus && sys.gpus.length > 0 ? sys.gpus.map(g => `${g.util.toFixed(1)}%`).join(' / ') : '0.0%'}</span>
                 </div>
                 <div className="flex-1 min-h-0 w-full relative">
-                  <ResponsiveContainer width="100%" height="100%">
+                  {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={history}>
                       <YAxis domain={[0, 100]} hide />
                       <XAxis dataKey="time" hide />
@@ -260,7 +266,7 @@ export const ModernTheme = ({
                         <Area key={`gpu-area-${i}`} type="monotone" dataKey={`gpu${i}`} stroke={gpu.is_nvidia ? "#10b981" : "#f43f5e"} strokeWidth={2} fillOpacity={0.15} fill={gpu.is_nvidia ? "#10b981" : "#f43f5e"} isAnimationActive={false} />
                       ))}
                     </AreaChart>
-                  </ResponsiveContainer>
+                  </ResponsiveContainer>}
                 </div>
               </div>
             </div>
@@ -392,6 +398,31 @@ export const ModernTheme = ({
                     >
                       <TrendingUp size={14} />
                     </button>
+                    <div className="w-px h-6 bg-white/10 mx-1"></div>
+                    <button 
+      onClick={async (e) => { 
+        const btn = e.currentTarget;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="animate-pulse">SYNCING...</span>';
+        btn.disabled = true;
+        try { 
+          await invoke('force_backup'); 
+          // Wait 3 seconds to simulate/wait for backup trigger
+          setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            alert('FTP Sync command sent to backend!');
+          }, 2000);
+        } catch(err){
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        } 
+      }} 
+      className="px-3 py-1.5 flex items-center justify-center gap-1.5 bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-500/30 rounded-lg text-[10px] font-bold transition-all"
+      title="Force FTP Backup Now"
+    >
+      <DownloadCloud size={12} /> SYNC FTP
+    </button>
                   </div>
                 </div>
 
@@ -413,19 +444,21 @@ export const ModernTheme = ({
                       ))}
                     </div>
                     <div className="flex-1 min-h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
+                      {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={serverHistory || []}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                          <XAxis dataKey="timestamp" hide />
                           <YAxis tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} width={35} />
                           <Tooltip
                             contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
-                            formatter={(v: any, name: any) => [`${v} ms`, name === 'ping' ? 'Ping' : name === 'http' ? 'HTTP' : 'DB Query']}
+                            labelFormatter={(label: any) => new Date(label).toLocaleTimeString()}
+                            formatter={(v: any, name: any) => [`${v} ms`, name === 'ping_ms' ? 'Ping' : name === 'http_ms' ? 'HTTP' : 'DB Query']}
                           />
                           <Area type="monotone" dataKey="ping"    stroke="#38bdf8" strokeWidth={2} fillOpacity={0.08} fill="#38bdf8" isAnimationActive={false} />
                           <Area type="monotone" dataKey="http"    stroke="#a855f7" strokeWidth={2} fillOpacity={0.08} fill="#a855f7" isAnimationActive={false} />
                           <Area type="monotone" dataKey="dbQuery" stroke="#f59e0b" strokeWidth={2} fillOpacity={0.08} fill="#f59e0b" isAnimationActive={false} />
                         </AreaChart>
-                      </ResponsiveContainer>
+                      </ResponsiveContainer>}
                     </div>
                   </div>
                 ) : (
@@ -437,14 +470,19 @@ export const ModernTheme = ({
                       <Globe size={10} className="text-sky-400" /> Ping Latency (ms)
                     </h3>
                     <div className="flex-1 min-h-[160px]">
-                      <ResponsiveContainer width="100%" height="100%">
+                      {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={serverHistory || []}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                          <XAxis dataKey="timestamp" hide />
                           <YAxis tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} width={35} />
-                          <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} formatter={(v: any) => [`${v} ms`, 'Ping']} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} 
+                            labelFormatter={(label: any) => new Date(label).toLocaleTimeString()}
+                            formatter={(v: any) => [`${v} ms`, 'Ping']} 
+                          />
                           <Area type="monotone" dataKey="ping" stroke="#38bdf8" strokeWidth={2} fillOpacity={0.15} fill="#38bdf8" isAnimationActive={false} />
                         </AreaChart>
-                      </ResponsiveContainer>
+                      </ResponsiveContainer>}
                     </div>
                   </div>
 
@@ -454,14 +492,19 @@ export const ModernTheme = ({
                       <Wifi size={10} className="text-purple-400" /> HTTP Response (ms)
                     </h3>
                     <div className="flex-1 min-h-[160px]">
-                      <ResponsiveContainer width="100%" height="100%">
+                      {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={serverHistory || []}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                          <XAxis dataKey="timestamp" hide />
                           <YAxis tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} width={35} />
-                          <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} formatter={(v: any) => [`${v} ms`, 'HTTP']} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} 
+                            labelFormatter={(label: any) => new Date(label).toLocaleTimeString()}
+                            formatter={(v: any) => [`${v} ms`, 'HTTP']} 
+                          />
                           <Area type="monotone" dataKey="http" stroke="#a855f7" strokeWidth={2} fillOpacity={0.15} fill="#a855f7" isAnimationActive={false} />
                         </AreaChart>
-                      </ResponsiveContainer>
+                      </ResponsiveContainer>}
                     </div>
                   </div>
 
@@ -471,14 +514,19 @@ export const ModernTheme = ({
                       <Database size={10} className="text-amber-400" /> DB Query Time (ms)
                     </h3>
                     <div className="flex-1 min-h-[160px]">
-                      <ResponsiveContainer width="100%" height="100%">
+                      {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={serverHistory || []}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                          <XAxis dataKey="timestamp" hide />
                           <YAxis tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} width={35} />
-                          <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} formatter={(v: any) => [`${v} ms`, 'DB Query']} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} 
+                            labelFormatter={(label: any) => new Date(label).toLocaleTimeString()}
+                            formatter={(v: any) => [`${v} ms`, 'DB Query']} 
+                          />
                           <Area type="monotone" dataKey="dbQuery" stroke="#f59e0b" strokeWidth={2} fillOpacity={0.15} fill="#f59e0b" isAnimationActive={false} />
                         </AreaChart>
-                      </ResponsiveContainer>
+                      </ResponsiveContainer>}
                     </div>
                   </div>
                 </div>

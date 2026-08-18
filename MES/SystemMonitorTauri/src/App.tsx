@@ -17,6 +17,8 @@ export default function App() {
   const [theme, setTheme] = useState<string>('modern');
   const [mode, setMode] = useState<string>('window');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [ecoMode, setEcoMode] = useState<boolean>(localStorage.getItem('app_eco_mode') === 'true');
+  const [pollServer, setPollServer] = useState<boolean>(localStorage.getItem('app_poll_server') !== 'false');
   
   const highCpuTicks = useRef(0);
   const highRamTicks = useRef(0);
@@ -50,12 +52,13 @@ export default function App() {
 
     // MES Server Status Polling
     const fetchServerStatus = async () => {
+      if (localStorage.getItem('app_poll_server') === 'false') return;
       try {
         const res = await fetch('http://localhost:3000/api/data?range=4h');
         const json = await res.json();
         if (json.success && json.data.length > 0) {
           setServerStatus(json.data[json.data.length - 1]);
-          setServerHistory(json.data);
+          setServerHistory(json.data.slice(-60));
         }
       } catch (err) {
         // Silently ignore if server is unreachable
@@ -158,13 +161,13 @@ export default function App() {
 
   const renderActiveTheme = () => {
     if (mode === 'mini') {
-      return <MiniTheme sys={sys} />;
+      return <MiniTheme sys={sys} onReturnToWindow={async () => { setMode('window'); localStorage.setItem('app_mode', 'window'); await invoke('set_window_mode'); }} onClose={handleClose} />;
     }
     
     if (theme === 'classic') {
-      return <ClassicTheme sys={sys} history={history} onClose={handleClose} onToggleTheme={() => setIsSettingsOpen(true)} />;
+      return <ClassicTheme sys={sys} history={history} onClose={handleClose} onToggleTheme={() => setIsSettingsOpen(true)} ecoMode={ecoMode} />;
     }
-    return <ModernTheme sys={sys} history={history} serverStatus={serverStatus} serverHistory={serverHistory} onClose={handleClose} onToggleTheme={() => setIsSettingsOpen(true)} />;
+    return <ModernTheme sys={sys} history={history} serverStatus={serverStatus} serverHistory={serverHistory} onClose={handleClose} onToggleTheme={() => setIsSettingsOpen(true)} ecoMode={ecoMode} />;
   };
 
   return (
@@ -177,6 +180,10 @@ export default function App() {
         onThemeChange={setTheme}
         currentMode={mode}
         onModeChange={handleModeChange}
+        ecoMode={ecoMode}
+        onEcoModeChange={(val: boolean) => { setEcoMode(val); localStorage.setItem('app_eco_mode', val.toString()); }}
+        pollServer={pollServer}
+        onPollServerChange={(val: boolean) => { setPollServer(val); localStorage.setItem('app_poll_server', val.toString()); }}
       />
     </>
   );

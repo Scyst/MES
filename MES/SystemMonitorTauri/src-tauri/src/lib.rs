@@ -325,6 +325,27 @@ fn start_backend() -> bool {
 }
 
 #[tauri::command]
+fn stop_backend() -> bool {
+    let _ = std::process::Command::new("wmic").args(&["process", "where", "CommandLine like '%performance_dashboard.cjs%'", "call", "terminate"]).output();
+    let _ = std::process::Command::new("wmic").args(&["process", "where", "CommandLine like '%performance_logger.cjs%'", "call", "terminate"]).output();
+    let _ = std::process::Command::new("wmic").args(&["process", "where", "CommandLine like '%backup_server.cjs%'", "call", "terminate"]).output();
+    true
+}
+
+#[tauri::command]
+fn read_backup_log() -> String {
+    let log_path = r"E:\MES\MES\MES\SystemMonitorBackend\backup_crash.log";
+    match std::fs::read_to_string(log_path) {
+        Ok(contents) => {
+            let lines: Vec<&str> = contents.lines().collect();
+            let tail = if lines.len() > 10 { &lines[lines.len() - 10..] } else { &lines[..] };
+            tail.join("\n")
+        },
+        Err(_) => "".to_string(),
+    }
+}
+
+#[tauri::command]
 fn force_backup() -> bool {
     // Create the trigger_backup.flag file in the backend directory
     let flag_path = r"E:\MES\MES\MES\SystemMonitorBackend\trigger_backup.flag";
@@ -343,8 +364,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             exit_app, set_window_mode, set_mini_mode, set_widget_mode, set_opacity,
-            check_backend_status, start_backend, force_backup
-        ])
+            check_backend_status, start_backend, force_backup, stop_backend, read_backup_log])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

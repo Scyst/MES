@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, X, Monitor, MonitorUp, PictureInPicture2, Palette, BellRing, Sun, Server, Play, CheckCircle2, AlertCircle, Database, DownloadCloud } from 'lucide-react';
+import { Settings, X, Monitor, MonitorUp, PictureInPicture2, Palette, BellRing, Sun, Server, Play, CheckCircle2, AlertCircle, Database, DownloadCloud, Zap } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 
 interface SettingsModalProps {
@@ -9,10 +9,15 @@ interface SettingsModalProps {
   onThemeChange: (theme: string) => void;
   currentMode: string;
   onModeChange: (mode: string) => void;
+  ecoMode?: boolean;
+  onEcoModeChange?: (val: boolean) => void;
+  pollServer?: boolean;
+  onPollServerChange?: (val: boolean) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
-  isOpen, onClose, currentTheme, onThemeChange, currentMode, onModeChange
+  isOpen, onClose, currentTheme, onThemeChange, currentMode, onModeChange,
+  ecoMode, onEcoModeChange, pollServer, onPollServerChange
 }) => {
   const [notifyCpu, setNotifyCpu] = useState(90);
   const [notifyRam, setNotifyRam] = useState(90);
@@ -34,8 +39,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     // Poll backend status while modal is open
     const checkStatus = async () => {
       try {
-        const isRunning: boolean = await invoke('check_backend_status');
-        setBackendRunning(isRunning);
+        try { await fetch('http://localhost:3000'); setBackendRunning(true); } catch(e) { setBackendRunning(false); }
       } catch (e) {
         setBackendRunning(false);
       }
@@ -47,9 +51,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleStartBackend = async () => {
     try {
-      await invoke('start_backend');
-      // Optimistically set to true, next poll will verify
-      setBackendRunning(true);
+      if (backendRunning) {
+        await invoke('stop_backend');
+        setBackendRunning(false);
+      } else {
+        await invoke('start_backend');
+        setBackendRunning(true);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -109,6 +117,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         <div className="p-4 flex flex-col gap-6 text-[#94a3b8] max-h-[70vh] overflow-y-auto">
           
+          <div>
+            <div className="flex items-center gap-2 mb-3 text-[#e2e8f0]">
+              <Zap size={14} className="text-emerald-400" />
+              <h3 className="font-bold uppercase tracking-wide">Power & Polling (Eco Mode)</h3>
+            </div>
+            <div className="bg-[#1a2b50]/10 p-3 rounded border border-[#1a2b50]/40 flex flex-col gap-3">
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-200 group-hover:text-white transition-colors">Eco Mode (Pause Graphs)</span>
+                  <span className="text-[10px] text-slate-400">Stops rendering SVG charts to save CPU/GPU.</span>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={ecoMode || false} 
+                  onChange={(e) => onEcoModeChange && onEcoModeChange(e.target.checked)}
+                  className="w-4 h-4 accent-emerald-500 cursor-pointer"
+                />
+              </label>
+
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-200 group-hover:text-white transition-colors">Poll MES Server Data</span>
+                  <span className="text-[10px] text-slate-400">Fetch metrics from the remote MES Database.</span>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={pollServer !== false} 
+                  onChange={(e) => onPollServerChange && onPollServerChange(e.target.checked)}
+                  className="w-4 h-4 accent-indigo-500 cursor-pointer"
+                />
+              </label>
+            </div>
+          </div>
+
           <div>
             <div className="flex items-center gap-2 mb-3 text-[#e2e8f0]">
               <Monitor size={14} className="text-[#f43f5e]" />
@@ -215,11 +257,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
               <button 
                 onClick={handleStartBackend}
-                disabled={backendRunning === true}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded border transition-colors ${backendRunning === true ? 'bg-transparent border-[#1a2b50]/40 text-[#64748b] cursor-not-allowed' : 'bg-[#00d4ff]/10 border-[#00d4ff] text-[#00d4ff] hover:bg-[#00d4ff]/20 cursor-pointer'}`}
+                
+                className={`flex items-center gap-1 px-3 py-1.5 rounded border transition-colors ${backendRunning === true ? 'bg-[#f43f5e]/10 border-[#f43f5e] text-[#f43f5e] hover:bg-[#f43f5e]/20 cursor-pointer' : 'bg-[#00d4ff]/10 border-[#00d4ff] text-[#00d4ff] hover:bg-[#00d4ff]/20 cursor-pointer'}`}
               >
-                <Play size={12} />
-                {backendRunning === true ? 'ACTIVE' : 'START'}
+                {backendRunning === true ? <div className="w-2 h-2 bg-[#f43f5e]" /> : <Play size={12} />}
+                {backendRunning === true ? 'STOP' : 'START'}
               </button>
             </div>
             </div>
@@ -253,8 +295,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 SYNC NOW
               </button>
             </div>
-          </div>
-
           {/* OPACITY (Widget mode only) */}
           {currentMode === 'widget' && (
             <div>

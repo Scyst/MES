@@ -1,10 +1,15 @@
 import React from 'react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import type { SysPayload } from '../types';
+import { X, LayoutDashboard } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 interface MiniThemeProps {
   sys: SysPayload;
+  onReturnToWindow?: () => void;
+  onClose?: () => void;
 }
 
-export const MiniTheme: React.FC<MiniThemeProps> = ({ sys }) => {
+export const MiniTheme: React.FC<MiniThemeProps> = ({ sys, onReturnToWindow, onClose }) => {
   const getColor = (val: number, reverse = false) => {
     if (reverse) {
       if (val < 10) return '#ef4444'; 
@@ -29,6 +34,7 @@ export const MiniTheme: React.FC<MiniThemeProps> = ({ sys }) => {
   return (
     <div 
       data-tauri-drag-region
+      onMouseDown={() => getCurrentWindow().startDragging()}
       className="h-screen w-screen bg-[#060810]/95 text-[#cbd5e1] overflow-hidden flex items-center px-3 font-mono text-xs select-none border border-[#1a2b50]/60 rounded-lg shadow-xl cursor-move"
     >
 
@@ -85,7 +91,25 @@ export const MiniTheme: React.FC<MiniThemeProps> = ({ sys }) => {
             {netTotal > 1024 ? (netTotal / 1024).toFixed(1) + ' MB' : netTotal.toFixed(0) + ' KB'}
           </span>
         </div>
+
+        <div className="flex items-center gap-2 pointer-events-auto shrink-0 pl-1">
+          <button 
+            onClick={() => { if(onReturnToWindow) onReturnToWindow(); else { localStorage.setItem('app_mode', 'window'); invoke('set_window_mode'); } }} 
+            className="text-slate-500 hover:text-white transition-colors cursor-pointer"
+            title="Return to Window Mode"
+          >
+            <LayoutDashboard size={12} />
+          </button>
+          <button 
+            onClick={() => { if(onClose) onClose(); else invoke('close_window'); }} 
+            className="text-rose-500/70 hover:text-rose-400 transition-colors cursor-pointer"
+            title="Exit"
+          >
+            <X size={12} />
+          </button>
+        </div>
       </div>
+
     </div>
   );
 };

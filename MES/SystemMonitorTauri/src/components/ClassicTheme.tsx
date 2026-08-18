@@ -1,4 +1,5 @@
-import { YAxis, ResponsiveContainer, AreaChart, Area, Tooltip } from 'recharts';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { YAxis, XAxis, ResponsiveContainer, AreaChart, Area, Tooltip } from 'recharts';
 import { Zap, ArrowDown, ArrowUp, HardDrive, Flame, Layers } from 'lucide-react';
 import type { SysPayload } from '../types';
 
@@ -35,12 +36,14 @@ export const ClassicTheme = ({
   sys, 
   history,
   onClose,
-  onToggleTheme
+  onToggleTheme,
+  ecoMode
 }: { 
   sys: SysPayload, 
   history: any[],
   onClose: () => void,
-  onToggleTheme: () => void
+  onToggleTheme: () => void,
+  ecoMode?: boolean
 }) => {
   const formatUptime = (seconds: number) => {
     const d = Math.floor(seconds / 86400);
@@ -53,7 +56,7 @@ export const ClassicTheme = ({
     <div className="h-screen w-screen bg-[#060810]/90 text-[#cbd5e1] overflow-hidden flex flex-col p-3 gap-3 font-mono select-none text-xs">
       
       {/* DRAG REGION BACKGROUND LAYER */}
-      <div data-tauri-drag-region className="absolute top-0 left-0 w-[calc(100%-200px)] h-8 z-0 cursor-move" />
+      <div onMouseDown={() => getCurrentWindow().startDragging()} className="absolute top-0 left-0 w-[calc(100%-200px)] h-8 z-0 cursor-move" />
 
       <div className="flex justify-between items-end shrink-0 border-b border-[#1a2b50]/60 pb-1 z-10">
         <div className="flex items-center gap-2 pointer-events-none">
@@ -123,37 +126,37 @@ export const ClassicTheme = ({
         <div className="flex-1 bg-[#0a0f18] border border-[#1a2b50]/40 rounded relative p-1">
           <div className="absolute top-1 left-2 text-[10px] text-[#475569] z-10">CPU</div>
           <div className="absolute top-1 right-2 text-[10px] text-[#00d4ff] z-10">{sys.cpu_percent.toFixed(0)}%</div>
-          <ResponsiveContainer width="100%" height="100%">
+          {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={history}>
-              <YAxis domain={[0, 100]} hide />
+              <XAxis dataKey="time" hide /><YAxis domain={[0, 100]} hide />
               <Tooltip contentStyle={{ backgroundColor: '#0b1120', border: '1px solid #1a2b50', borderRadius: '4px' }} labelStyle={{ display: 'none' }} />
               <Area type="monotone" dataKey="cpu" stroke="#00d4ff" strokeWidth={1.5} fillOpacity={0.1} fill="#00d4ff" isAnimationActive={false} />
             </AreaChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer>}
         </div>
         <div className="flex-1 bg-[#0a0f18] border border-[#1a2b50]/40 rounded relative p-1">
           <div className="absolute top-1 left-2 text-[10px] text-[#475569] z-10">RAM</div>
           <div className="absolute top-1 right-2 text-[10px] text-[#a855f7] z-10">{((sys.ram_used_mb/sys.ram_total_mb)*100).toFixed(0)}%</div>
-          <ResponsiveContainer width="100%" height="100%">
+          {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={history}>
-              <YAxis domain={[0, 100]} hide />
+              <XAxis dataKey="time" hide /><YAxis domain={[0, 100]} hide />
               <Tooltip contentStyle={{ backgroundColor: '#0b1120', border: '1px solid #1a2b50', borderRadius: '4px' }} labelStyle={{ display: 'none' }} />
               <Area type="step" dataKey="ram" stroke="#a855f7" strokeWidth={1.5} fillOpacity={0.1} fill="#a855f7" isAnimationActive={false} />
             </AreaChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer>}
         </div>
         <div className="flex-1 bg-[#0a0f18] border border-[#1a2b50]/40 rounded relative p-1">
           <div className="absolute top-1 left-2 text-[10px] text-[#475569] z-10">GPU</div>
           <div className="absolute top-1 right-2 text-[10px] text-[#f43f5e] z-10">{sys.gpus && sys.gpus.length > 0 ? sys.gpus.map(g => `${g.util.toFixed(0)}%`).join(' / ') : '0%'}</div>
-          <ResponsiveContainer width="100%" height="100%">
+          {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={history}>
-              <YAxis domain={[0, 100]} hide />
+              <XAxis dataKey="time" hide /><YAxis domain={[0, 100]} hide />
               <Tooltip contentStyle={{ backgroundColor: '#0b1120', border: '1px solid #1a2b50', borderRadius: '4px' }} labelStyle={{ display: 'none' }} />
               {sys.gpus && sys.gpus.map((gpu, i) => (
                 <Area key={`gpu-classic-${i}`} type="monotone" dataKey={`gpu${i}`} stroke={gpu.is_nvidia ? "#10b981" : "#f43f5e"} strokeWidth={1.5} fillOpacity={0.1} fill={gpu.is_nvidia ? "#10b981" : "#f43f5e"} isAnimationActive={false} />
               ))}
             </AreaChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer>}
         </div>
       </div>
 
