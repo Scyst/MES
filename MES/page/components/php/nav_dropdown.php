@@ -152,6 +152,21 @@
     </div>
     <div class="offcanvas-body p-0">
         
+        <div class="p-3 bg-white border-bottom d-none" id="mobilePerformanceCard">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="small fw-bold text-muted">เกรดประเมิน:</span>
+                <span class="badge bg-secondary" id="mobileHeaderGradeDisplay">รอประเมิน</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="small text-secondary">ค่าผลงาน:</span>
+                <span class="small fw-bold text-primary" id="mobileHeaderIncomeDisplay">฿0.00</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="small text-secondary">Ratio:</span>
+                <span class="small fw-bold text-success" id="mobileHeaderRatioDisplay">0.00</span>
+            </div>
+        </div>
+        
         <div class="p-3 bg-white border-bottom sticky-top" style="z-index: 10;">
             <div class="input-group">
                 <span class="input-group-text bg-light border-0"><i class="fas fa-search text-dark"></i></span>

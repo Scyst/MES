@@ -69,16 +69,16 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                 </span>
                 <span id="topHeaderQuickGrade" class="badge ms-2 d-none" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.1);"></span>
             </a>
-            <ul class="dropdown-menu dropdown-menu-end shadow border border-light mt-2 p-2" style="min-width: 260px; border-radius: 12px;">
-                <li class="text-center p-3 border-bottom mb-0 bg-light rounded">
+            <ul class="dropdown-menu dropdown-menu-end shadow border border-light mt-2 p-2" style="min-width: 280px; border-radius: 12px;">
+                <li class="text-center p-3 border-bottom mb-2 bg-light rounded">
                     <i class="fas fa-user-circle fa-3x text-secondary mb-2"></i>
                     <h6 class="mb-0 fw-bold text-dark"><?php echo htmlspecialchars($fullName); ?></h6>
                     <small class="text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;"><?php echo htmlspecialchars($userRole); ?></small>
                 </li>
                 <!-- Performance Summary -->
-                <li class="px-3 py-2 border-bottom my-2 d-none" id="headerPerformanceCard">
+                <li class="px-3 py-2 border-bottom mb-2 d-none" id="headerPerformanceCard">
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="small fw-bold text-muted">เกรดประเมินเดือนนี้</span>
+                        <span class="small fw-bold text-muted">เกรดประเมิน:</span>
                         <span class="badge bg-secondary" id="headerGradeDisplay">รอประเมิน</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mb-1">
@@ -102,56 +102,69 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                 </li>
             </ul>
         </div>
+        <?php else: ?>
+        <a href="<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/auth/login.php" class="btn btn-primary btn-sm rounded-pill px-3">เข้าสู่ระบบ</a>
         <?php endif; ?>
-
     </div>
 </header>
 
 <?php include_once __DIR__ . '/nav_dropdown.php'; ?>
 
+<style>
+.portal-top-header {
+    background-color: var(--bs-body-bg, #fff);
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+.header-logo-box {
+    width: 45px;
+    height: 45px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.profile-icon-hover:hover {
+    color: var(--bs-primary) !important;
+}
+</style>
+
 <script>
-    // Script นาฬิกาและวันที่
-    const thaiMonths = [
-        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-    ];
-
-    function updateRealTimeClock() {
+document.addEventListener('DOMContentLoaded', function() {
+    function updateClock() {
         const now = new Date();
-        
-        // อัปเดตเวลา
-        const timeString = now.toLocaleTimeString('th-TH', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const clockEl = document.getElementById('realTimeClock');
-        if (clockEl) clockEl.textContent = timeString;
-
-        // อัปเดตวันที่ (เผื่อกรณีเปิดทิ้งไว้ข้ามคืน)
-        const dateString = `${now.getDate()} ${thaiMonths[now.getMonth()]} ${now.getFullYear() + 543}`;
-        const dateEl = document.getElementById('realTimeDate');
-        if (dateEl && dateEl.textContent !== dateString) {
-            dateEl.textContent = dateString;
-        }
+        document.getElementById('realTimeClock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
     }
-    setInterval(updateRealTimeClock, 1000);
-    updateRealTimeClock();
-    
-    // ดึงข้อมูลผลงานพนักงาน
-    document.addEventListener("DOMContentLoaded", function() {
-        let path = window.location.pathname;
-        let pageIndex = path.indexOf('/page/');
-        let baseUrl = pageIndex > 0 ? path.substring(0, pageIndex) : '';
-        
-        const card = document.getElementById('headerPerformanceCard');
-        if (!card) return;
+    setInterval(updateClock, 1000);
+    updateClock();
 
-        fetch(`${baseUrl}/page/manpower/api/api_my_performance.php`)
+    // Fetch Performance Data
+    <?php if (isset($_SESSION['user']['emp_id'])): ?>
+    setTimeout(() => {
+        fetch('<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/page/manpower/api/api_my_performance.php')
             .then(res => res.json())
             .then(json => {
-                if (json.success) {
-                    card.classList.remove('d-none');
+                if (json.success && json.data) {
+                    const card = document.getElementById('headerPerformanceCard');
+                    const mobileCard = document.getElementById('mobilePerformanceCard');
+                    
+                    if (card) {
+                        card.classList.remove('d-none');
+                    }
+                    if (mobileCard) {
+                        mobileCard.classList.remove('d-none');
+                    }
                     
                     if (json.data.has_data) {
                         let grade = json.data.grade;
                         const gradeEl = document.getElementById('headerGradeDisplay');
+                        const mobileGradeEl = document.getElementById('mobileHeaderGradeDisplay');
                         const quickBadge = document.getElementById('topHeaderQuickGrade');
                         
                         let isSystemGrade = false;
@@ -162,52 +175,107 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                             }
                         }
                         
-                        gradeEl.className = 'badge';
+                        if (gradeEl) gradeEl.className = 'badge';
+                        if (mobileGradeEl) mobileGradeEl.className = 'badge';
                         
                         if (grade && grade !== '-' && grade !== 'N/A') {
-                            gradeEl.textContent = grade + (isSystemGrade ? ' (คาดการณ์)' : '');
-                            quickBadge.classList.remove('d-none');
-                            quickBadge.textContent = 'เกรด: ' + grade + (isSystemGrade ? '*' : '');
-                            quickBadge.className = 'badge ms-2';
+                            const gradeText = grade + (isSystemGrade ? ' (คาดการณ์)' : '');
+                            if (gradeEl) gradeEl.textContent = gradeText;
+                            if (mobileGradeEl) mobileGradeEl.textContent = gradeText;
                             
-                            if (grade === 'A') {
-                                gradeEl.classList.add('bg-success');
-                                quickBadge.classList.add('bg-success');
-                            } else if (grade === 'B') {
-                                gradeEl.classList.add('bg-primary');
-                                quickBadge.classList.add('bg-primary');
-                            } else if (grade === 'C') {
-                                gradeEl.classList.add('bg-warning', 'text-dark');
-                                quickBadge.classList.add('bg-warning', 'text-dark');
-                            } else if (grade === 'D') {
-                                gradeEl.classList.add('bg-danger');
-                                quickBadge.classList.add('bg-danger');
-                            } else {
-                                gradeEl.classList.add('bg-secondary');
-                                quickBadge.classList.add('bg-secondary');
+                            if (quickBadge) {
+                                quickBadge.classList.remove('d-none');
+                                quickBadge.textContent = 'เกรด: ' + grade + (isSystemGrade ? '*' : '');
+                                quickBadge.className = 'badge ms-2';
                             }
+                            
+                            // Desktop Colors
+                            if (gradeEl && quickBadge) {
+                                if (grade === 'A') {
+                                    gradeEl.classList.add('bg-success');
+                                    quickBadge.classList.add('bg-success');
+                                } else if (grade === 'B') {
+                                    gradeEl.classList.add('bg-primary');
+                                    quickBadge.classList.add('bg-primary');
+                                } else if (grade === 'C') {
+                                    gradeEl.classList.add('bg-warning', 'text-dark');
+                                    quickBadge.classList.add('bg-warning', 'text-dark');
+                                } else if (grade === 'D') {
+                                    gradeEl.classList.add('bg-danger');
+                                    quickBadge.classList.add('bg-danger');
+                                } else {
+                                    gradeEl.classList.add('bg-secondary');
+                                    quickBadge.classList.add('bg-secondary');
+                                }
+                            }
+                            
+                            // Mobile Colors
+                            if (mobileGradeEl) {
+                                if (grade === 'A') mobileGradeEl.classList.add('bg-success');
+                                else if (grade === 'B') mobileGradeEl.classList.add('bg-primary');
+                                else if (grade === 'C') mobileGradeEl.classList.add('bg-warning', 'text-dark');
+                                else if (grade === 'D') mobileGradeEl.classList.add('bg-danger');
+                                else mobileGradeEl.classList.add('bg-secondary');
+                            }
+                            
                         } else {
-                            gradeEl.textContent = 'รอประเมิน';
-                            quickBadge.classList.add('d-none');
-                            gradeEl.classList.add('bg-secondary');
+                            if (gradeEl) {
+                                gradeEl.textContent = 'รอประเมิน';
+                                gradeEl.classList.add('bg-secondary');
+                            }
+                            if (mobileGradeEl) {
+                                mobileGradeEl.textContent = 'รอประเมิน';
+                                mobileGradeEl.classList.add('bg-secondary');
+                            }
+                            if (quickBadge) quickBadge.classList.add('d-none');
                         }
 
                         // Income
-                        document.getElementById('headerIncomeDisplay').textContent = '฿' + json.data.income_per_head.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        const formattedIncome = '฿' + json.data.income_per_head.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        const incomeEl = document.getElementById('headerIncomeDisplay');
+                        const mobileIncomeEl = document.getElementById('mobileHeaderIncomeDisplay');
+                        if (incomeEl) incomeEl.textContent = formattedIncome;
+                        if (mobileIncomeEl) mobileIncomeEl.textContent = formattedIncome;
                         
                         // Ratio
-                        document.getElementById('headerRatioDisplay').textContent = json.data.income_ratio.toFixed(2);
-                    } else {
-                        // No Data
-                        document.getElementById('headerGradeDisplay').textContent = 'รอประเมิน';
-                        document.getElementById('headerIncomeDisplay').textContent = 'ไม่มีข้อมูล';
-                        document.getElementById('headerIncomeDisplay').classList.replace('text-primary', 'text-muted');
-                        document.getElementById('headerRatioDisplay').textContent = '-';
-                        document.getElementById('headerRatioDisplay').classList.replace('text-success', 'text-muted');
+                        const formattedRatio = json.data.income_ratio.toFixed(2);
+                        const ratioEl = document.getElementById('headerRatioDisplay');
+                        const mobileRatioEl = document.getElementById('mobileHeaderRatioDisplay');
+                        if (ratioEl) ratioEl.textContent = formattedRatio;
+                        if (mobileRatioEl) mobileRatioEl.textContent = formattedRatio;
                         
-                        // Hide quick badge
+                    } else {
+                        // No Data Desktop
+                        const gradeEl = document.getElementById('headerGradeDisplay');
+                        const incomeEl = document.getElementById('headerIncomeDisplay');
+                        const ratioEl = document.getElementById('headerRatioDisplay');
                         const quickBadge = document.getElementById('topHeaderQuickGrade');
-                        quickBadge.classList.add('d-none');
+                        
+                        if (gradeEl) gradeEl.textContent = 'รอประเมิน';
+                        if (incomeEl) {
+                            incomeEl.textContent = 'ไม่มีข้อมูล';
+                            incomeEl.classList.replace('text-primary', 'text-muted');
+                        }
+                        if (ratioEl) {
+                            ratioEl.textContent = '-';
+                            ratioEl.classList.replace('text-success', 'text-muted');
+                        }
+                        if (quickBadge) quickBadge.classList.add('d-none');
+                        
+                        // No Data Mobile
+                        const mobileGradeEl = document.getElementById('mobileHeaderGradeDisplay');
+                        const mobileIncomeEl = document.getElementById('mobileHeaderIncomeDisplay');
+                        const mobileRatioEl = document.getElementById('mobileHeaderRatioDisplay');
+                        
+                        if (mobileGradeEl) mobileGradeEl.textContent = 'รอประเมิน';
+                        if (mobileIncomeEl) {
+                            mobileIncomeEl.textContent = 'ไม่มีข้อมูล';
+                            mobileIncomeEl.classList.replace('text-primary', 'text-muted');
+                        }
+                        if (mobileRatioEl) {
+                            mobileRatioEl.textContent = '-';
+                            mobileRatioEl.classList.replace('text-success', 'text-muted');
+                        }
                     }
                 }
             })
