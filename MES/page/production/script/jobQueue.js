@@ -908,6 +908,7 @@ async function editTxn(txnId, txnType, currentQty, jobId) {
         text: `ยอดเดิมที่ลงไว้คือ ${currentQty}`,
         input: 'number',
         inputValue: currentQty,
+        target: document.getElementById('jobLogsModal'),
         showCancelButton: true,
         confirmButtonText: 'บันทึกยอดใหม่',
         inputValidator: (value) => {
@@ -1016,12 +1017,15 @@ function populateRecordTeamUserDropdown(users) {
 
     listEl.innerHTML = '';
 
-    // Add Search Input and Clear Button
+    // Add Search Input and Clear Button and Select All Line Button
     const searchLi = document.createElement('li');
     searchLi.className = 'px-2 pb-2 mb-2 border-bottom sticky-top bg-white';
     searchLi.innerHTML = `
         <div class="d-flex gap-2">
             <input type="text" class="form-control form-control-sm" placeholder="ค้นหาชื่อ..." id="record_team_user_search">
+            <button type="button" class="btn btn-sm btn-outline-primary" id="record_team_user_select_line" title="เลือกทั้งไลน์">
+                <i class="fas fa-users"></i>
+            </button>
             <button type="button" class="btn btn-sm btn-outline-danger" id="record_team_user_clear" title="ล้างผู้ใช้งานทั้งหมด">
                 <i class="fas fa-trash-alt"></i>
             </button>
@@ -1045,6 +1049,12 @@ function populateRecordTeamUserDropdown(users) {
         const checkboxes = listEl.querySelectorAll('.team-user-checkbox');
         checkboxes.forEach(cb => cb.checked = false);
         updateRecordTeamUserUI();
+    });
+
+    const selectLineBtn = searchLi.querySelector('#record_team_user_select_line');
+    selectLineBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        selectActiveLineUsers();
     });
 
     users.forEach(u => {
@@ -1097,6 +1107,18 @@ function updateRecordTeamUserUI() {
         countEl.textContent = ids.length;
         countEl.className = 'badge bg-primary';
     }
+
+    // Sort items so checked ones are at the top
+    const items = Array.from(listEl.querySelectorAll('.team-user-item'));
+    items.sort((a, b) => {
+        const aChecked = a.querySelector('.team-user-checkbox').checked ? -1 : 1;
+        const bChecked = b.querySelector('.team-user-checkbox').checked ? -1 : 1;
+        if (aChecked !== bChecked) return aChecked - bChecked;
+        const aLabel = a.querySelector('label').textContent;
+        const bLabel = b.querySelector('label').textContent;
+        return aLabel.localeCompare(bLabel, 'th');
+    });
+    items.forEach(item => listEl.appendChild(item));
 }
 
 function setRecordTeamUserSelection(userIds) {
@@ -1109,6 +1131,71 @@ function setRecordTeamUserSelection(userIds) {
     });
 
     updateRecordTeamUserUI();
+}
+
+async function selectActiveLineUsers() {
+    const jobId = document.getElementById('record_job_id').value;
+    if (!jobId) return;
+    
+    // Find job to get location_id
+    const job = activeJobs.find(j => j.job_id == jobId);
+    if (!job || !job.location_id) {
+        Swal.fire('Error', 'ไม่สามารถระบุสถานที่ของจ๊อบนี้ได้', 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('record_team_user_select_line');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> กำลังโหลด...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch(`../production/api/inventoryManage.php?action=get_active_line_users&location_id=${job.location_id}`);
+        const result = await response.json();
+        
+        if (result.success && result.users) {
+            if (result.users.length === 0) {
+                Swal.fire('Info', 'ไม่พบพนักงานในไลน์นี้ที่ยังไม่สแกนออกในกะปัจจุบัน', 'info');
+            } else {
+                const listEl = document.getElementById('record_team_user_list');
+                // Inject any user not already in the dropdown
+                result.users.forEach(u => {
+                    if (listEl && !listEl.querySelector(`.team-user-checkbox[value="${u.id}"]`)) {
+                        const li = document.createElement('li');
+                        li.className = 'dropdown-item p-1 team-user-item';
+                        const div = document.createElement('div');
+                        div.className = 'form-check m-0';
+                        const input = document.createElement('input');
+                        input.className = 'form-check-input ms-0 me-2 team-user-checkbox';
+                        input.type = 'checkbox';
+                        input.value = u.id;
+                        input.id = `record_team_user_${u.id}`;
+                        input.addEventListener('change', () => updateRecordTeamUserUI());
+                        const label = document.createElement('label');
+                        label.className = 'form-check-label w-100 d-block small';
+                        label.htmlFor = `record_team_user_${u.id}`;
+                        label.textContent = u.fullname ? `${u.fullname} (${u.username})` : u.username;
+                        div.appendChild(input);
+                        div.appendChild(label);
+                        li.appendChild(div);
+                        listEl.appendChild(li);
+                    }
+                });
+                // Select all returned users
+                const userIds = result.users.map(u => u.id);
+                setRecordTeamUserSelection(userIds);
+                if (typeof showToast === 'function') showToast(`เลือกพนักงาน ${userIds.length} คนสำเร็จ`, 'var(--bs-success)');
+            }
+        } else {
+            Swal.fire('Error', result.message || 'ไม่สามารถดึงข้อมูลพนักงานได้', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }
 
 document.addEventListener('click', function (e) {

@@ -36,6 +36,9 @@ function populateTeamUserDropdown(users, prefix) {
     searchLi.innerHTML = `
         <div class="d-flex gap-2">
             <input type="text" class="form-control form-control-sm" placeholder="ค้นหาชื่อ..." id="${prefix}_team_user_search">
+            <button type="button" class="btn btn-sm btn-outline-primary" id="${prefix}_team_user_select_all" title="เลือกทั้งไลน์">
+                <i class="fas fa-users"></i>
+            </button>
             <button type="button" class="btn btn-sm btn-outline-danger" id="${prefix}_team_user_clear" title="ล้างผู้ใช้งานทั้งหมด">
                 <i class="fas fa-trash-alt"></i>
             </button>
@@ -52,6 +55,77 @@ function populateTeamUserDropdown(users, prefix) {
             item.style.display = label.includes(term) ? '' : 'none';
         });
     });
+
+    const selectAllBtn = searchLi.querySelector(`#${prefix}_team_user_select_all`);
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', async function (e) {
+            e.stopPropagation(); // prevent closing dropdown
+            
+            let locationId = null;
+            if (prefix === 'out') {
+                const locSelect = document.getElementById('out_location_id');
+                if (locSelect) locationId = locSelect.value;
+            } else if (prefix === 'edit_production') {
+                const locSelect = document.getElementById('edit_production_location_id');
+                if (locSelect) locationId = locSelect.value;
+            }
+
+            if (!locationId) {
+                Swal.fire({ icon: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกเครื่องจักร/สถานที่ก่อนเลือกพนักงานทั้งไลน์' });
+                return;
+            }
+
+            try {
+                selectAllBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                const res = await fetch(`api/inventoryManage.php?action=get_active_line_users&location_id=${locationId}`);
+                const data = await res.json();
+                
+                if (data.success && Array.isArray(data.users)) {
+                    if (data.users.length === 0) {
+                        Swal.fire({ icon: 'info', title: 'ไม่พบพนักงาน', text: 'ไม่พบพนักงานที่กำลังทำงานในไลน์นี้', timer: 2000, showConfirmButton: false });
+                    } else {
+                        // Inject any user not already in the dropdown, then check all returned users
+                        data.users.forEach(u => {
+                            const existingCb = listEl.querySelector(`.team-user-checkbox[value="${u.id}"]`);
+                            if (!existingCb) {
+                                const li = document.createElement('li');
+                                li.className = 'dropdown-item p-1 team-user-item';
+                                const div = document.createElement('div');
+                                div.className = 'form-check m-0';
+                                const input = document.createElement('input');
+                                input.className = 'form-check-input ms-0 me-2 team-user-checkbox';
+                                input.type = 'checkbox';
+                                input.value = u.id;
+                                input.id = `${prefix}_team_user_${u.id}`;
+                                input.addEventListener('change', () => updateTeamUserUI(prefix));
+                                const label = document.createElement('label');
+                                label.className = 'form-check-label w-100 d-block small';
+                                label.htmlFor = `${prefix}_team_user_${u.id}`;
+                                label.textContent = u.fullname ? `${u.fullname} (${u.username})` : u.username;
+                                div.appendChild(input);
+                                div.appendChild(label);
+                                li.appendChild(div);
+                                listEl.appendChild(li);
+                            }
+                        });
+                        // Now check all of them
+                        const activeUserIds = data.users.map(u => String(u.id));
+                        listEl.querySelectorAll('.team-user-checkbox').forEach(cb => {
+                            if (activeUserIds.includes(String(cb.value))) cb.checked = true;
+                        });
+                        updateTeamUserUI(prefix);
+                    }
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.message || 'ไม่สามารถดึงข้อมูลพนักงานในไลน์ได้' });
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire({ icon: 'error', title: 'Error', text: 'การเชื่อมต่อขัดข้อง' });
+            } finally {
+                selectAllBtn.innerHTML = '<i class="fas fa-users"></i>';
+            }
+        });
+    }
 
     const clearBtn = searchLi.querySelector(`#${prefix}_team_user_clear`);
     clearBtn.addEventListener('click', function(e) {
@@ -111,6 +185,18 @@ function updateTeamUserUI(prefix) {
         countEl.textContent = ids.length;
         countEl.className = 'badge bg-primary';
     }
+
+    // Sort items so checked ones are at the top
+    const items = Array.from(listEl.querySelectorAll('.team-user-item'));
+    items.sort((a, b) => {
+        const aChecked = a.querySelector('.team-user-checkbox').checked ? -1 : 1;
+        const bChecked = b.querySelector('.team-user-checkbox').checked ? -1 : 1;
+        if (aChecked !== bChecked) return aChecked - bChecked;
+        const aLabel = a.querySelector('label').textContent;
+        const bLabel = b.querySelector('label').textContent;
+        return aLabel.localeCompare(bLabel, 'th');
+    });
+    items.forEach(item => listEl.appendChild(item));
 }
 
 function setTeamUserSelection(prefix, userIds) {

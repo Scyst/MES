@@ -38,6 +38,7 @@ export default function MachineCockpit({ type = 'machine' }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editTxn, setEditTxn] = useState(null);
   const [editQty, setEditQty] = useState(0);
+  const [isLoadingLineUsers, setIsLoadingLineUsers] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('mes_active_team', JSON.stringify(activeTeam));
@@ -118,6 +119,58 @@ export default function MachineCockpit({ type = 'machine' }) {
         });
       }
     } catch (e) { console.error(e); }
+  };
+
+  const selectAllLineUsers = async () => {
+    // Try location_id first, then fall back to line name from machine data
+    const locId = locationData?.id || machineData?.location_id;
+    const lineName = locationData?.production_line || machineData?.line;
+
+    if (!locId && !lineName) {
+      MySwal.fire('แจ้งเตือน', 'ไม่พบข้อมูลสถานที่/ไลน์ผลิตของเครื่องจักรนี้', 'warning');
+      return;
+    }
+    
+    setIsLoadingLineUsers(true);
+    try {
+      const url = locId
+        ? `${API_BASE_URL}/active_line_users.php?location_id=${locId}`
+        : `${API_BASE_URL}/active_line_users.php?line=${encodeURIComponent(lineName)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('API request failed');
+      const json = await res.json();
+      
+      if (json.success && Array.isArray(json.users)) {
+        if (json.users.length === 0) {
+          MySwal.fire({ title: 'ไม่พบพนักงาน', text: 'ไม่พบพนักงานที่กำลังทำงานในไลน์นี้', icon: 'info', timer: 2000, showConfirmButton: false });
+        } else {
+          // Build member objects — prefer existing teamMembers data (which has more fields), fall back to API data
+          const teamMemberMap = new Map(teamMembers.map(m => [String(m.id), m]));
+          const newActive = [...activeTeam];
+          let added = 0;
+          json.users.forEach(u => {
+            const existing = teamMemberMap.get(String(u.id));
+            // Mobile API returns 'name', team.php also returns 'name' — keep consistent
+            const member = existing || { id: u.id, username: u.username, name: u.name };
+            if (!newActive.find(ex => String(ex.id) === String(u.id))) {
+              newActive.push(member);
+              added++;
+            }
+          });
+          setActiveTeam(newActive);
+          if (added === 0) {
+            MySwal.fire({ title: 'สำเร็จ', text: 'พนักงานทั้งหมดอยู่ในรายชื่อแล้ว', icon: 'info', timer: 1500, showConfirmButton: false });
+          }
+        }
+      } else {
+        MySwal.fire('Error', json.message || 'ไม่สามารถดึงข้อมูลได้', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      MySwal.fire('Error', 'การเชื่อมต่อขัดข้อง', 'error');
+    } finally {
+      setIsLoadingLineUsers(false);
+    }
   };
 
   useEffect(() => {
@@ -480,12 +533,21 @@ export default function MachineCockpit({ type = 'machine' }) {
                 onChange={(e) => setTeamSearch(e.target.value)}
                 className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors"
               />
+              <button 
+                onClick={selectAllLineUsers}
+                disabled={isLoadingLineUsers}
+                className="w-12 flex justify-center items-center bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-xl flex-shrink-0 transition-colors disabled:opacity-50"
+                title="เลือกทั้งไลน์"
+              >
+                {isLoadingLineUsers ? <RefreshCcw size={20} className="animate-spin" /> : <UserPlus size={20} />}
+              </button>
               {activeTeam.length > 0 && (
                 <button 
                   onClick={() => setActiveTeam([])}
-                  className="px-4 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl flex-shrink-0 transition-colors font-bold whitespace-nowrap"
+                  className="w-12 flex justify-center items-center bg-red-100 hover:bg-red-200 text-red-600 rounded-xl flex-shrink-0 transition-colors"
+                  title="ล้างรายชื่อ"
                 >
-                  ล้างรายชื่อ
+                  <Trash2 size={20} />
                 </button>
               )}
             </div>
@@ -496,6 +558,12 @@ export default function MachineCockpit({ type = 'machine' }) {
                   m.name.toLowerCase().includes(teamSearch.toLowerCase()) || 
                   m.employee_id.toLowerCase().includes(teamSearch.toLowerCase())
                 )
+                .sort((a, b) => {
+                  const aActive = activeTeam.find(m => m.id === a.id) ? -1 : 1;
+                  const bActive = activeTeam.find(m => m.id === b.id) ? -1 : 1;
+                  if (aActive !== bActive) return aActive - bActive;
+                  return a.name.localeCompare(b.name, 'th');
+                })
                 .map(member => {
                 const isActive = activeTeam.find(m => m.id === member.id);
                 return (
