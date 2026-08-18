@@ -58,6 +58,7 @@
                                         <option value="Improvement">Improvement (พัฒนา/ปรับปรุง)</option>
                                         <option value="Inspection">Inspection (ตรวจสอบ)</option>
                                         <option value="Setup">Setup (ตั้งเครื่อง)</option>
+                                        <option value="Safety/Hazard">Safety/Hazard (ความปลอดภัย)</option>
                                     </select>
                                 </div>
                             </div>
