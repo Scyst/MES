@@ -280,7 +280,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(err => console.error("Error fetching my performance:", err));
-    });
+    }, 1000); // slight delay
+    <?php endif; ?>
+});
 </script>
 
 <style>
