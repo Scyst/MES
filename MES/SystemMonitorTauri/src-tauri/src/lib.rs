@@ -285,25 +285,25 @@ fn set_opacity(window: tauri::Window, alpha: u8) {
 
 #[tauri::command]
 fn check_backend_status() -> bool {
-    let mut sys = sysinfo::System::new_all();
-    sys.refresh_all();
+    let mut sys = sysinfo::System::new();
+    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
     let mut is_dashboard_running = false;
     let mut is_logger_running = false;
     let mut is_backup_running = false;
     for (_pid, process) in sys.processes() {
         let name = process.name().to_string_lossy().to_lowercase();
-        if name.contains("node") {
-            let cmd_vec: Vec<String> = process.cmd().iter().map(|s| s.to_string_lossy().into_owned()).collect();
-            let cmd = cmd_vec.join(" ");
-            if cmd.contains("performance_dashboard.cjs") {
-                is_dashboard_running = true;
-            }
-            if cmd.contains("performance_logger.cjs") {
-                is_logger_running = true;
-            }
-            if cmd.contains("backup_server.cjs") {
-                is_backup_running = true;
-            }
+        let cmd_vec: Vec<String> = process.cmd().iter().map(|s| s.to_string_lossy().into_owned()).collect();
+        let cmd = cmd_vec.join(" ").to_lowercase();
+        let full_info = format!("{} {}", name, cmd);
+
+        if full_info.contains("performance_dashboard.cjs") {
+            is_dashboard_running = true;
+        }
+        if full_info.contains("performance_logger.cjs") {
+            is_logger_running = true;
+        }
+        if full_info.contains("backup_server.cjs") {
+            is_backup_running = true;
         }
     }
     is_dashboard_running && is_logger_running && is_backup_running
@@ -313,8 +313,13 @@ fn check_backend_status() -> bool {
 fn start_backend() -> bool {
     let app_data = std::env::var("APPDATA").unwrap_or_default();
     let vbs_path = format!("{}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\mes_performance_tracker.vbs", app_data);
+    let target_vbs = if std::path::Path::new(&vbs_path).exists() {
+        vbs_path
+    } else {
+        r"E:\MES\MES\MES\SystemMonitorBackend\start_dashboard.vbs".to_string()
+    };
     std::process::Command::new("wscript")
-        .arg(vbs_path)
+        .arg(target_vbs)
         .spawn()
         .is_ok()
 }

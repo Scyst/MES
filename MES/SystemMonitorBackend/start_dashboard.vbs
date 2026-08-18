@@ -1,4 +1,7 @@
-﻿Set WshShell = CreateObject("WScript.Shell")
+Set fso = CreateObject("Scripting.FileSystemObject")
+scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.CurrentDirectory = scriptDir
 WshShell.Run "cmd /c node performance_logger.cjs >> logger_crash.log 2>&1", 0, False
 WshShell.Run "cmd /c node performance_dashboard.cjs >> dashboard_crash.log 2>&1", 0, False
 WshShell.Run "cmd /c node backup_server.cjs >> backup_crash.log 2>&1", 0, False

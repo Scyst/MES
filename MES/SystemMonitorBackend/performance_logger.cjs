@@ -133,7 +133,6 @@ function measureTcp(host, port) {
 }
 
 // Tracking variables for Scheduler
-let lastBackupDate = null;
 let lastFtpUpdateHour = null;
 
 async function runLogger() {
@@ -143,17 +142,6 @@ async function runLogger() {
     // -----------------------------------------
     const now = new Date();
     const currentHour = now.getHours();
-    const currentDate = now.toDateString();
-
-    // 1. Midnight Backup (Run at 00:00 every day)
-    if (currentHour === 0 && lastBackupDate !== currentDate) {
-        lastBackupDate = currentDate;
-        console.log(`[${timestamp}] ⏰ Scheduled Task Triggered: Midnight Backup`);
-        exec('node backup_server.cjs > backup.log 2>&1', { cwd: __dirname }, (err) => {
-            if (err) console.error(`[${timestamp}] Backup Error:`, err);
-            else console.log(`[${timestamp}] Backup completed successfully (see backup.log)`);
-        });
-    }
 
     // 2. FTP Structure Update (Run every 6 hours: 0, 6, 12, 18)
     if (currentHour % 6 === 0 && lastFtpUpdateHour !== currentHour) {
