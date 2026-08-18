@@ -54,10 +54,12 @@ const TimeInput24 = ({ name, value, onChange, disabled, className }) => {
     if (val && !val.includes(':')) {
       val = val.replace(/[^0-9]/g, '');
       if (val.length > 0) {
-        if (val.length <= 2) {
-          val = val.padEnd(4, '0');
+        if (val.length === 1) {
+          val = '0' + val + '00';
+        } else if (val.length === 2) {
+          val = val + '00';
         } else if (val.length === 3) {
-          val = val.padEnd(4, '0');
+          val = '0' + val;
         }
         const h = Math.min(parseInt(val.slice(0, 2) || '0', 10), 23).toString().padStart(2, '0');
         const m = Math.min(parseInt(val.slice(2, 4) || '0', 10), 59).toString().padStart(2, '0');
@@ -99,6 +101,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   const [initialAttachmentsState, setInitialAttachmentsState] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [attachmentToDelete, setAttachmentToDelete] = useState(null);
+  const [attachmentsToDeleteOnSave, setAttachmentsToDeleteOnSave] = useState([]);
   
   const [formData, setFormData] = useState({
     title: '', status: 'todo', visibility: 'public', assignee: '',
@@ -131,6 +134,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         projectId: initialData.projectId || initialData.ProjectId || '',
         projectChecklistId: initialData.projectChecklistId || initialData.ProjectChecklistId || '',
         groupId: initialData.groupId || initialData.GroupId || '',
+        spaceId: initialData.spaceId || initialData.SpaceId || '',
         updateSeries: false,
         Id: initialData.Id
       };
@@ -155,13 +159,20 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         setInitialAttachmentsState('[]');
       }
 
+      if (initialData.Id) {
+        axios.get(`/api/tasks/${initialData.Id}/comments`)
+          .then(res => setComments(res.data))
+          .catch(e => console.error('Failed to fetch comments', e));
+      }
+
+
 
     } else if (isOpen) {
       const newFormData = {
         title: '', status: 'todo', visibility: 'public', assignee: currentUser?.fullname || currentUser?.username || '',
         startDate: '', dueDate: '', startTime: '09:00', endTime: '18:00',
         priority: 'normal', description: '', tags: '', recurrence: 'none',
-        recurrenceDays: [], recurrenceDates: [], recurrenceEndDate: '', recurrenceDuration: '1m', projectId: '', projectChecklistId: '', groupId: '', updateSeries: false
+        recurrenceDays: [], recurrenceDates: [], recurrenceEndDate: '', recurrenceDuration: '1m', projectId: '', projectChecklistId: '', groupId: '', spaceId: initialData?.spaceId || initialData?.SpaceId || '', updateSeries: false
       };
       setFormData(newFormData);
       setInitialFormState(JSON.stringify(newFormData));
@@ -169,7 +180,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       setInitialSubtasksState('[]');
       setAttachmentsArr([]);
       setInitialAttachmentsState('[]');
-
+      setComments([]);
 
       setActiveTab('general');
     }
@@ -290,7 +301,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     if (!attachmentToDelete) return;
     try {
       if (attachmentToDelete.url) {
-        await axios.post('/api/delete_attachment.php', { url: attachmentToDelete.url });
+        setAttachmentsToDeleteOnSave([...attachmentsToDeleteOnSave, attachmentToDelete.url]);
       }
       setAttachmentsArr(attachmentsArr.filter(a => a.id !== attachmentToDelete.id));
     } catch (e) {
@@ -318,6 +329,21 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!formData.title || !formData.title.trim()) {
+      alert('กรุณาระบุชื่องาน');
+      setActiveTab('general');
+      return;
+    }
+    
+    // Process physical deletions now
+    attachmentsToDeleteOnSave.forEach(async (url) => {
+      try {
+        await axios.post('/api/delete_attachment.php', { url });
+      } catch (err) {
+        console.error('Delete on save failed:', err);
+      }
+    });
     
     let computedEndDate = formData.recurrenceEndDate;
     if (!isEditing && formData.recurrence !== 'none') {
@@ -914,6 +940,59 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
             </div>
           )}
 
+          {/* COMMENTS TAB */}
+          {activeTab === 'comments' && isEditing && (
+            <div className="flex flex-col h-full max-h-[50vh]">
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar">
+                {comments.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-slate-500 py-10">
+                    <FiMessageSquare className="text-4xl text-slate-300 dark:text-slate-600 mb-3" />
+                    <p>ยังไม่มีความคิดเห็น</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {comments.map((c, i) => (
+                      <div key={c.Id || i} className="flex gap-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shrink-0">
+                          <span className="text-indigo-600 dark:text-indigo-400 font-bold text-sm">
+                            {(c.Author || 'U')[0].toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 bg-slate-50 dark:bg-slate-800 rounded-2xl rounded-tl-none p-3 border border-slate-200 dark:border-slate-700">
+                          <div className="flex items-baseline justify-between mb-1">
+                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{c.Author}</span>
+                            <span className="text-[10px] text-slate-400">
+                              {new Date(c.CreatedAt).toLocaleString('th-TH')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap">{c.Message}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                <form onSubmit={handlePostComment} className="flex gap-2 relative">
+                  <input
+                    type="text"
+                    value={newComment}
+                    onChange={e => setNewComment(e.target.value)}
+                    placeholder="พิมพ์ความคิดเห็น..."
+                    className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-full pl-4 pr-12 py-2.5 text-sm focus:outline-none focus:border-indigo-500 dark:text-white"
+                  />
+                  <button 
+                    type="submit"
+                    disabled={!newComment.trim()}
+                    className="absolute right-1 top-1 w-9 h-9 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FiSend className="w-4 h-4 ml-[-2px] mt-[2px]" />
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* Footer */}
@@ -926,7 +1005,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
             ) : <div></div>}
             
             <div className="flex gap-2">
-              <button type="button" onClick={onClose} className="px-5 py-2.5 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-sm font-medium active:scale-95">
+              <button type="button" onClick={handleClose} className="px-5 py-2.5 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-sm font-medium active:scale-95">
                 ยกเลิก
               </button>
               {/* Only submit the form if we are on general tab, or just use a button that triggers handleSubmit directly */}

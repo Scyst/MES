@@ -90,10 +90,11 @@ function isTaskOwnerBySession($taskAssignee, $taskCreatedBy = '', $pdo = null) {
     $creatorStr  = strtolower($taskCreatedBy ?? '');
 
     $matchNames = function($str) use ($uname, $fname, $akaList) {
-        if ($uname && strpos($str, $uname) !== false) return true;
-        if ($fname && strpos($str, $fname) !== false) return true;
+        $tokens = array_filter(array_map('trim', explode(',', $str)));
+        if ($uname && in_array($uname, $tokens, true)) return true;
+        if ($fname && in_array($fname, $tokens, true)) return true;
         foreach ($akaList as $aka) {
-            if (!empty($aka) && strpos($str, $aka) !== false) return true;
+            if (!empty($aka) && in_array($aka, $tokens, true)) return true;
         }
         return false;
     };
@@ -105,7 +106,7 @@ function isTaskOwnerBySession($taskAssignee, $taskCreatedBy = '', $pdo = null) {
  * ตรวจสอบว่า session user เป็นเจ้าของโปรเจ็คหรือไม่
  * ดึง AKA จาก DB โดยตรง เพราะ AKA ไม่ได้ถูกเก็บใน Session ตอน Login
  */
-function isProjectOwnerBySession($projectAssignee, $pdo = null) {
+function isProjectOwnerBySession($projectAssignee, $projectCreatedBy = '', $pdo = null) {
     $uname = strtolower(trim($_SESSION['username'] ?? ($_SESSION['user']['username'] ?? '')));
     $fname = strtolower(trim($_SESSION['fullname'] ?? ($_SESSION['user']['fullname'] ?? '')));
 
@@ -125,14 +126,19 @@ function isProjectOwnerBySession($projectAssignee, $pdo = null) {
     if (!$uname && !$fname && empty($akaList)) return false;
 
     $assigneeStr = strtolower($projectAssignee ?? '');
+    $creatorStr  = strtolower($projectCreatedBy ?? '');
 
-    if ($uname && strpos($assigneeStr, $uname) !== false) return true;
-    if ($fname && strpos($assigneeStr, $fname) !== false) return true;
-    foreach ($akaList as $aka) {
-        if (!empty($aka) && strpos($assigneeStr, $aka) !== false) return true;
-    }
+    $matchNames = function($str) use ($uname, $fname, $akaList) {
+        $tokens = array_filter(array_map('trim', explode(',', $str)));
+        if ($uname && in_array($uname, $tokens, true)) return true;
+        if ($fname && in_array($fname, $tokens, true)) return true;
+        foreach ($akaList as $aka) {
+            if (!empty($aka) && in_array($aka, $tokens, true)) return true;
+        }
+        return false;
+    };
 
-    return false;
+    return $matchNames($assigneeStr) || $matchNames($creatorStr);
 }
 
 // Ensure $_SESSION['user'] exists

@@ -46,7 +46,7 @@ try {
         sendJson($newProject, 201);
     }
     elseif ($method === 'PUT' && $id) {
-        $stmtCheck = $pdo->prepare("SELECT Assignee FROM TeamPlanner_Projects WHERE Id = ?");
+        $stmtCheck = $pdo->prepare("SELECT Assignee, CreatedBy FROM TeamPlanner_Projects WHERE Id = ?");
         $stmtCheck->execute([$id]);
         $project = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
@@ -54,7 +54,7 @@ try {
             sendJson(['error' => 'Project not found'], 404);
         }
 
-        if (!isAdminOrManager() && !isProjectOwnerBySession($project['Assignee'], $pdo)) {
+        if (!isAdminOrManager() && !isProjectOwnerBySession($project['Assignee'], $project['CreatedBy'], $pdo)) {
             http_response_code(403);
             sendJson(['error' => 'Permission denied: Only Admin/Manager or the Project Owner can edit this project.']);
         }

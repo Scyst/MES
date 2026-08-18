@@ -51,11 +51,12 @@ export default function MyTasks({ tasks = [], currentUser, refreshData, onSaveTa
   const noDateTasks = [];
 
   activeTasks.forEach(t => {
-    if (!t.DueDate) {
+    const dueDateStr = t.DueDate || t.dueDate;
+    if (!dueDateStr) {
       noDateTasks.push(t);
       return;
     }
-    const dueDate = new Date(t.DueDate);
+    const dueDate = new Date(dueDateStr);
     dueDate.setHours(0, 0, 0, 0);
     
     if (dueDate < now) overdueTasks.push(t);
@@ -293,24 +294,25 @@ function HeavyTaskCard({ task, onStatusChange, onSaveTask, onTaskClick }) {
   const isUrgent = task.Priority === 'Urgent';
   const isInProgress = task.Status === 'In Progress' || task.Status === 'in-progress';
   
-  // Parse Checklist
-  let checklist = [];
+  // Parse Subtasks
+  let subtasks = [];
   try {
-    if (task.Checklist && typeof task.Checklist === 'string') {
-      checklist = JSON.parse(task.Checklist);
-    } else if (Array.isArray(task.Checklist)) {
-      checklist = task.Checklist;
+    const rawSubtasks = task.subtasks || task.Subtasks;
+    if (rawSubtasks && typeof rawSubtasks === 'string') {
+      subtasks = JSON.parse(rawSubtasks);
+    } else if (Array.isArray(rawSubtasks)) {
+      subtasks = rawSubtasks;
     }
   } catch (e) {
-    console.error("Failed to parse checklist", e);
+    console.error("Failed to parse subtasks", e);
   }
 
-  const toggleChecklistItem = (itemId) => {
-    const updatedChecklist = checklist.map(item => 
-      item.id === itemId ? { ...item, isDone: !item.isDone } : item
+  const toggleSubtaskItem = (itemId) => {
+    const updatedSubtasks = subtasks.map(item => 
+      item.id === itemId ? { ...item, completed: !item.completed } : item
     );
     if (onSaveTask) {
-      onSaveTask({ ...task, Checklist: JSON.stringify(updatedChecklist) });
+      onSaveTask({ ...task, subtasks: JSON.stringify(updatedSubtasks) });
     }
   };
 
@@ -374,21 +376,21 @@ function HeavyTaskCard({ task, onStatusChange, onSaveTask, onTaskClick }) {
       </div>
       
       {/* Inline Checklist */}
-      {checklist.length > 0 && (
+      {subtasks.length > 0 && (
         <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50 space-y-2">
-          {checklist.map(item => (
+          {subtasks.map(item => (
             <label key={item.id} className="flex items-start gap-3 cursor-pointer group/item">
               <div className="relative flex items-center justify-center mt-0.5">
                 <input 
                   type="checkbox" 
-                  checked={item.isDone} 
-                  onChange={() => toggleChecklistItem(item.id)}
+                  checked={item.completed} 
+                  onChange={() => toggleSubtaskItem(item.id)}
                   className="peer appearance-none w-4 h-4 rounded border-2 border-slate-300 dark:border-slate-600 checked:bg-emerald-500 checked:border-emerald-500 transition-colors cursor-pointer"
                 />
                 <FiCheck className="absolute text-white text-[10px] opacity-0 peer-checked:opacity-100 pointer-events-none" />
               </div>
-              <span className={`text-sm select-none transition-colors ${item.isDone ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-700 dark:text-slate-300 group-hover/item:text-slate-900 dark:group-hover/item:text-white'}`}>
-                {item.text}
+              <span className={`text-sm select-none transition-colors ${item.completed ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-700 dark:text-slate-300 group-hover/item:text-slate-900 dark:group-hover/item:text-white'}`}>
+                {item.title}
               </span>
             </label>
           ))}
@@ -397,8 +399,8 @@ function HeavyTaskCard({ task, onStatusChange, onSaveTask, onTaskClick }) {
       
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
         <span className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
-          <FiClock className={new Date(task.DueDate) < new Date() ? 'text-rose-500' : ''} /> 
-          {task.DueDate ? task.DueDate.substring(0, 10) : 'No Date'}
+          <FiClock className={new Date(task.DueDate || task.dueDate) < new Date() ? 'text-rose-500' : ''} /> 
+          {(task.DueDate || task.dueDate) ? (task.DueDate || task.dueDate).substring(0, 10) : 'No Date'}
         </span>
       </div>
     </div>

@@ -65,11 +65,14 @@ export default function NotificationManager({ tasks = [], currentUser }) {
           });
         }
         
-        const isCreator = currentUser && searchTerms.some(term => 
-          term && (t.CreatedBy || '').toLowerCase() === term.toLowerCase()
+        const assigneeStr = (t.Assignee || '').toLowerCase();
+        const assignees = assigneeStr.split(',').map(s => s.trim()).filter(Boolean);
+        
+        const isAssignee = currentUser && searchTerms.some(term => 
+          term && assignees.includes(term.toLowerCase())
         );
         
-        if (!isCreator) return false;
+        if (!isAssignee) return false;
 
         return t.startDate <= currentDateStr && t.dueDate >= currentDateStr;
       });

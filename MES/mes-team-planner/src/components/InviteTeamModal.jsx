@@ -71,7 +71,14 @@ export default function InviteTeamModal({ isOpen, onClose, onSave, spaces = [], 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!spaceId || !selectedUser) return;
+    if (!spaceId) {
+      setError('กรุณาเลือกพื้นที่ทำงาน');
+      return;
+    }
+    if (!selectedUser) {
+      setError('กรุณาเลือกผู้ใช้งานจากรายการ (คลิกที่ชื่อผู้ใช้งาน)');
+      return;
+    }
     
     setIsSubmitting(true);
     setError(null);

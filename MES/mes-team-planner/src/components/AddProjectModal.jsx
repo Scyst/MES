@@ -9,6 +9,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
   const [attachmentsArr, setAttachmentsArr] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [attachmentToDelete, setAttachmentToDelete] = useState(null);
+  const [attachmentsToDeleteOnSave, setAttachmentsToDeleteOnSave] = useState([]);
   
   const [formData, setFormData] = useState({
     title: '', description: '', status: 'active', assignee: '', 
@@ -111,7 +112,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
     if (!attachmentToDelete) return;
     try {
       if (attachmentToDelete.url) {
-        await axios.post('/api/delete_attachment.php', { url: attachmentToDelete.url });
+        setAttachmentsToDeleteOnSave([...attachmentsToDeleteOnSave, attachmentToDelete.url]);
       }
       setAttachmentsArr(attachmentsArr.filter(a => a.id !== attachmentToDelete.id));
     } catch (e) {
@@ -132,7 +133,22 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!formData.title || !formData.title.trim()) {
+      alert('กรุณาระบุชื่อโปรเจ็ค');
+      setActiveModalTab('general');
+      return;
+    }
     
+    // Process physical deletions now
+    attachmentsToDeleteOnSave.forEach(async (url) => {
+      try {
+        await axios.post('/api/delete_attachment.php', { url });
+      } catch (err) {
+        console.error('Delete on save failed:', err);
+      }
+    });
+
     let finalData = { ...formData };
     if (newChecklistItem.trim()) {
       finalData.checklist = [...finalData.checklist, { id: Date.now().toString(), text: newChecklistItem.trim(), isDone: false }];
@@ -278,51 +294,53 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
         {activeModalTab === 'attachments' && (
           <div className="flex flex-col h-full max-h-[50vh]">
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              <div className="flex flex-col items-center justify-center w-full">
+              <div className="flex flex-col items-center justify-center w-full relative">
                 <label htmlFor="project-file-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 dark:border-slate-700 border-dashed rounded-xl cursor-pointer bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <FiPlus className="w-8 h-8 mb-2 text-slate-500" />
                     <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">คลิกเพื่ออัปโหลด</span> หรือลากไฟล์มาวาง</p>
                     <p className="text-xs text-slate-500">PNG, JPG, PDF หรือเอกสาร (สูงสุด 50MB)</p>
                   </div>
-                  {showConfirmClose && (
-                    <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-2xl animate-fade-in">
-                      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl max-w-sm w-full mx-4 border border-slate-200 dark:border-slate-700 animate-scale-up">
-                        <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-2">ละทิ้งการเปลี่ยนแปลง?</h4>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการปิดโดยไม่บันทึกใช่หรือไม่?</p>
-                        <div className="flex gap-3 justify-end">
-                          <button onClick={() => setShowConfirmClose(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
-                            ยกเลิก
-                          </button>
-                          <button onClick={() => { setShowConfirmClose(false); onClose(); }} className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-rose-500/20">
-                            ยืนยันการปิด
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {attachmentToDelete && (
-                    <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-2xl animate-fade-in">
-                      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl max-w-sm w-full mx-4 border border-slate-200 dark:border-slate-700 animate-scale-up">
-                        <div className="flex items-center gap-3 mb-3 text-rose-500">
-                          <FiTrash className="w-6 h-6" />
-                          <h4 className="text-lg font-bold text-slate-800 dark:text-white">ลบไฟล์แนบ?</h4>
-                        </div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">คุณต้องการลบไฟล์นี้ออกจากเซิร์ฟเวอร์ใช่หรือไม่? (การลบจะเกิดขึ้นทันที และไม่สามารถกู้คืนได้)</p>
-                        <div className="flex gap-3 justify-end">
-                          <button onClick={() => setAttachmentToDelete(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
-                            ยกเลิก
-                          </button>
-                          <button onClick={confirmDeleteAttachment} className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-rose-500/20">
-                            ลบถาวร
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                   <input id="project-file-upload" type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
                 </label>
+
+                {showConfirmClose && (
+                  <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-2xl animate-fade-in cursor-default">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl max-w-sm w-full mx-4 border border-slate-200 dark:border-slate-700 animate-scale-up">
+                      <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-2">ละทิ้งการเปลี่ยนแปลง?</h4>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการปิดโดยไม่บันทึกใช่หรือไม่?</p>
+                      <div className="flex gap-3 justify-end">
+                        <button type="button" onClick={() => setShowConfirmClose(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
+                          ยกเลิก
+                        </button>
+                        <button type="button" onClick={() => { setShowConfirmClose(false); onClose(); }} className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-rose-500/20">
+                          ยืนยันการปิด
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {attachmentToDelete && (
+                  <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-2xl animate-fade-in cursor-default">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl max-w-sm w-full mx-4 border border-slate-200 dark:border-slate-700 animate-scale-up">
+                      <div className="flex items-center gap-3 mb-3 text-rose-500">
+                        <FiTrash className="w-6 h-6" />
+                        <h4 className="text-lg font-bold text-slate-800 dark:text-white">ลบไฟล์แนบ?</h4>
+                      </div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">คุณต้องการลบไฟล์นี้ออกจากเซิร์ฟเวอร์ใช่หรือไม่? (การลบจะเกิดขึ้นทันที และไม่สามารถกู้คืนได้)</p>
+                      <div className="flex gap-3 justify-end">
+                        <button type="button" onClick={() => setAttachmentToDelete(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
+                          ยกเลิก
+                        </button>
+                        <button type="button" onClick={confirmDeleteAttachment} className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-rose-500/20">
+                          ลบถาวร
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
                 {isUploading && <p className="text-xs text-pink-500 mt-2 animate-pulse">กำลังอัปโหลด...</p>}
               </div>
 
@@ -356,7 +374,6 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
                 </div>
               )}
             </div>
-          </div>
         )}
 
           {activeModalTab === 'checklist' && (
@@ -442,7 +459,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
           )}
 
           <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors">ยกเลิก</button>
+            <button type="button" onClick={handleClose} className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors">ยกเลิก</button>
             <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">บันทึก</button>
           </div>
         </form>

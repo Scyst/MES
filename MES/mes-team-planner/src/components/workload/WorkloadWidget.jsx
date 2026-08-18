@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { FiGithub, FiActivity, FiClock, FiCalendar, FiCode, FiLoader } from 'react-icons/fi';
 import { parseISO, format } from 'date-fns';
+const githubCache = {};
 
 export default function WorkloadWidget({ user }) {
   const [data, setData] = useState(null);
@@ -19,8 +20,39 @@ export default function WorkloadWidget({ user }) {
     setError(null);
 
     // Phase 1: Fast — commit counts + calendar + events list (no LOC)
+    const cacheKeyBasic = `${user.username}_basic`;
+    const cacheKeyLoc = `${user.username}_loc`;
+
+    const fetchLoc = () => {
+      if (githubCache[cacheKeyLoc] && (Date.now() - githubCache[cacheKeyLoc].time < 900000)) {
+        setLocData(githubCache[cacheKeyLoc].data);
+        return;
+      }
+      setLocLoading(true);
+      axios.get(`/api/github.php?user=${user.username}&type=loc`)
+        .then(locRes => {
+          githubCache[cacheKeyLoc] = { data: locRes.data, time: Date.now() };
+          setLocData(locRes.data);
+          setLocLoading(false);
+        })
+        .catch(() => setLocLoading(false));
+    };
+
+    if (githubCache[cacheKeyBasic] && (Date.now() - githubCache[cacheKeyBasic].time < 900000)) {
+      if (githubCache[cacheKeyBasic].data?.configured === false) {
+        setError('not_configured');
+        setLoading(false);
+        return;
+      }
+      setData(githubCache[cacheKeyBasic].data);
+      setLoading(false);
+      fetchLoc();
+      return;
+    }
+
     axios.get(`/api/github.php?user=${user.username}&type=basic`)
       .then(res => {
+        githubCache[cacheKeyBasic] = { data: res.data, time: Date.now() };
         if (res.data?.configured === false) {
           setError('not_configured');
           setLoading(false);
@@ -30,13 +62,7 @@ export default function WorkloadWidget({ user }) {
         setLoading(false);
 
         // Phase 2: Slow — LOC stats in background
-        setLocLoading(true);
-        axios.get(`/api/github.php?user=${user.username}&type=loc`)
-          .then(locRes => {
-            setLocData(locRes.data);
-            setLocLoading(false);
-          })
-          .catch(() => setLocLoading(false));
+        fetchLoc();
       })
       .catch(err => {
         if (err.response?.status !== 404) console.error(err);

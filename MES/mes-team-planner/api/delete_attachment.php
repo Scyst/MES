@@ -22,6 +22,32 @@ if (empty($url)) {
 $basename = basename($url);
 $filePath = __DIR__ . '/uploads/planner/' . $basename;
 
+$canDelete = isAdminOrManager();
+
+if (!$canDelete) {
+    $stmt = $pdo->prepare("SELECT Assignee, CreatedBy FROM TeamPlanner_Tasks WHERE Attachments LIKE ?");
+    $stmt->execute(['%' . $basename . '%']);
+    $task = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($task) {
+        if (isTaskOwnerBySession($task['Assignee'], $task['CreatedBy'], $pdo)) {
+            $canDelete = true;
+        }
+    } else {
+        $pStmt = $pdo->prepare("SELECT Assignee, CreatedBy FROM TeamPlanner_Projects WHERE Attachments LIKE ?");
+        $pStmt->execute(['%' . $basename . '%']);
+        $project = $pStmt->fetch(PDO::FETCH_ASSOC);
+        if ($project) {
+            if (isProjectOwnerBySession($project['Assignee'], $project['CreatedBy'] ?? '', $pdo)) {
+                $canDelete = true;
+            }
+        }
+    }
+}
+
+if (!$canDelete) {
+    sendJson(['error' => 'Permission denied: You do not have permission to delete this attachment.'], 403);
+}
+
 $logFile = __DIR__ . '/debug_delete.log';
 file_put_contents($logFile, date('Y-m-d H:i:s') . " Delete request for URL: $url\n", FILE_APPEND);
 file_put_contents($logFile, date('Y-m-d H:i:s') . " Trying to delete: $filePath\n", FILE_APPEND);

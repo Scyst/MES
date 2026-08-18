@@ -99,7 +99,8 @@ function App() {
         const profileRes = await axios.get('/api/profile.php');
         if (profileRes.data && profileRes.data.aka !== undefined) {
           storedAkas = profileRes.data.aka; // server always returns comma-separated string
-          localStorage.setItem('user_akas', storedAkas);
+          const akasArray = storedAkas.split(',').map(a => a.trim()).filter(Boolean);
+          localStorage.setItem('user_akas', JSON.stringify(akasArray));
         } else {
           // Read from localStorage — handle both old JSON array and new string formats
           const raw = localStorage.getItem('user_akas') || '';

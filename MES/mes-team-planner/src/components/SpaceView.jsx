@@ -46,7 +46,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
     if (currentSpace.Id === 'home') return safeProjects;
     if (currentSpace.Id === 'mock') return []; // Clear mock data to prevent confusion
     
-    return safeProjects.filter(p => String(p.SpaceId) === String(currentSpace.Id));
+    return safeProjects.filter(p => String(p.SpaceId || p.spaceId) === String(currentSpace.Id));
   }, [currentSpace, projects]);
 
   const teamTasks = useMemo(() => {
@@ -54,9 +54,18 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
     if (currentSpace.Id === 'home') return safeTasks;
     if (currentSpace.Id === 'mock') return [];
     
-    return safeTasks.filter(t => 
-      String(t.SpaceId) === String(currentSpace.Id) || teamProjects.some(p => p?.Id && t?.ProjectId && String(p.Id) === String(t.ProjectId))
-    );
+    return safeTasks.filter(t => {
+      const tSpaceId = t.SpaceId || t.spaceId;
+      const tProjId = t.ProjectId || t.projectId;
+      
+      // Strict space match (ignore null/empty/0)
+      const matchesSpace = tSpaceId && String(tSpaceId) !== '0' && String(tSpaceId) === String(currentSpace.Id);
+      
+      // Match by Project inside the space
+      const matchesProject = teamProjects.some(p => p?.Id && tProjId && String(p.Id) === String(tProjId));
+      
+      return matchesSpace || matchesProject;
+    });
   }, [currentSpace, tasks, teamProjects]);
 
   const activeProjects = teamProjects.filter(p => p && p.Status !== 'Completed' && p.Status !== 'done');
@@ -137,7 +146,8 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
         </div>
       </div>
 
-      {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && spaceMembers.length > 0 && (
+      {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && spaceMembers.length > 0 && 
+       currentSpace.Name?.toLowerCase().includes('developer') && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -234,10 +244,10 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-tight truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{String(task?.Title || 'ไม่มีชื่องาน')}</p>
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-tight truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{String(task?.Title || task?.title || 'ไม่มีชื่องาน')}</p>
                     <div className="flex justify-between items-center mt-1 text-[10px] text-slate-500">
                       <span className="truncate max-w-[120px]" title={assigneeName}>{String(assigneeName || 'Unassigned')}</span>
-                      <span className="flex items-center gap-1 shrink-0"><FiClock /> {typeof task?.DueDate === 'string' ? task.DueDate.substring(0, 10) : (task?.DueDate ? String(task.DueDate) : '-')}</span>
+                      <span className="flex items-center gap-1 shrink-0"><FiClock /> {typeof (task?.DueDate || task?.dueDate) === 'string' ? (task.DueDate || task.dueDate).substring(0, 10) : ((task?.DueDate || task?.dueDate) ? String(task.DueDate || task.dueDate) : '-')}</span>
                     </div>
                   </div>
                 </div>

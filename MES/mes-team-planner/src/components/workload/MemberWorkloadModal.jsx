@@ -88,19 +88,19 @@ export default function MemberWorkloadModal({ isOpen, onClose, user }) {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                  <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                     <div className="text-xs text-slate-500 mb-1 flex items-center gap-1"><FiGitCommit /> Commits (Today)</div>
-                    <div className="text-2xl font-bold text-slate-800 dark:text-white">{stats.dailyStats?.commits || 0}</div>
+                    <div className="text-2xl font-bold text-slate-800 dark:text-white">{stats.stats?.commitsToday || 0}</div>
                  </div>
                  <div className="bg-emerald-50 dark:bg-emerald-500/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-500/20">
-                    <div className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1">+ Additions</div>
-                    <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{stats.dailyStats?.additions || 0}</div>
+                    <div className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1">Commits (Week)</div>
+                    <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{stats.stats?.commitsWeek || 0}</div>
                  </div>
                  <div className="bg-rose-50 dark:bg-rose-500/10 p-4 rounded-xl border border-rose-100 dark:border-rose-500/20">
-                    <div className="text-xs text-rose-600 dark:text-rose-400 mb-1 flex items-center gap-1">- Deletions</div>
-                    <div className="text-2xl font-bold text-rose-700 dark:text-rose-300">{stats.dailyStats?.deletions || 0}</div>
+                    <div className="text-xs text-rose-600 dark:text-rose-400 mb-1 flex items-center gap-1">Commits (Month)</div>
+                    <div className="text-2xl font-bold text-rose-700 dark:text-rose-300">{stats.stats?.commitsMonth || 0}</div>
                  </div>
                  <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                     <div className="text-xs text-slate-500 mb-1 flex items-center gap-1"><FiFileText /> Repositories</div>
-                    <div className="text-2xl font-bold text-slate-800 dark:text-white">{stats.dailyStats?.repositories?.length || 0}</div>
+                    <div className="text-2xl font-bold text-slate-800 dark:text-white">{stats.stats?.repositories?.length || 0}</div>
                  </div>
               </div>
 
@@ -164,11 +164,11 @@ export default function MemberWorkloadModal({ isOpen, onClose, user }) {
               )}
 
               {/* Commit Log */}
-              {stats.dailyStats?.commitLog && stats.dailyStats.commitLog.length > 0 && (
+              {stats.stats?.commitLog && stats.stats.commitLog.length > 0 && (
                 <div>
                   <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3">Recent Commits</h4>
                   <div className="space-y-2">
-                    {stats.dailyStats.commitLog.map((c, i) => (
+                    {stats.stats.commitLog.map((c, i) => (
                       <div key={i} className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-start gap-4">
                         <div className="min-w-0">
                            <div className="flex items-center gap-2 mb-1">

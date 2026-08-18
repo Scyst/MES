@@ -14,7 +14,7 @@ export default function LinkHub() {
 
   const fetchLinks = async () => {
     try {
-      const res = await axios.get('/api/links');
+      const res = await axios.get('/api/links.php');
       setLinks(res.data);
     } catch (error) {
       console.error(error);
@@ -30,7 +30,11 @@ export default function LinkHub() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('/api/links', { ...formData, createdBy: 'User' });
+      const res = await axios.post('/api/links.php', { 
+        ...formData, 
+        category: formData.category.trim(),
+        createdBy: 'User' 
+      });
       setLinks([res.data, ...links]);
       setFormData({ title: '', url: '', category: 'General' });
       setIsModalOpen(false); // Close modal on success
@@ -41,7 +45,7 @@ export default function LinkHub() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/links/${id}`);
+      await axios.delete(`/api/links.php?id=${id}`);
       setLinks(links.filter(l => l.Id !== id));
     } catch (error) {
       console.error(error);
@@ -53,16 +57,25 @@ export default function LinkHub() {
     if (!searchQuery) return Array.isArray(links) ? links : [];
     const q = searchQuery.toLowerCase();
     return Array.isArray(links) ? links.filter(l => 
-      l.Title.toLowerCase().includes(q) || 
-      l.Url.toLowerCase().includes(q) || 
-      l.Category.toLowerCase().includes(q)
+      (l.Title || '').toLowerCase().includes(q) || 
+      (l.Url || '').toLowerCase().includes(q) || 
+      (l.Category || l.category || 'General').toLowerCase().includes(q)
     ) : [];
   }, [links, searchQuery]);
 
   // Group by category
   const groupedLinks = filteredLinks.reduce((acc, link) => {
-    acc[link.Category] = acc[link.Category] || [];
-    acc[link.Category].push(link);
+    const rawCategory = link.Category || link.category || 'General';
+    const normalizedCategory = rawCategory.toString().trim().replace(/\s+/g, ' ');
+    const searchCat = normalizedCategory.normalize('NFC').toLowerCase();
+    
+    const existingKey = Object.keys(acc).find(key => 
+      key.normalize('NFC').toLowerCase() === searchCat
+    );
+    const finalCategory = existingKey || normalizedCategory;
+    
+    acc[finalCategory] = acc[finalCategory] || [];
+    acc[finalCategory].push(link);
     return acc;
   }, {});
 

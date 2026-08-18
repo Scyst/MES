@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import UserAvatar from './UserAvatar';
+import { getCanonicalName } from '../utils/userUtils';
 import { format, addDays, subDays, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { FiChevronLeft, FiChevronRight, FiSearch, FiPlus, FiX, FiUsers, FiUser, FiDownload, FiFileText } from 'react-icons/fi';
 import { toPng } from 'html-to-image';
@@ -69,7 +70,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
 
     const newStartMins = targetHour * 60;
     let newEndMins = newStartMins + duration;
-    if (newEndMins > 24 * 60) newEndMins = 24 * 60;
+    if (newEndMins > 24 * 60 - 1) newEndMins = 24 * 60 - 1;
 
     const newStartTime = formatMinutesToTime(newStartMins);
     const newEndTime = formatMinutesToTime(newEndMins);
@@ -94,15 +95,27 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
 
     const newStartMins = targetHour * 60;
     let newEndMins = newStartMins + duration;
-    if (newEndMins > 24 * 60) newEndMins = 24 * 60;
+    if (newEndMins > 24 * 60 - 1) newEndMins = 24 * 60 - 1;
 
     const newStartTime = formatMinutesToTime(newStartMins);
     const newEndTime = formatMinutesToTime(newEndMins);
 
+    let targetDueDateStr = targetDateStr;
+    if (task.startDate && task.dueDate) {
+      const sDate = new Date(task.startDate);
+      const dDate = new Date(task.dueDate);
+      const diffTime = dDate - sDate;
+      if (diffTime > 0) {
+        const targetDate = new Date(targetDateStr);
+        targetDate.setTime(targetDate.getTime() + diffTime);
+        targetDueDateStr = targetDate.toISOString().split('T')[0];
+      }
+    }
+
     onSaveTask({
       Id: task.Id,
       startDate: targetDateStr,
-      dueDate: targetDateStr,
+      dueDate: targetDueDateStr,
       startTime: newStartTime,
       endTime: newEndTime
     });
@@ -190,7 +203,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
 
   const allAssignees = [...new Set(
     tasks.flatMap(t => {
-      const names = (t.Assignee || '').split(',').map(a => a.trim()).filter(Boolean);
+      const names = (t.Assignee || '').split(',').map(a => getCanonicalName(a.trim(), users)).filter(Boolean);
       return names.length > 0 ? names : ['Unassigned'];
     })
   )].sort();
@@ -199,9 +212,10 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   const assignees = selectedAssignee === 'All' ? allAssignees : [selectedAssignee];
 
   const todaysTasks = useMemo(() => {
+    const nextDateStr = format(addDays(new Date(currentDateStr), 1), 'yyyy-MM-dd');
     return tasks.filter(t => {
       if (!t.startDate || !t.dueDate) return false;
-      const inDateRange = t.startDate <= currentDateStr && t.dueDate >= currentDateStr;
+      const inDateRange = t.startDate <= nextDateStr && t.dueDate >= currentDateStr;
       if (!inDateRange) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -263,7 +277,8 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
 
   const getPersonColor = (name) => {
     const firstName = (name || '').split(',')[0].trim();
-    let idx = allAssignees.indexOf(firstName);
+    const canonicalName = getCanonicalName(firstName, users);
+    let idx = allAssignees.indexOf(canonicalName);
     if (idx === -1) idx = 0;
     return PERSON_COLORS[idx % PERSON_COLORS.length] || PERSON_COLORS[0];
   };
@@ -403,7 +418,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
             {/* Body Rows */}
             {assignees.map(assignee => {
               const assigneeTasks = todaysTasks.filter(t => {
-                const names = (t.Assignee || '').split(',').map(a => a.trim()).filter(Boolean);
+                const names = (t.Assignee || '').split(',').map(a => getCanonicalName(a.trim(), users)).filter(Boolean);
                 return (names.length > 0 ? names : ['Unassigned']).includes(assignee);
               });
               const sortedTasks = [...assigneeTasks].sort((a, b) => parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime));
@@ -557,11 +572,16 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
               const dayOfWeek = day.getDay();
               
               // Filter tasks for this day
+              const nextDayStr = format(addDays(day, 1), 'yyyy-MM-dd');
               const dayTasks = tasks.filter(t => {
                 if (!t.startDate || !t.dueDate) return false;
-                const inDateRange = t.startDate <= dayStr && t.dueDate >= dayStr;
+                const inDateRange = t.startDate <= nextDayStr && t.dueDate >= dayStr;
                 if (!inDateRange) return false;
-                if (selectedAssignee !== 'All' && t.Assignee !== selectedAssignee) return false;
+                if (selectedAssignee !== 'All') {
+                  const names = (t.Assignee || '').split(',').map(a => getCanonicalName(a.trim(), users)).filter(Boolean);
+                  const finalNames = names.length > 0 ? names : ['Unassigned'];
+                  if (!finalNames.includes(selectedAssignee)) return false;
+                }
                 if (searchQuery) {
                   const q = searchQuery.toLowerCase();
                   return t.Title?.toLowerCase().includes(q) || t.Assignee?.toLowerCase().includes(q);
@@ -637,9 +657,6 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
 
                         const taskStartMins = getAbsoluteMinutes(task.startDate, task.startTime || '09:00', dayStr);
                         const taskEndMins = getAbsoluteMinutes(task.dueDate, task.endTime || '18:00', dayStr);
-                        
-                        const timelineStart = 6 * 60;
-                        const timelineEnd = timelineStart + (24 * 60);
 
                         const visStart = Math.max(taskStartMins, timelineStart);
                         const visEnd = Math.min(taskEndMins, timelineEnd);

@@ -18,16 +18,26 @@ export const isAdminOrManager = (user) => {
  */
 export const isProjectOwner = (user, project) => {
   if (!user || !project) return false;
-  if (!project.Assignee) return false;
   
-  const ownerStr = project.Assignee.toLowerCase();
+  const ownerStr = (project.Assignee || '').toLowerCase();
+  const creatorStr = (project.CreatedBy || '').toLowerCase();
+  
   const uname = (user.username || '').toLowerCase();
   const fname = (user.fullname || '').toLowerCase();
-  const aka = (user.aka || '').toLowerCase();
+  const akas = user.aka ? user.aka.split(',').map(a => a.trim().toLowerCase()).filter(Boolean) : [];
   
-  return (uname && ownerStr.includes(uname)) || 
-         (fname && ownerStr.includes(fname)) || 
-         (aka && ownerStr.includes(aka));
+  const checkMatch = (targetStr) => {
+    if (!targetStr) return false;
+    const tokens = targetStr.split(',').map(s => s.trim()).filter(Boolean);
+    if (uname && tokens.includes(uname)) return true;
+    if (fname && tokens.includes(fname)) return true;
+    for (let aka of akas) {
+      if (tokens.includes(aka)) return true;
+    }
+    return false;
+  };
+  
+  return checkMatch(ownerStr) || checkMatch(creatorStr);
 };
 
 /**
@@ -38,16 +48,26 @@ export const isProjectOwner = (user, project) => {
  */
 export const isTaskOwner = (user, task) => {
   if (!user || !task) return false;
-  if (!task.Assignee) return false;
   
-  const assigneeStr = task.Assignee.toLowerCase();
+  const assigneeStr = (task.Assignee || '').toLowerCase();
+  const creatorStr = (task.CreatedBy || '').toLowerCase();
+  
   const uname = (user.username || '').toLowerCase();
   const fname = (user.fullname || '').toLowerCase();
-  const aka = (user.aka || '').toLowerCase();
+  const akas = user.aka ? user.aka.split(',').map(a => a.trim().toLowerCase()).filter(Boolean) : [];
   
-  return (uname && assigneeStr.includes(uname)) || 
-         (fname && assigneeStr.includes(fname)) || 
-         (aka && assigneeStr.includes(aka));
+  const checkMatch = (targetStr) => {
+    if (!targetStr) return false;
+    const tokens = targetStr.split(',').map(s => s.trim()).filter(Boolean);
+    if (uname && tokens.includes(uname)) return true;
+    if (fname && tokens.includes(fname)) return true;
+    for (let aka of akas) {
+      if (tokens.includes(aka)) return true;
+    }
+    return false;
+  };
+  
+  return checkMatch(assigneeStr) || checkMatch(creatorStr);
 };
 
 // ==========================================

@@ -94,8 +94,9 @@ try {
             ]);
 
             $current = clone $start;
+            $hasDueDate = !empty($data['dueDate']);
             $dueDiffDays = 0;
-            if (!empty($data['dueDate'])) {
+            if ($hasDueDate) {
                 $dueDt = new DateTime($data['dueDate']);
                 $dueDiffDays = (int)$start->diff($dueDt)->format('%R%a');
             }
@@ -108,7 +109,15 @@ try {
                 } elseif ($recurrence === 'weekly') {
                     if ($current->format('w') == $start->format('w')) $shouldCreate = true;
                 } elseif ($recurrence === 'monthly') {
-                    if ($current->format('j') == $start->format('j')) $shouldCreate = true;
+                    $targetDay = (int)$start->format('j');
+                    $currentDay = (int)$current->format('j');
+                    $daysInCurrentMonth = (int)$current->format('t');
+                    
+                    if ($targetDay > $daysInCurrentMonth) {
+                        if ($currentDay === $daysInCurrentMonth) $shouldCreate = true;
+                    } else {
+                        if ($currentDay === $targetDay) $shouldCreate = true;
+                    }
                 } elseif ($recurrence === 'custom') {
                     if (in_array((int)$current->format('w'), $recDays)) {
                         $shouldCreate = true;
@@ -120,11 +129,14 @@ try {
 
                 if ($shouldCreate) {
                     $currentStartStr = $current->format('Y-m-d');
-                    $currentDueDt = clone $current;
-                    if ($dueDiffDays != 0) {
-                        $currentDueDt->modify(($dueDiffDays >= 0 ? '+' : '') . $dueDiffDays . ' days');
+                    $currentDueStr = null;
+                    if ($hasDueDate) {
+                        $currentDueDt = clone $current;
+                        if ($dueDiffDays != 0) {
+                            $currentDueDt->modify(($dueDiffDays >= 0 ? '+' : '') . $dueDiffDays . ' days');
+                        }
+                        $currentDueStr = $currentDueDt->format('Y-m-d');
                     }
-                    $currentDueStr = $currentDueDt->format('Y-m-d');
 
                     $tasksToCreate[] = [
                         'startDate' => $currentStartStr,
@@ -288,15 +300,31 @@ try {
             }
         }
 
+        if ($updateSeries && array_key_exists('startDate', $data) && array_key_exists('dueDate', $data)) {
+            if (empty($data['dueDate'])) {
+                $updateFields[] = "DueDate = NULL";
+            } else {
+                $newStart = new DateTime($data['startDate']);
+                $newDue = new DateTime($data['dueDate']);
+                $newDiffDays = (int)$newStart->diff($newDue)->format('%R%a');
+                $updateFields[] = "DueDate = DATEADD(day, $newDiffDays, StartDate)";
+            }
+        }
+
         if (empty($updateFields)) {
             sendJson(['error' => 'No fields to update'], 400);
         }
 
         $sql = "UPDATE TeamPlanner_Tasks SET " . implode(', ', $updateFields) . " OUTPUT INSERTED.* WHERE ";
         if ($updateSeries) {
-            $sql .= "GroupId = ? AND StartDate >= ?";
-            $params[] = $targetTask['GroupId'];
-            $params[] = $targetTask['StartDate'];
+            if (!empty($targetTask['StartDate'])) {
+                $sql .= "GroupId = ? AND (StartDate >= ? OR StartDate IS NULL)";
+                $params[] = $targetTask['GroupId'];
+                $params[] = $targetTask['StartDate'];
+            } else {
+                $sql .= "GroupId = ?";
+                $params[] = $targetTask['GroupId'];
+            }
         } else {
             $sql .= "Id = ?";
             $params[] = $id;
@@ -375,8 +403,13 @@ try {
 
         if ($deleteSeries) {
             if ($targetTask['GroupId']) {
-                $stmt = $pdo->prepare("DELETE FROM TeamPlanner_Tasks WHERE GroupId = ? AND StartDate >= ?");
-                $stmt->execute([$targetTask['GroupId'], $targetTask['StartDate']]);
+                if (!empty($targetTask['StartDate'])) {
+                    $stmt = $pdo->prepare("DELETE FROM TeamPlanner_Tasks WHERE GroupId = ? AND (StartDate >= ? OR StartDate IS NULL)");
+                    $stmt->execute([$targetTask['GroupId'], $targetTask['StartDate']]);
+                } else {
+                    $stmt = $pdo->prepare("DELETE FROM TeamPlanner_Tasks WHERE GroupId = ?");
+                    $stmt->execute([$targetTask['GroupId']]);
+                }
             } else {
                 $stmt = $pdo->prepare("DELETE FROM TeamPlanner_Tasks WHERE Id = ?");
                 $stmt->execute([$id]);

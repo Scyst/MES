@@ -48,7 +48,10 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
     let akas = [];
     try {
       const stored = localStorage.getItem('user_akas');
-      if (stored) akas = JSON.parse(stored);
+      if (stored) {
+        try { akas = JSON.parse(stored); }
+        catch { akas = stored.split(',').map(s => s.trim()).filter(Boolean); }
+      }
     } catch(e) {}
     
     const isMe = (name) => {
@@ -64,20 +67,29 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
     const projectTasks = tasks.filter(t => t.ProjectId == projectId || t.projectId == projectId);
     let totalMinutes = 0;
     projectTasks.forEach(t => {
-      if (t.StartTime && t.EndTime) {
-        const [startH, startM] = t.StartTime.split(':').map(Number);
-        const [endH, endM] = t.EndTime.split(':').map(Number);
+      const st = String(t.Status || t.status || '').toLowerCase();
+      if (st !== 'done' && st !== 'in progress' && st !== 'in_progress') return;
+
+      let diffDays = 1;
+      const sDate = t.StartDate || t.startDate;
+      const dDate = t.DueDate || t.dueDate;
+      if (sDate && dDate) {
+         const sd = new Date(sDate);
+         const ed = new Date(dDate);
+         const diff = Math.round((ed - sd) / (1000 * 60 * 60 * 24));
+         if (diff > 0) diffDays = diff + 1;
+      }
+
+      let startStr = t.StartTime || t.startTime;
+      let endStr = t.EndTime || t.endTime;
+      
+      if (startStr && endStr) {
+        const [startH, startM] = startStr.split(':').map(Number);
+        const [endH, endM] = endStr.split(':').map(Number);
         const start = startH * 60 + startM;
         let end = endH * 60 + endM;
         if (end < start) end += 24 * 60;
-        totalMinutes += (end - start);
-      } else if (t.startTime && t.endTime) {
-        const [startH, startM] = t.startTime.split(':').map(Number);
-        const [endH, endM] = t.endTime.split(':').map(Number);
-        const start = startH * 60 + startM;
-        let end = endH * 60 + endM;
-        if (end < start) end += 24 * 60;
-        totalMinutes += (end - start);
+        totalMinutes += (end - start) * diffDays;
       }
     });
     
@@ -306,7 +318,7 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], refreshDa
                     </button>
                   )}
                   {canDeleteProject(currentUser, p) && (
-                    <button onClick={() => handleDeleteProject(p.Id)} className="flex-none bg-white hover:bg-rose-50 dark:bg-slate-700 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 border border-slate-300 dark:border-slate-600 px-2 py-1.5 rounded-md transition-colors" title="ลบโปรเจ็ค">
+                    <button onClick={() => handleDelete(p.Id)} className="flex-none bg-white hover:bg-rose-50 dark:bg-slate-700 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 border border-slate-300 dark:border-slate-600 px-2 py-1.5 rounded-md transition-colors" title="ลบโปรเจ็ค">
                       <FiTrash2 className="w-3.5 h-3.5" />
                     </button>
                   )}

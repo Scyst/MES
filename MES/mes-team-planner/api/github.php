@@ -94,6 +94,19 @@ try {
         $monthStart = (new DateTime('first day of this month', $tz))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
         $yearStart  = (new DateTime('first day of january this year', $tz))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
 
+        // Cache key includes today's date so it invalidates at midnight (not just 15-min TTL)
+        $todayDate  = (new DateTime('today', $tz))->format('Y-m-d');
+        $cacheFile = sys_get_temp_dir() . '/planner_github_' . md5($login . '_' . $type . '_' . $todayDate) . '.json';
+        $cacheTTL = 900; // 15 minutes within same day
+
+        if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTTL) {
+            $cachedData = json_decode(file_get_contents($cacheFile), true);
+            if ($cachedData) {
+                sendJson($cachedData);
+                exit;
+            }
+        }
+
         // =====================================================
         // LOC-only mode: used by the second (lazy) frontend fetch
         // =====================================================
@@ -103,7 +116,8 @@ try {
                 exit;
             }
 
-            $eventsData  = fetchGithubAPI("https://api.github.com/users/{$login}/events?per_page=100", $token);
+            $eventsData = fetchGithubAPI("https://api.github.com/users/{$login}/events?per_page=100", $token);
+            
             $compareUrls = [];
             $urlMap      = [];
 
@@ -128,8 +142,9 @@ try {
                 }
             }
 
+            // Limit to 25 to avoid overloading GitHub API
             $locStats = ['today'=>['add'=>0,'del'=>0],'week'=>['add'=>0,'del'=>0],'month'=>['add'=>0,'del'=>0],'year'=>['add'=>0,'del'=>0]];
-            $compareUrls = array_slice($compareUrls, 0, 25); // Limit to 25 compare calls
+            $compareUrls = array_slice($compareUrls, 0, 25);
             $compareResults = fetchGithubMultiAPI($compareUrls, $token);
 
             foreach ($compareUrls as $i => $cUrl) {
@@ -144,12 +159,20 @@ try {
                 }
             }
 
-            sendJson([
+            // Cache key already includes date
+            $responseData = [
                 'locToday' => $locStats['today'],
                 'locWeek'  => $locStats['week'],
                 'locMonth' => $locStats['month'],
                 'locYear'  => $locStats['year'],
-            ]);
+                '_debugInfo' => [
+                    'note' => 'GitHub API returns max 100 events. If all 100 events happen today, Today/Week/Month/Year will be identical.',
+                    'eventsFetched' => count((array)$eventsData),
+                    'compareCalls' => count($compareUrls)
+                ]
+            ];
+            file_put_contents($cacheFile, json_encode($responseData));
+            sendJson($responseData);
             exit;
         }
 
@@ -250,7 +273,7 @@ try {
             }
         }
 
-        sendJson([
+        $responseData = [
             'totalContributions' => $calendar['totalContributions'] ?? 0,
             'weeks'              => $calendar['weeks'] ?? [],
             'stats'              => [
@@ -265,7 +288,9 @@ try {
                 'repositories'  => array_keys($repos),
                 'commitLog'     => $commitLog,
             ]
-        ]);
+        ];
+        file_put_contents($cacheFile, json_encode($responseData));
+        sendJson($responseData);
 
     } else {
         sendJson(['error' => 'Method not allowed'], 405);

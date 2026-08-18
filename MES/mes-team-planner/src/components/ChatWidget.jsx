@@ -61,7 +61,10 @@ export default function ChatWidget({ currentUser, tasks = [], projects = [], onS
         let akas = [];
         try {
           const stored = localStorage.getItem('user_akas');
-          if (stored) akas = JSON.parse(stored);
+          if (stored) {
+            try { akas = JSON.parse(stored); }
+            catch { akas = stored.split(',').map(s => s.trim()).filter(Boolean); }
+          }
         } catch(e) {}
         
         const isMe = (name) => {
