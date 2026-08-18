@@ -184,7 +184,7 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                         document.getElementById('headerIncomeDisplay').textContent = '฿' + json.data.income_per_head.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
                         
                         // Ratio
-                        document.getElementById('headerRatioDisplay').textContent = json.data.income_ratio.toFixed(1) + '%';
+                        document.getElementById('headerRatioDisplay').textContent = json.data.income_ratio.toFixed(2);
                     } else {
                         // No Data
                         document.getElementById('headerGradeDisplay').textContent = '-';

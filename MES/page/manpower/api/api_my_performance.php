@@ -106,7 +106,7 @@ try {
     if ($data) {
         $income = (float)$data['income_per_head'];
         $wage = (float)$data['total_wage'];
-        $ratio = $wage > 0 ? ($income / $wage) * 100 : 0;
+        $ratio = $wage > 0 ? ($income / $wage) : 0;
 
         echo json_encode([
             'success' => true,
