@@ -281,6 +281,19 @@ function checkSchedule() {
     const now = new Date();
     const currentHour = now.getHours();
     const currentDate = now.toDateString();
+    const triggerFile = path.join(__dirname, 'trigger_backup.flag');
+
+    // Trigger manual backup if flag file exists
+    if (fs.existsSync(triggerFile)) {
+        try {
+            fs.unlinkSync(triggerFile);
+            console.log(`[${now.toISOString()}] [Backup Daemon] Manual trigger detected via flag file.`);
+            triggerBackup('Manual Trigger (UI)');
+        } catch (e) {
+            console.error('[Error] Failed to read/delete trigger flag:', e);
+        }
+        return; // Skip daily schedule check if manual backup triggered
+    }
 
     // Trigger daily backup at designated hour (00:xx midnight hour) once per calendar day
     if (currentHour === BACKUP_SCHEDULE_HOUR && lastBackupDate !== currentDate) {

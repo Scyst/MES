@@ -324,13 +324,26 @@ fn start_backend() -> bool {
         .is_ok()
 }
 
+#[tauri::command]
+fn force_backup() -> bool {
+    // Create the trigger_backup.flag file in the backend directory
+    let flag_path = r"E:\MES\MES\MES\SystemMonitorBackend\trigger_backup.flag";
+    match std::fs::write(flag_path, "") {
+        Ok(_) => true,
+        Err(e) => {
+            eprintln!("Failed to write trigger flag: {}", e);
+            false
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             exit_app, set_window_mode, set_mini_mode, set_widget_mode, set_opacity,
-            check_backend_status, start_backend
+            check_backend_status, start_backend, force_backup
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

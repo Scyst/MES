@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, X, Monitor, MonitorUp, PictureInPicture2, Palette, BellRing, Sun, Server, Play, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Settings, X, Monitor, MonitorUp, PictureInPicture2, Palette, BellRing, Sun, Server, Play, CheckCircle2, AlertCircle, Database, DownloadCloud } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 
 interface SettingsModalProps {
@@ -220,6 +220,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               >
                 <Play size={12} />
                 {backendRunning === true ? 'ACTIVE' : 'START'}
+              </button>
+            </div>
+            </div>
+
+            {/* FTP Backup Row */}
+            <div className="flex items-center justify-between p-3 rounded-lg border border-[#1a2b50]/60 bg-[#061026]/40">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded bg-indigo-500/10 text-indigo-400">
+                  <Database size={16} />
+                </div>
+                <div>
+                  <div className="font-bold text-[#e2e8f0]">Manual FTP Backup</div>
+                  <div className="text-[10px] text-[#64748b]">
+                    Forces an immediate sync of MES FTP Server
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={async () => {
+                  try {
+                    await invoke('force_backup');
+                    // show success alert or something? we don't have sweetalert here, just rely on the click.
+                    alert("Manual backup triggered. Check the background process.");
+                  } catch (e) {
+                    console.error("Failed to trigger backup", e);
+                  }
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded border border-indigo-500 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 transition-colors"
+              >
+                <DownloadCloud size={12} />
+                SYNC NOW
               </button>
             </div>
           </div>
