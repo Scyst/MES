@@ -55,7 +55,6 @@ try {
             LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
             WHERE CONVERT(VARCHAR(7), t.transaction_timestamp, 120) = :period1
               AND t.transaction_type LIKE 'PRODUCTION_%'
-              AND stu.emp_id = :empId1
             GROUP BY stu.emp_id
         ) INC ON INC.emp_id = E.emp_id COLLATE Thai_CI_AS
         LEFT JOIN (
@@ -88,7 +87,6 @@ try {
             ) cm
             WHERE CONVERT(VARCHAR(7), ml.log_date, 120) = :period2
               AND ml.status IN ('PRESENT', 'LATE')
-              AND ml.emp_id = :empId2
             GROUP BY ml.emp_id
         ) WAGE ON WAGE.emp_id = E.emp_id COLLATE Thai_CI_AS
         LEFT JOIN dbo.EMPLOYEE_GRADES G WITH (NOLOCK) 
@@ -99,9 +97,7 @@ try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
         ':period1' => $currentPeriod,
-        ':empId1' => $emp_id,
         ':period2' => $currentPeriod,
-        ':empId2' => $emp_id,
         ':period3' => $currentPeriod,
         ':empId3' => $emp_id
     ]);
@@ -123,6 +119,7 @@ try {
             ]
         ]);
     } else {
+        $errorInfo = $stmt->errorInfo();
         // No data yet for this month
         echo json_encode([
             'success' => true,
@@ -131,7 +128,9 @@ try {
                 'grade' => '-',
                 'income_per_head' => 0,
                 'total_wage' => 0,
-                'income_ratio' => 0
+                'income_ratio' => 0,
+                'debug_error' => $errorInfo,
+                'debug_emp_id' => $emp_id
             ]
         ]);
     }
