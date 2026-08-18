@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/../../components/php/logger.php';
-require_once __DIR__ . '/../../../db.php';
+require_once __DIR__ . '/../../db.php';
 
 $input = json_decode(file_get_contents("php://input"), true) ?? $_POST;
 $action = $_REQUEST['action'] ?? $input['action'] ?? '';
