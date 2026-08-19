@@ -121,6 +121,7 @@ const subCategories = {
         { id: 'CASTER', name: 'CASTER (ล้อ)' },
         { id: 'PLASTIC SLIDE LOCK', name: 'PLASTIC SLIDE LOCK' },
         { id: 'PEARL COTTON', name: 'PEARL COTTON' },
+        { id: 'MANUAL', name: 'MANUAL (คู่มือ)' },
         { id: 'OTHER', name: 'อื่นๆ' }
     ],
     'CON': [

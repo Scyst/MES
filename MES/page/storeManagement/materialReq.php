@@ -299,6 +299,7 @@ $canManageImage = in_array($userRole, ['admin', 'creator', 'store', 'supervisor'
                                         <option value="CASTER">CASTER (ล้อ)</option>
                                         <option value="PLASTIC SLIDE LOCK">PLASTIC SLIDE LOCK</option>
                                         <option value="PEARL COTTON">PEARL COTTON</option>
+                                        <option value="MANUAL">MANUAL (คู่มือ)</option>
                                     </optgroup>
                                     <optgroup label="CON">
                                         <option value="ACC">อุปกรณ์ประกอบ</option>
