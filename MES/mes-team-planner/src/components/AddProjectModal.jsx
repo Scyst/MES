@@ -1,11 +1,27 @@
 import axios from 'axios';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FiPlus, FiCheckSquare, FiTrash, FiType, FiMessageSquare } from 'react-icons/fi';
 import ConfirmDialog from './common/ConfirmDialog';
+import MultiSelectInput from './common/MultiSelectInput';
 
-export default function AddProjectModal({ isOpen, onClose, onSave, initialData, spaces = [] }) {
+export default function AddProjectModal({ isOpen, onClose, onSave, initialData, spaces = [], users = [] }) {
   const [activeModalTab, setActiveModalTab] = useState('general');
   const [newChecklistItem, setNewChecklistItem] = useState('');
+
+  // Build autocomplete suggestions from users list (same pattern as AddTaskModal)
+  const uniqueAssignees = useMemo(() => {
+    return Array.from(new Set(
+      (users || []).flatMap(u => {
+        const names = [];
+        if (u.fullname) names.push(u.fullname.trim());
+        else if (u.username) names.push(u.username.trim());
+        if (u.aka) {
+          u.aka.split(',').map(a => a.trim()).filter(Boolean).forEach(a => names.push(a));
+        }
+        return names;
+      })
+    )).sort();
+  }, [users]);
   const [attachmentsArr, setAttachmentsArr] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [attachmentToDelete, setAttachmentToDelete] = useState(null);
@@ -242,7 +258,12 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ผู้รับผิดชอบ</label>
-                  <input value={formData.assignee} onChange={e => setFormData({...formData, assignee: e.target.value})} placeholder="ชื่อผู้รับผิดชอบ..." className="w-full border dark:border-slate-700 bg-transparent rounded-lg px-3 py-2 outline-none focus:border-indigo-500" />
+                  <MultiSelectInput
+                    value={formData.assignee}
+                    onChange={(val) => setFormData({ ...formData, assignee: val })}
+                    suggestions={uniqueAssignees}
+                    placeholder="พิมพ์ชื่อผู้รับผิดชอบ..."
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ความสำคัญ</label>

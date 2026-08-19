@@ -23,6 +23,7 @@ import AddProjectModal from './components/AddProjectModal';
 import AddSpaceModal from './components/AddSpaceModal';
 import InviteTeamModal from './components/InviteTeamModal';
 import ProfileSettingsModal from './components/ProfileSettingsModal';
+import ConfirmDialog from './components/common/ConfirmDialog';
 import { canManageSpace } from './utils/permissions';
 import UserAvatar from './components/UserAvatar';
 
@@ -68,6 +69,7 @@ function App() {
   const [inviteModalSpaceId, setInviteModalSpaceId] = useState(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState(null);
+  const [spaceToDelete, setSpaceToDelete] = useState(null);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -409,7 +411,7 @@ function App() {
             refreshData={refreshData} 
             users={users} 
             onEditSpace={(s) => { setEditingSpace(s); setIsAddSpaceModalOpen(true); }} 
-            onDeleteSpace={async (id) => { if(confirm('ต้องการลบทีมนี้ใช่หรือไม่?')) { await axios.delete(`/api/spaces.php?id=${id}`); refreshData(); setActiveTab('space-home'); } }} 
+            onDeleteSpace={(id) => setSpaceToDelete(id)} 
             openInviteModal={(sId) => { setInviteModalSpaceId(sId); setIsInviteModalOpen(true); }}
             onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
             onCreateTask={handleCreateTask}
@@ -776,6 +778,29 @@ function App() {
         users={users}
         initialData={globalEditingTask}
       />
+
+      <ConfirmDialog
+        isOpen={!!spaceToDelete}
+        title="ลบทีม/Space?"
+        message="ยืนยันการลบ Team Space นี้? (โปรเจ็คและงานที่เชื่อมโยงอยู่จะยังคงอยู่ แต่จะหลุดออกจาก Space นี้)"
+        confirmText="ลบ"
+        cancelText="ยกเลิก"
+        type="danger"
+        onConfirm={async () => {
+          if (!spaceToDelete) return;
+          try {
+            await axios.delete(`/api/spaces.php?id=${spaceToDelete}`);
+            refreshData();
+            setActiveTab('space-home');
+          } catch(e) {
+            console.error(e);
+          } finally {
+            setSpaceToDelete(null);
+          }
+        }}
+        onCancel={() => setSpaceToDelete(null)}
+      />
+
       <AddProjectModal 
         isOpen={isGlobalProjectModalOpen} 
         onClose={() => { setIsGlobalProjectModalOpen(false); setGlobalEditingProject(null); }} 
@@ -788,6 +813,7 @@ function App() {
         }}
         initialData={globalEditingProject}
         spaces={spaces}
+        users={users}
       />
       <AddSpaceModal
         isOpen={isAddSpaceModalOpen}

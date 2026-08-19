@@ -146,12 +146,11 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
         </div>
       </div>
 
-      {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && spaceMembers.length > 0 && 
-       currentSpace.Name?.toLowerCase().includes('developer') && (
+      {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && spaceMembers.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-              🚀 Team Developer Workloads
+              🚀 Team Workloads
             </h3>
           </div>
           <div className="flex flex-col gap-6">
