@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTrash2, FiPlus, FiUserPlus } from 'react-icons/fi';
+import { FiUsers, FiCheckCircle, FiClock, FiAlertCircle, FiFolder, FiEdit2, FiTrash2, FiPlus, FiUserPlus, FiActivity, FiX } from 'react-icons/fi';
 import axios from 'axios';
 import { canManageSpace } from '../utils/permissions';
 import { resolveAssigneeName } from '../utils/userUtils';
@@ -7,6 +7,7 @@ import { getCoverImage } from '../utils/imageUtils';
 import WorkloadWidget from './workload/WorkloadWidget';
 
 export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], users = [], currentUser, refreshData, onEditSpace, onDeleteSpace, openInviteModal, onTaskClick, onCreateTask, onCreateProject, onProjectClick, onSaveTask }) {
+  const [showWorkloadModal, setShowWorkloadModal] = useState(false);
   // Determine Space Name and current Space
   const currentSpace = useMemo(() => {
     if (activeTab === 'space-home') return { Id: 'home', Name: 'Home' };
@@ -68,7 +69,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
     });
   }, [currentSpace, tasks, teamProjects]);
 
-  const activeProjects = teamProjects.filter(p => p && p.Status !== 'Completed' && p.Status !== 'done');
+  const activeProjects = teamProjects.filter(p => p && p.Status !== 'closed');
   const doneTasks = teamTasks.filter(t => t && (t.Status === 'Done' || t.Status === 'done'));
 
   return (
@@ -147,16 +148,32 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
       </div>
 
       {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && spaceMembers.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-              🚀 Team Workloads
-            </h3>
-          </div>
-          <div className="flex flex-col gap-6">
-            {spaceMembers.map(member => (
-              <WorkloadWidget key={member.Id} user={{username: member.UserId, fullname: member.fullname, Role: member.Role}} />
-            ))}
+        <div className="mb-6">
+          <button 
+            onClick={() => setShowWorkloadModal(true)}
+            className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-xl text-sm font-bold transition-colors border border-indigo-200 dark:border-indigo-500/30"
+          >
+            <FiActivity className="w-4 h-4" /> 🚀 ดู Team Workloads (Git & Tasks)
+          </button>
+        </div>
+      )}
+
+      {showWorkloadModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+              <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                🚀 Team Workloads
+              </h2>
+              <button onClick={() => setShowWorkloadModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 transition-colors">
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+              {spaceMembers.map(member => (
+                <WorkloadWidget key={member.Id} user={{username: member.UserId, fullname: member.fullname, Role: member.Role}} />
+              ))}
+            </div>
           </div>
         </div>
       )}
