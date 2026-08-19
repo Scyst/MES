@@ -61,6 +61,10 @@ $pageTitle = "PE Enterprise";
                     <i class="fas fa-clock"></i>
                     <span class="nav-label">Downtime Tracker</span>
                 </button>
+                <button class="pe-nav-item" data-tab="safety">
+                    <i class="fas fa-hard-hat text-warning"></i>
+                    <span class="nav-label">Safety & Hazards</span>
+                </button>
                 <button class="pe-nav-item" data-tab="spareparts">
                     <i class="fas fa-boxes"></i>
                     <span class="nav-label">Spare Parts</span>
@@ -103,6 +107,10 @@ $pageTitle = "PE Enterprise";
                     <i class="fas fa-print"></i>
                     <span class="nav-label">Print Safety Boards</span>
                 </a>
+                <button class="pe-nav-item" data-tab="card_generator">
+                    <i class="fas fa-id-card"></i>
+                    <span class="nav-label">Print Safety Cards</span>
+                </button>
                 <a class="pe-nav-item" href="quick_hazard_report.php" target="_blank">
                     <i class="fas fa-exclamation-triangle text-danger"></i>
                     <span class="nav-label text-danger">Quick Hazard Report</span>
@@ -164,6 +172,11 @@ $pageTitle = "PE Enterprise";
                 <?php include 'components/tab_downtime.php'; ?>
             </div>
 
+            <!-- Safety Tab -->
+            <div class="pe-tab-panel" id="panel-safety">
+                <?php include 'components/tab_safety.php'; ?>
+            </div>
+
             <!-- Spare Parts Tab -->
             <div class="pe-tab-panel" id="panel-spareparts">
                 <?php include 'components/tab_spareparts.php'; ?>
@@ -187,6 +200,11 @@ $pageTitle = "PE Enterprise";
             <!-- Machine Timeline Tab -->
             <div class="pe-tab-panel" id="panel-machine_timeline">
                 <?php include 'components/tab_machine_timeline.php'; ?>
+            </div>
+
+            <!-- Card Generator Tab -->
+            <div class="pe-tab-panel" id="panel-card_generator">
+                <?php include 'components/tab_card_generator.php'; ?>
             </div>
 
         </div>
@@ -265,10 +283,12 @@ $pageTitle = "PE Enterprise";
 <script type="module" src="script/workOrderModule.js?v=<?php echo time(); ?>"></script>
 <script type="module" src="script/downtimeModule.js?v=<?php echo filemtime(__DIR__ . '/script/downtimeModule.js'); ?>"></script>
 <script type="module" src="script/sparePartsModule.js?v=<?php echo filemtime(__DIR__ . '/script/sparePartsModule.js'); ?>"></script>
+<script type="module" src="script/safetyModule.js?v=<?php echo filemtime(__DIR__ . '/script/safetyModule.js'); ?>"></script>
 <script type="module" src="script/analyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/analyticsModule.js'); ?>"></script>
 <script type="module" src="script/mapBuilderModule.js?v=<?php echo time(); ?>"></script>
 <script type="module" src="script/iiotModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotModule.js'); ?>"></script>
 <script type="module" src="script/iiotAnalyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotAnalyticsModule.js'); ?>"></script>
+<script type="module" src="script/cardGeneratorModule.js?v=<?php echo time(); ?>"></script>
 
 <script type="module" src="script/machineTimelineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineTimelineModule.js'); ?>"></script>
 

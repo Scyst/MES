@@ -11,7 +11,9 @@ let sidebarCollapsed = false;
         analytics: { title: 'Analytics Dashboard', breadcrumb: 'Dashboard', icon: 'fas fa-chart-line', loader: () => AnalyticsModule.loadAll() },
         iiot: { title: 'Live IIoT Monitor', breadcrumb: 'Live IIoT', icon: 'fas fa-satellite-dish', loader: () => IIoTModule.init() },
         iiot_analytics: { title: 'IIoT Historical Analytics', breadcrumb: 'IIoT Analytics', icon: 'fas fa-history', loader: () => IIoTAnalyticsModule.init() },
-        machine_timeline: { title: 'Machine Timeline', breadcrumb: 'Machine Timeline', icon: 'fas fa-stream', loader: () => MachineTimelineModule.fetchData() }
+        machine_timeline: { title: 'Machine Timeline', breadcrumb: 'Machine Timeline', icon: 'fas fa-stream', loader: () => MachineTimelineModule.fetchData() },
+        safety: { title: 'Safety & Hazards', breadcrumb: 'Safety', icon: 'fas fa-hard-hat', loader: () => SafetyModule.init() },
+        card_generator: { title: 'Card Generator', breadcrumb: 'Card Generator', icon: 'fas fa-id-card', loader: () => CardGeneratorModule.init() }
     };
     const loadedTabs = new Set();
 

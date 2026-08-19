@@ -9,11 +9,11 @@ $machineCode = $_GET['machine_code'] ?? '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Quick Hazard Report</title>
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../../utils/libs/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../utils/libs/fontawesome/css/all.min.css">
     <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="../../utils/libs/sweetalert2.all.min.js"></script>
     
     <!-- Custom CSS from PE-Enterprise System -->
     <link rel="stylesheet" href="css/pe-enterprise.css?v=<?= time() ?>">
@@ -148,6 +148,7 @@ $machineCode = $_GET['machine_code'] ?? '';
     </div>
 </div>
 
+<script src="../../utils/libs/bootstrap.bundle.min.js"></script>
 <script src="script/quick_hazard.js?v=<?= time() ?>"></script>
 </body>
 </html>
