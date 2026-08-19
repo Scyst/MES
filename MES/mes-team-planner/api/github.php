@@ -215,7 +215,13 @@ try {
 
             $graphData = fetchGithubAPI('https://api.github.com/graphql', $token, true, ['query' => $graphQuery]);
 
-            if (isset($graphData['data']['user'])) {
+            if (isset($graphData['errors']) && $graphData['data']['user'] === null) {
+                // The github username does not exist
+                sendJson(['configured' => false]);
+                exit;
+            }
+
+            if (isset($graphData['data']['user']) && $graphData['data']['user'] !== null) {
                 $u = $graphData['data']['user'];
                 $stats['commitsToday'] = $u['today']['totalCommitContributions'] ?? 0;
                 $stats['commitsWeek']  = $u['thisWeek']['totalCommitContributions'] ?? 0;
