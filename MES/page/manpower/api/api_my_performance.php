@@ -56,7 +56,7 @@ try {
             FROM dbo.STOCK_TRANSACTION_USERS stu WITH (NOLOCK)
             INNER JOIN dbo.STOCK_TRANSACTIONS t WITH (NOLOCK) ON stu.transaction_id = t.transaction_id
             LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
-            WHERE CONVERT(VARCHAR(7), t.transaction_timestamp, 120) = :period1
+            WHERE CONVERT(VARCHAR(7), DATEADD(HOUR, -8, t.transaction_timestamp), 120) = :period1
               AND t.transaction_type LIKE 'PRODUCTION_%'
             GROUP BY stu.emp_id
         ) INC ON INC.emp_id = E.emp_id COLLATE Thai_CI_AS
