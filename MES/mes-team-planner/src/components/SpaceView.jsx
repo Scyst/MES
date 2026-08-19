@@ -8,6 +8,7 @@ import WorkloadWidget from './workload/WorkloadWidget';
 
 export default function SpaceView({ activeTab, spaces = [], tasks = [], projects = [], users = [], currentUser, refreshData, onEditSpace, onDeleteSpace, openInviteModal, onTaskClick, onCreateTask, onCreateProject, onProjectClick, onSaveTask }) {
   const [showWorkloadModal, setShowWorkloadModal] = useState(false);
+  const [activeStatusTab, setActiveStatusTab] = useState('active');
   // Determine Space Name and current Space
   const currentSpace = useMemo(() => {
     if (activeTab === 'space-home') return { Id: 'home', Name: 'Home' };
@@ -70,6 +71,9 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
   }, [currentSpace, tasks, teamProjects]);
 
   const activeProjects = teamProjects.filter(p => p && p.Status !== 'closed');
+  const closedProjects = teamProjects.filter(p => p && p.Status === 'closed');
+  const displayedProjects = activeStatusTab === 'active' ? activeProjects : closedProjects;
+
   const doneTasks = teamTasks.filter(t => t && (t.Status === 'Done' || t.Status === 'done'));
 
   return (
@@ -170,9 +174,12 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
               </button>
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-              {spaceMembers.map(member => (
+              {spaceMembers.filter(m => m.UserId !== currentUser?.username).map(member => (
                 <WorkloadWidget key={member.Id} user={{username: member.UserId, fullname: member.fullname, Role: member.Role}} />
               ))}
+              {spaceMembers.filter(m => m.UserId !== currentUser?.username).length === 0 && (
+                 <div className="text-center text-slate-500 py-8">ไม่มีข้อมูล Workload ของสมาชิกทีมท่านอื่น</div>
+              )}
             </div>
           </div>
         </div>
@@ -193,8 +200,24 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
               )}
             </div>
           </div>
+          
+          <div className="flex items-center gap-2 mb-4 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
+            <button 
+              onClick={() => setActiveStatusTab('active')}
+              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeStatusTab === 'active' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+            >
+              กำลังดำเนินการ ({activeProjects.length})
+            </button>
+            <button 
+              onClick={() => setActiveStatusTab('closed')}
+              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeStatusTab === 'closed' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+            >
+              ปิดแล้ว ({closedProjects.length})
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {activeProjects.map((proj, idx) => {
+            {displayedProjects.map((proj, idx) => {
               let checklist = [];
               try { checklist = proj?.Checklist ? (typeof proj.Checklist === 'string' ? JSON.parse(proj.Checklist) : proj.Checklist) : []; } catch (e) {}
               const totalItems = Array.isArray(checklist) ? checklist.length : 0;
@@ -223,7 +246,7 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
                 </div>
               );
             })}
-            {activeProjects.length === 0 && (
+            {displayedProjects.length === 0 && (
               <div className="col-span-2 p-8 text-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 border-dashed text-slate-500">
                 ไม่มีโปรเจ็คในทีมนี้
               </div>
