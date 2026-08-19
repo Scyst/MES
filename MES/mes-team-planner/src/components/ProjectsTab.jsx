@@ -186,11 +186,46 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], users = [
         onCancel={() => setProjectToDelete(null)}
       />
 
-      <div className="flex flex-row flex-wrap items-center justify-end md:justify-between gap-3 shrink-0 mb-4 px-1">
-        <h2 className="hidden md:flex text-lg md:text-xl font-bold text-slate-900 dark:text-white items-center gap-2">
-          <span className="text-indigo-400">💼</span> โปรเจ็ค
-        </h2>
-        <div className="flex gap-2">
+      <div className="flex flex-row flex-wrap items-center justify-between gap-3 shrink-0 mb-4 px-1">
+        <div className="flex items-center gap-4 shrink-0">
+          <h2 className="hidden md:flex text-lg md:text-xl font-bold text-slate-900 dark:text-white items-center gap-2">
+            <span className="text-indigo-400">💼</span> โปรเจ็ค
+          </h2>
+          
+          {/* FEAT-1: Active / Closed status tabs (Moved to header) */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-xl w-fit shrink-0">
+            <button
+              onClick={() => setActiveStatusTab('active')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                activeStatusTab === 'active'
+                  ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              <FiCheckCircle className={activeStatusTab === 'active' ? 'text-indigo-500' : ''} />
+              ดำเนินการ
+              <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                activeStatusTab === 'active' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+              }`}>{activeProjects.length}</span>
+            </button>
+            <button
+              onClick={() => setActiveStatusTab('closed')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                activeStatusTab === 'closed'
+                  ? 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              <FiArchive className={activeStatusTab === 'closed' ? 'text-slate-500' : ''} />
+              ปิดแล้ว
+              <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                activeStatusTab === 'closed' ? 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+              }`}>{closedProjects.length}</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-2 shrink-0">
           <button
             onClick={() => { setEditingProject(null); setIsModalOpen(true); }}
             className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-900/20 flex items-center gap-1.5"
@@ -199,39 +234,7 @@ export default function ProjectsTab({ currentUser, tasks, spaces = [], users = [
           </button>
         </div>
       </div>
-
-      {/* FEAT-1: Active / Closed status tabs */}
-      <div className="flex items-center gap-1 mb-4 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-xl w-fit shrink-0">
-        <button
-          onClick={() => setActiveStatusTab('active')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-            activeStatusTab === 'active'
-              ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-          }`}
-        >
-          <FiCheckCircle className={activeStatusTab === 'active' ? 'text-indigo-500' : ''} />
-          ดำเนินการ
-          <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
-            activeStatusTab === 'active' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-          }`}>{activeProjects.length}</span>
-        </button>
-        <button
-          onClick={() => setActiveStatusTab('closed')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-            activeStatusTab === 'closed'
-              ? 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 shadow-sm'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-          }`}
-        >
-          <FiArchive className={activeStatusTab === 'closed' ? 'text-slate-500' : ''} />
-          ปิดแล้ว
-          <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
-            activeStatusTab === 'closed' ? 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-          }`}>{closedProjects.length}</span>
-        </button>
-      </div>
-
+      
       <div className="flex-1 overflow-y-auto px-1 pb-4 custom-scrollbar">
         {loading ? (
           <div className="text-center text-slate-500 py-10">กำลังโหลด...</div>

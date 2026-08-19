@@ -151,7 +151,8 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
         </div>
       </div>
 
-      {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && spaceMembers.length > 0 && (
+      {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && spaceMembers.length > 0 && 
+       currentSpace.Name?.toLowerCase().includes('developer') && (
         <div className="mb-6">
           <button 
             onClick={() => setShowWorkloadModal(true)}
@@ -174,12 +175,9 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
               </button>
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-              {spaceMembers.filter(m => m.UserId !== currentUser?.username).map(member => (
+              {spaceMembers.map(member => (
                 <WorkloadWidget key={member.Id} user={{username: member.UserId, fullname: member.fullname, Role: member.Role}} />
               ))}
-              {spaceMembers.filter(m => m.UserId !== currentUser?.username).length === 0 && (
-                 <div className="text-center text-slate-500 py-8">ไม่มีข้อมูล Workload ของสมาชิกทีมท่านอื่น</div>
-              )}
             </div>
           </div>
         </div>
@@ -188,32 +186,33 @@ export default function SpaceView({ activeTab, spaces = [], tasks = [], projects
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Col - Projects */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-              <FiFolder className="text-indigo-500" /> Team Projects
-            </h3>
-            <div className="flex items-center gap-2">
+          <div className="flex flex-row flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-4 shrink-0">
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <FiFolder className="text-indigo-500" /> Team Projects
+              </h3>
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
+                <button 
+                  onClick={() => setActiveStatusTab('active')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${activeStatusTab === 'active' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                >
+                  ดำเนินการ ({activeProjects.length})
+                </button>
+                <button 
+                  onClick={() => setActiveStatusTab('closed')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${activeStatusTab === 'closed' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                >
+                  ปิดแล้ว ({closedProjects.length})
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
               {currentSpace.Id !== 'home' && currentSpace.Id !== 'mock' && (
                 <button onClick={() => onCreateProject && onCreateProject({ SpaceId: currentSpace.Id })} className="text-xs font-bold bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900 transition-colors flex items-center gap-1">
                   <FiPlus /> New Project
                 </button>
               )}
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2 mb-4 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
-            <button 
-              onClick={() => setActiveStatusTab('active')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeStatusTab === 'active' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-            >
-              กำลังดำเนินการ ({activeProjects.length})
-            </button>
-            <button 
-              onClick={() => setActiveStatusTab('closed')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeStatusTab === 'closed' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-            >
-              ปิดแล้ว ({closedProjects.length})
-            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
