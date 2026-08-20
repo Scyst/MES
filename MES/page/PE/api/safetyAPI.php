@@ -27,13 +27,15 @@ try {
             $limit     = min((int)($_GET['limit'] ?? 50), 200);
             $days      = min((int)($_GET['days'] ?? 30), 365);
 
+            $daysParam = -$days;
+
             $sql = "SELECT wo_id, wo_number, wo_type, machine_name, line, priority,
                            requested_by, requested_at, issue_title, issue_detail,
                            image_path, status, assigned_to, completed_at, action_taken AS notes
                     FROM " . PE_WORK_ORDERS_TABLE . "
                     WHERE wo_type = 'Safety/Hazard'
-                    AND requested_at >= DATEADD(day, -?, GETDATE())";
-            $params = [$days];
+                    AND requested_at >= DATEADD(day, ?, GETDATE())";
+            $params = [$daysParam];
 
             if ($status !== 'all') {
                 $sql .= " AND status = ?";
@@ -57,9 +59,9 @@ try {
                 SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) AS completed
                 FROM " . PE_WORK_ORDERS_TABLE . "
                 WHERE wo_type = 'Safety/Hazard'
-                AND requested_at >= DATEADD(day, -?, GETDATE())";
+                AND requested_at >= DATEADD(day, ?, GETDATE())";
             $kpiStmt = $pdo->prepare($kpiSql);
-            $kpiStmt->execute([$days]);
+            $kpiStmt->execute([$daysParam]);
             $kpi = $kpiStmt->fetch(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $reports, 'kpi' => $kpi]);
