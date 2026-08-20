@@ -1,12 +1,9 @@
 <?php
 // e:\MES\MES\MES\page\storeManagement\warehouse_operations.php
-require_once '../db.php';
-require_once '../components/init.php';
+require_once __DIR__ . '/../components/init.php';
+requirePermission(['manage_warehouse', 'view_warehouse']);
 
-if (!hasPermission('add_production') && !hasPermission('manage_production')) {
-    header('Location: /MES/MES/page/error/403.php');
-    exit;
-}
+require_once __DIR__ . '/../db.php';
 
 $currentUserForJS = $_SESSION['user'] ?? null;
 
