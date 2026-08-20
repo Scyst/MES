@@ -415,25 +415,37 @@ const MachineModule = (() => {
     }
 
     let telemetryInterval = null;
+    
+    const fetchTelemetry = async () => {
+        try {
+            const res = await fetch('api/iiotAPI.php?action=get_live_telemetry');
+            const json = await res.json();
+            if (json.success && json.data) {
+                updateTelemetryUI(json.data);
+            }
+        } catch (e) {
+            console.error('Failed to fetch telemetry', e);
+        }
+    };
 
     function startTelemetryPolling() {
         if (telemetryInterval) clearInterval(telemetryInterval);
-        
-        const fetchTelemetry = async () => {
-            try {
-                const res = await fetch('api/iiotAPI.php?action=get_live_telemetry');
-                const json = await res.json();
-                if (json.success && json.data) {
-                    updateTelemetryUI(json.data);
-                }
-            } catch (e) {
-                console.error('Failed to fetch telemetry', e);
-            }
-        };
-
         fetchTelemetry(); // initial fetch
         telemetryInterval = setInterval(fetchTelemetry, 5000); // poll every 5 seconds
     }
+    
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            if (telemetryInterval) {
+                clearInterval(telemetryInterval);
+                telemetryInterval = null;
+            }
+        } else {
+            if (!telemetryInterval) {
+                telemetryInterval = setInterval(fetchTelemetry, 5000);
+            }
+        }
+    });
 
     function updateTelemetryUI(data) {
         document.querySelectorAll('.pe-machine-card[data-machine-code]').forEach(card => {

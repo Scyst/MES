@@ -22,6 +22,17 @@ const IIoTOeeModule = (function() {
             }
         });
         
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                stopAutoRefresh();
+            } else {
+                const activeTab = document.querySelector('.pe-nav-link.active');
+                if (activeTab && activeTab.dataset.tab === 'iiot_oee') {
+                    startAutoRefresh();
+                }
+            }
+        });
+        
         document.getElementById('iiotOeeDateFilter').addEventListener('change', fetchData);
         document.getElementById('iiotOeeMachineFilter').addEventListener('change', fetchData);
     }

@@ -114,6 +114,19 @@ const MapBuilderModule = (function () {
         });
         
         animateConveyors(); // Start conveyor animation
+        
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                if (conveyorAnimReq) {
+                    cancelAnimationFrame(conveyorAnimReq);
+                    conveyorAnimReq = null;
+                }
+            } else {
+                if (!conveyorAnimReq) {
+                    animateConveyors();
+                }
+            }
+        });
     }
 
     function toggleMode() {

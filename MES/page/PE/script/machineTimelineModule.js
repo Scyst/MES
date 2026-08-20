@@ -12,6 +12,17 @@ const MachineTimelineModule = (function() {
             }
         });
         
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                stopAutoRefresh();
+            } else {
+                const activeTab = document.querySelector('.pe-nav-link.active');
+                if (activeTab && activeTab.dataset.tab === 'machine_timeline') {
+                    startAutoRefresh();
+                }
+            }
+        });
+        
         const dateFilter = document.getElementById('timelineDateFilter');
         if (dateFilter) {
             dateFilter.addEventListener('change', fetchData);

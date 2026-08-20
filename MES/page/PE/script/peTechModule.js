@@ -498,6 +498,19 @@ const TechModule = (function() {
         loadData();
         startAutoRefresh();
         
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                if (autoRefreshTimer) {
+                    clearInterval(autoRefreshTimer);
+                    autoRefreshTimer = null;
+                }
+            } else {
+                if (!autoRefreshTimer) {
+                    autoRefreshTimer = setInterval(loadData, 60000);
+                }
+            }
+        });
+        
         // Override the submit button in the modal
         const submitBtn = document.getElementById('qcSaveBtn');
         if (submitBtn) {

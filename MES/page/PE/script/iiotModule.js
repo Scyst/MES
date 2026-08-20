@@ -98,8 +98,29 @@ const IIoTModule = (function() {
             document.addEventListener('peTabChanged', (e) => {
                 if (e.detail.tab === 'iiot') {
                     startPolling();
+                    if (!animationReq) animateAlerts();
                 } else {
                     stop();
+                    if (animationReq) {
+                        cancelAnimationFrame(animationReq);
+                        animationReq = null;
+                    }
+                }
+            });
+            
+            document.addEventListener("visibilitychange", () => {
+                if (document.hidden) {
+                    stop();
+                    if (animationReq) {
+                        cancelAnimationFrame(animationReq);
+                        animationReq = null;
+                    }
+                } else {
+                    const activeTab = document.querySelector('.pe-nav-link.active');
+                    if (activeTab && activeTab.dataset.tab === 'iiot') {
+                        startPolling();
+                        if (!animationReq) animateAlerts();
+                    }
                 }
             });
             
