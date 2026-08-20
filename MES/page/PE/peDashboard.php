@@ -103,10 +103,10 @@ $pageTitle = "PE Enterprise";
                     <i class="fas fa-external-link-alt"></i>
                     <span class="nav-label">PE Request Portal</span>
                 </a>
-                <a class="pe-nav-item" href="visual_board_print.php" target="_blank">
-                    <i class="fas fa-print"></i>
+                <button class="pe-nav-item" data-tab="visual_board">
+                    <i class="fas fa-chalkboard"></i>
                     <span class="nav-label">Print Safety Boards</span>
-                </a>
+                </button>
                 <button class="pe-nav-item" data-tab="card_generator">
                     <i class="fas fa-id-card"></i>
                     <span class="nav-label">Print Safety Cards</span>
@@ -207,6 +207,11 @@ $pageTitle = "PE Enterprise";
                 <?php include 'components/tab_card_generator.php'; ?>
             </div>
 
+            <!-- Visual Board Tab -->
+            <div class="pe-tab-panel" id="panel-visual_board">
+                <?php include 'components/tab_visual_board.php'; ?>
+            </div>
+
         </div>
     </div>
 </div>
@@ -289,6 +294,7 @@ $pageTitle = "PE Enterprise";
 <script type="module" src="script/iiotModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotModule.js'); ?>"></script>
 <script type="module" src="script/iiotAnalyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotAnalyticsModule.js'); ?>"></script>
 <script type="module" src="script/cardGeneratorModule.js?v=<?php echo time(); ?>"></script>
+<script type="module" src="script/visualBoardModule.js?v=<?php echo time(); ?>"></script>
 
 <script type="module" src="script/machineTimelineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineTimelineModule.js'); ?>"></script>
 
