@@ -29,7 +29,7 @@ try {
 
             $sql = "SELECT wo_id, wo_number, wo_type, machine_name, line, priority,
                            requested_by, requested_at, issue_title, issue_detail,
-                           image_path, status, assigned_to, completed_at, notes
+                           image_path, status, assigned_to, completed_at, action_taken AS notes
                     FROM " . PE_WORK_ORDERS_TABLE . "
                     WHERE wo_type = 'Safety/Hazard'
                     AND requested_at >= DATEADD(day, -?, GETDATE())";
@@ -94,7 +94,7 @@ try {
             }
 
             // Fetch old for audit
-            $oldStmt = $pdo->prepare("SELECT status, notes FROM " . PE_WORK_ORDERS_TABLE . " WHERE wo_id = ? AND wo_type = 'Safety/Hazard'");
+            $oldStmt = $pdo->prepare("SELECT status, action_taken AS notes FROM " . PE_WORK_ORDERS_TABLE . " WHERE wo_id = ? AND wo_type = 'Safety/Hazard'");
             $oldStmt->execute([$woId]);
             $old = $oldStmt->fetch(PDO::FETCH_ASSOC);
             if (!$old) throw new Exception("Hazard report not found.");
@@ -104,7 +104,7 @@ try {
 
             $pdo->beginTransaction();
             $updSql = "UPDATE " . PE_WORK_ORDERS_TABLE . "
-                       SET status = ?, notes = ?, assigned_to = ?,
+                       SET status = ?, action_taken = ?, assigned_to = ?,
                            completed_at = " . ($completedAt ? "?" : "completed_at") . "
                        WHERE wo_id = ?";
             $updParams = [$status, $notes, $assignedTo];
