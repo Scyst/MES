@@ -266,6 +266,7 @@ $pageTitle = "PE Enterprise";
 <script src="../../utils/libs/cropper.min.js"></script>
 <script src="../../utils/libs/fabric.min.js"></script>
 <script src="../../utils/libs/simpleheat.js"></script>
+<script src="../../utils/libs/qrcode.min.js"></script>
 <?php include_once '../components/chart_head.php'; ?>
 
 <!-- App Scripts -->
