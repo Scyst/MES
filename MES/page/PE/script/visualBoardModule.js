@@ -18,7 +18,7 @@ const VisualBoardModule = (function() {
             const result = await response.json();
             
             if (result.success) {
-                machines = result.data.machines || [];
+                machines = Array.isArray(result.data) ? result.data : (result.data.machines || []);
                 
                 // Extract unique lines for filter
                 lines = [...new Set(machines.map(m => m.line).filter(l => l))].sort();
