@@ -1,9 +1,4 @@
-/**
- * Card Generator Module for PE Dashboard
- * Handles the logic for creating, previewing, and printing visual board cards.
- */
-
-const CardGeneratorModule = (function() {
+﻿const CardGeneratorModule = (function() {
     let cardQueue = [];
     let cardIdCounter = 0;
     let allEmployees = [];
@@ -15,92 +10,83 @@ const CardGeneratorModule = (function() {
         
         console.log("CardGeneratorModule initialized");
         loadEmployeesData();
-
-        // Initialize Select2 if not already done
-        if ($.fn.select2) {
-            $('#cgOpEmployeeSelect').select2({ width: '100%' });
-            $('#cgLotoEmployeeSelect').select2({ width: '100%' });
-            $('#cgBatchLineSelect').select2({ width: '100%' });
-        }
         
         isInitialized = true;
     }
 
-    function loadEmployeesData() {
-        $.ajax({
-            url: 'api/safetyAPI.php?action=get_employees_for_cards',
-            type: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if(response.success) {
-                    allEmployees = response.data.employees;
-                    populateSelects(response.data.employees, response.data.lines);
-                } else {
-                    console.error("Failed to load employees", response.message);
-                }
-            },
-            error: function(err) {
-                console.error("Error loading employees", err);
+    async function loadEmployeesData() {
+        try {
+            const response = await fetch('api/safetyAPI.php?action=get_employees_for_cards');
+            const json = await response.json();
+            if(json.success) {
+                allEmployees = json.data.employees;
+                populateSelects(json.data.employees, json.data.lines);
+            } else {
+                console.error("Failed to load employees", json.message);
             }
-        });
+        } catch(err) {
+            console.error("Error loading employees", err);
+        }
     }
 
     function populateSelects(employees, lines) {
-        const opSelect = $('#cgOpEmployeeSelect');
-        const lotoSelect = $('#cgLotoEmployeeSelect');
-        const lineSelect = $('#cgBatchLineSelect');
+        const opSelect = document.getElementById('cgOpEmployeeSelect');
+        const lotoSelect = document.getElementById('cgLotoEmployeeSelect');
+        const lineSelect = document.getElementById('cgBatchLineSelect');
         
-        opSelect.empty().append('<option value="">-- ค้นหาชื่อพนักงาน --</option>');
-        lotoSelect.empty().append('<option value="">-- ค้นหาชื่อช่าง --</option>');
-        lineSelect.empty().append('<option value="">-- เลือกแผนก / ไลน์ผลิต --</option>');
+        if (opSelect) opSelect.innerHTML = '<option value="">-- ค้นหาชื่อพนักงาน --</option>';
+        if (lotoSelect) lotoSelect.innerHTML = '<option value="">-- ค้นหาชื่อช่าง --</option>';
+        if (lineSelect) lineSelect.innerHTML = '<option value="">-- เลือกแผนก / ไลน์ผลิต --</option>';
         
         employees.forEach(emp => {
             const line = emp.line || emp.department_api || '';
-            const option = `<option value="${emp.emp_id}" data-name="${emp.name_th}" data-dept="${line}">${emp.emp_id} - ${emp.name_th}</option>`;
-            opSelect.append(option);
-            lotoSelect.append(option);
+            const option = \<option value="\" data-name="\" data-dept="\">\ - \</option>\;
+            if (opSelect) opSelect.insertAdjacentHTML('beforeend', option);
+            if (lotoSelect) lotoSelect.insertAdjacentHTML('beforeend', option);
         });
         
         lines.forEach(line => {
-            lineSelect.append(`<option value="${line}">${line}</option>`);
+            if (lineSelect) lineSelect.insertAdjacentHTML('beforeend', \<option value="\">\</option>\);
         });
     }
 
     function renderPreview() {
-        const container = $('#cgPreviewContainer');
-        $('#cgPrintCountText').text(cardQueue.length);
+        const container = document.getElementById('cgPreviewContainer');
+        const countText = document.getElementById('cgPrintCountText');
+        if (countText) countText.innerText = cardQueue.length;
 
         if (cardQueue.length === 0) {
-            container.html(`
-                <div class="text-center text-muted" style="margin-top: 100px;">
-                    <i class="fas fa-id-card fa-4x mb-3 opacity-25"></i>
-                    <h5>พรีวิวการ์ดว่างเปล่า</h5>
-                    <p>เลือกเพิ่มการ์ดจากเมนูด้านซ้ายเพื่อเตรียมพิมพ์</p>
-                </div>
-            `);
+            if (container) {
+                container.innerHTML = \
+                    <div class="text-center text-muted" style="margin-top: 100px;">
+                        <i class="fas fa-id-card fa-4x mb-3 opacity-25"></i>
+                        <h5>พรีวิวการ์ดว่างเปล่า</h5>
+                        <p>เลือกเพิ่มการ์ดจากเมนูด้านซ้ายเพื่อเตรียมพิมพ์</p>
+                    </div>
+                \;
+            }
             return;
         }
 
-        container.empty();
+        if (container) container.innerHTML = '';
         
         const chunkSize = 10;
         for (let i = 0; i < cardQueue.length; i += chunkSize) {
             const chunk = cardQueue.slice(i, i + chunkSize);
-            let pageHtml = `<div class="cg-page cg-preview-page"><div class="cg-cards-grid">`;
+            let pageHtml = \<div class="cg-page cg-preview-page"><div class="cg-cards-grid">\;
             chunk.forEach(card => {
-                pageHtml += `<div class="cg-card-container" id="cg-card-${card.id}">`;
-                pageHtml += `<button class="cg-card-remove-btn no-print" onclick="CardGeneratorModule.removeCard(${card.id})" title="ลบการ์ดนี้"><i class="fas fa-times"></i></button>`;
+                pageHtml += \<div class="cg-card-container" id="cg-card-\">\;
+                pageHtml += \<button class="cg-card-remove-btn no-print" onclick="CardGeneratorModule.removeCard(\)" title="ลบการ์ดนี้"><i class="fas fa-times"></i></button>\;
                 pageHtml += card.html;
-                pageHtml += `</div>`;
+                pageHtml += \</div>\;
             });
-            pageHtml += `</div></div>`;
-            container.append(pageHtml);
+            pageHtml += \</div></div>\;
+            if (container) container.insertAdjacentHTML('beforeend', pageHtml);
         }
         
         // Scroll to bottom of preview panel when adding
-        const containerEl = document.getElementById('cgPreviewContainer');
-        if (containerEl && containerEl.parentElement) {
-            containerEl.parentElement.scrollTop = containerEl.parentElement.scrollHeight;
+        if (container && container.parentElement) {
+            container.parentElement.scrollTop = container.parentElement.scrollHeight;
         }
     }
 
@@ -120,11 +106,11 @@ const CardGeneratorModule = (function() {
     function addStatusCard(color) {
         let html = '';
         if (color === 'green') {
-            html = `<div class="cg-card-status cg-status-green"><i class="fas fa-check-circle"></i><div class="cg-card-status-text"><h2>ปกติ</h2><p>NORMAL</p></div></div>`;
+            html = \<div class="cg-card-status cg-status-green"><i class="fas fa-check-circle"></i><div class="cg-card-status-text"><h2>ปกติ</h2><p>NORMAL</p></div></div>\;
         } else if (color === 'yellow') {
-            html = `<div class="cg-card-status cg-status-yellow"><i class="fas fa-exclamation-triangle"></i><div class="cg-card-status-text"><h2>ระวัง</h2><p>WARNING</p></div></div>`;
+            html = \<div class="cg-card-status cg-status-yellow"><i class="fas fa-exclamation-triangle"></i><div class="cg-card-status-text"><h2>ระวัง</h2><p>WARNING</p></div></div>\;
         } else if (color === 'red') {
-            html = `<div class="cg-card-status cg-status-red"><i class="fas fa-times-circle"></i><div class="cg-card-status-text"><h2>หยุดเครื่อง</h2><p>STOP / DANGER</p></div></div>`;
+            html = \<div class="cg-card-status cg-status-red"><i class="fas fa-times-circle"></i><div class="cg-card-status-text"><h2>หยุดเครื่อง</h2><p>STOP / DANGER</p></div></div>\;
         }
         cardQueue.push({ id: cardIdCounter++, html: html });
         renderPreview();
@@ -137,38 +123,38 @@ const CardGeneratorModule = (function() {
     }
 
     function getOperatorHTML(name, empId, dept, photoUrl = '') {
-        let photoHtml = photoUrl ? `<img src="${photoUrl}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"> <i class="fas fa-user" style="display:none; font-size:32pt; color:#94a3b8;"></i>` : `<i class="fas fa-user" style="font-size:32pt; color:#94a3b8;"></i>`;
+        let photoHtml = photoUrl ? \<img src="\" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"> <i class="fas fa-user" style="display:none; font-size:32pt; color:#94a3b8;"></i>\ : \<i class="fas fa-user" style="font-size:32pt; color:#94a3b8;"></i>\;
         if(name === '' && empId === '') {
-            photoHtml = `<div style="text-align:center; font-size:9pt; color:#94a3b8; width:100%; font-weight:500;">ติดรูปถ่าย<br>1 นิ้ว</div>`;
+            photoHtml = \<div style="text-align:center; font-size:9pt; color:#94a3b8; width:100%; font-weight:500;">ติดรูปถ่าย<br>1 นิ้ว</div>\;
         }
         
-        return `<div class="cg-card-operator">
+        return \<div class="cg-card-operator">
             <div class="cg-op-left">
                 <div class="cg-op-header"><i class="fas fa-user-hard-hat"></i> OPERATOR</div>
-                <div class="cg-op-photo">${photoHtml}</div>
+                <div class="cg-op-photo">\</div>
             </div>
             <div class="cg-op-right">
                 <div class="cg-op-line-label">ชื่อ-นามสกุล</div>
-                <div class="cg-op-line">${name || '................................'}</div>
+                <div class="cg-op-line">\</div>
                 <div class="cg-op-line-label">รหัสพนักงาน</div>
-                <div class="cg-op-line">${empId || '................................'}</div>
+                <div class="cg-op-line">\</div>
                 <div class="cg-op-line-label">แผนก / ไลน์</div>
-                <div class="cg-op-line" style="border: none; margin-bottom: 0;">${dept || '................................'}</div>
+                <div class="cg-op-line" style="border: none; margin-bottom: 0;">\</div>
             </div>
-        </div>`;
+        </div>\;
     }
 
     function addOperatorCard() {
-        const select = $('#cgOpEmployeeSelect');
-        const selected = select.find(':selected');
-        if (!selected.val()) {
+        const select = document.getElementById('cgOpEmployeeSelect');
+        if (!select || !select.options[select.selectedIndex] || !select.value) {
             alert('กรุณาเลือกพนักงานก่อน');
             return;
         }
-        const empId = selected.val();
-        const name = selected.data('name');
-        const dept = selected.data('dept');
-        const photoUrl = `../../../assets/img/employees/${empId}.jpg`; 
+        const selected = select.options[select.selectedIndex];
+        const empId = select.value;
+        const name = selected.getAttribute('data-name');
+        const dept = selected.getAttribute('data-dept');
+        const photoUrl = \../../../assets/img/employees/\.jpg\; 
         
         cardQueue.push({ id: cardIdCounter++, html: getOperatorHTML(name, empId, dept, photoUrl) });
         renderPreview();
@@ -180,8 +166,9 @@ const CardGeneratorModule = (function() {
     }
     
     function addBatchOperatorCards() {
-        const select = $('#cgBatchLineSelect');
-        const selectedLine = select.val();
+        const select = document.getElementById('cgBatchLineSelect');
+        if (!select) return;
+        const selectedLine = select.value;
         
         if (!selectedLine) {
             alert('กรุณาเลือกแผนก/ไลน์ผลิตก่อน');
@@ -192,7 +179,7 @@ const CardGeneratorModule = (function() {
         allEmployees.forEach(emp => {
             const empLine = emp.line || emp.department_api;
             if (empLine === selectedLine) {
-                const photoUrl = `../../../assets/img/employees/${emp.emp_id}.jpg`;
+                const photoUrl = \../../../assets/img/employees/\.jpg\;
                 cardQueue.push({ 
                     id: cardIdCounter++, 
                     html: getOperatorHTML(emp.name_th, emp.emp_id, empLine, photoUrl) 
@@ -203,14 +190,14 @@ const CardGeneratorModule = (function() {
         
         if (count > 0) {
             renderPreview();
-            alert(`เพิ่มการ์ดพนักงานสำเร็จจำนวน ${count} ใบ`);
+            alert(\เพิ่มการ์ดพนักงานสำเร็จจำนวน \ ใบ\);
         } else {
             alert('ไม่พบพนักงานในแผนก/ไลน์ที่เลือก');
         }
     }
 
     function getLotoHTML(name) {
-        return `<div class="cg-card-loto">
+        return \<div class="cg-card-loto">
             <div class="cg-loto-header">LOCKOUT / TAGOUT</div>
             <div class="cg-loto-body">
                 <div class="cg-loto-left">
@@ -218,22 +205,22 @@ const CardGeneratorModule = (function() {
                     <div class="cg-loto-danger">ห้ามเดินเครื่อง</div>
                 </div>
                 <div class="cg-loto-right">
-                    <div class="cg-loto-line" style="border-bottom: 1.5px solid #ef4444; padding-bottom: 5px;">ช่าง: ${name || '................................'}</div>
+                    <div class="cg-loto-line" style="border-bottom: 1.5px solid #ef4444; padding-bottom: 5px;">ช่าง: \</div>
                     <div class="cg-loto-line" style="border-bottom: 1.5px dotted #ef4444; color: #64748b; font-weight: 500; margin-top: 8px;">วันที่: ................................</div>
                     <div class="cg-loto-line" style="border: none; margin-bottom: 0; color: #64748b; font-weight: 500;">เวลา: ................................</div>
                 </div>
             </div>
-        </div>`;
+        </div>\;
     }
 
     function addLotoCard() {
-        const select = $('#cgLotoEmployeeSelect');
-        const selected = select.find(':selected');
-        if (!selected.val()) {
+        const select = document.getElementById('cgLotoEmployeeSelect');
+        if (!select || !select.options[select.selectedIndex] || !select.value) {
             alert('กรุณาเลือกพนักงานก่อน');
             return;
         }
-        const name = selected.data('name');
+        const selected = select.options[select.selectedIndex];
+        const name = selected.getAttribute('data-name');
         cardQueue.push({ id: cardIdCounter++, html: getLotoHTML(name) });
         renderPreview();
     }
@@ -249,19 +236,20 @@ const CardGeneratorModule = (function() {
             return;
         }
         
-        const printContainer = $('#cgPrintContainer');
-        printContainer.empty();
+        const printContainer = document.getElementById('cgPrintContainer');
+        if (!printContainer) return;
+        printContainer.innerHTML = '';
         
         // Chunk cards into pages of 10
         const chunkSize = 10;
         for (let i = 0; i < cardQueue.length; i += chunkSize) {
             const chunk = cardQueue.slice(i, i + chunkSize);
-            let pageHtml = `<div class="cg-page"><div class="cg-cards-grid">`;
+            let pageHtml = \<div class="cg-page"><div class="cg-cards-grid">\;
             chunk.forEach(card => {
-                pageHtml += `<div class="cg-card-container">${card.html}</div>`;
+                pageHtml += \<div class="cg-card-container">\</div>\;
             });
-            pageHtml += `</div></div>`;
-            printContainer.append(pageHtml);
+            pageHtml += \</div></div>\;
+            printContainer.insertAdjacentHTML('beforeend', pageHtml);
         }
         
         // Use browser print - CSS will handle showing cgPrintContainer and hiding everything else
