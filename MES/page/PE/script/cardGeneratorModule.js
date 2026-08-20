@@ -1,4 +1,4 @@
-﻿const CardGeneratorModule = (function() {
+const CardGeneratorModule = (function() {
     let cardQueue = [];
     let cardIdCounter = 0;
     let allEmployees = [];
@@ -40,13 +40,13 @@
         
         employees.forEach(emp => {
             const line = emp.line || emp.department_api || '';
-            const option = \<option value="\" data-name="\" data-dept="\">\ - \</option>\;
+            const option = `<option value="${emp.emp_id}" data-name="${emp.name_th}" data-dept="${line}">${emp.emp_id} - ${emp.name_th}</option>`;
             if (opSelect) opSelect.insertAdjacentHTML('beforeend', option);
             if (lotoSelect) lotoSelect.insertAdjacentHTML('beforeend', option);
         });
         
         lines.forEach(line => {
-            if (lineSelect) lineSelect.insertAdjacentHTML('beforeend', \<option value="\">\</option>\);
+            if (lineSelect) lineSelect.insertAdjacentHTML('beforeend', `<option value="${line}">${line}</option>`);
         });
     }
 
@@ -57,13 +57,13 @@
 
         if (cardQueue.length === 0) {
             if (container) {
-                container.innerHTML = \
+                container.innerHTML = `
                     <div class="text-center text-muted" style="margin-top: 100px;">
                         <i class="fas fa-id-card fa-4x mb-3 opacity-25"></i>
                         <h5>พรีวิวการ์ดว่างเปล่า</h5>
                         <p>เลือกเพิ่มการ์ดจากเมนูด้านซ้ายเพื่อเตรียมพิมพ์</p>
                     </div>
-                \;
+                `;
             }
             return;
         }
@@ -73,14 +73,14 @@
         const chunkSize = 10;
         for (let i = 0; i < cardQueue.length; i += chunkSize) {
             const chunk = cardQueue.slice(i, i + chunkSize);
-            let pageHtml = \<div class="cg-page cg-preview-page"><div class="cg-cards-grid">\;
+            let pageHtml = `<div class="cg-page cg-preview-page"><div class="cg-cards-grid">`;
             chunk.forEach(card => {
-                pageHtml += \<div class="cg-card-container" id="cg-card-\">\;
-                pageHtml += \<button class="cg-card-remove-btn no-print" onclick="CardGeneratorModule.removeCard(\)" title="ลบการ์ดนี้"><i class="fas fa-times"></i></button>\;
+                pageHtml += `<div class="cg-card-container" id="cg-card-${card.id}">`;
+                pageHtml += `<button class="cg-card-remove-btn no-print" onclick="CardGeneratorModule.removeCard(${card.id})" title="ลบการ์ดนี้"><i class="fas fa-times"></i></button>`;
                 pageHtml += card.html;
-                pageHtml += \</div>\;
+                pageHtml += `</div>`;
             });
-            pageHtml += \</div></div>\;
+            pageHtml += `</div></div>`;
             if (container) container.insertAdjacentHTML('beforeend', pageHtml);
         }
         
@@ -106,11 +106,11 @@
     function addStatusCard(color) {
         let html = '';
         if (color === 'green') {
-            html = \<div class="cg-card-status cg-status-green"><i class="fas fa-check-circle"></i><div class="cg-card-status-text"><h2>ปกติ</h2><p>NORMAL</p></div></div>\;
+            html = `<div class="cg-card-status cg-status-green"><i class="fas fa-check-circle"></i><div class="cg-card-status-text"><h2>ปกติ</h2><p>NORMAL</p></div></div>`;
         } else if (color === 'yellow') {
-            html = \<div class="cg-card-status cg-status-yellow"><i class="fas fa-exclamation-triangle"></i><div class="cg-card-status-text"><h2>ระวัง</h2><p>WARNING</p></div></div>\;
+            html = `<div class="cg-card-status cg-status-yellow"><i class="fas fa-exclamation-triangle"></i><div class="cg-card-status-text"><h2>ระวัง</h2><p>WARNING</p></div></div>`;
         } else if (color === 'red') {
-            html = \<div class="cg-card-status cg-status-red"><i class="fas fa-times-circle"></i><div class="cg-card-status-text"><h2>หยุดเครื่อง</h2><p>STOP / DANGER</p></div></div>\;
+            html = `<div class="cg-card-status cg-status-red"><i class="fas fa-times-circle"></i><div class="cg-card-status-text"><h2>หยุดเครื่อง</h2><p>STOP / DANGER</p></div></div>`;
         }
         cardQueue.push({ id: cardIdCounter++, html: html });
         renderPreview();
@@ -123,25 +123,25 @@
     }
 
     function getOperatorHTML(name, empId, dept, photoUrl = '') {
-        let photoHtml = photoUrl ? \<img src="\" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"> <i class="fas fa-user" style="display:none; font-size:32pt; color:#94a3b8;"></i>\ : \<i class="fas fa-user" style="font-size:32pt; color:#94a3b8;"></i>\;
+        let photoHtml = photoUrl ? `<img src="${photoUrl}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"> <i class="fas fa-user" style="display:none; font-size:32pt; color:#94a3b8;"></i>` : `<i class="fas fa-user" style="font-size:32pt; color:#94a3b8;"></i>`;
         if(name === '' && empId === '') {
-            photoHtml = \<div style="text-align:center; font-size:9pt; color:#94a3b8; width:100%; font-weight:500;">ติดรูปถ่าย<br>1 นิ้ว</div>\;
+            photoHtml = `<div style="text-align:center; font-size:9pt; color:#94a3b8; width:100%; font-weight:500;">ติดรูปถ่าย<br>1 นิ้ว</div>`;
         }
         
-        return \<div class="cg-card-operator">
+        return `<div class="cg-card-operator">
             <div class="cg-op-left">
                 <div class="cg-op-header"><i class="fas fa-user-hard-hat"></i> OPERATOR</div>
-                <div class="cg-op-photo">\</div>
+                <div class="cg-op-photo">${photoHtml}</div>
             </div>
             <div class="cg-op-right">
                 <div class="cg-op-line-label">ชื่อ-นามสกุล</div>
-                <div class="cg-op-line">\</div>
+                <div class="cg-op-line">${name || '................................'}</div>
                 <div class="cg-op-line-label">รหัสพนักงาน</div>
-                <div class="cg-op-line">\</div>
+                <div class="cg-op-line">${empId || '................................'}</div>
                 <div class="cg-op-line-label">แผนก / ไลน์</div>
-                <div class="cg-op-line" style="border: none; margin-bottom: 0;">\</div>
+                <div class="cg-op-line" style="border: none; margin-bottom: 0;">${dept || '................................'}</div>
             </div>
-        </div>\;
+        </div>`;
     }
 
     function addOperatorCard() {
@@ -154,7 +154,7 @@
         const empId = select.value;
         const name = selected.getAttribute('data-name');
         const dept = selected.getAttribute('data-dept');
-        const photoUrl = \../../../assets/img/employees/\.jpg\; 
+        const photoUrl = `../../../assets/img/employees/${empId}.jpg`; 
         
         cardQueue.push({ id: cardIdCounter++, html: getOperatorHTML(name, empId, dept, photoUrl) });
         renderPreview();
@@ -179,7 +179,7 @@
         allEmployees.forEach(emp => {
             const empLine = emp.line || emp.department_api;
             if (empLine === selectedLine) {
-                const photoUrl = \../../../assets/img/employees/\.jpg\;
+                const photoUrl = `../../../assets/img/employees/${emp.emp_id}.jpg`;
                 cardQueue.push({ 
                     id: cardIdCounter++, 
                     html: getOperatorHTML(emp.name_th, emp.emp_id, empLine, photoUrl) 
@@ -190,14 +190,14 @@
         
         if (count > 0) {
             renderPreview();
-            alert(\เพิ่มการ์ดพนักงานสำเร็จจำนวน \ ใบ\);
+            alert(`เพิ่มการ์ดพนักงานสำเร็จจำนวน ${count} ใบ`);
         } else {
             alert('ไม่พบพนักงานในแผนก/ไลน์ที่เลือก');
         }
     }
 
     function getLotoHTML(name) {
-        return \<div class="cg-card-loto">
+        return `<div class="cg-card-loto">
             <div class="cg-loto-header">LOCKOUT / TAGOUT</div>
             <div class="cg-loto-body">
                 <div class="cg-loto-left">
@@ -205,12 +205,12 @@
                     <div class="cg-loto-danger">ห้ามเดินเครื่อง</div>
                 </div>
                 <div class="cg-loto-right">
-                    <div class="cg-loto-line" style="border-bottom: 1.5px solid #ef4444; padding-bottom: 5px;">ช่าง: \</div>
+                    <div class="cg-loto-line" style="border-bottom: 1.5px solid #ef4444; padding-bottom: 5px;">ช่าง: ${name || '................................'}</div>
                     <div class="cg-loto-line" style="border-bottom: 1.5px dotted #ef4444; color: #64748b; font-weight: 500; margin-top: 8px;">วันที่: ................................</div>
                     <div class="cg-loto-line" style="border: none; margin-bottom: 0; color: #64748b; font-weight: 500;">เวลา: ................................</div>
                 </div>
             </div>
-        </div>\;
+        </div>`;
     }
 
     function addLotoCard() {
@@ -244,11 +244,11 @@
         const chunkSize = 10;
         for (let i = 0; i < cardQueue.length; i += chunkSize) {
             const chunk = cardQueue.slice(i, i + chunkSize);
-            let pageHtml = \<div class="cg-page"><div class="cg-cards-grid">\;
+            let pageHtml = `<div class="cg-page"><div class="cg-cards-grid">`;
             chunk.forEach(card => {
-                pageHtml += \<div class="cg-card-container">\</div>\;
+                pageHtml += `<div class="cg-card-container">${card.html}</div>`;
             });
-            pageHtml += \</div></div>\;
+            pageHtml += `</div></div>`;
             printContainer.insertAdjacentHTML('beforeend', pageHtml);
         }
         
