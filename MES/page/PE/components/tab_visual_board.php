@@ -221,24 +221,52 @@
 
 <div class="pe-card h-100" style="background-color: #f1f5f9;">
     <div class="pe-card-header d-flex justify-content-between align-items-center bg-white border-bottom">
-        <h5 class="pe-card-title"><i class="fas fa-print text-secondary"></i> พื้นที่พรีวิว A4 (Landscape)</h5>
+        <h5 class="pe-card-title"><i class="fas fa-list text-secondary"></i> เลือกเครื่องจักรที่ต้องการพิมพ์</h5>
         <div class="d-flex align-items-center gap-3">
             <div class="pe-text-sm pe-text-muted fw-bold">
-                <span id="vbPrintCountText">0</span> Boards
+                เลือกแล้ว <span id="vbSelectedCount" class="text-primary fs-5">0</span> เครื่อง
             </div>
-            <button class="pe-btn pe-btn-primary pe-btn-sm" onclick="window.print()">
-                <i class="fas fa-print"></i> สั่งพิมพ์บอร์ด
+            <button class="pe-btn pe-btn-primary pe-btn-sm" onclick="VisualBoardModule.printSelected()">
+                <i class="fas fa-print"></i> พิมพ์บอร์ดที่เลือก
             </button>
         </div>
     </div>
     
-    <div class="pe-card-body p-0" style="overflow-y: auto; max-height: calc(100vh - 160px);">
-        <div class="vb-preview-page-wrapper" id="vbPreviewContainer">
-            <!-- Rendered by JS -->
-            <div class="text-center text-muted" style="margin-top: 100px;">
-                <i class="fas fa-spinner fa-spin fa-3x mb-3"></i>
-                <h5>Loading...</h5>
+    <div class="pe-card-body p-3 bg-white" style="overflow-y: auto; max-height: calc(100vh - 160px);">
+        <!-- Search and Actions -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="input-group" style="width: 300px;">
+                <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" class="form-control border-start-0" id="vbSearchInput" placeholder="ค้นหารหัส หรือชื่อเครื่อง..." onkeyup="VisualBoardModule.filterTable()">
             </div>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary me-2" onclick="VisualBoardModule.selectAll(true)">เลือกทั้งหมด</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="VisualBoardModule.selectAll(false)">ล้างการเลือก</button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered align-middle" id="vbMachineTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;" class="text-center">
+                            <input class="form-check-input" type="checkbox" id="vbSelectAllCheckbox" onclick="VisualBoardModule.toggleSelectAll(this)">
+                        </th>
+                        <th>รหัสเครื่อง (Code)</th>
+                        <th>ชื่อเครื่อง (Name)</th>
+                        <th>ไลน์ (Line)</th>
+                        <th>พื้นที่ (Area)</th>
+                        <th class="text-center">สถานะ</th>
+                    </tr>
+                </thead>
+                <tbody id="vbMachineTbody">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>Loading machines...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

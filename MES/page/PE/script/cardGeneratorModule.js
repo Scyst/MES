@@ -58,9 +58,9 @@ const CardGeneratorModule = (function() {
         if (cardQueue.length === 0) {
             if (container) {
                 container.innerHTML = `
-                    <div class="text-center text-muted" style="margin-top: 100px;">
-                        <i class="fas fa-id-card fa-4x mb-3 opacity-25"></i>
-                        <h5>พรีวิวการ์ดว่างเปล่า</h5>
+                    <div class="text-center text-muted w-100" style="margin-top: 100px;">
+                        <i class="fas fa-inbox fa-4x mb-3 opacity-25"></i>
+                        <h5>ยังไม่มีการ์ดในคิว</h5>
                         <p>เลือกเพิ่มการ์ดจากเมนูด้านซ้ายเพื่อเตรียมพิมพ์</p>
                     </div>
                 `;
@@ -70,19 +70,15 @@ const CardGeneratorModule = (function() {
 
         if (container) container.innerHTML = '';
         
-        const chunkSize = 10;
-        for (let i = 0; i < cardQueue.length; i += chunkSize) {
-            const chunk = cardQueue.slice(i, i + chunkSize);
-            let pageHtml = `<div class="cg-page cg-preview-page"><div class="cg-cards-grid">`;
-            chunk.forEach(card => {
-                pageHtml += `<div class="cg-card-container" id="cg-card-${card.id}">`;
-                pageHtml += `<button class="cg-card-remove-btn no-print" onclick="CardGeneratorModule.removeCard(${card.id})" title="ลบการ์ดนี้"><i class="fas fa-times"></i></button>`;
-                pageHtml += card.html;
-                pageHtml += `</div>`;
-            });
-            pageHtml += `</div></div>`;
-            if (container) container.insertAdjacentHTML('beforeend', pageHtml);
-        }
+        let html = '';
+        cardQueue.forEach(card => {
+            html += `<div class="cg-card-container position-relative" style="box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 4px;" id="cg-card-${card.id}">`;
+            html += `<button class="cg-card-remove-btn" style="opacity: 1;" onclick="CardGeneratorModule.removeCard(${card.id})" title="ลบการ์ดนี้"><i class="fas fa-times"></i></button>`;
+            html += card.html;
+            html += `</div>`;
+        });
+        
+        if (container) container.innerHTML = html;
         
         // Scroll to bottom of preview panel when adding
         if (container && container.parentElement) {
@@ -236,26 +232,11 @@ const CardGeneratorModule = (function() {
             return;
         }
         
-        const printContainer = document.getElementById('cgPrintContainer');
-        if (!printContainer) return;
-        printContainer.innerHTML = '';
+        // Serialize queue to localStorage
+        localStorage.setItem('print_cards_data', JSON.stringify(cardQueue));
         
-        // Chunk cards into pages of 10
-        const chunkSize = 10;
-        for (let i = 0; i < cardQueue.length; i += chunkSize) {
-            const chunk = cardQueue.slice(i, i + chunkSize);
-            let pageHtml = `<div class="cg-page"><div class="cg-cards-grid">`;
-            chunk.forEach(card => {
-                pageHtml += `<div class="cg-card-container">${card.html}</div>`;
-            });
-            pageHtml += `</div></div>`;
-            printContainer.insertAdjacentHTML('beforeend', pageHtml);
-        }
-        
-        // Use browser print - CSS will handle showing cgPrintContainer and hiding everything else
-        setTimeout(() => {
-            window.print();
-        }, 500);
+        // Open Print Window
+        window.open('card_print.php', '_blank');
     }
 
     // Public API

@@ -231,27 +231,27 @@
     <div class="col-lg-8 col-xl-9">
         <div class="pe-card h-100" style="background-color: #f1f5f9;">
             <div class="pe-card-header d-flex justify-content-between align-items-center bg-white border-bottom">
-                <h5 class="pe-card-title"><i class="fas fa-file-invoice text-secondary"></i> พื้นที่พรีวิว A4</h5>
+                <h5 class="pe-card-title"><i class="fas fa-list-ol text-secondary"></i> คิวรอพิมพ์ (Print Queue)</h5>
                 <div class="d-flex align-items-center gap-3">
                     <div class="pe-text-sm pe-text-muted fw-bold">
-                        <span id="cgPrintCountText">0</span> Cards
+                        คิวทั้งหมด <span id="cgPrintCountText" class="text-primary fs-5">0</span> รายการ
                     </div>
                     <button class="pe-btn pe-btn-ghost pe-btn-sm text-danger" onclick="CardGeneratorModule.clearCards()">
-                        <i class="fas fa-trash-alt"></i> ล้างทั้งหมด
+                        <i class="fas fa-trash-alt"></i> ล้างคิว
                     </button>
                     <button class="pe-btn pe-btn-primary pe-btn-sm" onclick="CardGeneratorModule.generateAndPrint()">
-                        <i class="fas fa-print"></i> สั่งพิมพ์
+                        <i class="fas fa-print"></i> พิมพ์บัตรในคิว
                     </button>
                 </div>
             </div>
             
-            <div class="pe-card-body p-0" style="overflow-y: auto; max-height: calc(100vh - 160px);">
-                <div class="cg-preview-page-wrapper" id="cgPreviewContainer">
+            <div class="pe-card-body p-3" style="overflow-y: auto; max-height: calc(100vh - 160px);">
+                <div id="cgPreviewContainer" class="d-flex flex-wrap gap-3 justify-content-start align-items-start">
                     <!-- Cards will be added here -->
-                    <div class="text-center text-muted" style="margin-top: 100px;">
-                        <i class="fas fa-print fa-4x mb-3 opacity-25"></i>
+                    <div class="text-center text-muted w-100" style="margin-top: 100px;">
+                        <i class="fas fa-inbox fa-4x mb-3 opacity-25"></i>
                         <h5>ยังไม่มีการ์ดในคิว</h5>
-                        <p class="pe-text-sm">เลือกเพิ่มการ์ดจากเมนูด้านซ้ายเพื่อสร้างแบบฟอร์มพิมพ์บนกระดาษ A4</p>
+                        <p class="pe-text-sm">เลือกเพิ่มการ์ดจากเมนูด้านซ้ายเพื่อสร้างแบบฟอร์ม</p>
                     </div>
                 </div>
             </div>
@@ -259,5 +259,4 @@
     </div>
 </div>
 
-<!-- Print Output (Hidden until Print) -->
-<div id="cgPrintContainer" style="display:none;"></div>
+</div>
