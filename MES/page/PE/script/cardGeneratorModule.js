@@ -98,8 +98,10 @@ const CardGeneratorModule = (function() {
         }
         
         // Scroll to bottom of preview panel when adding
-        const panel = document.querySelector('.cg-preview-panel');
-        if(panel) panel.scrollTop = panel.scrollHeight;
+        const containerEl = document.getElementById('cgPreviewContainer');
+        if (containerEl && containerEl.parentElement) {
+            containerEl.parentElement.scrollTop = containerEl.parentElement.scrollHeight;
+        }
     }
 
     function removeCard(id) {

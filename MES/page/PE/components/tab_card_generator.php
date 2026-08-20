@@ -1,107 +1,37 @@
 <!-- tab_card_generator.php -->
 <style>
-    /* Card Generator specific styles that override or add to pe-enterprise.css */
-    .cg-setup-container {
-        display: flex;
-        height: calc(100vh - 120px);
-        overflow: hidden;
+    /* Card Generator Styles */
+    
+    .cg-tool-section {
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--pe-border-color);
     }
     
-    .cg-control-panel {
-        flex: 0 0 420px;
-        display: flex;
-        flex-direction: column;
-        background: #f8fafc;
-        border-right: 1px solid #e2e8f0;
-        padding: 24px;
-        overflow-y: auto;
+    .cg-tool-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
     }
     
-    .cg-preview-panel {
-        flex: 1;
-        background: #e2e8f0;
-        padding: 32px;
-        overflow-y: auto;
-        position: relative;
-    }
-
-    .cg-control-panel-title {
-        font-size: 0.85rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #64748b;
-        margin-bottom: 16px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid #e2e8f0;
-    }
-
-    .cg-tool-card {
-        background: #ffffff;
-        border-radius: 12px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e2e8f0;
-        padding: 20px;
-        margin-bottom: 20px;
-        transition: all 0.2s ease;
-    }
-    
-    .cg-tool-card:hover {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border-color: #cbd5e1;
-    }
-    
-    .cg-panel-title {
-        font-size: 1rem;
-        font-weight: 700;
-        margin-bottom: 16px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .cg-btn-modern {
-        border-radius: 8px;
+    .cg-section-title {
+        font-size: 0.95rem;
         font-weight: 600;
-        padding: 10px 16px;
-        transition: all 0.2s;
+        margin-bottom: 12px;
+        color: var(--pe-text-color);
         display: flex;
         align-items: center;
-        justify-content: center;
         gap: 8px;
     }
-    
-    .cg-btn-modern:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
 
-    /* Select2 fixes for Card Generator */
-    #panel-card_generator .select2-container .select2-selection--single {
-        height: 42px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        background: #f8fafc;
-    }
-    #panel-card_generator .select2-container--default .select2-selection--single .select2-selection__rendered {
-        line-height: 42px;
-        color: #334155;
-        font-weight: 500;
-        padding-left: 14px;
-    }
-    #panel-card_generator .select2-container--default .select2-selection--single .select2-selection__arrow {
-        height: 40px;
-        right: 8px;
-    }
-
-    /* ------------------ PRINT & PREVIEW STYLES ------------------ */
+    /* Print & Preview Styles */
     .cg-page {
         width: 210mm;
         min-height: 297mm;
         background: white;
         margin: 0 auto 30px;
-        padding: 13.5mm 19.4mm; /* Precisely calculated to fit 5 rows x 2 cols of 85.6x54mm */
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        padding: 13.5mm 19.4mm;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         position: relative;
         box-sizing: border-box;
     }
@@ -114,7 +44,7 @@
         display: grid;
         grid-template-columns: repeat(2, 85.6mm);
         grid-auto-rows: 54mm;
-        gap: 0; /* NO GAP for easy single-pass cutting */
+        gap: 0;
         justify-content: center;
         align-content: start;
     }
@@ -128,8 +58,8 @@
         background: white;
         page-break-inside: avoid;
         position: relative;
-        /* Outline instead of border to prevent double-thickness when gap is 0 */
-        outline: 1px dashed #94a3b8;
+        /* Subtle outline for cutting guide, printed as well */
+        outline: 1px dashed #cbd5e1;
         outline-offset: -1px;
     }
 
@@ -139,18 +69,20 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        padding: 20px 0;
     }
     
     .cg-preview-page {
         display: block;
         transform-origin: top center;
-        transform: scale(0.75);
-        margin-bottom: -60px; /* offset the scaled margin */
+        /* Scale to fit most screens, adjust if necessary */
+        transform: scale(0.85);
+        margin-bottom: -15%; 
     }
     
     .cg-preview-page .cg-card-container:hover {
         z-index: 10;
-        outline: 2px dashed #3b82f6;
+        outline: 2px dashed var(--pe-primary);
         outline-offset: -2px;
     }
     
@@ -158,21 +90,25 @@
         position: absolute;
         top: 5px;
         right: 5px;
-        background: rgba(239, 68, 68, 0.9);
+        background: var(--pe-danger);
         color: white;
         border: none;
         border-radius: 50%;
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         z-index: 10;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        transition: all 0.2s;
+        opacity: 0;
+        transition: opacity 0.2s;
     }
-    .cg-card-remove-btn:hover { background: #dc2626; transform: scale(1.1); }
+    
+    .cg-preview-page .cg-card-container:hover .cg-card-remove-btn {
+        opacity: 1;
+    }
 
     /* Status Cards */
     .cg-card-status { flex: 1; display: flex; flex-direction: row; justify-content: center; align-items: center; color: white; padding: 10px; }
@@ -207,11 +143,11 @@
 
     @media print {
         body { background: white !important; padding: 0 !important; margin: 0 !important; }
-        .pe-sidebar, .pe-topbar, .cg-control-panel { display: none !important; }
+        .pe-sidebar, .pe-topbar, #cgControlPanel, .pe-filter-bar { display: none !important; }
         .pe-main { margin: 0 !important; padding: 0 !important; }
         .pe-content, .pe-tab-panel { padding: 0 !important; margin: 0 !important; }
         
-        .cg-setup-container { display: none !important; }
+        #cgLayoutRow { display: none !important; }
         #cgPrintContainer { display: block !important; }
         
         .cg-page { 
@@ -229,92 +165,95 @@
             print-color-adjust: exact !important;
         }
         .cg-card-remove-btn { display: none !important; }
-        .cg-card-container { outline: 1px solid #000 !important; outline-offset: -1px !important; }
     }
 </style>
 
-<div class="cg-setup-container">
-    <!-- Controls -->
-    <div class="cg-control-panel">
-        
-        <div class="cg-control-panel-title">เพิ่มการ์ดเข้าคิวพิมพ์</div>
+<div class="row g-4" id="cgLayoutRow">
+    <!-- Controls Panel -->
+    <div class="col-lg-4 col-xl-3" id="cgControlPanel">
+        <div class="pe-card h-100">
+            <div class="pe-card-header">
+                <h5 class="pe-card-title"><i class="fas fa-plus-circle text-primary"></i> เพิ่มการ์ดเข้าคิว</h5>
+            </div>
+            <div class="pe-card-body" style="overflow-y: auto; max-height: calc(100vh - 160px);">
+                
+                <div class="cg-tool-section">
+                    <div class="cg-section-title text-success"><i class="fas fa-traffic-light"></i> 1. สถานะเครื่องจักร</div>
+                    <div class="d-flex gap-2 mb-2">
+                        <button class="pe-btn pe-btn-sm btn-outline-success flex-fill" onclick="CardGeneratorModule.addStatusCard('green')">เขียว</button>
+                        <button class="pe-btn pe-btn-sm btn-outline-warning flex-fill" onclick="CardGeneratorModule.addStatusCard('yellow')">เหลือง</button>
+                        <button class="pe-btn pe-btn-sm btn-outline-danger flex-fill" onclick="CardGeneratorModule.addStatusCard('red')">แดง</button>
+                    </div>
+                    <button class="pe-btn pe-btn-sm pe-btn-secondary w-100" onclick="CardGeneratorModule.addStatusSet()"><i class="fas fa-layer-group"></i> เพิ่มชุด 3 สี</button>
+                </div>
 
-        <div class="cg-tool-card">
-            <div class="cg-panel-title text-primary"><i class="fas fa-traffic-light"></i> 1. สถานะเครื่องจักร</div>
-            <div class="d-flex gap-2 mb-2">
-                <button class="btn btn-outline-success cg-btn-modern flex-1 w-100" onclick="CardGeneratorModule.addStatusCard('green')">เขียว (ปกติ)</button>
-                <button class="btn btn-outline-warning cg-btn-modern flex-1 w-100" onclick="CardGeneratorModule.addStatusCard('yellow')">เหลือง (ระวัง)</button>
-                <button class="btn btn-outline-danger cg-btn-modern flex-1 w-100" onclick="CardGeneratorModule.addStatusCard('red')">แดง (หยุด)</button>
-            </div>
-            <button class="btn btn-light cg-btn-modern w-100 text-primary fw-bold mt-1" onclick="CardGeneratorModule.addStatusSet()"><i class="fas fa-plus-circle"></i> เพิ่มทั้งชุด 3 สี</button>
-        </div>
+                <div class="cg-tool-section">
+                    <div class="cg-section-title text-primary"><i class="fas fa-user-hard-hat"></i> 2. การ์ดพนักงาน</div>
+                    <div class="mb-3">
+                        <select class="form-select select2-emp w-100" id="cgOpEmployeeSelect">
+                            <option value="">-- ค้นหาชื่อพนักงาน --</option>
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="pe-btn pe-btn-sm pe-btn-primary flex-fill" onclick="CardGeneratorModule.addOperatorCard()"><i class="fas fa-plus"></i> เพิ่มพนักงาน</button>
+                        <button class="pe-btn pe-btn-sm pe-btn-ghost flex-fill" onclick="CardGeneratorModule.addBlankOperatorCard()"><i class="fas fa-file-alt"></i> การ์ดเปล่า</button>
+                    </div>
+                </div>
 
-        <div class="cg-tool-card">
-            <div class="cg-panel-title text-info"><i class="fas fa-user-hard-hat"></i> 2. การ์ดพนักงาน (Operator)</div>
-            <div class="mb-3">
-                <select class="form-select select2-emp w-100" id="cgOpEmployeeSelect">
-                    <option value="">-- ค้นหาชื่อพนักงาน --</option>
-                    <!-- Populated via API -->
-                </select>
+                <div class="cg-tool-section">
+                    <div class="cg-section-title text-danger"><i class="fas fa-tools"></i> 3. การ์ดซ่อมบำรุง LOTO</div>
+                    <div class="mb-3">
+                        <select class="form-select select2-emp w-100" id="cgLotoEmployeeSelect">
+                            <option value="">-- ค้นหาชื่อช่าง --</option>
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="pe-btn pe-btn-sm pe-btn-danger flex-fill" onclick="CardGeneratorModule.addLotoCard()"><i class="fas fa-plus"></i> เพิ่มช่าง</button>
+                        <button class="pe-btn pe-btn-sm pe-btn-ghost flex-fill" onclick="CardGeneratorModule.addBlankLotoCard()"><i class="fas fa-file-alt"></i> การ์ดเปล่า</button>
+                    </div>
+                </div>
+                
+                <div class="cg-tool-section border-0 mb-0">
+                    <div class="cg-section-title text-secondary"><i class="fas fa-users"></i> 4. พิมพ์ยกไลน์ (Batch)</div>
+                    <div class="mb-3">
+                        <select class="form-select select2-emp w-100" id="cgBatchLineSelect">
+                            <option value="">-- เลือกแผนก / ไลน์ผลิต --</option>
+                        </select>
+                    </div>
+                    <button class="pe-btn pe-btn-sm pe-btn-secondary w-100" onclick="CardGeneratorModule.addBatchOperatorCards()"><i class="fas fa-download"></i> ดึงพนักงานทั้งหมด</button>
+                </div>
+                
             </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-info text-white cg-btn-modern w-100" onclick="CardGeneratorModule.addOperatorCard()"><i class="fas fa-plus"></i> เพิ่มพนักงาน</button>
-                <button class="btn btn-light text-secondary cg-btn-modern w-100" onclick="CardGeneratorModule.addBlankOperatorCard()"><i class="fas fa-file-alt"></i> การ์ดเปล่า</button>
-            </div>
-        </div>
-
-        <div class="cg-tool-card">
-            <div class="cg-panel-title text-danger"><i class="fas fa-tools"></i> 3. การ์ดซ่อมบำรุง (LOTO)</div>
-            <div class="mb-3">
-                <select class="form-select select2-emp w-100" id="cgLotoEmployeeSelect">
-                    <option value="">-- ค้นหาชื่อช่าง --</option>
-                    <!-- Populated via API -->
-                </select>
-            </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-danger cg-btn-modern w-100" onclick="CardGeneratorModule.addLotoCard()"><i class="fas fa-plus"></i> เพิ่มช่าง</button>
-                <button class="btn btn-light text-secondary cg-btn-modern w-100" onclick="CardGeneratorModule.addBlankLotoCard()"><i class="fas fa-file-alt"></i> การ์ดเปล่า</button>
-            </div>
-        </div>
-        
-        <div class="cg-tool-card border-secondary">
-            <div class="cg-panel-title text-secondary"><i class="fas fa-layer-group"></i> 4. พิมพ์ยกไลน์ (Batch)</div>
-            <p class="text-muted small mb-3">ดึงพนักงานทุกคนในไลน์ผลิตเป็น Operator Card</p>
-            <div class="mb-3">
-                <select class="form-select select2-emp w-100" id="cgBatchLineSelect">
-                    <option value="">-- เลือกแผนก / ไลน์ผลิต --</option>
-                    <!-- Populated via API -->
-                </select>
-            </div>
-            <button class="btn btn-secondary cg-btn-modern w-100" onclick="CardGeneratorModule.addBatchOperatorCards()"><i class="fas fa-users"></i> ดึงข้อมูลทั้งหมด</button>
         </div>
     </div>
 
-    <!-- Preview -->
-    <div class="cg-preview-panel">
-        <div class="d-flex justify-content-between align-items-center mb-4 sticky-top bg-light p-3 rounded shadow-sm" style="z-index: 20;">
-            <div>
-                <h4 class="mb-0 text-secondary"><i class="fas fa-eye"></i> พื้นที่พรีวิว</h4>
-                <div class="text-muted small fw-medium mt-1">
-                    <span id="cgPrintCountText">0</span> Cards Ready (เรียง 10 ใบต่อแผ่น A4 ชิดกันเพื่อตัดง่าย)
+    <!-- Preview Panel -->
+    <div class="col-lg-8 col-xl-9">
+        <div class="pe-card h-100" style="background-color: #f1f5f9;">
+            <div class="pe-card-header d-flex justify-content-between align-items-center bg-white border-bottom">
+                <h5 class="pe-card-title"><i class="fas fa-file-invoice text-secondary"></i> พื้นที่พรีวิว A4</h5>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="pe-text-sm pe-text-muted fw-bold">
+                        <span id="cgPrintCountText">0</span> Cards
+                    </div>
+                    <button class="pe-btn pe-btn-ghost pe-btn-sm text-danger" onclick="CardGeneratorModule.clearCards()">
+                        <i class="fas fa-trash-alt"></i> ล้างทั้งหมด
+                    </button>
+                    <button class="pe-btn pe-btn-primary pe-btn-sm" onclick="CardGeneratorModule.generateAndPrint()">
+                        <i class="fas fa-print"></i> สั่งพิมพ์
+                    </button>
                 </div>
             </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-light text-danger fw-bold shadow-sm" onclick="CardGeneratorModule.clearCards()" style="border-radius: 8px;">
-                    <i class="fas fa-trash-alt me-1"></i> ล้างทั้งหมด
-                </button>
-                <button class="btn btn-success fw-bold shadow-sm px-4" onclick="CardGeneratorModule.generateAndPrint()" style="border-radius: 8px;">
-                    <i class="fas fa-print me-2"></i> สั่งพิมพ์
-                </button>
-            </div>
-        </div>
-        
-        <div class="cg-preview-page-wrapper" id="cgPreviewContainer">
-            <!-- Cards will be added here -->
-            <div class="text-center text-muted" style="margin-top: 100px;">
-                <i class="fas fa-id-card fa-4x mb-3 opacity-25"></i>
-                <h5>พรีวิวการ์ดว่างเปล่า</h5>
-                <p>เลือกเพิ่มการ์ดจากเมนูด้านซ้ายเพื่อเตรียมพิมพ์</p>
+            
+            <div class="pe-card-body p-0" style="overflow-y: auto; max-height: calc(100vh - 160px);">
+                <div class="cg-preview-page-wrapper" id="cgPreviewContainer">
+                    <!-- Cards will be added here -->
+                    <div class="text-center text-muted" style="margin-top: 100px;">
+                        <i class="fas fa-print fa-4x mb-3 opacity-25"></i>
+                        <h5>ยังไม่มีการ์ดในคิว</h5>
+                        <p class="pe-text-sm">เลือกเพิ่มการ์ดจากเมนูด้านซ้ายเพื่อสร้างแบบฟอร์มพิมพ์บนกระดาษ A4</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
