@@ -28,7 +28,7 @@
         display: block;
         transform-origin: top center;
         transform: scale(0.65); /* Scale to fit A4 landscape on screen */
-        margin-bottom: -25%; 
+        margin-bottom: -70mm; 
     }
     
     .vb-board-header {
