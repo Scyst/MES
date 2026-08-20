@@ -25,17 +25,15 @@ try {
         case 'get_hazard_reports':
             $status    = $_GET['status'] ?? 'all';
             $limit     = min((int)($_GET['limit'] ?? 50), 200);
-            $days      = min((int)($_GET['days'] ?? 30), 365);
-
-            $daysParam = -$days;
+            $days = min((int)($_GET['days'] ?? 30), 365);
 
             $sql = "SELECT wo_id, wo_number, wo_type, machine_name, line, priority,
                            requested_by, requested_at, issue_title, issue_detail,
                            image_path, status, assigned_to, completed_at, action_taken AS notes
                     FROM " . PE_WORK_ORDERS_TABLE . "
                     WHERE wo_type = 'Safety/Hazard'
-                    AND requested_at >= DATEADD(day, ?, GETDATE())";
-            $params = [$daysParam];
+                    AND requested_at >= DATEADD(day, -{$days}, GETDATE())";
+            $params = [];
 
             if ($status !== 'all') {
                 $sql .= " AND status = ?";
@@ -44,8 +42,7 @@ try {
             $sql .= " ORDER BY
                         CASE status WHEN 'Pending' THEN 1 WHEN 'In Progress' THEN 2 ELSE 3 END,
                         requested_at DESC
-                      OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY";
-            $params[] = $limit;
+                      OFFSET 0 ROWS FETCH NEXT {$limit} ROWS ONLY";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -59,9 +56,9 @@ try {
                 SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) AS completed
                 FROM " . PE_WORK_ORDERS_TABLE . "
                 WHERE wo_type = 'Safety/Hazard'
-                AND requested_at >= DATEADD(day, ?, GETDATE())";
+                AND requested_at >= DATEADD(day, -{$days}, GETDATE())";
             $kpiStmt = $pdo->prepare($kpiSql);
-            $kpiStmt->execute([$daysParam]);
+            $kpiStmt->execute();
             $kpi = $kpiStmt->fetch(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $reports, 'kpi' => $kpi]);

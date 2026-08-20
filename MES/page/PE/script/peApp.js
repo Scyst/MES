@@ -13,7 +13,8 @@ let sidebarCollapsed = false;
         iiot_analytics: { title: 'IIoT Historical Analytics', breadcrumb: 'IIoT Analytics', icon: 'fas fa-history', loader: () => IIoTAnalyticsModule.init() },
         machine_timeline: { title: 'Machine Timeline', breadcrumb: 'Machine Timeline', icon: 'fas fa-stream', loader: () => MachineTimelineModule.fetchData() },
         safety: { title: 'Safety & Hazards', breadcrumb: 'Safety', icon: 'fas fa-hard-hat', loader: () => SafetyModule.init() },
-        card_generator: { title: 'Card Generator', breadcrumb: 'Card Generator', icon: 'fas fa-id-card', loader: () => CardGeneratorModule.init() }
+        card_generator: { title: 'Card Generator', breadcrumb: 'Card Generator', icon: 'fas fa-id-card', loader: () => CardGeneratorModule.init() },
+        visual_board: { title: 'Visual Board (Print)', breadcrumb: 'Print Safety Boards', icon: 'fas fa-print', loader: () => VisualBoardModule.init() }
     };
     const loadedTabs = new Set();
 
