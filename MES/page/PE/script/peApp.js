@@ -14,7 +14,7 @@ let sidebarCollapsed = false;
         machine_timeline: { title: 'Machine Timeline', breadcrumb: 'Machine Timeline', icon: 'fas fa-stream', loader: () => MachineTimelineModule.fetchData() },
         safety: { title: 'Safety & Hazards', breadcrumb: 'Safety', icon: 'fas fa-hard-hat', loader: () => SafetyModule.init() },
         card_generator: { title: 'Card Generator', breadcrumb: 'Card Generator', icon: 'fas fa-id-card', loader: () => CardGeneratorModule.init() },
-        visual_board: { title: 'Visual Board (Print)', breadcrumb: 'Print Safety Boards', icon: 'fas fa-print', loader: () => VisualBoardModule.init() }
+        visual_board: { title: 'Visual Board (Print)', breadcrumb: 'Print Safety Boards', icon: 'fas fa-print', loader: () => VisualBoardModule.loadData() }
     };
     const loadedTabs = new Set();
 
