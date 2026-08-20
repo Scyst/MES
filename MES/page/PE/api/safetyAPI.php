@@ -65,12 +65,12 @@ try {
             break;
 
         case 'get_employees_for_cards':
-            $empStmt = $pdo->query("SELECT emp_id, name_th, department_api, line FROM " . EMPLOYEE_TABLE . " WHERE is_active = 1 ORDER BY name_th");
+            $empStmt = $pdo->query("SELECT emp_id, name_th, line FROM dbo.MANPOWER_EMPLOYEES WHERE is_active = 1 ORDER BY name_th");
             $employees = $empStmt->fetchAll(PDO::FETCH_ASSOC);
 
             $lines = [];
             foreach($employees as $e) {
-                $l = $e['line'] ?: $e['department_api'];
+                $l = $e['line'];
                 if($l && !in_array($l, $lines)) {
                     $lines[] = $l;
                 }
