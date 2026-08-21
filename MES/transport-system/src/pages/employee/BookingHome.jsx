@@ -17,6 +17,7 @@ const BookingHome = () => {
   const [masterRoutes, setMasterRoutes] = useState([]);
   const [timeSlots, setTimeSlots] = useState([]);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  const [frequentBooking, setFrequentBooking] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -51,6 +52,30 @@ const BookingHome = () => {
       
       setBookings(bookingsData || []);
       setMasterRoutes(routesData || []);
+      
+      // Calculate frequent route
+      if (bookingsData && bookingsData.length > 0) {
+        const counts = {};
+        bookingsData.forEach(b => {
+           const key = `${b.routeId}_${b.timeSlotId}`;
+           counts[key] = (counts[key] || 0) + 1;
+        });
+        let maxKey = null;
+        let maxCount = 0;
+        for (const [key, count] of Object.entries(counts)) {
+          if (count > maxCount) {
+            maxCount = count;
+            maxKey = key;
+          }
+        }
+        if (maxKey) {
+          const [rId, tsId] = maxKey.split('_');
+          const favRoute = (routesData || []).find(r => r.id === rId);
+          if (favRoute) {
+            setFrequentBooking({ route: favRoute, timeSlotId: tsId });
+          }
+        }
+      }
       
       // Sort time slots chronologically
       const sortedTimeSlots = (timeSlotsData || []).sort((a, b) => {
@@ -228,8 +253,34 @@ const BookingHome = () => {
             </div>
           ) : (
             <>
+              {/* Frequent Route Card */}
+              {frequentBooking && selectedRoute === 'ทั้งหมด' && (
+                <div className="col-span-full mb-2">
+                  <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Clock size={14}/> เส้นทางประจำของคุณ</p>
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-4 border border-blue-100 dark:border-blue-800/30 shadow-sm flex items-center justify-between gap-4">
+                    <div className="flex-1 flex flex-col gap-1">
+                      <span className="text-lg font-black text-blue-900 dark:text-blue-100">{frequentBooking.route.name}</span>
+                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                        {timeSlots.find(t => t.id === frequentBooking.timeSlotId)?.name || ''}
+                      </span>
+                    </div>
+                    <div>
+                      <button 
+                        onClick={() => {
+                          setSelectedTimeSlot(frequentBooking.timeSlotId);
+                          handleBook(frequentBooking.route);
+                        }}
+                        className="px-6 py-2.5 rounded-xl font-bold text-sm transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg whitespace-nowrap active:scale-95 flex items-center gap-2"
+                      >
+                         จองด่วน
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {filteredRoutes.length === 0 ? (
-                <div className="text-center py-10 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+                <div className="text-center py-10 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 col-span-full">
                   <BusFront size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
                   <p className="text-gray-500 dark:text-gray-400 font-bold">ไม่พบเส้นทาง</p>
                 </div>

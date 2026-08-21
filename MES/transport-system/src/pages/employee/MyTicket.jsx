@@ -6,6 +6,7 @@ import ConfirmModal from '../../components/ConfirmModal';
 import { bookingsAPI, schedulesAPI, authAPI, masterAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { Html5Qrcode } from 'html5-qrcode';
+import Confetti from '../../components/ui/Confetti';
 
 const MyTicket = () => {
   const { ticketId } = useParams();
@@ -20,6 +21,7 @@ const MyTicket = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const [scannerError, setScannerError] = useState('');
 
   useEffect(() => {
@@ -126,7 +128,8 @@ const MyTicket = () => {
         });
       }
       setBooking(prev => ({ ...prev, status: 'BOARDED' }));
-      setTimeout(() => setShowSurvey(true), 1500);
+      setShowConfetti(true);
+      setTimeout(() => setShowSurvey(true), 2500);
     } catch (err) {
       alert(err.message || "เกิดข้อผิดพลาดในการเช็คอิน");
     } finally {
@@ -285,13 +288,14 @@ const MyTicket = () => {
                   </>
                 )}
               </>
-            ) : (
-              <div className="text-center py-10 w-full h-full flex flex-col items-center justify-center relative">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-20"></div>
-                  <CheckCircle size={80} className="text-emerald-500 dark:text-emerald-400 mx-auto mb-6 relative z-10 animate-[bounce_1s_ease-in-out]" />
-                </div>
-                <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-400 mb-2">เช็คอินสำเร็จ</h3>
+              ) : (
+                <div className="text-center py-10 w-full h-full flex flex-col items-center justify-center relative">
+                  <div className="relative">
+                    <Confetti fire={showConfetti} duration={4000} />
+                    <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-20"></div>
+                    <CheckCircle size={80} className="text-emerald-500 dark:text-emerald-400 mx-auto mb-6 relative z-10 animate-[bounce_1s_ease-in-out]" />
+                  </div>
+                  <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-400 mb-2">เช็คอินสำเร็จ</h3>
                 <p className="text-sm text-emerald-600 dark:text-emerald-500 font-bold mb-8">บันทึกข้อมูลการเดินทางของคุณแล้ว</p>
                 
                 <div className="w-full max-w-sm bg-white dark:bg-gray-800 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50 shadow-sm text-left">

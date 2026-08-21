@@ -126,17 +126,50 @@ const DriverTripDetails = () => {
           <div className="w-10"></div>
         </div>
 
-        {/* Progress Bar */}
-        <div>
-          <div className="flex justify-between text-xs font-bold mb-1">
-            <span className="text-gray-600 dark:text-gray-400">ขึ้นรถแล้ว {boardedList.length} / ความจุ {trip.capacity}</span>
-            <span className={percent >= 100 ? 'text-red-500' : 'text-blue-600'}>{percent}%</span>
+        {/* Circular Progress & Stats */}
+        <div className="flex items-center gap-5 my-1">
+          {/* Circular Progress */}
+          <div className="relative w-20 h-20 flex-shrink-0">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+              <circle
+                className="text-gray-100 dark:text-gray-700 stroke-current"
+                strokeWidth="8"
+                cx="50"
+                cy="50"
+                r="42"
+                fill="transparent"
+              />
+              <circle
+                className={`transition-all duration-1000 ease-out stroke-current ${percent >= 100 ? 'text-red-500' : 'text-blue-500'}`}
+                strokeWidth="8"
+                strokeLinecap="round"
+                cx="50"
+                cy="50"
+                r="42"
+                fill="transparent"
+                strokeDasharray={`${2 * Math.PI * 42}`}
+                strokeDashoffset={`${2 * Math.PI * 42 * (1 - Math.min(percent, 100) / 100)}`}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className={`text-lg font-black leading-none ${percent >= 100 ? 'text-red-500' : 'text-blue-600 dark:text-blue-400'}`}>
+                {percent}%
+              </span>
+            </div>
           </div>
-          <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
-            <div 
-              className={`h-1.5 rounded-full transition-all duration-500 ${percent >= 100 ? 'bg-red-500' : 'bg-blue-500'}`}
-              style={{ width: `${Math.min(percent, 100)}%` }}
-            />
+          
+          {/* Text Stats */}
+          <div className="flex-1">
+            <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">ความจุผู้โดยสาร</p>
+            <div className="flex items-baseline gap-1.5">
+              <span className={`text-3xl font-black tracking-tighter ${percent >= 100 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+                {boardedList.length}
+              </span>
+              <span className="text-gray-500 dark:text-gray-400 font-bold text-sm">/ {capacity}</span>
+            </div>
+            {percent >= 100 && (
+              <p className="text-xs text-red-500 font-bold mt-0.5 flex items-center gap-1"><AlertCircle size={12}/> รถเต็มแล้ว</p>
+            )}
           </div>
         </div>
 
