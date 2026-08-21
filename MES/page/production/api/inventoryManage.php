@@ -1810,32 +1810,35 @@ try {
             
             $users = [];
 
+            // Determine shift_date using 08:00-07:59 cutoff (DATEADD hour -8)
             if (!empty($log_date)) {
-                // For a specific date (e.g. past record), don't filter by scan_out_time IS NULL
+                // Past record: shift_date = log_date timestamp - 8h
+                // Frontend sends the calendar date (YYYY-MM-DD); treat as 08:00 of that day
+                // to resolve which shift_date it belongs to
                 $sql = "SELECT DISTINCT
-                        u.id, 
-                        u.username, 
+                        u.id,
+                        u.username,
                         ISNULL(NULLIF(emp.name_th, ''), u.fullname) AS fullname
                     FROM dbo.MANPOWER_DAILY_LOGS dl
                     JOIN dbo.MANPOWER_EMPLOYEES emp ON dl.emp_id = emp.emp_id
                     JOIN " . USERS_TABLE . " u ON emp.emp_id = u.emp_id COLLATE Thai_CI_AS
-                    WHERE (dl.log_date = ? OR dl.log_date = CAST(DATEADD(day, -1, ?) AS DATE))
+                    WHERE dl.log_date = CAST(DATEADD(hour, -8, CAST(? AS DATETIME)) AS DATE)
                     AND dl.actual_line = ?
                     AND dl.status = 'PRESENT'
                     AND u.is_active = 1";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$log_date, $log_date, $production_line]);
+                $stmt->execute([$log_date . ' 08:00:00', $production_line]);
                 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             } else {
-                // Current date behavior
+                // Live mode: shift_date = NOW() - 8h, must still be clocked in
                 $sql = "SELECT DISTINCT
-                        u.id, 
-                        u.username, 
+                        u.id,
+                        u.username,
                         ISNULL(NULLIF(emp.name_th, ''), u.fullname) AS fullname
                     FROM dbo.MANPOWER_DAILY_LOGS dl
                     JOIN dbo.MANPOWER_EMPLOYEES emp ON dl.emp_id = emp.emp_id
                     JOIN " . USERS_TABLE . " u ON emp.emp_id = u.emp_id COLLATE Thai_CI_AS
-                    WHERE dl.log_date >= CAST(DATEADD(day, -1, GETDATE()) AS DATE)
+                    WHERE dl.log_date = CAST(DATEADD(hour, -8, GETDATE()) AS DATE)
                     AND dl.actual_line = ?
                     AND dl.status = 'PRESENT'
                     AND dl.scan_out_time IS NULL
