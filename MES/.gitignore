@@ -6,8 +6,12 @@ Media/
 docs/
 uploads/
 mcp_server/
-.agents/
 .vscode/
+# Agent temporary workspaces (not tracked)
+.agents/teamwork_preview_*/
+.agents/sentinel_*/
+.agents/ORIGINAL_REQUEST.md
+mes-team-planner/.agents/
 
 # Sensitive files - NEVER push these
 .env
