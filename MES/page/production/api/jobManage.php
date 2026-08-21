@@ -127,7 +127,7 @@ try {
 
             $pdo->beginTransaction();
             $prefix = "JOB-" . date('ym') . "-";
-            $stmt = $pdo->prepare("SELECT TOP 1 job_no FROM PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_no LIKE ? ORDER BY job_no DESC");
+            $stmt = $pdo->prepare("SELECT TOP 1 job_no FROM PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_no LIKE ? AND LEN(job_no) = 13 ORDER BY job_no DESC");
             $stmt->execute([$prefix . '%']);
             $lastJob = $stmt->fetchColumn();
 
@@ -498,6 +498,7 @@ try {
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    $errorMsg = mb_convert_encoding($e->getMessage(), 'UTF-8', 'auto');
+    echo json_encode(['success' => false, 'message' => $errorMsg]);
 }
 ?>
