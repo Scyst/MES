@@ -62,12 +62,17 @@ function populateTeamUserDropdown(users, prefix) {
             e.stopPropagation(); // prevent closing dropdown
             
             let locationId = null;
+            let logDate = null;
             if (prefix === 'out') {
                 const locSelect = document.getElementById('out_location_id');
                 if (locSelect) locationId = locSelect.value;
+                const dateInput = document.getElementById('out_log_date');
+                if (dateInput) logDate = dateInput.value;
             } else if (prefix === 'edit_production') {
                 const locSelect = document.getElementById('edit_production_location_id');
                 if (locSelect) locationId = locSelect.value;
+                const dateInput = document.getElementById('edit_production_log_date');
+                if (dateInput) logDate = dateInput.value;
             }
 
             if (!locationId) {
@@ -77,7 +82,7 @@ function populateTeamUserDropdown(users, prefix) {
 
             try {
                 selectAllBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                const res = await fetch(`api/inventoryManage.php?action=get_active_line_users&location_id=${locationId}`);
+                const res = await fetch(`api/inventoryManage.php?action=get_active_line_users&location_id=${locationId}&log_date=${logDate || ''}`);
                 const data = await res.json();
                 
                 if (data.success && Array.isArray(data.users)) {

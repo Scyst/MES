@@ -1796,6 +1796,7 @@ try {
 
         case 'get_active_line_users':
             $location_id = $_GET['location_id'] ?? 0;
+            $log_date = $_GET['log_date'] ?? '';
             
             // First get the production_line from LOCATIONS_TABLE
             $locStmt = $pdo->prepare("SELECT production_line FROM " . LOCATIONS_TABLE . " WHERE location_id = ?");
@@ -1807,22 +1808,59 @@ try {
                 break;
             }
             
-            $sql = "SELECT 
-                    u.id, 
-                    u.username, 
-                    ISNULL(NULLIF(emp.name_th, ''), u.fullname) AS fullname
-                FROM dbo.MANPOWER_DAILY_LOGS dl
-                JOIN dbo.MANPOWER_EMPLOYEES emp ON dl.emp_id = emp.emp_id
-                JOIN " . USERS_TABLE . " u ON emp.emp_id = u.emp_id COLLATE Thai_CI_AS
-                WHERE dl.log_date >= CAST(DATEADD(day, -1, GETDATE()) AS DATE)
-                AND dl.actual_line = ?
-                AND dl.status = 'PRESENT'
-                AND dl.scan_out_time IS NULL
-                AND u.is_active = 1";
-                
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$production_line]);
-            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $users = [];
+
+            if (!empty($log_date)) {
+                // For a specific date (e.g. past record), don't filter by scan_out_time IS NULL
+                $sql = "SELECT DISTINCT
+                        u.id, 
+                        u.username, 
+                        ISNULL(NULLIF(emp.name_th, ''), u.fullname) AS fullname
+                    FROM dbo.MANPOWER_DAILY_LOGS dl
+                    JOIN dbo.MANPOWER_EMPLOYEES emp ON dl.emp_id = emp.emp_id
+                    JOIN " . USERS_TABLE . " u ON emp.emp_id = u.emp_id COLLATE Thai_CI_AS
+                    WHERE (dl.log_date = ? OR dl.log_date = CAST(DATEADD(day, -1, ?) AS DATE))
+                    AND dl.actual_line = ?
+                    AND dl.status = 'PRESENT'
+                    AND u.is_active = 1";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$log_date, $log_date, $production_line]);
+                $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                // Current date behavior
+                $sql = "SELECT DISTINCT
+                        u.id, 
+                        u.username, 
+                        ISNULL(NULLIF(emp.name_th, ''), u.fullname) AS fullname
+                    FROM dbo.MANPOWER_DAILY_LOGS dl
+                    JOIN dbo.MANPOWER_EMPLOYEES emp ON dl.emp_id = emp.emp_id
+                    JOIN " . USERS_TABLE . " u ON emp.emp_id = u.emp_id COLLATE Thai_CI_AS
+                    WHERE dl.log_date >= CAST(DATEADD(day, -1, GETDATE()) AS DATE)
+                    AND dl.actual_line = ?
+                    AND dl.status = 'PRESENT'
+                    AND dl.scan_out_time IS NULL
+                    AND u.is_active = 1";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$production_line]);
+                $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            // Fallback: If no logs found (e.g. hasn't clocked in yet, or no records for that past date)
+            // fetch default employees assigned to this line.
+            if (empty($users)) {
+                $fallbackSql = "SELECT DISTINCT
+                        u.id, 
+                        u.username, 
+                        ISNULL(NULLIF(emp.name_th, ''), u.fullname) AS fullname
+                    FROM dbo.MANPOWER_EMPLOYEES emp
+                    JOIN " . USERS_TABLE . " u ON emp.emp_id = u.emp_id COLLATE Thai_CI_AS
+                    WHERE emp.line = ?
+                    AND emp.is_active = 1
+                    AND u.is_active = 1";
+                $fbStmt = $pdo->prepare($fallbackSql);
+                $fbStmt->execute([$production_line]);
+                $users = $fbStmt->fetchAll(PDO::FETCH_ASSOC);
+            }
             
             echo json_encode(['success' => true, 'users' => $users]);
             break;
