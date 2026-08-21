@@ -32,12 +32,12 @@ try {
             
             // Restrict for non-admins
             if ($currentUser['role'] !== 'admin' && $currentUser['role'] !== 'creator') {
-                $userTeam = $currentUser['team_group'] ?? '';
-                if ($userTeam) {
+                $userLine = $currentUser['line'] ?? '';
+                if ($userLine) {
                     $locFilter = " AND production_line = ? ";
-                    $params[] = $userTeam;
+                    $params[] = $userLine;
                 } else {
-                    // If no team assigned, they see nothing
+                    // If no line assigned, they see nothing
                     $locFilter = " AND 1=0 ";
                 }
             }
@@ -74,12 +74,12 @@ try {
 
             // Role-based restriction
             if ($currentUser['role'] !== 'admin' && $currentUser['role'] !== 'creator') {
-                $userTeam = $currentUser['team_group'] ?? '';
-                if ($userTeam) {
+                $userLine = $currentUser['line'] ?? '';
+                if ($userLine) {
                     $locFilter .= " AND l.production_line = ?";
-                    $params[] = $userTeam;
+                    $params[] = $userLine;
                 } else {
-                    $locFilter .= " AND 1=0"; // See nothing if no team
+                    $locFilter .= " AND 1=0"; // See nothing if no line
                 }
             }
 
