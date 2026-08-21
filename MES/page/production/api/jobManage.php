@@ -27,11 +27,28 @@ try {
     switch ($action) {
         
         case 'get_locations':
-            $sql = "SELECT location_id, location_name, location_type 
+            $params = [];
+            $locFilter = "";
+            
+            // Restrict for non-admins
+            if ($currentUser['role'] !== 'admin' && $currentUser['role'] !== 'creator') {
+                $userTeam = $currentUser['team_group'] ?? '';
+                if ($userTeam) {
+                    $locFilter = " AND production_line = ? ";
+                    $params[] = $userTeam;
+                } else {
+                    // If no team assigned, they see nothing
+                    $locFilter = " AND 1=0 ";
+                }
+            }
+
+            $sql = "SELECT location_id, location_name, location_type, production_line 
                     FROM " . LOCATIONS_TABLE . " 
-                    WHERE is_active = 1 AND location_type != 'STORE'
+                    WHERE is_active = 1 AND location_type != 'STORE' $locFilter
                     ORDER BY location_name ASC";
-            $data = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $data]);
             break;
 
@@ -49,10 +66,21 @@ try {
             $params = [];
             $locFilter = "";
             
-            // 🟢 ปรับให้ถ้าไม่ได้เลือกไลน์ (ค่าว่าง) จะแสดงของทุกไลน์
+            // Apply location dropdown filter
             if ($location_id !== '') {
-                $locFilter = "AND j.location_id = ?";
+                $locFilter .= " AND j.location_id = ?";
                 $params[] = $location_id;
+            }
+
+            // Role-based restriction
+            if ($currentUser['role'] !== 'admin' && $currentUser['role'] !== 'creator') {
+                $userTeam = $currentUser['team_group'] ?? '';
+                if ($userTeam) {
+                    $locFilter .= " AND l.production_line = ?";
+                    $params[] = $userTeam;
+                } else {
+                    $locFilter .= " AND 1=0"; // See nothing if no team
+                }
             }
 
             $sql = "SELECT j.*, i.part_no, i.part_description as part_name, l.location_name, u.fullname as creator_name,
