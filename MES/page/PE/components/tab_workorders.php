@@ -127,21 +127,22 @@
                         <th style="width:3%;" class="pe-text-center">
                             <input type="checkbox" id="woCheckAll" onchange="WorkOrderModule.toggleAllBulkChecks(this)">
                         </th>
-                        <th style="width:8%;">Status</th>
-                        <th style="width:10%;">WO #</th>
-                        <th style="width:7%;">Type</th>
-                        <th style="width:8%;">Priority</th>
-                        <th style="width:12%;">Machine</th>
-                        <th style="width:6%;">Line</th>
-                        <th style="width:17%;">Issue</th>
-                        <th style="width:7%;">Requested</th>
+                        <th style="width:7%;">Status</th>
+                        <th style="width:9%;">WO #</th>
+                        <th style="width:6%;">Type</th>
+                        <th style="width:7%;">Priority</th>
+                        <th style="width:10%;">Machine</th>
+                        <th style="width:5%;">Line</th>
+                        <th style="width:16%;">Issue</th>
+                        <th style="width:9%;">Requested By</th>
+                        <th style="width:7%;">Date/Time</th>
                         <th style="width:7%;">Assigned To</th>
-                        <th style="width:7%;">Repair Time</th>
+                        <th style="width:6%;">Time</th>
                         <th style="width:8%;" class="pe-text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="woTableBody">
-                    <tr><td colspan="12" class="pe-text-center pe-text-muted" style="padding:60px;">Loading...</td></tr>
+                    <tr><td colspan="13" class="pe-text-center pe-text-muted" style="padding:60px;">Loading...</td></tr>
                 </tbody>
             </table>
         </div>

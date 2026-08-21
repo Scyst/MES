@@ -49,7 +49,7 @@
                             </div>
                         <div class="row g-2">
                             <!-- Basic Information -->
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="pe-form-group">
                                     <label class="pe-form-label">WO Type <span class="required">*</span></label>
                                     <select class="pe-form-select" id="woFrmType">
@@ -62,7 +62,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="pe-form-group">
                                     <label class="pe-form-label">Priority <span class="required">*</span></label>
                                     <select class="pe-form-select" id="woFrmPriority">
@@ -73,7 +73,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="pe-form-group">
                                     <label class="pe-form-label">Machine <span class="required">*</span></label>
                                     <select class="pe-form-select" id="woFrmMachine" onchange="WorkOrderModule.onMachineChange()">
@@ -81,7 +81,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div id="colCustomMachine" class="col-md-3" style="display: none;">
+                            <div id="colCustomMachine" class="col-md-6" style="display: none;">
                                 <div class="pe-form-group">
                                     <label class="pe-form-label text-primary">ระบุชื่ออุปกรณ์</label>
                                     <input type="text" class="pe-form-input" id="woFrmMachineName" placeholder="พิมพ์ชื่ออุปกรณ์...">
@@ -96,12 +96,17 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="pe-form-group">
+                                    <label class="pe-form-label">Requested By</label>
+                                    <input type="text" class="pe-form-input pe-bg-light" id="woFrmRequestedBy" placeholder="ชื่อผู้แจ้ง" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="pe-form-group">
                                     <label class="pe-form-label">Request Date</label>
                                     <input type="datetime-local" class="pe-form-input" id="woFrmRequestDate">
                                 </div>
                             </div>
-
-                            </div>
+                        </div>
 
                         <!-- Full-width fields extracted from row for flex stretching -->
                         <div class="pe-form-group mt-2 mb-2">
@@ -226,6 +231,9 @@
             </div>
             <div class="modal-footer d-flex flex-wrap justify-content-between" style="gap: 12px; border-top: 1px solid var(--pe-border-light); padding: 16px;">
                 <div class="d-flex me-auto" style="gap: 8px;">
+                    <button type="button" class="pe-btn pe-btn-danger" id="woLotoBtn" onclick="window.LotoModule && window.LotoModule.openLotoModal(document.getElementById('woFrmMachine').value, document.getElementById('woEditId').value)" style="display:none;">
+                        <i class="fas fa-lock me-1"></i> ระบบ LOTO
+                    </button>
                     <button type="button" class="pe-btn pe-btn-success" id="woQuickCloseBtn" onclick="WorkOrderModule.openQuickCloseModal(document.getElementById('woEditId').value)" style="display:none;">
                         <i class="fas fa-check-circle me-1"></i> ปิดงานด่วน
                     </button>

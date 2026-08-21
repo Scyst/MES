@@ -78,7 +78,7 @@ try {
 
             $where = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
 
-            $sql = "SELECT W.*, M.machine_code, M.machine_name AS machine_display_name
+            $sql = "SELECT W.*, M.machine_code, M.machine_name AS machine_display_name, M.is_loto, M.loto_reason
                     FROM " . PE_WORK_ORDERS_TABLE . " W WITH (NOLOCK)
                     LEFT JOIN " . PE_MACHINES_TABLE . " M WITH (NOLOCK) ON W.machine_id = M.machine_id
                     $where

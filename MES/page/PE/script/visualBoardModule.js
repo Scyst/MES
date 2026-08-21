@@ -87,7 +87,10 @@ const VisualBoardModule = (function() {
                 <td class="text-center">
                     <input class="form-check-input vb-row-checkbox" type="checkbox" value="${m.machine_id}" ${isChecked} onchange="VisualBoardModule.updateSelection(this)">
                 </td>
-                <td class="fw-bold text-primary">${escapeHtml(m.machine_code)}</td>
+                <td class="fw-bold text-primary">
+                    ${m.is_loto ? '<span class="badge bg-danger me-1" style="font-size:0.7rem;" title="LOCKED"><i class="fas fa-lock"></i></span>' : ''}
+                    ${escapeHtml(m.machine_code)}
+                </td>
                 <td>${escapeHtml(m.machine_name)}</td>
                 <td><span class="badge bg-secondary">${escapeHtml(m.line || '-')}</span></td>
                 <td>${escapeHtml(m.area || '-')}</td>

@@ -227,6 +227,7 @@ $pageTitle = "PE Enterprise";
     include __DIR__ . '/components/modals/modal_mt_item.php';
     include __DIR__ . '/components/modals/modal_quick_close.php';
     include __DIR__ . '/components/modals/modal_wo_filters.php';
+    include __DIR__ . '/components/modals/modal_loto.php';
 ?>
 
 <!-- Cropper Modal -->
@@ -290,6 +291,7 @@ $pageTitle = "PE Enterprise";
 <script type="module" src="script/downtimeModule.js?v=<?php echo filemtime(__DIR__ . '/script/downtimeModule.js'); ?>"></script>
 <script type="module" src="script/sparePartsModule.js?v=<?php echo filemtime(__DIR__ . '/script/sparePartsModule.js'); ?>"></script>
 <script type="module" src="script/safetyModule.js?v=<?php echo filemtime(__DIR__ . '/script/safetyModule.js'); ?>"></script>
+<script type="module" src="script/lotoModule.js?v=<?php echo time(); ?>"></script>
 <script type="module" src="script/analyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/analyticsModule.js'); ?>"></script>
 <script type="module" src="script/mapBuilderModule.js?v=<?php echo time(); ?>"></script>
 <script type="module" src="script/iiotModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotModule.js'); ?>"></script>

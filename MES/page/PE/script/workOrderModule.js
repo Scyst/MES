@@ -77,7 +77,7 @@ const WorkOrderModule = (() => {
         if (!tbody) return;
 
         if (!data.length) {
-            tbody.innerHTML = `<tr><td colspan="12" class="pe-text-center pe-text-muted" style="padding:60px;">No work orders found</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="13" class="pe-text-center pe-text-muted" style="padding:60px;">No work orders found</td></tr>`;
             return;
         }
 
@@ -109,9 +109,13 @@ const WorkOrderModule = (() => {
                 <td class="pe-fw-bold" style="color:var(--pe-primary);">${PEApp.escapeHtml(w.wo_number)}</td>
                 <td class="pe-text-sm">${PEApp.escapeHtml(w.wo_type || '-')}</td>
                 <td>${PEApp.getPriorityBadge(w.priority)}</td>
-                <td class="pe-text-sm">${machineTxt}</td>
+                <td class="pe-text-sm">
+                    ${w.is_loto ? '<span class="badge bg-danger me-1" style="font-size:0.7rem;" title="LOCKED"><i class="fas fa-lock"></i></span>' : ''}
+                    ${machineTxt}
+                </td>
                 <td>${PEApp.escapeHtml(w.line || '-')}</td>
                 <td class="pe-text-sm" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${PEApp.escapeHtml(w.issue_title || '-')}</td>
+                <td class="pe-text-sm" style="font-weight:600; color:var(--pe-text-secondary);">${PEApp.escapeHtml(w.requested_by || '-')}</td>
                 <td class="pe-text-sm">${PEApp.formatDate(w.requested_at)}</td>
                 <td class="pe-text-sm">${PEApp.escapeHtml(w.assigned_to || '-')}</td>
                 <td class="pe-text-sm pe-text-center">${w.repair_minutes ? w.repair_minutes + ' min' : '-'}</td>
@@ -162,6 +166,7 @@ const WorkOrderModule = (() => {
                         <i class="fas fa-cogs me-1"></i>${PEApp.escapeHtml(w.machine_code || w.machine_name || '-')}
                     </div>
                     <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end; flex-shrink: 0;">
+                        ${w.is_loto ? '<span class="badge bg-danger" style="font-size:0.7rem;"><i class="fas fa-lock me-1"></i>LOTO</span>' : ''}
                         ${PEApp.getStatusBadge(w.status)}
                         ${PEApp.getPriorityBadge(w.priority)}
                     </div>
@@ -172,10 +177,13 @@ const WorkOrderModule = (() => {
                     ${PEApp.escapeHtml(w.issue_title || '-')}
                 </div>
                 
-                <!-- Row 3: WO# & Date -->
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--pe-text-secondary); margin-bottom: 12px;">
+                <!-- Row 3: WO# & Date & Requester -->
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--pe-text-secondary); margin-bottom: 6px;">
                     <span style="font-weight: 600; color: var(--pe-text-muted);"><i class="fas fa-hashtag me-1" style="opacity:0.6;"></i>${PEApp.escapeHtml(w.wo_number)}</span>
                     <span><i class="far fa-clock me-1"></i>${PEApp.formatDate(w.requested_at)}</span>
+                </div>
+                <div style="font-size: 12px; color: var(--pe-text-secondary); margin-bottom: 12px;">
+                    <i class="fas fa-user-circle me-1"></i>${PEApp.escapeHtml(w.requested_by || '-')}
                 </div>
                 
                 <!-- Row 4: Icons (Left) & Actions (Right) -->
@@ -228,10 +236,16 @@ const WorkOrderModule = (() => {
             <div class="pe-board-card" draggable="true" ondragstart="WorkOrderModule.dragStart(event, ${w.wo_id})" id="board-card-${w.wo_id}" onclick="WorkOrderModule.openModal(${w.wo_id})">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div class="pe-fw-bold" style="color:var(--pe-primary); font-size: 0.95rem;">${PEApp.escapeHtml(w.wo_number)}</div>
-                    ${PEApp.getPriorityBadge(w.priority)}
+                    <div class="d-flex gap-1">
+                        ${w.is_loto ? '<span class="badge bg-danger" style="font-size:0.7rem;"><i class="fas fa-lock"></i></span>' : ''}
+                        ${PEApp.getPriorityBadge(w.priority)}
+                    </div>
                 </div>
                 <div class="pe-text-sm pe-text-muted mb-2 pe-text-truncate" title="${PEApp.escapeHtml(w.issue_title)}">
                     ${PEApp.escapeHtml(w.issue_title)}
+                </div>
+                <div class="pe-text-sm mb-2" style="font-size: 0.8rem; color: var(--pe-text-secondary);">
+                    <i class="fas fa-user-circle me-1"></i>${PEApp.escapeHtml(w.requested_by || '-')}
                 </div>
                 <div class="d-flex justify-content-between align-items-center mt-auto" style="font-size: 0.8rem; color: var(--pe-text-muted);">
                     <div><i class="fas fa-industry me-1"></i> ${machineTxt}</div>
@@ -434,6 +448,7 @@ const WorkOrderModule = (() => {
         const saveBtn = document.getElementById('woSaveBtn');
         const acceptBtn = document.getElementById('woQuickAcceptBtn');
         const closeBtn = document.getElementById('woQuickCloseBtn');
+        const lotoBtn = document.getElementById('woLotoBtn');
         
         if (printBtn) {
             printBtn.style.display = (isEdit && !isDeleted) ? '' : 'none';
@@ -441,6 +456,7 @@ const WorkOrderModule = (() => {
         
         if (acceptBtn) acceptBtn.style.display = 'none';
         if (closeBtn) closeBtn.style.display = 'none';
+        if (lotoBtn) lotoBtn.style.display = 'none';
 
         if (isDeleted) {
             document.getElementById('woModalTitle').textContent = 'Restore Work Order';
@@ -464,7 +480,7 @@ const WorkOrderModule = (() => {
                 if (document.getElementById('woFrmMachineName')) {
                     document.getElementById('woFrmMachineName').value = (!wo.machine_id && wo.machine_name) ? wo.machine_name : '';
                     if (document.getElementById('colCustomMachine')) document.getElementById('colCustomMachine').style.display = wo.machine_id ? 'none' : 'block';
-                    if (document.getElementById('colLine')) document.getElementById('colLine').className = wo.machine_id ? 'col-md-6' : 'col-md-3';
+                    if (document.getElementById('colLine')) document.getElementById('colLine').className = 'col-md-6';
                 }
                 document.getElementById('woFrmLine').value = wo.line || '';
                 document.getElementById('woFrmTitle').value = wo.issue_title || '';
@@ -476,6 +492,7 @@ const WorkOrderModule = (() => {
                 document.getElementById('woFrmAction').value = wo.action_taken || '';
 
                 if (wo.requested_at) document.getElementById('woFrmRequestDate').value = wo.requested_at.replace(' ', 'T').substring(0, 16);
+                if (document.getElementById('woFrmRequestedBy')) document.getElementById('woFrmRequestedBy').value = wo.requested_by || '';
                 if (wo.started_at) document.getElementById('woFrmStartedAt').value = wo.started_at.replace(' ', 'T').substring(0, 16);
                 if (wo.completed_at) document.getElementById('woFrmCompletedAt').value = wo.completed_at.replace(' ', 'T').substring(0, 16);
 
@@ -484,6 +501,14 @@ const WorkOrderModule = (() => {
                 }
                 if (closeBtn) {
                     closeBtn.style.display = (wo.status === 'In Progress') && !isDeleted ? '' : 'none';
+                }
+                if (lotoBtn) {
+                    lotoBtn.style.display = (wo.status !== 'Completed' && wo.status !== 'Cancelled') && !isDeleted ? '' : 'none';
+                    if (wo.is_loto) {
+                        lotoBtn.innerHTML = '<i class="fas fa-lock me-1"></i> <span class="d-none d-sm-inline">LOCKED</span>';
+                    } else {
+                        lotoBtn.innerHTML = '<i class="fas fa-lock me-1"></i> <span class="d-none d-sm-inline">ระบบ LOTO</span>';
+                    }
                 }
 
                 if (wo.image_path) {
@@ -865,7 +890,7 @@ const WorkOrderModule = (() => {
         if (colCustomMachine && colLine) {
             if (sel.value === '') {
                 colCustomMachine.style.display = 'block';
-                colLine.className = 'col-md-3';
+                colLine.className = 'col-md-6';
             } else {
                 colCustomMachine.style.display = 'none';
                 colLine.className = 'col-md-6';
@@ -1240,7 +1265,8 @@ const WorkOrderModule = (() => {
                 ${imgHtml}
                 <strong>ใบงาน:</strong> ${wo.wo_number}<br>
                 <strong>เครื่องจักร:</strong> ${wo.machine_display_name || wo.machine_name || '-'}<br>
-                <strong>อาการเสีย:</strong> <span style="color: var(--pe-primary);">${PEApp.escapeHtml(wo.issue_title)}</span>
+                <strong>อาการเสีย:</strong> <span style="color: var(--pe-primary);">${PEApp.escapeHtml(wo.issue_title)}</span><br>
+                <strong>ผู้แจ้ง:</strong> ${PEApp.escapeHtml(wo.requested_by || '-')}
             </div>
         `;
     }
