@@ -16,6 +16,21 @@ $periodLength = strlen($period) == 10 ? 10 : 7;
 $line = $_GET['line'] ?? 'ALL';
 $hcGroup = $_GET['hcGroup'] ?? 'ALL';
 
+$startDate = $period;
+if (strlen($period) === 21 && strpos($period, '_') !== false) {
+    // Range mode: YYYY-MM-DD_YYYY-MM-DD
+    $parts = explode('_', $period);
+    $startDate = $parts[0];
+    $endDate = date('Y-m-d', strtotime($parts[1] . ' +1 day'));
+} elseif ($periodLength == 7) {
+    // Monthly mode
+    $startDate = $period . '-01';
+    $endDate = date('Y-m-d', strtotime("$startDate +1 month"));
+} else {
+    // Daily mode
+    $endDate = date('Y-m-d', strtotime("$startDate +1 day"));
+}
+
 try {
     if ($action === 'get_grading_data') {
         
@@ -33,6 +48,7 @@ try {
                 ISNULL(WAGE.total_wage, 350.0) AS total_wage,
                 ISNULL(WAGE.dl_wage, 350.0) AS dl_wage,
                 ISNULL(WAGE.ot_wage, 0.0) AS ot_wage,
+                ISNULL(WAGE.ot_hours, 0.0) AS ot_hours,
                 C.threshold_a,
                 C.threshold_b,
                 C.threshold_c
@@ -40,7 +56,7 @@ try {
             INNER JOIN (
                 SELECT DISTINCT emp_id 
                 FROM dbo.MANPOWER_DAILY_LOGS WITH (NOLOCK)
-                WHERE CONVERT(VARCHAR($periodLength), log_date, 120) = :period1
+                WHERE log_date >= :start1 AND log_date < :end1
             ) L ON L.emp_id = E.emp_id
             LEFT JOIN dbo.EMPLOYEE_GRADES G WITH (NOLOCK) 
                 ON E.emp_id = G.emp_id AND G.evaluation_period = :period2
@@ -56,69 +72,65 @@ try {
                 FROM dbo.STOCK_TRANSACTION_USERS stu WITH (NOLOCK)
                 INNER JOIN dbo.STOCK_TRANSACTIONS t WITH (NOLOCK) ON stu.transaction_id = t.transaction_id
                 LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
-                WHERE CONVERT(VARCHAR($periodLength), DATEADD(HOUR, -8, t.transaction_timestamp), 120) = :period3
+                WHERE t.transaction_timestamp >= DATEADD(HOUR, 8, CAST(:start3 AS DATETIME)) 
+                  AND t.transaction_timestamp < DATEADD(HOUR, 8, CAST(:end3 AS DATETIME))
                   AND t.transaction_type LIKE 'PRODUCTION_%'
                 GROUP BY stu.emp_id
             ) INC ON INC.emp_id = E.emp_id COLLATE Thai_CI_AS
             LEFT JOIN (
                 SELECT 
-                    ml.emp_id,
+                    LOGS.emp_id,
+                    LOGS.present_days * RATES.daily_rate AS dl_wage,
+                    LOGS.ot_hours * RATES.ot_rate AS ot_wage,
+                    (LOGS.present_days * RATES.daily_rate) + (LOGS.ot_hours * RATES.ot_rate) AS total_wage,
+                    LOGS.ot_hours
+                FROM (
+                    SELECT 
+                        ml.emp_id,
+                        COUNT(ml.log_date) AS present_days,
                         SUM(
-                            COALESCE(
-                                CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN cm.hourly_rate / 30.0 ELSE cm.hourly_rate END,
-                                350.0
-                            )
-                        ) AS dl_wage,
-                        SUM(
-                            (
-                                CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL 
-                                THEN 
-                                    CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) > 570 
-                                    THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5 
-                                    ELSE 0 END
+                            CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL 
+                            THEN 
+                                CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) > 570 
+                                THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5 
                                 ELSE 0 END
-                            )
-                            * 
-                            (COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN (cm.hourly_rate / 30.0) / 8.0 ELSE cm.hourly_rate / 8.0 END, 350.0 / 8.0) * 1.5)
-                        ) AS ot_wage,
-                        SUM(
-                            COALESCE(
-                                CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN cm.hourly_rate / 30.0 ELSE cm.hourly_rate END,
-                                350.0
-                            )
-                            +
-                            (
-                                CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL 
-                                THEN 
-                                    CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) > 570 
-                                    THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5 
-                                    ELSE 0 END
-                                ELSE 0 END
-                            )
-                            * 
-                            (COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN (cm.hourly_rate / 30.0) / 8.0 ELSE cm.hourly_rate / 8.0 END, 350.0 / 8.0) * 1.5)
-                        ) AS total_wage
-                FROM dbo.MANPOWER_DAILY_LOGS ml WITH (NOLOCK)
-                LEFT JOIN dbo.MANPOWER_EMPLOYEES emp WITH (NOLOCK) ON ml.emp_id = emp.emp_id COLLATE Thai_CI_AS
-                LEFT JOIN dbo.MANPOWER_SHIFTS ms WITH (NOLOCK) ON ms.shift_id = ISNULL(ml.shift_id, emp.default_shift_id)
-                OUTER APPLY (
-                    SELECT TOP 1 * FROM dbo.MANPOWER_CATEGORY_MAPPING WITH (NOLOCK) 
-                    WHERE emp.position LIKE '%' + keyword + '%' COLLATE Thai_CI_AS 
-                    ORDER BY display_order DESC
-                ) cm
-                WHERE CONVERT(VARCHAR($periodLength), ml.log_date, 120) = :period4
-                  AND ml.status IN ('PRESENT', 'LATE')
-                GROUP BY ml.emp_id
+                            ELSE 0 END
+                        ) AS ot_hours
+                    FROM dbo.MANPOWER_DAILY_LOGS ml WITH (NOLOCK)
+                    LEFT JOIN dbo.MANPOWER_EMPLOYEES emp WITH (NOLOCK) ON ml.emp_id = emp.emp_id COLLATE Thai_CI_AS
+                    LEFT JOIN dbo.MANPOWER_SHIFTS ms WITH (NOLOCK) ON ms.shift_id = ISNULL(ml.shift_id, emp.default_shift_id)
+                    WHERE ml.log_date >= :start4 AND ml.log_date < :end4
+                      AND ml.status IN ('PRESENT', 'LATE')
+                    GROUP BY ml.emp_id
+                ) LOGS
+                LEFT JOIN (
+                    SELECT 
+                        e.emp_id,
+                        COALESCE(
+                            CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN cm.hourly_rate / 30.0 ELSE cm.hourly_rate END,
+                            350.0
+                        ) AS daily_rate,
+                        COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN (cm.hourly_rate / 30.0) / 8.0 ELSE cm.hourly_rate / 8.0 END, 350.0 / 8.0) * 1.5 AS ot_rate
+                    FROM dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK)
+                    OUTER APPLY (
+                        SELECT TOP 1 * FROM dbo.MANPOWER_CATEGORY_MAPPING WITH (NOLOCK) 
+                        WHERE e.position LIKE '%' + keyword + '%' COLLATE Thai_CI_AS 
+                        ORDER BY display_order DESC
+                    ) cm
+                ) RATES ON RATES.emp_id = LOGS.emp_id COLLATE Thai_CI_AS
             ) WAGE ON WAGE.emp_id = E.emp_id COLLATE Thai_CI_AS
             LEFT JOIN dbo.EMPLOYEE_GRADING_CRITERIA C WITH (NOLOCK) ON C.line = E.line
             WHERE E.is_active = 1
         ";
         
         $params = [
-            ':period1' => $period,
-            ':period2' => $period,
-            ':period3' => $period,
-            ':period4' => $period
+            ':start1' => $startDate,
+            ':end1' => $endDate,
+            ':period2' => $period, // Grade period remains 'YYYY-MM'
+            ':start3' => $startDate,
+            ':end3' => $endDate,
+            ':start4' => $startDate,
+            ':end4' => $endDate
         ];
         
         if ($line !== 'ALL') {
@@ -178,6 +190,7 @@ try {
                 'total_wage' => $wage,
                 'dl_wage' => (float)($emp['dl_wage'] ?? 0),
                 'ot_wage' => (float)($emp['ot_wage'] ?? 0),
+                'ot_hours' => (float)($emp['ot_hours'] ?? 0),
                 'ratio' => round($ratio, 2),
                 'system_grade' => $systemGrade,
                 'grade' => $emp['grade'] ?? '',

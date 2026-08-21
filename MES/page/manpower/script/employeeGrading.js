@@ -6,7 +6,7 @@ const App = {
     state: {
         employees: [],
         lines: new Set(),
-        currentSort: { col: 'emp_id', dir: 'asc' },
+        currentSort: { col: 'line', dir: 'asc' },
         isWageVisible: false, // Hide wage data by default
         analyticsLine: 'ALL'  // Analytics modal line filter
     },
@@ -28,14 +28,22 @@ const App = {
     bindEvents: function() {
         document.querySelectorAll('input[name="periodTypeToggle"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
-                const isDaily = e.target.value === 'daily';
-                document.getElementById('filterPeriodMonth').classList.toggle('d-none', isDaily);
-                document.getElementById('filterPeriodDate').classList.toggle('d-none', !isDaily);
+                const type = e.target.value;
+                document.getElementById('filterPeriodMonth').classList.toggle('d-none', type !== 'monthly');
+                document.getElementById('filterPeriodDate').classList.toggle('d-none', type !== 'daily');
+                document.getElementById('filterPeriodRangeGroup').classList.toggle('d-none', type !== 'range');
+                
+                // Hide Save Grades in range mode
+                const saveBtn = document.getElementById('btnSaveGrades');
+                if (saveBtn) saveBtn.style.display = (type === 'range') ? 'none' : 'block';
+
                 this.loadData();
             });
         });
         document.getElementById('filterPeriodMonth').addEventListener('change', () => this.loadData());
         document.getElementById('filterPeriodDate').addEventListener('change', () => this.loadData());
+        document.getElementById('filterPeriodDateStart').addEventListener('change', () => this.loadData());
+        document.getElementById('filterPeriodDateEnd').addEventListener('change', () => this.loadData());
         document.getElementById('filterHcGroup').addEventListener('change', () => this.loadData());
         document.getElementById('filterLine').addEventListener('change', () => this.renderTable());
         
@@ -66,9 +74,18 @@ const App = {
     loadData: async function() {
         try {
             const periodType = document.querySelector('input[name="periodTypeToggle"]:checked').value;
-            const period = periodType === 'daily' 
-                ? document.getElementById('filterPeriodDate').value 
-                : document.getElementById('filterPeriodMonth').value;
+            let period;
+            if (periodType === 'daily') {
+                period = document.getElementById('filterPeriodDate').value;
+            } else if (periodType === 'monthly') {
+                period = document.getElementById('filterPeriodMonth').value;
+            } else {
+                const start = document.getElementById('filterPeriodDateStart').value;
+                const end = document.getElementById('filterPeriodDateEnd').value;
+                period = `${start}_${end}`;
+            }
+            this.state.currentPeriodType = periodType;
+            this.state.currentPeriod = period;
             const hcGroup = document.getElementById('filterHcGroup').value;
             
             Swal.fire({
@@ -83,6 +100,27 @@ const App = {
             if (!result.success) throw new Error(result.message);
 
             this.state.employees = result.data;
+            
+            // Sort by Line -> Position -> Name by default
+            this.state.employees.sort((a, b) => {
+                const lineA = (a.line || a.department_api || '').toLowerCase();
+                const lineB = (b.line || b.department_api || '').toLowerCase();
+                if (lineA < lineB) return -1;
+                if (lineA > lineB) return 1;
+
+                const posA = (a.position || '').toLowerCase();
+                const posB = (b.position || '').toLowerCase();
+                if (posA < posB) return -1;
+                if (posA > posB) return 1;
+
+                const nameA = (a.name_th || '').toLowerCase();
+                const nameB = (b.name_th || '').toLowerCase();
+                if (nameA < nameB) return -1;
+                if (nameA > nameB) return 1;
+
+                return 0;
+            });
+
             this.extractLines();
             this.renderTable();
 
@@ -129,8 +167,11 @@ const App = {
 
         // Sorting logic
         filtered.sort((a, b) => {
-            let valA = a[this.state.currentSort.col] || '';
-            let valB = b[this.state.currentSort.col] || '';
+            let col = this.state.currentSort.col;
+            if (col === 'line') col = 'department_api'; // Fallback if line is missing but usually line is populated
+            
+            let valA = a[col] || a['line'] || a['department_api'] || '';
+            let valB = b[col] || b['line'] || b['department_api'] || '';
             
             if (this.state.currentSort.col === 'income_per_head' || this.state.currentSort.col === 'ratio') {
                 valA = parseFloat(valA) || 0;
@@ -142,6 +183,19 @@ const App = {
 
             if (valA < valB) return this.state.currentSort.dir === 'asc' ? -1 : 1;
             if (valA > valB) return this.state.currentSort.dir === 'asc' ? 1 : -1;
+            
+            // Secondary sort by position
+            const posA = (a.position || '').toLowerCase();
+            const posB = (b.position || '').toLowerCase();
+            if (posA < posB) return -1;
+            if (posA > posB) return 1;
+            
+            // Tertiary sort by name
+            const nameA = (a.name_th || '').toLowerCase();
+            const nameB = (b.name_th || '').toLowerCase();
+            if (nameA < nameB) return -1;
+            if (nameA > nameB) return 1;
+
             return 0;
         });
 
@@ -576,7 +630,7 @@ const App = {
             title: 'Verify Identity',
             target: isModalOpen ? modalEl : document.body,
             input: 'password',
-            inputLabel: 'Please enter your login password to view sensitive wage data',
+            text: 'Please enter your login password to view sensitive wage data',
             inputPlaceholder: 'Enter your password...',
             showCancelButton: true,
             confirmButtonText: 'Unlock',
@@ -834,6 +888,441 @@ const App = {
         } catch (e) {
             Swal.fire('Error', e.message, 'error');
         }
+    },
+
+    exportData: async function(format) {
+        try {
+            // Require password verification before exporting
+            const { value: pin } = await Swal.fire({
+                title: 'Verify Identity',
+                input: 'password',
+                text: 'Please enter your login password to export data (contains sensitive wage info)',
+                inputPlaceholder: 'Enter your password...',
+                showCancelButton: true,
+                confirmButtonText: 'Unlock & Export',
+                inputValidator: (value) => {
+                    if (!value) return 'You need to write something!'
+                }
+            });
+
+            if (!pin) return;
+
+            Swal.fire({ title: 'Verifying...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            const formData = new URLSearchParams();
+            formData.append('action', 'verify_password');
+            formData.append('password', pin);
+
+            const response = await fetch('api/api_employee_grading.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.message || 'Incorrect password.');
+            }
+            
+            Swal.close();
+
+            switch(format) {
+                case 'excel':
+                    this.exportToExcel();
+                    break;
+                case 'csv':
+                    this.exportToCSV();
+                    break;
+                case 'pdf':
+                    await this.exportToPDF();
+                    break;
+            }
+        } catch (e) {
+            Swal.fire('Error', 'Export failed: ' + e.message, 'error');
+            console.error(e);
+        }
+    },
+
+    getExportFilename: function(ext) {
+        const periodType = document.querySelector('input[name="periodTypeToggle"]:checked').value;
+        let period;
+        if (periodType === 'daily') {
+            period = document.getElementById('filterPeriodDate').value;
+        } else if (periodType === 'monthly') {
+            period = document.getElementById('filterPeriodMonth').value;
+        } else {
+            const start = document.getElementById('filterPeriodDateStart').value;
+            const end = document.getElementById('filterPeriodDateEnd').value;
+            period = `${start}_to_${end}`;
+        }
+        const line = document.getElementById('filterLine').value;
+        return `Grading_${line}_${period}.${ext}`;
+    },
+
+    createWorksheetFromData: function(employeesArray) {
+        if (!employeesArray || employeesArray.length === 0) return null;
+
+        const exportData = employeesArray.map(emp => {
+            const dlWage = emp.dl_wage > 0 ? Number(parseFloat(emp.dl_wage).toFixed(2)) : 0;
+            const otWage = emp.ot_wage > 0 ? Number(parseFloat(emp.ot_wage).toFixed(2)) : 0;
+            const wage = emp.total_wage > 0 ? Number(parseFloat(emp.total_wage).toFixed(2)) : 0;
+            const income = emp.income_per_head ? Number(parseFloat(emp.income_per_head).toFixed(2)) : 0;
+            const ratio = emp.ratio ? Number(parseFloat(emp.ratio).toFixed(2)) : (wage > 0 ? Number((income / wage).toFixed(2)) : 0);
+            
+            return {
+                'EMP ID': emp.emp_id,
+                'Name': emp.name_th,
+                'Position': emp.position || '-',
+                'Line': emp.line || emp.department_api,
+                'OT Hours': emp.ot_hours,
+                'DL Wage': dlWage,
+                'OT Wage': otWage,
+                'Total Wage': wage,
+                'Income': income,
+                'Ratio': ratio,
+                'System Grade': emp.system_grade || '-',
+                'Adjusted Grade': emp.adjusted_grade || '-',
+                'Final Grade': emp.final_grade || '-',
+                'Note': emp.manager_note || ''
+            };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        
+        // Apply right-align style to Grade columns and their headers (requires xlsx-js-style)
+        const rightAlignHeaders = ['OT Hours', 'DL Wage', 'OT Wage', 'Total Wage', 'Income', 'Ratio', 'System Grade', 'Adjusted Grade', 'Final Grade'];
+        for (const cellAddress in ws) {
+            if (cellAddress.startsWith('!')) continue;
+            const val = ws[cellAddress].v;
+            if (
+                (typeof val === 'string' && ['A', 'B', 'C', 'D', '-'].includes(val)) ||
+                rightAlignHeaders.includes(val)
+            ) {
+                ws[cellAddress].s = { alignment: { horizontal: "right" } };
+            }
+        }
+        
+        // Auto-fit columns
+        const wscols = Object.keys(exportData[0]).map(key => {
+            const maxLen = Math.max(
+                key.length,
+                ...exportData.map(row => row[key] ? row[key].toString().length : 0)
+            );
+            return { wch: maxLen + 5 }; // Increased padding
+        });
+        ws['!cols'] = wscols;
+
+        return ws;
+    },
+
+    exportToExcel: async function() {
+        if (!this.state.employees || this.state.employees.length === 0) {
+            throw new Error("No data to export");
+        }
+        
+        const wb = XLSX.utils.book_new();
+        
+        // 0. Get the currently filtered data for the Summary sheet
+        const lineFilter = document.getElementById('filterLine').value;
+        const filteredEmployees = this.state.employees.filter(emp => {
+            if (lineFilter !== 'ALL') {
+                const empLine = emp.line || emp.department_api;
+                if (empLine !== lineFilter) return false;
+            }
+            return true;
+        });
+
+        // 1. Always create the Summary Sheet first
+        const summaryWs = this.createWorksheetFromData(filteredEmployees);
+        if (summaryWs) {
+            XLSX.utils.book_append_sheet(wb, summaryWs, "Summary");
+        }
+
+        // 2. If Monthly or Range, fetch daily data and append sheets
+        if (this.state.currentPeriodType === 'monthly' || this.state.currentPeriodType === 'range') {
+            
+            let startDate, endDate;
+            if (this.state.currentPeriodType === 'monthly') {
+                const [year, month] = this.state.currentPeriod.split('-');
+                startDate = new Date(year, month - 1, 1);
+                endDate = new Date(year, month, 0); // Last day of month
+            } else {
+                const [startStr, endStr] = this.state.currentPeriod.split('_');
+                startDate = new Date(startStr);
+                endDate = new Date(endStr);
+            }
+
+            const totalDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+            
+            Swal.fire({
+                title: 'Fetching Daily Data...',
+                text: `Downloading details for ${totalDays} days. Please wait.`,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                const fetchPromises = [];
+                const lineFilter = document.getElementById('filterLine').value;
+                const groupFilter = document.getElementById('filterHcGroup').value;
+
+                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
+                    const dayNum = d.getDate();
+                    const monthStr = d.toLocaleString('default', {month:'short'});
+                    const sheetName = `${dayNum} ${monthStr}`;
+                    
+                    const url = new URL(window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'api/api_employee_grading.php');
+                    url.searchParams.append('action', 'get_grading_data');
+                    url.searchParams.append('period', dateStr);
+                    if (lineFilter) url.searchParams.append('line', lineFilter);
+                    if (groupFilter) url.searchParams.append('hcGroup', groupFilter);
+
+                    fetchPromises.push(
+                        fetch(url)
+                            .then(res => res.json())
+                            .then(data => ({ day: dayNum, dateStr, sheetName, data: data.success ? data.data : [] }))
+                            .catch(err => ({ day: dayNum, dateStr, sheetName, data: [] }))
+                    );
+                }
+
+                const results = await Promise.all(fetchPromises);
+                results.sort((a, b) => new Date(a.dateStr) - new Date(b.dateStr));
+
+                // 2.5 Build Trend Matrices
+                const empMapIncome = new Map();
+                const empMapRatio = new Map();
+                
+                filteredEmployees.forEach(emp => {
+                    empMapIncome.set(emp.emp_id, {
+                        'EMP ID': emp.emp_id,
+                        'Name': emp.name_th,
+                        'Position': emp.position || '-',
+                        'Line': emp.line || emp.department_api
+                    });
+                    empMapRatio.set(emp.emp_id, {
+                        'EMP ID': emp.emp_id,
+                        'Name': emp.name_th,
+                        'Position': emp.position || '-',
+                        'Line': emp.line || emp.department_api
+                    });
+                });
+
+                results.forEach(result => {
+                    const colName = result.sheetName;
+                    filteredEmployees.forEach(emp => {
+                        empMapIncome.get(emp.emp_id)[colName] = null;
+                        empMapRatio.get(emp.emp_id)[colName] = null;
+                    });
+                    
+                    if (result.data) {
+                        result.data.forEach(dailyEmp => {
+                            if (empMapIncome.has(dailyEmp.emp_id)) {
+                                const wage = dailyEmp.total_wage > 0 ? Number(parseFloat(dailyEmp.total_wage).toFixed(2)) : 0;
+                                const income = dailyEmp.income_per_head ? Number(parseFloat(dailyEmp.income_per_head).toFixed(2)) : 0;
+                                const ratio = dailyEmp.ratio ? Number(parseFloat(dailyEmp.ratio).toFixed(2)) : (wage > 0 ? Number((income / wage).toFixed(2)) : 0);
+                                
+                                empMapIncome.get(dailyEmp.emp_id)[colName] = income;
+                                empMapRatio.get(dailyEmp.emp_id)[colName] = ratio;
+                            }
+                        });
+                    }
+                });
+
+                const trendIncomeData = Array.from(empMapIncome.values());
+                const trendRatioData = Array.from(empMapRatio.values());
+
+                if (trendIncomeData.length > 0) {
+                    const wsIncome = XLSX.utils.json_to_sheet(trendIncomeData);
+                    const wsRatio = XLSX.utils.json_to_sheet(trendRatioData);
+                    
+                    const setMatrixStyles = (ws, isRatio) => {
+                        for (const cellAddress in ws) {
+                            if (cellAddress.startsWith('!')) continue;
+                            const cell = ws[cellAddress];
+                            
+                            // Headers are strings. If it's a date header (not one of the first 4), right-align it
+                            if (cellAddress.replace(/[A-Z]/g, '') === '1') {
+                                if (!['EMP ID', 'Name', 'Position', 'Line'].includes(cell.v)) {
+                                    cell.s = { alignment: { horizontal: "right" }, font: { bold: true } };
+                                } else {
+                                    cell.s = { font: { bold: true } };
+                                }
+                            } else if (typeof cell.v === 'number') {
+                                cell.s = { alignment: { horizontal: "right" } };
+                                if (isRatio) cell.z = '0.00';
+                                else cell.z = '#,##0.00';
+                            }
+                        }
+                        
+                        const wscols = Object.keys(trendIncomeData[0]).map(key => {
+                            if (key === 'EMP ID') return { wch: 15 };
+                            if (key === 'Name') return { wch: 30 };
+                            if (key === 'Position') return { wch: 25 };
+                            if (key === 'Line') return { wch: 20 };
+                            return { wch: 12 };
+                        });
+                        ws['!cols'] = wscols;
+                    };
+
+                    setMatrixStyles(wsIncome, false);
+                    setMatrixStyles(wsRatio, true);
+
+                    XLSX.utils.book_append_sheet(wb, wsIncome, "Trend - Income");
+                    XLSX.utils.book_append_sheet(wb, wsRatio, "Trend - Ratio");
+                }
+
+                // 2.6 Append Daily Sheets
+
+                for (const result of results) {
+                    if (result.data && result.data.length > 0) {
+                        const ws = this.createWorksheetFromData(result.data);
+                        if (ws) {
+                            XLSX.utils.book_append_sheet(wb, ws, result.sheetName);
+                        }
+                    }
+                }
+                
+                Swal.close();
+            } catch (error) {
+                console.error('Export Error:', error);
+                Swal.fire('Export Failed', 'An error occurred while fetching daily details.', 'error');
+                return; // Stop export if failed
+            }
+        }
+        
+        XLSX.writeFile(wb, this.getExportFilename('xlsx'));
+    },
+
+    exportToCSV: function() {
+        if (!this.state.employees || this.state.employees.length === 0) {
+            throw new Error("No data to export");
+        }
+        
+        const exportData = this.state.employees.map(emp => {
+            const dlWage = emp.dl_wage > 0 ? Number(parseFloat(emp.dl_wage).toFixed(2)) : 0;
+            const otWage = emp.ot_wage > 0 ? Number(parseFloat(emp.ot_wage).toFixed(2)) : 0;
+            const wage = emp.total_wage > 0 ? Number(parseFloat(emp.total_wage).toFixed(2)) : 0;
+            const income = emp.income_per_head ? Number(parseFloat(emp.income_per_head).toFixed(2)) : 0;
+            const ratio = emp.ratio ? Number(parseFloat(emp.ratio).toFixed(2)) : (wage > 0 ? Number((income / wage).toFixed(2)) : 0);
+            
+            return {
+                'EMP ID': emp.emp_id,
+                'Name': emp.name_th,
+                'Position': emp.position || '-',
+                'Line': emp.line || emp.department_api,
+                'OT Hours': emp.ot_hours,
+                'DL Wage': dlWage,
+                'OT Wage': otWage,
+                'Total Wage': wage,
+                'Income': income,
+                'Ratio': ratio,
+                'System Grade': emp.system_grade || '-',
+                'Adjusted Grade': emp.adjusted_grade || '-',
+                'Final Grade': emp.final_grade || '-',
+                'Note': emp.manager_note || ''
+            };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const csv = XLSX.utils.sheet_to_csv(ws);
+        
+        // Add BOM for Excel UTF-8 support
+        const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", this.getExportFilename('csv'));
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    },
+
+    exportToPDF: async function() {
+        if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF.API.autoTable === 'undefined') {
+            throw new Error("PDF export libraries (jsPDF or AutoTable) are not loaded.");
+        }
+
+        if (!this.state.employees || this.state.employees.length === 0) {
+            throw new Error("No data to export");
+        }
+
+        Swal.fire({ title: 'Generating PDF...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
+        
+        // Fetch and load Sarabun font to support Thai characters
+        try {
+            const fontUrl = 'https://raw.githubusercontent.com/google/fonts/main/ofl/sarabun/Sarabun-Regular.ttf';
+            const fontRes = await fetch(fontUrl);
+            if (fontRes.ok) {
+                const buffer = await fontRes.arrayBuffer();
+                let binary = '';
+                const bytes = new Uint8Array(buffer);
+                for (let i = 0; i < bytes.byteLength; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                const fontBase64 = window.btoa(binary);
+                doc.addFileToVFS('Sarabun-Regular.ttf', fontBase64);
+                doc.addFont('Sarabun-Regular.ttf', 'Sarabun', 'normal');
+                doc.setFont('Sarabun');
+            }
+        } catch (e) {
+            console.warn("Could not load Thai font for PDF:", e);
+        }
+        
+        const periodType = document.querySelector('input[name="periodTypeToggle"]:checked').value;
+        const period = periodType === 'daily' 
+            ? document.getElementById('filterPeriodDate').value 
+            : document.getElementById('filterPeriodMonth').value;
+        const line = document.getElementById('filterLine').value;
+
+        doc.setFontSize(16);
+        doc.text(`Income Per Head & Grading Report`, 14, 15);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Period: ${period} | Line: ${line}`, 14, 22);
+
+        const tableColumn = ["EMP ID", "Name", "Position", "Line", "OT Hrs", "DL Wage", "OT Wage", "Total Wage", "Income", "Ratio", "Sys. Grade", "Adj.", "Final"];
+        const tableRows = [];
+
+        this.state.employees.forEach(emp => {
+            const dlWage = emp.dl_wage > 0 ? Number(parseFloat(emp.dl_wage).toFixed(2)) : 0;
+            const otWage = emp.ot_wage > 0 ? Number(parseFloat(emp.ot_wage).toFixed(2)) : 0;
+            const wage = emp.total_wage > 0 ? Number(parseFloat(emp.total_wage).toFixed(2)) : 0;
+            const income = emp.income_per_head ? Number(parseFloat(emp.income_per_head).toFixed(2)) : 0;
+            const ratio = emp.ratio ? Number(parseFloat(emp.ratio).toFixed(2)) : (wage > 0 ? Number((income / wage).toFixed(2)) : 0);
+            
+            tableRows.push([
+                emp.emp_id,
+                emp.name_th,
+                emp.position || '-',
+                emp.line || emp.department_api,
+                emp.ot_hours,
+                dlWage.toFixed(2),
+                otWage.toFixed(2),
+                wage.toFixed(2),
+                income.toFixed(2),
+                ratio,
+                emp.system_grade || '-',
+                emp.adjusted_grade || '-',
+                emp.final_grade || '-'
+            ]);
+        });
+
+        doc.autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 28,
+            theme: 'grid',
+            styles: { fontSize: 8, font: "Sarabun" },
+            headStyles: { fillColor: [41, 128, 185], textColor: 255, font: "Sarabun" }
+        });
+
+        doc.save(this.getExportFilename('pdf'));
+        Swal.close();
     },
 
     saveAnalysisAsImage: async function() {

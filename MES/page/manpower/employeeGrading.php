@@ -24,8 +24,12 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
     <!-- ApexCharts -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     
-    <script src="../../utils/libs/xlsx.full.min.js"></script>
+    <!-- Replace standard SheetJS with xlsx-js-style to support Excel cell alignment/styling -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
     <style>
         .grade-select {
@@ -87,19 +91,29 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                 <div class="d-flex align-items-center bg-white px-3 py-2 rounded-pill shadow-sm border dashboard-toolbar">
                     <div class="d-flex align-items-center">
                         <div class="btn-segmented me-3">
-                            <input type="radio" class="btn-check" name="periodTypeToggle" id="btnPeriodMonthly" value="monthly" autocomplete="off" checked>
+                            <input type="radio" class="btn-check" name="periodTypeToggle" id="btnPeriodDaily" value="daily" autocomplete="off" checked>
+                            <label class="btn btn-sm rounded-pill px-3 mb-0 border-0" style="transition: all 0.2s;" for="btnPeriodDaily">Day</label>
+
+                            <input type="radio" class="btn-check" name="periodTypeToggle" id="btnPeriodMonthly" value="monthly" autocomplete="off">
                             <label class="btn btn-sm rounded-pill px-3 mb-0 border-0" style="transition: all 0.2s;" for="btnPeriodMonthly">Month</label>
                           
-                            <input type="radio" class="btn-check" name="periodTypeToggle" id="btnPeriodDaily" value="daily" autocomplete="off">
-                            <label class="btn btn-sm rounded-pill px-3 mb-0 border-0" style="transition: all 0.2s;" for="btnPeriodDaily">Day</label>
+                            <input type="radio" class="btn-check" name="periodTypeToggle" id="btnPeriodRange" value="range" autocomplete="off">
+                            <label class="btn btn-sm rounded-pill px-3 mb-0 border-0" style="transition: all 0.2s;" for="btnPeriodRange">Range</label>
                         </div>
                         <i class="far fa-calendar-alt text-primary opacity-50 me-2"></i>
-                        <input type="month" id="filterPeriodMonth" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
+                        <input type="month" id="filterPeriodMonth" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0 d-none" 
                                value="<?php echo date('Y-m'); ?>" 
                                style="width: 110px; cursor: pointer; outline: none; box-shadow: none;" title="Select Month">
-                        <input type="date" id="filterPeriodDate" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0 d-none" 
+                        <input type="date" id="filterPeriodDate" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
                                value="<?php echo date('Y-m-d'); ?>" 
                                style="width: 110px; cursor: pointer; outline: none; box-shadow: none;" title="Select Date">
+                        <div id="filterPeriodRangeGroup" class="d-flex align-items-center d-none">
+                            <input type="date" id="filterPeriodDateStart" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
+                                   style="width: 110px; cursor: pointer; outline: none; box-shadow: none;" value="<?= date('Y-m-d', strtotime('-7 days')) ?>">
+                            <span class="mx-1 text-primary fw-bold">-</span>
+                            <input type="date" id="filterPeriodDateEnd" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
+                                   style="width: 110px; cursor: pointer; outline: none; box-shadow: none;" value="<?= date('Y-m-d') ?>">
+                        </div>
                     </div>
 
                     <div class="vr mx-1 text-muted opacity-25 my-1"></div>
@@ -135,7 +149,19 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                             <i class="fas fa-cog"></i>
                         </button>
 
-                        <button class="btn btn-warning btn-sm fw-bold px-4 rounded-pill shadow-sm text-dark d-flex align-items-center justify-content-center" style="height: 32px;" onclick="App.autoGrade()" title="Apply System Grades">
+                        <div class="dropdown me-2">
+                            <button class="btn btn-light btn-sm text-secondary rounded-circle shadow-sm d-flex align-items-center justify-content-center" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px; padding: 0;" title="Export Data">
+                                <i class="fas fa-file-export"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="exportDropdown" style="font-size: 0.9rem;">
+                                <li><a class="dropdown-item" href="#" onclick="App.exportData('excel'); return false;"><i class="fas fa-file-excel text-success me-2"></i> Export to Excel</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="App.exportData('csv'); return false;"><i class="fas fa-file-csv text-info me-2"></i> Export to CSV</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="App.exportData('pdf'); return false;"><i class="fas fa-file-pdf text-danger me-2"></i> Export Report (PDF)</a></li>
+                            </ul>
+                        </div>
+
+                        <button class="btn btn-sm fw-bold px-4 rounded-pill shadow-sm text-white d-flex align-items-center justify-content-center" style="height: 32px; background: linear-gradient(135deg, #f59e0b, #ea580c); border: none; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'" onclick="App.autoGrade()" title="Apply System Grades">
                             <i class="fas fa-magic me-2"></i> Auto Grade
                         </button>
                     </div>
