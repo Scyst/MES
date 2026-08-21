@@ -1,5 +1,5 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DownloadCloud, Activity, Cpu, HardDrive, Zap, Flame, Layers, ArrowDown, ArrowUp, Globe, Database, Server, Wifi, LayoutDashboard, Cloud, Settings, LayoutList, Columns3, TrendingUp, CheckCircle2, AlertCircle } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import type { SysPayload, ServerStatus } from '../types';
@@ -57,6 +57,8 @@ export const ModernTheme = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'local' | 'server'>('local');
   const [serverLayout, setServerLayout] = useState<'row' | 'col' | 'combined'>('col');
+  const [serverTimeframe, setServerTimeframe] = useState<number>(360);
+  const graphData = useMemo(() => (serverHistory || []).slice(-serverTimeframe), [serverHistory, serverTimeframe]);
   const [backendRunning, setBackendRunning] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -398,6 +400,18 @@ export const ModernTheme = ({
                     >
                       <TrendingUp size={14} />
                     </button>
+                      <div className="w-px h-6 bg-white/10 mx-1"></div>
+                      <select 
+                        value={serverTimeframe} 
+                        onChange={(e) => setServerTimeframe(Number(e.target.value))}
+                        className="bg-transparent text-xs text-white/50 hover:text-white/80 focus:outline-none cursor-pointer"
+                        title="Timeframe"
+                      >
+                        <option value={60} className="bg-[#0f172a] text-white">10 Min</option>
+                        <option value={180} className="bg-[#0f172a] text-white">30 Min</option>
+                        <option value={360} className="bg-[#0f172a] text-white">1 Hour</option>
+                        <option value={1440} className="bg-[#0f172a] text-white">4 Hours</option>
+                      </select>
                     <div className="w-px h-6 bg-white/10 mx-1"></div>
                     <button 
       onClick={async (e) => { 
@@ -445,9 +459,9 @@ export const ModernTheme = ({
                     </div>
                     <div className="flex-1 min-h-[300px]">
                       {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={serverHistory || []}>
+                        <AreaChart data={graphData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                          <XAxis dataKey="timestamp" hide />
+                          <XAxis dataKey="timestamp" tickFormatter={(tick) => new Date(tick).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} minTickGap={40} height={20} />
                           <YAxis tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} width={35} />
                           <Tooltip
                             contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
@@ -471,9 +485,9 @@ export const ModernTheme = ({
                     </h3>
                     <div className="flex-1 min-h-[160px]">
                       {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={serverHistory || []}>
+                        <AreaChart data={graphData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                          <XAxis dataKey="timestamp" hide />
+                          <XAxis dataKey="timestamp" tickFormatter={(tick) => new Date(tick).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} minTickGap={40} height={20} />
                           <YAxis tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} width={35} />
                           <Tooltip 
                             contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} 
@@ -493,9 +507,9 @@ export const ModernTheme = ({
                     </h3>
                     <div className="flex-1 min-h-[160px]">
                       {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={serverHistory || []}>
+                        <AreaChart data={graphData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                          <XAxis dataKey="timestamp" hide />
+                          <XAxis dataKey="timestamp" tickFormatter={(tick) => new Date(tick).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} minTickGap={40} height={20} />
                           <YAxis tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} width={35} />
                           <Tooltip 
                             contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} 
@@ -515,9 +529,9 @@ export const ModernTheme = ({
                     </h3>
                     <div className="flex-1 min-h-[160px]">
                       {ecoMode ? <div className="flex-1 flex items-center justify-center text-emerald-500/50 text-xs font-bold font-mono tracking-widest border border-emerald-500/10 rounded-lg bg-emerald-500/5">ECO MODE PAUSED</div> : <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={serverHistory || []}>
+                        <AreaChart data={graphData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                          <XAxis dataKey="timestamp" hide />
+                          <XAxis dataKey="timestamp" tickFormatter={(tick) => new Date(tick).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} minTickGap={40} height={20} />
                           <YAxis tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }} axisLine={false} tickLine={false} width={35} />
                           <Tooltip 
                             contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} 

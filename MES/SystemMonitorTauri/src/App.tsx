@@ -58,7 +58,7 @@ export default function App() {
         const json = await res.json();
         if (json.success && json.data.length > 0) {
           setServerStatus(json.data[json.data.length - 1]);
-          setServerHistory(json.data.slice(-60));
+          setServerHistory(json.data);
         }
       } catch (err) {
         // Silently ignore if server is unreachable
