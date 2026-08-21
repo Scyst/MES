@@ -1220,7 +1220,7 @@ function openAddPartModal() {
 
     const now = new Date();
     document.getElementById('out_log_date').value = now.toISOString().split('T')[0];
-    new bootstrap.Modal(document.getElementById('addPartModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('addPartModal')).show();
 }
 
 function openAddEntryModal() {
@@ -1261,7 +1261,7 @@ function openAddEntryModal() {
     } catch (e) { }
 
     updateAvailableStockDisplay();
-    new bootstrap.Modal(document.getElementById('addEntryModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('addEntryModal')).show();
 }
 
 function lockEntryForm() {
@@ -1345,7 +1345,7 @@ async function openStockDetailModal(itemId, partNo) {
     modalTitle.textContent = `Stock Details for: ${partNo}`;
     modalBody.innerHTML = '<tr><td colspan="2" class="text-center">Loading details...</td></tr>';
 
-    const modal = new bootstrap.Modal(modalElement);
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
     modal.show();
 
     const result = await sendRequest(INVENTORY_API_URL, 'get_stock_details_by_item', 'GET', null, { item_id: itemId });
@@ -1441,7 +1441,7 @@ async function openVarianceDetailModal(itemId, locationId, partNo, lotNo = null)
     inTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
     outTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
 
-    const modal = new bootstrap.Modal(modalElement);
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
     modal.show();
 
     const params = {
@@ -1507,7 +1507,7 @@ function openAdjustStockModal(itemData) {
     modal.querySelector('#adjust_physical_count').value = '';
     modal.querySelector('#adjust_notes').value = '';
 
-    const modalInstance = new bootstrap.Modal(modal);
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modal);
     modalInstance.show();
 }
 
@@ -1516,7 +1516,7 @@ async function openSummaryModal() {
     if (!modalBody) return;
     modalBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading summary...</td></tr>';
 
-    const summaryModal = new bootstrap.Modal(document.getElementById('summaryModal'));
+    const summaryModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('summaryModal'));
     summaryModal.show();
 
     const searchString = document.getElementById('filterSearch').value;
@@ -1580,7 +1580,7 @@ async function openHistorySummaryModal() {
     if (!modalBody) return;
     modalBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading summary...</td></tr>';
 
-    const summaryModal = new bootstrap.Modal(document.getElementById('historySummaryModal'));
+    const summaryModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('historySummaryModal'));
     summaryModal.show();
 
     const searchString = document.getElementById('filterSearch').value;
@@ -1893,7 +1893,7 @@ async function editTransaction(transactionId, type) {
 
             if (type === 'entry') {
                 modalId = 'editEntryModal';
-                modal = new bootstrap.Modal(document.getElementById(modalId));
+                modal = bootstrap.Modal.getOrCreateInstance(document.getElementById(modalId));
 
                 deleteBtn = document.getElementById('deleteEntryFromModalBtn');
                 saveBtn = document.querySelector('#editEntryForm button[data-action="save"]');
@@ -1922,7 +1922,7 @@ async function editTransaction(transactionId, type) {
 
             } else if (type === 'production') {
                 modalId = 'editProductionModal';
-                modal = new bootstrap.Modal(document.getElementById(modalId));
+                modal = bootstrap.Modal.getOrCreateInstance(document.getElementById(modalId));
                 deleteBtn = document.getElementById('deleteProductionFromModalBtn');
                 saveBtn = modal._element.querySelector('button[type="submit"]');
 
@@ -2001,7 +2001,7 @@ async function openHourlyProductionModal() {
     const endDate = document.getElementById('filterEndDate').value;
     subTitle.textContent = `แสดงผลสรุปยอดรวม ตั้งแต่วันที่: ${startDate} ถึง ${endDate} (อ้างอิงกะ 8:00 - 8:00)`;
 
-    const summaryModal = new bootstrap.Modal(document.getElementById('hourlyProductionModal'));
+    const summaryModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('hourlyProductionModal'));
     summaryModal.show();
 
     const searchString = document.getElementById('filterSearch').value;

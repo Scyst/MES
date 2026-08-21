@@ -44,6 +44,11 @@ async function loadLocations() {
                 select.insertAdjacentHTML('beforeend', opt);
                 if(modalSelect) modalSelect.insertAdjacentHTML('beforeend', opt);
             });
+
+            if (result.data.length === 1) {
+                select.value = result.data[0].location_id;
+                if(modalSelect) modalSelect.value = result.data[0].location_id;
+            }
         }
     } catch (e) { console.error("Error loading locations", e); }
 }
@@ -465,7 +470,7 @@ function openCreateJobModal() {
     const currentLoc = document.getElementById('locationSelect').value;
     if(currentLoc) document.getElementById('modal_location').value = currentLoc;
     
-    new bootstrap.Modal(document.getElementById('createJobModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('createJobModal')).show();
 }
 
 async function submitCreateJob() {
@@ -614,7 +619,7 @@ function openRecordModal(jobId, jobNo) {
     }
     loadRecordTeamUsers(true);
     
-    new bootstrap.Modal(document.getElementById('recordOutputModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('recordOutputModal')).show();
 }
 
 async function submitRecordOutput() {
@@ -899,7 +904,7 @@ async function viewJobLogs(jobNo, jobId, partNo = '', partName = '') {
         tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted"><i class="fas fa-inbox fs-2 mb-3 text-light"></i><br><span style="font-size: 0.9rem;">ยังไม่มีประวัติการลงยอดสำหรับ Job นี้</span></td></tr>`;
     }
     const modalEl = document.getElementById('jobLogsModal');
-    if(modalEl) new bootstrap.Modal(modalEl).show();
+    if(modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
 async function editTxn(txnId, txnType, currentQty, jobId) {

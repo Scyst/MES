@@ -394,7 +394,7 @@ async function openBulkEditMode() {
             }
             locSelect.value = data.from_location_id;
 
-            const modal = new bootstrap.Modal(document.getElementById('bulkEditModal'));
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('bulkEditModal'));
             modal.show();
         } else {
             Swal.fire('ไม่พบข้อมูล', `ไม่สามารถดึงข้อมูล ${previewSerial} ได้ อาจจะถูกลบหรือรับเข้าคลังไปแล้ว`, 'error');
