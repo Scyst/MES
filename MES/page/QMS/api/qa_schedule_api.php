@@ -139,7 +139,7 @@ try {
         }
 
         $sql = "UPDATE SALES_ORDERS 
-                SET inspection_status = ?, inspection_result = ?, inspection_remark = ?, ticket_number = ?, qa_inspector = ?, inspect_type = ?, actual_inspection_date = ?, is_confirmed = 1, updated_at = GETDATE() 
+                SET inspection_status = ?, inspection_result = ?, inspection_remark = ?, ticket_number = ?, qa_inspector = ?, inspect_type = ?, actual_inspection_date = ?, updated_at = GETDATE() 
                 WHERE id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$inspection_status, $inspection_result, $remark, $ticket_number, $qa_inspector, $inspect_type, $actual_inspection_date, $po_id]);
@@ -171,7 +171,6 @@ try {
                 inspection_result = NULL,
                 inspection_remark = NULL,
                 qa_inspector = NULL,
-                is_confirmed = 0,
                 updated_at = GETDATE() 
                 WHERE id = ?";
         $stmt = $pdo->prepare($sql);
