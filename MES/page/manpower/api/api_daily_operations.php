@@ -403,6 +403,21 @@ try {
             break;
 
 
+        case 'confirm_anomaly':
+            if (!hasPermission('manage_manpower')) throw new Exception("Permission Denied");
+            
+            $logId = $input['log_id'] ?? '';
+            if (empty($logId)) throw new Exception("Log ID is required");
+
+            $sql = "UPDATE dbo.MANPOWER_DAILY_LOGS SET is_verified = 1, updated_at = GETDATE(), updated_by = ? WHERE log_id = ?";
+            $pdo->prepare($sql)->execute([$updatedBy, $logId]);
+            
+            $pdo->prepare("INSERT INTO " . USER_LOGS_TABLE . " (action_by, action_type, detail, created_at) VALUES (?, 'MANPOWER_CONFIRM_ANOMALY', ?, GETDATE())")
+                ->execute([$updatedBy, "Confirmed anomaly for log_id: $logId"]);
+            
+            echo json_encode(['success' => true, 'message' => 'Confirmed successfully']);
+            break;
+
         case 'batch_quick_swap_shift':
             if (!hasPermission('manage_manpower')) throw new Exception("Permission Denied");
             
@@ -647,6 +662,8 @@ try {
                            WHEN L.shift_id = 1 AND L.scan_in_time IS NOT NULL AND CAST(L.scan_in_time AS TIME) >= '13:00:00' THEN 'DAY_BUT_NIGHT_SCAN'
                            WHEN L.status = 'LATE' AND L.scan_in_time IS NOT NULL THEN 'LATE_SUSPECT'
                            WHEN L.scan_in_time IS NULL AND L.scan_out_time IS NOT NULL THEN 'ORPHAN_OUT'
+                           WHEN L.shift_id = 1 AND L.scan_in_time IS NULL AND ((L.log_date = CAST(GETDATE() AS DATE) AND CAST(GETDATE() AS TIME) >= '08:30:00') OR L.log_date < CAST(GETDATE() AS DATE)) AND L.status IN ('WAITING', 'ABSENT') THEN 'MISSING_IN_SCAN'
+                           WHEN L.shift_id = 2 AND L.scan_in_time IS NULL AND ((L.log_date = CAST(GETDATE() AS DATE) AND CAST(GETDATE() AS TIME) >= '20:30:00') OR L.log_date < CAST(GETDATE() AS DATE)) AND L.status IN ('WAITING', 'ABSENT') THEN 'MISSING_IN_SCAN'
                            ELSE 'SCAN_MISMATCH'
                        END as detect_type
                 FROM dbo.MANPOWER_DAILY_LOGS L
@@ -673,7 +690,12 @@ try {
                           CAST(L.scan_in_time AS TIME) BETWEEN '17:00:00' AND '18:00:59' OR
                           CAST(L.scan_in_time AS TIME) BETWEEN '20:01:00' AND '21:00:59'
                       ))
+                      OR
+                      (L.shift_id = 1 AND L.scan_in_time IS NULL AND ((L.log_date = CAST(GETDATE() AS DATE) AND CAST(GETDATE() AS TIME) >= '08:30:00') OR L.log_date < CAST(GETDATE() AS DATE)) AND L.status IN ('WAITING', 'ABSENT'))
+                      OR
+                      (L.shift_id = 2 AND L.scan_in_time IS NULL AND ((L.log_date = CAST(GETDATE() AS DATE) AND CAST(GETDATE() AS TIME) >= '20:30:00') OR L.log_date < CAST(GETDATE() AS DATE)) AND L.status IN ('WAITING', 'ABSENT'))
                   )
+                  AND (L.is_verified = 0 OR L.is_verified IS NULL)
                 ORDER BY L.log_date DESC, L.scan_in_time DESC
             ";
             $stmt = $pdo->prepare($sql);

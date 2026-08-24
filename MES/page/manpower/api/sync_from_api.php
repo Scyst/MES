@@ -282,6 +282,20 @@ try {
                 }
             }
 
+            // FALLBACK: If strict windows yielded nothing, but they did scan today, 
+            // capture the very first scan of the day as scanIn.
+            // This allows the Anomaly Detector to catch abnormal scans (NIGHT_ABNORMAL_SCAN / DAY_ABNORMAL_SCAN).
+            if ($scanIn === null && $scanOut === null && !empty($scans)) {
+                $todayStart = strtotime($procDate . ' 00:00:00');
+                $todayEnd = strtotime($procDate . ' 23:59:59');
+                foreach ($scans as $ts) {
+                    if ($ts >= $todayStart && $ts <= $todayEnd) {
+                        $scanIn = $ts;
+                        break;
+                    }
+                }
+            }
+
             // บันทึกถ้ามีข้อมูลอย่างน้อย 1 scan
             if ($scanIn !== null || $scanOut !== null) {
                 if (!isset($sessionsByEmpDate[$empId][$dateStr])) {

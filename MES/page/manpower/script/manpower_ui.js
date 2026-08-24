@@ -2647,6 +2647,8 @@ const Actions = {
                         detectMsg = '⏰ สถานะสาย — อาจเกิดจากลืมสลับกะ (เวลาเข้าอาจเป็นเวลาออกงานจริง)';
                     } else if (row.detect_type === 'ORPHAN_OUT') {
                         detectMsg = '❓ มีเฉพาะเวลาออก ไม่มีเวลาเข้า (ลืมสแกนเข้างาน)';
+                    } else if (row.detect_type === 'MISSING_IN_SCAN') {
+                        detectMsg = '⚠️ ยังไม่พบเวลาเข้างาน (อาจสลับไปอีกกะหนึ่ง)';
                     } else {
                         detectMsg = '⚠️ เวลาสแกนผิดปกติ';
                     }
@@ -2666,6 +2668,7 @@ const Actions = {
                         <td class="text-center align-middle small text-danger fw-bold">${detectMsg}</td>
                         <td class="text-center align-middle pe-4">
                             <button class="btn btn-sm btn-outline-dark fw-bold shadow-sm" onclick="Actions.quickSwapShift('${row.log_id}', '${row.name_th}', ${newShiftId}, '${newShiftName}'); setTimeout(() => Actions.openShiftSwapAudit(), 1500);">${btnLabel}</button>
+                            <button class="btn btn-sm btn-outline-success fw-bold shadow-sm ms-1" onclick="Actions.confirmAnomaly('${row.log_id}');" title="ยืนยันความถูกต้อง (ไม่ต้องแสดงอีก)"><i class="fas fa-check"></i></button>
                         </td>
                     </tr>`;
                 }).join('');
@@ -2686,6 +2689,33 @@ const Actions = {
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('rawScanStartDate').value = today;
             document.getElementById('rawScanEndDate').value = today;
+        }
+    },
+    async confirmAnomaly(logId) {
+        if (!confirm('ยืนยันว่าข้อมูลนี้ถูกต้องแล้วใช่หรือไม่? (จะไม่แสดงในการแจ้งเตือนนี้อีก)')) return;
+        try {
+            const res = await fetch('api/api_daily_operations.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'confirm_anomaly', log_id: logId })
+            });
+            const json = await res.json();
+            if (json.success) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'ยืนยันข้อมูลเรียบร้อย',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+                this.openShiftSwapAudit();
+            } else {
+                Swal.fire('Error', json.message || 'Failed to confirm', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'An error occurred', 'error');
         }
     },
 
