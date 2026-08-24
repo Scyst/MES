@@ -156,7 +156,7 @@ function editConcession(id) {
                     if (data[key]) {
                         const img = document.createElement('img');
                         // Use base path for images
-                        img.src = '../' + data[key]; 
+                        img.src = '../../' + data[key]; 
                         img.className = 'img-thumbnail shadow-sm';
                         img.style = 'height: 80px; object-fit: cover; border-radius: 4px;';
                         preview.appendChild(img);

@@ -6,7 +6,7 @@ require_once '../../../auth/check_auth.php';
 require_once '../../components/php/logger.php';
 
 function handleConcessionUploads($request_no, $old_paths = []) {
-    $upload_dir = '../../uploads/concessions/';
+    $upload_dir = '../../../uploads/concessions/';
     if (!is_dir($upload_dir)) {
         mkdir($upload_dir, 0777, true);
     }
@@ -28,8 +28,8 @@ function handleConcessionUploads($request_no, $old_paths = []) {
                     $new_name = $request_no . '_' . time() . '_' . $i . '.' . $ext;
                     if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
                         // If updating, delete the old file
-                        if (!empty($paths[$i]) && file_exists('../../' . $paths[$i])) {
-                            @unlink('../../' . $paths[$i]);
+                        if (!empty($paths[$i]) && file_exists('../../../' . $paths[$i])) {
+                            @unlink('../../../' . $paths[$i]);
                         }
                         $paths[$i] = 'uploads/concessions/' . $new_name;
                     }
