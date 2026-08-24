@@ -54,6 +54,11 @@ function openConcessionModal() {
     document.getElementById('concessionModalTitle').innerHTML = '<i class="fas fa-file-alt me-2"></i>New Customer Concession Request';
     document.getElementById('concessionSubmitBtn').innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Request';
     
+    const imageInput = document.getElementById('concessionImages');
+    if (imageInput) imageInput.value = '';
+    const preview = document.getElementById('concessionImagePreview');
+    if (preview) preview.innerHTML = '';
+    
     const modal = new bootstrap.Modal(document.getElementById('concessionModal'));
     modal.show();
 }
@@ -141,6 +146,24 @@ function editConcession(id) {
             document.getElementById('concessionModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Concession Request';
             document.getElementById('concessionSubmitBtn').innerHTML = '<i class="fas fa-save me-2"></i>Save Changes';
             
+            const imageInput = document.getElementById('concessionImages');
+            if (imageInput) imageInput.value = '';
+            
+            const preview = document.getElementById('concessionImagePreview');
+            if (preview) {
+                preview.innerHTML = '';
+                ['attached_image_1', 'attached_image_2', 'attached_image_3'].forEach(key => {
+                    if (data[key]) {
+                        const img = document.createElement('img');
+                        // Use base path for images
+                        img.src = '../' + data[key]; 
+                        img.className = 'img-thumbnail shadow-sm';
+                        img.style = 'height: 80px; object-fit: cover; border-radius: 4px;';
+                        preview.appendChild(img);
+                    }
+                });
+            }
+            
             const form = document.getElementById('formConcession');
             for (const key in data) {
                 if (form.elements[key]) {
@@ -169,6 +192,39 @@ document.addEventListener('DOMContentLoaded', () => {
     if(concessionTab) {
         concessionTab.addEventListener('shown.bs.tab', function (e) {
             loadConcessionList();
+        });
+    }
+
+    const concessionImages = document.getElementById('concessionImages');
+    if(concessionImages) {
+        concessionImages.addEventListener('change', function(e) {
+            const preview = document.getElementById('concessionImagePreview');
+            preview.innerHTML = '';
+            const files = Array.from(e.target.files);
+            
+            if (files.length > 3) {
+                Swal.fire('Warning', 'You can only upload a maximum of 3 images.', 'warning');
+                e.target.value = '';
+                return;
+            }
+            
+            files.forEach(file => {
+                if (file.size > 5 * 1024 * 1024) {
+                    Swal.fire('Warning', 'Image size must be less than 5MB.', 'warning');
+                    e.target.value = '';
+                    preview.innerHTML = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'img-thumbnail shadow-sm';
+                    img.style = 'height: 80px; object-fit: cover; border-radius: 4px;';
+                    preview.appendChild(img);
+                }
+                reader.readAsDataURL(file);
+            });
         });
     }
 });

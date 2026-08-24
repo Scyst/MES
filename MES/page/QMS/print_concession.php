@@ -184,6 +184,13 @@ $title = $is_blank ? 'Concession_Blank' : 'Concession_Print';
         
         $chkReportNeed = $data['is_report_needed'] ? '[ / ] Need' : '[  ] Need';
         $chkReportNotNeed = !$data['is_report_needed'] ? '[ / ] Not Need' : '[  ] Not Need';
+        
+        $images = [];
+        if (!empty($data['attached_image_1'])) $images[] = $data['attached_image_1'];
+        if (!empty($data['attached_image_2'])) $images[] = $data['attached_image_2'];
+        if (!empty($data['attached_image_3'])) $images[] = $data['attached_image_3'];
+        
+        $total_pages = !empty($images) ? 2 : 1;
     ?>
     <div class="page">
         <!-- Header -->
@@ -209,7 +216,7 @@ $title = $is_blank ? 'Concession_Blank' : 'Concession_Print';
                         </tr>
                         <tr>
                             <td class="font-bold">Page:</td>
-                            <td>1 of 1</td>
+                            <td>1 of <?php echo $total_pages; ?></td>
                         </tr>
                     </table>
                 </td>
@@ -339,6 +346,52 @@ $title = $is_blank ? 'Concession_Blank' : 'Concession_Print';
             FM-QCS-006 / R02 : 07/07/22
         </div>
     </div>
+
+    <?php if (!empty($images)): ?>
+    <div class="page">
+        <!-- Header -->
+        <table class="table-bordered" style="margin-bottom: 15px;">
+            <tr>
+                <td width="30%" class="text-center align-middle">
+                    <div class="font-bold text-red font-helvetica" style="font-size: 28px; line-height: 1;">SCAN</div>
+                    <div class="text-xs">SNC CREATIVITY ANTHOLOGY CO.,LTD.</div>
+                </td>
+                <td width="40%" class="text-center align-middle">
+                    <div class="font-bold text-lg" style="margin-bottom: 5px;">เอกสารแนบ</div>
+                    <div class="text-sm">( ATTACHMENT )</div>
+                </td>
+                <td width="30%" class="align-middle" style="padding: 0;">
+                    <table class="table-noborder text-sm" style="margin-bottom: 0;">
+                        <tr>
+                            <td width="35%" class="font-bold">Doc No.:</td>
+                            <td width="65%"><?php echo htmlspecialchars($data['request_no']); ?></td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">Date:</td>
+                            <td><?php echo $show_date; ?></td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">Page:</td>
+                            <td>2 of 2</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+        
+        <div style="padding: 15px; border: 1px solid #000; box-sizing: border-box; min-height: 800px;">
+            <div class="font-bold" style="margin-bottom: 15px; font-size: 16px;">รูปภาพประกอบ (Attached Images)</div>
+            <div style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
+                <?php foreach($images as $img): ?>
+                <div style="width: 100%; text-align: center; margin-bottom: 15px;">
+                    <img src="../../<?php echo htmlspecialchars($img); ?>" style="max-width: 90%; max-height: 320px; object-fit: contain; border: 1px solid #ddd; padding: 5px;" alt="Attachment">
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <?php endforeach; ?>
 
 </body>

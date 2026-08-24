@@ -144,6 +144,14 @@
                             <textarea class="form-control form-control-sm border-success" name="measure_permanent" rows="2" required></textarea>
                         </div>
 
+                        <div class="col-12"><hr class="my-2 border-secondary border-opacity-25"></div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label small fw-bold">Attach Images (แนบรูปภาพ 1-3 รูป - สูงสุด 5MB/รูป)</label>
+                            <input type="file" class="form-control form-control-sm" name="images[]" id="concessionImages" accept="image/jpeg, image/png" multiple>
+                            <div class="form-text text-muted small">Only JPG/PNG formats are allowed. Max 3 images.</div>
+                            <div id="concessionImagePreview" class="d-flex flex-wrap gap-2 mt-2"></div>
+                        </div>
+
                         <div class="col-12 mb-3">
                             <label class="form-label small fw-bold">Submit Report (เอกสารสนับสนุน)</label>
                             <select class="form-select form-select-sm" name="is_report_needed">

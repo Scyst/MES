@@ -5,6 +5,41 @@ require_once '../../db.php';
 require_once '../../../auth/check_auth.php';
 require_once '../../components/php/logger.php';
 
+function handleConcessionUploads($request_no, $old_paths = []) {
+    $upload_dir = '../../uploads/concessions/';
+    if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0777, true);
+    }
+    
+    $paths = [
+        $old_paths[0] ?? null,
+        $old_paths[1] ?? null,
+        $old_paths[2] ?? null
+    ];
+    
+    if (isset($_FILES['images'])) {
+        $file_count = is_array($_FILES['images']['name']) ? count($_FILES['images']['name']) : 0;
+        for ($i = 0; $i < min(3, $file_count); $i++) {
+            if ($_FILES['images']['error'][$i] === UPLOAD_ERR_OK) {
+                $tmp_name = $_FILES['images']['tmp_name'][$i];
+                $name = $_FILES['images']['name'][$i];
+                $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
+                    $new_name = $request_no . '_' . time() . '_' . $i . '.' . $ext;
+                    if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
+                        // If updating, delete the old file
+                        if (!empty($paths[$i]) && file_exists('../../' . $paths[$i])) {
+                            @unlink('../../' . $paths[$i]);
+                        }
+                        $paths[$i] = 'uploads/concessions/' . $new_name;
+                    }
+                }
+            }
+        }
+    }
+    return $paths;
+}
+
 $action = $_REQUEST['action'] ?? '';
 
 try {
@@ -31,12 +66,14 @@ try {
         }
         $request_no = $prefix . str_pad($next_num, 3, '0', STR_PAD_LEFT);
 
+        $paths = handleConcessionUploads($request_no);
+
         $sql = "INSERT INTO QMS_CONCESSION (
                     request_no, request_date, issued_by_dept, request_to, subject, person_name, 
                     part_name, part_no, order_no, qty, lot_no, model_name, serial_no, mfg_date, 
                     difference_detail, reason_for_adopt, root_cause, measure_tentative, measure_permanent, 
-                    is_report_needed, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING_APPROVAL')";
+                    is_report_needed, status, attached_image_1, attached_image_2, attached_image_3
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING_APPROVAL', ?, ?, ?)";
         
         $params = [
             $request_no,
@@ -58,7 +95,10 @@ try {
             $_POST['root_cause'] ?? '',
             $_POST['measure_tentative'] ?? '',
             $_POST['measure_permanent'] ?? '',
-            isset($_POST['is_report_needed']) && $_POST['is_report_needed'] == '1' ? 1 : 0
+            isset($_POST['is_report_needed']) && $_POST['is_report_needed'] == '1' ? 1 : 0,
+            $paths[0],
+            $paths[1],
+            $paths[2]
         ];
 
         $stmt = $pdo->prepare($sql);
@@ -76,12 +116,20 @@ try {
         $oldData = $stmtOld->fetch(PDO::FETCH_ASSOC);
         if (!$oldData) throw new Exception("Concession not found");
 
+        $old_paths = [
+            $oldData['attached_image_1'],
+            $oldData['attached_image_2'],
+            $oldData['attached_image_3']
+        ];
+        $paths = handleConcessionUploads($oldData['request_no'], $old_paths);
+
         $sql = "UPDATE QMS_CONCESSION SET 
                     issued_by_dept = ?, request_to = ?, subject = ?, person_name = ?, 
                     part_name = ?, part_no = ?, order_no = ?, qty = ?, lot_no = ?, 
                     model_name = ?, serial_no = ?, mfg_date = ?, difference_detail = ?, 
                     reason_for_adopt = ?, root_cause = ?, measure_tentative = ?, 
-                    measure_permanent = ?, is_report_needed = ?, updated_at = GETDATE()
+                    measure_permanent = ?, is_report_needed = ?, updated_at = GETDATE(),
+                    attached_image_1 = ?, attached_image_2 = ?, attached_image_3 = ?
                 WHERE id = ?";
         
         $params = [
@@ -103,6 +151,9 @@ try {
             $_POST['measure_tentative'] ?? '',
             $_POST['measure_permanent'] ?? '',
             isset($_POST['is_report_needed']) && $_POST['is_report_needed'] == '1' ? 1 : 0,
+            $paths[0],
+            $paths[1],
+            $paths[2],
             $id
         ];
 
