@@ -42,6 +42,10 @@
                         <label class="pe-form-label">ผู้ยืนยันการปลดล็อก (Supervisor) <span class="text-danger">*</span></label>
                         <input type="text" class="pe-form-input" id="lotoFrmUnlockedBy" placeholder="ระบุชื่อหัวหน้างานผู้ตรวจสอบ" value="<?= htmlspecialchars($_SESSION['user']['username'] ?? '') ?>">
                     </div>
+                    <div class="pe-form-group mb-4">
+                        <label class="pe-form-label">รหัสผ่านยืนยัน (PIN / Password) <span class="text-danger">*</span></label>
+                        <input type="password" class="pe-form-input" id="lotoFrmUnlockedPin" placeholder="รหัสผ่านของระบบเพื่อยืนยันสิทธิ์">
+                    </div>
                     <button type="button" class="btn btn-success w-100 fw-bold" onclick="LotoModule.removeLoto()">
                         <i class="fas fa-unlock me-2"></i> ยืนยันปลดล็อกและคืนสภาพ (REMOVE LOTO)
                     </button>

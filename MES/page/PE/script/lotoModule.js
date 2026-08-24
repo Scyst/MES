@@ -104,9 +104,10 @@ const LotoModule = (function () {
      */
     async function removeLoto() {
         const unlockedBy = $('#lotoFrmUnlockedBy').val().trim();
+        const unlockedPin = $('#lotoFrmUnlockedPin').val().trim();
 
-        if (!unlockedBy) {
-            Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ครบ', text: 'กรุณาระบุชื่อผู้ยืนยันการปลดล็อก' });
+        if (!unlockedBy || !unlockedPin) {
+            Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ครบ', text: 'กรุณาระบุชื่อผู้ยืนยันการปลดล็อก และรหัสผ่าน' });
             return;
         }
 
@@ -117,7 +118,8 @@ const LotoModule = (function () {
                 body: JSON.stringify({
                     action: 'unlock',
                     machine_id: currentMachineId,
-                    unlocked_by: unlockedBy
+                    unlocked_by: unlockedBy,
+                    unlocked_pin: unlockedPin
                 })
             });
             const result = await response.json();

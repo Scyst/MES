@@ -60,12 +60,20 @@ try {
         case 'unlock':
             $machine_id = $input['machine_id'] ?? null;
             $unlocked_by = trim($input['unlocked_by'] ?? '');
+            $unlocked_pin = trim($input['unlocked_pin'] ?? '');
             
-            // In a real scenario we'd verify PIN or permissions here.
-            // For now, we trust the name entered or session user.
+            if (!$machine_id || !$unlocked_by || !$unlocked_pin) {
+                echo json_encode(['success' => false, 'message' => 'Missing machine, supervisor name, or PIN']);
+                exit;
+            }
 
-            if (!$machine_id || !$unlocked_by) {
-                echo json_encode(['success' => false, 'message' => 'Missing machine or supervisor name']);
+            // Verify PIN against USERS table
+            $stmt = $pdo->prepare("SELECT password FROM USERS WHERE username = ? AND is_active = 1");
+            $stmt->execute([$unlocked_by]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$user || !password_verify($unlocked_pin, $user['password'])) {
+                echo json_encode(['success' => false, 'message' => 'Invalid username or PIN']);
                 exit;
             }
 
