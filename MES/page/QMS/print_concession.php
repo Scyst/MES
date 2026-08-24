@@ -136,6 +136,8 @@ $title = $is_blank ? 'Concession_Blank' : 'Concession_Print';
         .text-right { text-align: right; }
         .align-middle { vertical-align: middle !important; }
         
+        tr, td, th { page-break-inside: avoid; } /* Prevent rows from splitting across pages */
+        
         .font-bold { font-weight: 700; }
         .text-red { color: #dc2626; }
         
@@ -379,12 +381,12 @@ $title = $is_blank ? 'Concession_Blank' : 'Concession_Print';
             </tr>
         </table>
         
-        <div style="padding: 15px; border: 1px solid #000; box-sizing: border-box; min-height: 800px;">
+        <div style="padding: 15px; border: 1px solid #000; box-sizing: border-box;">
             <div class="font-bold" style="margin-bottom: 15px; font-size: 16px;">รูปภาพประกอบ (Attached Images)</div>
             <div style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
                 <?php foreach($images as $img): ?>
                 <div style="width: 100%; text-align: center; margin-bottom: 15px;">
-                    <img src="../../<?php echo htmlspecialchars($img); ?>" style="max-width: 90%; max-height: 320px; object-fit: contain; border: 1px solid #ddd; padding: 5px;" alt="Attachment">
+                    <img src="../../<?php echo htmlspecialchars($img); ?>" style="max-width: 90%; max-height: 220px; object-fit: contain; border: 1px solid #ddd; padding: 5px;" alt="Attachment">
                 </div>
                 <?php endforeach; ?>
             </div>
