@@ -147,10 +147,10 @@
     border: 2px dashed #38bdf8;
 }
 </style>
-<div class="card shadow-sm border-0 flex-fill mt-0" id="calendarViewContainer" style="min-height: 700px; overflow: hidden; height: 100%;">
-    <div class="row g-0 h-100 flex-fill">
+<div class="card shadow-sm border-0 flex-fill mt-0" id="calendarViewContainer" style="min-height: 500px; height: 100%; display: flex; flex-direction: column;">
+    <div class="row g-0 h-100 flex-fill" style="min-height: 0;">
         <!-- Main Calendar (Now on Left) -->
-        <div class="col-lg-9 d-flex flex-column h-100 bg-white border-end">
+        <div class="col-lg-9 d-flex flex-column h-100 bg-white border-end" style="min-height: 0;">
             <div class="card-header bg-white py-2 border-bottom d-flex align-items-center justify-content-between"> 
                 <div class="d-flex gap-1">
                     <button id="qa-calendar-prev-button" class="btn btn-sm btn-light border text-muted" title="Previous">
@@ -175,7 +175,7 @@
                     </button>
                 </div>
             </div>
-            <div class="card-body p-0 position-relative h-100 d-flex flex-column" style="overflow: hidden; background-color: #f1f5f9;">
+            <div class="card-body p-0 position-relative h-100 d-flex flex-column" style="background-color: #f1f5f9; min-height: 0;">
                 
                 <!-- Day Headers -->
                 <div class="qa-grid-headers d-flex border-bottom bg-light">
@@ -189,7 +189,7 @@
                 </div>
 
                 <!-- Custom Grid Container -->
-                <div id="qaCustomCalendarGrid" class="qa-custom-grid flex-fill" style="overflow-y: auto;">
+                <div id="qaCustomCalendarGrid" class="qa-custom-grid flex-fill" style="overflow-y: auto; min-height: 0;">
                     <!-- Grid cells rendered via JS -->
                 </div>
 
