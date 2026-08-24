@@ -120,6 +120,20 @@
 .qa-dot.status-done { background-color: #22c55e; }
 .qa-dot.result-fail { background-color: #ef4444; }
 
+.qa-desktop-events {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 140px;
+}
+/* Custom slim scrollbar for event lists */
+.qa-desktop-events::-webkit-scrollbar {
+    width: 4px;
+}
+.qa-desktop-events::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
 @media (max-width: 768px) {
     .qa-desktop-events { display: none; }
     .qa-mobile-dots { display: flex; }

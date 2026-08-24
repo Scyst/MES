@@ -561,8 +561,8 @@ function buildCustomQaCalendar(eventsData) {
         mobileContainer.className = 'qa-mobile-dots';
 
         if (dayEvents.length > 0) {
-            // Render up to 2 on desktop
-            dayEvents.slice(0, 2).forEach(evt => {
+            // Render all on desktop
+            dayEvents.forEach(evt => {
                 let statusClass = 'status-waiting';
                 if (evt.extendedProps.status === 'IN_PROGRESS') statusClass = 'status-progress';
                 if (evt.extendedProps.status === 'DONE') statusClass = 'status-done';
@@ -591,24 +591,6 @@ function buildCustomQaCalendar(eventsData) {
                 dot.className = `qa-dot ${statusClass}`;
                 mobileContainer.appendChild(dot);
             });
-
-            // Extra events
-            if (dayEvents.length > 2) {
-                const moreLabel = document.createElement('div');
-                moreLabel.className = 'qa-more-text';
-                moreLabel.textContent = `+${dayEvents.length - 2} more`;
-                desktopContainer.appendChild(moreLabel);
-                
-                for(let i = 2; i < Math.min(dayEvents.length, 5); i++) {
-                    let sc = 'status-waiting';
-                    if (dayEvents[i].extendedProps.status === 'IN_PROGRESS') sc = 'status-progress';
-                    if (dayEvents[i].extendedProps.status === 'DONE') sc = 'status-done';
-                    if (dayEvents[i].extendedProps.result === 'FAIL') sc = 'result-fail';
-                    const d = document.createElement('div');
-                    d.className = `qa-dot ${sc}`;
-                    mobileContainer.appendChild(d);
-                }
-            }
         }
         
         cell.appendChild(desktopContainer);
