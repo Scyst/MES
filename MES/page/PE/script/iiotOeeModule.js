@@ -198,14 +198,18 @@ const IIoTOeeModule = (function() {
                 if (tbody) {
                     const keys = Object.keys(data.data);
                     if (keys.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No machine data available for this period.</td></tr>';
+                        if (tbody.innerHTML !== '<tr><td colspan="6" class="text-center text-muted p-4">No machine data available for this period.</td></tr>') {
+                            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No machine data available for this period.</td></tr>';
+                        }
                     } else {
                         const displayKeys = mc ? (data.data[mc] ? [mc] : []) : keys.sort();
                         
                         if (displayKeys.length === 0) {
-                            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No data for selected machine.</td></tr>';
+                            if (tbody.innerHTML !== '<tr><td colspan="6" class="text-center text-muted p-4">No data for selected machine.</td></tr>') {
+                                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No data for selected machine.</td></tr>';
+                            }
                         } else {
-                            tbody.innerHTML = displayKeys.map(k => {
+                            const newHtml = displayKeys.map(k => {
                                 const mData = data.data[k];
                                 const oeeVal = mData.oee || 0;
                                 const availVal = mData.availability || 0;
@@ -226,6 +230,10 @@ const IIoTOeeModule = (function() {
                                     </td>
                                 </tr>`;
                             }).join('');
+                            
+                            if (tbody.innerHTML !== newHtml) {
+                                tbody.innerHTML = newHtml;
+                            }
                         }
                     }
                 }

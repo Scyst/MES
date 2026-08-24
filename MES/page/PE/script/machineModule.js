@@ -474,7 +474,9 @@ const MachineModule = (() => {
                         statusHtml = `<span class="pe-badge pe-status-inactive" style="padding: 2px 6px; font-size: 10px;">${telemetry.live_status}</span>`;
                     }
                 }
-                sBadge.innerHTML = statusHtml;
+                if (sBadge.innerHTML !== statusHtml) {
+                    sBadge.innerHTML = statusHtml;
+                }
 
                 // Telemetry Content
                 let contentHtml = `<div class="pe-d-flex pe-flex-column pe-gap-2">`;
@@ -498,7 +500,9 @@ const MachineModule = (() => {
                 }
                 contentHtml += `</div>`;
                 
-                tContainer.innerHTML = contentHtml;
+                if (tContainer.innerHTML !== contentHtml) {
+                    tContainer.innerHTML = contentHtml;
+                }
             } else {
                 tContainer.style.display = 'none';
                 sBadge.innerHTML = '';

@@ -42,7 +42,6 @@
 ## 🚀 ระยะที่ 4: เติมเต็มส่วนที่ขาดหายและพัฒนาระบบขั้นสูง (Future Plan)
 
 ### 🧹 1. Code Cleanup & Optimization (Technical Debt)
-- [ ] **ลบไฟล์ขยะ:** ลบไฟล์ `visual_board_print.php` ตัวเก่าทิ้ง เนื่องจากได้ย้ายเข้าสู่ SPA ของ PE Dashboard อย่างสมบูรณ์แล้ว
 - [ ] **Data Entry:** กำหนด Checklist Template ให้กับเครื่องจักรแต่ละประเภทจริงในฐานข้อมูล (ปัจจุบันระบบทำงานได้แล้ว แต่มีแค่ Template กลาง `machine_type = NULL`)
 - [ ] **LOTO Workflow Enhancements:**
   - เพิ่มการบังคับใส่ PIN หรือรหัสผ่าน ก่อนกดยืนยันปลดล็อก LOTO

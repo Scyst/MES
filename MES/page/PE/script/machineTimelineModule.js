@@ -118,7 +118,10 @@ const MachineTimelineModule = (function() {
         const machines = Object.keys(data).sort();
         
         if (machines.length === 0) {
-            container.innerHTML = `<div class="p-5 text-center text-muted">No machine data available.</div>`;
+            const emptyHtml = `<div class="p-5 text-center text-muted">No machine data available.</div>`;
+            if (container.innerHTML !== emptyHtml) {
+                container.innerHTML = emptyHtml;
+            }
             return;
         }
 
