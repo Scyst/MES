@@ -43,7 +43,7 @@
 
 <!-- Modal Concession Form -->
 <div class="modal fade" id="concessionModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold" id="concessionModalTitle"><i class="fas fa-file-alt me-2"></i>New Customer Concession Request</h5>
@@ -174,7 +174,7 @@
 
 <!-- Modal Approval/View Details -->
 <div class="modal fade" id="concessionDetailModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-dark text-white">
                 <h5 class="modal-title fw-bold" id="detailModalTitle">Concession Request Details</h5>
