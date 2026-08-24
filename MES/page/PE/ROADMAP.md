@@ -36,3 +36,27 @@
 - [x] **แดชบอร์ดความปลอดภัย (Safety Dashboard):** 
   - ทำหน้า Dashboard แสดงผล Pre-Op Audit และ Hazard Incidents
   - รวมฟังก์ชัน Checklist Manager สำหรับสร้าง/แก้คำถามแบบฟอร์มได้เอง
+
+---
+
+## 🚀 ระยะที่ 4: เติมเต็มส่วนที่ขาดหายและพัฒนาระบบขั้นสูง (Future Plan)
+
+### 🧹 1. Code Cleanup & Optimization (Technical Debt)
+- [ ] **ลบไฟล์ขยะ:** ลบไฟล์ `visual_board_print.php` ตัวเก่าทิ้ง เนื่องจากได้ย้ายเข้าสู่ SPA ของ PE Dashboard อย่างสมบูรณ์แล้ว
+- [ ] **Data Entry:** กำหนด Checklist Template ให้กับเครื่องจักรแต่ละประเภทจริงในฐานข้อมูล (ปัจจุบันระบบทำงานได้แล้ว แต่มีแค่ Template กลาง `machine_type = NULL`)
+- [ ] **LOTO Workflow Enhancements:**
+  - เพิ่มการบังคับใส่ PIN หรือรหัสผ่าน ก่อนกดยืนยันปลดล็อก LOTO
+  - ส่งแจ้งเตือน (Line Notify) เมื่อมีการล็อก LOTO เครื่องจักรสำคัญ (Critical Machines)
+
+### 🔌 2. Safety IoT Integration (เชื่อมต่อเซนเซอร์)
+- [ ] **เชื่อมต่อเซนเซอร์ความปลอดภัยเข้า Node-RED:**
+  - ดึงข้อมูลสถานะ Safety Relay, Light Curtain, E-Stop จาก PLC มาเข้า Node-RED
+  - เขียน Logic ตรวจสอบ: "เครื่องจักรกำลังทำงาน (Run) + เซนเซอร์ความปลอดภัยถูกปิด (Bypass)"
+- [ ] **ระบบแจ้งเตือนฉุกเฉิน (Real-time Alerts):**
+  - แสดงผล Alert บนหน้า PE Dashboard ทันทีที่พบการ Bypass
+  - ส่ง Line Notify แจ้งเตือนไปยัง จป. และผู้จัดการโรงงานทันที
+
+### 📊 3. Advanced Safety Analytics (ระบบรายงานเชิงลึก)
+- [ ] **Safety MTTR (Mean Time To Resolution):** วิเคราะห์ระยะเวลาเฉลี่ยตั้งแต่เริ่มแจ้งเหตุ (Hazard) จนถึงช่างเข้าซ่อมและแก้ไขเสร็จ
+- [ ] **Pre-Op Compliance Report:** รีพอร์ตสรุปรายสัปดาห์/รายเดือน เพื่อเช็คว่าแต่ละแผนก/แต่ละ Line มีการแสกนตรวจเครื่องจักรก่อนเริ่มงานครบ 100% หรือไม่
+- [ ] **Export to Excel / PDF:** เพิ่มปุ่มสำหรับ Export รายงานความปลอดภัยทั้งหมด เพื่อใช้ประกอบการทำ ISO 45001 หรือรายงานต่อกระทรวงแรงงาน
