@@ -514,6 +514,13 @@ try {
                     }
                 }
                 
+                // ANTI-OVERLAP RULE for Shift Transitions (Night -> Day)
+                if ($isNight && $scanIn === null && $scanOut !== null) {
+                    if ((int)date('H', $scanOut) >= 5) {
+                        $scanOut = null; 
+                    }
+                }
+                
                 $inTimeStr = $scanIn ? date('Y-m-d H:i:s', $scanIn) : null;
                 $outTimeStr = $scanOut ? date('Y-m-d H:i:s', $scanOut) : null;
                 

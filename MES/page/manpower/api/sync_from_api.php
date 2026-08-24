@@ -274,6 +274,13 @@ try {
                     $scanOut = $ts; // อัปเดตเรื่อยๆ ตัวสุดท้ายชนะ
                 }
             }
+            
+            // ANTI-OVERLAP RULE for Shift Transitions (Night -> Day)
+            if ($isNight && $scanIn === null && $scanOut !== null) {
+                if ((int)date('H', $scanOut) >= 5) {
+                    $scanOut = null; 
+                }
+            }
 
             // บันทึกถ้ามีข้อมูลอย่างน้อย 1 scan
             if ($scanIn !== null || $scanOut !== null) {
