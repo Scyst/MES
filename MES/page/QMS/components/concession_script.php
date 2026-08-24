@@ -109,8 +109,18 @@ function viewConcession(id) {
                     <tr><th class="bg-light">Root Cause</th><td>${data.root_cause}</td></tr>
                     <tr><th class="bg-light">Tentative Measure</th><td class="text-warning">${data.measure_tentative}</td></tr>
                     <tr><th class="bg-light">Permanent Measure</th><td class="text-success">${data.measure_permanent}</td></tr>
-                </table>
-            `;
+                `;
+                
+            const images = [data.attached_image_1, data.attached_image_2, data.attached_image_3].filter(Boolean);
+            if (images.length > 0) {
+                html += `<tr><th class="bg-light">Attachments</th><td><div class="d-flex flex-wrap gap-2">`;
+                images.forEach(img => {
+                    html += `<a href="../../${img}" target="_blank"><img src="../../${img}" class="img-thumbnail shadow-sm" style="height: 100px; object-fit: cover; border-radius: 4px;" alt="Attachment"></a>`;
+                });
+                html += `</div></td></tr>`;
+            }
+            
+            html += `</table>`;
             
             document.getElementById('concessionDetailContent').innerHTML = html;
             
