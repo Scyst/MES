@@ -2536,7 +2536,7 @@ const Actions = {
             console.error('Error confirming records:', error);
             alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
         }
-    }
+    },
 
     async batchSwapShift() {
         const checkboxes = document.querySelectorAll('.swap-audit-cb:checked');
