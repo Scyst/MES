@@ -122,6 +122,17 @@ $title = $is_blank ? 'Concession_Blank' : 'Concession_Print';
             .page { 
                 width: 100% !important; min-height: auto !important; margin: 0 !important; padding: 0 !important;
                 box-shadow: none !important; border: none !important; 
+                padding-bottom: 20px !important; /* Room for fixed footer */
+            }
+            .screen-footer { display: none !important; }
+            .print-footer {
+                display: block !important;
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                font-size: 10px;
+                text-align: right;
+                z-index: 999;
             }
         }
 
@@ -164,12 +175,15 @@ $title = $is_blank ? 'Concession_Blank' : 'Concession_Print';
 
         /* Hide injected inactivity modal */
         .modal { display: none !important; }
+        
+        .print-footer { display: none; }
     </style>
     <script>
         var bootstrap = { Modal: function() { return { show: function(){}, hide: function(){} }; } };
     </script>
 </head>
 <body>
+    <div class="print-footer">FM-QCS-006 / R02 : 07/07/22</div>
 
     <div class="no-print">
         <button class="btn-print" onclick="window.print()">
@@ -344,7 +358,7 @@ $title = $is_blank ? 'Concession_Blank' : 'Concession_Print';
             </tr>
         </table>
 
-        <div class="text-right text-xs" style="margin-top: 15px;">
+        <div class="text-right text-xs screen-footer" style="position: absolute; bottom: 10px; right: 10px;">
             FM-QCS-006 / R02 : 07/07/22
         </div>
     </div>
@@ -390,6 +404,10 @@ $title = $is_blank ? 'Concession_Blank' : 'Concession_Print';
                 </div>
                 <?php endforeach; ?>
             </div>
+        </div>
+        
+        <div class="text-right text-xs screen-footer" style="position: absolute; bottom: 10px; right: 10px;">
+            FM-QCS-006 / R02 : 07/07/22
         </div>
     </div>
     <?php endif; ?>
