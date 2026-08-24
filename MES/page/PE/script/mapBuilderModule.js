@@ -636,19 +636,20 @@ const MapBuilderModule = (function () {
     }
 
     let conveyorAnimReq = null;
-    let lastConveyorRender = 0;
+    
     function animateConveyors(timestamp) {
         if (!canvas) {
             conveyorAnimReq = requestAnimationFrame(animateConveyors);
             return;
         }
         
-        if (timestamp - lastConveyorRender < 100) {
+        // Pause animation if tab is not active (fixes background GPU load)
+        if (typeof PEApp !== 'undefined' && PEApp.getCurrentTab && PEApp.getCurrentTab() !== 'iiot_map_builder' && PEApp.getCurrentTab() !== 'iiot') {
             conveyorAnimReq = requestAnimationFrame(animateConveyors);
             return;
         }
-        lastConveyorRender = timestamp;
 
+        // Run at native 60fps for smooth rendering (fixes G-Sync monitor flicker)
         let renderNeeded = false;
         canvas.getObjects().forEach(obj => {
             // Treat as conveyor if explicitly flagged, or if it's a line with dash array [15,10]
@@ -657,12 +658,13 @@ const MapBuilderModule = (function () {
                 // Ensure isConveyor is set so it gets saved correctly next time
                 obj.isConveyor = true;
                 let offset = obj.strokeDashOffset || 0;
-                offset -= 1; // speed of conveyor
+                offset -= 0.5; // smoother speed of conveyor
                 if (offset <= -25) offset = 0;
                 obj.set('strokeDashOffset', offset);
                 renderNeeded = true;
             }
         });
+        
         if (renderNeeded) canvas.renderAll();
         conveyorAnimReq = requestAnimationFrame(animateConveyors);
     }

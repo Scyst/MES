@@ -498,14 +498,15 @@ const IIoTModule = (function() {
     }
 
     let animationReq = null;
-    let lastAlertRender = 0;
+    
     function animateAlerts(timestamp) {
-        if (timestamp - lastAlertRender < 100) {
+        // Pause animation if tab is not active
+        if (typeof PEApp !== 'undefined' && PEApp.getCurrentTab && PEApp.getCurrentTab() !== 'iiot') {
             animationReq = requestAnimationFrame(animateAlerts);
             return;
         }
-        lastAlertRender = timestamp;
 
+        // Run at native 60fps for smooth rendering (fixes G-Sync flicker)
         if (typeof MapBuilderModule !== 'undefined') {
             const canvas = MapBuilderModule.getCanvas();
             if (canvas) {
@@ -514,15 +515,15 @@ const IIoTModule = (function() {
                 objects.forEach(obj => {
                     if (obj.alert_state === 'stopped' || obj.alert_state === 'warning') {
                         if (obj.opacity === undefined) obj.opacity = 1;
-                        if (obj._dir === undefined) obj._dir = -0.05;
+                        if (obj._dir === undefined) obj._dir = -0.01; // Slower speed for 60fps
 
                         obj.opacity += obj._dir;
                         if (obj.opacity <= 0.2) {
                             obj.opacity = 0.2;
-                            obj._dir = 0.05;
+                            obj._dir = 0.01;
                         } else if (obj.opacity >= 1) {
                             obj.opacity = 1;
-                            obj._dir = -0.05;
+                            obj._dir = -0.01;
                         }
                         renderNeeded = true;
                     }
