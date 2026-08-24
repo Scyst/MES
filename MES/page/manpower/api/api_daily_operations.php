@@ -555,6 +555,28 @@ try {
             echo json_encode(['success' => true, 'message' => "Batch swapped & recalculated $successCount shifts successfully"]);
             break;
 
+        case 'batch_clear_times':
+            if (!hasPermission('manage_manpower')) throw new Exception("Permission Denied");
+            $logs = $input['logs'] ?? [];
+            if (empty($logs) || !is_array($logs)) throw new Exception("No logs provided");
+
+            $inClause = str_repeat('?,', count($logs) - 1) . '?';
+            $pdo->beginTransaction();
+
+            $stmt = $pdo->prepare("UPDATE dbo.MANPOWER_DAILY_LOGS SET scan_in_time = NULL, scan_out_time = NULL, status = 'HOLIDAY', is_verified = 1, updated_at = GETDATE() WHERE log_id IN ($inClause)");
+            $stmt->execute($logs);
+
+            // Re-calculate cost for affected dates
+            $stmtDates = $pdo->prepare("SELECT DISTINCT log_date FROM dbo.MANPOWER_DAILY_LOGS WHERE log_id IN ($inClause)");
+            $stmtDates->execute($logs);
+            while ($row = $stmtDates->fetch(PDO::FETCH_ASSOC)) {
+                $pdo->prepare("EXEC sp_CalculateDailyCost @StartDate = ?, @EndDate = ?")->execute([$row['log_date'], $row['log_date']]);
+            }
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => "Cleared times for " . count($logs) . " records."]);
+            break;
+
         case 'fetch_raw_central_scans':
             $startDate = $_GET['start_date'] ?? date('Y-m-d');
             $endDate = $_GET['end_date'] ?? date('Y-m-d', strtotime('+1 day', strtotime($startDate)));

@@ -124,6 +124,7 @@
                                 <li><hr class="dropdown-divider"></li>
                                 <li><h6 class="dropdown-header text-uppercase small">ตั้งค่าอื่นๆ (Other Actions)</h6></li>
                                 <li><a class="dropdown-item" href="#" onclick="Actions.batchReset()"><i class="fas fa-undo text-secondary me-2"></i>รีเซ็ตข้อมูล (Reset)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.batchClearTimes()"><i class="fas fa-eraser text-danger me-2"></i>ลบเวลาสแกนออก (Clear Scan Times)</a></li>
                                 <li><a class="dropdown-item" href="#" onclick="Actions.batchSwapShiftDetail()"><i class="fas fa-exchange-alt text-warning me-2"></i>สลับกะ (Swap Shift)</a></li>
                                 <li><a class="dropdown-item" href="#" onclick="Actions.batchUpdateMasterShift()"><i class="fas fa-user-cog text-info me-2"></i>อัปเดตกะหลัก (Update Master Shift)</a></li>
                             </ul>

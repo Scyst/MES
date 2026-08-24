@@ -2115,6 +2115,49 @@ const Actions = {
         App.loadData();
     },
 
+    async batchClearTimes() {
+        const checkboxes = document.querySelectorAll('.log-checkbox:checked');
+        if (checkboxes.length === 0) return UI.showToast("กรุณาเลือกพนักงาน", "warning");
+
+        if (!confirm(`ยืนยันการลบเวลาสแกนออกสำหรับ ${checkboxes.length} คน? (จะล็อกข้อมูลไว้ไม่ให้ Auto Sync ดึงเวลาผิดมาทับอีก)`)) return;
+
+        UI.showLoader();
+        let successCount = 0;
+        let failCount = 0;
+        const date = document.getElementById('filterDate').value;
+        const logs = [];
+
+        for (const cb of checkboxes) {
+            const tr = cb.closest('tr');
+            if (tr.dataset.logid && tr.dataset.logid !== '0') {
+                logs.push(tr.dataset.logid);
+            }
+        }
+
+        if (logs.length > 0) {
+            try {
+                const res = await fetch('api/api_daily_operations.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'batch_clear_times', logs: logs })
+                });
+                const json = await res.json();
+                if (json.success) successCount = logs.length;
+                else failCount = logs.length;
+            } catch (e) { failCount = logs.length; }
+        }
+
+        UI.hideLoader();
+        if (successCount > 0) UI.showToast(`✅ ลบเวลาสแกนสำเร็จ ${successCount} รายการ`, "success");
+        if (failCount > 0) UI.showToast(`❌ ล้มเหลว ${failCount} รายการ`, "danger");
+
+        const checkAll = document.getElementById('checkAllLogs');
+        if (checkAll) checkAll.checked = false;
+        this.updateBatchSelectedCount();
+        await this.fetchDetailData();
+        App.loadData();
+    },
+
     async batchSwapShiftDetail() {
         const checkboxes = document.querySelectorAll('.log-checkbox:checked');
         if (checkboxes.length === 0) return UI.showToast("กรุณาเลือกพนักงาน", "warning");
