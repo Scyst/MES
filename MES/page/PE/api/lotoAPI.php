@@ -51,6 +51,22 @@ try {
             $stmt = $pdo->prepare("INSERT INTO dbo.PE_LOTO_LOGS (machine_id, wo_id, locked_by, status) VALUES (?, ?, ?, 'Locked')");
             $stmt->execute([$machine_id, $wo_id ?: null, $locked_by]);
 
+            // Check criticality for Line Notify
+            $stmt = $pdo->prepare("SELECT machine_name, criticality, area FROM " . PE_MACHINES_TABLE . " WHERE machine_id = ?");
+            $stmt->execute([$machine_id]);
+            $machine_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($machine_info && in_array($machine_info['criticality'], ['High', 'Critical'])) {
+                $msg = "\n⚠️ [LOTO ALERT] ⚠️\n";
+                $msg .= "มีการ Lock Out เครื่องจักรสำคัญ!\n";
+                $msg .= "Machine: " . $machine_info['machine_name'] . " (" . $machine_info['area'] . ")\n";
+                $msg .= "By: $locked_by\n";
+                $msg .= "Reason: $reason";
+                if (function_exists('sendLineNotify')) {
+                    sendLineNotify($msg);
+                }
+            }
+
             writeLog('LOTO_LOCK', "Machine $machine_id locked by $locked_by. Reason: $reason", null, $input);
             $pdo->commit();
 
@@ -89,6 +105,21 @@ try {
                 WHERE machine_id = ? AND status = 'Locked'
             ");
             $stmt->execute([$unlocked_by, $machine_id]);
+
+            // Check criticality for Line Notify
+            $stmt = $pdo->prepare("SELECT machine_name, criticality, area FROM " . PE_MACHINES_TABLE . " WHERE machine_id = ?");
+            $stmt->execute([$machine_id]);
+            $machine_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($machine_info && in_array($machine_info['criticality'], ['High', 'Critical'])) {
+                $msg = "\n✅ [LOTO REMOVED] ✅\n";
+                $msg .= "ปลดล็อก LOTO เครื่องจักรสำเร็จ\n";
+                $msg .= "Machine: " . $machine_info['machine_name'] . " (" . $machine_info['area'] . ")\n";
+                $msg .= "Unlocked By: $unlocked_by";
+                if (function_exists('sendLineNotify')) {
+                    sendLineNotify($msg);
+                }
+            }
 
             writeLog('LOTO_UNLOCK', "Machine $machine_id unlocked by $unlocked_by", null, $input);
             $pdo->commit();

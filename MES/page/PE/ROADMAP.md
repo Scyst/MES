@@ -44,8 +44,8 @@
 ### 🧹 1. Code Cleanup & Optimization (Technical Debt)
 - [ ] **Data Entry:** กำหนด Checklist Template ให้กับเครื่องจักรแต่ละประเภทจริงในฐานข้อมูล (ปัจจุบันระบบทำงานได้แล้ว แต่มีแค่ Template กลาง `machine_type = NULL`)
 - [ ] **LOTO Workflow Enhancements:**
-  - เพิ่มการบังคับใส่ PIN หรือรหัสผ่าน ก่อนกดยืนยันปลดล็อก LOTO
-  - ส่งแจ้งเตือน (Line Notify) เมื่อมีการล็อก LOTO เครื่องจักรสำคัญ (Critical Machines)
+  - [x] เพิ่มการบังคับใส่ PIN หรือรหัสผ่าน ก่อนกดยืนยันปลดล็อก LOTO
+  - [x] ส่งแจ้งเตือน (Line Notify) เมื่อมีการล็อก LOTO เครื่องจักรสำคัญ (Critical Machines)
 
 ### 🔌 2. Safety IoT Integration (เชื่อมต่อเซนเซอร์)
 - [ ] **เชื่อมต่อเซนเซอร์ความปลอดภัยเข้า Node-RED:**

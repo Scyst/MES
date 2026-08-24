@@ -114,4 +114,43 @@ function handleApiError(Throwable $e, $pdo = null, $payload = null) {
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
+/**
+ * Send Line Notify Notification
+ * @param string $message ข้อความที่ต้องการส่ง
+ * @return bool
+ */
+function sendLineNotify($message) {
+    $token = getenv('LINE_NOTIFY_TOKEN');
+    if (!$token) {
+        error_log("Line Notify Error: LINE_NOTIFY_TOKEN not configured in .env");
+        return false;
+    }
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, "https://notify-api.line.me/api/notify");
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, "message=" . urlencode($message));
+    $headers = array('Content-type: application/x-www-form-urlencoded', 'Authorization: Bearer ' . $token);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    $result = curl_exec($ch);
+    
+    if (curl_error($ch)) {
+        error_log("Line Notify cURL Error: " . curl_error($ch));
+        curl_close($ch);
+        return false;
+    }
+    
+    $res = json_decode($result, true);
+    curl_close($ch);
+    
+    if (isset($res['status']) && $res['status'] == 200) {
+        return true;
+    } else {
+        error_log("Line Notify API Error: " . json_encode($res));
+        return false;
+    }
+}
 ?>

@@ -196,8 +196,8 @@ async function runLogger() {
     );
 }
 
-// Run immediately, then every 10 seconds
+// Run immediately, then every 60 seconds
 runLogger();
-setInterval(runLogger, 10000);
+setInterval(runLogger, 60000);
 
-console.log("Performance Logger is running. Writing to SQLite database every 10 seconds.");
+console.log("Performance Logger is running. Writing to SQLite database every 1 minute.");
