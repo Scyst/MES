@@ -11,7 +11,12 @@ const IIoTModule = (function() {
     let cropperInstance = null;
     let panzoomInstance = null;
 
+    let initialized = false;
+
     async function init() {
+        if (initialized) return;
+        initialized = true;
+
         try {
             const tt = document.getElementById('machineTooltip');
             if (tt && tt.parentNode !== document.body) {
@@ -92,7 +97,7 @@ const IIoTModule = (function() {
 
             renderGrid();
             startPolling();
-            animateAlerts();
+            if (!animationReq) animateAlerts();
             
             // Listen for Tab Changes to handle Polling Lifecycle
             document.addEventListener('peTabChanged', (e) => {
@@ -493,7 +498,14 @@ const IIoTModule = (function() {
     }
 
     let animationReq = null;
-    function animateAlerts() {
+    let lastAlertRender = 0;
+    function animateAlerts(timestamp) {
+        if (timestamp - lastAlertRender < 100) {
+            animationReq = requestAnimationFrame(animateAlerts);
+            return;
+        }
+        lastAlertRender = timestamp;
+
         if (typeof MapBuilderModule !== 'undefined') {
             const canvas = MapBuilderModule.getCanvas();
             if (canvas) {
@@ -502,19 +514,38 @@ const IIoTModule = (function() {
                 objects.forEach(obj => {
                     if (obj.alert_state === 'stopped' || obj.alert_state === 'warning') {
                         if (obj.opacity === undefined) obj.opacity = 1;
-                        if (obj._dir === undefined) obj._dir = -0.02;
+                        if (obj._dir === undefined) obj._dir = -0.05;
 
                         obj.opacity += obj._dir;
                         if (obj.opacity <= 0.2) {
                             obj.opacity = 0.2;
-                            obj._dir = 0.02;
+                            obj._dir = 0.05;
                         } else if (obj.opacity >= 1) {
                             obj.opacity = 1;
-                            obj._dir = -0.02;
+                            obj._dir = -0.05;
                         }
                         renderNeeded = true;
                     }
                 });
+                
+                const rects = canvas.getObjects('rect');
+                rects.forEach(obj => {
+                    if (obj.alert_state === 'stopped' || obj.alert_state === 'warning') {
+                        if (obj.opacity === undefined) obj.opacity = 1;
+                        if (obj._dir === undefined) obj._dir = -0.05;
+
+                        obj.opacity += obj._dir;
+                        if (obj.opacity <= 0.2) {
+                            obj.opacity = 0.2;
+                            obj._dir = 0.05;
+                        } else if (obj.opacity >= 1) {
+                            obj.opacity = 1;
+                            obj._dir = -0.05;
+                        }
+                        renderNeeded = true;
+                    }
+                });
+
                 if (renderNeeded) canvas.renderAll();
             }
         }

@@ -14,7 +14,11 @@ const MapBuilderModule = (function () {
     let gridLines = [];
     let systemLocations = [];
 
+    let initialized = false;
     function init() {
+        if (initialized) return;
+        initialized = true;
+
         if (typeof fabric === 'undefined') {
             console.error('Fabric.js is not loaded. Map Builder cannot initialize.');
             return;
@@ -625,11 +629,19 @@ const MapBuilderModule = (function () {
     }
 
     let conveyorAnimReq = null;
-    function animateConveyors() {
+    let lastConveyorRender = 0;
+    function animateConveyors(timestamp) {
         if (!canvas) {
             conveyorAnimReq = requestAnimationFrame(animateConveyors);
             return;
         }
+        
+        if (timestamp - lastConveyorRender < 100) {
+            conveyorAnimReq = requestAnimationFrame(animateConveyors);
+            return;
+        }
+        lastConveyorRender = timestamp;
+
         let renderNeeded = false;
         canvas.getObjects().forEach(obj => {
             // Treat as conveyor if explicitly flagged, or if it's a line with dash array [15,10]
