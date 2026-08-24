@@ -296,3 +296,118 @@ let sidebarCollapsed = false;
 window.PEApp = PEApp;
 
 export default PEApp;
+
+
+// --- Notification Center ---
+const notifyBtn = document.getElementById('topbarNotifyBtn');
+const notifyDropdown = document.getElementById('notifyDropdown');
+const notifyBadge = document.getElementById('notifyBadge');
+const notifyList = document.getElementById('notifyList');
+const notifyCountText = document.getElementById('notifyCountText');
+
+let knownNotificationIds = new Set();
+
+if (notifyBtn) {
+    notifyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        notifyDropdown.style.display = notifyDropdown.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!notifyBtn.contains(e.target) && !notifyDropdown.contains(e.target)) {
+            notifyDropdown.style.display = 'none';
+        }
+    });
+}
+
+function fetchNotifications() {
+    fetch('api/getNotifications.php')
+        .then(r => r.json())
+        .then(res => {
+            if (res.success && res.data) {
+                updateNotificationUI(res.data);
+            }
+        })
+        .catch(err => console.error('Error fetching notifications:', err));
+}
+
+function updateNotificationUI(notifs) {
+    if (!notifyBadge || !notifyList) return;
+
+    if (notifs.length > 0) {
+        notifyBadge.style.display = 'inline-block';
+        notifyBadge.innerText = notifs.length > 99 ? '99+' : notifs.length;
+        notifyCountText.innerText = '(' + notifs.length + ')';
+        
+        let html = '';
+        notifs.forEach(n => {
+            // Check for new notifications to toast
+            if (!knownNotificationIds.has(n.id)) {
+                knownNotificationIds.add(n.id);
+                // Toast newly discovered notification (if not first load)
+                if (knownNotificationIds.size > notifs.length) { 
+                    // This logic prevents toasting everything on first load.
+                    // Wait, a better way: store a flag if it's initial load.
+                }
+            }
+
+            let icon = 'fa-info-circle text-info';
+            if (n.alert_level === 'danger') icon = 'fa-exclamation-triangle text-danger';
+            if (n.alert_level === 'warning') icon = 'fa-exclamation-circle text-warning';
+
+            html += \
+                <div style="padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 0.9em;">
+                    <div style="display: flex; align-items: start; gap: 10px;">
+                        <i class="fas \" style="margin-top: 3px;"></i>
+                        <div>
+                            <div style="font-weight: bold; color: #333;">\</div>
+                            <div style="color: #666; margin-top: 2px; white-space: pre-wrap;">\</div>
+                            <div style="color: #aaa; font-size: 0.8em; margin-top: 4px;">\</div>
+                        </div>
+                    </div>
+                </div>
+            \;
+        });
+        notifyList.innerHTML = html;
+    } else {
+        notifyBadge.style.display = 'none';
+        notifyCountText.innerText = '(0)';
+        notifyList.innerHTML = '<div style="padding: 15px; text-align: center; color: #888; font-size: 0.9em;">ไม่มีการแจ้งเตือนใหม่</div>';
+    }
+}
+
+let isFirstNotifyLoad = true;
+function pollNotifications() {
+    fetch('api/getNotifications.php')
+        .then(r => r.json())
+        .then(res => {
+            if (res.success && res.data) {
+                // Toast new ones
+                if (!isFirstNotifyLoad) {
+                    res.data.forEach(n => {
+                        if (!knownNotificationIds.has(n.id)) {
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 6000,
+                                icon: n.alert_level === 'danger' ? 'error' : (n.alert_level === 'warning' ? 'warning' : 'info'),
+                                title: n.title,
+                                text: n.message.replace(/\\n/g, ' ')
+                            });
+                        }
+                    });
+                }
+                
+                knownNotificationIds.clear();
+                res.data.forEach(n => knownNotificationIds.add(n.id));
+                isFirstNotifyLoad = false;
+                
+                updateNotificationUI(res.data);
+            }
+        });
+}
+
+// Start notification polling every 10 seconds
+setInterval(pollNotifications, 10000);
+setTimeout(pollNotifications, 1000); // Initial fetch

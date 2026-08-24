@@ -145,6 +145,23 @@ $pageTitle = "PE Enterprise";
                 PE Enterprise <i class="fas fa-chevron-right" style="font-size:9px;"></i> <span id="topbarBreadcrumb">Machines</span>
             </div>
             <div class="pe-topbar-actions">
+                <!-- Notification Bell -->
+                <div class="pe-notification-container" style="position: relative; display: inline-block; margin-right: 15px;">
+                    <button class="pe-btn pe-btn-ghost pe-btn-sm" id="topbarNotifyBtn" title="Notifications">
+                        <i class="fas fa-bell"></i>
+                        <span id="notifyBadge" class="badge bg-danger rounded-pill" style="position: absolute; top: -5px; right: -5px; font-size: 0.65rem; display: none;">0</span>
+                    </button>
+                    <!-- Dropdown -->
+                    <div id="notifyDropdown" class="pe-notify-dropdown" style="display: none; position: absolute; right: 0; top: 100%; width: 320px; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1050; max-height: 400px; overflow-y: auto;">
+                        <div style="padding: 10px 15px; border-bottom: 1px solid #eee; font-weight: bold; background: #f8f9fa; border-radius: 8px 8px 0 0;">
+                            การแจ้งเตือนระบบ <span id="notifyCountText" class="text-muted" style="font-size:0.85em; font-weight:normal;">(0)</span>
+                        </div>
+                        <div id="notifyList" style="padding: 0;">
+                            <div style="padding: 15px; text-align: center; color: #888; font-size: 0.9em;">ไม่มีการแจ้งเตือนใหม่</div>
+                        </div>
+                    </div>
+                </div>
+
                 <button class="pe-btn pe-btn-ghost pe-btn-sm" id="topbarRefreshBtn" title="Refresh">
                     <i class="fas fa-sync-alt"></i>
                 </button>

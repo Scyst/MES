@@ -43,3 +43,8 @@
 - **Reason**: Audit log table for all LOTO lock/unlock events. Required by `lotoAPI.php` for the `lock`, `unlock`, and `status` actions. Missing table caused every LOTO action to fail silently.
 
 ---
+
+### 2026-08-24: In-App Notification Center
+- **Created Table**: PE_NOTIFICATIONS
+  - Columns: id (INT IDENTITY PK), module (VARCHAR 50), ef_id (VARCHAR 50), 	itle (NVARCHAR 255), message (NVARCHAR MAX), lert_level (VARCHAR 20), created_at (DATETIME DEFAULT GETDATE()), is_active (BIT DEFAULT 1)
+  - Purpose: Global notification center for LOTO and other PE alerts.

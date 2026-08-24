@@ -57,14 +57,12 @@ try {
             $machine_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($machine_info && in_array($machine_info['criticality'], ['High', 'Critical'])) {
-                $msg = "\n⚠️ [LOTO ALERT] ⚠️\n";
-                $msg .= "มีการ Lock Out เครื่องจักรสำคัญ!\n";
-                $msg .= "Machine: " . $machine_info['machine_name'] . " (" . $machine_info['area'] . ")\n";
-                $msg .= "By: $locked_by\n";
-                $msg .= "Reason: $reason";
-                if (function_exists('sendLineNotify')) {
-                    sendLineNotify($msg);
-                }
+                // Insert into In-App Notification Center
+                $title = "⚠️ LOTO ALERT: " . $machine_info['machine_name'];
+                $msg = "เครื่องจักรสำคัญถูก Lock Out โดย $locked_by\nเหตุผล: $reason";
+                
+                $stmt = $pdo->prepare("INSERT INTO dbo.PE_NOTIFICATIONS (module, ref_id, title, message, alert_level) VALUES ('LOTO', ?, ?, ?, 'danger')");
+                $stmt->execute([$machine_id, $title, $msg]);
             }
 
             writeLog('LOTO_LOCK', "Machine $machine_id locked by $locked_by. Reason: $reason", null, $input);
@@ -112,13 +110,12 @@ try {
             $machine_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($machine_info && in_array($machine_info['criticality'], ['High', 'Critical'])) {
-                $msg = "\n✅ [LOTO REMOVED] ✅\n";
-                $msg .= "ปลดล็อก LOTO เครื่องจักรสำเร็จ\n";
-                $msg .= "Machine: " . $machine_info['machine_name'] . " (" . $machine_info['area'] . ")\n";
-                $msg .= "Unlocked By: $unlocked_by";
-                if (function_exists('sendLineNotify')) {
-                    sendLineNotify($msg);
-                }
+                // Clear the active notification
+                $stmt = $pdo->prepare("UPDATE dbo.PE_NOTIFICATIONS SET is_active = 0 WHERE module = 'LOTO' AND ref_id = ?");
+                $stmt->execute([$machine_id]);
+                
+                // Insert a success notification (optional, maybe auto-clear is enough)
+                // For now, let's just clear it to keep the bell clean.
             }
 
             writeLog('LOTO_UNLOCK', "Machine $machine_id unlocked by $unlocked_by", null, $input);
