@@ -2508,6 +2508,36 @@ const Actions = {
     },
 
     _employeeCache: [],
+    async batchConfirmAnomaly() {
+        const checkboxes = document.querySelectorAll('.swap-audit-cb:checked');
+        if (checkboxes.length === 0) {
+            alert('กรุณาเลือกรายการที่ต้องการยืนยันอย่างน้อย 1 รายการ');
+            return;
+        }
+
+        if (!confirm(`คุณต้องการยืนยัน ${checkboxes.length} รายการนี้ว่าถูกต้องใช่หรือไม่? (รายการจะถูกซ่อนจากการแจ้งเตือน)`)) return;
+
+        const logIds = Array.from(checkboxes).map(cb => cb.value);
+        
+        try {
+            const res = await fetch('api/api_daily_operations.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'batch_confirm_anomaly', log_ids: logIds })
+            });
+            const json = await res.json();
+            if (json.success) {
+                alert(json.message || 'ยืนยันรายการสำเร็จ');
+                this.openShiftSwapAudit(); // Reload
+            } else {
+                alert('ข้อผิดพลาด: ' + json.message);
+            }
+        } catch (error) {
+            console.error('Error confirming records:', error);
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+        }
+    }
+
     async batchSwapShift() {
         const checkboxes = document.querySelectorAll('.swap-audit-cb:checked');
         if (checkboxes.length === 0) {

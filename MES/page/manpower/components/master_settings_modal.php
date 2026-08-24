@@ -93,7 +93,15 @@
                                     <span class="text-muted small align-self-center">To</span>
                                     <input type="date" id="swapAuditEndDate" class="form-control form-control-sm" value="<?php echo date('Y-m-d'); ?>" onchange="Actions.openShiftSwapAudit()">
                                     <button class="btn btn-sm btn-outline-secondary" onclick="Actions.openShiftSwapAudit()"><i class="fas fa-sync-alt"></i></button>
-                                      <button class="btn btn-sm btn-dark text-nowrap" onclick="Actions.batchSwapShift()"><i class="fas fa-layer-group me-1"></i>Batch Swap</button>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-dark text-nowrap dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-layer-group me-1"></i>Batch Action
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                            <li><a class="dropdown-item" href="#" onclick="Actions.batchSwapShift()"><i class="fas fa-exchange-alt me-2 text-primary"></i>Batch Swap</a></li>
+                                            <li><a class="dropdown-item" href="#" onclick="Actions.batchConfirmAnomaly()"><i class="fas fa-check-circle me-2 text-success"></i>Batch Confirm</a></li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                             <div class="card-body p-0 flex-grow-1 overflow-auto bg-white">

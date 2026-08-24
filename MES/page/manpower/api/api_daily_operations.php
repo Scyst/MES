@@ -418,6 +418,25 @@ try {
             echo json_encode(['success' => true, 'message' => 'Confirmed successfully']);
             break;
 
+        case 'batch_confirm_anomaly':
+            if (!hasPermission('manage_manpower')) throw new Exception("Permission Denied");
+            
+            $logIds = $input['log_ids'] ?? [];
+            if (empty($logIds) || !is_array($logIds)) throw new Exception("No log IDs provided");
+
+            $inQuery = implode(',', array_fill(0, count($logIds), '?'));
+            
+            $sql = "UPDATE dbo.MANPOWER_DAILY_LOGS SET is_verified = 1, updated_at = GETDATE(), updated_by = ? WHERE log_id IN ($inQuery)";
+            $params = array_merge([$updatedBy], $logIds);
+            
+            $pdo->prepare($sql)->execute($params);
+            
+            $pdo->prepare("INSERT INTO " . USER_LOGS_TABLE . " (action_by, action_type, detail, created_at) VALUES (?, 'MANPOWER_BATCH_CONFIRM_ANOMALY', ?, GETDATE())")
+                ->execute([$updatedBy, "Confirmed anomaly for " . count($logIds) . " logs"]);
+            
+            echo json_encode(['success' => true, 'message' => 'ยืนยันสำเร็จ ' . count($logIds) . ' รายการ']);
+            break;
+
         case 'batch_quick_swap_shift':
             if (!hasPermission('manage_manpower')) throw new Exception("Permission Denied");
             
