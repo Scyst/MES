@@ -41,11 +41,18 @@ const MapBuilderModule = (function () {
         h = h || 600;
 
         // Use intrinsic image dimensions
+        // OPTIMIZATION: Disable Retina Scaling to prevent 4x pixel overhead on low-end Intel GPUs
         canvas = new fabric.Canvas('iiotMapCanvas', {
             width: w,
             height: h,
-            selection: true
+            selection: true,
+            renderOnAddRemove: false,
+            enableRetinaScaling: false,
+            imageSmoothingEnabled: false
         });
+        
+        // Globally optimize object caching for complex shapes
+        fabric.Object.prototype.objectCaching = true;
 
         // Resize when image is fully loaded
         if (img && !img.complete) {
