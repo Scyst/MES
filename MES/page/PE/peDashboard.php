@@ -99,7 +99,7 @@ $pageTitle = "PE Enterprise";
                     <i class="fas fa-mobile-alt"></i>
                     <span class="nav-label">Technician Portal</span>
                 </a>
-                <a class="pe-nav-item" href="peRequest.php">
+                <a class="pe-nav-item" href="peRequest.php" target="_blank">
                     <i class="fas fa-external-link-alt"></i>
                     <span class="nav-label">PE Request Portal</span>
                 </a>
@@ -112,8 +112,8 @@ $pageTitle = "PE Enterprise";
                     <span class="nav-label">Print Safety Cards</span>
                 </button>
                 <a class="pe-nav-item" href="quick_hazard_report.php" target="_blank">
-                    <i class="fas fa-exclamation-triangle text-danger"></i>
-                    <span class="nav-label text-danger">Quick Hazard Report</span>
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span class="nav-label">Quick Hazard Report</span>
                 </a>
                 <a class="pe-nav-item" href="../dailyLog/dailyLogUI.php" style="color: var(--pe-danger);">
                     <i class="fas fa-sign-out-alt"></i>
@@ -221,12 +221,12 @@ $pageTitle = "PE Enterprise";
 
             <!-- Card Generator Tab -->
             <div class="pe-tab-panel" id="panel-card_generator">
-                <?php include 'components/tab_card_generator.php'; ?>
+                
             </div>
 
             <!-- Visual Board Tab -->
             <div class="pe-tab-panel" id="panel-visual_board">
-                <?php include 'components/tab_visual_board.php'; ?>
+                <?php include 'components/tab_print_safety.php'; ?>
             </div>
 
         </div>
@@ -320,3 +320,6 @@ $pageTitle = "PE Enterprise";
 
 </body>
 </html>
+
+
+
