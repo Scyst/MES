@@ -355,24 +355,24 @@ function updateNotificationUI(notifs) {
             if (n.alert_level === 'danger') icon = 'fa-exclamation-triangle text-danger';
             if (n.alert_level === 'warning') icon = 'fa-exclamation-circle text-warning';
 
-            html += \
+            html += `
                 <div style="padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 0.9em;">
                     <div style="display: flex; align-items: start; gap: 10px;">
-                        <i class="fas \" style="margin-top: 3px;"></i>
+                        <i class="fas ${icon}" style="margin-top: 3px;"></i>
                         <div>
-                            <div style="font-weight: bold; color: #333;">\</div>
-                            <div style="color: #666; margin-top: 2px; white-space: pre-wrap;">\</div>
-                            <div style="color: #aaa; font-size: 0.8em; margin-top: 4px;">\</div>
+                            <div style="font-weight: bold; color: #333;">${n.title}</div>
+                            <div style="color: #666; margin-top: 2px; white-space: pre-wrap;">${n.message}</div>
+                            <div style="color: #aaa; font-size: 0.8em; margin-top: 4px;">${n.created_at}</div>
                         </div>
                     </div>
                 </div>
-            \;
+            `;
         });
         notifyList.innerHTML = html;
     } else {
         notifyBadge.style.display = 'none';
         notifyCountText.innerText = '(0)';
-        notifyList.innerHTML = '<div style="padding: 15px; text-align: center; color: #888; font-size: 0.9em;">äÁèÁÕ¡ÒÃá¨é§àµ×Í¹ãËÁè</div>';
+        notifyList.innerHTML = '<div style="padding: 15px; text-align: center; color: #888; font-size: 0.9em;">ï¿½ï¿½ï¿½ï¿½Õ¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¹ï¿½ï¿½ï¿½ï¿½</div>';
     }
 }
 
@@ -411,3 +411,4 @@ function pollNotifications() {
 // Start notification polling every 10 seconds
 setInterval(pollNotifications, 10000);
 setTimeout(pollNotifications, 1000); // Initial fetch
+
