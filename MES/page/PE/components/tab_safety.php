@@ -1,3 +1,14 @@
+<style>
+    #panel-safety {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - var(--pe-header-height) - 50px);
+    }
+    #panel-safety > .row {
+        flex: 1;
+        min-height: 0;
+    }
+</style>
 <!-- tab_safety.php — Safety & Hazard Management -->
 
 <!-- KPIs -->
@@ -121,23 +132,23 @@
     </div>
 
     <!-- Charts Column -->
-    <div class="col-lg-4 pe-animate-in" style="--delay: 0.6s">
+    <div class="col-lg-4 pe-animate-in d-flex flex-column" style="--delay: 0.6s">
         <!-- Compliance Chart -->
-        <div class="pe-card mb-3">
+        <div class="pe-card mb-3" style="flex: 1; display: flex; flex-direction: column;">
             <div class="pe-card-header">
                 <h6><i class="fas fa-chart-pie me-2 text-primary"></i>Pre-Op Compliance</h6>
             </div>
-            <div class="pe-card-body d-flex align-items-center justify-content-center" style="height: 220px;">
+            <div class="pe-card-body d-flex align-items-center justify-content-center" style="flex: 1; min-height: 0;">
                 <canvas id="preopComplianceChart"></canvas>
             </div>
         </div>
         
         <!-- Hazard Trend Chart -->
-        <div class="pe-card">
+        <div class="pe-card" style="flex: 1; display: flex; flex-direction: column;">
             <div class="pe-card-header">
                 <h6><i class="fas fa-chart-line me-2 text-warning"></i>Hazard Trend (30 Days)</h6>
             </div>
-            <div class="pe-card-body d-flex align-items-center justify-content-center" style="height: 220px;">
+            <div class="pe-card-body d-flex align-items-center justify-content-center" style="flex: 1; min-height: 0;">
                 <canvas id="hazardTrendChart"></canvas>
             </div>
         </div>
@@ -148,3 +159,6 @@
 <?php 
 // Modals are already included in peDashboard.php
 ?>
+
+
+
