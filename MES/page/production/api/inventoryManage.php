@@ -1783,6 +1783,15 @@ try {
             if ($team !== '') {
                 $sql .= " AND ISNULL(TS.hc_group, ISNULL(NULLIF(emp.team_group, ''), u.team_group)) = ?";
                 $params[] = $team;
+            } else {
+                $sql .= " AND ISNULL(TS.hc_group, ISNULL(NULLIF(emp.team_group, ''), u.team_group)) = (
+                    SELECT ISNULL(TS2.hc_group, ISNULL(NULLIF(emp2.team_group, ''), u2.team_group))
+                    FROM " . USERS_TABLE . " u2
+                    LEFT JOIN dbo.MANPOWER_EMPLOYEES emp2 ON u2.emp_id = emp2.emp_id COLLATE Thai_CI_AS
+                    LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS2 ON emp2.department_api = TS2.department_api COLLATE Thai_CI_AS
+                    WHERE u2.id = ?
+                )";
+                $params[] = intval($currentUser['id']);
             }
             
             $sql .= " ORDER BY ISNULL(NULLIF(emp.name_th, ''), ISNULL(NULLIF(u.fullname, ''), u.username))";

@@ -183,7 +183,7 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
             <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
                 <div class="modal-header bg-white border-bottom pb-2">
                     <h5 class="modal-title fw-bold text-dark"><i class="fas fa-plus-circle me-2 text-primary"></i>สร้างคิวงานใหม่</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="z-index: 1050; position: relative;" onclick="try{bootstrap.Modal.getInstance(document.getElementById('createJobModal')).hide();}catch(e){}"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="z-index: 1050; position: relative;"></button>
                 </div>
                 <form id="createJobForm">
                     <div class="modal-body bg-white">
@@ -225,7 +225,7 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
             <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
                 <div class="modal-header bg-white border-bottom-0 pb-0">
                     <h5 class="modal-title fw-bold text-dark"><i class="fas fa-edit me-2 text-primary"></i>บันทึกผลผลิต</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="z-index: 1050; position: relative;" onclick="try{bootstrap.Modal.getInstance(document.getElementById('recordOutputModal')).hide();}catch(e){}"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="z-index: 1050; position: relative;"></button>
                 </div>
                 <div class="modal-body pt-2">
                     <input type="hidden" id="record_job_id">

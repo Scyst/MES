@@ -228,6 +228,33 @@ try {
                 $timestamp = $logdate . ' ' . $end_of_hour_time;
                 $prod_notes = trim("Scan: " . $notes);
                 
+                $team_user_ids = null;
+                if (!empty($_SESSION['user']['line']) && $_SESSION['user']['line'] === 'ASSEMBLY') {
+                    $shiftDate = date('Y-m-d', strtotime('-8 hours'));
+                    $teamStmt = $pdo->prepare("
+                        SELECT u.id 
+                        FROM " . USERS_TABLE . " u
+                        LEFT JOIN dbo.MANPOWER_EMPLOYEES emp ON u.emp_id = emp.emp_id COLLATE Thai_CI_AS
+                        LEFT JOIN dbo.MANPOWER_DAILY_LOGS ml ON ml.emp_id = emp.emp_id COLLATE Thai_CI_AS
+                        LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS ON emp.department_api = TS.department_api COLLATE Thai_CI_AS
+                        WHERE u.is_active = 1 
+                          AND ISNULL(TS.hc_group, ISNULL(NULLIF(emp.team_group, ''), u.team_group)) = (
+                              SELECT ISNULL(TS2.hc_group, ISNULL(NULLIF(emp2.team_group, ''), u2.team_group))
+                              FROM " . USERS_TABLE . " u2
+                              LEFT JOIN dbo.MANPOWER_EMPLOYEES emp2 ON u2.emp_id = emp2.emp_id COLLATE Thai_CI_AS
+                              LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS2 ON emp2.department_api = TS2.department_api COLLATE Thai_CI_AS
+                              WHERE u2.id = ?
+                          )
+                          AND CAST(ml.log_date AS DATE) = ?
+                          AND ml.status IN ('PRESENT', 'LATE')
+                    ");
+                    $teamStmt->execute([$user_id, $shiftDate]);
+                    $teamMembers = $teamStmt->fetchAll(PDO::FETCH_COLUMN);
+                    if (count($teamMembers) > 0) {
+                        $team_user_ids = implode(',', $teamMembers);
+                    }
+                }
+
                 $prodStmt = $pdo->prepare("
                     EXEC dbo.sp_ExecuteProduction 
                         @item_id = ?, 
@@ -240,7 +267,9 @@ try {
                         @start_time = ?, 
                         @end_time = ?, 
                         @user_id = ?, 
-                        @username = ?
+                        @username = ?,
+                        @machine_id = NULL,
+                        @team_user_ids = ?
                 ");
                 
                 $prodStmt->execute([
@@ -254,7 +283,8 @@ try {
                     $start_of_hour_time,
                     $end_of_hour_time,
                     $user_id,
-                    $username
+                    $username,
+                    $team_user_ids
                 ]);
 
                 $getTxnStmt = $pdo->prepare("SELECT TOP 1 transaction_id FROM " . TRANSACTIONS_TABLE . " WHERE parameter_id = ? AND transaction_type = ? AND created_by_user_id = ? ORDER BY transaction_id DESC");

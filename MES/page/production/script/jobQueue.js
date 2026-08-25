@@ -494,7 +494,7 @@ async function submitCreateJob() {
         const res = await response.json();
         
         if (res.success) {
-            bootstrap.Modal.getInstance(document.getElementById('createJobModal')).hide();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('createJobModal')).hide();
             if(typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
             
             if(payload.location_id === document.getElementById('locationSelect').value || document.getElementById('locationSelect').value === "") {
@@ -654,7 +654,7 @@ async function submitRecordOutput() {
                 override_team: payload.override_team,
                 team_user_ids: payload.team_user_ids ? payload.team_user_ids.split(',').map(Number) : []
             }));
-            bootstrap.Modal.getInstance(document.getElementById('recordOutputModal')).hide();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('recordOutputModal')).hide();
             fetchJobs(true);
             if(typeof showToast === 'function') showToast(res.message, 'var(--bs-success)');
             
@@ -946,7 +946,7 @@ async function editTxn(txnId, txnType, currentQty, jobId) {
             if(resRec.success) {
                 Swal.fire('สำเร็จ', 'แก้ไขและปรับสต็อกเรียบร้อยแล้ว', 'success');
                 const modalEl = document.getElementById('jobLogsModal');
-                if(modalEl) bootstrap.Modal.getInstance(modalEl).hide();
+                if(modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
                 fetchJobs(true);
             }
         } else {
@@ -973,7 +973,7 @@ async function deleteTxn(txnId, jobId) {
             showConfirmButton: false
         });
         const modalEl = document.getElementById('jobLogsModal');
-        if(modalEl) bootstrap.Modal.getInstance(modalEl).hide();
+        if(modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
         fetchJobs(true);
     } else {
         Swal.fire('Error', res.message, 'error');
@@ -1000,11 +1000,13 @@ async function loadRecordTeamUsers(isInit = false) {
             let lastData = null;
             try { lastData = JSON.parse(localStorage.getItem('jobQueueUILastEntry')); } catch(e){}
 
-            // Auto-select logged-in user if no override and users array has length 1
+            // Auto-select based on line and override
             if (isInit && lastData && lastData.team_user_ids && lastData.team_user_ids.length > 0) {
                 setRecordTeamUserSelection(lastData.team_user_ids);
+            } else if (team || (typeof currentUser !== 'undefined' && currentUser && currentUser.line === 'ASSEMBLY')) {
+                setRecordTeamUserSelection(result.users.map(u => String(u.id)));
             } else if (!team && typeof currentUser !== 'undefined' && currentUser && currentUser.id) {
-                setRecordTeamUserSelection([currentUser.id]);
+                setRecordTeamUserSelection([String(currentUser.id)]);
             } else {
                 setRecordTeamUserSelection([]);
             }
