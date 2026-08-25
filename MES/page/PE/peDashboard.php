@@ -1,4 +1,9 @@
 <?php
+// Security: Prevent Full Path Disclosure
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+?>
+<?php
 // MES/page/PE/index.php — PE Enterprise Portal
 require_once __DIR__ . '/../components/init.php';
 
@@ -320,6 +325,7 @@ $pageTitle = "PE Enterprise";
 
 </body>
 </html>
+
 
 
 
