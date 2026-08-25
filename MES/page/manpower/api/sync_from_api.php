@@ -89,9 +89,11 @@ try {
     // 4. Update Master Data (TEST Table)
     $existingEmployees = [];
     $sqlEmp = "SELECT E.emp_id, E.line, E.default_shift_id, E.team_group, E.is_active, E.position, E.department_api,
-                      ISNULL(CM.category_name, 'Other') as emp_type
+                      ISNULL(CM.category_name, 'Other') as emp_type,
+                      ISNULL(TS.hc_group, 'MAIN') as hc_group
                FROM dbo.MANPOWER_EMPLOYEES E
-               LEFT JOIN dbo.MANPOWER_CATEGORY_MAPPING CM ON E.position LIKE '%' + CM.keyword + '%'";
+               LEFT JOIN dbo.MANPOWER_CATEGORY_MAPPING CM ON E.position LIKE '%' + CM.keyword + '%'
+               LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS ON E.department_api = TS.department_api";
     
     $stmtCheckIds = $pdo->query($sqlEmp);
     while ($row = $stmtCheckIds->fetch(PDO::FETCH_ASSOC)) { 
@@ -165,7 +167,7 @@ try {
             
             $existingEmployees[$apiEmpId] = [
                 'emp_id' => $apiEmpId, 'line' => $defaultLine, 'default_shift_id' => $defaultShiftId,
-                'team_group' => null, 'is_active' => $apiCalculatedActive, 'emp_type' => 'Other'
+                'team_group' => null, 'is_active' => $apiCalculatedActive, 'emp_type' => 'Other', 'hc_group' => 'MAIN'
             ];
             $stats['new']++;
         }
@@ -191,13 +193,13 @@ try {
     
     $stmtUpdateLog = $pdo->prepare("UPDATE dbo.MANPOWER_DAILY_LOGS 
         SET scan_in_time = ?, scan_out_time = ?, status = ?, shift_id = ?, 
-            actual_line = ?, actual_team = ?, actual_emp_type = ?, 
+            actual_line = ?, actual_team = ?, actual_emp_type = ?, actual_hc_group = ?, 
             updated_at = GETDATE() 
         WHERE log_id = ? AND is_verified = 0");
         
     $stmtInsertLog = $pdo->prepare("INSERT INTO dbo.MANPOWER_DAILY_LOGS 
-        (log_date, emp_id, scan_in_time, scan_out_time, status, shift_id, actual_line, actual_team, actual_emp_type, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())");
+        (log_date, emp_id, scan_in_time, scan_out_time, status, shift_id, actual_line, actual_team, actual_emp_type, actual_hc_group, updated_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())");
 
     // ===================================================================
     // SHIFT WINDOW SCAN PAIRING (First IN, Last OUT per Shift Window)
@@ -339,6 +341,7 @@ try {
             $snapLine = $empData['line'];
             $snapTeam = $empData['team_group'];
             $snapType = $empData['emp_type'];
+            $snapHcGroup = $empData['hc_group'] ?? 'MAIN';
 
             $targetShiftId = $logExist['shift_id'] ?? $empData['default_shift_id'] ?? $defaultShiftId;
             $shiftStartTime = $shiftConfig[$targetShiftId] ?? '08:00:00';
@@ -362,9 +365,9 @@ try {
                 }
 
                 if ($logExist) {
-                    $stmtUpdateLog->execute([$inTimeStr, $outTimeStr, $status, $targetShiftId, $snapLine, $snapTeam, $snapType, $logExist['log_id']]);
+                    $stmtUpdateLog->execute([$inTimeStr, $outTimeStr, $status, $targetShiftId, $snapLine, $snapTeam, $snapType, $snapHcGroup, $logExist['log_id']]);
                 } else {
-                    $stmtInsertLog->execute([$procDate, $empId, $inTimeStr, $outTimeStr, $status, $targetShiftId, $snapLine, $snapTeam, $snapType]);
+                    $stmtInsertLog->execute([$procDate, $empId, $inTimeStr, $outTimeStr, $status, $targetShiftId, $snapLine, $snapTeam, $snapType, $snapHcGroup]);
                 }
             } else {
                 // ไม่มี session → กำหนดสถานะตามปฏิทิน
@@ -378,12 +381,12 @@ try {
                     if (in_array($logExist['status'], ['PRESENT', 'LATE']) && $logExist['is_verified'] == 0) {
                         // ไม่มี session ในวันนี้ แต่เคยมี status PRESENT/LATE → ข้อมูลเก่าที่ไม่ถูกต้อง
                         // เคลียร์เวลาสแกนแล้ว reset status
-                        $stmtUpdateLog->execute([null, null, $targetStatus, $targetShiftId, $snapLine, $snapTeam, $snapType, $logExist['log_id']]);
+                        $stmtUpdateLog->execute([null, null, $targetStatus, $targetShiftId, $snapLine, $snapTeam, $snapType, $snapHcGroup, $logExist['log_id']]);
                     } else if ($logExist['status'] !== $targetStatus && in_array($logExist['status'], ['WAITING', 'ABSENT', 'HOLIDAY'])) {
                         $pdo->prepare("UPDATE dbo.MANPOWER_DAILY_LOGS SET status = ?, updated_at = GETDATE() WHERE log_id = ?")->execute([$targetStatus, $logExist['log_id']]);
                     }
                 } else {
-                    $stmtInsertLog->execute([$procDate, $empId, null, null, $targetStatus, $targetShiftId, $snapLine, $snapTeam, $snapType]);
+                    $stmtInsertLog->execute([$procDate, $empId, null, null, $targetStatus, $targetShiftId, $snapLine, $snapTeam, $snapType, $snapHcGroup]);
                 }
             }
             $stats['log_processed']++;

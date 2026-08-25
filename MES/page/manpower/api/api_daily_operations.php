@@ -814,15 +814,21 @@ try {
             $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
             if ($existing) {
+                // Not updating actual_hc_group here because it's already snapshotted, or we could update it. 
+                // Let's leave actual_hc_group as is for existing records.
                 $sql = "UPDATE dbo.MANPOWER_DAILY_LOGS 
                         SET status = ?, remark = ?, scan_in_time = ?, scan_out_time = ?, actual_line = ?, actual_team = ?, shift_id = ?, updated_by = ?, updated_at = GETDATE(), is_verified = 1 
                         WHERE log_id = ?";
                 $pdo->prepare($sql)->execute([$status, $remark, $scanIn, $scanOut, $actualLine, $actualTeam, $shiftId, $updatedBy, $existing['log_id']]);
             } else {
+                $stmtHc = $pdo->prepare("SELECT ISNULL(TS.hc_group, 'MAIN') as hc_group FROM dbo.MANPOWER_EMPLOYEES E LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS ON E.department_api = TS.department_api WHERE E.emp_id = ?");
+                $stmtHc->execute([$empId]);
+                $actualHcGroup = $stmtHc->fetchColumn() ?: 'MAIN';
+
                 $sql = "INSERT INTO dbo.MANPOWER_DAILY_LOGS 
-                        (log_date, emp_id, status, remark, scan_in_time, scan_out_time, actual_line, actual_team, shift_id, updated_by, updated_at, is_verified)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), 1)";
-                $pdo->prepare($sql)->execute([$logDate, $empId, $status, $remark, $scanIn, $scanOut, $actualLine, $actualTeam, $shiftId, $updatedBy]);
+                        (log_date, emp_id, status, remark, scan_in_time, scan_out_time, actual_line, actual_team, shift_id, updated_by, updated_at, is_verified, actual_hc_group)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), 1, ?)";
+                $pdo->prepare($sql)->execute([$logDate, $empId, $status, $remark, $scanIn, $scanOut, $actualLine, $actualTeam, $shiftId, $updatedBy, $actualHcGroup]);
             }
 
             // Recalc (เน€เธเธฅเธตเนเธขเธเนเธเนเธเน SP _TEST)

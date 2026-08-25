@@ -1580,7 +1580,11 @@ const Actions = {
 
             if (result.success) {
                 UI.showToast("✅ Team Settings saved successfully!", "success");
-                bootstrap.Modal.getInstance(document.getElementById('teamSettingsModal')).hide();
+                const modalEl = document.getElementById('masterSettingsModal');
+                if (modalEl) {
+                    const modalInst = bootstrap.Modal.getInstance(modalEl);
+                    if (modalInst) modalInst.hide();
+                }
                 App.loadData();
             } else {
                 UI.showToast("❌ Error: " + result.message, "danger");
