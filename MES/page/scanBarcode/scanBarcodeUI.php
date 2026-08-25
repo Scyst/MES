@@ -75,6 +75,20 @@ $pageHeaderSubtitle = '<span style="opacity:0.55;font-size:0.7rem">v1.5.3</span>
                                    placeholder="หมายเหตุ (ถ้ามี)" autocomplete="off">
                         </div>
 
+                        <div class="form-group" id="teamSelectionGroup">
+                            <input type="hidden" id="record_team_user_ids" value="">
+                            <label>ผู้ปฏิบัติงาน (รายคน) <span class="badge bg-secondary" id="record_team_user_count">1</span></label>
+                            <div class="dropdown w-100">
+                                <button class="btn btn-outline-secondary w-100 text-start d-flex justify-content-between align-items-center" type="button" id="record_team_user_btn" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside" style="background-color: #fff; height: calc(1.5em + 1.25rem + 2px);">
+                                    <span id="record_team_user_text" class="text-truncate text-secondary">-- อิงตามผู้ล็อกอิน --</span>
+                                    <i class="fas fa-chevron-down ms-2"></i>
+                                </button>
+                                <ul class="dropdown-menu w-100 shadow-sm p-2" aria-labelledby="record_team_user_btn" style="max-height: 200px; overflow-y: auto;" id="record_team_user_list">
+                                    <div class="text-center small text-muted">กำลังโหลด...</div>
+                                </ul>
+                            </div>
+                        </div>
+
                         <div class="button-row">
                             <button type="button" class="btn btn-secondary" onclick="clearForm()">🔄 Clear</button>
                             <button type="submit" class="btn btn-primary" id="saveBtn">💾 บันทึกข้อมูล</button>

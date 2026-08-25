@@ -105,6 +105,7 @@ try {
             $location_name   = trim($input['location_name']   ?? '');
             $production_type = strtoupper(trim($input['type'] ?? 'FG'));
             $notes           = trim($input['notes']           ?? '');
+            $team_user_ids_input = isset($input['team_user_ids']) && is_array($input['team_user_ids']) ? $input['team_user_ids'] : [];
 
             if ((empty($barcode) && empty($sap)) || empty($location_id)) {
                 throw new Exception('กรุณากรอกข้อมูล Barcode และ Location ให้ครบถ้วน');
@@ -229,26 +230,21 @@ try {
                 $prod_notes = trim("Scan: " . $notes);
                 
                 $team_user_ids = null;
-                if (!empty($_SESSION['user']['line']) && $_SESSION['user']['line'] === 'ASSEMBLY') {
+                if (!empty($team_user_ids_input)) {
+                    $team_user_ids = implode(',', $team_user_ids_input);
+                } else if (!empty($_SESSION['user']['line']) && $_SESSION['user']['line'] === 'ASSEMBLY') {
                     $shiftDate = date('Y-m-d', strtotime('-8 hours'));
                     $teamStmt = $pdo->prepare("
-                        SELECT u.id 
-                        FROM " . USERS_TABLE . " u
-                        LEFT JOIN dbo.MANPOWER_EMPLOYEES emp ON u.emp_id = emp.emp_id COLLATE Thai_CI_AS
-                        LEFT JOIN dbo.MANPOWER_DAILY_LOGS ml ON ml.emp_id = emp.emp_id COLLATE Thai_CI_AS
-                        LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS ON emp.department_api = TS.department_api COLLATE Thai_CI_AS
-                        WHERE u.is_active = 1 
-                          AND ISNULL(TS.hc_group, ISNULL(NULLIF(emp.team_group, ''), u.team_group)) = (
-                              SELECT ISNULL(TS2.hc_group, ISNULL(NULLIF(emp2.team_group, ''), u2.team_group))
-                              FROM " . USERS_TABLE . " u2
-                              LEFT JOIN dbo.MANPOWER_EMPLOYEES emp2 ON u2.emp_id = emp2.emp_id COLLATE Thai_CI_AS
-                              LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS2 ON emp2.department_api = TS2.department_api COLLATE Thai_CI_AS
-                              WHERE u2.id = ?
-                          )
-                          AND CAST(ml.log_date AS DATE) = ?
-                          AND ml.status IN ('PRESENT', 'LATE')
+                        SELECT DISTINCT u.id 
+                        FROM dbo.MANPOWER_DAILY_LOGS dl
+                        JOIN dbo.MANPOWER_EMPLOYEES emp ON dl.emp_id = emp.emp_id
+                        JOIN " . USERS_TABLE . " u ON emp.emp_id = u.emp_id COLLATE Thai_CI_AS
+                        WHERE dl.log_date = CAST(? AS DATE)
+                          AND dl.actual_line = 'ASSEMBLY'
+                          AND dl.status IN ('PRESENT', 'LATE')
+                          AND u.is_active = 1
                     ");
-                    $teamStmt->execute([$user_id, $shiftDate]);
+                    $teamStmt->execute([$shiftDate]);
                     $teamMembers = $teamStmt->fetchAll(PDO::FETCH_COLUMN);
                     if (count($teamMembers) > 0) {
                         $team_user_ids = implode(',', $teamMembers);
