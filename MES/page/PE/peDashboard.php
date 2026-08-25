@@ -66,10 +66,6 @@ $pageTitle = "PE Enterprise";
                     <i class="fas fa-clock"></i>
                     <span class="nav-label">Downtime Tracker</span>
                 </button>
-                <button class="pe-nav-item" data-tab="safety">
-                    <i class="fas fa-hard-hat text-warning"></i>
-                    <span class="nav-label">Safety & Hazards</span>
-                </button>
                 <button class="pe-nav-item" data-tab="spareparts">
                     <i class="fas fa-boxes"></i>
                     <span class="nav-label">Spare Parts</span>
@@ -88,10 +84,14 @@ $pageTitle = "PE Enterprise";
                     <span class="nav-label">Live IIoT Monitor</span>
                 </button>
 
-                <button class="pe-nav-item" data-tab="iiot_analytics">
-                    <i class="fas fa-history" style="color: #a855f7;"></i>
-                    <span class="nav-label">IIoT Historical Analytics</span>
-                </button>
+                                  <button class="pe-nav-item" data-tab="iiot_analytics">
+                      <i class="fas fa-history" style="color: #a855f7;"></i>
+                      <span class="nav-label">IIoT Historical Analytics</span>
+                  </button>
+                  <button class="pe-nav-item" data-tab="safety">
+                      <i class="fas fa-hard-hat text-warning"></i>
+                      <span class="nav-label">Safety & Hazards</span>
+                  </button>
                 <button class="pe-nav-item" data-tab="analytics">
                     <i class="fas fa-chart-line"></i>
                     <span class="nav-label">Maintenance Analytics</span>
@@ -108,13 +108,9 @@ $pageTitle = "PE Enterprise";
                     <i class="fas fa-external-link-alt"></i>
                     <span class="nav-label">PE Request Portal</span>
                 </a>
-                <button class="pe-nav-item" data-tab="visual_board">
-                    <i class="fas fa-chalkboard"></i>
-                    <span class="nav-label">Print Safety Boards</span>
-                </button>
-                <button class="pe-nav-item" data-tab="card_generator">
-                    <i class="fas fa-id-card"></i>
-                    <span class="nav-label">Print Safety Cards</span>
+                                <button class="pe-nav-item" data-tab="print_safety">
+                    <i class="fas fa-print"></i>
+                    <span class="nav-label">Safety Print Center</span>
                 </button>
                 <a class="pe-nav-item" href="quick_hazard_report.php" target="_blank">
                     <i class="fas fa-exclamation-triangle"></i>
@@ -325,6 +321,9 @@ $pageTitle = "PE Enterprise";
 
 </body>
 </html>
+
+
+
 
 
 
