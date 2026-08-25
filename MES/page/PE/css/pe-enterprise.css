@@ -34,7 +34,7 @@
     --pe-text-secondary: #64748b;
     --pe-text-muted: #94a3b8;
     --pe-text-on-primary: #ffffff;
-    --pe-text-sidebar: #cbd5e1;
+    --pe-text-sidebar: #ffffff;
     --pe-text-sidebar-active: #ffffff;
 
     --pe-border: #e2e8f0;
@@ -1949,3 +1949,4 @@
         background: #fff;
     }
 }
+

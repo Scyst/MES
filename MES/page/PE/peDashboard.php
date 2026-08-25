@@ -76,20 +76,20 @@ $pageTitle = "PE Enterprise";
             <div class="pe-nav-section">
                 <div class="pe-nav-section-label">Analytics & IIoT</div>
                 <button class="pe-nav-item" data-tab="machine_timeline">
-                    <i class="fas fa-stream" style="color: #0ea5e9;"></i>
+                    <i class="fas fa-stream"></i>
                     <span class="nav-label">Machine Timeline</span>
                 </button>
                 <button class="pe-nav-item" data-tab="iiot">
-                    <i class="fas fa-satellite-dish" style="color: #38bdf8;"></i>
+                    <i class="fas fa-satellite-dish"></i>
                     <span class="nav-label">Live IIoT Monitor</span>
                 </button>
 
                                   <button class="pe-nav-item" data-tab="iiot_analytics">
-                      <i class="fas fa-history" style="color: #a855f7;"></i>
+                      <i class="fas fa-history"></i>
                       <span class="nav-label">IIoT Historical Analytics</span>
                   </button>
                   <button class="pe-nav-item" data-tab="safety">
-                      <i class="fas fa-hard-hat text-warning"></i>
+                      <i class="fas fa-hard-hat"></i>
                       <span class="nav-label">Safety & Hazards</span>
                   </button>
                 <button class="pe-nav-item" data-tab="analytics">
@@ -220,13 +220,10 @@ $pageTitle = "PE Enterprise";
                 <?php include 'components/tab_machine_timeline.php'; ?>
             </div>
 
-            <!-- Card Generator Tab -->
-            <div class="pe-tab-panel" id="panel-card_generator">
-                
-            </div>
+            
 
             <!-- Visual Board Tab -->
-            <div class="pe-tab-panel" id="panel-visual_board">
+            <div class="pe-tab-panel" id="panel-print_safety">
                 <?php include 'components/tab_print_safety.php'; ?>
             </div>
 
@@ -321,6 +318,8 @@ $pageTitle = "PE Enterprise";
 
 </body>
 </html>
+
+
 
 
 

@@ -1,7 +1,7 @@
 <!-- tab_safety.php — Safety & Hazard Management -->
 
 <!-- KPIs -->
-<div class="pe-kpi-row mb-3" id="safetyKpiRow">
+<div class="pe-kpi-row" id="safetyKpiRow">
     <div class="pe-kpi-card kpi-primary pe-animate-in" style="--delay: 0.1s">
         <div>
             <div class="pe-kpi-label">Pre-Op Audits (Today)</div>
@@ -33,7 +33,7 @@
 </div>
 
 <!-- Main Grid Layout -->
-<div class="row g-3">
+<div class="row g-4">
     <!-- Left Column (Tabs & Data) -->
     <div class="col-lg-8 pe-animate-in" style="--delay: 0.5s">
         <div class="pe-card h-100">
