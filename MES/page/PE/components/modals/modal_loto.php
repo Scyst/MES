@@ -44,7 +44,7 @@
                     </div>
                     <div class="pe-form-group mb-4">
                         <label class="pe-form-label">รหัสผ่านยืนยัน (PIN / Password) <span class="text-danger">*</span></label>
-                        <input type="password" class="pe-form-input" id="lotoFrmUnlockedPin" placeholder="รหัสผ่านของระบบเพื่อยืนยันสิทธิ์">
+                        <input type="text" style="-webkit-text-security: disc;" class="pe-form-input" id="lotoFrmUnlockedPin" placeholder="รหัสผ่านของระบบเพื่อยืนยันสิทธิ์">
                     </div>
                     <button type="button" class="btn btn-success w-100 fw-bold" onclick="LotoModule.removeLoto()">
                         <i class="fas fa-unlock me-2"></i> ยืนยันปลดล็อกและคืนสภาพ (REMOVE LOTO)

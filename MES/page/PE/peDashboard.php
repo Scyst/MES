@@ -31,7 +31,7 @@ $pageTitle = "PE Enterprise";
     <link rel="stylesheet" href="../../utils/libs/flatpickr.min.css">
     <link rel="stylesheet" href="../../utils/libs/cropper.min.css">
     <link rel="stylesheet" href="../components/css/fonts.css?v=<?php echo filemtime(__DIR__ . '/../components/css/fonts.css'); ?>">
-    <link rel="stylesheet" href="css/pe-enterprise.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="css/pe-enterprise.css?v=<?php echo time() + 12345; ?>">
 </head>
 
 <body>
@@ -302,17 +302,17 @@ $pageTitle = "PE Enterprise";
 
 <script type="module" src="script/peApp.js?v=<?php echo filemtime(__DIR__ . '/script/peApp.js'); ?>"></script>
 <script type="module" src="script/machineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineModule.js'); ?>"></script>
-<script type="module" src="script/workOrderModule.js?v=<?php echo time(); ?>"></script>
+<script type="module" src="script/workOrderModule.js?v=<?php echo time() + 12345; ?>"></script>
 <script type="module" src="script/downtimeModule.js?v=<?php echo filemtime(__DIR__ . '/script/downtimeModule.js'); ?>"></script>
 <script type="module" src="script/sparePartsModule.js?v=<?php echo filemtime(__DIR__ . '/script/sparePartsModule.js'); ?>"></script>
 <script type="module" src="script/safetyModule.js?v=<?php echo filemtime(__DIR__ . '/script/safetyModule.js'); ?>"></script>
-<script type="module" src="script/lotoModule.js?v=<?php echo time(); ?>"></script>
+<script type="module" src="script/lotoModule.js?v=<?php echo filemtime(__DIR__ . '/script/lotoModule.js'); ?>"></script>
 <script type="module" src="script/analyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/analyticsModule.js'); ?>"></script>
-<script type="module" src="script/mapBuilderModule.js?v=<?php echo time(); ?>"></script>
+<script type="module" src="script/mapBuilderModule.js?v=<?php echo time() + 12345; ?>"></script>
 <script type="module" src="script/iiotModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotModule.js'); ?>"></script>
 <script type="module" src="script/iiotAnalyticsModule.js?v=<?php echo filemtime(__DIR__ . '/script/iiotAnalyticsModule.js'); ?>"></script>
-<script type="module" src="script/cardGeneratorModule.js?v=<?php echo time(); ?>"></script>
-<script type="module" src="script/visualBoardModule.js?v=<?php echo time(); ?>"></script>
+<script type="module" src="script/cardGeneratorModule.js?v=<?php echo time() + 12345; ?>"></script>
+<script type="module" src="script/visualBoardModule.js?v=<?php echo time() + 12345; ?>"></script>
 
 <script type="module" src="script/machineTimelineModule.js?v=<?php echo filemtime(__DIR__ . '/script/machineTimelineModule.js'); ?>"></script>
 

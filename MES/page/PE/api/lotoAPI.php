@@ -151,6 +151,6 @@ try {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    writeErrorLog('lotoAPI', $e->getMessage(), $input);
+    writeErrorLog(, 'lotoAPI', $e->getMessage(), $input);
     echo json_encode(['success' => false, 'message' => 'Internal server error: ' . $e->getMessage()]);
 }
