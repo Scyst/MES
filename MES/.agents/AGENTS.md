@@ -1,4 +1,4 @@
-# FILE DELETION SAFETY PROTOCOL (CRITICAL)
+﻿# FILE DELETION SAFETY PROTOCOL (CRITICAL)
 
 - **DRY-RUN BEFORE DELETION:** Whenever an agent is instructed to (or decides to) delete files or directories on the server (whether through bash commands, scripts, FTP, or other tools), the agent **MUST** perform a verification check first.
 - **SELECT BEFORE DELETE:** Just like running a `SELECT` statement before a `DELETE` in SQL, the agent must run a non-destructive listing command (e.g., `ls`, `find`, or equivalent MCP tools like `list_directory`) using the EXACT same pattern/conditions it plans to use for the deletion.
@@ -21,11 +21,11 @@
 - **ASSUME PRODUCTION:** Unless explicitly instructed that this is a prototype, write all code to production standards. Always include robust error handling (try-catch), input validation, proper typing, and pagination/limits on queries.
 
 # GIT WORKFLOW (MULTI-AGENT PARALLEL)
-- **WORK DIRECTLY ON MAIN:** All agents commit directly to `main`. Do NOT create feature branches or switch branches. This project has no CI/CD auto-deploy — `git push` does NOT affect production. Production updates only happen via explicit FTP upload through MCP tools.
+- **WORK DIRECTLY ON MAIN:** All agents commit directly to `main`. Do NOT create feature branches or switch branches. This project has no CI/CD auto-deploy โ€” `git push` does NOT affect production. Production updates only happen via explicit FTP upload through MCP tools.
 - **NEVER SWITCH BRANCHES:** NEVER run `git checkout <branch>` or `git switch <branch>` to change the active branch. Doing so changes files on disk for ALL agents running in parallel. Branch management (merge, cleanup) is handled by the Manager Agent only when explicitly requested.
 - **SMALL & SPECIFIC COMMITS:** Every commit MUST cover one logical change only. Never bundle multiple unrelated fixes into one commit. This enables clean `git revert <hash>` if a specific feature needs to be rolled back without affecting others.
-  - ✅ `fix: prevent QA schedule from overwriting sales order confirmation status`
-  - ❌ `update stuff` / `fixes` / `various changes`
+  - โ… `fix: prevent QA schedule from overwriting sales order confirmation status`
+  - โ `update stuff` / `fixes` / `various changes`
 - **PULL BEFORE PUSH:** ALWAYS run `git pull origin main --rebase` before pushing to avoid conflicts with other agents' work.
 - **SHARED STATE AWARENESS (DB & ENV):** Global resources require strict coordination across all agents. (1) **Database:** Any schema alterations MUST be documented in a root `db_changes.md` file. (2) **Environment:** Any new key added to `.env` MUST be simultaneously added to `.env.example` with a dummy value.
 
@@ -41,3 +41,7 @@
 - **LOG BEFORE LEAVING:** Whenever an agent completes a task, hits a blocker, or finishes a session, it MUST log its work in E:\MES\MES\MES\.agents\sync_board\<YYYY-MM-DD>.md.
 - **TEMPLATE COMPLIANCE:** Follow the template provided in E:\MES\MES\MES\.agents\sync_board\README.md.
 - **NO SILENT WORK:** Do not perform work and terminate without updating the sync board. This is critical for multi-agent handoffs and syncing to the MES Team Planner.
+
+# POWERSHELL & SCRIPTING HAZARDS (CRITICAL)
+- **SINGLE-QUOTED HERE-STRINGS (`@' '@`):** When generating Python/Node.js scripts or writing files via PowerShell, ALWAYS use single-quoted here-strings (`@' '@`).
+- **AVOID DOUBLE-QUOTED HERE-STRINGS (`@" "@`):** NEVER use double-quoted here-strings unless explicit variable expansion is required. PowerShell aggressively evaluates `$variables` and interprets backticks (`` ` ``) as escape characters (e.g., `` `t `` becomes a TAB, `` `a `` becomes a BELL). This WILL silently destroy file contents (like PHP variables or Markdown backticks) and cause syntax errors.
