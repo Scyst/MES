@@ -23,9 +23,9 @@
     <div class="pe-d-flex pe-gap-8 pe-flex-wrap">
         <button class="pe-chip" onclick="AnalyticsModule.setPeriod('today')">Today</button>
         <button class="pe-chip" onclick="AnalyticsModule.setPeriod('week')">This Week</button>
-        <button class="pe-chip active" onclick="AnalyticsModule.setPeriod('month')">This Month</button>
+        <button class="pe-chip" onclick="AnalyticsModule.setPeriod('month')">This Month</button>
         <button class="pe-chip" onclick="AnalyticsModule.setPeriod('last_month')">Last Month</button>
-        <button class="pe-chip" onclick="AnalyticsModule.setPeriod('quarter')">This Quarter</button>
+        <button class="pe-chip active" onclick="AnalyticsModule.setPeriod('quarter')">This Quarter</button>
         <button class="pe-btn pe-btn-ghost pe-btn-sm ms-2" onclick="window.print()" title="Export PDF / Print" style="border-color:var(--pe-text-muted); color:var(--pe-text-primary);">
             <i class="fas fa-print me-1"></i> Executive Report
         </button>
@@ -229,3 +229,4 @@
         #predictiveRiskContainer { break-after: avoid; }
     }
 </style>
+

@@ -295,7 +295,6 @@ let sidebarCollapsed = false;
 // Attach to window for legacy inline handlers (onclick)
 window.PEApp = PEApp;
 
-export default PEApp;
 
 
 // --- Notification Center ---
@@ -413,4 +412,7 @@ setInterval(pollNotifications, 10000);
 setTimeout(pollNotifications, 1000); // Initial fetch
 
 
+
+
+export default PEApp;
 

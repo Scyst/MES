@@ -1,3 +1,22 @@
+Chart.register({
+    id: 'emptyStatePlugin',
+    afterDraw: function(chart) {
+        if (chart.data.datasets.length === 0 || chart.data.datasets.every(d => !d.data || d.data.length === 0)) {
+            let ctx = chart.ctx;
+            let width = chart.width;
+            let height = chart.height;
+            chart.clear();
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '14px "Sarabun", sans-serif';
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText('ไม่มีข้อมูลในช่วงเวลาที่เลือก', width / 2, height / 2);
+            ctx.restore();
+        }
+    }
+});
+
 // analyticsModule.js — Analytics Dashboard Module
 const AnalyticsModule = (() => {
     let chartTrend = null;
@@ -452,7 +471,8 @@ const AnalyticsModule = (() => {
     // Init date defaults
     document.addEventListener('DOMContentLoaded', () => {
         const now = new Date();
-        const first = new Date(now.getFullYear(), now.getMonth(), 1);
+        const q = Math.floor(now.getMonth() / 3);
+        const first = new Date(now.getFullYear(), q * 3, 1);
         const startEl = document.getElementById('analyticsStartDate');
         const endEl = document.getElementById('analyticsEndDate');
         if (startEl && !startEl.value) startEl.value = first.toISOString().slice(0, 10);
@@ -464,3 +484,5 @@ const AnalyticsModule = (() => {
 
 window.AnalyticsModule = AnalyticsModule;
 export default AnalyticsModule;
+
+
