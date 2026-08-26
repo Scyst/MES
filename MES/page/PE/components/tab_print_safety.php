@@ -43,7 +43,7 @@
         color: #3b82f6;
     }
     
-        #panel-print_safety {
+        #panel-print_safety.active {
         display: flex;
         flex-direction: column;
         height: calc(100vh - var(--pe-header-height) - 50px);
@@ -116,5 +116,6 @@
         </div>
     </div>
 </div>
+
 
 

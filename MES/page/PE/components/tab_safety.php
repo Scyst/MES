@@ -1,5 +1,5 @@
 <style>
-    #panel-safety {
+    #panel-safety.active {
         display: flex;
         flex-direction: column;
         height: calc(100vh - var(--pe-header-height) - 50px);
@@ -159,6 +159,7 @@
 <?php 
 // Modals are already included in peDashboard.php
 ?>
+
 
 
 
