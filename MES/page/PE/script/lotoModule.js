@@ -33,7 +33,7 @@ const LotoModule = (function () {
         
         try {
             Swal.showLoading();
-            const response = await fetch(\?action=status&machine_id=\);
+            const response = await fetch(API_URL + "?action=status&machine_id=" + machineId);
             const result = await response.json();
             Swal.close();
 
