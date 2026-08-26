@@ -36,7 +36,7 @@
 <div class="pe-filter-bar">
     <div class="pe-search">
         <i class="fas fa-search"></i>
-        <input type="text" id="dtSearchInput" placeholder="ค้นหา Machine, Cause, Note..." oninput="DowntimeModule.filterTable()">
+        <input type="text" id="dtSearchInput" placeholder="ค้นหา Machine, Cause, Note..." oninput="DowntimeModule.filterTable()" autocomplete="off">
     </div>
     <select class="pe-filter-select" id="dtFilterLine" onchange="DowntimeModule.loadData()">
         <option value="">ทุก Line</option>

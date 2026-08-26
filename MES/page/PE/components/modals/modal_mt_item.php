@@ -35,19 +35,19 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label pe-text-xs fw-bold">Item Code <span class="text-danger">*</span></label>
-                        <input type="text" name="item_code" id="mt_item_code" class="form-control form-control-sm pe-input fw-bold" required>
+                        <input type="text" name="item_code" id="mt_item_code" class="form-control form-control-sm pe-input fw-bold" required autocomplete="off">
                     </div>
                     <div class="col-md-8">
                         <label class="form-label pe-text-xs fw-bold">Item Name <span class="text-danger">*</span></label>
-                        <input type="text" name="item_name" id="mt_item_name" class="form-control form-control-sm pe-input" required>
+                        <input type="text" name="item_name" id="mt_item_name" class="form-control form-control-sm pe-input" required autocomplete="off">
                     </div>
                     <div class="col-12">
                         <label class="form-label pe-text-xs fw-bold">Description / Spec</label>
-                        <input type="text" name="description" id="mt_description" class="form-control form-control-sm pe-input">
+                        <input type="text" name="description" id="mt_description" class="form-control form-control-sm pe-input" autocomplete="off">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label pe-text-xs fw-bold">Supplier</label>
-                        <input type="text" name="supplier" id="mt_supplier" class="form-control form-control-sm pe-input">
+                        <input type="text" name="supplier" id="mt_supplier" class="form-control form-control-sm pe-input" autocomplete="off">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label pe-text-xs fw-bold">Unit Price (฿)</label>

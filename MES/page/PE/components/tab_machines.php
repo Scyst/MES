@@ -36,7 +36,7 @@
 <div class="pe-filter-bar">
     <div class="pe-search">
         <i class="fas fa-search"></i>
-        <input type="text" id="machineSearchInput" placeholder="ค้นหารหัสเครื่อง, ชื่อ, Line..." oninput="MachineModule.filterTable()">
+        <input type="text" id="machineSearchInput" placeholder="ค้นหารหัสเครื่อง, ชื่อ, Line..." oninput="MachineModule.filterTable()" autocomplete="off">
     </div>
     <select class="pe-filter-select" id="machineFilterLine" onchange="MachineModule.loadData()">
         <option value="">ทุก Line</option>

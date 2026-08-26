@@ -78,7 +78,7 @@
                         <div class="pe-filter-bar d-flex justify-content-between align-items-center p-3 border-bottom">
                             <div class="pe-search" style="max-width: 250px;">
                                 <i class="fas fa-search"></i>
-                                <input type="text" id="safetySearchInput" placeholder="ค้นหา Machine, Issue..." oninput="SafetyModule.filterTable()">
+                                <input type="text" id="safetySearchInput" placeholder="ค้นหา Machine, Issue..." oninput="SafetyModule.filterTable()" autocomplete="off">
                             </div>
                             <select class="form-select form-select-sm w-auto" id="safetyStatusFilter" onchange="SafetyModule.loadData()">
                                 <option value="all">All Status</option>

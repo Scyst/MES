@@ -16,19 +16,19 @@
                     <div class="col-md-4">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Machine Code <span class="required">*</span></label>
-                            <input type="text" class="pe-form-input" id="machineFrmCode" placeholder="e.g. PRESS-001" style="text-transform:uppercase;">
+                            <input type="text" class="pe-form-input" id="machineFrmCode" placeholder="e.g. PRESS-001" style="text-transform:uppercase;" autocomplete="off">
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Machine Name <span class="required">*</span></label>
-                            <input type="text" class="pe-form-input" id="machineFrmName" placeholder="e.g. Hydraulic Press 200T">
+                            <input type="text" class="pe-form-input" id="machineFrmName" placeholder="e.g. Hydraulic Press 200T" autocomplete="off">
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Asset No.</label>
-                            <input type="text" class="pe-form-input" id="machineFrmAssetNo" placeholder="e.g. AST-1001">
+                            <input type="text" class="pe-form-input" id="machineFrmAssetNo" placeholder="e.g. AST-1001" autocomplete="off">
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -41,7 +41,7 @@
                     <div class="col-md-4">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Area</label>
-                            <input type="text" class="pe-form-input" id="machineFrmArea" placeholder="e.g. Stamping, Assembly">
+                            <input type="text" class="pe-form-input" id="machineFrmArea" placeholder="e.g. Stamping, Assembly" autocomplete="off">
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -70,19 +70,19 @@
                     <div class="col-md-4">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Manufacturer</label>
-                            <input type="text" class="pe-form-input" id="machineFrmManufacturer" placeholder="e.g. AIDA, Fanuc">
+                            <input type="text" class="pe-form-input" id="machineFrmManufacturer" placeholder="e.g. AIDA, Fanuc" autocomplete="off">
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Model</label>
-                            <input type="text" class="pe-form-input" id="machineFrmModel">
+                            <input type="text" class="pe-form-input" id="machineFrmModel" autocomplete="off">
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Serial Number</label>
-                            <input type="text" class="pe-form-input" id="machineFrmSerial">
+                            <input type="text" class="pe-form-input" id="machineFrmSerial" autocomplete="off">
                         </div>
                     </div>
                     <!-- (MQTT was here, removed) -->
@@ -121,7 +121,7 @@
                     <div class="col-md-12">
                         <div class="pe-form-group">
                             <label class="pe-form-label">MQTT Topic / Node Name</label>
-                            <input type="text" class="pe-form-input" id="machineFrmMqttTopic" placeholder="e.g. DB_HM_1003_4">
+                            <input type="text" class="pe-form-input" id="machineFrmMqttTopic" placeholder="e.g. DB_HM_1003_4" autocomplete="off">
                         </div>
                     </div>
                     <div class="col-md-12">

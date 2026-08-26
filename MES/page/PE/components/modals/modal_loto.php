@@ -17,7 +17,7 @@
                     </div>
                     <div class="pe-form-group mb-3">
                         <label class="pe-form-label">ผู้ทำการล็อก (Technician) <span class="text-danger">*</span></label>
-                        <input type="text" class="pe-form-input" id="lotoFrmLockedBy" placeholder="ระบุชื่อผู้ซ่อม" value="<?= htmlspecialchars($_SESSION['user']['username'] ?? '') ?>">
+                        <input type="text" class="pe-form-input" id="lotoFrmLockedBy" placeholder="ระบุชื่อผู้ซ่อม" value="<?= htmlspecialchars($_SESSION['user']['username'] ?? '') ? autocomplete="off">">
                     </div>
                     <div class="pe-form-group mb-3">
                         <label class="pe-form-label">เหตุผล / อาการเสีย</label>
@@ -40,7 +40,7 @@
                     </div>
                     <div class="pe-form-group mb-3">
                         <label class="pe-form-label">ผู้ยืนยันการปลดล็อก (Supervisor) <span class="text-danger">*</span></label>
-                        <input type="text" class="pe-form-input" id="lotoFrmUnlockedBy" placeholder="ระบุชื่อหัวหน้างานผู้ตรวจสอบ" value="<?= htmlspecialchars($_SESSION['user']['username'] ?? '') ?>">
+                        <input type="text" class="pe-form-input" id="lotoFrmUnlockedBy" placeholder="ระบุชื่อหัวหน้างานผู้ตรวจสอบ" value="<?= htmlspecialchars($_SESSION['user']['username'] ?? '') ? autocomplete="off">">
                     </div>
                     <div class="pe-form-group mb-4">
                         <label class="pe-form-label">รหัสผ่านยืนยัน (PIN / Password) <span class="text-danger">*</span></label>

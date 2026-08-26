@@ -80,7 +80,7 @@
                     <div class="col-12">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Cause Detail <span class="required">*</span></label>
-                            <input type="text" class="pe-form-input" id="dtFrmCauseDetail" placeholder="อธิบายสาเหตุ...">
+                            <input type="text" class="pe-form-input" id="dtFrmCauseDetail" placeholder="อธิบายสาเหตุ..." autocomplete="off">
                         </div>
                     </div>
                     <div class="col-12">

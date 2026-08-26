@@ -533,7 +533,7 @@
                         
                         <div id="objProperties" style="display: none; background: #f8fafc; padding: 8px; border-radius: 6px; margin-top: 8px; border: 1px solid #e2e8f0;">
                             <label style="font-size: 11px; color: #64748b;">Zone Name / Text</label>
-                            <input type="text" id="objNameInput" class="form-control bg-white text-dark border-secondary form-control-sm mb-2" style="font-size: 12px;" oninput="MapBuilderModule.updateObjName(this.value)">
+                            <input type="text" id="objNameInput" class="form-control bg-white text-dark border-secondary form-control-sm mb-2" style="font-size: 12px;" oninput="MapBuilderModule.updateObjName(this.value)" autocomplete="off">
                             
                             <div id="objLocationGroup" style="display: none;">
                                 <label style="font-size: 11px; color: #64748b;">Bind to Location (Optional)</label>
@@ -714,7 +714,7 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label text-muted small">Global Search</label>
-                    <input type="text" class="form-control" id="iiotFilterSearch" placeholder="Search name, code, model, asset no...">
+                    <input type="text" class="form-control" id="iiotFilterSearch" placeholder="Search name, code, model, asset no..." autocomplete="off">
                 </div>
                 <div class="row">
                     <div class="col-6 mb-3">

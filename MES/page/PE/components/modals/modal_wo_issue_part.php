@@ -11,7 +11,7 @@
                     <div class="col-12">
                           <div class="mb-3">
                               <label class="pe-form-label">อะไหล่ (Item) <span class="pe-text-danger">*</span></label>
-                              <input type="text" class="pe-form-input" id="woIssueItemInput" list="woIssueItemList" placeholder="-- พิมพ์เพื่อค้นหาอะไหล่ --" oninput="typeof WorkOrderModule !== 'undefined' ? WorkOrderModule.onSparePartChange() : TechModule.onSparePartChange()" required>
+                              <input type="text" class="pe-form-input" id="woIssueItemInput" list="woIssueItemList" placeholder="-- พิมพ์เพื่อค้นหาอะไหล่ --" oninput="typeof WorkOrderModule !== 'undefined' ? WorkOrderModule.onSparePartChange() : TechModule.onSparePartChange()" required autocomplete="off">
                               <datalist id="woIssueItemList"></datalist>
                               <input type="hidden" id="woIssueItem" required>
                               <div class="pe-text-xs mt-1 text-muted" id="woIssueItemDesc"></div>
@@ -35,13 +35,13 @@
                     <div class="col-md-6">
                         <div class="pe-form-group">
                             <label class="pe-form-label">ราคาต่อหน่วย</label>
-                            <input type="text" class="pe-form-input" id="woIssuePrice" readonly style="background-color: var(--pe-bg-hover);">
+                            <input type="text" class="pe-form-input" id="woIssuePrice" readonly style="background-color: var(--pe-bg-hover);" autocomplete="off">
                         </div>
                     </div>
                     <div class="col-12">
                         <div class="pe-form-group mb-0">
                             <label class="pe-form-label">หมายเหตุ (Notes)</label>
-                            <input type="text" class="pe-form-input" id="woIssueNotes" placeholder="ระบุเหตุผล หรือจุดที่นำไปเปลี่ยน">
+                            <input type="text" class="pe-form-input" id="woIssueNotes" placeholder="ระบุเหตุผล หรือจุดที่นำไปเปลี่ยน" autocomplete="off">
                         </div>
                     </div>
                 </div>

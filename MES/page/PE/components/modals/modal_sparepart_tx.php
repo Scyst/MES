@@ -22,7 +22,7 @@
                                             <i class="fas fa-image text-muted"></i>
                                         </div>
                                         <div class="flex-grow-1">
-                                            <input type="text" class="pe-form-input" id="spTxItemInput" list="spTxItemList" placeholder="-- พิมพ์เพื่อค้นหาอะไหล่ --" onchange="SparePartsModule.onItemInput()">
+                                            <input type="text" class="pe-form-input" id="spTxItemInput" list="spTxItemList" placeholder="-- พิมพ์เพื่อค้นหาอะไหล่ --" onchange="SparePartsModule.onItemInput()" autocomplete="off">
                                             <datalist id="spTxItemList"></datalist>
                                         </div>
                                     </div>

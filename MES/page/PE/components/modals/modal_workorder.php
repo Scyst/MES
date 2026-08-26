@@ -84,7 +84,7 @@
                             <div id="colCustomMachine" class="col-md-6" style="display: none;">
                                 <div class="pe-form-group">
                                     <label class="pe-form-label text-primary">ระบุชื่ออุปกรณ์</label>
-                                    <input type="text" class="pe-form-input" id="woFrmMachineName" placeholder="พิมพ์ชื่ออุปกรณ์...">
+                                    <input type="text" class="pe-form-input" id="woFrmMachineName" placeholder="พิมพ์ชื่ออุปกรณ์..." autocomplete="off">
                                 </div>
                             </div>
                             <div id="colLine" class="col-md-6">
@@ -97,7 +97,7 @@
                             <div class="col-md-6">
                                 <div class="pe-form-group">
                                     <label class="pe-form-label">Requested By</label>
-                                    <input type="text" class="pe-form-input pe-bg-light" id="woFrmRequestedBy" placeholder="ชื่อผู้แจ้ง" readonly>
+                                    <input type="text" class="pe-form-input pe-bg-light" id="woFrmRequestedBy" placeholder="ชื่อผู้แจ้ง" readonly autocomplete="off">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -111,7 +111,7 @@
                         <!-- Full-width fields extracted from row for flex stretching -->
                         <div class="pe-form-group mt-2 mb-2">
                             <label class="pe-form-label">Issue Title <span class="required">*</span></label>
-                            <input type="text" class="pe-form-input" id="woFrmTitle" placeholder="สรุปปัญหาสั้นๆ...">
+                            <input type="text" class="pe-form-input" id="woFrmTitle" placeholder="สรุปปัญหาสั้นๆ..." autocomplete="off">
                         </div>
                         <div class="pe-form-group d-flex flex-column flex-grow-1 mb-0">
                             <label class="pe-form-label">Issue Detail</label>
