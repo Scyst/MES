@@ -134,6 +134,13 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
     return `${h}:${m}`;
   };
 
+  const getAbsoluteMinutes = (dateStr, timeStr, refDateStr) => {
+    const d1 = new Date(dateStr);
+    const d2 = new Date(refDateStr);
+    const diffDays = Math.round((d1.getTime() - d2.getTime()) / (1000 * 3600 * 24));
+    return (diffDays * 24 * 60) + parseTimeToMinutes(timeStr || '00:00');
+  };
+
   const nextDay = () => setCurrentDate(addDays(currentDate, 1));
   const prevDay = () => setCurrentDate(subDays(currentDate, 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
@@ -421,18 +428,23 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                 const names = (t.Assignee || '').split(',').map(a => getCanonicalName(a.trim(), users)).filter(Boolean);
                 return (names.length > 0 ? names : ['Unassigned']).includes(assignee);
               });
-              const sortedTasks = [...assigneeTasks].sort((a, b) => parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime));
+              const sortedTasks = [...assigneeTasks].sort((a, b) => {
+                const aVis = Math.max(getAbsoluteMinutes(a.startDate, a.startTime || '09:00', currentDateStr), timelineStart);
+                const bVis = Math.max(getAbsoluteMinutes(b.startDate, b.startTime || '09:00', currentDateStr), timelineStart);
+                return aVis - bVis;
+              });
               const rows = [];
               
               sortedTasks.forEach(task => {
-                const taskStartMins = parseTimeToMinutes(task.startTime || '09:00');
-                const taskEndMins = parseTimeToMinutes(task.endTime || '18:00');
+                const taskStartMins = Math.max(getAbsoluteMinutes(task.startDate, task.startTime || '09:00', currentDateStr), timelineStart);
+                const taskEndMins = Math.min(getAbsoluteMinutes(task.dueDate, task.endTime || '18:00', currentDateStr), timelineEnd);
+                
                 let rowIndex = 0;
                 while(true) {
                   if (!rows[rowIndex]) { rows[rowIndex] = [task]; task._rowIndex = rowIndex; break; }
                   const overlaps = rows[rowIndex].some(eTask => {
-                    const eStart = parseTimeToMinutes(eTask.startTime || '09:00');
-                    const eEnd = parseTimeToMinutes(eTask.endTime || '18:00');
+                    const eStart = Math.max(getAbsoluteMinutes(eTask.startDate, eTask.startTime || '09:00', currentDateStr), timelineStart);
+                    const eEnd = Math.min(getAbsoluteMinutes(eTask.dueDate, eTask.endTime || '18:00', currentDateStr), timelineEnd);
                     return (taskStartMins < eEnd && taskEndMins > eStart);
                   });
                   if (!overlaps) { rows[rowIndex].push(task); task._rowIndex = rowIndex; break; }
@@ -589,18 +601,24 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                 return true;
               });
 
-              const sortedTasks = [...dayTasks].sort((a, b) => parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime));
+              const sortedTasks = [...dayTasks].sort((a, b) => {
+                const aVis = Math.max(getAbsoluteMinutes(a.startDate, a.startTime || '09:00', dayStr), timelineStart);
+                const bVis = Math.max(getAbsoluteMinutes(b.startDate, b.startTime || '09:00', dayStr), timelineStart);
+                return aVis - bVis;
+              });
               const rows = [];
               
               sortedTasks.forEach(task => {
-                const taskStartMins = parseTimeToMinutes(task.startTime || '09:00');
-                const taskEndMins = parseTimeToMinutes(task.endTime || '18:00');
+                const taskStartMins = Math.max(getAbsoluteMinutes(task.startDate, task.startTime || '09:00', dayStr), timelineStart);
+                const taskEndMins = Math.min(getAbsoluteMinutes(task.dueDate, task.endTime || '18:00', dayStr), timelineEnd);
+                
                 let rowIndex = 0;
                 while(true) {
                   if (!rows[rowIndex]) { rows[rowIndex] = [task]; task._rowIndex = rowIndex; break; }
                   const overlaps = rows[rowIndex].some(eTask => {
-                    const eStart = parseTimeToMinutes(eTask.startTime || '09:00');
-                    const eEnd = parseTimeToMinutes(eTask.endTime || '18:00');
+                    const eStart = Math.max(getAbsoluteMinutes(eTask.startDate, eTask.startTime || '09:00', dayStr), timelineStart);
+                    const eEnd = Math.min(getAbsoluteMinutes(eTask.dueDate, eTask.endTime || '18:00', dayStr), timelineEnd);
+                    // Add a tiny margin to prevent overlap if they are touching
                     return (taskStartMins < eEnd && taskEndMins > eStart);
                   });
                   if (!overlaps) { rows[rowIndex].push(task); task._rowIndex = rowIndex; break; }
