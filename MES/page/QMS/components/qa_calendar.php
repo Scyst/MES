@@ -7,7 +7,7 @@
 .qa-custom-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    grid-auto-rows: minmax(100px, 1fr);
+    grid-auto-rows: minmax(80px, 1fr);
     background-color: #e2e8f0; /* borders */
     gap: 1px;
 }
@@ -147,7 +147,7 @@
     border: 2px dashed #38bdf8;
 }
 </style>
-<div class="card shadow-sm border-0 flex-fill mt-0" id="calendarViewContainer" style="min-height: 500px; height: 100%; display: flex; flex-direction: column;">
+<div class="card shadow-sm border-0 flex-fill mt-0" id="calendarViewContainer" style="min-height: 350px; height: calc(100vh - 210px); display: flex; flex-direction: column;">
     <div class="row g-0 h-100 flex-fill" style="min-height: 0;">
         <!-- Main Calendar (Now on Left) -->
         <div class="col-lg-9 d-flex flex-column h-100 bg-white border-end" style="min-height: 0;">
