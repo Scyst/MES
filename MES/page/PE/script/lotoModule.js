@@ -1,9 +1,19 @@
-// MES/page/PE/script/lotoModule.js
+﻿// MES/page/PE/script/lotoModule.js
 
 const LotoModule = (function () {
     const API_URL = 'api/lotoAPI.php';
     let currentMachineId = null;
     let currentWoId = null;
+    let lotoModalInstance = null;
+
+    function getModalInstance() {
+        const modalEl = document.getElementById('lotoModal');
+        if (!modalEl) return null;
+        if (!lotoModalInstance) {
+            lotoModalInstance = new bootstrap.Modal(modalEl);
+        }
+        return lotoModalInstance;
+    }
 
     /**
      * Opens the LOTO modal.
@@ -18,32 +28,35 @@ const LotoModule = (function () {
         currentMachineId = machineId;
         currentWoId = woId;
         
-        $('#lotoFrmMachineId').val(machineId);
-        $('#lotoFrmWoId').val(woId || '');
+        document.getElementById('lotoFrmMachineId').value = machineId;
+        document.getElementById('lotoFrmWoId').value = woId || '';
         
         try {
             Swal.showLoading();
-            const response = await fetch(`${API_URL}?action=status&machine_id=${machineId}`);
+            const response = await fetch(\?action=status&machine_id=\);
             const result = await response.json();
             Swal.close();
 
-            if (result.success && result.data && result.data.is_loto) {
+            if (result.success && result.data && (result.data.is_loto == 1 || result.data.is_loto === true)) {
                 // Machine is locked - Show Unlock UI
-                $('#lotoLockSection').hide();
-                $('#lotoUnlockSection').show();
+                document.getElementById('lotoLockSection').style.display = 'none';
+                document.getElementById('lotoUnlockSection').style.display = 'block';
                 
-                $('#lotoLblLockedBy').text(result.data.locked_by || '-');
-                $('#lotoLblLockedAt').text(result.data.locked_at ? new Date(result.data.locked_at).toLocaleString('th-TH') : '-');
-                $('#lotoLblReason').text(result.data.loto_reason || '-');
-                $('#lotoFrmUnlockedBy').val('');
+                document.getElementById('lotoLblLockedBy').textContent = result.data.locked_by || '-';
+                document.getElementById('lotoLblLockedAt').textContent = result.data.locked_at ? new Date(result.data.locked_at).toLocaleString('th-TH') : '-';
+                document.getElementById('lotoLblReason').textContent = result.data.loto_reason || '-';
+                document.getElementById('lotoFrmUnlockedBy').value = '';
+                document.getElementById('lotoFrmUnlockedPin').value = '';
             } else {
                 // Machine is unlocked - Show Lock UI
-                $('#lotoUnlockSection').hide();
-                $('#lotoLockSection').show();
-                $('#lotoFrmReason').val('');
+                document.getElementById('lotoUnlockSection').style.display = 'none';
+                document.getElementById('lotoLockSection').style.display = 'block';
+                document.getElementById('lotoFrmReason').value = '';
             }
             
-            $('#lotoModal').modal('show');
+            const modal = getModalInstance();
+            if (modal) modal.show();
+            
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'ข้อผิดพลาด', text: 'ไม่สามารถดึงข้อมูลสถานะ LOTO ได้' });
             console.error(error);
@@ -54,8 +67,8 @@ const LotoModule = (function () {
      * Applies LOTO to the machine
      */
     async function applyLoto() {
-        const lockedBy = $('#lotoFrmLockedBy').val().trim();
-        const reason = $('#lotoFrmReason').val().trim();
+        const lockedBy = document.getElementById('lotoFrmLockedBy').value.trim();
+        const reason = document.getElementById('lotoFrmReason').value.trim();
 
         if (!lockedBy) {
             Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ครบ', text: 'กรุณาระบุชื่อผู้ทำการล็อก' });
@@ -77,7 +90,8 @@ const LotoModule = (function () {
             const result = await response.json();
 
             if (result.success) {
-                $('#lotoModal').modal('hide');
+                const modal = getModalInstance();
+                if (modal) modal.hide();
                 Swal.fire({ icon: 'success', title: 'สำเร็จ', text: result.message, timer: 1500, showConfirmButton: false });
                 
                 // Refresh relevant UI
@@ -103,8 +117,8 @@ const LotoModule = (function () {
      * Removes LOTO from the machine
      */
     async function removeLoto() {
-        const unlockedBy = $('#lotoFrmUnlockedBy').val().trim();
-        const unlockedPin = $('#lotoFrmUnlockedPin').val().trim();
+        const unlockedBy = document.getElementById('lotoFrmUnlockedBy').value.trim();
+        const unlockedPin = document.getElementById('lotoFrmUnlockedPin').value.trim();
 
         if (!unlockedBy || !unlockedPin) {
             Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ครบ', text: 'กรุณาระบุชื่อผู้ยืนยันการปลดล็อก และรหัสผ่าน' });
@@ -125,7 +139,8 @@ const LotoModule = (function () {
             const result = await response.json();
 
             if (result.success) {
-                $('#lotoModal').modal('hide');
+                const modal = getModalInstance();
+                if (modal) modal.hide();
                 Swal.fire({ icon: 'success', title: 'สำเร็จ', text: result.message, timer: 1500, showConfirmButton: false });
                 
                 // Refresh relevant UI
