@@ -261,6 +261,13 @@
                         <div class="text-muted small mt-1 text-truncate" id="transItemDesc">-</div>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary mb-1">เลือกแท็กอ้างอิง (Select Tag) - <span class="text-muted fw-normal">Optional</span></label>
+                        <select id="transTag" class="form-select border-secondary-subtle shadow-sm" onchange="onTransferTagChange()">
+                            <option value="">ระบุจำนวนเอง (Manual QTY)</option>
+                        </select>
+                    </div>
+
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label small fw-bold text-secondary mb-1">จากคลัง (From)</label>

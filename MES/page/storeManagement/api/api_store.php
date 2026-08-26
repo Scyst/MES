@@ -1000,6 +1000,7 @@ try {
         case 'get_item_details':
             $item_id = $_GET['item_id'] ?? 0;
             $location_id = $_GET['location_id'] ?? 'ALL';
+            $location_type = $_GET['location_type'] ?? 'ALL';
             
             $condAvail = "o.parameter_id = ? AND o.quantity != 0";
             $paramsAvail = [$item_id];
@@ -1007,6 +1008,9 @@ try {
             if ($location_id !== 'ALL') {
                 $condAvail .= " AND o.location_id = ?";
                 $paramsAvail[] = $location_id;
+            } else if ($location_type !== 'ALL') {
+                $condAvail .= " AND l.location_type = ?";
+                $paramsAvail[] = $location_type;
             }
             
             $stmtAvail = $pdo->prepare("SELECT l.location_id, l.location_name, SUM(o.quantity) as qty FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) JOIN dbo.LOCATIONS l WITH (NOLOCK) ON o.location_id = l.location_id WHERE $condAvail GROUP BY l.location_id, l.location_name ORDER BY qty DESC");
@@ -1137,6 +1141,11 @@ try {
             $to_loc_id = (int)($_POST['to_loc_id'] ?? 0);
             $qty = (float)($_POST['quantity'] ?? 0);
             $remark = trim($_POST['remark'] ?? '');
+            
+            $transfer_tag = trim($_POST['transfer_tag'] ?? '');
+            if (!empty($transfer_tag)) {
+                $remark = trim("[TAG: $transfer_tag] " . $remark);
+            }
 
             if ($item_id === 0 || $from_loc_id === 0 || $to_loc_id === 0 || $qty <= 0) {
                 throw new Exception("ข้อมูลไม่ครบถ้วน (Item, Locations, Qty)");
@@ -1233,6 +1242,24 @@ try {
             $stmt = $pdo->prepare("EXEC dbo.sp_Store_ProcessTransferBatch @TransferIdsJson = ?, @ActionStatus = ?, @UserId = ?");
             $stmt->execute([$transferIdsJson, $action_status, $currentUser['id']]);
             
+            if ($action_status === 'COMPLETED') {
+                $transferIdsArray = json_decode($transferIdsJson, true);
+                if (!empty($transferIdsArray)) {
+                    $placeholders = implode(',', array_fill(0, count($transferIdsArray), '?'));
+                    $stmtTags = $pdo->prepare("SELECT transfer_uuid, to_location_id, notes FROM dbo.STOCK_TRANSFER_ORDERS WITH (NOLOCK) WHERE transfer_id IN ($placeholders) AND status = 'COMPLETED' AND notes LIKE '%[TAG: %'");
+                    $stmtTags->execute($transferIdsArray);
+                    $tagTransfers = $stmtTags->fetchAll(PDO::FETCH_ASSOC);
+                    
+                    foreach ($tagTransfers as $tt) {
+                        if (preg_match('/\[TAG:\s*([^\]]+)\]/', $tt['notes'], $matches)) {
+                            $serial_no = trim($matches[1]);
+                            $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET location_id = ? WHERE serial_no = ?")->execute([$tt['to_location_id'], $serial_no]);
+                            $pdo->prepare("INSERT INTO dbo.TAG_TRANSACTIONS (serial_no, transaction_type, quantity_changed, reference_id, created_by_user_id, notes) VALUES (?, 'LOCATION_TRANSFER', 0, ?, ?, 'Transferred via Transfer Request')")->execute([$serial_no, $tt['transfer_uuid'], $currentUser['id']]);
+                        }
+                    }
+                }
+            }
+            
             $msg = $action_status === 'COMPLETED' ? "โอนย้ายสต็อกสำเร็จ!" : "ยกเลิกรายการสำเร็จ!";
             $response = ['success' => true, 'message' => $msg];
             break;
@@ -1249,6 +1276,25 @@ try {
             $stmt = $pdo->prepare("EXEC dbo.sp_Store_ProcessTransferBatch @TransferIdsJson = ?, @ActionStatus = ?, @UserId = ?");
             $stmt->execute([$transferIdsJson, $action_status, $currentUser['id']]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $affected_rows = $result['affected_rows'] ?? 0;
+            
+            if ($action_status === 'COMPLETED') {
+                $transferIdsArray = json_decode($transferIdsJson, true);
+                if (!empty($transferIdsArray)) {
+                    $placeholders = implode(',', array_fill(0, count($transferIdsArray), '?'));
+                    $stmtTags = $pdo->prepare("SELECT transfer_uuid, to_location_id, notes FROM dbo.STOCK_TRANSFER_ORDERS WITH (NOLOCK) WHERE transfer_id IN ($placeholders) AND status = 'COMPLETED' AND notes LIKE '%[TAG: %'");
+                    $stmtTags->execute($transferIdsArray);
+                    $tagTransfers = $stmtTags->fetchAll(PDO::FETCH_ASSOC);
+                    
+                    foreach ($tagTransfers as $tt) {
+                        if (preg_match('/\[TAG:\s*([^\]]+)\]/', $tt['notes'], $matches)) {
+                            $serial_no = trim($matches[1]);
+                            $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET location_id = ? WHERE serial_no = ?")->execute([$tt['to_location_id'], $serial_no]);
+                            $pdo->prepare("INSERT INTO dbo.TAG_TRANSACTIONS (serial_no, transaction_type, quantity_changed, reference_id, created_by_user_id, notes) VALUES (?, 'LOCATION_TRANSFER', 0, ?, ?, 'Transferred via Transfer Request')")->execute([$serial_no, $tt['transfer_uuid'], $currentUser['id']]);
+                        }
+                    }
+                }
+            }
             $successCount = $result['affected_rows'] ?? 0;
 
             $response = ['success' => true, 'message' => "ดำเนินการเสร็จสิ้นจำนวน $successCount รายการ"];

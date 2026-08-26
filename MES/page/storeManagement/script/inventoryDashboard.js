@@ -307,8 +307,9 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
 
     try {
         const locFilterId = document.getElementById('locationFilter')?.value || 'ALL';
+        const locTypeFilter = document.getElementById('locationTypeFilter')?.value || 'ALL';
         const [res, tagRes] = await Promise.all([
-            fetchAPI(`get_item_details&item_id=${itemId}&location_id=${locFilterId}`, 'GET'),
+            fetchAPI(`get_item_details&item_id=${itemId}&location_id=${locFilterId}&location_type=${locTypeFilter}`, 'GET'),
             fetchAPI(`get_available_tags_for_item&item_code=${encodeURIComponent(itemNo)}&item_id=${itemId}&location_id=${locFilterId}`, 'GET').catch(e => ({data: []}))
         ]);
         
@@ -698,7 +699,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(checkPendingTransfers, 30000);
 });
 
-function openCreateTransferModal(itemId, itemNo, itemDesc, availQty) {
+let currentTransferTags = [];
+
+async function openCreateTransferModal(itemId, itemNo, itemDesc, availQty) {
     document.getElementById('formCreateTransfer').reset();
     document.getElementById('transItemId').value = itemId;
     document.getElementById('transItemNo').innerText = itemNo;
@@ -723,8 +726,48 @@ function openCreateTransferModal(itemId, itemNo, itemDesc, availQty) {
         }
     });
 
+    const tagSelect = document.getElementById('transTag');
+    if (tagSelect) {
+        tagSelect.innerHTML = '<option value="">ระบุจำนวนเอง (Manual QTY)</option><option value="" disabled>กำลังโหลด...</option>';
+        currentTransferTags = [];
+        fetchAPI(`get_available_tags_for_item&item_code=${encodeURIComponent(itemNo)}&item_id=${itemId}&location_id=ALL`, 'GET')
+            .then(res => {
+                tagSelect.innerHTML = '<option value="">ระบุจำนวนเอง (Manual QTY)</option>';
+                if (res.data && res.data.length > 0) {
+                    currentTransferTags = res.data;
+                    res.data.forEach(t => {
+                        tagSelect.add(new Option(`Tag: ${t.serial_no} (Qty: ${t.current_qty}) - Loc: ${t.location_name || t.location_id}`, t.serial_no));
+                    });
+                } else {
+                    tagSelect.innerHTML = '<option value="">ระบุจำนวนเอง (ไม่มีแท็กพร้อมใช้)</option>';
+                }
+            })
+            .catch(() => {
+                tagSelect.innerHTML = '<option value="">ระบุจำนวนเอง (Manual QTY)</option>';
+            });
+    }
+
     createTransferModalInst.show();
     setTimeout(() => document.getElementById('transQty').focus(), 500);
+}
+
+function onTransferTagChange() {
+    const selectedSerial = document.getElementById('transTag')?.value;
+    const fromLoc = document.getElementById('transFromLoc');
+    const qtyInput = document.getElementById('transQty');
+    
+    if (selectedSerial && currentTransferTags.length > 0) {
+        const tag = currentTransferTags.find(t => t.serial_no === selectedSerial);
+        if (tag) {
+            fromLoc.value = tag.location_id;
+            qtyInput.value = tag.current_qty;
+            fromLoc.style.pointerEvents = 'none';
+            fromLoc.classList.add('bg-light');
+        }
+    } else {
+        fromLoc.style.pointerEvents = 'auto';
+        fromLoc.classList.remove('bg-light');
+    }
 }
 
 async function submitTransferRequest(e) {
@@ -737,6 +780,9 @@ async function submitTransferRequest(e) {
     formData.append('to_loc_id', document.getElementById('transToLoc').value);
     formData.append('quantity', document.getElementById('transQty').value);
     formData.append('remark', document.getElementById('transRemark').value);
+    
+    const selectedTag = document.getElementById('transTag')?.value;
+    if (selectedTag) formData.append('transfer_tag', selectedTag);
 
     const res = await fetchAPI('create_transfer_request', 'POST', formData, 'btnSubmitTransfer');
     if (res) {
