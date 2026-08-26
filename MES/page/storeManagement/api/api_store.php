@@ -1141,11 +1141,7 @@ try {
             $to_loc_id = (int)($_POST['to_loc_id'] ?? 0);
             $qty = (float)($_POST['quantity'] ?? 0);
             $remark = trim($_POST['remark'] ?? '');
-            
-            $transfer_tag = trim($_POST['transfer_tag'] ?? '');
-            if (!empty($transfer_tag)) {
-                $remark = trim("[TAG: $transfer_tag] " . $remark);
-            }
+            $transfer_tag = trim($_POST['transfer_tag'] ?? '') ?: null;
 
             if ($item_id === 0 || $from_loc_id === 0 || $to_loc_id === 0 || $qty <= 0) {
                 throw new Exception("ข้อมูลไม่ครบถ้วน (Item, Locations, Qty)");
@@ -1156,10 +1152,10 @@ try {
 
             $uuid = 'TRF-' . strtoupper(substr(md5(uniqid()), 0, 8));
             $sql = "INSERT INTO dbo.STOCK_TRANSFER_ORDERS 
-                    (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes, created_at) 
-                    VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, GETDATE())";
+                    (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes, tag_serial_no, created_at) 
+                    VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, GETDATE())";
             
-            $pdo->prepare($sql)->execute([$uuid, $item_id, $qty, $from_loc_id, $to_loc_id, $currentUser['id'], $remark]);
+            $pdo->prepare($sql)->execute([$uuid, $item_id, $qty, $from_loc_id, $to_loc_id, $currentUser['id'], $remark, $transfer_tag]);
             
             $response = ['success' => true, 'message' => 'สร้างรายการรอโอนย้ายสำเร็จ'];
             break;
@@ -1246,16 +1242,14 @@ try {
                 $transferIdsArray = json_decode($transferIdsJson, true);
                 if (!empty($transferIdsArray)) {
                     $placeholders = implode(',', array_fill(0, count($transferIdsArray), '?'));
-                    $stmtTags = $pdo->prepare("SELECT transfer_uuid, to_location_id, notes FROM dbo.STOCK_TRANSFER_ORDERS WHERE transfer_id IN ($placeholders) AND status = 'COMPLETED' AND notes LIKE '%[[]TAG: %'");
+                    $stmtTags = $pdo->prepare("SELECT transfer_uuid, to_location_id, tag_serial_no FROM dbo.STOCK_TRANSFER_ORDERS WHERE transfer_id IN ($placeholders) AND status = 'COMPLETED' AND tag_serial_no IS NOT NULL");
                     $stmtTags->execute($transferIdsArray);
                     $tagTransfers = $stmtTags->fetchAll(PDO::FETCH_ASSOC);
                     
                     foreach ($tagTransfers as $tt) {
-                        if (preg_match('/\[TAG:\s*([^\]]+)\]/', $tt['notes'], $matches)) {
-                            $serial_no = trim($matches[1]);
-                            $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET location_id = ? WHERE serial_no = ?")->execute([$tt['to_location_id'], $serial_no]);
-                            $pdo->prepare("INSERT INTO dbo.TAG_TRANSACTIONS (serial_no, transaction_type, quantity_changed, reference_id, created_by_user_id, notes) VALUES (?, 'LOCATION_TRANSFER', 0, ?, ?, 'Transferred via Transfer Request')")->execute([$serial_no, $tt['transfer_uuid'], $currentUser['id']]);
-                        }
+                        $serial_no = $tt['tag_serial_no'];
+                        $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET location_id = ? WHERE serial_no = ?")->execute([$tt['to_location_id'], $serial_no]);
+                        $pdo->prepare("INSERT INTO dbo.TAG_TRANSACTIONS (serial_no, transaction_type, quantity_changed, reference_id, created_by_user_id, notes) VALUES (?, 'LOCATION_TRANSFER', 0, ?, ?, 'Transferred via Transfer Request')")->execute([$serial_no, $tt['transfer_uuid'], $currentUser['id']]);
                     }
                 }
             }
@@ -1282,16 +1276,14 @@ try {
                 $transferIdsArray = json_decode($transferIdsJson, true);
                 if (!empty($transferIdsArray)) {
                     $placeholders = implode(',', array_fill(0, count($transferIdsArray), '?'));
-                    $stmtTags = $pdo->prepare("SELECT transfer_uuid, to_location_id, notes FROM dbo.STOCK_TRANSFER_ORDERS WHERE transfer_id IN ($placeholders) AND status = 'COMPLETED' AND notes LIKE '%[[]TAG: %'");
+                    $stmtTags = $pdo->prepare("SELECT transfer_uuid, to_location_id, tag_serial_no FROM dbo.STOCK_TRANSFER_ORDERS WHERE transfer_id IN ($placeholders) AND status = 'COMPLETED' AND tag_serial_no IS NOT NULL");
                     $stmtTags->execute($transferIdsArray);
                     $tagTransfers = $stmtTags->fetchAll(PDO::FETCH_ASSOC);
                     
                     foreach ($tagTransfers as $tt) {
-                        if (preg_match('/\[TAG:\s*([^\]]+)\]/', $tt['notes'], $matches)) {
-                            $serial_no = trim($matches[1]);
-                            $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET location_id = ? WHERE serial_no = ?")->execute([$tt['to_location_id'], $serial_no]);
-                            $pdo->prepare("INSERT INTO dbo.TAG_TRANSACTIONS (serial_no, transaction_type, quantity_changed, reference_id, created_by_user_id, notes) VALUES (?, 'LOCATION_TRANSFER', 0, ?, ?, 'Transferred via Transfer Request')")->execute([$serial_no, $tt['transfer_uuid'], $currentUser['id']]);
-                        }
+                        $serial_no = $tt['tag_serial_no'];
+                        $pdo->prepare("UPDATE dbo.RM_SERIAL_TAGS SET location_id = ? WHERE serial_no = ?")->execute([$tt['to_location_id'], $serial_no]);
+                        $pdo->prepare("INSERT INTO dbo.TAG_TRANSACTIONS (serial_no, transaction_type, quantity_changed, reference_id, created_by_user_id, notes) VALUES (?, 'LOCATION_TRANSFER', 0, ?, ?, 'Transferred via Transfer Request')")->execute([$serial_no, $tt['transfer_uuid'], $currentUser['id']]);
                     }
                 }
             }

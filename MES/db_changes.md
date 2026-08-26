@@ -46,5 +46,15 @@
 
 ### 2026-08-24: In-App Notification Center
 - **Created Table**: PE_NOTIFICATIONS
-  - Columns: id (INT IDENTITY PK), module (VARCHAR 50), ef_id (VARCHAR 50), 	itle (NVARCHAR 255), message (NVARCHAR MAX), lert_level (VARCHAR 20), created_at (DATETIME DEFAULT GETDATE()), is_active (BIT DEFAULT 1)
+  - Columns: id (INT IDENTITY PK), module (VARCHAR 50), ef_id (VARCHAR 50), 	itle (NVARCHAR 255), message (NVARCHAR MAX),  lert_level (VARCHAR 20), created_at (DATETIME DEFAULT GETDATE()), is_active (BIT DEFAULT 1)
   - Purpose: Global notification center for LOTO and other PE alerts.
+
+---
+
+## 2026-08-26
+
+### [ADD COLUMN] `STOCK_TRANSFER_ORDERS`
+- **Agent**: Antigravity
+- **SQL**: `ALTER TABLE dbo.STOCK_TRANSFER_ORDERS ADD tag_serial_no VARCHAR(100) NULL;`
+- **Reason**: เพิ่ม column เพื่อเก็บ `serial_no` ของแท็กที่เกี่ยวข้องกับการโอนย้าย แทนการฝัง `[TAG: ...]` ไว้ใน `notes` — เสถียรกว่า, queryable, ไม่ต้อง parse string
+- **Impact**: `NULL`able — ไม่กระทบ record เดิม
