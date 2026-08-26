@@ -1,6 +1,15 @@
 // MES/page/storeManagement/script/inventoryDashboard.js
 "use strict";
 
+/** แสดงตัวเลขสวยงาม: จำนวนเต็มไม่มีทศนิยม, ทศนิยมแสดงแค่ที่จำเป็น */
+function fmtQty(val) {
+    const num = parseFloat(val);
+    if (isNaN(num)) return '0';
+    return Number.isInteger(num)
+        ? num.toLocaleString()
+        : num.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 3 });
+}
+
 let currentPage = 1;
 let rowsPerPage = 100;
 let totalPages = 1;
@@ -144,7 +153,7 @@ async function loadDashboardData() {
         if (result.kpi) {
             document.getElementById('totalSkus').innerText = parseInt(result.kpi.total_skus || 0, 10).toLocaleString();
             document.getElementById('outOfStock').innerText = parseInt(result.kpi.out_of_stock || 0, 10).toLocaleString();
-            document.getElementById('totalPending').innerText = parseFloat(result.kpi.total_pending_qty || 0).toLocaleString();
+            document.getElementById('totalPending').innerText = fmtQty(result.kpi.total_pending_qty || 0);
             document.getElementById('totalValue').innerText = parseFloat(result.kpi.total_value || 0).toLocaleString(undefined, {minimumFractionDigits: 2});
         }
 
@@ -176,9 +185,9 @@ async function loadDashboardData() {
                     <td class="text-muted">${escapeHTML(row.sap_no || '-')}</td>
                     <td class="text-truncate" style="max-width: 250px;" title="${escapeHTML(row.part_description || '-')}">${escapeHTML(row.part_description || '-')}</td>
                     <td class="text-center"><span class="badge ${badgeType}">${escapeHTML(row.material_type)}</span></td>
-                    <td class="text-end text-warning fw-bold">${pendingQty.toLocaleString()}</td>
-                    <td class="text-end fw-bold ${isOutOfStock ? 'text-danger' : 'text-success'}" onclick="showItemDetails(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" title="คลิกเพื่อดูพิกัดและแท็กสินค้า" style="cursor: pointer;"><u>${availableQty.toLocaleString()}</u></td>
-                    <td class="text-end fw-bold text-dark">${totalQty.toLocaleString()}</td>
+                    <td class="text-end text-warning fw-bold">${fmtQty(pendingQty)}</td>
+                    <td class="text-end fw-bold ${isOutOfStock ? 'text-danger' : 'text-success'}" onclick="showItemDetails(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" title="คลิกเพื่อดูพิกัดและแท็กสินค้า" style="cursor: pointer;"><u>${fmtQty(availableQty)}</u></td>
+                    <td class="text-end fw-bold text-dark">${fmtQty(totalQty)}</td>
                     <td class="text-end text-muted">${parseFloat(row.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                     <td class="text-end text-primary fw-bold">${parseFloat(row.total_value).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                     <td class="text-center">
@@ -226,15 +235,15 @@ async function loadDashboardData() {
                         <div class="row g-2 text-center mt-2 border-top pt-2" style="font-size: 0.85rem;">
                             <div class="col-4 border-end">
                                 <div class="text-muted" style="font-size: 0.7rem;">Pending</div>
-                                <div class="fw-bold text-warning">${pendingQty.toLocaleString()}</div>
+                                <div class="fw-bold text-warning">${fmtQty(pendingQty)}</div>
                             </div>
                             <div class="col-4 border-end" onclick="showItemDetails(${row.item_id}, '${escapeHTML(row.item_no)}', '${escapeHTML(row.part_description)}')" title="คลิกเพื่อดูพิกัดและแท็กสินค้า" style="cursor: pointer;">
                                 <div class="text-muted" style="font-size: 0.7rem;">Available</div>
-                                <div class="fw-bold ${isOutOfStock ? 'text-danger' : 'text-success'} fs-6"><u>${availableQty.toLocaleString()}</u></div>
+                                <div class="fw-bold ${isOutOfStock ? 'text-danger' : 'text-success'} fs-6"><u>${fmtQty(availableQty)}</u></div>
                             </div>
                             <div class="col-4">
                                 <div class="text-muted" style="font-size: 0.7rem;">Total</div>
-                                <div class="fw-bold text-dark">${totalQty.toLocaleString()}</div>
+                                <div class="fw-bold text-dark">${fmtQty(totalQty)}</div>
                             </div>
                         </div>
                     </div>
@@ -329,13 +338,13 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
                     storeSystemStock += qty;
                 }
                 
-                availTbody.innerHTML += `<tr style="height: 61px;"><td>${escapeHTML(loc.location_name)}</td><td class="text-end fw-bold ${qty < 0 ? 'text-danger' : 'text-success'} align-middle">${qty.toLocaleString()}</td></tr>`;
+                availTbody.innerHTML += `<tr style="height: 61px;"><td>${escapeHTML(loc.location_name)}</td><td class="text-end fw-bold ${qty < 0 ? 'text-danger' : 'text-success'} align-middle">${fmtQty(qty)}</td></tr>`;
                 
                 if (overviewList) {
                     overviewList.innerHTML += `
                         <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                             <span class="text-dark fw-bold"><i class="fas fa-map-marker-alt text-primary me-2"></i> ${escapeHTML(loc.location_name)}</span>
-                            <span class="badge ${qty < 0 ? 'bg-danger' : 'bg-success'} rounded-pill fs-6">${qty.toLocaleString()}</span>
+                            <span class="badge ${qty < 0 ? 'bg-danger' : 'bg-success'} rounded-pill fs-6">${fmtQty(qty)}</span>
                         </div>
                     `;
                 }
@@ -349,7 +358,7 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
         if (totalQtyEl) {
             totalQtyEl.innerHTML = `
                 <div class="text-muted small">ยอดรวมทั้งโรงงาน</div>
-                <h4 class="fw-bold ${totalSystemStock < 0 ? 'text-danger' : 'text-success'} mb-0">${totalSystemStock.toLocaleString()}</h4>
+                <h4 class="fw-bold ${totalSystemStock < 0 ? 'text-danger' : 'text-success'} mb-0">${fmtQty(totalSystemStock)}</h4>
             `;
         }
 
@@ -362,7 +371,7 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
                             ${escapeHTML(p.tracking_no)}
                             <div class="small text-muted">PO: ${escapeHTML(p.po_number || '-')}</div>
                         </td>
-                        <td class="text-end fw-bold text-warning align-middle">${parseInt(p.qty, 10).toLocaleString()}</td>
+                        <td class="text-end fw-bold text-warning align-middle">${fmtQty(parseInt(p.qty, 10))}</td>
                     </tr>`;
             });
         } else {
@@ -384,7 +393,7 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
                             <div class="small text-muted">Loc: ${escapeHTML(t.location_name || '-')} | Pallet: ${escapeHTML(t.warehouse_no || '-')}</div>
                         </td>
                         <td class="text-end fw-bold text-primary align-middle text-nowrap">
-                            ${qty.toLocaleString()}
+                            ${fmtQty(qty)}
                             ${CAN_MANAGE_WH ? `<button class="btn btn-sm btn-outline-danger ms-2 py-0 px-2 shadow-sm border-0" onclick="forceIssueTag('${t.serial_no}')" title="ตัดจ่ายแท็กนี้ออกจากสต็อก (ชดเชยการใช้มือ)"><i class="fas fa-sign-out-alt"></i></button>` : ''}
                         </td>
                     </tr>`;
@@ -706,7 +715,7 @@ async function openCreateTransferModal(itemId, itemNo, itemDesc, availQty) {
     document.getElementById('transItemId').value = itemId;
     document.getElementById('transItemNo').innerText = itemNo;
     document.getElementById('transItemDesc').innerText = itemDesc || '-';
-    document.getElementById('transAvailQty').innerText = parseFloat(availQty).toLocaleString();
+    document.getElementById('transAvailQty').innerText = fmtQty(availQty);
     
     const filterSelect = document.getElementById('locationFilter');
     const fromLoc = document.getElementById('transFromLoc');
@@ -728,22 +737,31 @@ async function openCreateTransferModal(itemId, itemNo, itemDesc, availQty) {
 
     const tagSelect = document.getElementById('transTag');
     if (tagSelect) {
-        tagSelect.innerHTML = '<option value="">ระบุจำนวนเอง (Manual QTY)</option><option value="" disabled>กำลังโหลด...</option>';
+        tagSelect.innerHTML = '<option value="">กำลังโหลดแท็ก...</option>';
         currentTransferTags = [];
         fetchAPI(`get_available_tags_for_item&item_code=${encodeURIComponent(itemNo)}&item_id=${itemId}&location_id=ALL`, 'GET')
             .then(res => {
-                tagSelect.innerHTML = '<option value="">ระบุจำนวนเอง (Manual QTY)</option>';
                 if (res.data && res.data.length > 0) {
                     currentTransferTags = res.data;
+                    // มีแท็ก → บังคับเลือก Tag ปิด Manual
+                    tagSelect.innerHTML = '<option value="" disabled selected>กรุณาเลือกแท็ก (Required)</option>';
                     res.data.forEach(t => {
-                        tagSelect.add(new Option(`Tag: ${t.serial_no} (Qty: ${t.current_qty}) - Loc: ${t.location_name || t.location_id}`, t.serial_no));
+                        tagSelect.add(new Option(`Tag: ${t.serial_no} (Qty: ${fmtQty(t.current_qty)}) - ${t.location_name || t.location_id}`, t.serial_no));
                     });
+                    tagSelect.required = true;
+                    document.getElementById('transQty').readOnly = true;
+                    document.getElementById('transFromLoc').style.pointerEvents = 'none';
+                    document.getElementById('transFromLoc').classList.add('bg-light');
                 } else {
+                    // ไม่มีแท็ก → อนุญาต Manual QTY
                     tagSelect.innerHTML = '<option value="">ระบุจำนวนเอง (ไม่มีแท็กพร้อมใช้)</option>';
+                    tagSelect.required = false;
+                    document.getElementById('transQty').readOnly = false;
                 }
             })
             .catch(() => {
                 tagSelect.innerHTML = '<option value="">ระบุจำนวนเอง (Manual QTY)</option>';
+                tagSelect.required = false;
             });
     }
 
