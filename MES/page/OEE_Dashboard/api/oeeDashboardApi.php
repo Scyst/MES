@@ -302,42 +302,46 @@ try {
                     if (is_numeric($v)) $stdRes[$k] = (float)$v;
                 }
                 
-                $stmtAct = $pdo->prepare("EXEC dbo." . SP_CALC_ACTUAL_COST . " @StartDate=:sd, @EndDate=:ed, @Line=:ln, @Team=:tm");
-                $stmtAct->bindValue(':sd', $startDate);
-                $stmtAct->bindValue(':ed', $endDate);
-                
-                if (empty($line) || $line === 'All' || strtoupper($line) === 'ASSEMBLY') {
-                    $stmtAct->bindValue(':ln', null, PDO::PARAM_NULL);
-                } else {
-                    $stmtAct->bindValue(':ln', $line, PDO::PARAM_STR);
-                }
-                
-                $stmtAct->bindValue(':tm', empty($team) ? null : $team, PDO::PARAM_STR);
-                $stmtAct->execute();
-                $actRes = $stmtAct->fetch(PDO::FETCH_ASSOC);
-
                 $stdRes['isActualDLCost'] = false;
-                if ($actRes && isset($actRes['TotalActualDLOT'])) {
-                    $stdRes['TotalDLCost'] = (float)$actRes['TotalActualDLOT'];
-                    $stdRes['TotalActualDL'] = (float)($actRes['TotalActualDL'] ?? 0);
-                    $stdRes['TotalActualOT'] = (float)($actRes['TotalActualOT'] ?? 0);
-                    $stdRes['isActualDLCost'] = true;
+                
+                // Fetch actual cost ONLY if looking at aggregate level (no specific model, machine, or team)
+                if ((empty($model) || $model === 'All') && (empty($machine) || $machine === 'All') && (empty($team) || $team === 'All')) {
+                    $stmtAct = $pdo->prepare("EXEC dbo." . SP_CALC_ACTUAL_COST . " @StartDate=:sd, @EndDate=:ed, @Line=:ln, @Team=:tm");
+                    $stmtAct->bindValue(':sd', $startDate);
+                    $stmtAct->bindValue(':ed', $endDate);
                     
-                    $rev = $stdRes['TotalStdRevenue'] ?? 0;
-                    $stdRes['PercentDL'] = ($rev > 0) ? ($stdRes['TotalDLCost'] / $rev) * 100 : 0;
-                    $stdRes['PercentOH'] = ($rev > 0) ? (($stdRes['TotalOHCost'] ?? 0) / $rev) * 100 : 0;
+                    if (empty($line) || $line === 'All' || strtoupper($line) === 'ASSEMBLY') {
+                        $stmtAct->bindValue(':ln', null, PDO::PARAM_NULL);
+                    } else {
+                        $stmtAct->bindValue(':ln', $line, PDO::PARAM_STR);
+                    }
                     
-                    $stdRes['TotalStdCost'] = ($stdRes['TotalMatCost'] ?? 0) + $stdRes['TotalDLCost'] + ($stdRes['TotalOHCost'] ?? 0);
-                    $stdRes['PercentGPStd'] = ($rev > 0) ? (($rev - $stdRes['TotalStdCost']) / $rev) * 100 : 0;
-                    
-                    $totalCost = $stdRes['TotalStdCost'];
-                    $revenue = $stdRes['TotalStdRevenue'];
-                    $laborCost = $stdRes['TotalDLCost'];
-                    $stdRes['CostPerUnit'] = ($totalFG > 0) ? ($totalCost / $totalFG) : 0;
-                    $matCostPerUnit = ($totalFG > 0) ? ($stdRes['TotalMatCost'] / $totalFG) : 0;
-                    $stdRes['ScrapCostValue'] = $scrapQty * $matCostPerUnit;
-                    $stdRes['LaborEfficiency'] = ($laborCost > 0) ? ($revenue / $laborCost) : 0;
+                    $stmtAct->bindValue(':tm', null, PDO::PARAM_NULL);
+                    $stmtAct->execute();
+                    $actRes = $stmtAct->fetch(PDO::FETCH_ASSOC);
+
+                    if ($actRes && isset($actRes['TotalActualDLOT'])) {
+                        $stdRes['TotalDLCost'] = (float)$actRes['TotalActualDLOT'];
+                        $stdRes['TotalActualDL'] = (float)($actRes['TotalActualDL'] ?? 0);
+                        $stdRes['TotalActualOT'] = (float)($actRes['TotalActualOT'] ?? 0);
+                        $stdRes['isActualDLCost'] = true;
+                    }
                 }
+                
+                $rev = $stdRes['TotalStdRevenue'] ?? 0;
+                $stdRes['PercentDL'] = ($rev > 0) ? ($stdRes['TotalDLCost'] / $rev) * 100 : 0;
+                $stdRes['PercentOH'] = ($rev > 0) ? (($stdRes['TotalOHCost'] ?? 0) / $rev) * 100 : 0;
+                
+                $stdRes['TotalStdCost'] = ($stdRes['TotalMatCost'] ?? 0) + $stdRes['TotalDLCost'] + ($stdRes['TotalOHCost'] ?? 0);
+                $stdRes['PercentGPStd'] = ($rev > 0) ? (($rev - $stdRes['TotalStdCost']) / $rev) * 100 : 0;
+                
+                $totalCost = $stdRes['TotalStdCost'];
+                $revenue = $stdRes['TotalStdRevenue'];
+                $laborCost = $stdRes['TotalDLCost'];
+                $stdRes['CostPerUnit'] = ($totalFG > 0) ? ($totalCost / $totalFG) : 0;
+                $matCostPerUnit = ($totalFG > 0) ? ($stdRes['TotalMatCost'] / $totalFG) : 0;
+                $stdRes['ScrapCostValue'] = $scrapQty * $matCostPerUnit;
+                $stdRes['LaborEfficiency'] = ($laborCost > 0) ? ($revenue / $laborCost) : 0;
                 
                 $response['data'] = $stdRes;
                 $response['success'] = true;
