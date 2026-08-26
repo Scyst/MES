@@ -128,7 +128,7 @@ try {
             }
             
             $stmt = $pdo->prepare("
-                SELECT t.serial_no, t.current_qty, t.master_pallet_no, t.received_date, t.warehouse_no, l.location_name
+                SELECT t.serial_no, t.current_qty, t.location_id, t.master_pallet_no, t.received_date, t.warehouse_no, l.location_name
                 FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
                 LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON t.location_id = l.location_id
                 WHERE $cond
@@ -1246,7 +1246,7 @@ try {
                 $transferIdsArray = json_decode($transferIdsJson, true);
                 if (!empty($transferIdsArray)) {
                     $placeholders = implode(',', array_fill(0, count($transferIdsArray), '?'));
-                    $stmtTags = $pdo->prepare("SELECT transfer_uuid, to_location_id, notes FROM dbo.STOCK_TRANSFER_ORDERS WITH (NOLOCK) WHERE transfer_id IN ($placeholders) AND status = 'COMPLETED' AND notes LIKE '%[TAG: %'");
+                    $stmtTags = $pdo->prepare("SELECT transfer_uuid, to_location_id, notes FROM dbo.STOCK_TRANSFER_ORDERS WHERE transfer_id IN ($placeholders) AND status = 'COMPLETED' AND notes LIKE '%[[]TAG: %'");
                     $stmtTags->execute($transferIdsArray);
                     $tagTransfers = $stmtTags->fetchAll(PDO::FETCH_ASSOC);
                     
@@ -1282,7 +1282,7 @@ try {
                 $transferIdsArray = json_decode($transferIdsJson, true);
                 if (!empty($transferIdsArray)) {
                     $placeholders = implode(',', array_fill(0, count($transferIdsArray), '?'));
-                    $stmtTags = $pdo->prepare("SELECT transfer_uuid, to_location_id, notes FROM dbo.STOCK_TRANSFER_ORDERS WITH (NOLOCK) WHERE transfer_id IN ($placeholders) AND status = 'COMPLETED' AND notes LIKE '%[TAG: %'");
+                    $stmtTags = $pdo->prepare("SELECT transfer_uuid, to_location_id, notes FROM dbo.STOCK_TRANSFER_ORDERS WHERE transfer_id IN ($placeholders) AND status = 'COMPLETED' AND notes LIKE '%[[]TAG: %'");
                     $stmtTags->execute($transferIdsArray);
                     $tagTransfers = $stmtTags->fetchAll(PDO::FETCH_ASSOC);
                     
