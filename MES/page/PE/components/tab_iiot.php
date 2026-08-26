@@ -714,7 +714,7 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label text-muted small">Global Search</label>
-                    <input type="text" class="form-control" id="iiotFilterSearch" placeholder="Search name, code, model, asset no..." autocomplete="off">
+                    <input type="search" class="form-control" id="iiotFilterSearch" placeholder="Search name, code, model, asset no..." autocomplete="new-password">
                 </div>
                 <div class="row">
                     <div class="col-6 mb-3">

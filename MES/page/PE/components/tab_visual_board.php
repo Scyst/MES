@@ -237,7 +237,7 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div class="input-group" style="width: 300px;">
                 <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                <input type="text" class="form-control border-start-0" id="vbSearchInput" placeholder="ค้นหารหัส หรือชื่อเครื่อง..." onkeyup="VisualBoardModule.filterTable()" autocomplete="off">
+                <input type="search" class="form-control border-start-0" id="vbSearchInput" placeholder="ค้นหารหัส หรือชื่อเครื่อง..." onkeyup="VisualBoardModule.filterTable()" autocomplete="new-password">
             </div>
             <div>
                 <button class="btn btn-sm btn-outline-secondary me-2" onclick="VisualBoardModule.selectAll(true)">เลือกทั้งหมด</button>

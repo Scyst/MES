@@ -93,7 +93,7 @@
                 <div class="pe-filter-bar" style="border-bottom: 1px solid var(--pe-border-color); border-radius: 0;">
                     <div class="pe-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="spSearchInput" placeholder="ค้นหา Item Code, ชื่อ, รายละเอียด..." oninput="SparePartsModule.filterTable()" autocomplete="off">
+                        <input type="search" id="spSearchInput" placeholder="ค้นหา Item Code, ชื่อ, รายละเอียด..." oninput="SparePartsModule.filterTable()" autocomplete="new-password">
                     </div>
                     <select class="pe-filter-select" id="spFilterLocation" onchange="SparePartsModule.loadData()">
                         <option value="">ทุกคลัง</option>
@@ -170,7 +170,7 @@
                 <div class="pe-filter-bar" style="border-bottom: 1px solid var(--pe-border-color); border-radius: 0;">
                     <div class="pe-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="spMasterSearchInput" placeholder="ค้นหา Item Code, ชื่อ, Supplier..." oninput="SparePartsModule.filterMasterTable()" autocomplete="off">
+                        <input type="search" id="spMasterSearchInput" placeholder="ค้นหา Item Code, ชื่อ, Supplier..." oninput="SparePartsModule.filterMasterTable()" autocomplete="new-password">
                     </div>
                     <div class="pe-filter-spacer"></div>
                     <div class="d-flex gap-2 flex-wrap align-items-center">
@@ -229,7 +229,7 @@
                 <div class="pe-filter-bar" style="border-bottom: 1px solid var(--pe-border-color); border-radius: 0;">
                     <div class="pe-search">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="spHistorySearchInput" placeholder="ค้นหา รหัส, ชื่อ, ผู้ทำรายการ..." oninput="SparePartsModule.filterHistoryTable()" autocomplete="off">
+                        <input type="search" id="spHistorySearchInput" placeholder="ค้นหา รหัส, ชื่อ, ผู้ทำรายการ..." oninput="SparePartsModule.filterHistoryTable()" autocomplete="new-password">
                     </div>
                     <div class="pe-filter-spacer"></div>
                     <div class="d-flex gap-2 flex-wrap">

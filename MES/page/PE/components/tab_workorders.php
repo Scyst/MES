@@ -37,7 +37,7 @@
     <div class="pe-filter-header-mobile">
         <div class="pe-search">
             <i class="fas fa-search"></i>
-            <input type="text" id="woSearchInput" placeholder="ค้นหา WO#, Machine, Issue..." oninput="WorkOrderModule.filterTable()" autocomplete="off">
+            <input type="search" id="woSearchInput" placeholder="ค้นหา WO#, Machine, Issue..." oninput="WorkOrderModule.filterTable()" autocomplete="new-password">
         </div>
         <button class="pe-btn pe-btn-ghost pe-mobile-filter-toggle" onclick="WorkOrderModule.openFilterModal()" title="Open Filters">
             <i class="fas fa-filter"></i>
