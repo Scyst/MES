@@ -778,7 +778,7 @@ function onTransferTagChange() {
         const tag = currentTransferTags.find(t => t.serial_no === selectedSerial);
         if (tag) {
             fromLoc.value = tag.location_id;
-            qtyInput.value = tag.current_qty;
+            qtyInput.value = parseFloat(tag.current_qty);
             fromLoc.style.pointerEvents = 'none';
             fromLoc.classList.add('bg-light');
         }
