@@ -21,6 +21,7 @@ try {
     switch ($action) {
         case 'lock':
             $machine_id = $input['machine_id'] ?? null;
+            if ($machine_id === 'undefined') $machine_id = null;
             $wo_id = $input['wo_id'] ?? null;
             $locked_by = trim($input['locked_by'] ?? '');
             $reason = trim($input['reason'] ?? '');
@@ -126,7 +127,7 @@ try {
 
         case 'status':
             $machine_id = $_GET['machine_id'] ?? null;
-            if (!$machine_id) {
+            if (!$machine_id || $machine_id === 'undefined' || !is_numeric($machine_id)) {
                 echo json_encode(['success' => false, 'message' => 'Missing machine_id']);
                 exit;
             }
@@ -151,6 +152,6 @@ try {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    writeErrorLog(, 'lotoAPI', $e->getMessage(), $input);
+    writeErrorLog($pdo, 'lotoAPI', $e->getMessage(), $input);
     echo json_encode(['success' => false, 'message' => 'Internal server error: ' . $e->getMessage()]);
 }
