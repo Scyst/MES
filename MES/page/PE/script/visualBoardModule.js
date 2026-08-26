@@ -88,7 +88,7 @@ const VisualBoardModule = (function() {
                     <input class="form-check-input vb-row-checkbox" type="checkbox" value="${m.machine_id}" ${isChecked} onchange="VisualBoardModule.updateSelection(this)">
                 </td>
                 <td class="fw-bold text-primary">
-                    ${m.is_loto ? '<span class="badge bg-danger me-1" style="font-size:0.7rem;" title="LOCKED"><i class="fas fa-lock"></i></span>' : ''}
+                    ${m.is_loto == 1 ? '<span class="badge bg-danger me-1" style="font-size:0.7rem;" title="LOCKED"><i class="fas fa-lock"></i></span>' : ''}
                     ${escapeHtml(m.machine_code)}
                 </td>
                 <td>${escapeHtml(m.machine_name)}</td>

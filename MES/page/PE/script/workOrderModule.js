@@ -110,7 +110,7 @@ const WorkOrderModule = (() => {
                 <td class="pe-text-sm">${PEApp.escapeHtml(w.wo_type || '-')}</td>
                 <td>${PEApp.getPriorityBadge(w.priority)}</td>
                 <td class="pe-text-sm">
-                    ${w.is_loto ? '<span class="badge bg-danger me-1" style="font-size:0.7rem;" title="LOCKED"><i class="fas fa-lock"></i></span>' : ''}
+                    ${w.is_loto == 1 ? '<span class="badge bg-danger me-1" style="font-size:0.7rem;" title="LOCKED"><i class="fas fa-lock"></i></span>' : ''}
                     ${machineTxt}
                 </td>
                 <td>${PEApp.escapeHtml(w.line || '-')}</td>
@@ -166,7 +166,7 @@ const WorkOrderModule = (() => {
                         <i class="fas fa-cogs me-1"></i>${PEApp.escapeHtml(w.machine_code || w.machine_name || '-')}
                     </div>
                     <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end; flex-shrink: 0;">
-                        ${w.is_loto ? '<span class="badge bg-danger" style="font-size:0.7rem;"><i class="fas fa-lock me-1"></i>LOTO</span>' : ''}
+                        ${w.is_loto == 1 ? '<span class="badge bg-danger" style="font-size:0.7rem;"><i class="fas fa-lock me-1"></i>LOTO</span>' : ''}
                         ${PEApp.getStatusBadge(w.status)}
                         ${PEApp.getPriorityBadge(w.priority)}
                     </div>
@@ -237,7 +237,7 @@ const WorkOrderModule = (() => {
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div class="pe-fw-bold" style="color:var(--pe-primary); font-size: 0.95rem;">${PEApp.escapeHtml(w.wo_number)}</div>
                     <div class="d-flex gap-1">
-                        ${w.is_loto ? '<span class="badge bg-danger" style="font-size:0.7rem;"><i class="fas fa-lock"></i></span>' : ''}
+                        ${w.is_loto == 1 ? '<span class="badge bg-danger" style="font-size:0.7rem;"><i class="fas fa-lock"></i></span>' : ''}
                         ${PEApp.getPriorityBadge(w.priority)}
                     </div>
                 </div>

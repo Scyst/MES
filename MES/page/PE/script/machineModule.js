@@ -91,7 +91,7 @@ const MachineModule = (() => {
                     <div class="card-top">
                         <div class="machine-icon"><i class="${typeIcon}"></i></div>
                         <div class="pe-d-flex pe-gap-8 pe-align-center">
-                            ${m.is_loto ? '<span class="badge bg-danger" style="font-size:0.7rem;"><i class="fas fa-lock"></i> LOTO</span>' : ''}
+                            ${m.is_loto == 1 ? '<span class="badge bg-danger" style="font-size:0.7rem;"><i class="fas fa-lock"></i> LOTO</span>' : ''}
                             ${PEApp.getCriticalityBadge(m.criticality || 'Medium')}
                             ${PEApp.getMachineStatusBadge(m.status || 'Active')}
                         </div>
@@ -103,7 +103,7 @@ const MachineModule = (() => {
             if (m.image_path) {
                 topBadgesHtml = `
                     <div class="pe-d-flex pe-gap-8 pe-align-center pe-mb-3">
-                        ${m.is_loto ? '<span class="badge bg-danger" style="font-size:0.7rem;"><i class="fas fa-lock"></i> LOTO</span>' : ''}
+                        ${m.is_loto == 1 ? '<span class="badge bg-danger" style="font-size:0.7rem;"><i class="fas fa-lock"></i> LOTO</span>' : ''}
                         ${PEApp.getCriticalityBadge(m.criticality || 'Medium')}
                         ${PEApp.getMachineStatusBadge(m.status || 'Active')}
                     </div>`;
@@ -143,7 +143,7 @@ const MachineModule = (() => {
         tbody.innerHTML = data.map(m => `
             <tr>
                 <td class="pe-fw-bold" style="color:var(--pe-primary);">
-                    ${m.is_loto ? '<span class="badge bg-danger me-1" style="font-size:0.7rem;" title="LOCKED"><i class="fas fa-lock"></i></span>' : ''}
+                    ${m.is_loto == 1 ? '<span class="badge bg-danger me-1" style="font-size:0.7rem;" title="LOCKED"><i class="fas fa-lock"></i></span>' : ''}
                     ${PEApp.escapeHtml(m.machine_code)}
                 </td>
                 <td>${PEApp.escapeHtml(m.machine_name)}</td>
