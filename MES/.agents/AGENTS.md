@@ -1,4 +1,4 @@
-﻿# FILE DELETION SAFETY PROTOCOL (CRITICAL)
+# FILE DELETION SAFETY PROTOCOL (CRITICAL)
 
 - **DRY-RUN BEFORE DELETION:** Whenever an agent is instructed to (or decides to) delete files or directories on the server (whether through bash commands, scripts, FTP, or other tools), the agent **MUST** perform a verification check first.
 - **SELECT BEFORE DELETE:** Just like running a `SELECT` statement before a `DELETE` in SQL, the agent must run a non-destructive listing command (e.g., `ls`, `find`, or equivalent MCP tools like `list_directory`) using the EXACT same pattern/conditions it plans to use for the deletion.
@@ -18,6 +18,7 @@
 - **FAIL FAST & LOUD:** If you encounter an error on an isolated module, log the error to `error_log.md` and proceed with independent tasks. If the error is a core blocker (e.g., DB connection, build failure) or ambiguous requirement, halt execution immediately, report the exact error, and ask the user for clarification.
 - **DOC-FIRST (THINK BEFORE CODE):** Apply DOC-FIRST **ONLY** when creating new modules, APIs, or changing core architecture (e.g., JSDoc, module README, ROADMAP.md). Skip this requirement for minor bug fixes or small feature additions to conserve tokens.
 - **BOY SCOUT RULE (LEAVE IT BETTER):** Apply this rule ONLY to **local variables** within the function scope you are actively editing. NEVER rename public/exported variables or functions to prevent side-effects. Do not add `// TODO` comments as they create technical debt.
+- **FORMAL TONE (INDUSTRIAL GRADE):** All user-facing text, UI elements, confirmation dialogs, and notifications MUST use formal, professional Thai/English terminology appropriate for an industrial or factory software environment. Do not use playful, casual, or slang terminology (e.g. use "ทั้งหมด" instead of "รวดเดียว", "กรุณายืนยัน" instead of "เอาเลยไหม").
 - **ASSUME PRODUCTION:** Unless explicitly instructed that this is a prototype, write all code to production standards. Always include robust error handling (try-catch), input validation, proper typing, and pagination/limits on queries.
 
 # GIT WORKFLOW (MULTI-AGENT PARALLEL)
