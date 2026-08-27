@@ -965,8 +965,8 @@ async function bulkProcessTransfer(status) {
     if (transferIds.length === 0) return;
     
     const confirmMsg = status === 'COMPLETED' 
-        ? `ยืนยันการอนุมัติรับของจำนวน ${transferIds.length} รายการ รวดเดียว?` 
-        : `ยืนยันการปฏิเสธคำขอจำนวน ${transferIds.length} รายการ รวดเดียวใช่หรือไม่?`;
+        ? `ยืนยันการอนุมัติรับของจำนวน ${transferIds.length} รายการ หรือไม่?` 
+        : `ยืนยันการปฏิเสธคำขอจำนวน ${transferIds.length} รายการ หรือไม่?`;
         
     const { isConfirmed } = await Swal.fire({
         title: 'ยืนยันการทำรายการ',
