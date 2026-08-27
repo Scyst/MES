@@ -968,7 +968,18 @@ async function bulkProcessTransfer(status) {
         ? `ยืนยันการอนุมัติรับของจำนวน ${transferIds.length} รายการ รวดเดียว?` 
         : `ยืนยันการปฏิเสธคำขอจำนวน ${transferIds.length} รายการ รวดเดียวใช่หรือไม่?`;
         
-    if (!confirm(confirmMsg)) return;
+    const { isConfirmed } = await Swal.fire({
+        title: 'ยืนยันการทำรายการ',
+        text: confirmMsg,
+        icon: status === 'COMPLETED' ? 'question' : 'warning',
+        showCancelButton: true,
+        confirmButtonColor: status === 'COMPLETED' ? '#198754' : '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: status === 'COMPLETED' ? '<i class="fas fa-check"></i> ยืนยันอนุมัติ' : '<i class="fas fa-times"></i> ยืนยันปฏิเสธ',
+        cancelButtonText: 'ยกเลิก'
+    });
+    
+    if (!isConfirmed) return;
 
     const formData = new FormData();
     formData.append('transfer_ids', JSON.stringify(transferIds));
@@ -985,7 +996,19 @@ async function bulkProcessTransfer(status) {
 
 async function processTransfer(transferId, status) {
     let msg = status === 'COMPLETED' ? 'ยืนยันรับของเข้าปลายทาง (ตัดสต็อกจริง)?' : 'ต้องการยกเลิกคำขอนี้ใช่หรือไม่?';
-    if (!confirm(msg)) return;
+    
+    const { isConfirmed } = await Swal.fire({
+        title: 'ยืนยันการทำรายการ',
+        text: msg,
+        icon: status === 'COMPLETED' ? 'question' : 'warning',
+        showCancelButton: true,
+        confirmButtonColor: status === 'COMPLETED' ? '#198754' : '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: status === 'COMPLETED' ? '<i class="fas fa-check"></i> ยืนยันรับของ' : '<i class="fas fa-times"></i> ยกเลิกคำขอ',
+        cancelButtonText: 'ปิด'
+    });
+    
+    if (!isConfirmed) return;
 
     const formData = new FormData();
     formData.append('transfer_id', transferId);
