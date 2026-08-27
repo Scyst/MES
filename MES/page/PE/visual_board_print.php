@@ -259,11 +259,13 @@ if (!isset($_SESSION['user'])) {
                 countText.innerText = `${machines.length} boards selected`;
 
                 let html = '';
-                const hazardUrlBase = `${window.location.origin}/MES/MES/page/PE/quick_hazard_report.php?machine_code=`;
+                // Dynamically build base URL from current location to support subdirectory deployments
+                let currentUrl = window.location.href.split('?')[0]; // Remove any query params if exist
+                const preopUrlBase = currentUrl.replace('visual_board_print.php', 'quick_preop.php') + '?machine_code=';
 
                 machines.forEach((m, index) => {
                     const installDateStr = m.install_date ? new Date(m.install_date).toLocaleDateString('en-GB') : '-';
-                    const machineUrl = hazardUrlBase + encodeURIComponent(m.machine_code);
+                    const machineUrl = preopUrlBase + encodeURIComponent(m.machine_code);
 
                     html += `
                     <div class="vb-page">
@@ -318,7 +320,7 @@ if (!isset($_SESSION['user'])) {
                             
                             <div class="vb-qr-section">
                                 <div class="vb-qr-text mb-2">
-                                    <h4><i class="fas fa-qrcode"></i> สแกนแจ้งปัญหา</h4>
+                                    <h4 style="font-size: 14pt; line-height: 1.4;"><i class="fas fa-qrcode"></i> สแกนเพื่อตรวจก่อนเปิดเครื่อง<br><small class="text-secondary" style="font-size: 10pt;">(Pre-Op Checklist)</small></h4>
                                 </div>
                                 <div class="vb-qr-code-box">
                                     <div id="vb_qrcode_${index}" class="qrcode-render" data-url="${escapeHtml(machineUrl)}"></div>

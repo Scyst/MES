@@ -13,14 +13,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once __DIR__ . '/../../components/php/logger.php';
 require_once __DIR__ . '/../../db.php';
 
-$input = json_decode(file_get_contents("php://input"), true) ?? $_POST ?? $_GET;
+$jsonInput = json_decode(file_get_contents("php://input"), true);
+$input = is_array($jsonInput) ? $jsonInput : (!empty($_POST) ? $_POST : $_GET);
 $action = $input['action'] ?? '';
 
 if ($action === 'get_preop_logs') {
     try {
-        $sql = "SELECT p.*, m.machine_code, m.machine_name, m.line 
+        $sql = "SELECT p.*, m.machine_code, m.machine_name, m.line, w.wo_number 
                 FROM PE_PREOP_AUDITS p 
                 JOIN " . PE_MACHINES_TABLE . " m ON p.machine_id = m.machine_id 
+                LEFT JOIN " . PE_WORK_ORDERS_TABLE . " w ON p.wo_id = w.wo_id
                 ORDER BY p.audited_at DESC";
         $stmt = $pdo->query($sql);
         $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -191,19 +193,31 @@ if ($action === 'submit_preop') {
         $machineName = $mData['machine_name'];
         $line = $mData['line'];
         
-        // Handle image upload if provided (only when failed)
+        // Handle multiple image uploads per item
         $imagePath = null;
-        if ($isFailed && !empty($input['image_base64'])) {
-            $uploadDir = __DIR__ . '/../../../uploads/pe_images/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
-            $filename = 'PREOP_' . time() . '_' . uniqid() . '.jpg';
-            $imgData = preg_replace('#^data:image/\w+;base64,#i', '', $input['image_base64']);
-            if (file_put_contents($uploadDir . $filename, base64_decode($imgData))) {
-                $imagePath = 'uploads/pe_images/' . $filename;
+        $uploadDir = __DIR__ . '/../../../uploads/pe_images/';
+        
+        foreach ($checklistData as &$item) {
+            if (!empty($item['image_base64'])) {
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                $filename = 'PREOP_ITEM_' . $item['item_id'] . '_' . time() . '_' . uniqid() . '.jpg';
+                $imgData = preg_replace('#^data:image/\w+;base64,#i', '', $item['image_base64']);
+                if (file_put_contents($uploadDir . $filename, base64_decode($imgData))) {
+                    $item['image_path'] = 'uploads/pe_images/' . $filename;
+                    // Set the first found image as the main image_path for the overall record
+                    if ($imagePath === null) {
+                        $imagePath = $item['image_path'];
+                    }
+                }
+                // Unset base64 string so it doesn't take up space in JSON DB column
+                unset($item['image_base64']);
             }
         }
+        unset($item);
+        
+        $checklistJson = json_encode($checklistData, JSON_UNESCAPED_UNICODE);
         
         $pdo->beginTransaction();
         
@@ -253,10 +267,10 @@ if ($action === 'submit_preop') {
             $lotoStmt = $pdo->prepare($lotoSql);
             $lotoStmt->execute(["Pre-Op Audit Failed: " . $remarks, $machineId]);
             
-            // Log LOTO
-            $lLogSql = "INSERT INTO PE_LOTO_LOGS (machine_id, action, action_by, reason) VALUES (?, 'LOCKED', ?, ?)";
+            // Log LOTO with correct columns
+            $lLogSql = "INSERT INTO PE_LOTO_LOGS (machine_id, wo_id, locked_by, locked_at, status, reason) VALUES (?, ?, ?, ?, 'LOCKED', ?)";
             $lLogStmt = $pdo->prepare($lLogSql);
-            $lLogStmt->execute([$machineId, 'SYSTEM (Pre-Op Audit)', "Failed: " . $remarks]);
+            $lLogStmt->execute([$machineId, $woId, $auditedBy, date('Y-m-d H:i:s'), "Failed: " . $remarks]);
         }
         
         $shiftDate = date('Y-m-d');
@@ -287,11 +301,8 @@ if ($action === 'submit_preop') {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        $msg = $e->getMessage();
-        if (strpos($msg, 'SQLSTATE') !== false) {
-            $msg = mb_convert_encoding($msg, 'UTF-8', 'TIS-620');
-        }
-        echo json_encode(['success' => false, 'message' => $msg]);
+        // Return raw error message
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
     exit;
 }

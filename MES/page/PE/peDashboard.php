@@ -243,6 +243,7 @@ $pageTitle = "PE Enterprise";
     include __DIR__ . '/components/modals/modal_quick_close.php';
     include __DIR__ . '/components/modals/modal_wo_filters.php';
     include __DIR__ . '/components/modals/modal_loto.php';
+    include __DIR__ . '/components/modals/modal_checklist.php';
 ?>
 
 <!-- Cropper Modal -->

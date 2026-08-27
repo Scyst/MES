@@ -42,7 +42,7 @@
 ## 🚀 ระยะที่ 4: เติมเต็มส่วนที่ขาดหายและพัฒนาระบบขั้นสูง (Future Plan)
 
 ### 🧹 1. Code Cleanup & Optimization (Technical Debt)
-- [ ] **Data Entry:** กำหนด Checklist Template ให้กับเครื่องจักรแต่ละประเภทจริงในฐานข้อมูล (ปัจจุบันระบบทำงานได้แล้ว แต่มีแค่ Template กลาง `machine_type = NULL`)
+- [x] **Data Entry:** กำหนด Checklist Template ให้กับเครื่องจักรแต่ละประเภทจริงในฐานข้อมูล (ปัจจุบันระบบทำงานได้แล้ว แต่มีแค่ Template กลาง `machine_type = NULL`)
 - [ ] **LOTO Workflow Enhancements:**
   - [x] เพิ่มการบังคับใส่ PIN หรือรหัสผ่าน ก่อนกดยืนยันปลดล็อก LOTO
   - [x] ส่งแจ้งเตือน (Line Notify) เมื่อมีการล็อก LOTO เครื่องจักรสำคัญ (Critical Machines)

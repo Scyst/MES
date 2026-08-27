@@ -27,21 +27,23 @@ try {
             $limit     = min((int)($_GET['limit'] ?? 50), 200);
             $days = min((int)($_GET['days'] ?? 30), 365);
 
-            $sql = "SELECT wo_id, wo_number, wo_type, machine_name, line, priority,
-                           requested_by, requested_at, issue_title, issue_detail,
-                           image_path, status, assigned_to, completed_at, action_taken AS notes
-                    FROM " . PE_WORK_ORDERS_TABLE . "
-                    WHERE wo_type = 'Safety/Hazard'
-                    AND requested_at >= DATEADD(day, -{$days}, GETDATE())";
+            $sql = "SELECT w.wo_id, w.wo_number, w.wo_type, w.machine_name, w.line, w.priority,
+                           w.requested_by, w.requested_at, w.issue_title, w.issue_detail,
+                           w.image_path, w.status, w.assigned_to, w.completed_at, w.action_taken AS notes,
+                           a.checklist_data
+                    FROM " . PE_WORK_ORDERS_TABLE . " w
+                    LEFT JOIN PE_PREOP_AUDITS a ON w.wo_id = a.wo_id
+                    WHERE w.wo_type = 'Safety/Hazard'
+                    AND w.requested_at >= DATEADD(day, -{$days}, GETDATE())";
             $params = [];
 
             if ($status !== 'all') {
-                $sql .= " AND status = ?";
+                $sql .= " AND w.status = ?";
                 $params[] = $status;
             }
             $sql .= " ORDER BY
-                        CASE status WHEN 'Pending' THEN 1 WHEN 'In Progress' THEN 2 ELSE 3 END,
-                        requested_at DESC
+                        CASE w.status WHEN 'Pending' THEN 1 WHEN 'In Progress' THEN 2 ELSE 3 END,
+                        w.requested_at DESC
                       OFFSET 0 ROWS FETCH NEXT {$limit} ROWS ONLY";
 
             $stmt = $pdo->prepare($sql);

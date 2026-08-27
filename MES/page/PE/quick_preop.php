@@ -1,6 +1,8 @@
 <?php
 // e:\MES\MES\MES\page\PE\quick_preop.php
+session_start();
 $machineCode = $_GET['machine_code'] ?? '';
+$loggedInUser = $_SESSION['user']['username'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -59,35 +61,24 @@ $machineCode = $_GET['machine_code'] ?? '';
             border: 2px dashed var(--pe-danger); 
             color: var(--pe-danger); 
             background: rgba(239, 68, 68, 0.05); 
-            border-radius: 14px; 
-            padding: 25px 10px; 
+            border-radius: 8px; 
+            padding: 15px 10px; 
             text-align: center; 
             cursor: pointer; 
             transition: all 0.2s ease; 
         }
-        .preview-container { 
-            position: relative; 
-            display: none; 
-            margin-top: 15px; 
-        }
-        .preview-container img { 
-            width: 100%; 
-            border-radius: 14px; 
-            border: 2px solid var(--pe-danger); 
-            box-shadow: var(--pe-shadow-sm); 
-        }
         .remove-img-btn { 
             position: absolute; 
-            top: -12px; 
-            right: -12px; 
+            top: -10px; 
+            right: -10px; 
             background: var(--pe-danger); 
             color: white; 
             border: none; 
             border-radius: 50%; 
-            width: 32px; 
-            height: 32px; 
-            font-size: 14px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+            width: 28px; 
+            height: 28px; 
+            font-size: 12px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3); 
             z-index: 5; 
             display: flex;
             align-items: center;
@@ -131,7 +122,7 @@ $machineCode = $_GET['machine_code'] ?? '';
                 </div>
                 <div class="col-6">
                     <label class="pe-form-label">ผู้ตรวจ (Audited By) <span class="required">*</span></label>
-                    <input type="text" class="pe-form-input" name="audited_by" required placeholder="ชื่อ/รหัส">
+                    <input type="text" class="pe-form-input" name="audited_by" id="auditedByInput" required placeholder="ชื่อ/รหัส" value="<?= htmlspecialchars($loggedInUser) ?>">
                 </div>
             </div>
 
@@ -149,27 +140,11 @@ $machineCode = $_GET['machine_code'] ?? '';
             <!-- Failure Action Area (Shown only if any answer is NO) -->
             <div id="failActionArea" style="display: none; margin-top: 20px; padding: 15px; border-radius: 12px; background-color: var(--pe-danger-light); border: 1px solid var(--pe-danger);">
                 <h6 class="text-danger fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> พบปัญหาความปลอดภัย</h6>
-                <p class="small text-danger mb-2">ระบบจะสร้างใบแจ้งซ่อมฉุกเฉิน (Hazard Report) อัตโนมัติ กรุณาถ่ายรูปและระบุรายละเอียด</p>
-                
-                <div class="mb-3">
-                    <label class="pe-form-label text-danger">รายละเอียด (Remarks) <span class="required">*</span></label>
-                    <textarea class="pe-form-input" id="failRemarks" name="remarks" rows="2" placeholder="อธิบายปัญหาที่พบ..."></textarea>
-                </div>
+                <p class="small text-danger mb-2">ระบบจะสร้างใบแจ้งซ่อมฉุกเฉิน (Hazard Report) อัตโนมัติ</p>
                 
                 <div class="mb-2">
-                    <label class="pe-form-label text-danger">ถ่ายรูปหลักฐาน (Photo Evidence) <span class="required">*</span></label>
-                    <input type="hidden" id="imageBase64" name="image_base64" value="">
-                    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
-                    
-                    <div class="camera-btn shadow-sm" id="cameraBtn">
-                        <i class="fas fa-camera fa-2x mb-1"></i>
-                        <h6 class="mb-0 fw-bold">แตะเพื่อถ่ายรูป</h6>
-                    </div>
-
-                    <div class="preview-container" id="previewContainer">
-                        <button type="button" class="remove-img-btn" id="removeImgBtn"><i class="fas fa-times"></i></button>
-                        <img id="imagePreview" src="" alt="Preview">
-                    </div>
+                    <label class="pe-form-label text-danger">รายละเอียดภาพรวม (Overall Remarks) <span class="required">*</span></label>
+                    <textarea class="pe-form-input" id="failRemarks" name="remarks" rows="2" placeholder="อธิบายปัญหาที่พบ..."></textarea>
                 </div>
             </div>
 
@@ -181,22 +156,44 @@ $machineCode = $_GET['machine_code'] ?? '';
 </div>
 
 <script>
+window.removeImage = function(itemId) {
+    document.getElementById(`cam_${itemId}`).value = '';
+    document.getElementById(`img_b64_${itemId}`).value = '';
+    document.getElementById(`preview_img_${itemId}`).src = '';
+    document.getElementById(`preview_cont_${itemId}`).style.display = 'none';
+    document.getElementById(`cam_btn_${itemId}`).style.display = 'block';
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const failActionArea = document.getElementById('failActionArea');
     const submitBtn = document.getElementById('submitBtn');
     
-    // Auto-fill audited_by if previously saved
-    const savedName = localStorage.getItem('preop_audited_by');
-    if(savedName) {
-        document.querySelector('input[name="audited_by"]').value = savedName;
+    // Auto-fill audited_by if previously saved and no session user
+    const auditedByInput = document.getElementById('auditedByInput');
+    if (!auditedByInput.value) {
+        const savedName = localStorage.getItem('preop_audited_by');
+        if(savedName) {
+            auditedByInput.value = savedName;
+        }
     }
     
     // Check if any "no" is selected
     function checkFailures() {
         let hasFailure = false;
-        const noRadios = document.querySelectorAll('input[type="radio"][value="no"]');
-        noRadios.forEach(radio => {
-            if (radio.checked) hasFailure = true;
+        
+        document.querySelectorAll('.checklist-item').forEach(itemDiv => {
+            const radio = itemDiv.querySelector('input[type="radio"]');
+            if (!radio) return;
+            const itemId = radio.dataset.itemId;
+            const noRadio = document.getElementById(`q${itemId}_no`);
+            const failArea = document.getElementById(`fail_area_${itemId}`);
+            
+            if (noRadio && noRadio.checked) {
+                failArea.style.display = 'block';
+                hasFailure = true;
+            } else {
+                failArea.style.display = 'none';
+            }
         });
         
         if (hasFailure) {
@@ -247,13 +244,67 @@ document.addEventListener('DOMContentLoaded', () => {
                                     data-item-id="${item.item_id}" data-item-text="${item.item_text}" required>
                                 <label class="btn btn-outline-danger w-50 fw-bold" for="q${item.item_id}_no"><i class="fas fa-times me-1"></i> NO</label>
                             </div>
+                            
+                            <div class="item-failure-area" id="fail_area_${item.item_id}" style="display: none; background: #fff5f5; border: 1px dashed #ef4444; padding: 10px; border-radius: 8px; margin-top: 10px;">
+                                <label class="small text-danger fw-bold mb-1"><i class="fas fa-camera"></i> ถ่ายรูปจุดที่มีปัญหา <span class="required">*</span></label>
+                                <input type="hidden" id="img_b64_${item.item_id}" value="">
+                                <input type="file" id="cam_${item.item_id}" accept="image/*" capture="environment" style="display: none;">
+                                
+                                <div class="camera-btn shadow-sm" id="cam_btn_${item.item_id}" onclick="document.getElementById('cam_${item.item_id}').click();">
+                                    <i class="fas fa-camera mb-1"></i>
+                                    <div class="small fw-bold">ถ่ายรูป</div>
+                                </div>
+
+                                <div class="preview-container" id="preview_cont_${item.item_id}" style="display: none; position: relative;">
+                                    <button type="button" class="remove-img-btn" onclick="removeImage(${item.item_id})"><i class="fas fa-times"></i></button>
+                                    <img id="preview_img_${item.item_id}" src="" alt="Preview" style="width: 100%; border-radius: 8px; border: 1px solid #ef4444;">
+                                </div>
+                            </div>
                         </div>
                     `;
                     container.insertAdjacentHTML('beforeend', html);
                 });
                 
-                document.querySelectorAll('.checklist-radio').forEach(input => {
-                    input.addEventListener('change', checkFailures);
+                // Attach file input listeners and radio listeners
+                result.data.forEach((item) => {
+                    // Radio listener
+                    document.getElementById(`q${item.item_id}_yes`).addEventListener('change', checkFailures);
+                    document.getElementById(`q${item.item_id}_no`).addEventListener('change', checkFailures);
+
+                    // Camera listener
+                    const camInput = document.getElementById(`cam_${item.item_id}`);
+                    camInput.addEventListener('change', function(e) {
+                        if (e.target.files && e.target.files[0]) {
+                            const file = e.target.files[0];
+                            if (file.size > 5 * 1024 * 1024) {
+                                Swal.fire('ขนาดไฟล์เกิน', 'กรุณาอัปโหลดรูปภาพขนาดไม่เกิน 5MB', 'warning');
+                                camInput.value = '';
+                                return;
+                            }
+                            const reader = new FileReader();
+                            reader.onload = function(evt) {
+                                const img = new Image();
+                                img.onload = function() {
+                                    const canvas = document.createElement('canvas');
+                                    let width = img.width; let height = img.height;
+                                    const MAX = 1200;
+                                    if(width > height && width > MAX) { height *= MAX/width; width = MAX; }
+                                    else if(height > MAX) { width *= MAX/height; height = MAX; }
+                                    canvas.width = width; canvas.height = height;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx.drawImage(img, 0, 0, width, height);
+                                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                                    
+                                    document.getElementById(`preview_img_${item.item_id}`).src = dataUrl;
+                                    document.getElementById(`img_b64_${item.item_id}`).value = dataUrl;
+                                    document.getElementById(`cam_btn_${item.item_id}`).style.display = 'none';
+                                    document.getElementById(`preview_cont_${item.item_id}`).style.display = 'block';
+                                }
+                                img.src = evt.target.result;
+                            }
+                            reader.readAsDataURL(file);
+                        }
+                    });
                 });
             } else {
                 container.innerHTML = '<div class="alert alert-danger">ไม่พบแบบฟอร์ม หรือรหัสเครื่องจักรไม่ถูกต้อง</div>';
@@ -278,75 +329,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Camera logic
-    const cameraBtn = document.getElementById('cameraBtn');
-    const cameraInput = document.getElementById('cameraInput');
-    const imagePreview = document.getElementById('imagePreview');
-    const previewContainer = document.getElementById('previewContainer');
-    const removeImgBtn = document.getElementById('removeImgBtn');
-    const imageBase64 = document.getElementById('imageBase64');
-
-    cameraBtn.addEventListener('click', () => { cameraInput.click(); });
-
-    cameraInput.addEventListener('change', function(e) {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            
-            // Validate size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                Swal.fire('ขนาดไฟล์เกิน', 'กรุณาอัปโหลดรูปภาพขนาดไม่เกิน 5MB', 'warning');
-                cameraInput.value = '';
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                // Compression logic (very basic resize for canvas)
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 1200;
-                    const MAX_HEIGHT = 1200;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
-                    } else {
-                        if (height > MAX_HEIGHT) {
-                            width *= MAX_HEIGHT / height;
-                            height = MAX_HEIGHT;
-                        }
-                    }
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                    imagePreview.src = dataUrl;
-                    imageBase64.value = dataUrl;
-                    
-                    cameraBtn.style.display = 'none';
-                    previewContainer.style.display = 'block';
-                }
-                img.src = evt.target.result;
-            }
-            reader.readAsDataURL(file);
-        }
-    });
-
-    removeImgBtn.addEventListener('click', () => {
-        cameraInput.value = '';
-        imageBase64.value = '';
-        imagePreview.src = '';
-        previewContainer.style.display = 'none';
-        cameraBtn.style.display = 'block';
-    });
-
     // Form Submission
     document.getElementById('preopForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -358,8 +340,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const failAreaVisible = failActionArea.style.display === 'block';
-        if (failAreaVisible && !imageBase64.value) {
-            Swal.fire('ถ่ายรูปหลักฐาน', 'กรุณาถ่ายรูปปัญหาที่พบเพื่อเป็นหลักฐาน', 'warning');
+        
+        const checklistData = [];
+        let missingPhotos = false;
+
+        document.querySelectorAll('.checklist-item').forEach(itemDiv => {
+            const radio = itemDiv.querySelector('input[type="radio"]:checked');
+            if (radio) {
+                const itemId = radio.dataset.itemId;
+                let imageB64 = '';
+                if (radio.value === 'no') {
+                    imageB64 = document.getElementById(`img_b64_${itemId}`).value;
+                    if (!imageB64) missingPhotos = true;
+                }
+                
+                checklistData.push({
+                    item_id: itemId,
+                    text: radio.dataset.itemText,
+                    answer: radio.value,
+                    image_base64: imageB64
+                });
+            }
+        });
+
+        if (failAreaVisible && missingPhotos) {
+            Swal.fire('ถ่ายรูปหลักฐาน', 'กรุณาถ่ายรูปในจุดที่คุณตรวจสอบไม่ผ่าน (ที่มีปัญหา)', 'warning');
             return;
         }
 
@@ -369,20 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData.entries());
-
-        // Extract checklist data dynamically
-        const checklistData = [];
-        document.querySelectorAll('.checklist-item').forEach(itemDiv => {
-            const radio = itemDiv.querySelector('input[type="radio"]:checked');
-            if (radio) {
-                checklistData.push({
-                    item_id: radio.dataset.itemId,
-                    text: radio.dataset.itemText,
-                    answer: radio.value
-                });
-            }
-        });
-        
         data.checklist_data = checklistData;
 
         try {
@@ -411,10 +402,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('preopForm').reset();
                     document.getElementById('machineCode').value = mc;
                     document.querySelector('input[name="audited_by"]').value = auditedBy;
-                    removeImgBtn.click();
-                    checkFailures();
                     
-                    // Reload checklist just in case
+                    checkFailures();
                     loadChecklist(mc);
                 });
             } else {

@@ -4,6 +4,7 @@ const SafetyModule = (function() {
     let rawPreOpData = [];
     let currentHazModal = null;
     let checklistModal = null;
+    let statsModal = null;
     let complianceChart = null;
     let hazardTrendChart = null;
 
@@ -13,6 +14,9 @@ const SafetyModule = (function() {
         }
         if(document.getElementById('checklistModal')) {
             checklistModal = new bootstrap.Modal(document.getElementById('checklistModal'));
+        }
+        if(document.getElementById('safetyStatsModal')) {
+            statsModal = new bootstrap.Modal(document.getElementById('safetyStatsModal'));
         }
         loadData();
         loadPreOpStats();
@@ -131,8 +135,24 @@ const SafetyModule = (function() {
         let html = '';
         data.forEach(item => {
             let badgeClass = item.status === 'Passed' ? 'bg-success' : 'bg-danger';
-            let woLink = item.wo_id ? `<span class="badge bg-danger cursor-pointer" title="View WO" onclick="alert('WO ID: ${item.wo_id}')"><i class="fas fa-link"></i> WO</span>` : '-';
-            
+            let woLink = '-';
+            if (item.wo_id && item.wo_number) {
+                // Map Pre-Op data to Hazard format for viewDetails modal
+                let mappedItem = {
+                    wo_number: item.wo_number,
+                    machine_name: item.machine_name || item.machine_code,
+                    line: item.line || '',
+                    issue_title: 'Pre-Op Audit Failed',
+                    requested_by: item.audited_by,
+                    requested_at: item.audited_at,
+                    checklist_data: item.checklist_data,
+                    image_path: item.image_path,
+                    wo_id: item.wo_id,
+                    status: 'Pending' // fallback
+                };
+                let escapedItem = JSON.stringify(mappedItem).replace(/'/g, "&apos;");
+                woLink = `<span class="badge bg-danger cursor-pointer" title="View Details" onclick='SafetyModule.viewDetails(${escapedItem})'><i class="fas fa-search me-1"></i>${item.wo_number}</span>`;
+            }
             html += `
                 <tr class="align-middle">
                     <td>
@@ -256,22 +276,65 @@ const SafetyModule = (function() {
         document.getElementById('hazModalTitle').innerText = item.issue_title || '--';
         document.getElementById('hazModalWo').innerText = item.wo_number || '--';
         document.getElementById('hazModalMachine').innerText = `${item.machine_name} (${item.line})`;
-        document.getElementById('hazModalDetail').innerText = item.issue_detail || '--';
         document.getElementById('hazModalReporter').innerText = item.requested_by || '--';
         
         const reqDate = item.requested_at ? new Date(item.requested_at) : null;
         document.getElementById('hazModalTime').innerText = reqDate ? `${reqDate.toLocaleDateString('en-GB')} ${reqDate.toLocaleTimeString('en-GB')}` : '--';
 
+        const detailContainer = document.getElementById('hazModalDetail');
         const imgEl = document.getElementById('hazModalImage');
         const noImgEl = document.getElementById('hazModalNoImage');
-        if (item.image_path) {
-            imgEl.src = `../../${item.image_path}`;
-            imgEl.style.display = 'block';
-            noImgEl.style.display = 'none';
-        } else {
-            imgEl.src = '';
+        const imgContainer = document.getElementById('hazModalImageContainer');
+
+        let handledAsChecklist = false;
+
+        if (item.checklist_data) {
+            try {
+                const checklist = JSON.parse(item.checklist_data);
+                let html = '<div class="d-flex flex-column gap-3">';
+                let hasFailedItems = false;
+                checklist.forEach(cl => {
+                    if (cl.answer === 'no') {
+                        hasFailedItems = true;
+                        let imgHtml = cl.image_path ? `<img src="../../${cl.image_path}" class="img-fluid rounded border mt-2" style="max-height: 200px; object-fit: contain;">` : '';
+                        html += `
+                            <div class="border rounded p-2 bg-white">
+                                <div class="fw-bold text-dark"><i class="fas fa-times-circle text-danger me-1"></i> ${cl.text}</div>
+                                <div class="small text-muted mt-1">เหตุผล: ${cl.reason || 'ไม่ระบุ'}</div>
+                                ${imgHtml}
+                            </div>
+                        `;
+                    }
+                });
+                html += '</div>';
+                
+                if (hasFailedItems) {
+                    detailContainer.innerHTML = html;
+                    handledAsChecklist = true;
+                }
+            } catch (e) {
+                console.error("Failed to parse checklist data", e);
+            }
+        }
+
+        if (handledAsChecklist) {
+            // Hide the main image section if we have checklist data because images are shown inline
             imgEl.style.display = 'none';
-            noImgEl.style.display = 'block';
+            noImgEl.style.display = 'none';
+            if (imgContainer) imgContainer.style.display = 'none';
+        } else {
+            // Fallback for regular hazard reports
+            detailContainer.innerText = item.issue_detail || '--';
+            if (imgContainer) imgContainer.style.display = 'block';
+            if (item.image_path) {
+                imgEl.src = `../../${item.image_path}`;
+                imgEl.style.display = 'block';
+                noImgEl.style.display = 'none';
+            } else {
+                imgEl.src = '';
+                imgEl.style.display = 'none';
+                noImgEl.style.display = 'flex';
+            }
         }
 
         if (document.getElementById('hazUpdateWoId')) {
@@ -329,6 +392,12 @@ const SafetyModule = (function() {
         });
     }
 
+    // --- Stats Modal (Charts) ---
+    function openStatsModal() {
+        if (!statsModal) return;
+        statsModal.show();
+    }
+
     // --- Checklist Config ---
     function openChecklistConfig() {
         if (!checklistModal) return;
@@ -354,7 +423,7 @@ const SafetyModule = (function() {
     function loadChecklistConfig() {
         const type = document.getElementById('configMachineType')?.value || '';
         const tbody = document.getElementById('checklistConfigBody');
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+        tbody.innerHTML = '<tr data-loading><td colspan="4" class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังโหลด...</td></tr>';
         
         fetch('api/preopAPI.php', {
             method: 'POST',
@@ -363,23 +432,27 @@ const SafetyModule = (function() {
         })
         .then(res => res.json())
         .then(data => {
+            tbody.innerHTML = ''; // clear loading row
             if (data.success) {
-                tbody.innerHTML = '';
                 if(data.data.length === 0) {
-                    addChecklistRow();
+                    tbody.innerHTML = '<tr data-empty><td colspan="4" class="text-center py-3 text-muted">ยังไม่มีรายการตรวจสอบสำหรับประเภทนี้ กด "เพิ่มรายการ" เพื่อเริ่มต้น</td></tr>';
                     return;
                 }
-                
                 data.data.forEach(item => {
                     addChecklistRow(item);
                 });
             }
+        })
+        .catch(() => {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger"><i class="fas fa-exclamation-circle me-2"></i>เกิดข้อผิดพลาด กรุณาลองใหม่</td></tr>';
         });
     }
 
     function addChecklistRow(item = null) {
         const tbody = document.getElementById('checklistConfigBody');
-        if(tbody.querySelector('.text-center')) tbody.innerHTML = ''; // clear loading
+        // Clear only the loading placeholder row (identified by data-loading attribute)
+        const loadingRow = tbody.querySelector('tr[data-loading]');
+        if (loadingRow) loadingRow.remove();
         
         const rowCount = tbody.children.length + 1;
         const tr = document.createElement('tr');
@@ -389,13 +462,13 @@ const SafetyModule = (function() {
                 <input type="number" class="form-control form-control-sm text-center row-order" value="${item ? item.item_order : rowCount}" min="1">
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm row-text" value="${item ? item.item_text : ''}" placeholder="Enter question..." required>
+                <input type="text" class="form-control form-control-sm row-text" value="${item ? item.item_text.replace(/"/g, '&quot;') : ''}" placeholder="กรอกรายการตรวจสอบ..." required>
             </td>
             <td class="text-center">
                 <input type="checkbox" class="form-check-input row-critical" ${!item || item.is_critical ? 'checked' : ''}>
             </td>
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()" title="ลบรายการนี้"><i class="fas fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -465,7 +538,8 @@ const SafetyModule = (function() {
         openChecklistConfig: openChecklistConfig,
         loadChecklistConfig: loadChecklistConfig,
         addChecklistRow: addChecklistRow,
-        saveChecklistConfig: saveChecklistConfig
+        saveChecklistConfig: saveChecklistConfig,
+        openStatsModal: openStatsModal
     };
 })();
 

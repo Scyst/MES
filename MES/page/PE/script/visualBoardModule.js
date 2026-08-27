@@ -111,7 +111,7 @@ const VisualBoardModule = (function() {
     }
 
     function updateSelection(checkbox) {
-        const id = parseInt(checkbox.value);
+        const id = checkbox.value.toString();
         if (checkbox.checked) {
             selectedMachineIds.add(id);
         } else {
@@ -127,7 +127,7 @@ const VisualBoardModule = (function() {
         
         visibleCheckboxes.forEach(cb => {
             cb.checked = isChecked;
-            const id = parseInt(cb.value);
+            const id = cb.value.toString();
             if (isChecked) {
                 selectedMachineIds.add(id);
             } else {
@@ -187,7 +187,7 @@ const VisualBoardModule = (function() {
         }
         
         // Find full machine objects for selected IDs
-        const selectedMachinesData = machines.filter(m => selectedMachineIds.has(m.machine_id));
+        const selectedMachinesData = machines.filter(m => selectedMachineIds.has(m.machine_id.toString()));
         
         // Store in localStorage
         localStorage.setItem('print_machines_data', JSON.stringify(selectedMachinesData));
