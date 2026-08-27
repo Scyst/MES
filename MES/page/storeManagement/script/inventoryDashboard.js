@@ -945,12 +945,15 @@ function toggleSelectAllTransfers(checkbox) {
 function updateBulkButton() {
     const checkedCount = document.querySelectorAll('.transfer-checkbox:checked').length;
     const btnApprove = document.getElementById('btnBulkApprove');
+    const btnReject = document.getElementById('btnBulkReject');
     document.getElementById('selectedCount').innerText = checkedCount;
     
     if (checkedCount > 0) {
         btnApprove.classList.remove('d-none');
+        if(btnReject) btnReject.classList.remove('d-none');
     } else {
         btnApprove.classList.add('d-none');
+        if(btnReject) btnReject.classList.add('d-none');
         document.getElementById('selectAllTransfers').checked = false;
     }
 }
@@ -960,7 +963,12 @@ async function bulkProcessTransfer(status) {
     const transferIds = Array.from(checkboxes).map(cb => cb.value);
     
     if (transferIds.length === 0) return;
-    if (!confirm(`ยืนยันการอนุมัติรับของจำนวน ${transferIds.length} รายการ รวดเดียว?`)) return;
+    
+    const confirmMsg = status === 'COMPLETED' 
+        ? `ยืนยันการอนุมัติรับของจำนวน ${transferIds.length} รายการ รวดเดียว?` 
+        : `ยืนยันการปฏิเสธคำขอจำนวน ${transferIds.length} รายการ รวดเดียวใช่หรือไม่?`;
+        
+    if (!confirm(confirmMsg)) return;
 
     const formData = new FormData();
     formData.append('transfer_ids', JSON.stringify(transferIds));

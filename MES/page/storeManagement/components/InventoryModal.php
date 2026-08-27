@@ -329,6 +329,9 @@
                         <button id="btnBulkApprove" class="btn btn-sm btn-success fw-bold shadow-sm d-none" onclick="bulkProcessTransfer('COMPLETED')">
                             <i class="fas fa-check-double me-1"></i> อนุมัติที่เลือก (<span id="selectedCount">0</span>)
                         </button>
+                        <button id="btnBulkReject" class="btn btn-sm btn-danger fw-bold shadow-sm d-none" onclick="bulkProcessTransfer('CANCELLED')">
+                            <i class="fas fa-times me-1"></i> ปฏิเสธที่เลือก
+                        </button>
                     </div>
                 </div>
 
