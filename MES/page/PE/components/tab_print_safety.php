@@ -43,39 +43,12 @@
         color: #3b82f6;
     }
     
-        #panel-print_safety.active {
-        display: flex;
-        flex-direction: column;
-        height: calc(100vh - var(--pe-header-height) - 50px);
-        overflow: hidden;
-    }
-    #panel-print_safety > .row {
-        flex: 1;
-        min-height: 0;
-        margin: 0;
-    }
-    .print-safety-content {
-        background: #fff;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-    #printSafetyTabsContent {
-        flex: 1;
-        min-height: 0;
-        overflow: hidden;
-    }
-    .print-tab-scroll-area {
-        height: 100%;
-        overflow-y: auto;
-    }
+
 </style>
 
-<div class="row g-4 h-100">
-    <div class="col-lg-4 col-xl-3">
-        <div class="pe-card h-100">
+<div class="row g-4 flex-fill w-100" style="min-height: 0; margin: 0;">
+    <div class="col-lg-4 col-xl-3 ps-0">
+        <div class="pe-card pe-card-fill border-0">
             <div class="pe-card-header border-0 pb-0">
                 <h5 class="fw-bold mb-3"><i class="fas fa-print me-2 text-primary"></i> Print Center</h5>
             </div>
@@ -99,16 +72,16 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-8 col-xl-9">
-        <div class="print-safety-content">
-            <div class="tab-content h-100" id="printSafetyTabsContent">
-                <div class="tab-pane fade show active h-100" id="print-board-panel" role="tabpanel">
-                    <div class="print-tab-scroll-area">
+    <div class="col-lg-8 col-xl-9 pe-0">
+        <div class="pe-card pe-card-fill border-0">
+            <div class="tab-content d-flex flex-column flex-fill" id="printSafetyTabsContent" style="min-height: 0;">
+                <div class="tab-pane fade show active pe-tab-pane-fill" id="print-board-panel" role="tabpanel">
+                    <div class="pe-table-scroll-y p-3">
                         <?php include 'tab_visual_board.php'; ?>
                     </div>
                 </div>
-                <div class="tab-pane fade h-100" id="print-card-panel" role="tabpanel">
-                    <div class="print-tab-scroll-area">
+                <div class="tab-pane fade pe-tab-pane-fill" id="print-card-panel" role="tabpanel">
+                    <div class="pe-table-scroll-y p-3">
                         <?php include 'tab_card_generator.php'; ?>
                     </div>
                 </div>
@@ -116,6 +89,3 @@
         </div>
     </div>
 </div>
-
-
-
