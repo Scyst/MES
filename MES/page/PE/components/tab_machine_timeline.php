@@ -1,4 +1,4 @@
-<div class="card shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
+<div class="card shadow-sm border-0 pe-card-fill" style="border-radius: 12px;">
     <div class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-stream text-info me-2"></i> Timeline Overview</h6>
         <div class="d-flex gap-2 align-items-center">
@@ -11,9 +11,9 @@
             </button>
         </div>
     </div>
-    <div class="card-body p-0 border-top">
+    <div class="card-body p-0 border-top d-flex flex-column">
         <!-- Gantt Timeline Container -->
-        <div id="machineTimelineContainer" class="position-relative w-100" style="min-height: 400px; overflow-x: auto; overflow-y: hidden;">
+        <div id="machineTimelineContainer" class="position-relative w-100 pe-table-scroll-y">
             <div class="p-5 text-center text-muted">
                 <div class="spinner-border text-info" role="status"></div>
                 <div class="mt-2">Rendering Timeline...</div>
