@@ -55,35 +55,44 @@ const CardGeneratorModule = (function() {
         const countText = document.getElementById('cgPrintCountText');
         if (countText) countText.innerText = cardQueue.length;
 
+        if (!container) return;
+        
         if (cardQueue.length === 0) {
-            if (container) {
-                container.innerHTML = `
-                    <div class="text-center text-muted w-100" style="margin-top: 80px; grid-column: span 2;">
+            container.innerHTML = `
+                <div class="cg-page cg-preview-page cg-cards-grid" style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 297mm;">
+                    <div class="text-center text-muted w-100" style="margin-top: 80px;">
                         <i class="fas fa-id-badge fa-4x mb-3" style="color: #e2e8f0;"></i>
                         <h6 class="fw-bold text-secondary">ยังไม่มีการ์ดในคิว</h6>
                         <p class="pe-text-sm mb-0">เพิ่มการ์ดจากเครื่องมือด้านซ้ายเพื่อสร้างแบบฟอร์ม</p>
                     </div>
-                `;
-            }
+                </div>
+            `;
             return;
         }
-
-        if (container) container.innerHTML = '';
         
-        let html = '';
-        cardQueue.forEach(card => {
-            html += `<div class="cg-card-container position-relative" style="box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 4px;" id="cg-card-${card.id}">`;
-            html += `<button class="cg-card-remove-btn" style="opacity: 1;" onclick="CardGeneratorModule.removeCard(${card.id})" title="ลบการ์ดนี้"><i class="fas fa-times"></i></button>`;
-            html += card.html;
-            html += `</div>`;
-        });
+        const cardsPerPage = 10;
+        const totalPages = Math.ceil(cardQueue.length / cardsPerPage);
         
-        if (container) container.innerHTML = html;
-        
-        // Scroll to bottom of preview panel when adding
-        if (container && container.parentElement) {
-            container.parentElement.scrollTop = container.parentElement.scrollHeight;
+        let allHtml = '';
+        for (let i = 0; i < totalPages; i++) {
+            const pageCards = cardQueue.slice(i * cardsPerPage, (i + 1) * cardsPerPage);
+            let pageHtml = `<div class="cg-page cg-preview-page cg-cards-grid">`;
+            
+            pageCards.forEach(card => {
+                pageHtml += `<div class="cg-card-container position-relative" style="box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 4px;" id="cg-card-${card.id}">`;
+                pageHtml += `<button class="cg-card-remove-btn" style="opacity: 1;" onclick="CardGeneratorModule.removeCard(${card.id})" title="ลบการ์ดนี้"><i class="fas fa-times"></i></button>`;
+                pageHtml += card.html;
+                pageHtml += `</div>`;
+            });
+            
+            pageHtml += `</div>`;
+            allHtml += pageHtml;
         }
+        
+        container.innerHTML = allHtml;
+        
+        // Scroll to bottom of preview panel when adding (container is wrapper now)
+        container.scrollTop = container.scrollHeight;
     }
 
     function removeCard(id) {

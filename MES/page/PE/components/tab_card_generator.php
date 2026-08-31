@@ -41,16 +41,17 @@
     }
 
     .cg-cards-grid {
-        display: flex;
-        flex-wrap: wrap;
-        align-content: flex-start;
-        align-items: flex-start;
-        justify-content: flex-start;
+        display: grid;
+        grid-template-columns: 50% 50%;
+        grid-auto-rows: 54mm;
+        gap: 0;
+        justify-content: center;
+        align-content: start;
     }
 
     .cg-card-container {
-        width: 85.6mm;
-        height: 54mm;
+        width: 100%;
+        height: 100%;
         box-sizing: border-box;
         display: flex;
         overflow: hidden;
@@ -284,15 +285,8 @@
             </div>
             
             <div class="flex-fill p-4 rounded" style="background-color: #cbd5e1; overflow-y: auto; overflow-x: hidden; border: 1px solid #94a3b8; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 400px; padding-bottom: 50px;">
-                <div class="cg-preview-page-wrapper">
-                    <div class="cg-page cg-preview-page cg-cards-grid" id="cgPreviewContainer">
-                        <!-- Cards will be added here -->
-                        <div class="text-center text-muted w-100" style="margin-top: 80px; grid-column: span 2;">
-                            <i class="fas fa-id-badge fa-4x mb-3" style="color: #e2e8f0;"></i>
-                            <h6 class="fw-bold text-secondary">ยังไม่มีการ์ดในคิว</h6>
-                            <p class="pe-text-sm mb-0">เพิ่มการ์ดจากเครื่องมือด้านซ้ายเพื่อสร้างแบบฟอร์ม</p>
-                        </div>
-                    </div>
+                <div class="cg-preview-page-wrapper" id="cgPreviewContainer">
+                    <!-- Pages will be generated here dynamically by JS -->
                 </div>
             </div>
         </div>
