@@ -11,7 +11,7 @@
             </button>
         </div>
     </div>
-    <div class="card-body p-0 border-top d-flex flex-column">
+    <div class="card-body p-0 border-top d-flex flex-column" style="flex: 1; min-height: 0;">
         <!-- Gantt Timeline Container -->
         <div id="machineTimelineContainer" class="position-relative w-100 pe-table-scroll-y">
             <div class="p-5 text-center text-muted">

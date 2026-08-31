@@ -61,7 +61,7 @@
     </div>
 
     <div class="pe-card-body p-0">
-        <div class="tab-content d-flex flex-column flex-fill" id="safetyTabsContent">
+        <div class="tab-content d-flex flex-column flex-fill" id="safetyTabsContent" style="min-height: 0;">
 
             <!-- Hazard Reports Panel -->
             <div class="tab-pane fade show active pe-tab-pane-fill" id="hazard-panel" role="tabpanel">

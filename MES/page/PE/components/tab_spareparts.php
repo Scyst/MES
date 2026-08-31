@@ -86,7 +86,7 @@
 
     <!-- Body with Tab Contents -->
     <div class="pe-card-body p-0">
-        <div class="tab-content d-flex flex-column flex-fill" id="spTabContent">
+        <div class="tab-content d-flex flex-column flex-fill" id="spTabContent" style="min-height: 0;">
 
             <!-- STOCK ON-HAND PANE -->
             <div class="tab-pane fade show active pe-tab-pane-fill" id="sp-onhand-pane" role="tabpanel">
