@@ -398,6 +398,9 @@
     flex: 1;
     padding: 24px;
     min-width: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 /* ── Cards ───────────────────────────────── */
@@ -407,6 +410,32 @@
     border-radius: var(--pe-radius-lg);
     box-shadow: var(--pe-shadow-sm);
     transition: box-shadow var(--pe-transition-fast), transform var(--pe-transition-fast);
+}
+
+.pe-card-fill {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+.pe-card-fill > .pe-card-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+.pe-table-scroll-y {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    min-height: 0;
+}
+.pe-tab-pane-fill.active {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 .pe-card:hover {
@@ -685,9 +714,11 @@
 /* ── Tables ──────────────────────────────── */
 .pe-table {
     width: 100%;
+    min-width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     font-size: 13px;
+    margin: 0;
 }
 
 .pe-table thead th {
@@ -1721,7 +1752,9 @@
     display: none;
 }
 .pe-tab-panel.active {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
     animation: fadeSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 

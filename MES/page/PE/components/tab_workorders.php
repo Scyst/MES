@@ -118,9 +118,9 @@
 </div>
 
 <!-- Table View -->
-<div class="pe-card" id="woTableView">
+<div class="pe-card pe-card-fill" id="woTableView">
     <div class="pe-card-body p-0">
-        <div style="overflow-x:auto; max-height:600px;">
+        <div class="pe-table-scroll-y">
             <table class="pe-table" id="woTable">
                 <thead>
                     <tr>

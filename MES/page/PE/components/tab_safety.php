@@ -33,7 +33,7 @@
 </div>
 
 <!-- Main Content Card -->
-<div class="pe-card pe-animate-in" style="--delay: 0.5s">
+<div class="pe-card pe-card-fill pe-animate-in" style="--delay: 0.5s">
     <div class="pe-card-header d-flex justify-content-between align-items-center">
         <ul class="nav nav-pills pe-nav-pills" id="safetyTabs" role="tablist">
             <li class="nav-item" role="presentation">
@@ -61,10 +61,10 @@
     </div>
 
     <div class="pe-card-body p-0">
-        <div class="tab-content" id="safetyTabsContent">
+        <div class="tab-content d-flex flex-column flex-fill" id="safetyTabsContent">
 
             <!-- Hazard Reports Panel -->
-            <div class="tab-pane fade show active" id="hazard-panel" role="tabpanel">
+            <div class="tab-pane fade show active pe-tab-pane-fill" id="hazard-panel" role="tabpanel">
                 <div class="pe-filter-bar">
                     <div class="pe-search" style="max-width: 260px;">
                         <i class="fas fa-search"></i>
@@ -77,7 +77,7 @@
                         <option value="Completed">Resolved</option>
                     </select>
                 </div>
-                <div class="table-responsive">
+                <div class="pe-table-scroll-y">
                     <table class="pe-table mb-0" id="safetyTable">
                         <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-table-header);">
                             <tr>
@@ -95,8 +95,8 @@
             </div>
 
             <!-- Pre-Op Audits Panel -->
-            <div class="tab-pane fade" id="preop-panel" role="tabpanel">
-                <div class="table-responsive">
+            <div class="tab-pane fade pe-tab-pane-fill" id="preop-panel" role="tabpanel">
+                <div class="pe-table-scroll-y">
                     <table class="pe-table mb-0" id="preopTable">
                         <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-table-header);">
                             <tr>

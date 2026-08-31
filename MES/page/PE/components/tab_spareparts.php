@@ -61,7 +61,7 @@
 }
 </style>
 
-<div class="pe-card">
+<div class="pe-card pe-card-fill">
     <!-- Header with Tabs -->
     <div class="pe-card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-bottom: 1px solid var(--pe-border-color); padding-bottom: 0;">
         <ul class="nav pe-header-nav" id="spNavTabs" role="tablist">
@@ -86,10 +86,10 @@
 
     <!-- Body with Tab Contents -->
     <div class="pe-card-body p-0">
-        <div class="tab-content" id="spTabContent">
+        <div class="tab-content d-flex flex-column flex-fill" id="spTabContent">
 
             <!-- STOCK ON-HAND PANE -->
-            <div class="tab-pane fade show active" id="sp-onhand-pane" role="tabpanel">
+            <div class="tab-pane fade show active pe-tab-pane-fill" id="sp-onhand-pane" role="tabpanel">
                 <div class="pe-filter-bar" style="border-bottom: 1px solid var(--pe-border-color); border-radius: 0;">
                     <div class="pe-search">
                         <i class="fas fa-search"></i>
@@ -132,14 +132,14 @@
                     </div>
                 </div>
                 <!-- Grid View -->
-                <div id="spGridBody" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 mt-1 px-2 pb-3" style="max-height: 550px; overflow-y: auto;">
+                <div id="spGridBody" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 mt-1 px-2 pb-3 pe-table-scroll-y" style="">
                     <div class="col-12 text-center text-muted py-5">
                         <div class="spinner-border text-primary" role="status"></div>
                         <div class="mt-2">กำลังโหลดข้อมูล...</div>
                     </div>
                 </div>
                 <!-- Table View -->
-                <div id="spTableContainer" style="overflow-x:auto; max-height:550px; display: none;">
+                <div id="spTableContainer" class="pe-table-scroll-y" style="display: none;">
                     <table class="pe-table" id="spTable">
                         <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-secondary);">
                             <tr>
@@ -166,7 +166,7 @@
             </div>
 
             <!-- ITEM MASTER PANE -->
-            <div class="tab-pane fade" id="sp-master-pane" role="tabpanel">
+            <div class="tab-pane fade pe-tab-pane-fill" id="sp-master-pane" role="tabpanel">
                 <div class="pe-filter-bar" style="border-bottom: 1px solid var(--pe-border-color); border-radius: 0;">
                     <div class="pe-search">
                         <i class="fas fa-search"></i>
@@ -191,14 +191,14 @@
                     </div>
                 </div>
                 <!-- Grid View -->
-                <div id="spMasterGridBody" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 mt-1 px-2 pb-3" style="max-height: 550px; overflow-y: auto;">
+                <div id="spMasterGridBody" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 mt-1 px-2 pb-3 pe-table-scroll-y" style="">
                     <div class="col-12 text-center text-muted py-5">
                         <div class="spinner-border text-primary" role="status"></div>
                         <div class="mt-2">กำลังโหลดข้อมูล...</div>
                     </div>
                 </div>
                 <!-- Table View -->
-                <div id="spMasterTableContainer" style="overflow-x:auto; max-height:550px; display: none;">
+                <div id="spMasterTableContainer" class="pe-table-scroll-y" style="display: none;">
                     <table class="pe-table" id="spMasterTable">
                         <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-secondary);">
                             <tr>
@@ -225,7 +225,7 @@
             </div>
 
             <!-- HISTORY LOG PANE -->
-            <div class="tab-pane fade" id="sp-history-pane" role="tabpanel">
+            <div class="tab-pane fade pe-tab-pane-fill" id="sp-history-pane" role="tabpanel">
                 <div class="pe-filter-bar" style="border-bottom: 1px solid var(--pe-border-color); border-radius: 0;">
                     <div class="pe-search">
                         <i class="fas fa-search"></i>
@@ -238,7 +238,7 @@
                         </button>
                     </div>
                 </div>
-                <div style="overflow-x:auto; max-height:550px;">
+                <div class="pe-table-scroll-y">
                     <table class="pe-table" id="spHistoryTable">
                         <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-secondary);">
                             <tr>

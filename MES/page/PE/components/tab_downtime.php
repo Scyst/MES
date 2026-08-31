@@ -76,13 +76,13 @@
 </div>
 
 <!-- Table -->
-<div class="pe-card">
+<div class="pe-card pe-card-fill">
     <div class="pe-card-header">
         <h6><i class="fas fa-history"></i> Downtime History</h6>
         <span class="pe-text-xs pe-text-muted">Showing <span id="dtShowing">0</span> records</span>
     </div>
     <div class="pe-card-body p-0">
-        <div style="overflow-x:auto; max-height:500px;">
+        <div class="pe-table-scroll-y">
             <table class="pe-table" id="dtTable">
                 <thead>
                     <tr>
