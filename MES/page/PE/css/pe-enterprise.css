@@ -496,7 +496,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
 }
 
 .pe-kpi-card {
@@ -546,7 +546,7 @@
 
 .pe-kpi-value {
     font-size: 28px;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1.1;
     color: var(--pe-text-primary);
     letter-spacing: -0.5px;
