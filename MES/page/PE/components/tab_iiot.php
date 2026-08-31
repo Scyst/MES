@@ -16,7 +16,7 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
-    padding: 16px 20px 16px;
+    margin-bottom: 16px;
 }
 .iiot-overview-card {
     background: #fff;
