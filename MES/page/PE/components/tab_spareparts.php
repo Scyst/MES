@@ -67,17 +67,17 @@
         <ul class="nav pe-header-nav" id="spNavTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="sp-onhand-tab" data-bs-toggle="pill" data-bs-target="#sp-onhand-pane" type="button" role="tab" onclick="SparePartsModule.switchTab('onhand')">
-                    <h6><i class="fas fa-boxes me-2"></i>Stock On-Hand</h6>
+                    <span class="fw-bold fs-6"><i class="fas fa-boxes me-2"></i>Stock On-Hand</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="sp-master-tab" data-bs-toggle="pill" data-bs-target="#sp-master-pane" type="button" role="tab" onclick="SparePartsModule.switchTab('master')">
-                    <h6><i class="fas fa-database me-2"></i>Item Master</h6>
+                    <span class="fw-bold fs-6"><i class="fas fa-database me-2"></i>Item Master</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="sp-history-tab" data-bs-toggle="pill" data-bs-target="#sp-history-pane" type="button" role="tab" onclick="SparePartsModule.switchTab('history')">
-                    <h6><i class="fas fa-history me-2"></i>History Log</h6>
+                    <span class="fw-bold fs-6"><i class="fas fa-history me-2"></i>History Log</span>
                 </button>
             </li>
         </ul>

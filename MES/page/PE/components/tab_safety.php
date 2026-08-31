@@ -35,15 +35,15 @@
 <!-- Main Content Card -->
 <div class="pe-card pe-card-fill pe-animate-in" style="--delay: 0.5s">
     <div class="pe-card-header d-flex justify-content-between align-items-center">
-        <ul class="nav nav-pills pe-nav-pills" id="safetyTabs" role="tablist">
+        <ul class="nav pe-header-nav" id="safetyTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="hazard-tab" data-bs-toggle="pill" data-bs-target="#hazard-panel" type="button" role="tab">
-                    <i class="fas fa-exclamation-triangle me-1 text-danger"></i> Hazard Reports
+                    <span class="fw-bold fs-6"><i class="fas fa-exclamation-triangle me-1 text-danger"></i> Hazard Reports</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="preop-tab" data-bs-toggle="pill" data-bs-target="#preop-panel" type="button" role="tab" onclick="SafetyModule.loadPreOpData()">
-                    <i class="fas fa-clipboard-list me-1 text-primary"></i> Pre-Op Audits
+                    <span class="fw-bold fs-6"><i class="fas fa-clipboard-list me-1 text-primary"></i> Pre-Op Audits</span>
                 </button>
             </li>
         </ul>

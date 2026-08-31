@@ -405,22 +405,34 @@
 
 <div class="iiot-dashboard pe-animate-in">
     <!-- Top KPI Overview -->
-    <div class="iiot-overview-row">
-        <div class="iiot-overview-card pe-animate-in" style="border-left: 4px solid var(--pe-primary);">
-            <div><div class="kpi-label">Registered Assets</div><div class="kpi-val" id="iiotKpiTotal">-</div></div>
-            <i class="fas fa-server pe-text-muted fa-2x"></i>
+    <div class="pe-kpi-row" id="iiotKpiRow">
+        <div class="pe-kpi-card kpi-primary pe-animate-in">
+            <div>
+                <div class="pe-kpi-label">Registered Assets</div>
+                <div class="pe-kpi-value" id="iiotKpiTotal">-</div>
+            </div>
+            <div class="pe-kpi-icon"><i class="fas fa-server"></i></div>
         </div>
-        <div class="iiot-overview-card pe-animate-in" style="border-left: 4px solid var(--pe-success);">
-            <div><div class="kpi-label">Active / Running</div><div class="kpi-val" id="iiotKpiActive">-</div></div>
-            <i class="fas fa-check-circle pe-text-muted fa-2x"></i>
+        <div class="pe-kpi-card kpi-success pe-animate-in">
+            <div>
+                <div class="pe-kpi-label">Active / Running</div>
+                <div class="pe-kpi-value" id="iiotKpiActive">-</div>
+            </div>
+            <div class="pe-kpi-icon"><i class="fas fa-check-circle"></i></div>
         </div>
-        <div class="iiot-overview-card pe-animate-in" style="border-left: 4px solid var(--pe-danger);">
-            <div><div class="kpi-label">Under Repair</div><div class="kpi-val" id="iiotKpiRepair">-</div></div>
-            <i class="fas fa-tools pe-text-muted fa-2x"></i>
+        <div class="pe-kpi-card kpi-danger pe-animate-in">
+            <div>
+                <div class="pe-kpi-label">Under Repair</div>
+                <div class="pe-kpi-value" id="iiotKpiRepair">-</div>
+            </div>
+            <div class="pe-kpi-icon"><i class="fas fa-tools"></i></div>
         </div>
-        <div class="iiot-overview-card pe-animate-in" style="border-left: 4px solid var(--pe-info);">
-            <div><div class="kpi-label">IIoT Connected</div><div class="kpi-val" id="iiotKpiConnected">-</div></div>
-            <i class="fas fa-wifi pe-text-muted fa-2x"></i>
+        <div class="pe-kpi-card kpi-info pe-animate-in">
+            <div>
+                <div class="pe-kpi-label">IIoT Connected</div>
+                <div class="pe-kpi-value" id="iiotKpiConnected">-</div>
+            </div>
+            <div class="pe-kpi-icon"><i class="fas fa-wifi"></i></div>
         </div>
     </div>
 

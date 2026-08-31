@@ -1,5 +1,5 @@
-<div class="card shadow-sm border-0 pe-card-fill" style="border-radius: 12px;">
-    <div class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+<div class="pe-card pe-card-fill border-0">
+    <div class="pe-card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-stream text-info me-2"></i> Timeline Overview</h6>
         <div class="d-flex gap-2 align-items-center">
             <div class="input-group input-group-sm" style="width: auto;">
@@ -11,7 +11,7 @@
             </button>
         </div>
     </div>
-    <div class="card-body p-0 border-top d-flex flex-column" style="flex: 1; min-height: 0;">
+    <div class="pe-card-body p-0 border-top d-flex flex-column" style="flex: 1; min-height: 0;">
         <!-- Gantt Timeline Container -->
         <div id="machineTimelineContainer" class="position-relative w-100 pe-table-scroll-y">
             <div class="p-5 text-center text-muted">
