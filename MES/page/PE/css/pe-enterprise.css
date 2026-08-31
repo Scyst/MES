@@ -958,14 +958,7 @@
 }
 
 /* ── Tab Content Panels ──────────────────── */
-.pe-tab-panel {
-    display: none;
-    animation: pe-fadeSlideUp 0.3s ease-out;
-}
-
-.pe-tab-panel.active {
-    display: block;
-}
+/* NOTE: Full definition with animation is at the bottom of this file (Smooth Tab Transitions section) */
 
 /* ── Machine Card Grid ───────────────────── */
 .pe-machine-grid {
@@ -1723,23 +1716,18 @@
     color: var(--pe-text-muted);
 }
 
-/* ── Smooth Tab Transitions ───────────────────── */
+/* ── Tab Content Panels & Smooth Transitions ─── */
 .pe-tab-panel {
     display: none;
-    opacity: 0;
-    margin-top: 10px;
-    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 .pe-tab-panel.active {
     display: block;
-    opacity: 1;
-    margin-top: 0;
     animation: fadeSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes fadeSlideUp {
-    0% { opacity: 0; margin-top: 10px; }
-    100% { opacity: 1; margin-top: 0; }
+    0%   { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
 
