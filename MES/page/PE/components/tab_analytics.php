@@ -1,7 +1,7 @@
 <!-- tab_analytics.php — Analytics Dashboard -->
 
 <!-- Date Filter -->
-<div class="pe-filter-bar pe-mb-24">
+<div class="pe-filter-bar pe-mb-16">
     <div class="pe-d-flex pe-align-center pe-gap-8">
         <i class="fas fa-chart-line" style="color:var(--pe-primary);font-size:16px;"></i>
         <span class="pe-fw-bold" style="font-size:14px;">Maintenance Analytics</span>

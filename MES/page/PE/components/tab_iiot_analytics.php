@@ -1,7 +1,7 @@
 <!-- tab_iiot_analytics.php — IIoT Historical Analytics -->
 
 <!-- Date Filter -->
-<div class="pe-filter-bar pe-mb-24">
+<div class="pe-filter-bar pe-mb-16">
     <div class="pe-d-flex pe-align-center pe-gap-8">
         <i class="fas fa-history" style="color:var(--pe-primary);font-size:16px;"></i>
         <span class="pe-fw-bold" style="font-size:14px;">IIoT Historical Analytics</span>

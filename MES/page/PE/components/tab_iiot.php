@@ -44,7 +44,6 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 20px;
-    padding: 0 20px;
 }
 .iiot-card {
     background: #ffffff;
@@ -163,6 +162,7 @@
     border-radius: 8px;
     border: 1px solid #cbd5e1;
     overflow: hidden;
+    margin-bottom: 16px;
 }
 .iiot-floorplan-img {
     height: auto;
