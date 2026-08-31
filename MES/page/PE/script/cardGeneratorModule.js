@@ -58,10 +58,10 @@ const CardGeneratorModule = (function() {
         if (cardQueue.length === 0) {
             if (container) {
                 container.innerHTML = `
-                    <div class="text-center text-muted w-100" style="margin-top: 100px;">
-                        <i class="fas fa-inbox fa-4x mb-3 opacity-25"></i>
-                        <h5>ยังไม่มีการ์ดในคิว</h5>
-                        <p>เลือกเพิ่มการ์ดจากเมนูด้านซ้ายเพื่อเตรียมพิมพ์</p>
+                    <div class="text-center text-muted w-100" style="margin-top: 80px; grid-column: span 2;">
+                        <i class="fas fa-id-badge fa-4x mb-3" style="color: #e2e8f0;"></i>
+                        <h6 class="fw-bold text-secondary">ยังไม่มีการ์ดในคิว</h6>
+                        <p class="pe-text-sm mb-0">เพิ่มการ์ดจากเครื่องมือด้านซ้ายเพื่อสร้างแบบฟอร์ม</p>
                     </div>
                 `;
             }
