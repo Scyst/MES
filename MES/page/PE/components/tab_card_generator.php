@@ -41,12 +41,11 @@
     }
 
     .cg-cards-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 85.6mm);
-        grid-auto-rows: 54mm;
-        gap: 0;
-        justify-content: center;
-        align-content: start;
+        display: flex;
+        flex-wrap: wrap;
+        align-content: flex-start;
+        align-items: flex-start;
+        justify-content: flex-start;
     }
 
     .cg-card-container {
@@ -171,55 +170,98 @@
 <div class="row gx-4 h-100" id="cgLayoutRow">
     <!-- Controls Panel -->
     <div class="col-lg-4 col-xl-3" id="cgControlPanel">
-        <div class="bg-light rounded p-3 h-100" style="border: 1px solid var(--pe-border-color); overflow-y: auto;">
-            <h6 class="fw-bold mb-3 pb-2 border-bottom"><i class="fas fa-sliders-h text-primary me-2"></i> เครื่องมือสร้างการ์ด</h6>
-            
-            <div class="cg-tool-section">
-                <div class="cg-section-title text-success"><i class="fas fa-traffic-light"></i> 1. สถานะเครื่องจักร</div>
-                <div class="d-flex gap-2 mb-2">
-                    <button class="pe-btn pe-btn-sm btn-outline-success flex-fill" onclick="CardGeneratorModule.addStatusCard('green')">เขียว</button>
-                    <button class="pe-btn pe-btn-sm btn-outline-warning flex-fill" onclick="CardGeneratorModule.addStatusCard('yellow')">เหลือง</button>
-                    <button class="pe-btn pe-btn-sm btn-outline-danger flex-fill" onclick="CardGeneratorModule.addStatusCard('red')">แดง</button>
-                </div>
-                <button class="pe-btn pe-btn-sm pe-btn-secondary w-100" onclick="CardGeneratorModule.addStatusSet()"><i class="fas fa-layer-group"></i> เพิ่มชุด 3 สี</button>
+        <div class="bg-white rounded shadow-sm h-100 d-flex flex-column" style="border: 1px solid var(--pe-border-color);">
+            <div class="p-3 border-bottom bg-light rounded-top">
+                <h6 class="fw-bold m-0 text-dark"><i class="fas fa-sliders-h text-primary me-2"></i> เครื่องมือสร้างการ์ด</h6>
             </div>
+            
+            <div class="p-3 flex-fill" style="overflow-y: auto;">
+                <div class="accordion" id="cgAccordion">
+                    
+                    <!-- 1. สถานะเครื่องจักร -->
+                    <div class="accordion-item border-0 mb-3 rounded shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button py-2 px-3 fw-bold pe-text-sm bg-white rounded" type="button" data-bs-toggle="collapse" data-bs-target="#cgColStatus" aria-expanded="true">
+                                <span class="text-success"><i class="fas fa-traffic-light me-2"></i> 1. สถานะเครื่องจักร</span>
+                            </button>
+                        </h2>
+                        <div id="cgColStatus" class="accordion-collapse collapse show">
+                            <div class="accordion-body px-3 py-3 border-top">
+                                <div class="d-flex gap-2 mb-2">
+                                    <button class="pe-btn pe-btn-sm btn-outline-success flex-fill" onclick="CardGeneratorModule.addStatusCard('green')"><i class="fas fa-check-circle me-1"></i> เขียว</button>
+                                    <button class="pe-btn pe-btn-sm btn-outline-warning flex-fill" onclick="CardGeneratorModule.addStatusCard('yellow')"><i class="fas fa-exclamation-triangle me-1"></i> เหลือง</button>
+                                    <button class="pe-btn pe-btn-sm btn-outline-danger flex-fill" onclick="CardGeneratorModule.addStatusCard('red')"><i class="fas fa-times-circle me-1"></i> แดง</button>
+                                </div>
+                                <button class="pe-btn pe-btn-sm btn-outline-secondary w-100" onclick="CardGeneratorModule.addStatusSet()"><i class="fas fa-layer-group me-1"></i> เพิ่มชุดครบ 3 สี</button>
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="cg-tool-section">
-                <div class="cg-section-title text-primary"><i class="fas fa-user-hard-hat"></i> 2. การ์ดพนักงาน</div>
-                <div class="mb-2">
-                    <select class="form-select select2-emp w-100" id="cgOpEmployeeSelect">
-                        <option value="">-- ค้นหาชื่อพนักงาน --</option>
-                    </select>
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="pe-btn pe-btn-sm pe-btn-primary flex-fill" onclick="CardGeneratorModule.addOperatorCard()"><i class="fas fa-plus"></i> พนักงาน</button>
-                    <button class="pe-btn pe-btn-sm pe-btn-ghost flex-fill border" onclick="CardGeneratorModule.addBlankOperatorCard()"><i class="fas fa-file-alt"></i> การ์ดเปล่า</button>
-                </div>
-            </div>
+                    <!-- 2. การ์ดพนักงาน -->
+                    <div class="accordion-item border-0 mb-3 rounded shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button py-2 px-3 fw-bold pe-text-sm bg-white rounded collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cgColOp" aria-expanded="false">
+                                <span class="text-primary"><i class="fas fa-user-hard-hat me-2"></i> 2. การ์ดพนักงาน (Operator)</span>
+                            </button>
+                        </h2>
+                        <div id="cgColOp" class="accordion-collapse collapse">
+                            <div class="accordion-body px-3 py-3 border-top">
+                                <div class="mb-3">
+                                    <select class="form-select select2-emp w-100" id="cgOpEmployeeSelect">
+                                        <option value="">-- ค้นหาชื่อพนักงาน --</option>
+                                    </select>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="pe-btn pe-btn-sm pe-btn-primary flex-fill" onclick="CardGeneratorModule.addOperatorCard()"><i class="fas fa-plus"></i> เพิ่มพนักงาน</button>
+                                    <button class="pe-btn pe-btn-sm pe-btn-ghost flex-fill border" onclick="CardGeneratorModule.addBlankOperatorCard()"><i class="fas fa-file-alt"></i> การ์ดเปล่า</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="cg-tool-section">
-                <div class="cg-section-title text-danger"><i class="fas fa-tools"></i> 3. การ์ดซ่อมบำรุง LOTO</div>
-                <div class="mb-2">
-                    <select class="form-select select2-emp w-100" id="cgLotoEmployeeSelect">
-                        <option value="">-- ค้นหาชื่อช่าง --</option>
-                    </select>
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="pe-btn pe-btn-sm pe-btn-danger flex-fill" onclick="CardGeneratorModule.addLotoCard()"><i class="fas fa-plus"></i> ช่าง</button>
-                    <button class="pe-btn pe-btn-sm pe-btn-ghost flex-fill border" onclick="CardGeneratorModule.addBlankLotoCard()"><i class="fas fa-file-alt"></i> การ์ดเปล่า</button>
+                    <!-- 3. การ์ด LOTO -->
+                    <div class="accordion-item border-0 mb-3 rounded shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button py-2 px-3 fw-bold pe-text-sm bg-white rounded collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cgColLoto" aria-expanded="false">
+                                <span class="text-danger"><i class="fas fa-tools me-2"></i> 3. ป้ายห้าม (LOTO)</span>
+                            </button>
+                        </h2>
+                        <div id="cgColLoto" class="accordion-collapse collapse">
+                            <div class="accordion-body px-3 py-3 border-top">
+                                <div class="mb-3">
+                                    <select class="form-select select2-emp w-100" id="cgLotoEmployeeSelect">
+                                        <option value="">-- ค้นหาชื่อช่างซ่อม --</option>
+                                    </select>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="pe-btn pe-btn-sm pe-btn-danger flex-fill" onclick="CardGeneratorModule.addLotoCard()"><i class="fas fa-plus"></i> เพิ่มช่าง</button>
+                                    <button class="pe-btn pe-btn-sm pe-btn-ghost flex-fill border" onclick="CardGeneratorModule.addBlankLotoCard()"><i class="fas fa-file-alt"></i> การ์ดเปล่า</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 4. พิมพ์ยกไลน์ -->
+                    <div class="accordion-item border-0 rounded shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button py-2 px-3 fw-bold pe-text-sm bg-white rounded collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cgColBatch" aria-expanded="false">
+                                <span class="text-secondary"><i class="fas fa-users me-2"></i> 4. พิมพ์แบบชุด (Batch)</span>
+                            </button>
+                        </h2>
+                        <div id="cgColBatch" class="accordion-collapse collapse">
+                            <div class="accordion-body px-3 py-3 border-top">
+                                <div class="mb-3">
+                                    <select class="form-select select2-emp w-100" id="cgBatchLineSelect">
+                                        <option value="">-- เลือกแผนก / ไลน์ผลิต --</option>
+                                    </select>
+                                </div>
+                                <button class="pe-btn pe-btn-sm pe-btn-secondary w-100" onclick="CardGeneratorModule.addBatchOperatorCards()"><i class="fas fa-download"></i> ดึงพนักงานทั้งหมดในไลน์</button>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
-            
-            <div class="cg-tool-section border-0 mb-0">
-                <div class="cg-section-title text-secondary"><i class="fas fa-users"></i> 4. พิมพ์ยกไลน์ (Batch)</div>
-                <div class="mb-2">
-                    <select class="form-select select2-emp w-100" id="cgBatchLineSelect">
-                        <option value="">-- เลือกแผนก / ไลน์ผลิต --</option>
-                    </select>
-                </div>
-                <button class="pe-btn pe-btn-sm pe-btn-secondary w-100" onclick="CardGeneratorModule.addBatchOperatorCards()"><i class="fas fa-download"></i> ดึงพนักงานทั้งหมด</button>
-            </div>
-            
         </div>
     </div>
 
@@ -241,16 +283,20 @@
                 </div>
             </div>
             
-            <div class="flex-fill p-4 rounded" style="background-color: #f8fafc; overflow-y: auto; border: 1px dashed #cbd5e1; min-height: 400px;">
-                <div id="cgPreviewContainer" class="d-flex flex-wrap gap-3 justify-content-start align-items-start">
-                    <!-- Cards will be added here -->
-                    <div class="text-center text-muted w-100" style="margin-top: 80px;">
-                        <i class="fas fa-id-badge fa-4x mb-3" style="color: #e2e8f0;"></i>
-                        <h6 class="fw-bold text-secondary">ยังไม่มีการ์ดในคิว</h6>
-                        <p class="pe-text-sm mb-0">เพิ่มการ์ดจากเครื่องมือด้านซ้ายเพื่อสร้างแบบฟอร์ม</p>
+            <div class="flex-fill p-4 rounded" style="background-color: #cbd5e1; overflow-y: auto; overflow-x: hidden; border: 1px solid #94a3b8; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 400px; padding-bottom: 50px;">
+                <div class="cg-preview-page-wrapper">
+                    <div class="cg-page cg-preview-page cg-cards-grid" id="cgPreviewContainer">
+                        <!-- Cards will be added here -->
+                        <div class="text-center text-muted w-100" style="margin-top: 80px; grid-column: span 2;">
+                            <i class="fas fa-id-badge fa-4x mb-3" style="color: #e2e8f0;"></i>
+                            <h6 class="fw-bold text-secondary">ยังไม่มีการ์ดในคิว</h6>
+                            <p class="pe-text-sm mb-0">เพิ่มการ์ดจากเครื่องมือด้านซ้ายเพื่อสร้างแบบฟอร์ม</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
 </div>
