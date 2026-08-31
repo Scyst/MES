@@ -210,6 +210,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('Accessories Inspection', 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', '<i class="fas fa-camera"></i>', '../AccessoriesInspection/accessoriesInspectionUI.php', '', $themeQa);
                         renderServiceLink('PE Enterprise', 'ศูนย์กลางจัดการเครื่องจักรและซ่อมบำรุง', '<i class="fas fa-cogs"></i>', '../PE/peDashboard.php', 'view_maintenance', $themeQa);
                         renderServiceLink('PE Tech (Mobile)', 'ระบบรับงานและจัดการซ่อมสำหรับช่าง (มือถือ)', '<i class="fas fa-wrench"></i>', '../PE/peTechMobile.php', 'view_maintenance', $themeQa);
+                        renderServiceLink('Digital Twin', 'ระบบ 3D Monitoring ของโรงงาน', '<i class="fas fa-cubes"></i>', 'http://10.1.8.142:5173/', '', $themeQa);
                         ?>
                     </div>
                 </div>

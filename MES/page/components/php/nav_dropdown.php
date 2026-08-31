@@ -209,6 +209,7 @@
             <a class="list-group-item list-group-item-action text-dark" href="../AccessoriesInspection/accessoriesInspectionUI.php"><i class="fas fa-camera fa-fw me-3"></i> Accessories Inspection</a>
             <a class="list-group-item list-group-item-action text-dark" href="../PE/peDashboard.php"><i class="fas fa-cogs fa-fw me-3"></i> PE Enterprise Dashboard</a>
             <a class="list-group-item list-group-item-action text-dark" href="../PE/peTechMobile.php"><i class="fas fa-wrench fa-fw me-3"></i> PE Tech (Mobile)</a>
+            <a class="list-group-item list-group-item-action text-dark" href="http://10.1.8.142:5173/" target="_blank"><i class="fas fa-cubes fa-fw me-3"></i> Digital Twin (3D)</a>
 
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">EXECUTIVE & MANAGEMENT</div>
             <?php if (in_array($userRole, ['admin', 'creator'])): ?>
