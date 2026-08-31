@@ -199,53 +199,34 @@
     }
 </style>
 
-<!-- Filter Bar -->
-<div class="pe-filter-bar" id="visualBoardFilterBar">
-    <div class="pe-filter-header-mobile">
-        <h5 class="m-0 fw-bold"><i class="fas fa-chalkboard text-primary me-2"></i>Visual Boards</h5>
-    </div>
-    
-    <div class="pe-filter-spacer"></div>
-    
-    <div class="pe-filter-actions">
-        <select class="form-select form-select-sm d-inline-block w-auto" id="vbLineFilter" onchange="VisualBoardModule.loadData()">
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center gap-2">
+        <div class="input-group input-group-sm" style="width: 250px;">
+            <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+            <input type="search" class="form-control border-start-0" id="vbSearchInput" placeholder="ค้นหารหัส หรือชื่อ..." onkeyup="VisualBoardModule.filterTable()" autocomplete="new-password">
+        </div>
+        <select class="form-select form-select-sm w-auto" id="vbLineFilter" onchange="VisualBoardModule.loadData()">
             <option value="">-- All Lines --</option>
             <!-- Loaded via JS -->
         </select>
-        
-        <button class="pe-btn pe-btn-ghost d-inline-flex align-items-center ms-2" onclick="VisualBoardModule.loadData()" title="Refresh">
+        <button class="pe-btn pe-btn-ghost pe-btn-sm p-1" onclick="VisualBoardModule.loadData()" title="Refresh">
             <i class="fas fa-sync-alt"></i>
+        </button>
+    </div>
+    
+    <div class="d-flex align-items-center gap-2">
+        <span class="pe-text-xs pe-text-muted fw-bold me-2">
+            เลือกแล้ว <span id="vbSelectedCount" class="text-primary fs-6">0</span> เครื่อง
+        </span>
+        <button class="btn btn-sm btn-outline-secondary" onclick="VisualBoardModule.selectAll(true)">เลือกทั้งหมด</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="VisualBoardModule.selectAll(false)">ล้าง</button>
+        <button class="pe-btn pe-btn-primary pe-btn-sm ms-2" onclick="VisualBoardModule.printSelected()">
+            <i class="fas fa-print me-1"></i> พิมพ์
         </button>
     </div>
 </div>
 
-<div class="pe-card h-100" style="background-color: #f1f5f9;">
-    <div class="pe-card-header d-flex justify-content-between align-items-center bg-white border-bottom">
-        <h5 class="pe-card-title"><i class="fas fa-list text-secondary"></i> เลือกเครื่องจักรที่ต้องการพิมพ์</h5>
-        <div class="d-flex align-items-center gap-3">
-            <div class="pe-text-sm pe-text-muted fw-bold">
-                เลือกแล้ว <span id="vbSelectedCount" class="text-primary fs-5">0</span> เครื่อง
-            </div>
-            <button class="pe-btn pe-btn-primary pe-btn-sm" onclick="VisualBoardModule.printSelected()">
-                <i class="fas fa-print"></i> พิมพ์บอร์ดที่เลือก
-            </button>
-        </div>
-    </div>
-    
-    <div class="pe-card-body p-3 bg-white" style="overflow-y: auto; max-height: calc(100vh - 160px);">
-        <!-- Search and Actions -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="input-group" style="width: 300px;">
-                <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                <input type="search" class="form-control border-start-0" id="vbSearchInput" placeholder="ค้นหารหัส หรือชื่อเครื่อง..." onkeyup="VisualBoardModule.filterTable()" autocomplete="new-password">
-            </div>
-            <div>
-                <button class="btn btn-sm btn-outline-secondary me-2" onclick="VisualBoardModule.selectAll(true)">เลือกทั้งหมด</button>
-                <button class="btn btn-sm btn-outline-secondary" onclick="VisualBoardModule.selectAll(false)">ล้างการเลือก</button>
-            </div>
-        </div>
-
-        <div class="table-responsive">
+<div class="table-responsive">
             <table class="table table-hover table-bordered align-middle" id="vbMachineTable">
                 <thead class="table-light">
                     <tr>
@@ -268,5 +249,5 @@
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
+    
+
