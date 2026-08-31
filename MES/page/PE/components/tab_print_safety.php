@@ -46,7 +46,7 @@
 
 </style>
 
-<div class="row g-4 flex-fill w-100" style="min-height: 0; margin: 0;">
+<div class="row gx-4 flex-fill w-100" style="min-height: 0; margin: 0;">
     <div class="col-lg-4 col-xl-3 ps-0">
         <div class="pe-card pe-card-fill border-0">
             <div class="pe-card-header border-0 pb-0">
