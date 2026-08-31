@@ -16,6 +16,9 @@ export default function LogModal({ isOpen, onClose, periodId, periodInfo, logDat
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const [isRendered, setIsRendered] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
   useEffect(() => {
     if (existingData) {
       setMood(existingData.mood);
@@ -24,7 +27,24 @@ export default function LogModal({ isOpen, onClose, periodId, periodInfo, logDat
     }
   }, [existingData]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setIsRendered(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsVisible(true);
+        });
+      });
+    } else {
+      setIsVisible(false);
+      const timer = setTimeout(() => {
+        setIsRendered(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  if (!isRendered) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,8 +80,8 @@ export default function LogModal({ isOpen, onClose, periodId, periodInfo, logDat
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 transition-all duration-300 ease-in-out ${isVisible ? 'opacity-100 backdrop-blur-sm' : 'opacity-0 backdrop-blur-none pointer-events-none'}`}>
+      <div className={`bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'}`}>
         <div className="p-4 border-b flex justify-between items-center bg-gray-50">
           <div>
             <div className="text-xs text-gray-500">Production Date: {logDate}</div>

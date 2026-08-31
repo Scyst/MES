@@ -98,14 +98,17 @@ export default function AppLayout() {
             <div className="relative">
               <button 
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                className="relative z-50 flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full py-1 pl-1 pr-3 hover:shadow-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                className={`relative z-50 flex items-center gap-2 border rounded-full py-1 pl-1 pr-3 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-100 ${isProfileDropdownOpen ? 'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 shadow-inner' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50'}`}
               >
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 flex items-center justify-center font-bold text-sm">
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">
                   {user?.fullname ? user.fullname.charAt(0) : 'U'}
                 </div>
-                <div className="hidden lg:block text-sm text-left">
-                  <p className="font-bold text-gray-800 dark:text-gray-100 leading-none">{user?.fullname || 'Admin User'}</p>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{user?.position || user?.role || 'Guest'}</p>
+                <div className="hidden lg:flex items-center gap-2 text-sm text-left">
+                  <div>
+                    <p className="font-bold text-gray-800 dark:text-gray-100 leading-none">{user?.fullname || 'Admin User'}</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{user?.position || user?.role || 'Guest'}</p>
+                  </div>
+                  <span className="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded border border-black/10 shadow-sm">-</span>
                 </div>
               </button>
               
@@ -115,40 +118,64 @@ export default function AppLayout() {
                     className="fixed inset-0 z-40"
                     onClick={() => setIsProfileDropdownOpen(false)}
                   ></div>
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                    <div className="p-3 border-b border-gray-100 dark:border-gray-700 lg:hidden">
-                    <p className="font-bold text-gray-800 dark:text-gray-100">{user?.fullname || 'Admin User'}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{user?.position || user?.role || 'Guest'}</p>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('openMorningBrief'));
-                      setIsProfileDropdownOpen(false);
-                    }}
-                    className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-                  >
-                    <Coffee size={16} /> <span>สรุปประจำวัน</span>
-                  </button>
-                  <button 
-                    onClick={toggleTheme}
-                    className="flex items-center justify-between w-full px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-yellow-600 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />} 
-                      <span>โหมดการแสดงผล</span>
+                  <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                    
+                    {/* User Info Header */}
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col items-center text-center">
+                      <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 flex items-center justify-center font-bold text-2xl mb-2">
+                        {user?.fullname ? user.fullname.charAt(0) : 'U'}
+                      </div>
+                      <p className="font-bold text-gray-800 dark:text-gray-100">{user?.fullname || 'Admin User'}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 tracking-wider uppercase mt-0.5">{user?.position || user?.role || 'Guest'}</p>
                     </div>
-                    <span className="text-xs text-gray-400">{theme === 'dark' ? 'มืด' : 'สว่าง'}</span>
-                  </button>
-                  <button className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 transition-colors border-t border-gray-100 dark:border-gray-700">
-                    <Settings size={16} /> <span>ตั้งค่าบัญชี</span>
-                  </button>
-                  <button 
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border-t border-gray-100 dark:border-gray-700"
-                  >
-                    <LogOut size={16} /> <span>ออกจากระบบ</span>
-                  </button>
-                </div>
+
+                    {/* Performance Summary (Placeholder) */}
+                    <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400">เกรดประเมิน:</span>
+                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">- (คาดการณ์)</span>
+                      </div>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">ค่าผลงาน (IPH):</span>
+                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">฿0.00</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Ratio:</span>
+                        <span className="text-xs font-bold text-green-600 dark:text-green-400">0.00</span>
+                      </div>
+                    </div>
+
+                    {(user?.role === 'admin' || user?.role === 'creator') && (
+                      <button 
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('openMorningBrief'));
+                          setIsProfileDropdownOpen(false);
+                        }}
+                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                      >
+                        <Coffee size={16} /> <span>สรุปประจำวัน</span>
+                      </button>
+                    )}
+                    <button 
+                      onClick={toggleTheme}
+                      className="flex items-center justify-between w-full px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-yellow-600 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />} 
+                        <span>โหมดการแสดงผล</span>
+                      </div>
+                      <span className="text-xs text-gray-400">{theme === 'dark' ? 'มืด' : 'สว่าง'}</span>
+                    </button>
+                    <button className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 transition-colors border-t border-gray-100 dark:border-gray-700">
+                      <Settings size={16} /> <span>ตั้งค่าบัญชี</span>
+                    </button>
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border-t border-gray-100 dark:border-gray-700"
+                    >
+                      <LogOut size={16} /> <span>ออกจากระบบ</span>
+                    </button>
+                  </div>
                 </>
               )}
             </div>

@@ -18,12 +18,32 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
   const [selectedDate, setSelectedDate] = useState(initialData?.raw_date || '');
   const [dontShowToday, setDontShowToday] = useState(false);
 
+  const [isRendered, setIsRendered] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
   useEffect(() => {
     setData(initialData);
     if (initialData?.raw_date) {
       setSelectedDate(initialData.raw_date);
     }
   }, [initialData]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsRendered(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsVisible(true);
+        });
+      });
+    } else {
+      setIsVisible(false);
+      const timer = setTimeout(() => {
+        setIsRendered(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   const fetchBrief = async (team, date) => {
     setLoading(true);
@@ -67,11 +87,11 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
     onClose();
   };
 
-  if (!isOpen || !data) return null;
+  if (!isRendered) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-[20px] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 pt-[68px] transition-all duration-300 ease-in-out ${isVisible ? 'opacity-100 backdrop-blur-sm' : 'opacity-0 backdrop-blur-none pointer-events-none'}`}>
+      <div className={`bg-white rounded-[20px] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] transition-all duration-300 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'}`}>
         
         {/* Header (linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)) */}
         <div className="bg-gradient-to-br from-[#0f2027] via-[#203a43] to-[#2c5364] p-5 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center relative">
@@ -81,7 +101,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
             </div>
             <div className="flex-1">
               <h4 className="text-xl font-bold mb-0">Morning Brief</h4>
-              <div className="text-white/70 text-sm">สรุปผลงานวันที่ {data.date_text}</div>
+              <div className="text-white/70 text-sm">สรุปผลงานวันที่ {data?.date_text || selectedDate}</div>
             </div>
             <div className="flex items-center gap-3">
               <input 
@@ -113,6 +133,10 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
             <div className="flex flex-col items-center justify-center py-20 text-slate-500">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-current"></div>
               <p className="mt-4 font-semibold animate-pulse">กำลังโหลดข้อมูล...</p>
+            </div>
+          ) : !data ? (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+              <p className="mt-4 font-semibold">ไม่มีข้อมูลสำหรับวันนี้</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -171,17 +195,19 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
 
               {/* Team Mood */}
               <div className="col-span-1 md:col-span-5">
-                <div className="bg-white p-4 rounded-2xl shadow-sm h-full flex flex-col items-center justify-center text-center">
-                  <div className="text-gray-500 text-xs font-bold uppercase mb-2 w-full text-left flex items-center gap-2">
+                <div className="bg-white p-4 rounded-2xl shadow-sm h-full flex flex-col text-center">
+                  <div className="text-gray-500 text-xs font-bold uppercase mb-3 w-full text-left flex items-center gap-2">
                     <SmilePlus size={16} /> Team Mood
                   </div>
-                  <div className="text-6xl mb-2 mt-2 select-none">
-                    {getMoodEmoji(parseFloat(data.mood_avg))}
+                  <div className="flex-1 flex flex-col items-center justify-center">
+                    <div className="text-6xl mb-2 select-none">
+                      {getMoodEmoji(parseFloat(data.mood_avg))}
+                    </div>
+                    <div className="font-bold text-xl text-gray-900">
+                      {parseFloat(data.mood_avg).toFixed(1)} <span className="text-sm text-gray-400 font-normal">/ 5.0</span>
+                    </div>
+                    <small className="text-gray-500 mt-1 font-medium">ความสุขเฉลี่ยพนักงาน</small>
                   </div>
-                  <div className="font-bold text-xl text-gray-900">
-                    {parseFloat(data.mood_avg).toFixed(1)} <span className="text-sm text-gray-400 font-normal">/ 5.0</span>
-                  </div>
-                  <small className="text-gray-500 mt-1 font-medium">ความสุขเฉลี่ยพนักงาน</small>
                 </div>
               </div>
 
