@@ -71,6 +71,14 @@ $pageTitle = "PE Enterprise";
                     <span class="nav-label">Spare Parts</span>
                     <span class="nav-badge" id="lowStockBadge" style="display:none;">0</span>
                 </button>
+                <button class="pe-nav-item" data-tab="safety">
+                      <i class="fas fa-hard-hat"></i>
+                      <span class="nav-label">Safety & Hazards</span>
+                  </button>
+                <button class="pe-nav-item" data-tab="print_safety">
+                    <i class="fas fa-print"></i>
+                    <span class="nav-label">Safety Print Center</span>
+                </button>
             </div>
 
             <div class="pe-nav-section">
@@ -88,10 +96,7 @@ $pageTitle = "PE Enterprise";
                       <i class="fas fa-history"></i>
                       <span class="nav-label">IIoT Historical Analytics</span>
                   </button>
-                  <button class="pe-nav-item" data-tab="safety">
-                      <i class="fas fa-hard-hat"></i>
-                      <span class="nav-label">Safety & Hazards</span>
-                  </button>
+
                 <button class="pe-nav-item" data-tab="analytics">
                     <i class="fas fa-chart-line"></i>
                     <span class="nav-label">Maintenance Analytics</span>
@@ -108,10 +113,7 @@ $pageTitle = "PE Enterprise";
                     <i class="fas fa-external-link-alt"></i>
                     <span class="nav-label">PE Request Portal</span>
                 </a>
-                                <button class="pe-nav-item" data-tab="print_safety">
-                    <i class="fas fa-print"></i>
-                    <span class="nav-label">Safety Print Center</span>
-                </button>
+
                 <a class="pe-nav-item" href="quick_hazard_report.php" target="_blank">
                     <i class="fas fa-exclamation-triangle"></i>
                     <span class="nav-label">Quick Hazard Report</span>
