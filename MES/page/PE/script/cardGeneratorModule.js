@@ -241,11 +241,11 @@ const CardGeneratorModule = (function() {
             return;
         }
         
-        // Serialize queue to localStorage
+        // Serialize queue to localStorage (optional now, but kept for backup)
         localStorage.setItem('print_cards_data', JSON.stringify(cardQueue));
         
-        // Open Print Window
-        window.open('card_print.php', '_blank');
+        // Print current window directly
+        window.print();
     }
 
     // Public API

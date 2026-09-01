@@ -147,8 +147,18 @@
         .pe-main { margin: 0 !important; padding: 0 !important; }
         .pe-content, .pe-tab-panel { padding: 0 !important; margin: 0 !important; }
         
-        #cgLayoutRow { display: none !important; }
-        #cgPrintContainer { display: block !important; }
+        /* Make layout full width for print */
+        #cgLayoutRow { display: block !important; margin: 0 !important; padding: 0 !important; }
+        #cgLayoutRow > div:nth-child(2) { width: 100% !important; flex: none !important; padding: 0 !important; max-width: 100% !important; }
+        
+        /* Remove wrapper styles */
+        .flex-fill.rounded { background: transparent !important; border: none !important; padding: 0 !important; }
+        
+        /* Remove preview scaling and padding */
+        .cg-preview-page-wrapper { padding: 0 !important; }
+        .cg-preview-page { transform: none !important; margin-bottom: 0 !important; }
+        
+        #cgPrintContainer { display: none !important; }
         
         .cg-page { 
             display: block !important;
