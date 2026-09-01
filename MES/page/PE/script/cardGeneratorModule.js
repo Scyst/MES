@@ -241,11 +241,26 @@ const CardGeneratorModule = (function() {
             return;
         }
         
-        // Serialize queue to localStorage (optional now, but kept for backup)
+        // Serialize queue to localStorage
         localStorage.setItem('print_cards_data', JSON.stringify(cardQueue));
         
-        // Print current window directly
-        window.print();
+        // Use a hidden iframe to print card_print.php without leaving the dashboard
+        let printFrame = document.getElementById('cgHiddenPrintFrame');
+        if (!printFrame) {
+            printFrame = document.createElement('iframe');
+            printFrame.id = 'cgHiddenPrintFrame';
+            printFrame.name = 'cgHiddenPrintFrame';
+            printFrame.style.position = 'absolute';
+            printFrame.style.top = '-9999px';
+            printFrame.style.left = '-9999px';
+            printFrame.style.width = '0';
+            printFrame.style.height = '0';
+            printFrame.style.border = '0';
+            document.body.appendChild(printFrame);
+        }
+        
+        // Load the print page in the iframe. The page will auto-trigger window.print()
+        printFrame.src = 'card_print.php';
     }
 
     // Public API
