@@ -77,7 +77,7 @@
         transform-origin: top center;
         /* Scale to fit most screens, adjust if necessary */
         transform: scale(0.85);
-        margin-bottom: -15%; 
+        margin-bottom: -35mm; 
     }
     
     .cg-preview-page .cg-card-container:hover {
