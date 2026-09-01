@@ -73,7 +73,7 @@
     }
     
     .cg-preview-page {
-        display: block;
+        /* display removed to preserve grid */
         transform-origin: top center;
         /* Scale to fit most screens, adjust if necessary */
         transform: scale(0.85);
