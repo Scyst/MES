@@ -1,0 +1,198 @@
+{
+  "Antigravity": [
+    {
+      "task": "System Analyst",
+      "desc": ""
+    }
+  ],
+  "Frontend": [
+    {
+      "task": "Agent",
+      "desc": ""
+    },
+    {
+      "task": "Agent",
+      "desc": ""
+    },
+    {
+      "task": "Agent",
+      "desc": ""
+    },
+    {
+      "task": "Agent",
+      "desc": ""
+    }
+  ],
+  "Agent": [
+    {
+      "task": "Activity",
+      "desc": ""
+    },
+    {
+      "task": "Activity",
+      "desc": ""
+    },
+    {
+      "task": "Activity",
+      "desc": ""
+    },
+    {
+      "task": "Activity",
+      "desc": ""
+    },
+    {
+      "task": "Activity",
+      "desc": ""
+    },
+    {
+      "task": "Activity",
+      "desc": ""
+    },
+    {
+      "task": "Activity",
+      "desc": ""
+    }
+  ],
+  "storeManagement": [
+    {
+      "task": "Transfer by Tag & Bug Fixes",
+      "desc": "- เพิ่มการส่ง `location_type` ไปที่ API และคัดกรอง Location ตาม Type - เพิ่ม Dropdown ให้เลือก Tag ใน Modal \"สร้างรายการโอนย้าย\" ซึ่งจะช่วยดึงค่า Location และ QTY ของแท็กนั้นๆ มาเติมให้อัตโนมัติและล็อกเอาไว้ - ปรับปรุง API เพื่อรับข้อมูลว่าเป็นการโอนแท็กไหน โดยบันทึกรหัสแท็กไว้ในหมายเหตุ `[TAG: เลขแท็ก]` และเมื่ออนุมัติ ระบบจะอ่านหมายเหตุนี้ไปย้าย Location ของแท็กตามที่ระบุ "
+    },
+    {
+      "task": "Bug Fix Review",
+      "desc": "1. เพิ่ม `t.location_id` ใน SELECT ของ `get_available_tags_for_item` เพราะ JS ต้องใช้ค่านี้ auto-fill คลังต้นทาง แต่ถูก query ขาดไป 2. แก้ไข SQL LIKE Pattern `'%[TAG: %'` -> `'%[[]TAG: %'` เนื่องจาก `[` เป็น wildcard ของ SQL Server ทำให้ไม่ match ตัวอักษร literal และแท็กไม่ถูก query เจอหลังอนุมัติ (bug นี้เกิดขึ้นซ้ำทั้ง `process_transfer_request` และ `bulk_process_transfer_request`) "
+    },
+    {
+      "task": "Schema Refactor",
+      "desc": "ผู้ใช้ตั้งคำถามว่าถ้าโอนย้ายซ้ำหลายครั้ง Notes จะล้นมั้ย — วิเคราะห์แล้วพบว่า design การบัง `[TAG:]` ใน Notes เป็น anti-pattern"
+    },
+    {
+      "task": "UX Improvements",
+      "desc": "1. เพิ่ม `fmtQty()` helper — แสดงจำนวนเต็มโดยไม่มีทศนิยม แสดงทศนิยมเฉพาะที่จำเป็น ใช้ทั่วทั้งหน้า 2. Dynamic Tag Enforcement — ถ้าสินค้ามีแท็ก บังคับเลือก Tag และ lock ช่องจำนวน/คลัง ถ้าไม่มีแท็กเปิด Manual ตามปกติ "
+    },
+    {
+      "task": "Minor Bug Fix",
+      "desc": "ช่องจำนวนใน Modal \"สร้างรายการโอนย้าย\" แสดงทศนิยมเกิน เช่น `100.000` แทนที่จะเป็น `100`"
+    },
+    {
+      "task": "Frontend QA & Rollback",
+      "desc": "1. ใช้ `browser_subagent` ล็อกอินและทดสอบสร้างรายการโอนย้ายผ่าน UI จริง ยืนยันว่า `fmtQty()` และ Tag Enforcement ทำงานได้ถูกต้อง 2. ทำการ Rollback ข้อมูลทดสอบผ่าน SQL: คืนยอดให้ `INVENTORY_ONHAND`, เปลี่ยนสถานะโอนย้ายใน `STOCK_TRANSFER_ORDERS` เป็น `CANCELLED`, และปรับยอด Transaction ใน `STOCK_TRANSACTIONS` ให้เป็น `0` พร้อมระบุ Notes ว่าเป็น QA TEST REVERT "
+    }
+  ],
+  "OEE_Dashboard": [
+    {
+      "task": "Bug Fix - OEE Cost Summary",
+      "desc": "ผู้ใช้แจ้งว่าเมื่อกรองข้อมูลตามทีม (Team) ค่าแรง (DLOT) แสดงผลเป็นของทั้งไลน์แทนที่จะเป็นเฉพาะทีมนั้น"
+    }
+  ],
+  "QMS": [
+    {
+      "task": "Responsive UI Fix",
+      "desc": "1. เปลี่ยน `min-height` ของ Container จาก `500px` เป็น `350px` และใช้ `height: calc(100vh - 210px);` เพื่อบังคับให้ปฏิทินฟิตพอดีกับหน้าจอที่เหลือ 2. ปรับ `minmax` ของตารางวันที่จาก `100px` เหลือ `80px` เพื่อให้ช่องวันเล็กลงเมื่อถูกบีบ "
+    }
+  ],
+  "PE_Dashboard": [
+    {
+      "task": "PE Dashboard Fixes & Analytics Empty State",
+      "desc": "ผู้ใช้แจ้งว่าแท็บส่วนใหญ่ในหน้า Analytics & IIoT ไม่แสดงข้อมูล และมี Error แจ้งเตือนในตอนโหลดหน้า Dashboard"
+    },
+    {
+      "task": "Hotfix: PE Tab Overlapping Bug",
+      "desc": "ผู้ใช้แจ้งว่าหลังจากแก้เลย์เอาต์ แท็บต่างๆ กลายเป็นหน้าจอขาวโพลน"
+    },
+    {
+      "task": "Hotfix: LOTO Padlock UI Bug",
+      "desc": "ผู้ใช้พบสัญลักษณ์แม่กุญแจแดง (LOTO) ปรากฏบนเครื่องจักรทั้งๆ ที่ไม่ได้เปิดล็อกไว้"
+    },
+    {
+      "task": "Hotfix: LOTO Modal jQuery Error",
+      "desc": "ผู้ใช้พบ Error $ is not defined ตอนกดปุ่มระบบ LOTO และสงสัยกรณีแจ้งซ่อมไม่มีเครื่องจักร"
+    },
+    {
+      "task": "UX: Prevent Browser Autofill on Search Inputs",
+      "desc": "ผู้ใช้รำคาญที่เบราว์เซอร์ (Password Manager) พยายามใส่ Username ลงในช่อง SearchBox ต่างๆ ทั่วทั้งหน้า Dashboard อัตโนมัติ"
+    },
+    {
+      "task": "Hotfix: Blank Screen/Silent Error after Autocomplete update",
+      "desc": "ผู้ใช้แจ้งว่าหน้าเว็บใช้งานไม่ได้ เปลี่ยนแท็บไม่ได้ แต่ไม่พบ Error บน Console"
+    },
+    {
+      "task": "UX: Aggressive Autofill Fix v2",
+      "desc": "ผู้ใช้แจ้งว่าเบราว์เซอร์ยังคงพยายาม Autofill Username ลงในช่องค้นหา (Search) อยู่ แม้จะใส่ `autocomplete=\"off\"` ไปแล้ว เนื่องจากเบราว์เซอร์รุ่นใหม่ๆ (เช่น Chrome) มักจะเพิกเฉยต่อคำสั่งนี้"
+    },
+    {
+      "task": "UX/API: LOTO Modal Autofill & Error Fixes",
+      "desc": "- ซ่อนช่องรหัสผ่านจากเบราว์เซอร์โดยเปลี่ยนเป็น `type=\"text\"` และใช้ CSS `-webkit-text-security: disc;` เพื่อพรางตาแทน เบราว์เซอร์จะไม่มองว่าหน้านี้เป็นหน้า Login อีกต่อไป - แก้บัค writeErrorLog ใน lotoAPI.php ที่ลืมส่งพารามิเตอร์ $pdo - บังคับอัปเดตเวอร์ชันไฟล์ JS บน peDashboard.php เพื่อล้างแคชให้ผู้ใช้โดยอัตโนมัติ "
+    },
+    {
+      "task": "Hotfix: LOTO API Syntax Error",
+      "desc": "- แก้ไข Syntax Error บน lotoAPI.php ให้ถูกต้อง - เพิ่มการดักเช็คค่าตัวเลข (is_numeric) ให้กับพารามิเตอร์ machine_id ป้องกันบัคฐานข้อมูล (SQLSTATE 22018) กรณีมีการส่ง ID แปลกปลอมเข้ามา "
+    },
+    {
+      "task": "Checklist Template Data Entry",
+      "desc": "งานจาก Phase 4.1 ของ ROADMAP ต้องการกำหนด Checklist Template ให้กับเครื่องจักรแต่ละประเภทจริงในฐานข้อมูล (Data Entry)"
+    },
+    {
+      "task": "Hazard Report & Pre-Op Checklist UX Improvement",
+      "desc": "- แก้ไข Fatal error จากการเรียกใช้ `$_SESSION['user']` ไปเป็น `$_SESSION['user']['username']` - ปรับปรุงการดึงข้อมูลแบบฟอร์ม (Pre-Op Audit) โดยเชื่อม `PE_PREOP_AUDITS` เข้ากับ `PE_WORK_ORDERS_TABLE` เพื่อดึงข้อมูล `checklist_data` JSON มา Parse - ออกแบบ UI ใน Modal แบบใหม่ โดยแยกลิสต์ตามข้อที่ตรวจไม่ผ่าน พร้อมโชว์รูปภาพและเหตุผลกำกับแยกแต่ละข้อชัดเจน - เปลี่ยนตาราง Pre-Op ให้โชว์หมายเลข WO ตัวเต็ม (เช่น WO-20260827-0001) และกดเปิดดูรายละเอียดใน Modal ได้ "
+    }
+  ],
+  "Team": [
+    {
+      "task": "Planner (Timeline Ghost Rows Fix)",
+      "desc": "ผู้ใช้พบปัญหามีบรรทัดว่างๆ (Ghost rows) ในหน้า Timeline (Gantt Chart) ทั้งที่งานไม่ได้ซ้อนทับกัน"
+    }
+  ],
+  "StoreManagement": [
+    {
+      "task": "Bulk Reject Pending Transfers",
+      "desc": "- เพิ่มปุ่ม `<button id=\"btnBulkReject\">` ข้างๆ ปุ่ม Approve ใน `InventoryModal.php` - แก้ไขฟังก์ชัน `bulkProcessTransfer(status)` ใน `inventoryDashboard.js` ให้รับ status แบบไดนามิกและเปลี่ยนข้อความ confirm สอดคล้องกัน ('CANCELLED' สำหรับปฏิเสธ และ 'COMPLETED' สำหรับอนุมัติ) - จัดการแสดงผล/ซ่อน ปุ่ม Reject ผ่าน JS พร้อมกับปุ่ม Approve "
+    },
+    {
+      "task": "UI Polish: SweetAlert2 for Transfer Approvals",
+      "desc": "- เปลี่ยนการเรียก `confirm()` แบบ Native เป็น `Swal.fire()` ทั้งในฟังก์ชัน `bulkProcessTransfer()` และ `processTransfer()` - ออกแบบปุ่มให้มีสีสอดคล้องกับการกระทำ (สีเขียวสำหรับอนุมัติ สีแดงสำหรับปฏิเสธ) พร้อมไอคอนกำกับชัดเจน "
+    }
+  ],
+  "Database_Maintenance": [
+    {
+      "task": "Mass Reject Old Pending Transfers",
+      "desc": "1. ทำการ Backup ข้อมูลที่สถานะเป็น PENDING ทั้งหมด 30,241 รายการ ไว้ที่ตาราง `dbo.STOCK_TRANSFER_ORDERS_PENDING_BAK_20260831` ก่อนเพื่อความปลอดภัย 2. รันคำสั่ง SQL ปรับสถานะคำขอเก่าทั้งหมด (ที่สร้างก่อนวันที่ 27 ส.ค. 2026 เวลา 23:59:59) จาก `PENDING` เป็น `CANCELLED` เพื่อล้างไพ่ "
+    }
+  ],
+  "UI_Navigation": [
+    {
+      "task": "Add Digital Twin Link",
+      "desc": "ผู้พัฒนาอีกท่านฝากเพิ่มลิงก์ชั่วคราวสำหรับระบบ Digital Twin (3D Monitoring) ของโรงงาน เพื่อให้สามารถเข้าถึงได้จากหน้าเว็บหลัก"
+    },
+    {
+      "task": "Dashboard Modules Roles & Permissions",
+      "desc": "ผู้ใช้ต้องการให้เมนูใน Dashboard (SPA V2) อิงตาม Permission และ Role ของผู้ใช้งาน"
+    }
+  ],
+  "PE_UI": [
+    {
+      "task": "Fix Inconsistent Tab Spacing",
+      "desc": "1. ลบ duplicate `.pe-tab-panel` definition แรก (L961–968) ออก 2. แก้ animation `fadeSlideUp` ให้ใช้ `transform: translateY(8px)` แทน `margin-top: 10px` เพื่อกัน layout shift 3. เพิ่ม `padding-top: 16px` ใน `.iiot-overview-row` ใน `tab_iiot.php` "
+    },
+    {
+      "task": "Fix Tab Layout - Stray Div & Spacing",
+      "desc": "1. ลบ `</div>` ที่เกินมาใน `tab_safety.php` (บรรทัด 145) เพื่อให้โครงสร้าง DOM ถูกต้อง 2. เปลี่ยน CSS ของ `.iiot-overview-row` จาก `padding: 16px 20px 16px;` เป็น `margin-bottom: 16px;` เพื่อให้กว้างเต็มคอนเทนเนอร์เหมือนแท็บอื่นๆ "
+    },
+    {
+      "task": "Fix Table Shrink & Scrollbars for Full Screen",
+      "desc": "1. สร้าง Utility classes ใหม่ใน pe-enterprise.css ได้แก่ .pe-card-fill, .pe-tab-pane-fill, .pe-table-scroll-y เพื่อให้ใช้ Flexbox คำนวณความสูงแบบเต็มหน้าจอ (flex: 1) โดยอัตโนมัติ 2. ลบ max-height แบบ Hardcode ออกจากแท็บที่มีตารางทั้งหมด 3. ใส่คลาส Flexbox ใหม่เข้าไปแทนใน DOM ของ Work Orders, Spare Parts, Downtime Tracker, และ Safety & Hazards 4. อัปโหลดไฟล์แก้ไขผ่าน FTP ไปยัง MES/MES/page/PE/ (แก้ไขที่อยู่ที่อัปโหลดผิดก่อนหน้านี้) "
+    },
+    {
+      "task": "Fix Container Shrink behavior & Machine Timeline",
+      "desc": "1. เพิ่ม min-height: 0; ให้กับ .pe-content และ .pe-tab-panel.active ใน pe-enterprise.css เพื่ออนุญาตให้ flex หดตัว 2. เปลี่ยนโครงสร้างใน \tab_machine_timeline.php ให้ใช้ class Flexbox เต็มจอ 3. อัปโหลดทั้งสองไฟล์ขึ้น FTP ไปยัง /MES/MES/page/PE/ "
+    },
+    {
+      "task": "Enforce height constraint on .pe-main",
+      "desc": "1. แก้ไข pe-enterprise.css เปลี่ยนจาก min-height: 100vh เป็น height: 100vh และใส่ overflow: hidden; ใน .pe-main เพื่อให้แอปพลิเคชันไม่ขยายเกินหน้าจอเบราว์เซอร์เด็ดขาด 2. เพิ่ม overflow-y: auto; overflow-x: hidden; ใน .pe-content เพื่อให้แท็บอื่นๆ ที่ไม่ได้ใช้ Flex-fill เต็มจอ (เช่น Dashboard) ยังคงสามารถเลื่อนดูข้อมูลได้ตามปกติ 3. อัปโหลด pe-enterprise.css ขึ้น FTP "
+    },
+    {
+      "task": "Fix missing inner scrollbars in Flex containers",
+      "desc": "1. เพิ่ม `style=\"min-height: 0;\"` ให้กับ `.tab-content` ในหน้า Spare Parts และ Safety เพื่อให้มันยอมหดตัวและปลดล็อคการ Scroll ภายในตาราง 2. เพิ่ม `flex: 1; min-height: 0;` ให้กับ `.card-body` ใน `tab_machine_timeline.php` 3. อัปโหลดทั้ง 3 ไฟล์ขึ้น FTP "
+    }
+  ]
+}
