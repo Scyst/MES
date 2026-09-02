@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { FiX, FiTrash2, FiCalendar, FiClock, FiUser, FiEye, FiCheckCircle, FiCheckSquare, FiType, FiFlag, FiAlignLeft, FiList, FiMessageSquare, FiTag, FiRefreshCw, FiPlus, FiSend, FiInfo, FiBriefcase } from 'react-icons/fi';
 import MultiSelectInput from './common/MultiSelectInput';
 import axios from 'axios';
@@ -6,28 +6,28 @@ import { canEditTask, canDeleteTask } from '../utils/permissions';
 import ConfirmDialog from './common/ConfirmDialog';
 
 const PRIORITY_OPTIONS = [
-  { value: 'urgent', label: '🔴 ด่วนมาก', color: 'bg-red-500', dot: 'bg-red-400', ring: 'ring-red-500/30' },
-  { value: 'high', label: '🟠 ด่วน', color: 'bg-orange-500', dot: 'bg-orange-400', ring: 'ring-orange-500/30' },
-  { value: 'normal', label: '🟡 ปกติ', color: 'bg-yellow-500', dot: 'bg-yellow-400', ring: 'ring-yellow-500/30' },
-  { value: 'low', label: '🟢 ต่ำ', color: 'bg-green-500', dot: 'bg-green-400', ring: 'ring-green-500/30' },
+  { value: 'urgent', label: '๐”ด เธ”เนเธงเธเธกเธฒเธ', color: 'bg-red-500', dot: 'bg-red-400', ring: 'ring-red-500/30' },
+  { value: 'high', label: '๐  เธ”เนเธงเธ', color: 'bg-orange-500', dot: 'bg-orange-400', ring: 'ring-orange-500/30' },
+  { value: 'normal', label: '๐ก เธเธเธ•เธด', color: 'bg-yellow-500', dot: 'bg-yellow-400', ring: 'ring-yellow-500/30' },
+  { value: 'low', label: '๐ข เธ•เนเธณ', color: 'bg-green-500', dot: 'bg-green-400', ring: 'ring-green-500/30' },
 ];
 
 const RECURRENCE_OPTIONS = [
-  { value: 'none', label: '❌ ไม่ทำซ้ำ' },
-  { value: 'daily', label: '📅 ทำซ้ำทุกวัน' },
-  { value: 'weekly', label: '📆 ทำซ้ำทุกสัปดาห์' },
-  { value: 'monthly', label: '🗓️ ทำซ้ำทุกเดือน' },
-  { value: 'custom', label: '⚙️ กำหนดวันเอง' },
+  { value: 'none', label: 'โ เนเธกเนเธ—เธณเธเนเธณ' },
+  { value: 'daily', label: '๐“… เธ—เธณเธเนเธณเธ—เธธเธเธงเธฑเธ' },
+  { value: 'weekly', label: '๐“ เธ—เธณเธเนเธณเธ—เธธเธเธชเธฑเธเธ”เธฒเธซเน' },
+  { value: 'monthly', label: '๐—“๏ธ เธ—เธณเธเนเธณเธ—เธธเธเน€เธ”เธทเธญเธ' },
+  { value: 'custom', label: 'โ๏ธ เธเธณเธซเธเธ”เธงเธฑเธเน€เธญเธ' },
 ];
 
 const WEEK_DAYS = [
-  { value: 1, label: 'จ' },
-  { value: 2, label: 'อ' },
-  { value: 3, label: 'พ' },
-  { value: 4, label: 'พฤ' },
-  { value: 5, label: 'ศ' },
-  { value: 6, label: 'ส' },
-  { value: 0, label: 'อา' },
+  { value: 1, label: 'เธ' },
+  { value: 2, label: 'เธญ' },
+  { value: 3, label: 'เธ' },
+  { value: 4, label: 'เธเธค' },
+  { value: 5, label: 'เธจ' },
+  { value: 6, label: 'เธช' },
+  { value: 0, label: 'เธญเธฒ' },
 ];
 
 const TimeInput24 = ({ name, value, onChange, disabled, className }) => {
@@ -271,7 +271,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     if (!file) return;
 
     if (file.size > 50 * 1024 * 1024) {
-      alert('ขนาดไฟล์เกิน 50MB');
+      alert('เธเธเธฒเธ”เนเธเธฅเนเน€เธเธดเธ 50MB');
       e.target.value = null;
       return;
     }
@@ -306,7 +306,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       setAttachmentsArr(attachmentsArr.filter(a => a.id !== attachmentToDelete.id));
     } catch (e) {
       console.error('Delete failed:', e);
-      alert('เกิดข้อผิดพลาดในการลบไฟล์จากเซิร์ฟเวอร์');
+      alert('เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”เนเธเธเธฒเธฃเธฅเธเนเธเธฅเนเธเธฒเธเน€เธเธดเธฃเนเธเน€เธงเธญเธฃเน');
     } finally {
       setAttachmentToDelete(null);
     }
@@ -331,13 +331,13 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     e.preventDefault();
 
     if (!formData.title || !formData.title.trim()) {
-      alert('กรุณาระบุชื่องาน');
+      alert('เธเธฃเธธเธ“เธฒเธฃเธฐเธเธธเธเธทเนเธญเธเธฒเธ');
       setActiveTab('general');
       return;
     }
     
     if (formData.recurrence !== 'none' && !formData.startDate) {
-      alert('กรุณาระบุวันที่เริ่มต้น (Start Date) สำหรับงานที่ตั้งค่าทำซ้ำ');
+      alert('เธเธฃเธธเธ“เธฒเธฃเธฐเธเธธเธงเธฑเธเธ—เธตเนเน€เธฃเธดเนเธกเธ•เนเธ (Start Date) เธชเธณเธซเธฃเธฑเธเธเธฒเธเธ—เธตเนเธ•เธฑเนเธเธเนเธฒเธ—เธณเธเนเธณ');
       setActiveTab('general');
       return;
     }
@@ -391,14 +391,14 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     {showConfirmClose && (
       <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-fade-in">
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700 animate-scale-up">
-          <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-2">ละทิ้งการเปลี่ยนแปลง?</h4>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการปิดโดยไม่บันทึกใช่หรือไม่?</p>
+          <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-2">เธฅเธฐเธ—เธดเนเธเธเธฒเธฃเน€เธเธฅเธตเนเธขเธเนเธเธฅเธ?</h4>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">เธเธธเธ“เธกเธตเธเธฒเธฃเน€เธเธฅเธตเนเธขเธเนเธเธฅเธเธ—เธตเนเธขเธฑเธเนเธกเนเนเธ”เนเธเธฑเธเธ—เธถเธ เธ•เนเธญเธเธเธฒเธฃเธเธดเธ”เนเธ”เธขเนเธกเนเธเธฑเธเธ—เธถเธเนเธเนเธซเธฃเธทเธญเนเธกเน?</p>
           <div className="flex gap-3 justify-end">
             <button onClick={() => setShowConfirmClose(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
-              ยกเลิก
+              เธขเธเน€เธฅเธดเธ
             </button>
             <button onClick={() => { setShowConfirmClose(false); onClose(); }} className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-rose-500/20">
-              ยืนยันการปิด
+              เธขเธทเธเธขเธฑเธเธเธฒเธฃเธเธดเธ”
             </button>
           </div>
         </div>
@@ -410,15 +410,15 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700 animate-scale-up">
           <div className="flex items-center gap-3 mb-3 text-rose-500">
             <FiTrash2 className="w-6 h-6" />
-            <h4 className="text-lg font-bold text-slate-800 dark:text-white">ลบไฟล์แนบ?</h4>
+            <h4 className="text-lg font-bold text-slate-800 dark:text-white">เธฅเธเนเธเธฅเนเนเธเธ?</h4>
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">คุณต้องการลบไฟล์นี้ออกจากเซิร์ฟเวอร์ใช่หรือไม่? (การลบจะเกิดขึ้นทันที และไม่สามารถกู้คืนได้)</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">เธเธธเธ“เธ•เนเธญเธเธเธฒเธฃเธฅเธเนเธเธฅเนเธเธตเนเธญเธญเธเธเธฒเธเน€เธเธดเธฃเนเธเน€เธงเธญเธฃเนเนเธเนเธซเธฃเธทเธญเนเธกเน? (เธเธฒเธฃเธฅเธเธเธฐเน€เธเธดเธ”เธเธถเนเธเธ—เธฑเธเธ—เธต เนเธฅเธฐเนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธเธนเนเธเธทเธเนเธ”เน)</p>
           <div className="flex gap-3 justify-end">
             <button onClick={() => setAttachmentToDelete(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
-              ยกเลิก
+              เธขเธเน€เธฅเธดเธ
             </button>
             <button onClick={confirmDeleteAttachment} className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-rose-500/20">
-              ลบถาวร
+              เธฅเธเธ–เธฒเธงเธฃ
             </button>
           </div>
         </div>
@@ -438,7 +438,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
           <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
             <div className="flex items-center gap-3">
               <div className={`w-2.5 h-2.5 rounded-full ${isEditing ? 'bg-amber-400' : 'bg-indigo-500'}`}></div>
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{isEditing ? 'แก้ไขงาน' : 'สร้างงานใหม่'}</h3>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{isEditing ? 'เนเธเนเนเธเธเธฒเธ' : 'เธชเธฃเนเธฒเธเธเธฒเธเนเธซเธกเน'}</h3>
             </div>
             <div className="flex items-center gap-2">
               {isEditing && formData.Id && (
@@ -449,9 +449,9 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     window.dispatchEvent(new CustomEvent('open-chat-room', { detail: { type: 'task', referenceId: formData.Id }}));
                   }}
                   className="flex items-center gap-1.5 bg-sky-100 hover:bg-sky-200 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 dark:hover:bg-sky-800/80 px-3 py-1.5 rounded-xl font-medium text-sm transition-all"
-                  title="เปิดแชทของงานนี้"
+                  title="เน€เธเธดเธ”เนเธเธ—เธเธญเธเธเธฒเธเธเธตเน"
                 >
-                  <FiMessageSquare /> แชท
+                  <FiMessageSquare /> เนเธเธ—
                 </button>
               )}
               <button type="button" onClick={handleClose} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-700/80 transition-all active:scale-90">
@@ -467,14 +467,14 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               onClick={() => setActiveTab('general')}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'general' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
             >
-              <FiAlignLeft /> รายละเอียด
+              <FiAlignLeft /> เธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”
             </button>
             <button 
               type="button"
               onClick={() => setActiveTab('checklist')}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'checklist' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
             >
-              <FiList /> งานย่อย & โปรเจ็ค
+              <FiList /> เธเธฒเธเธขเนเธญเธข & เนเธเธฃเน€เธเนเธ
               {subtasksArr.length > 0 && (
                 <span className="ml-1 bg-slate-100 dark:bg-slate-800 text-xs px-1.5 py-0.5 rounded-full">{subtasksArr.filter(s=>s.completed).length}/{subtasksArr.length}</span>
               )}
@@ -484,7 +484,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               onClick={() => setActiveTab('attachments')}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'attachments' ? 'border-pink-500 text-pink-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
             >
-              <FiType /> แนบไฟล์
+              <FiType /> เนเธเธเนเธเธฅเน
               {attachmentsArr.length > 0 && (
                 <span className="ml-1 bg-slate-100 dark:bg-slate-800 text-xs px-1.5 py-0.5 rounded-full">{attachmentsArr.length}</span>
               )}
@@ -495,7 +495,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 onClick={() => setActiveTab('comments')}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'comments' ? 'border-sky-500 text-sky-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
               >
-                <FiMessageSquare /> ความคิดเห็น
+                <FiMessageSquare /> เธเธงเธฒเธกเธเธดเธ”เน€เธซเนเธ
                 {comments.length > 0 && (
                   <span className="ml-1 bg-slate-100 dark:bg-slate-800 text-xs px-1.5 py-0.5 rounded-full">{comments.length}</span>
                 )}
@@ -506,7 +506,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         
         {!isEditable && (
           <div className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 p-2 text-xs text-center border-b border-amber-200 dark:border-amber-500/20 font-medium">
-            คุณไม่มีสิทธิ์แก้ไขงานนี้ (View Only)
+            เธเธธเธ“เนเธกเนเธกเธตเธชเธดเธ—เธเธดเนเนเธเนเนเธเธเธฒเธเธเธตเน (View Only)
           </div>
         )}
 
@@ -520,24 +520,24 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               {/* Title */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                  <FiType className="text-indigo-500" /> ชื่องาน
+                  <FiType className="text-indigo-500" /> เธเธทเนเธญเธเธฒเธ
                 </label>
-                <input disabled={!isEditable} required name="title" value={formData.title} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder-slate-400 text-sm" placeholder="เช่น ตรวจสอบเครื่องจักร Line A..." />
+                <input disabled={!isEditable} required name="title" value={formData.title} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder-slate-400 text-sm" placeholder="เน€เธเนเธ เธ•เธฃเธงเธเธชเธญเธเน€เธเธฃเธทเนเธญเธเธเธฑเธเธฃ Line A..." />
               </div>
 
               {/* Description */}
               <div className="flex flex-col flex-1 min-h-[100px]">
                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                  <FiAlignLeft className="text-indigo-500" /> รายละเอียด
+                  <FiAlignLeft className="text-indigo-500" /> เธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”
                 </label>
-                <textarea disabled={!isEditable} name="description" value={formData.description} onChange={handleChange} className="flex-1 w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm resize-none placeholder-slate-400" placeholder="หมายเหตุ, ขั้นตอนการปฏิบัติงาน..." />
+                <textarea disabled={!isEditable} name="description" value={formData.description} onChange={handleChange} className="flex-1 w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm resize-none placeholder-slate-400" placeholder="เธซเธกเธฒเธขเน€เธซเธ•เธธ, เธเธฑเนเธเธ•เธญเธเธเธฒเธฃเธเธเธดเธเธฑเธ•เธดเธเธฒเธ..." />
               </div>
 
               {/* Status, Priority, Assignee */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiCheckCircle className="text-emerald-500" /> สถานะ
+                    <FiCheckCircle className="text-emerald-500" /> เธชเธ–เธฒเธเธฐ
                   </label>
                   <div className="relative">
                     <select disabled={!isEditable} name="status" value={formData.status} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all text-sm appearance-none cursor-pointer">
@@ -545,33 +545,33 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                       <option value="in-progress">In Progress</option>
                       <option value="done">Done</option>
                     </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">โ–พ</div>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiFlag className="text-orange-500" /> ความสำคัญ
+                    <FiFlag className="text-orange-500" /> เธเธงเธฒเธกเธชเธณเธเธฑเธ
                   </label>
                   <div className="relative">
                     <select disabled={!isEditable} name="priority" value={formData.priority} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all text-sm appearance-none cursor-pointer">
-                      <option value="urgent">🔴 ด่วนมาก</option>
-                      <option value="high">🟠 ด่วน</option>
-                      <option value="normal">🟡 ปกติ</option>
-                      <option value="low">🟢 ต่ำ</option>
+                      <option value="urgent">๐”ด เธ”เนเธงเธเธกเธฒเธ</option>
+                      <option value="high">๐  เธ”เนเธงเธ</option>
+                      <option value="normal">๐ก เธเธเธ•เธด</option>
+                      <option value="low">๐ข เธ•เนเธณ</option>
                     </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">โ–พ</div>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiUser className="text-sky-500" /> ผู้รับผิดชอบ
+                    <FiUser className="text-sky-500" /> เธเธนเนเธฃเธฑเธเธเธดเธ”เธเธญเธ
                   </label>
                   <MultiSelectInput 
                     disabled={!isEditable}
                     value={formData.assignee}
                     onChange={(val) => setFormData(prev => ({ ...prev, assignee: val }))}
                     suggestions={uniqueAssignees}
-                    placeholder="พิมพ์ชื่อ..."
+                    placeholder="เธเธดเธกเธเนเธเธทเนเธญ..."
                   />
                 </div>
               </div>
@@ -580,7 +580,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiCalendar className="text-indigo-500" /> เริ่มต้น
+                    <FiCalendar className="text-indigo-500" /> เน€เธฃเธดเนเธกเธ•เนเธ
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <input lang="en-GB" disabled={!isEditable} type="date" name="startDate" value={formData.startDate || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm" />
@@ -589,7 +589,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiClock className="text-rose-500" /> สิ้นสุด
+                    <FiClock className="text-rose-500" /> เธชเธดเนเธเธชเธธเธ”
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <input lang="en-GB" disabled={!isEditable} type="date" name="dueDate" value={formData.dueDate || ''} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all text-sm" />
@@ -604,36 +604,36 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-1">
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiTag className="text-indigo-500" /> แท็ก (Tags)
+                    <FiTag className="text-indigo-500" /> เนเธ—เนเธ (Tags)
                   </label>
                   <MultiSelectInput 
                     disabled={!isEditable}
                     value={formData.tags || ''}
                     onChange={(val) => setFormData(prev => ({ ...prev, tags: val }))}
-                    suggestions={['ด่วน', 'ประชุม', 'โปรเจกต์', 'ปัญหา', 'ออกแบบ', 'พัฒนาระบบ']}
-                    placeholder="พิมพ์แท็ก..."
+                    suggestions={['เธ”เนเธงเธ', 'เธเธฃเธฐเธเธธเธก', 'เนเธเธฃเน€เธเธเธ•เน', 'เธเธฑเธเธซเธฒ', 'เธญเธญเธเนเธเธ', 'เธเธฑเธ’เธเธฒเธฃเธฐเธเธ']}
+                    placeholder="เธเธดเธกเธเนเนเธ—เนเธ..."
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiEye className="text-slate-500" /> สิทธิ์การมองเห็น
+                    <FiEye className="text-slate-500" /> เธชเธดเธ—เธเธดเนเธเธฒเธฃเธกเธญเธเน€เธซเนเธ
                   </label>
                   <div className="relative">
                     <select disabled={!isEditable} name="visibility" value={formData.visibility} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all text-sm appearance-none cursor-pointer">
-                      <option value="public">🌐 Public</option>
-                      <option value="private">🔒 Private</option>
+                      <option value="public">๐ Public</option>
+                      <option value="private">๐”’ Private</option>
                     </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">โ–พ</div>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <FiRefreshCw className="text-indigo-500" /> งานทำซ้ำ
+                    <FiRefreshCw className="text-indigo-500" /> เธเธฒเธเธ—เธณเธเนเธณ
                     {isEditing && (
                       <div className="group relative flex items-center ml-1">
                         <FiInfo className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-help transition-colors" />
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 dark:bg-slate-700 text-white text-[11px] font-normal text-center rounded-lg px-2 py-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 shadow-lg pointer-events-none">
-                          ไม่สามารถเปลี่ยนรูปแบบการทำซ้ำของงานที่ถูกสร้างไปแล้ว
+                          เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เน€เธเธฅเธตเนเธขเธเธฃเธนเธเนเธเธเธเธฒเธฃเธ—เธณเธเนเธณเธเธญเธเธเธฒเธเธ—เธตเนเธ–เธนเธเธชเธฃเนเธฒเธเนเธเนเธฅเนเธง
                           <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
                         </div>
                       </div>
@@ -645,16 +645,16 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">โ–พ</div>
                   </div>
                   {formData.recurrence === 'weekly' && !isEditing && (
                     <p className="mt-2 text-xs text-indigo-500 dark:text-indigo-400">
-                      ✨ ตามวันในสัปดาห์ของ <strong>"วันที่เริ่ม"</strong>
+                      โจ เธ•เธฒเธกเธงเธฑเธเนเธเธชเธฑเธเธ”เธฒเธซเนเธเธญเธ <strong>"เธงเธฑเธเธ—เธตเนเน€เธฃเธดเนเธก"</strong>
                     </p>
                   )}
                   {formData.recurrence === 'monthly' && !isEditing && (
                     <p className="mt-2 text-xs text-indigo-500 dark:text-indigo-400">
-                      ✨ ตามวันที่ของ <strong>"วันที่เริ่ม"</strong>
+                      โจ เธ•เธฒเธกเธงเธฑเธเธ—เธตเนเธเธญเธ <strong>"เธงเธฑเธเธ—เธตเนเน€เธฃเธดเนเธก"</strong>
                     </p>
                   )}
                 </div>
@@ -666,7 +666,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     <div className="space-y-6">
                       <div>
                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">
-                          1. เลือกวันในสัปดาห์
+                          1. เน€เธฅเธทเธญเธเธงเธฑเธเนเธเธชเธฑเธเธ”เธฒเธซเน
                         </label>
                         <div className="flex flex-wrap gap-2">
                           {WEEK_DAYS.map(day => {
@@ -691,7 +691,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                       <div className="h-px bg-slate-200 dark:bg-slate-700/50 w-full"></div>
                       <div>
                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">
-                          2. เลือกวันที่ของเดือน (1-31)
+                          2. เน€เธฅเธทเธญเธเธงเธฑเธเธ—เธตเนเธเธญเธเน€เธ”เธทเธญเธ (1-31)
                         </label>
                         <div className="grid grid-cols-7 sm:grid-cols-10 gap-1.5">
                           {Array.from({ length: 31 }, (_, i) => i + 1).map(date => {
@@ -721,14 +721,14 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   <div className="pt-2">
                     <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
                       <FiRefreshCw className="text-indigo-500" />
-                      ต้องการทำซ้ำไปนานแค่ไหน?
+                      เธ•เนเธญเธเธเธฒเธฃเธ—เธณเธเนเธณเนเธเธเธฒเธเนเธเนเนเธซเธ?
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {[
-                        { value: '1m', label: '1 เดือน' },
-                        { value: '3m', label: '3 เดือน' },
-                        { value: '6m', label: '6 เดือน' },
-                        { value: '1y', label: '1 ปี' }
+                        { value: '1m', label: '1 เน€เธ”เธทเธญเธ' },
+                        { value: '3m', label: '3 เน€เธ”เธทเธญเธ' },
+                        { value: '6m', label: '6 เน€เธ”เธทเธญเธ' },
+                        { value: '1y', label: '1 เธเธต' }
                       ].map(opt => {
                         const isSelected = (formData.recurrenceDuration || '1m') === opt.value;
                         return (
@@ -745,7 +745,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     </div>
                     <p className="mt-3 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                       <FiInfo className="shrink-0" />
-                      ระบบจะสร้างตารางงานล่วงหน้าให้ตามระยะเวลาที่คุณเลือก (นับจากวันที่เริ่ม)
+                      เธฃเธฐเธเธเธเธฐเธชเธฃเนเธฒเธเธ•เธฒเธฃเธฒเธเธเธฒเธเธฅเนเธงเธเธซเธเนเธฒเนเธซเนเธ•เธฒเธกเธฃเธฐเธขเธฐเน€เธงเธฅเธฒเธ—เธตเนเธเธธเธ“เน€เธฅเธทเธญเธ (เธเธฑเธเธเธฒเธเธงเธฑเธเธ—เธตเนเน€เธฃเธดเนเธก)
                     </p>
                   </div>
                 </div>
@@ -763,8 +763,8 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                       className="mt-1 w-4 h-4 text-amber-500 bg-white border-slate-300 rounded focus:ring-amber-500"
                     />
                     <div>
-                      <div className="text-sm font-bold text-amber-700 dark:text-amber-400">อัปเดตงานในอนาคตทั้งหมด</div>
-                      <div className="text-xs text-amber-600 dark:text-amber-500/70 mt-1">หากติ๊กเลือก จะอัปเดตงานอื่นๆ ในซีรีส์นี้ที่มีกำหนดการหลังจากงานนี้ด้วย (การเปลี่ยนวันที่จะไม่ถูกนำไปอัปเดตกับงานอื่น)</div>
+                      <div className="text-sm font-bold text-amber-700 dark:text-amber-400">เธญเธฑเธเน€เธ”เธ•เธเธฒเธเนเธเธญเธเธฒเธเธ•เธ—เธฑเนเธเธซเธกเธ”</div>
+                      <div className="text-xs text-amber-600 dark:text-amber-500/70 mt-1">เธซเธฒเธเธ•เธดเนเธเน€เธฅเธทเธญเธ เธเธฐเธญเธฑเธเน€เธ”เธ•เธเธฒเธเธญเธทเนเธเน เนเธเธเธตเธฃเธตเธชเนเธเธตเนเธ—เธตเนเธกเธตเธเธณเธซเธเธ”เธเธฒเธฃเธซเธฅเธฑเธเธเธฒเธเธเธฒเธเธเธตเนเธ”เนเธงเธข (เธเธฒเธฃเน€เธเธฅเธตเนเธขเธเธงเธฑเธเธ—เธตเนเธเธฐเนเธกเนเธ–เธนเธเธเธณเนเธเธญเธฑเธเน€เธ”เธ•เธเธฑเธเธเธฒเธเธญเธทเนเธ)</div>
                     </div>
                   </label>
                 </div>
@@ -780,22 +780,22 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               {/* Projects Integration - Cleaned up */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-2">
-                  <FiBriefcase className="text-indigo-500" /> นำเข้าจากโปรเจ็ค (ทางเลือก)
+                  <FiBriefcase className="text-indigo-500" /> เธเธณเน€เธเนเธฒเธเธฒเธเนเธเธฃเน€เธเนเธ (เธ—เธฒเธเน€เธฅเธทเธญเธ)
                 </label>
                 <div className="relative mb-3">
                   <select disabled={!isEditable} name="projectId" value={formData.projectId} onChange={handleProjectChange} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none cursor-pointer">
-                    <option value="">-- ไม่ผูกกับโปรเจ็ค --</option>
+                    <option value="">-- เนเธกเนเธเธนเธเธเธฑเธเนเธเธฃเน€เธเนเธ --</option>
                     {projectsList.filter(p => p.Status === 'active' || p.Id == formData.projectId).map(p => (
                       <option key={p.Id} value={p.Id}>{p.Title}</option>
                     ))}
                   </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">โ–พ</div>
                 </div>
 
                 {formData.projectId && isEditable && projectsList.find(p => p.Id == formData.projectId)?.Checklist?.filter(c => !c.isDone && !subtasksArr.some(st => st.projectChecklistId === c.id))?.length > 0 && (
                   <div className="bg-indigo-50/50 dark:bg-indigo-500/10 p-3 rounded-xl border border-indigo-100 dark:border-indigo-500/20 mb-4">
                     <label className="block text-xs font-semibold text-indigo-700 dark:indigo-400 mb-2 uppercase tracking-wide">
-                      ดึง Checklist จากโปรเจ็คมาทำ
+                      เธ”เธถเธ Checklist เธเธฒเธเนเธเธฃเน€เธเนเธเธกเธฒเธ—เธณ
                     </label>
                     <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
                       {projectsList.find(p => p.Id == formData.projectId)?.Checklist?.filter(c => !c.isDone && !subtasksArr.some(st => st.projectChecklistId === c.id))?.map(c => (
@@ -812,7 +812,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                               }]);
                             }}
                             className="shrink-0 flex items-center justify-center w-6 h-6 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-500 hover:text-white dark:bg-indigo-500/20 dark:text-indigo-400 dark:hover:bg-indigo-500 dark:hover:text-white transition-colors"
-                            title="ดึงเข้างานย่อย"
+                            title="เธ”เธถเธเน€เธเนเธฒเธเธฒเธเธขเนเธญเธข"
                           >
                             <FiPlus className="w-4 h-4" />
                           </button>
@@ -831,17 +831,17 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                       value={newSubtask}
                       onChange={(e) => setNewSubtask(e.target.value)}
                       className="flex-1 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
-                      placeholder="เพิ่มงานย่อยใหม่..."
+                      placeholder="เน€เธเธดเนเธกเธเธฒเธเธขเนเธญเธขเนเธซเธกเน..."
                     />
                     <button type="submit" className="bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-1 transition-colors">
-                      <FiPlus /> เพิ่ม
+                      <FiPlus /> เน€เธเธดเนเธก
                     </button>
                   </form>
                 )}
 
                 {subtasksArr.length === 0 ? (
                   <div className="text-center text-slate-400 dark:text-slate-500 text-sm py-8 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl">
-                    ยังไม่มีรายการย่อยในงานนี้
+                    เธขเธฑเธเนเธกเนเธกเธตเธฃเธฒเธขเธเธฒเธฃเธขเนเธญเธขเนเธเธเธฒเธเธเธตเน
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -866,11 +866,11 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                             }
                           }}
                           className={`flex-1 bg-transparent border-b border-dashed border-slate-300 dark:border-slate-600 hover:border-indigo-400 focus:border-solid focus:border-indigo-500 outline-none text-sm px-1 py-0.5 transition-all ${st.completed ? 'text-emerald-500/70 line-through' : 'text-slate-700 dark:text-slate-200'}`}
-                          title="คลิกเพื่อแก้ไข"
+                          title="เธเธฅเธดเธเน€เธเธทเนเธญเนเธเนเนเธ"
                         />
                         {st.projectChecklistId && (
                           <span className="inline-block ml-2 px-1.5 py-0.5 rounded text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 font-medium shrink-0">
-                            จากโปรเจ็ค
+                            เธเธฒเธเนเธเธฃเน€เธเนเธ
                           </span>
                         )}
                         {isEditable && (
@@ -887,7 +887,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
                 <FiInfo className="shrink-0 text-sky-500" /> 
                 <span>
-                  หากต้องการบันทึก Checklist อย่าลืมกด <b>บันทึกทั้งหมด</b> ที่ด้านล่างนะครับ
+                  เธซเธฒเธเธ•เนเธญเธเธเธฒเธฃเธเธฑเธเธ—เธถเธ Checklist เธญเธขเนเธฒเธฅเธทเธกเธเธ” <b>เธเธฑเธเธ—เธถเธเธ—เธฑเนเธเธซเธกเธ”</b> เธ—เธตเนเธ”เนเธฒเธเธฅเนเธฒเธเธเธฐเธเธฃเธฑเธ
                 </span>
               </div>
             </div>
@@ -903,18 +903,18 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                   <label htmlFor="file-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 dark:border-slate-700 border-dashed rounded-xl cursor-pointer bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <FiPlus className="w-8 h-8 mb-2 text-slate-500" />
-                      <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">คลิกเพื่ออัปโหลด</span> หรือลากไฟล์มาวาง</p>
-                      <p className="text-xs text-slate-500">PNG, JPG, PDF หรือเอกสาร (สูงสุด 50MB)</p>
+                      <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">เธเธฅเธดเธเน€เธเธทเนเธญเธญเธฑเธเนเธซเธฅเธ”</span> เธซเธฃเธทเธญเธฅเธฒเธเนเธเธฅเนเธกเธฒเธงเธฒเธ</p>
+                      <p className="text-xs text-slate-500">PNG, JPG, PDF เธซเธฃเธทเธญเน€เธญเธเธชเธฒเธฃ (เธชเธนเธเธชเธธเธ” 50MB)</p>
                     </div>
                     <input id="file-upload" type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
                   </label>
-                  {isUploading && <p className="text-xs text-pink-500 mt-2 animate-pulse">กำลังอัปโหลด...</p>}
+                  {isUploading && <p className="text-xs text-pink-500 mt-2 animate-pulse">เธเธณเธฅเธฑเธเธญเธฑเธเนเธซเธฅเธ”...</p>}
                 </div>
 
                 {/* List of attachments */}
                 {attachmentsArr.length > 0 && (
                   <div className="flex flex-col gap-2 mt-4">
-                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">ไฟล์แนบทั้งหมด ({attachmentsArr.length})</h4>
+                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">เนเธเธฅเนเนเธเธเธ—เธฑเนเธเธซเธกเธ” ({attachmentsArr.length})</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {attachmentsArr.map(att => (
                         <div key={att.id} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
@@ -953,7 +953,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 {comments.length === 0 ? (
                   <div className="flex flex-col items-center justify-center text-slate-500 py-10">
                     <FiMessageSquare className="text-4xl text-slate-300 dark:text-slate-600 mb-3" />
-                    <p>ยังไม่มีความคิดเห็น</p>
+                    <p>เธขเธฑเธเนเธกเนเธกเธตเธเธงเธฒเธกเธเธดเธ”เน€เธซเนเธ</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -984,7 +984,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                     type="text"
                     value={newComment}
                     onChange={e => setNewComment(e.target.value)}
-                    placeholder="พิมพ์ความคิดเห็น..."
+                    placeholder="เธเธดเธกเธเนเธเธงเธฒเธกเธเธดเธ”เน€เธซเนเธ..."
                     className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-full pl-4 pr-12 py-2.5 text-sm focus:outline-none focus:border-indigo-500 dark:text-white"
                   />
                   <button 
@@ -1005,18 +1005,18 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
         <div className="px-5 py-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/95 shrink-0">
           <div className="flex items-center justify-between">
             {isEditing && onDelete ? (
-              <button type="button" onClick={() => onDelete(formData.Id)} className="text-rose-400 hover:text-rose-300 flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-rose-500/10 transition-all text-sm font-medium active:scale-95">
-                <FiTrash2 /> ลบงาน
+              <button type="button" onClick={() => onDelete(formData.Id, formData.updateSeries)} className="text-rose-400 hover:text-rose-300 flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-rose-500/10 transition-all text-sm font-medium active:scale-95">
+                <FiTrash2 /> เธฅเธเธเธฒเธ
               </button>
             ) : <div></div>}
             
             <div className="flex gap-2">
               <button type="button" onClick={handleClose} className="px-5 py-2.5 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-sm font-medium active:scale-95">
-                ยกเลิก
+                เธขเธเน€เธฅเธดเธ
               </button>
               {/* Only submit the form if we are on general tab, or just use a button that triggers handleSubmit directly */}
               <button type="button" onClick={handleSubmit} className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl font-semibold shadow-lg shadow-indigo-900/30 transition-all active:scale-95 text-sm flex items-center gap-2">
-                {isEditing ? '💾 บันทึกทั้งหมด' : '✨ สร้างงาน'}
+                {isEditing ? '๐’พ เธเธฑเธเธ—เธถเธเธ—เธฑเนเธเธซเธกเธ”' : 'โจ เธชเธฃเนเธฒเธเธเธฒเธ'}
               </button>
             </div>
           </div>
