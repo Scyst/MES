@@ -6,6 +6,12 @@ requirePermission(['view_maintenance', 'view_production', 'view_dashboard']);
 
 $currentUser = $_SESSION['user'];
 $pageTitle = "Technician Portal";
+
+// Check if user has photo
+$empId = $currentUser['emp_id'] ?? '';
+$photoPath = !empty($empId) ? "../../assets/img/employees/{$empId}.jpg" : "";
+$hasPhoto = !empty($empId) && file_exists(__DIR__ . '/../../' . $photoPath);
+$profileUrl = $hasPhoto ? $photoPath . "?v=" . time() : "";
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -37,46 +43,94 @@ $pageTitle = "Technician Portal";
     </script>
 </head>
 <body>
+    <div class="container-app">
+        <!-- Header -->
+        <header class="app-header">
+            <h1 class="app-title" id="appHeaderTitle"><i class="fas fa-wrench text-primary"></i> Technician Portal</h1> 
+            <button class="btn btn-light btn-sm rounded-circle shadow-sm" type="button" onclick="window.location.href='../dailyLog/dailyLogUI.php'" title="Back to Main">
+                <i class="fas fa-times"></i>
+            </button>
+        </header>
 
-    <!-- Header -->
-    <header class="tech-header">
-        <div class="tech-header-title">
-            <a href="../dailyLog/dailyLogUI.php" class="text-white me-2 text-decoration-none">
-                <i class="fas fa-arrow-left"></i>
-            </a>
-            <i class="fas fa-wrench"></i>
-            Technician Portal
+        <!-- Section: My Jobs -->
+        <div id="section-myjobs" class="app-section active">
+            <div class="app-card mb-3 text-center bg-primary bg-opacity-10 border-primary border-opacity-25" style="padding: 10px; margin-top: 10px;">
+                <h6 class="fw-bold text-primary mb-1"><i class="fas fa-user-cog me-1"></i> งานซ่อมของฉัน</h6>
+                <small class="text-muted">รายการใบแจ้งซ่อมที่มอบหมายให้คุณ</small>
+            </div>
+            
+            <div class="tech-feed" id="woFeedContainer-my">
+                <!-- Rendered via JS -->
+                <div class="tech-empty">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <div>กำลังโหลดข้อมูล...</div>
+                </div>
+            </div>
         </div>
-        <div class="tech-user-info">
-            <i class="fas fa-user-circle"></i> 
-            <?php echo htmlspecialchars($currentUser['fullname'] ?? $currentUser['username']); ?>
-        </div>
-    </header>
 
-    <!-- Tabs -->
-    <div class="tech-tabs">
-        <button class="tech-tab-btn active" id="tabMyJobs" onclick="TechModule.setFilter('my')">งานของฉัน</button>
-        <button class="tech-tab-btn" id="tabAllJobs" onclick="TechModule.setFilter('all')">งานทั้งหมด</button>
+        <!-- Section: All Jobs -->
+        <div id="section-alljobs" class="app-section">
+            <div class="app-card mb-3 text-center bg-secondary bg-opacity-10 border-secondary border-opacity-25" style="padding: 10px; margin-top: 10px;">
+                <h6 class="fw-bold text-secondary mb-1"><i class="fas fa-list me-1"></i> งานซ่อมทั้งหมด</h6>
+                <small class="text-muted">รายการใบแจ้งซ่อมในระบบทั้งหมด</small>
+            </div>
+            
+            <div class="tech-feed" id="woFeedContainer-all">
+                <!-- Rendered via JS -->
+                <div class="tech-empty">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <div>กำลังโหลดข้อมูล...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Profile -->
+        <div id="section-profile" class="app-section">
+            <div class="app-card text-center mt-3">
+                <h5 class="fw-bold mb-4 text-primary"><i class="fas fa-id-badge me-2"></i> โปรไฟล์พนักงาน</h5>
+                
+                <div class="profile-photo-container mb-3" onclick="document.getElementById('profileImageUpload').click()">
+                    <img id="profileDisplay" src="<?php echo $profileUrl; ?>" style="display: <?php echo $hasPhoto ? 'block' : 'none'; ?>;">
+                    <i id="profileIconPlaceholder" class="fas fa-user" style="font-size: 5rem; color: #94a3b8; display: <?php echo $hasPhoto ? 'none' : 'block'; ?>;"></i>
+                    <div class="profile-photo-overlay">
+                        <i class="fas fa-camera"></i> แตะเพื่อเปลี่ยนรูป
+                    </div>
+                </div>
+                
+                <input type="file" id="profileImageUpload" accept="image/*" style="display: none;">
+                
+                <h4 class="mb-1 text-dark"><?php echo htmlspecialchars($currentUser['fullname'] ?? $currentUser['username']); ?></h4>
+                <p class="text-muted mb-1"><i class="fas fa-id-card"></i> รหัสพนักงาน: <?php echo htmlspecialchars($empId ?: 'ไม่ได้ระบุ'); ?></p>
+                <p class="text-muted mb-3"><i class="fas fa-user-tag"></i> ตำแหน่ง: <?php echo htmlspecialchars($currentUser['position'] ?? $currentUser['role']); ?></p>
+                
+                <hr class="border-secondary opacity-25">
+                
+                <p class="text-start text-muted" style="font-size: 0.85rem;">
+                    <strong>คำแนะนำ:</strong> รูปภาพโปรไฟล์จะถูกนำไปใช้ใน LOTO Operator Cards (การ์ดความปลอดภัยช่าง) กรุณาใช้ภาพถ่ายหน้าตรงที่เห็นใบหน้าชัดเจน
+                </p>
+                
+                <button class="pe-btn pe-btn-danger w-100 mt-3" onclick="window.location.href='../../auth/logout.php'">
+                    <i class="fas fa-sign-out-alt me-1"></i> ออกจากระบบ
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item-btn active" data-target="section-myjobs" onclick="TechModule.setFilter('my')" data-title="งานของฉัน" data-icon="fa-user-cog" data-color="text-primary"> 
+                <i class="fas fa-user-cog"></i><span>งานของฉัน</span>
+            </button>
+            <button class="nav-item-btn" data-target="section-alljobs" onclick="TechModule.setFilter('all')" data-title="งานทั้งหมด" data-icon="fa-list" data-color="text-secondary"> 
+                <i class="fas fa-list"></i><span>งานทั้งหมด</span>
+            </button>
+            <button class="nav-item-btn" data-target="section-profile" data-title="โปรไฟล์" data-icon="fa-user-circle" data-color="text-dark">
+                <i class="fas fa-user-circle"></i><span>โปรไฟล์</span>
+            </button>
+        </nav>
     </div>
 
-    <!-- Feed Container -->
-    <div class="tech-feed" id="woFeedContainer">
-        <!-- Rendered via JS -->
-        <div class="tech-empty">
-            <i class="fas fa-spinner fa-spin"></i>
-            <div>กำลังโหลดข้อมูล...</div>
-        </div>
-    </div>
-
-    <!-- Floating Action Button -->
-    <button class="tech-fab" onclick="TechModule.loadData()" title="รีเฟรชข้อมูล">
-        <i class="fas fa-sync-alt"></i>
-    </button>
-
-    <!-- Quick Close Modal (Reused from Main System) -->
+    <!-- Modals -->
     <?php include 'components/modals/modal_quick_close.php'; ?>
-    
-    <!-- Issue Spare Part Modal (Reused from Main System) -->
     <?php include 'components/modals/modal_wo_issue_part.php'; ?>
 
     <!-- Cropper Modal -->
@@ -91,12 +145,13 @@ $pageTitle = "Technician Portal";
             <div style="flex-grow: 1; max-height: calc(100% - 40px); max-width: 100%; display: flex; align-items: center; justify-content: center;">
                 <img id="imageToCrop" src="" alt="Picture to crop" style="max-width: 100%; max-height: 100%; display: block;">
             </div>
-            <div class="mt-2">
+            <!-- Action buttons moved to bottom to enforce 1:1 ratio for profiles if needed, but we keep flexible here -->
+            <div class="mt-2" id="cropRatioButtons">
                 <div class="btn-group" role="group" aria-label="Aspect Ratio">
-                    <button type="button" class="btn btn-outline-light btn-sm btn-aspect" data-ratio="1">1:1</button>
+                    <button type="button" class="btn btn-outline-light btn-sm btn-aspect active" data-ratio="1">1:1</button>
                     <button type="button" class="btn btn-outline-light btn-sm btn-aspect" data-ratio="1.3333333333333333">4:3</button>
                     <button type="button" class="btn btn-outline-light btn-sm btn-aspect" data-ratio="0.75">3:4</button>
-                    <button type="button" class="btn btn-outline-light btn-sm btn-aspect active" data-ratio="NaN">อิสระ</button>
+                    <button type="button" class="btn btn-outline-light btn-sm btn-aspect" data-ratio="NaN">อิสระ</button>
                 </div>
             </div>
           </div>
@@ -174,5 +229,3 @@ $pageTitle = "Technician Portal";
     <script type="module" src="script/peTechModule.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
-
-

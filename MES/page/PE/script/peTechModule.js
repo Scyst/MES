@@ -28,13 +28,41 @@ const TechModule = (function() {
 
     function setFilter(filter) {
         currentFilter = filter;
-        document.getElementById('tabMyJobs').classList.toggle('active', filter === 'my');
-        document.getElementById('tabAllJobs').classList.toggle('active', filter === 'all');
-        renderFeed();
+        
+        // Update Bottom Nav
+        document.querySelectorAll('.bottom-nav .nav-item-btn').forEach(btn => {
+            btn.classList.remove('active');
+            // Restore color
+            btn.classList.remove('text-primary', 'text-secondary', 'text-dark');
+        });
+        
+        const activeBtn = document.querySelector(`.bottom-nav .nav-item-btn[data-target="section-${filter}jobs"]`) || document.querySelector(`.bottom-nav .nav-item-btn[data-target="section-${filter}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+            activeBtn.classList.add(activeBtn.dataset.color);
+            
+            // Change Header Title
+            const headerTitle = document.getElementById('appHeaderTitle');
+            if (headerTitle) {
+                headerTitle.innerHTML = `<i class="fas ${activeBtn.dataset.icon} ${activeBtn.dataset.color}"></i> ${activeBtn.dataset.title}`;
+            }
+        }
+
+        // Update Sections
+        document.querySelectorAll('.app-section').forEach(sec => sec.classList.remove('active'));
+        if (filter === 'profile') {
+            document.getElementById('section-profile').classList.add('active');
+        } else {
+            document.getElementById(`section-${filter}jobs`).classList.add('active');
+            renderFeed();
+        }
     }
 
     function renderFeed() {
-        const container = document.getElementById('woFeedContainer');
+        const containerId = currentFilter === 'my' ? 'woFeedContainer-my' : 'woFeedContainer-all';
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
         const myName = CURRENT_USER.fullname || CURRENT_USER.username;
         
         let filtered = allData.filter(wo => wo.status !== 'Completed' && wo.status !== 'Cancelled' && wo.status !== 'Deleted');
@@ -77,16 +105,16 @@ const TechModule = (function() {
             </div>`;
 
             html += `
-            <div class="tech-card" id="wo-card-${wo.wo_id}" data-priority="${wo.priority}">
-                <div class="tech-card-header">
-                    <div class="tech-wo-num">${wo.wo_number}</div>
+            <div class="wo-card" id="wo-card-${wo.wo_id}" data-priority="${wo.priority}">
+                <div class="wo-card-header">
+                    <div class="wo-card-id">${wo.wo_number}</div>
                     <div class="tech-status-badge ${statusClass}">${wo.status}</div>
                 </div>
                 <div class="tech-machine">
                     <i class="fas fa-industry me-1"></i> ${wo.machine_display_name || wo.machine_name || '-'}
                 </div>
-                <div class="tech-issue">${PEApp.escapeHtml(wo.issue_title)}</div>
-                <div class="tech-meta mb-2">
+                <div class="wo-card-title">${PEApp.escapeHtml(wo.issue_title)}</div>
+                <div class="wo-card-meta mb-2">
                     <div><i class="fas fa-clock"></i> ${wo.requested_at ? wo.requested_at.substring(11, 16) : '-'}</div>
                     ${wo.assigned_to ? `<div><i class="fas fa-user"></i> ${wo.assigned_to}</div>` : ''}
                 </div>
@@ -619,7 +647,134 @@ const TechModule = (function() {
         }
     });
 
+    
+    /* --- Profile Photo Logic --- */
+    let profileCropper = null;
+    
+    function initProfileUpload() {
+        const uploadInput = document.getElementById('profileImageUpload');
+        if (!uploadInput) return;
+
+        uploadInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    document.getElementById('imageToCrop').src = evt.target.result;
+                    const modal = new bootstrap.Modal(document.getElementById('cropImageModal'));
+                    modal.show();
+                };
+                reader.readAsDataURL(file);
+                // Reset input
+                e.target.value = '';
+            }
+        });
+
+        // Setup Cropper when modal opens
+        document.getElementById('cropImageModal').addEventListener('shown.bs.modal', function () {
+            const image = document.getElementById('imageToCrop');
+            if (profileCropper) {
+                profileCropper.destroy();
+            }
+            profileCropper = new Cropper(image, {
+                aspectRatio: 1, // 1:1 for Profile
+                viewMode: 1,
+                dragMode: 'move',
+                autoCropArea: 0.9,
+                restore: false,
+                guides: true,
+                center: true,
+                highlight: false,
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                toggleDragModeOnDblclick: false,
+            });
+            
+            // Set active ratio button
+            document.querySelectorAll('.btn-aspect').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.btn-aspect[data-ratio="1"]').classList.add('active');
+        });
+
+        // Destroy Cropper when modal closes
+        document.getElementById('cropImageModal').addEventListener('hidden.bs.modal', function () {
+            if (profileCropper) {
+                profileCropper.destroy();
+                profileCropper = null;
+            }
+            document.getElementById('imageToCrop').src = '';
+        });
+
+        // Aspect ratio buttons
+        document.querySelectorAll('.btn-aspect').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (!profileCropper) return;
+                document.querySelectorAll('.btn-aspect').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                profileCropper.setAspectRatio(parseFloat(this.dataset.ratio));
+            });
+        });
+
+        document.getElementById('btnRotateLeft')?.addEventListener('click', () => {
+            if (profileCropper) profileCropper.rotate(-90);
+        });
+
+        document.getElementById('btnRotateRight')?.addEventListener('click', () => {
+            if (profileCropper) profileCropper.rotate(90);
+        });
+
+        document.getElementById('btnConfirmCrop')?.addEventListener('click', function() {
+            if (!profileCropper) return;
+            const btn = this;
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังอัปโหลด...';
+            btn.disabled = true;
+
+            const canvas = profileCropper.getCroppedCanvas({
+                width: 400, // Fixed resolution
+                height: 400,
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high'
+            });
+
+            const base64Image = canvas.toDataURL('image/jpeg', 0.85);
+
+            fetch('api/profileAPI.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'upload_photo',
+                    image: base64Image
+                })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    PEApp.showToast('อัปเดตภาพโปรไฟล์สำเร็จ', 'success');
+                    
+                    // Update UI immediately
+                    document.getElementById('profileDisplay').src = res.photo_url;
+                    document.getElementById('profileDisplay').style.display = 'block';
+                    document.getElementById('profileIconPlaceholder').style.display = 'none';
+                    
+                    bootstrap.Modal.getInstance(document.getElementById('cropImageModal')).hide();
+                } else {
+                    PEApp.showToast(res.message || 'เกิดข้อผิดพลาดในการอัปโหลด', 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                PEApp.showToast('การเชื่อมต่อล้มเหลว', 'error');
+            })
+            .finally(() => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            });
+        });
+    }
+
+
     return {
+        setFilter: setFilter,
         loadData,
         setFilter,
         getWorkOrder: (id) => allData.find(w => w.wo_id == id),

@@ -1778,17 +1778,17 @@ try {
             $serial_no = $_POST['serial_no'] ?? '';
             if (empty($serial_no)) throw new Exception("ไม่พบ Serial No.");
 
-            $checkStmt = $pdo->prepare("SELECT status FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE serial_no = ?");
+            $checkStmt = $pdo->prepare("SELECT status, item_id, current_qty, location_id FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE serial_no = ?");
             $checkStmt->execute([$serial_no]);
-            $tagStatus = $checkStmt->fetchColumn();
+            $tagData = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$tagStatus) throw new Exception('ไม่พบข้อมูล Tag นี้ในระบบ');
-            if (!in_array($tagStatus, ['PENDING', 'AVAILABLE'])) {
+            if (!$tagData) throw new Exception('ไม่พบข้อมูล Tag นี้ในระบบ');
+            if (!in_array($tagData['status'], ['PENDING', 'AVAILABLE'])) {
                 throw new Exception('ไม่อนุญาตให้ลบ เนื่องจากวัตถุดิบนี้ถูกเบิกจ่าย หรือเข้าสู่กระบวนการผลิตแล้ว!');
             }
 
             try {
-                // Check if table DELETED_SERIAL_TAGS exists. If not, create it automatically.
+                // Ensure table exists
                 $pdo->exec("
                     IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='DELETED_SERIAL_TAGS' and xtype='U')
                     CREATE TABLE dbo.DELETED_SERIAL_TAGS (
@@ -1799,6 +1799,7 @@ try {
                         qty_per_pallet DECIMAL(18,4) DEFAULT 0,
                         current_qty DECIMAL(18,4) DEFAULT 0,
                         status VARCHAR(50) NULL,
+                        location_id INT NULL,
                         po_number VARCHAR(100) NULL,
                         warehouse_no VARCHAR(100) NULL,
                         pallet_no VARCHAR(100) NULL,
@@ -1811,21 +1812,34 @@ try {
                         deleted_by INT NOT NULL
                     )
                 ");
+                // Add location_id if missing (for existing tables)
+                $pdo->exec("IF COL_LENGTH('dbo.DELETED_SERIAL_TAGS', 'location_id') IS NULL ALTER TABLE dbo.DELETED_SERIAL_TAGS ADD location_id INT NULL;");
             } catch (Exception $e) {}
 
             try {
                 $insStmt = $pdo->prepare("
                     INSERT INTO dbo.DELETED_SERIAL_TAGS (
-                        serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status,
+                        serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status, location_id,
                         po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, original_created_at, original_created_by,
                         deleted_by
                     )
-                    SELECT serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status,
+                    SELECT serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status, location_id,
                            po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, created_at, created_by, ?
                     FROM dbo.RM_SERIAL_TAGS WHERE serial_no = ?
                 ");
                 $insStmt->execute([$currentUser['id'] ?? 0, $serial_no]);
             } catch (Exception $e) { }
+
+            // Deduct from INVENTORY_ONHAND if the tag is AVAILABLE
+            if ($tagData['status'] === 'AVAILABLE' && !empty($tagData['location_id'])) {
+                $qtyToDeduct = -1 * floatval($tagData['current_qty']);
+                $updStmt = $pdo->prepare("EXEC dbo.sp_UpdateOnhandBalance @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+                $updStmt->execute([$tagData['item_id'], $tagData['location_id'], $qtyToDeduct]);
+                
+                // Log STOCK_TRANSACTIONS
+                $logStmt = $pdo->prepare("INSERT INTO dbo.STOCK_TRANSACTIONS (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, transaction_timestamp) VALUES (?, ?, 'ADJUST_OUT', ?, NULL, ?, 'Deleted tag: ' + ?, GETDATE())");
+                $logStmt->execute([$tagData['item_id'], $qtyToDeduct, $tagData['location_id'], $currentUser['id'] ?? 0, $serial_no]);
+            }
 
             $pdo->prepare("DELETE FROM dbo.RM_SERIAL_TAGS WHERE serial_no = ?")->execute([$serial_no]);
             $response = ['success' => true];
@@ -1838,9 +1852,16 @@ try {
 
             $placeholders = implode(',', array_fill(0, count($serials), '?'));
             
-            $checkStmt = $pdo->prepare("SELECT serial_no FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE serial_no IN ($placeholders) AND status NOT IN ('PENDING', 'AVAILABLE')");
+            $checkStmt = $pdo->prepare("SELECT serial_no, status, item_id, current_qty, location_id FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE serial_no IN ($placeholders)");
             $checkStmt->execute($serials);
-            $usedTags = $checkStmt->fetchAll(PDO::FETCH_COLUMN);
+            $tagsData = $checkStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $usedTags = [];
+            foreach ($tagsData as $t) {
+                if (!in_array($t['status'], ['PENDING', 'AVAILABLE'])) {
+                    $usedTags[] = $t['serial_no'];
+                }
+            }
 
             if (count($usedTags) > 0) throw new Exception('ไม่อนุญาตให้ลบ! มีบางรายการถูกเบิกจ่ายไปแล้ว: ' . implode(', ', $usedTags));
 
@@ -1855,6 +1876,7 @@ try {
                         qty_per_pallet DECIMAL(18,4) DEFAULT 0,
                         current_qty DECIMAL(18,4) DEFAULT 0,
                         status VARCHAR(50) NULL,
+                        location_id INT NULL,
                         po_number VARCHAR(100) NULL,
                         warehouse_no VARCHAR(100) NULL,
                         pallet_no VARCHAR(100) NULL,
@@ -1867,22 +1889,35 @@ try {
                         deleted_by INT NOT NULL
                     )
                 ");
+                $pdo->exec("IF COL_LENGTH('dbo.DELETED_SERIAL_TAGS', 'location_id') IS NULL ALTER TABLE dbo.DELETED_SERIAL_TAGS ADD location_id INT NULL;");
             } catch (Exception $e) {}
 
             try {
                 $insParams = array_merge([$currentUser['id'] ?? 0], $serials);
                 $insStmt = $pdo->prepare("
                     INSERT INTO dbo.DELETED_SERIAL_TAGS (
-                        serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status,
+                        serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status, location_id,
                         po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, original_created_at, original_created_by,
                         deleted_by
                     )
-                    SELECT serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status,
+                    SELECT serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status, location_id,
                            po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, created_at, created_by, ?
                     FROM dbo.RM_SERIAL_TAGS WHERE serial_no IN ($placeholders)
                 ");
                 $insStmt->execute($insParams);
             } catch (Exception $e) { }
+
+            // Process INVENTORY_ONHAND deduction for each AVAILABLE tag
+            foreach ($tagsData as $t) {
+                if ($t['status'] === 'AVAILABLE' && !empty($t['location_id'])) {
+                    $qtyToDeduct = -1 * floatval($t['current_qty']);
+                    $updStmt = $pdo->prepare("EXEC dbo.sp_UpdateOnhandBalance @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+                    $updStmt->execute([$t['item_id'], $t['location_id'], $qtyToDeduct]);
+                    
+                    $logStmt = $pdo->prepare("INSERT INTO dbo.STOCK_TRANSACTIONS (parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, notes, transaction_timestamp) VALUES (?, ?, 'ADJUST_OUT', ?, NULL, ?, 'Deleted tag: ' + ?, GETDATE())");
+                    $logStmt->execute([$t['item_id'], $qtyToDeduct, $t['location_id'], $currentUser['id'] ?? 0, $t['serial_no']]);
+                }
+            }
 
             $pdo->prepare("DELETE FROM dbo.RM_SERIAL_TAGS WHERE serial_no IN ($placeholders)")->execute($serials);
             $response = ['success' => true];
