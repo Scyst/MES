@@ -2,6 +2,10 @@
 const TechModule = (function() {
     let allData = [];
     let currentFilter = 'my'; // 'my' or 'all'
+    let currentStatusFilter = 'all';
+    let currentAdvSearch = '';
+    let currentAdvLine = '';
+    let currentAdvMachine = '';
     let autoRefreshTimer = null;
 
     async function loadData() {
@@ -16,6 +20,7 @@ const TechModule = (function() {
 
             if (res.success) {
                 allData = res.data || [];
+                populateFilterDropdowns();
                 renderFeed();
             }
         } catch (e) {
@@ -50,12 +55,75 @@ const TechModule = (function() {
 
         // Update Sections
         document.querySelectorAll('.app-section').forEach(sec => sec.classList.remove('active'));
-        if (filter === 'profile') {
-            document.getElementById('section-profile').classList.add('active');
-        } else {
-            document.getElementById(`section-${filter}jobs`).classList.add('active');
+        document.getElementById(`section-${filter}jobs`).classList.add('active');
+        renderFeed();
+    }
+
+    
+    
+    function populateFilterDropdowns() {
+        const lineSelect = document.getElementById('techFilterLine');
+        const machineSelect = document.getElementById('techFilterMachine');
+        if (!lineSelect || !machineSelect) return;
+        
+        let lines = new Set();
+        let machines = new Set();
+        
+        allData.forEach(wo => {
+            if (wo.line) lines.add(wo.line);
+            if (wo.machine_display_name) machines.add(wo.machine_display_name);
+            else if (wo.machine_name) machines.add(wo.machine_name);
+        });
+        
+        let lineHtml = '<option value="">ทั้งหมด</option>';
+        Array.from(lines).sort().forEach(l => { lineHtml += `<option value="${l}">${l}</option>`; });
+        lineSelect.innerHTML = lineHtml;
+        
+        let machHtml = '<option value="">ทั้งหมด</option>';
+        Array.from(machines).sort().forEach(m => { machHtml += `<option value="${m}">${m}</option>`; });
+        machineSelect.innerHTML = machHtml;
+    }
+
+    function onSearchChange() {
+        const searchInput = document.getElementById('techSearchInput');
+        if (searchInput) {
+            currentAdvSearch = searchInput.value.toLowerCase().trim();
             renderFeed();
         }
+    }
+
+    function openAdvancedFilter() {
+        document.getElementById('techFilterStatus').value = currentStatusFilter;
+        document.getElementById('techFilterLine').value = currentAdvLine;
+        document.getElementById('techFilterMachine').value = currentAdvMachine;
+        const modal = new bootstrap.Modal(document.getElementById('techAdvancedFilterModal'));
+        modal.show();
+    }
+    
+    function applyAdvancedFilter() {
+        currentStatusFilter = document.getElementById('techFilterStatus').value;
+        currentAdvLine = document.getElementById('techFilterLine').value;
+        currentAdvMachine = document.getElementById('techFilterMachine').value;
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('techAdvancedFilterModal'));
+        if (modal) modal.hide();
+        
+        renderFeed();
+    }
+    
+    function resetAdvancedFilter() {
+        currentStatusFilter = 'all';
+        currentAdvLine = '';
+        currentAdvMachine = '';
+        
+        document.getElementById('techFilterStatus').value = 'all';
+        document.getElementById('techFilterLine').value = '';
+        document.getElementById('techFilterMachine').value = '';
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('techAdvancedFilterModal'));
+        if (modal) modal.hide();
+        
+        renderFeed();
     }
 
     function renderFeed() {
@@ -65,11 +133,37 @@ const TechModule = (function() {
         
         const myName = CURRENT_USER.fullname || CURRENT_USER.username;
         
-        let filtered = allData.filter(wo => wo.status !== 'Completed' && wo.status !== 'Cancelled' && wo.status !== 'Deleted');
-        
-        if (currentFilter === 'my') {
-            filtered = filtered.filter(wo => wo.assigned_to === myName || wo.status === 'Assigned' && wo.assigned_to === myName || wo.status === 'In Progress' && wo.assigned_to === myName);
-        }
+        let filtered = allData.filter(wo => {
+            if (wo.status === 'Cancelled' || wo.status === 'Deleted') return false;
+            
+            // 1. My jobs filter
+            if (currentFilter === 'my') {
+                if (wo.assigned_to !== myName) return false;
+            }
+            
+            // 2. Status filter
+            if (currentStatusFilter !== 'all') {
+                if (wo.status !== currentStatusFilter) return false;
+            } else if (wo.status === 'Completed' && !currentAdvSearch && !currentAdvLine && !currentAdvMachine) {
+                // By default 'all' hides Completed unless specifically searching/filtering
+                return false;
+            }
+            
+            // 3. Advanced filters
+            if (currentAdvLine && wo.line !== currentAdvLine) return false;
+            
+            let mName = wo.machine_display_name || wo.machine_name || '';
+            if (currentAdvMachine && mName !== currentAdvMachine) return false;
+            
+            if (currentAdvSearch) {
+                let textToSearch = (wo.wo_number || '') + ' ' + (wo.issue_title || '') + ' ' + (wo.issue_detail || '') + ' ' + (wo.machine_display_name || '') + ' ' + (wo.machine_name || '') + ' ' + (wo.requested_by || '');
+                if (!textToSearch.toLowerCase().includes(currentAdvSearch)) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
 
         if (filtered.length === 0) {
             container.innerHTML = `
@@ -87,39 +181,43 @@ const TechModule = (function() {
             const statusClass = 'tech-status-' + wo.status.replace(' ', '');
             
             const detailsId = `wo-details-${wo.wo_id}`;
-            let detailsHtml = `<div class="tech-wo-details text-start" id="${detailsId}" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--pe-border-color);">`;
+            let detailsHtml = `<div class="tech-wo-details text-start" id="${detailsId}" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--pe-border-color);">`;
             
             if (wo.image_path) {
                 detailsHtml += `
-                <div style="margin-bottom: 12px; border-radius: 6px; overflow: hidden; background: #e0e0e0; text-align: center; border: 1px solid var(--pe-border-color);">
-                    <img src="../../${wo.image_path}" style="width: 100%; height: 120px; object-fit: cover; display: block; cursor: pointer;" onclick="window.openIssueDetails(${wo.wo_id})" alt="Issue Image">
+                <div style="margin-bottom: 12px; border-radius: 8px; overflow: hidden; background: #f8fafc; text-align: center; border: 1px solid var(--pe-border-color);">
+                    <img src="../../${wo.image_path}" style="width: 100%; height: 250px; object-fit: cover; display: block;" alt="Issue Image">
                 </div>`;
             }
             
             detailsHtml += `
-                <div style="font-size: 0.85rem; color: var(--pe-text-color); white-space: pre-wrap;"><strong>รายละเอียด:</strong><br>${PEApp.escapeHtml(wo.issue_detail || 'ไม่มีรายละเอียดเพิ่มเติม')}</div>
-                <div style="font-size: 0.8rem; color: var(--pe-text-muted); margin-top: 8px;"><strong>ผู้แจ้ง:</strong> ${PEApp.escapeHtml(wo.requested_by_name || '-')}</div>
-                <button type="button" class="btn btn-sm btn-light border w-100 mt-2 text-primary" onclick="window.openIssueDetails(${wo.wo_id})">
-                    <i class="fas fa-file-alt me-1"></i> ดูรายละเอียดงานทั้งหมด
-                </button>
+                <div class="mb-2">
+                    <div style="font-size: 0.75rem; text-transform:uppercase; color: var(--op-text-muted);">รายละเอียดปัญหา</div>
+                    <div style="font-size: 0.9rem; color: var(--op-text); white-space: pre-wrap;" class="bg-light p-2 rounded border mt-1">${PEApp.escapeHtml(wo.issue_detail || 'ไม่มีรายละเอียดเพิ่มเติม')}</div>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--op-text-muted); display:flex; justify-content:space-between;">
+                    <div><strong>ผู้แจ้ง:</strong> ${PEApp.escapeHtml(wo.requested_by || '-')}</div>
+                    <div class="text-primary" style="font-size: 0.75rem;"><i class="fas fa-hand-pointer me-1"></i> กดเพื่อดูรายละเอียด</div>
+                </div>
             </div>`;
 
             html += `
             <div class="wo-card" id="wo-card-${wo.wo_id}" data-priority="${wo.priority}">
-                <div class="wo-card-header">
-                    <div class="wo-card-id">${wo.wo_number}</div>
-                    <div class="tech-status-badge ${statusClass}">${wo.status}</div>
+                <div style="cursor:pointer;" onclick="window.openIssueDetails(${wo.wo_id})">
+                    <div class="wo-card-header mb-2">
+                        <div class="wo-card-id">${wo.wo_number}</div>
+                        <div class="tech-status-badge ${statusClass}">${wo.status}</div>
+                    </div>
+                    <div class="fw-bold text-dark" style="font-size: 1.05rem; margin-bottom: 6px;">${PEApp.escapeHtml(wo.issue_title)}</div>
+                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size: 0.85rem;">
+                        <div><i class="fas fa-industry me-1"></i> ${wo.machine_display_name || wo.machine_name || '-'}</div>
+                        <div>
+                            <i class="fas fa-clock me-1"></i> ${wo.requested_at ? wo.requested_at.substring(11, 16) : '-'}
+                            ${wo.assigned_to ? `<span class="ms-2"><i class="fas fa-user me-1"></i> ${wo.assigned_to}</span>` : ''}
+                        </div>
+                    </div>
+                    ${detailsHtml}
                 </div>
-                <div class="tech-machine">
-                    <i class="fas fa-industry me-1"></i> ${wo.machine_display_name || wo.machine_name || '-'}
-                </div>
-                <div class="wo-card-title">${PEApp.escapeHtml(wo.issue_title)}</div>
-                <div class="wo-card-meta mb-2">
-                    <div><i class="fas fa-clock"></i> ${wo.requested_at ? wo.requested_at.substring(11, 16) : '-'}</div>
-                    ${wo.assigned_to ? `<div><i class="fas fa-user"></i> ${wo.assigned_to}</div>` : ''}
-                </div>
-                
-                ${detailsHtml}
 
                 <div class="tech-actions mt-3 ${wo.status === 'Assigned' && isMine ? 'two-col' : ''}">
                     ${renderButtons(wo, isMine)}
@@ -648,144 +746,24 @@ const TechModule = (function() {
     });
 
     
-    /* --- Profile Photo Logic --- */
-    let profileCropper = null;
     
-    function initProfileUpload() {
-        const uploadInput = document.getElementById('profileImageUpload');
-        if (!uploadInput) return;
-
-        uploadInput.addEventListener('change', function(e) {
-            if (e.target.files && e.target.files[0]) {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    document.getElementById('imageToCrop').src = evt.target.result;
-                    const modal = new bootstrap.Modal(document.getElementById('cropImageModal'));
-                    modal.show();
-                };
-                reader.readAsDataURL(file);
-                // Reset input
-                e.target.value = '';
-            }
-        });
-
-        // Setup Cropper when modal opens
-        document.getElementById('cropImageModal').addEventListener('shown.bs.modal', function () {
-            const image = document.getElementById('imageToCrop');
-            if (profileCropper) {
-                profileCropper.destroy();
-            }
-            profileCropper = new Cropper(image, {
-                aspectRatio: 1, // 1:1 for Profile
-                viewMode: 1,
-                dragMode: 'move',
-                autoCropArea: 0.9,
-                restore: false,
-                guides: true,
-                center: true,
-                highlight: false,
-                cropBoxMovable: true,
-                cropBoxResizable: true,
-                toggleDragModeOnDblclick: false,
-            });
-            
-            // Set active ratio button
-            document.querySelectorAll('.btn-aspect').forEach(btn => btn.classList.remove('active'));
-            document.querySelector('.btn-aspect[data-ratio="1"]').classList.add('active');
-        });
-
-        // Destroy Cropper when modal closes
-        document.getElementById('cropImageModal').addEventListener('hidden.bs.modal', function () {
-            if (profileCropper) {
-                profileCropper.destroy();
-                profileCropper = null;
-            }
-            document.getElementById('imageToCrop').src = '';
-        });
-
-        // Aspect ratio buttons
-        document.querySelectorAll('.btn-aspect').forEach(btn => {
-            btn.addEventListener('click', function() {
-                if (!profileCropper) return;
-                document.querySelectorAll('.btn-aspect').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                profileCropper.setAspectRatio(parseFloat(this.dataset.ratio));
-            });
-        });
-
-        document.getElementById('btnRotateLeft')?.addEventListener('click', () => {
-            if (profileCropper) profileCropper.rotate(-90);
-        });
-
-        document.getElementById('btnRotateRight')?.addEventListener('click', () => {
-            if (profileCropper) profileCropper.rotate(90);
-        });
-
-        document.getElementById('btnConfirmCrop')?.addEventListener('click', function() {
-            if (!profileCropper) return;
-            const btn = this;
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังอัปโหลด...';
-            btn.disabled = true;
-
-            const canvas = profileCropper.getCroppedCanvas({
-                width: 400, // Fixed resolution
-                height: 400,
-                imageSmoothingEnabled: true,
-                imageSmoothingQuality: 'high'
-            });
-
-            const base64Image = canvas.toDataURL('image/jpeg', 0.85);
-
-            fetch('api/profileAPI.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'upload_photo',
-                    image: base64Image
-                })
-            })
-            .then(r => r.json())
-            .then(res => {
-                if (res.success) {
-                    PEApp.showToast('อัปเดตภาพโปรไฟล์สำเร็จ', 'success');
-                    
-                    // Update UI immediately
-                    document.getElementById('profileDisplay').src = res.photo_url;
-                    document.getElementById('profileDisplay').style.display = 'block';
-                    document.getElementById('profileIconPlaceholder').style.display = 'none';
-                    
-                    bootstrap.Modal.getInstance(document.getElementById('cropImageModal')).hide();
-                } else {
-                    PEApp.showToast(res.message || 'เกิดข้อผิดพลาดในการอัปโหลด', 'error');
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                PEApp.showToast('การเชื่อมต่อล้มเหลว', 'error');
-            })
-            .finally(() => {
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
-            });
-        });
-    }
-
 
     return {
         setFilter: setFilter,
-        loadData,
-        setFilter,
+        openAdvancedFilter: openAdvancedFilter,
+        applyAdvancedFilter: applyAdvancedFilter,
+        resetAdvancedFilter: resetAdvancedFilter,
+        onSearchChange: onSearchChange,
+        loadData: loadData,
         getWorkOrder: (id) => allData.find(w => w.wo_id == id),
-        acceptJob,
-        startJob,
-        revertStart,
-        unassignJob,
-        openQuickClose,
-        openIssuePart,
-        onSparePartChange,
-        confirmIssuePart
+        acceptJob: acceptJob,
+        startJob: startJob,
+        revertStart: revertStart,
+        unassignJob: unassignJob,
+        openQuickClose: openQuickClose,
+        openIssuePart: openIssuePart,
+        onSparePartChange: onSparePartChange,
+        confirmIssuePart: confirmIssuePart
     };
 })();
 

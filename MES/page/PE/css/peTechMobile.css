@@ -53,6 +53,11 @@ body {
 
 /* App Cards / Feed */
 .tech-empty {
+    margin-top: 2rem;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+    border: 1px dashed var(--op-border);
+
     text-align: center;
     padding: 3rem 1rem;
     color: var(--op-text-muted);
@@ -65,18 +70,20 @@ body {
 .tech-empty i { font-size: 2.5rem; opacity: 0.5; }
 
 .tech-feed {
-    padding: 12px 16px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 4px;
 }
 
 .wo-card {
     background: var(--op-card-bg);
-    border-radius: 12px;
-    padding: 15px;
+    backdrop-filter: var(--op-glass-blur);
+    -webkit-backdrop-filter: var(--op-glass-blur);
+    border-radius: 16px;
+    padding: 20px;
     box-shadow: var(--op-shadow-md);
-    border: 1px solid var(--op-border);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    margin: 12px 16px;
 }
 .wo-card-header {
     display: flex;
@@ -236,3 +243,116 @@ body {
     padding: 5px 0;
     font-size: 0.8rem;
 }
+
+
+/* Tech Buttons */
+.tech-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.tech-actions.two-col {
+    flex-direction: row;
+}
+.tech-actions.two-col .tech-btn {
+    flex: 1;
+}
+
+.tech-btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-align: center;
+    border: none;
+    transition: all 0.2s;
+    width: 100%;
+}
+.tech-btn-accept {
+    background-color: var(--op-primary);
+    color: white;
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.25);
+}
+.tech-btn-accept:active {
+    background-color: var(--op-primary-hover);
+    transform: translateY(1px);
+}
+.tech-btn-outline {
+    background-color: transparent;
+    border: 1px solid var(--op-border);
+    color: var(--op-text-muted);
+}
+.tech-btn-outline:active {
+    background-color: #f1f5f9;
+}
+.tech-btn-start {
+    background-color: var(--op-warning);
+    color: #fff;
+    box-shadow: 0 4px 6px rgba(245, 158, 11, 0.25);
+}
+.tech-btn-start:active {
+    background-color: #d97706;
+}
+.tech-btn-close {
+    background-color: var(--op-success);
+    color: white;
+    box-shadow: 0 4px 6px rgba(16, 185, 129, 0.25);
+    margin-top: 8px;
+}
+.tech-btn-close:active {
+    background-color: #059669;
+}
+
+
+/* Status Badges */
+.tech-status-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.tech-status-Open { background-color: rgba(245, 158, 11, 0.15); color: var(--op-warning); }
+.tech-status-Assigned { background-color: rgba(59, 130, 246, 0.15); color: var(--op-primary); }
+.tech-status-InProgress { background-color: rgba(16, 185, 129, 0.15); color: var(--op-success); }
+.tech-status-Completed { background-color: rgba(148, 163, 184, 0.2); color: var(--op-text-muted); }
+.tech-status-Cancelled { background-color: rgba(239, 68, 68, 0.15); color: var(--op-danger); }
+
+/* Typography for tech-cards */
+.tech-machine {
+    font-size: 0.9rem;
+    color: var(--op-text-muted);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+.tech-issue {
+    font-size: 1.05rem;
+    color: var(--op-text);
+    margin-bottom: 12px;
+}
+.tech-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--op-text-muted);
+    background: #f1f5f9;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+
+/* App Cards */
+.app-card {
+    background: var(--op-card-bg);
+    backdrop-filter: var(--op-glass-blur);
+    -webkit-backdrop-filter: var(--op-glass-blur);
+    border-radius: 16px;
+    padding: 20px;
+    margin: 12px 16px;
+    box-shadow: var(--op-shadow-md);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.tech-filter-bar::-webkit-scrollbar { display: none; }
+.tech-filter-bar { -ms-overflow-style: none; scrollbar-width: none; }
