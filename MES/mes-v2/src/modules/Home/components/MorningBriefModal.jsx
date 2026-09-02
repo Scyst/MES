@@ -90,45 +90,46 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
   if (!isRendered) return null;
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 pt-[68px] transition-all duration-300 ease-in-out ${isVisible ? 'opacity-100 backdrop-blur-sm' : 'opacity-0 backdrop-blur-none pointer-events-none'}`}>
-      <div className={`bg-white rounded-[20px] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] transition-all duration-300 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'}`}>
-        
-        {/* Header (linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)) */}
-        <div className="bg-gradient-to-br from-[#0f2027] via-[#203a43] to-[#2c5364] p-5 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center relative">
-          <div className="flex items-center gap-4 w-full">
-            <div className="bg-yellow-400 rounded-full w-12 h-12 flex items-center justify-center shadow-lg shrink-0">
-              <Sun className="text-gray-900" size={24} />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-xl font-bold mb-0">Morning Brief</h4>
-              <div className="text-white/70 text-sm">สรุปผลงานวันที่ {data?.date_text || selectedDate}</div>
-            </div>
-            <div className="flex items-center gap-3">
-              <input 
-                type="date" 
-                value={selectedDate}
-                onChange={handleDateChange}
-                className="bg-white/20 border-0 rounded px-3 py-1.5 text-sm font-bold text-white focus:ring-2 focus:ring-white/50 outline-none cursor-pointer"
-                title="เลือกวันที่"
-              />
-              <select 
-                value={selectedTeam}
-                onChange={handleTeamChange}
-                className="bg-white/20 border-0 rounded px-3 py-1.5 text-sm font-bold text-white focus:ring-2 focus:ring-white/50 outline-none cursor-pointer"
-              >
-                <option value="ALL" className="text-gray-900">All Teams</option>
-                <option value="TEAM 1" className="text-gray-900">TEAM 1</option>
-                <option value="TEAM 2" className="text-gray-900">TEAM 2</option>
-              </select>
-              <button onClick={handleClose} className="text-white/70 hover:text-white transition-colors p-1">
-                &times;
-              </button>
+    <div className={`fixed inset-0 z-50 overflow-y-auto bg-black/60 pt-[68px] transition-all duration-300 ease-in-out ${isVisible ? 'opacity-100 backdrop-blur-sm' : 'opacity-0 backdrop-blur-none pointer-events-none'}`}>
+      <div className="min-h-full flex items-center justify-center p-4 py-8">
+        <div className={`bg-white rounded-[20px] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'}`}>
+          
+          {/* Header */}
+          <div className="bg-gradient-to-br from-[#0f2027] via-[#203a43] to-[#2c5364] p-5 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center relative">
+            <div className="flex items-center gap-4 w-full">
+              <div className="bg-yellow-400 rounded-full w-12 h-12 flex items-center justify-center shadow-lg shrink-0">
+                <Sun className="text-gray-900" size={24} />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-xl font-bold mb-0">Morning Brief</h4>
+                <div className="text-white/70 text-sm">สรุปผลงานวันที่ {data?.date_text || selectedDate}</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <input 
+                  type="date" 
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  className="bg-white/20 border-0 rounded px-3 py-1.5 text-sm font-bold text-white focus:ring-2 focus:ring-white/50 outline-none cursor-pointer"
+                  title="เลือกวันที่"
+                />
+                <select 
+                  value={selectedTeam}
+                  onChange={handleTeamChange}
+                  className="bg-white/20 border-0 rounded px-3 py-1.5 text-sm font-bold text-white focus:ring-2 focus:ring-white/50 outline-none cursor-pointer"
+                >
+                  <option value="ALL" className="text-gray-900">All Teams</option>
+                  <option value="TEAM 1" className="text-gray-900">TEAM 1</option>
+                  <option value="TEAM 2" className="text-gray-900">TEAM 2</option>
+                </select>
+                <button onClick={handleClose} className="text-white/70 hover:text-white transition-colors p-1 text-2xl leading-none">
+                  &times;
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto bg-gray-50 flex-1">
+          {/* Content */}
+          <div className="p-4 sm:p-6 bg-gray-50 flex-1">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-500">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-current"></div>
@@ -223,7 +224,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                     </span>
                   </div>
                   
-                  <div className="space-y-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-2">
                     {data.models && data.models.length > 0 ? data.models.map((m, idx) => {
                       const fg = parseInt(m.fg) || 0;
                       const hold = parseInt(m.hold) || 0;
@@ -271,6 +272,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
         </div>
 
       </div>
+    </div>
     </div>
   );
 }

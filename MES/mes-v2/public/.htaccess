@@ -1,9 +1,9 @@
-DirectoryIndex dashboard.html
+DirectoryIndex index.html
 Options -MultiViews
 RewriteEngine On
 RewriteBase /iot-toolbox/sandbox-b9/Toolbox2/
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^ dashboard.html [QSA,L]
+RewriteRule ^ index.html [QSA,L]
 
 # Prevent caching for the entry HTML
 <FilesMatch "\.(html)$">
