@@ -152,8 +152,8 @@ try {
 
         if (empty($tasksToCreate)) {
             $tasksToCreate[] = [
-                'startDate' => $data['startDate'] ?? null,
-                'dueDate'   => $data['dueDate'] ?? null,
+                'startDate' => !empty($data['startDate']) ? $data['startDate'] : null,
+                'dueDate'   => !empty($data['dueDate']) ? $data['dueDate'] : null,
                 'groupId'   => null,
                 'settings'  => null
             ];
@@ -184,9 +184,9 @@ try {
                     $data['subtasks'] ?? '[]',
                     $data['tags'] ?? '',
                     $recurrence,
-                    $data['projectId'] ?? null,
-                    $data['projectChecklistId'] ?? null,
-                    $data['spaceId'] ?? null,
+                    !empty($data['projectId']) ? $data['projectId'] : null,
+                    !empty($data['projectChecklistId']) ? $data['projectChecklistId'] : null,
+                    !empty($data['spaceId']) ? $data['spaceId'] : null,
                     $createdBy,
                     $t['groupId'],
                     $t['settings'],
@@ -296,7 +296,11 @@ try {
                     continue; // Skip dates when updating series
                 }
                 $updateFields[] = "$dbKey = ?";
-                $params[] = $data[$jsonKey];
+                $val = $data[$jsonKey];
+                if ($val === '' && in_array($dbKey, ['ProjectId', 'ProjectChecklistId', 'SpaceId', 'StartDate', 'DueDate'])) {
+                    $val = null;
+                }
+                $params[] = $val;
             }
         }
 

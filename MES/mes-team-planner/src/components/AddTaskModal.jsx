@@ -336,6 +336,12 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       return;
     }
     
+    if (formData.recurrence !== 'none' && !formData.startDate) {
+      alert('กรุณาระบุวันที่เริ่มต้น (Start Date) สำหรับงานที่ตั้งค่าทำซ้ำ');
+      setActiveTab('general');
+      return;
+    }
+
     // Process physical deletions now
     attachmentsToDeleteOnSave.forEach(async (url) => {
       try {
