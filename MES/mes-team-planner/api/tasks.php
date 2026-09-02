@@ -81,6 +81,12 @@ try {
             $start = new DateTime($data['startDate']);
             $end = new DateTime($data['recurrenceEndDate']);
 
+            // Fallback: If frontend sends endDate same as startDate, assume 1 month duration
+            if ($start->format('Y-m-d') === $end->format('Y-m-d')) {
+                $end = (clone $start)->modify('+1 month');
+                $data['recurrenceEndDate'] = $end->format('Y-m-d');
+            }
+
             // Safety limit 365 days
             $diff = $start->diff($end)->days;
             if ($diff > 366) $end = (clone $start)->modify('+365 days');
