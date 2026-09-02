@@ -123,13 +123,7 @@ window.updateLocationFilterDropdown = function() {
             wipSelected = true;
         }
         
-        let isFilterDefault = '';
-        if (loc.location_type === 'STORE' && window.location.pathname.includes('inventoryDashboard.php') && !filterStoreSelected) {
-            isFilterDefault = 'selected';
-            filterStoreSelected = true;
-        }
-
-        const filterOption = `<option value="${escapeHTML(loc.location_id)}" ${isFilterDefault}>${escapeHTML(loc.location_name)}</option>`;
+        const filterOption = `<option value="${escapeHTML(loc.location_id)}">${escapeHTML(loc.location_name)}</option>`;
         const receiveOption = `<option value="${escapeHTML(loc.location_id)}" ${isReceiveDefault}>${escapeHTML(loc.location_name)}</option>`;
         const issueOption = `<option value="${escapeHTML(loc.location_id)}" ${isIssueDefault}>${escapeHTML(loc.location_name)}</option>`;
         
