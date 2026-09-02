@@ -201,6 +201,9 @@ try {
                     $stmtRoom = $pdo->prepare("INSERT INTO TeamPlanner_ChatRooms (Type, ReferenceId) VALUES ('task', ?)");
                     $stmtRoom->execute([$newTask['Id']]);
                 }
+                
+                // Clear any pending result sets to prevent PDO SQLSRV "active result set" issues on next iteration
+                $stmt->closeCursor();
             }
 
             if (count($createdTasks) > 0 && $createdTasks[0]['Status'] === 'done' && !empty($createdTasks[0]['ProjectId'])) {
