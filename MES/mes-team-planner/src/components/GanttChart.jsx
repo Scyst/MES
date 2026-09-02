@@ -45,8 +45,8 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
     }
   };
 
-  const handleDeleteTask = async (taskId) => {
-    const success = await onDeleteTask(taskId);
+  const handleDeleteTask = async (taskId, deleteSeries) => {
+    const success = await onDeleteTask(taskId, deleteSeries);
     if (success) {
       setIsModalOpen(false);
       setEditingTask(null);

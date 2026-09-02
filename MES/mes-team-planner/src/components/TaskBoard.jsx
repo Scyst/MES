@@ -92,8 +92,8 @@ export default function TaskBoard({ tasks = [], currentUser, setTasks, onSaveTas
     }
   };
 
-  const handleDeleteTask = async (taskId) => {
-    const success = await onDeleteTask(taskId);
+  const handleDeleteTask = async (taskId, deleteSeries) => {
+    const success = await onDeleteTask(taskId, deleteSeries);
     if (success) {
       setIsModalOpen(false);
       setEditingTask(null);

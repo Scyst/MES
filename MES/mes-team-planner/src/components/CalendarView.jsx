@@ -23,8 +23,8 @@ export default function CalendarView({ tasks = [], events = [], onSaveTask, onDe
     }
   };
 
-  const handleDeleteTask = async (taskId) => {
-    const success = await onDeleteTask(taskId);
+  const handleDeleteTask = async (taskId, deleteSeries) => {
+    const success = await onDeleteTask(taskId, deleteSeries);
     if (success) {
       setIsTaskModalOpen(false);
       setEditingTask(null);
