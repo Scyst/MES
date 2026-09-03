@@ -422,19 +422,19 @@ $currentUserId = (int)$_SESSION['user']['id'];
                             <div class="row g-3">
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">ชื่อ-นามสกุล</label>
-                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldFullname" style="min-height: 32px; font-size: 0.85rem; font-weight: 500;">—</span></div>
+                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldFullname" style="min-height: 32px; min-width: 160px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">ตำแหน่งงาน</label>
-                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldPosition" style="min-height: 32px; font-size: 0.85rem; font-weight: 500;">—</span></div>
+                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldPosition" style="min-height: 32px; min-width: 160px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">สาย / Line</label>
-                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldLine" style="min-height: 32px; font-size: 0.85rem; font-weight: 500;">—</span></div>
+                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldLine" style="min-height: 32px; min-width: 160px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">แผนก</label>
-                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldDept" style="min-height: 32px; font-size: 0.85rem; font-weight: 500;">—</span></div>
+                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldDept" style="min-height: 32px; min-width: 160px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-4 pro-field-group">
                                     <label class="form-label">วันเกิด</label>
