@@ -146,7 +146,8 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
 <?php include_once('../components/php/top_header.php'); ?>
 
-<main class="portal-main-content p-3 p-md-4">
+<main id="main-content">
+    <div class="container-fluid py-4">
 
     <!-- Alert zone -->
     <div id="profileAlert" class="alert d-none mb-3" role="alert"></div>
@@ -370,6 +371,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
         </div><!-- end info-card -->
 
     </div><!-- end grid -->
+    </div><!-- end container-fluid -->
 </main>
 
 <script>
