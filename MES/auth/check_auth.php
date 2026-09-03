@@ -38,9 +38,36 @@ function hasRole($roles): bool {
 
 function hasPermission($permissionCode): bool {
     if (hasRole('creator')) return true;
+    
+    // Auto-recovery if permissions are missing in session (e.g., from old sessions before the update)
+    if (empty($_SESSION['user']['permissions']) || !is_array($_SESSION['user']['permissions'])) {
+        global $pdo;
+        if (isset($pdo) && !empty($_SESSION['user']['role']) && !empty($_SESSION['user']['id'])) {
+            try {
+                $role = $_SESSION['user']['role'];
+                $userId = $_SESSION['user']['id'];
+                
+                $permStmt = $pdo->prepare("SELECT perm_code FROM dbo.SYS_ROLE_PERMISSIONS WHERE role_code = ?");
+                $permStmt->execute([$role]);
+                $rolePermissions = $permStmt->fetchAll(PDO::FETCH_COLUMN); 
+                
+                $userPermStmt = $pdo->prepare("SELECT perm_code FROM dbo.SYS_USER_PERMISSIONS WHERE user_id = ?");
+                $userPermStmt->execute([$userId]);
+                $userPermissions = $userPermStmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                $_SESSION['user']['permissions'] = array_values(array_unique(array_merge($rolePermissions, $userPermissions)));
+            } catch (Exception $e) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+    
     if (empty($_SESSION['user']['permissions']) || !is_array($_SESSION['user']['permissions'])) {
         return false;
     }
+    
     return in_array($permissionCode, $_SESSION['user']['permissions']);
 }
 
