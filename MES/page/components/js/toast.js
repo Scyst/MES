@@ -14,18 +14,14 @@ function showToast(message, color = '#28a745') {
   }
   
   Object.assign(toast.style, {
-      position: 'fixed', bottom: '20px', right: '20px', padding: '15px 25px', 
+      position: 'fixed', top: 'auto', bottom: '20px', right: '20px', padding: '15px 25px', 
       borderRadius: '8px', color: 'white', opacity: '0', 
       transform: 'translateY(20px)', transition: 'all 0.3s ease', zIndex: '99999', 
       boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
       width: 'max-content',
       maxWidth: '90vw',
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px'
+      maxHeight: '100px',
+      overflow: 'hidden'
   });
 
   //-- กำหนดข้อความและสี พร้อมทำให้ Toast แสดงขึ้นมา --
