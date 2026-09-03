@@ -1,0 +1,15 @@
+{
+    "profile": {
+        "title": "My Profile",
+        "tab_info": "Personal Info",
+        "tab_security": "Security",
+        "tab_activity": "Activity Log",
+        "tab_preferences": "Preferences",
+        "btn_save": "Save Changes",
+        "btn_cancel": "Cancel"
+    },
+    "nav": {
+        "home": "Home",
+        "logout": "Logout"
+    }
+}
