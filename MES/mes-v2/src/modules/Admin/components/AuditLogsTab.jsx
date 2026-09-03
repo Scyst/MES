@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, History, Filter, Download } from 'lucide-react';
+import { Search, History, Filter, Download, X } from 'lucide-react';
 import { userManageApi } from '../../../shared/services/userManageApi';
 
 export default function AuditLogsTab() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
+  const [jsonModal, setJsonModal] = useState({ isOpen: false, title: '', data: null });
 
   // Default filters to today
   const todayStr = new Date().toISOString().split('T')[0];
@@ -48,18 +49,21 @@ export default function AuditLogsTab() {
     loadLogs();
   };
 
-  // Helper to safely render JSON text
-  const renderJsonText = (jsonStr) => {
+  // Helper to safely render JSON text or button
+  const renderJsonText = (jsonStr, title) => {
     if (!jsonStr) return '-';
     try {
       const obj = JSON.parse(jsonStr);
       return (
-        <pre className="text-[10px] text-gray-500 overflow-x-auto max-w-[200px] whitespace-pre-wrap">
-          {JSON.stringify(obj, null, 2)}
-        </pre>
+        <button 
+          onClick={() => setJsonModal({ isOpen: true, title, data: obj })}
+          className="text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md transition-colors whitespace-nowrap font-medium"
+        >
+          View Data
+        </button>
       );
     } catch {
-      return <span className="text-xs text-gray-500">{jsonStr}</span>;
+      return <span className="text-xs text-gray-500 line-clamp-2 max-w-[150px] break-words" title={jsonStr}>{jsonStr}</span>;
     }
   };
 
@@ -156,8 +160,8 @@ export default function AuditLogsTab() {
                     <td className="py-2 px-3 text-xs font-mono text-indigo-700">{log.module}</td>
                     <td className="py-2 px-3 text-xs text-gray-600">{log.ref_id}</td>
                     <td className="py-2 px-3 text-xs text-gray-700 max-w-[200px] truncate" title={log.remark}>{log.remark || '-'}</td>
-                    <td className="py-2 px-3">{renderJsonText(log.old_value)}</td>
-                    <td className="py-2 px-3">{renderJsonText(log.new_value)}</td>
+                    <td className="py-2 px-3">{renderJsonText(log.old_value, 'Old Value Data')}</td>
+                    <td className="py-2 px-3">{renderJsonText(log.new_value, 'New Value Data')}</td>
                   </tr>
                 ))
               )}
@@ -165,6 +169,31 @@ export default function AuditLogsTab() {
           </table>
         </div>
       </div>
+
+      {/* JSON Viewer Modal */}
+      {jsonModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in-up">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Filter size={18} className="text-blue-600" />
+                {jsonModal.title}
+              </h2>
+              <button 
+                onClick={() => setJsonModal({ isOpen: false, title: '', data: null })} 
+                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto bg-slate-800 text-emerald-400 font-mono text-sm">
+              <pre className="whitespace-pre-wrap">
+                {JSON.stringify(jsonModal.data, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
