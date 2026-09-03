@@ -409,32 +409,32 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         
                         <!-- 1. ข้อมูลพื้นฐาน -->
                         <div class="mb-4">
-                            <div class="pro-section-header">
-                                <i class="fas fa-user-circle text-primary"></i>
-                                ข้อมูลพื้นฐาน (Basic Info)
-                            </div>
-                            
-                            <div class="pro-notice">
-                                <i class="fas fa-info-circle notice-icon text-secondary"></i>
-                                <span><strong>หมายเหตุ:</strong> ข้อมูลชื่อ ตำแหน่ง แผนก และสายการผลิต ซิงค์อัตโนมัติจากระบบ HR หากต้องการแก้ไขกรุณาติดต่อฝ่ายบุคคล</span>
+                            <div class="pro-section-header d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <i class="fas fa-user-circle text-primary"></i>
+                                    ข้อมูลพื้นฐาน (Basic Info)
+                                </div>
+                                <div class="text-secondary" style="font-size: 0.75rem; font-weight: normal;">
+                                    <i class="fas fa-info-circle"></i> ข้อมูลซิงค์จาก HR (แก้ไขผ่านระบบไม่ได้)
+                                </div>
                             </div>
 
                             <div class="row g-3">
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">ชื่อ-นามสกุล</label>
-                                    <div><span class="badge bg-light text-dark border px-3 py-2 skeleton" id="fieldFullname" style="min-height: 28px; font-size: 0.85rem; font-weight: 500;">—</span></div>
+                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldFullname" style="min-height: 32px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">ตำแหน่งงาน</label>
-                                    <div><span class="badge bg-info text-dark px-3 py-2 skeleton" id="fieldPosition" style="min-height: 28px; font-size: 0.85rem; font-weight: 500;">—</span></div>
+                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldPosition" style="min-height: 32px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">สาย / Line</label>
-                                    <div><span class="badge bg-success px-3 py-2 skeleton" id="fieldLine" style="min-height: 28px; font-size: 0.85rem; font-weight: 500;">—</span></div>
+                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldLine" style="min-height: 32px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">แผนก</label>
-                                    <div><span class="badge bg-primary px-3 py-2 skeleton" id="fieldDept" style="min-height: 28px; font-size: 0.85rem; font-weight: 500;">—</span></div>
+                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldDept" style="min-height: 32px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-4 pro-field-group">
                                     <label class="form-label">วันเกิด</label>
