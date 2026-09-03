@@ -292,6 +292,24 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                     <label class="form-label-sm">แผนก</label>
                                     <div><span class="badge bg-primary px-3 py-2 skeleton" id="fieldDept" style="font-size: 0.85rem; min-height: 28px;">—</span></div>
                                 </div>
+                                <div class="col-md-4">
+                                    <label class="form-label-sm text-primary"><i class="fas fa-calendar-alt me-1"></i> วันเกิด (DOB)</label>
+                                    <input type="date" class="form-control" id="fieldDOB" name="date_of_birth">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label-sm text-primary"><i class="fas fa-ring me-1"></i> สถานภาพสมรส</label>
+                                    <select class="form-select" id="fieldMarital" name="marital_status">
+                                        <option value="">-- เลือกสถานภาพ --</option>
+                                        <option value="โสด">โสด (Single)</option>
+                                        <option value="สมรส">สมรส (Married)</option>
+                                        <option value="หย่าร้าง">หย่าร้าง (Divorced)</option>
+                                        <option value="หม้าย">หม้าย (Widowed)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label-sm text-primary"><i class="fas fa-child me-1"></i> จำนวนบุตร (คน)</label>
+                                    <input type="number" class="form-control" id="fieldChildren" name="children_count" min="0" placeholder="0">
+                                </div>
                                 <div class="col-12">
                                     <label class="form-label-sm text-primary"><i class="fas fa-edit me-1"></i> คำแนะนำตัว (ไม่บังคับ)</label>
                                     <textarea class="form-control" id="fieldBio" name="bio" rows="3"
@@ -299,6 +317,29 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                     <div class="text-end mt-1">
                                         <small class="text-muted"><span id="bioCharCount">0</span>/500</small>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- สวัสดิการและอุปกรณ์ -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="fas fa-tshirt me-2"></i>สวัสดิการและอุปกรณ์ (Welfare & Equipment)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label-sm text-primary">ขนาดเสื้อยูนิฟอร์ม (Shirt Size)</label>
+                                    <select class="form-select" id="fieldShirt" name="shirt_size">
+                                        <option value="">-- เลือกขนาดเสื้อ --</option>
+                                        <option value="S">S</option>
+                                        <option value="M">M</option>
+                                        <option value="L">L</option>
+                                        <option value="XL">XL</option>
+                                        <option value="2XL">2XL</option>
+                                        <option value="3XL">3XL</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-sm text-primary">ขนาดรองเท้าเซฟตี้ (Shoe Size)</label>
+                                    <input type="text" class="form-control" id="fieldShoe" name="shoe_size" placeholder="เช่น 39, 40, 42 หรือเบอร์ US" maxlength="10">
                                 </div>
                             </div>
                         </div>
@@ -353,11 +394,15 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         <div class="mb-4">
                             <h6 class="fw-bold text-danger border-bottom pb-2 mb-3"><i class="fas fa-heartbeat me-2"></i>ผู้ติดต่อฉุกเฉิน (Emergency Contact)</h6>
                             <div class="row g-3">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label-sm text-danger"><i class="fas fa-user-shield me-1"></i> ชื่อผู้ติดต่อฉุกเฉิน</label>
                                     <input type="text" class="form-control" id="fieldEmergName" name="emergency_contact_name" placeholder="ชื่อ - นามสกุล" maxlength="200">
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
+                                    <label class="form-label-sm text-danger"><i class="fas fa-users me-1"></i> ความสัมพันธ์</label>
+                                    <input type="text" class="form-control" id="fieldEmergRel" name="emergency_contact_relation" placeholder="เช่น บิดา, มารดา, พี่น้อง" maxlength="100">
+                                </div>
+                                <div class="col-md-4">
                                     <label class="form-label-sm text-danger"><i class="fas fa-phone me-1"></i> เบอร์โทรศัพท์ฉุกเฉิน</label>
                                     <input type="tel" class="form-control" id="fieldEmergPhone" name="emergency_contact_phone" placeholder="08X-XXX-XXXX" maxlength="50">
                                 </div>
@@ -595,7 +640,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.getElementById('fieldCommute').value  = d.commute_method || '';
                 document.getElementById('fieldVehicle').value  = d.vehicle_registration || '';
                 document.getElementById('fieldEmergName').value= d.emergency_contact_name || '';
+                document.getElementById('fieldEmergRel').value = d.emergency_contact_relation || '';
                 document.getElementById('fieldEmergPhone').value= d.emergency_contact_phone || '';
+
+                document.getElementById('fieldDOB').value      = d.date_of_birth || '';
+                document.getElementById('fieldMarital').value  = d.marital_status || '';
+                document.getElementById('fieldChildren').value = d.children_count || '';
+                document.getElementById('fieldShirt').value    = d.shirt_size || '';
+                document.getElementById('fieldShoe').value     = d.shoe_size || '';
 
                 document.getElementById('fieldTheme').value = d.theme_preference || 'light';
                 document.getElementById('fieldLang').value  = d.preferred_lang   || 'th';
@@ -765,7 +817,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 commute_method : document.getElementById('fieldCommute').value.trim(),
                 vehicle_registration : document.getElementById('fieldVehicle').value.trim(),
                 emergency_contact_name : document.getElementById('fieldEmergName').value.trim(),
-                emergency_contact_phone: document.getElementById('fieldEmergPhone').value.trim()
+                emergency_contact_relation : document.getElementById('fieldEmergRel').value.trim(),
+                emergency_contact_phone: document.getElementById('fieldEmergPhone').value.trim(),
+                date_of_birth : document.getElementById('fieldDOB').value.trim(),
+                marital_status : document.getElementById('fieldMarital').value.trim(),
+                children_count : document.getElementById('fieldChildren').value.trim(),
+                shirt_size : document.getElementById('fieldShirt').value.trim(),
+                shoe_size : document.getElementById('fieldShoe').value.trim()
             });
             showAlert(json.message, json.success ? 'success' : 'danger');
         } catch { showAlert('เกิดข้อผิดพลาด กรุณาลองใหม่'); }

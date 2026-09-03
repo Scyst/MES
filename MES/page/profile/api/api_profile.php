@@ -42,7 +42,8 @@ try {
                     u.emp_id, u.profile_picture, u.phone, u.bio,
                     u.social_line_id, u.social_facebook,
                     u.commute_method, u.vehicle_registration,
-                    u.emergency_contact_name, u.emergency_contact_phone, u.current_address,
+                    u.emergency_contact_name, u.emergency_contact_phone, u.emergency_contact_relation, u.current_address,
+                    u.date_of_birth, u.marital_status, u.children_count, u.shirt_size, u.shoe_size,
                     u.last_login, u.pwd_changed_at,
                     u.preferred_lang, u.theme_preference, u.created_at,
                     m.position, m.department_api, m.start_date
@@ -71,14 +72,22 @@ try {
             $lang      = isset($input['preferred_lang'])   ? trim($input['preferred_lang'])   : null;
             $theme     = isset($input['theme_preference']) ? trim($input['theme_preference']) : null;
             
-            // New fields
+            // New fields (Contact & Social)
             $line_id   = isset($input['social_line_id']) ? trim($input['social_line_id']) : null;
             $facebook  = isset($input['social_facebook']) ? trim($input['social_facebook']) : null;
             $commute   = isset($input['commute_method']) ? trim($input['commute_method']) : null;
             $vehicle   = isset($input['vehicle_registration']) ? trim($input['vehicle_registration']) : null;
             $emergName = isset($input['emergency_contact_name']) ? trim($input['emergency_contact_name']) : null;
             $emergPhone= isset($input['emergency_contact_phone']) ? trim($input['emergency_contact_phone']) : null;
+            $emergRel  = isset($input['emergency_contact_relation']) ? trim($input['emergency_contact_relation']) : null;
             $address   = isset($input['current_address']) ? trim($input['current_address']) : null;
+
+            // New fields (Personal & Welfare)
+            $dob       = !empty($input['date_of_birth']) ? trim($input['date_of_birth']) : null;
+            $marital   = isset($input['marital_status']) ? trim($input['marital_status']) : null;
+            $children  = isset($input['children_count']) && $input['children_count'] !== '' ? (int)$input['children_count'] : 0;
+            $shirt     = isset($input['shirt_size']) ? trim($input['shirt_size']) : null;
+            $shoe      = isset($input['shoe_size']) ? trim($input['shoe_size']) : null;
 
             // Validation
             if ($phone !== null && $phone !== '' && !preg_match('/^[0-9+\-\s()]{7,20}$/', $phone)) {
@@ -97,20 +106,23 @@ try {
                 throw new Exception('คำแนะนำตัวต้องไม่เกิน 500 ตัวอักษร');
             }
 
-            // Execute Update via Raw SQL (Since SP may not know about the new columns)
+            // Execute Update via Raw SQL
             $stmt = $pdo->prepare("
                 UPDATE " . USERS_TABLE . "
                 SET phone = ?, bio = ?, preferred_lang = ?, theme_preference = ?,
                     social_line_id = ?, social_facebook = ?,
                     commute_method = ?, vehicle_registration = ?,
-                    emergency_contact_name = ?, emergency_contact_phone = ?,
-                    current_address = ?
+                    emergency_contact_name = ?, emergency_contact_phone = ?, emergency_contact_relation = ?,
+                    current_address = ?,
+                    date_of_birth = ?, marital_status = ?, children_count = ?, shirt_size = ?, shoe_size = ?
                 WHERE id = ?
             ");
             $stmt->execute([
                 $phone, $bio, $lang, $theme,
                 $line_id, $facebook, $commute, $vehicle,
-                $emergName, $emergPhone, $address,
+                $emergName, $emergPhone, $emergRel,
+                $address,
+                $dob, $marital, $children, $shirt, $shoe,
                 $currentId
             ]);
 
