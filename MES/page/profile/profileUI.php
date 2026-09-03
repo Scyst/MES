@@ -823,12 +823,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     
                     return `
                         <div class="activity-item">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="fw-bold"><i class="${icon} me-2"></i>${log.action}</span>
-                                <small class="text-muted">${formatDate(log.created_at)}</small>
+                            <div class="d-flex justify-content-between mb-1 align-items-center">
+                                <span style="font-size: 0.85rem; font-weight: 600; color: var(--bs-body-color);"><i class="${icon} me-2"></i>${log.action}</span>
+                                <span class="text-muted" style="font-size: 0.75rem;">${formatDate(log.created_at)}</span>
                             </div>
-                            <div class="small text-muted">${log.details || ''}</div>
-                            <div class="small text-muted mt-1"><i class="fas fa-network-wired me-1"></i> ${log.ip_address || '—'}</div>
+                            <div class="text-muted" style="font-size: 0.8rem;">${log.details || ''}</div>
+                            <div class="text-muted mt-1" style="font-size: 0.75rem;"><i class="fas fa-network-wired me-1"></i> ${log.ip_address || '—'}</div>
                         </div>
                     `;
                 }).join('');
