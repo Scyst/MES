@@ -40,6 +40,9 @@ try {
                 SELECT
                     u.id, u.username, u.fullname, u.role, u.line, u.team_group,
                     u.emp_id, u.profile_picture, u.phone, u.bio,
+                    u.social_line_id, u.social_facebook,
+                    u.commute_method, u.vehicle_registration,
+                    u.emergency_contact_name, u.emergency_contact_phone, u.current_address,
                     u.last_login, u.pwd_changed_at,
                     u.preferred_lang, u.theme_preference, u.created_at,
                     m.position, m.department_api, m.start_date
@@ -62,54 +65,61 @@ try {
 
         // ─────────────────────────────────────────────
         case 'update_my_info':
-            // NOTE: Intentionally validates nullable fields individually
+            // Basic fields
             $phone     = isset($input['phone'])      ? trim($input['phone'])      : null;
             $bio       = isset($input['bio'])         ? trim($input['bio'])        : null;
             $lang      = isset($input['preferred_lang'])   ? trim($input['preferred_lang'])   : null;
             $theme     = isset($input['theme_preference']) ? trim($input['theme_preference']) : null;
+            
+            // New fields
+            $line_id   = isset($input['social_line_id']) ? trim($input['social_line_id']) : null;
+            $facebook  = isset($input['social_facebook']) ? trim($input['social_facebook']) : null;
+            $commute   = isset($input['commute_method']) ? trim($input['commute_method']) : null;
+            $vehicle   = isset($input['vehicle_registration']) ? trim($input['vehicle_registration']) : null;
+            $emergName = isset($input['emergency_contact_name']) ? trim($input['emergency_contact_name']) : null;
+            $emergPhone= isset($input['emergency_contact_phone']) ? trim($input['emergency_contact_phone']) : null;
+            $address   = isset($input['current_address']) ? trim($input['current_address']) : null;
 
-            // Validate phone format (ถ้ามี)
+            // Validation
             if ($phone !== null && $phone !== '' && !preg_match('/^[0-9+\-\s()]{7,20}$/', $phone)) {
                 throw new Exception('รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง');
             }
-
-            // Validate lang
+            if ($emergPhone !== null && $emergPhone !== '' && !preg_match('/^[0-9+\-\s()]{7,20}$/', $emergPhone)) {
+                throw new Exception('รูปแบบเบอร์โทรศัพท์ฉุกเฉินไม่ถูกต้อง');
+            }
             if ($lang !== null && !in_array($lang, ['th', 'en'], true)) {
                 throw new Exception('ภาษาที่ระบุไม่รองรับ');
             }
-
-            // Validate theme
             if ($theme !== null && !in_array($theme, ['light', 'dark'], true)) {
                 throw new Exception('ธีมที่ระบุไม่รองรับ');
             }
-
-            // Validate bio length
             if ($bio !== null && mb_strlen($bio) > 500) {
                 throw new Exception('คำแนะนำตัวต้องไม่เกิน 500 ตัวอักษร');
             }
 
+            // Execute Update via Raw SQL (Since SP may not know about the new columns)
             $stmt = $pdo->prepare("
-                EXEC " . DB_DATABASE . ".dbo.sp_ManageUser
-                    @Action        = 'UPDATE_PROFILE',
-                    @UserId        = ?,
-                    @Phone         = ?,
-                    @Bio           = ?,
-                    @PreferredLang = ?,
-                    @ThemePreference = ?,
-                    @ActionBy      = ?
+                UPDATE " . USERS_TABLE . "
+                SET phone = ?, bio = ?, preferred_lang = ?, theme_preference = ?,
+                    social_line_id = ?, social_facebook = ?,
+                    commute_method = ?, vehicle_registration = ?,
+                    emergency_contact_name = ?, emergency_contact_phone = ?,
+                    current_address = ?
+                WHERE id = ?
             ");
-            $stmt->execute([$currentId, $phone, $bio, $lang, $theme, $username]);
+            $stmt->execute([
+                $phone, $bio, $lang, $theme,
+                $line_id, $facebook, $commute, $vehicle,
+                $emergName, $emergPhone, $address,
+                $currentId
+            ]);
 
             // อัปเดต session theme เพื่อ sync ทันที
-            if ($theme !== null) {
-                $_SESSION['user']['theme_preference'] = $theme;
-            }
-            if ($lang !== null) {
-                $_SESSION['user']['preferred_lang'] = $lang;
-            }
+            if ($theme !== null) $_SESSION['user']['theme_preference'] = $theme;
+            if ($lang !== null)  $_SESSION['user']['preferred_lang'] = $lang;
 
-            writeLog($pdo, 'UPDATE_PROFILE', 'PROFILE', $username, $currentId, null, 'User updated own profile info');
-            echo json_encode(['success' => true, 'message' => 'บันทึกข้อมูลโปรไฟล์สำเร็จ']);
+            writeLog($pdo, 'UPDATE_PROFILE', 'PROFILE', $username, $currentId, null, 'User updated comprehensive profile info');
+            echo json_encode(['success' => true, 'message' => 'บันทึกข้อมูลส่วนตัวสำเร็จ']);
             break;
 
         // ─────────────────────────────────────────────

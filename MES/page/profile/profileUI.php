@@ -271,39 +271,101 @@ $currentUserId = (int)$_SESSION['user']['id'];
                 <div id="section-info">
                     <h5 class="fw-bold mb-4">ข้อมูลส่วนตัว</h5>
                     <form id="profileInfoForm">
-                        <div class="row g-4">
-                            <div class="col-md-6">
-                                <label class="form-label-sm">ชื่อ-นามสกุล</label>
-                                <div class="form-control bg-light skeleton border-0" id="fieldFullname" style="min-height: 38px;">—</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label-sm">ตำแหน่งงาน</label>
-                                <div><span class="badge bg-info text-dark px-3 py-2 skeleton" id="fieldPosition" style="font-size: 0.9rem; min-height: 28px;">—</span></div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label-sm">สาย / Line</label>
-                                <div><span class="badge bg-success px-3 py-2 skeleton" id="fieldLine" style="font-size: 0.9rem; min-height: 28px;">—</span></div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label-sm">แผนก</label>
-                                <div><span class="badge bg-primary px-3 py-2 skeleton" id="fieldDept" style="font-size: 0.9rem; min-height: 28px;">—</span></div>
-                            </div>
-                            <div class="col-12 mt-4">
-                                <label class="form-label-sm text-primary"><i class="fas fa-edit me-1"></i> เบอร์โทรศัพท์ (สามารถแก้ไขได้)</label>
-                                <input type="tel" class="form-control form-control-lg" id="fieldPhone" name="phone"
-                                       placeholder="ไม่ได้ระบุ" maxlength="20">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label-sm text-primary"><i class="fas fa-edit me-1"></i> คำแนะนำตัว (ไม่บังคับ)</label>
-                                <textarea class="form-control" id="fieldBio" name="bio" rows="4"
-                                          placeholder="แนะนำตัวคุณสั้นๆ..." maxlength="500"></textarea>
-                                <div class="text-end mt-1">
-                                    <small class="text-muted"><span id="bioCharCount">0</span>/500</small>
+                        
+                        <!-- 1. ข้อมูลพื้นฐาน -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="fas fa-user-circle me-2"></i>ข้อมูลพื้นฐาน (Basic Info)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label-sm">ชื่อ-นามสกุล</label>
+                                    <div class="form-control bg-light skeleton border-0" id="fieldFullname" style="min-height: 38px;">—</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-sm">ตำแหน่งงาน</label>
+                                    <div><span class="badge bg-info text-dark px-3 py-2 skeleton" id="fieldPosition" style="font-size: 0.85rem; min-height: 28px;">—</span></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-sm">สาย / Line</label>
+                                    <div><span class="badge bg-success px-3 py-2 skeleton" id="fieldLine" style="font-size: 0.85rem; min-height: 28px;">—</span></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-sm">แผนก</label>
+                                    <div><span class="badge bg-primary px-3 py-2 skeleton" id="fieldDept" style="font-size: 0.85rem; min-height: 28px;">—</span></div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label-sm text-primary"><i class="fas fa-edit me-1"></i> คำแนะนำตัว (ไม่บังคับ)</label>
+                                    <textarea class="form-control" id="fieldBio" name="bio" rows="3"
+                                              placeholder="แนะนำตัวคุณสั้นๆ..." maxlength="500"></textarea>
+                                    <div class="text-end mt-1">
+                                        <small class="text-muted"><span id="bioCharCount">0</span>/500</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- 2. ข้อมูลการติดต่อ & โซเชียล -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="fas fa-address-book me-2"></i>ข้อมูลการติดต่อ (Contact Info)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label-sm text-primary"><i class="fas fa-phone-alt me-1"></i> เบอร์โทรศัพท์</label>
+                                    <input type="tel" class="form-control" id="fieldPhone" name="phone" placeholder="08X-XXX-XXXX" maxlength="20">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label-sm text-primary"><i class="fab fa-line me-1"></i> Line ID</label>
+                                    <input type="text" class="form-control" id="fieldLineId" name="social_line_id" placeholder="Line ID" maxlength="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label-sm text-primary"><i class="fab fa-facebook-square me-1"></i> Facebook</label>
+                                    <input type="text" class="form-control" id="fieldFacebook" name="social_facebook" placeholder="Facebook Name/URL" maxlength="200">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label-sm text-primary"><i class="fas fa-map-marker-alt me-1"></i> ที่อยู่ปัจจุบัน (Current Address)</label>
+                                    <textarea class="form-control" id="fieldAddress" name="current_address" rows="2" placeholder="ที่อยู่สำหรับติดต่อ..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. การเดินทาง -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="fas fa-car me-2"></i>การเดินทาง (Commute)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label-sm text-primary"><i class="fas fa-route me-1"></i> วิธีการเดินทางมาทำงาน</label>
+                                    <select class="form-select" id="fieldCommute" name="commute_method">
+                                        <option value="">-- เลือกวิธีการเดินทาง --</option>
+                                        <option value="รถรับส่งบริษัท">รถรับส่งบริษัท (Company Bus)</option>
+                                        <option value="รถยนต์ส่วนตัว">รถยนต์ส่วนตัว (Personal Car)</option>
+                                        <option value="รถจักรยานยนต์ส่วนตัว">รถจักรยานยนต์ส่วนตัว (Motorcycle)</option>
+                                        <option value="รถโดยสารประจำทาง">รถโดยสารประจำทาง (Public Transport)</option>
+                                        <option value="เดิน">เดิน (Walk)</option>
+                                        <option value="อื่นๆ">อื่นๆ (Others)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-sm text-primary"><i class="fas fa-id-card-alt me-1"></i> ทะเบียนรถ (ถ้ามี)</label>
+                                    <input type="text" class="form-control" id="fieldVehicle" name="vehicle_registration" placeholder="เช่น กข 1234 กทม" maxlength="50">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. ข้อมูลฉุกเฉิน -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-danger border-bottom pb-2 mb-3"><i class="fas fa-heartbeat me-2"></i>ผู้ติดต่อฉุกเฉิน (Emergency Contact)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label-sm text-danger"><i class="fas fa-user-shield me-1"></i> ชื่อผู้ติดต่อฉุกเฉิน</label>
+                                    <input type="text" class="form-control" id="fieldEmergName" name="emergency_contact_name" placeholder="ชื่อ - นามสกุล" maxlength="200">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-sm text-danger"><i class="fas fa-phone me-1"></i> เบอร์โทรศัพท์ฉุกเฉิน</label>
+                                    <input type="tel" class="form-control" id="fieldEmergPhone" name="emergency_contact_phone" placeholder="08X-XXX-XXXX" maxlength="50">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mt-4 d-flex justify-content-end">
-                            <button type="submit" class="btn btn-primary px-5 py-2 fw-bold rounded-pill" id="btnSaveInfo">
+                            <button type="submit" class="btn btn-primary px-4 py-2 fw-bold rounded" id="btnSaveInfo">
                                 <i class="fas fa-save me-2"></i>บันทึกข้อมูลส่วนตัว
                             </button>
                         </div>
@@ -336,7 +398,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                             <div class="col-12">
                                 <label class="form-label-sm">รหัสผ่านเดิม</label>
                                 <div class="input-group">
-                                    <input type="password" class="form-control form-control-lg" id="fieldOldPwd"
+                                    <input type="password" class="form-control" id="fieldOldPwd"
                                            name="old_password" placeholder="กรอกรหัสผ่านเดิม" autocomplete="current-password">
                                     <button class="btn btn-light border" type="button" data-toggle-pwd="fieldOldPwd">
                                         <i class="fas fa-eye text-muted"></i>
@@ -346,7 +408,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                             <div class="col-md-6">
                                 <label class="form-label-sm">รหัสผ่านใหม่</label>
                                 <div class="input-group">
-                                    <input type="password" class="form-control form-control-lg" id="fieldNewPwd"
+                                    <input type="password" class="form-control" id="fieldNewPwd"
                                            name="new_password" placeholder="อย่างน้อย 6 ตัวอักษร" autocomplete="new-password">
                                     <button class="btn btn-light border" type="button" data-toggle-pwd="fieldNewPwd">
                                         <i class="fas fa-eye text-muted"></i>
@@ -366,7 +428,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                             <div class="col-md-6">
                                 <label class="form-label-sm">ยืนยันรหัสผ่านใหม่</label>
                                 <div class="input-group">
-                                    <input type="password" class="form-control form-control-lg" id="fieldConfirmPwd"
+                                    <input type="password" class="form-control" id="fieldConfirmPwd"
                                            name="confirm_password" placeholder="กรอกรหัสผ่านใหม่อีกครั้ง" autocomplete="new-password">
                                     <button class="btn btn-light border" type="button" data-toggle-pwd="fieldConfirmPwd">
                                         <i class="fas fa-eye text-muted"></i>
@@ -379,7 +441,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         </div>
 
                         <div class="mt-4 d-flex justify-content-end">
-                            <button type="submit" class="btn btn-warning px-5 py-2 fw-bold rounded-pill" id="btnChangePassword">
+                            <button type="submit" class="btn btn-warning px-4 py-2 fw-bold rounded" id="btnChangePassword">
                                 <i class="fas fa-key me-2"></i>เปลี่ยนรหัสผ่าน
                             </button>
                         </div>
@@ -525,6 +587,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.getElementById('fieldPhone').value    = d.phone || '';
                 document.getElementById('fieldBio').value      = d.bio || '';
                 document.getElementById('bioCharCount').textContent = (d.bio || '').length;
+
+                // New Fields
+                document.getElementById('fieldLineId').value   = d.social_line_id || '';
+                document.getElementById('fieldFacebook').value = d.social_facebook || '';
+                document.getElementById('fieldAddress').value  = d.current_address || '';
+                document.getElementById('fieldCommute').value  = d.commute_method || '';
+                document.getElementById('fieldVehicle').value  = d.vehicle_registration || '';
+                document.getElementById('fieldEmergName').value= d.emergency_contact_name || '';
+                document.getElementById('fieldEmergPhone').value= d.emergency_contact_phone || '';
 
                 document.getElementById('fieldTheme').value = d.theme_preference || 'light';
                 document.getElementById('fieldLang').value  = d.preferred_lang   || 'th';
@@ -688,6 +759,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const json = await apiPost(`${API_URL}?action=update_my_info`, {
                 phone : document.getElementById('fieldPhone').value.trim(),
                 bio   : document.getElementById('fieldBio').value.trim(),
+                social_line_id : document.getElementById('fieldLineId').value.trim(),
+                social_facebook: document.getElementById('fieldFacebook').value.trim(),
+                current_address: document.getElementById('fieldAddress').value.trim(),
+                commute_method : document.getElementById('fieldCommute').value.trim(),
+                vehicle_registration : document.getElementById('fieldVehicle').value.trim(),
+                emergency_contact_name : document.getElementById('fieldEmergName').value.trim(),
+                emergency_contact_phone: document.getElementById('fieldEmergPhone').value.trim()
             });
             showAlert(json.message, json.success ? 'success' : 'danger');
         } catch { showAlert('เกิดข้อผิดพลาด กรุณาลองใหม่'); }
