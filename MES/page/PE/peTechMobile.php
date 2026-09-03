@@ -7,11 +7,6 @@ requirePermission(['view_maintenance', 'view_production', 'view_dashboard']);
 $currentUser = $_SESSION['user'];
 $pageTitle = "Technician Portal";
 
-// Check if user has photo
-$empId = $currentUser['emp_id'] ?? '';
-$photoPath = !empty($empId) ? "../../assets/img/employees/{$empId}.jpg" : "";
-$hasPhoto = !empty($empId) && file_exists(__DIR__ . '/../../' . $photoPath);
-$profileUrl = $hasPhoto ? $photoPath . "?v=" . time() : "";
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -87,37 +82,6 @@ $profileUrl = $hasPhoto ? $photoPath . "?v=" . time() : "";
             </div>
         </div>
 
-        <!-- Section: Profile -->
-        <div id="section-profile" class="app-section">
-            <div class="app-card text-center mt-3 bg-white mx-3 p-4" style="border-radius: 16px; box-shadow: var(--op-shadow-sm);">
-                <h5 class="fw-bold mb-4 text-primary"><i class="fas fa-id-badge me-2"></i> โปรไฟล์พนักงาน</h5>
-                
-                <div class="profile-photo-container mb-3 mx-auto" onclick="document.getElementById('profileImageUpload').click()" style="width:120px; height:120px; border-radius:50%; overflow:hidden; position:relative; background:#f1f5f9; cursor:pointer; border:3px solid #fff; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
-                    <img id="profileDisplay" src="<?php echo $profileUrl; ?>" style="width:100%; height:100%; object-fit:cover; display: <?php echo $hasPhoto ? 'block' : 'none'; ?>;">
-                    <i id="profileIconPlaceholder" class="fas fa-user" style="font-size: 4rem; color: #cbd5e1; line-height:120px; display: <?php echo $hasPhoto ? 'none' : 'block'; ?>;"></i>
-                    <div class="profile-photo-overlay" style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.5); color:#fff; font-size:0.7rem; padding:4px 0; text-align:center;">
-                        <i class="fas fa-camera"></i> แตะเพื่อเปลี่ยน
-                    </div>
-                </div>
-                
-                <input type="file" id="profileImageUpload" accept="image/*" style="display: none;">
-                
-                <h4 class="mb-1 text-dark fw-bold"><?php echo htmlspecialchars($currentUser['fullname'] ?? $currentUser['username']); ?></h4>
-                <p class="text-muted mb-1"><i class="fas fa-id-card"></i> รหัสพนักงาน: <?php echo htmlspecialchars($empId ?: 'ไม่ได้ระบุ'); ?></p>
-                <p class="text-muted mb-3"><i class="fas fa-user-tag"></i> ตำแหน่ง: <?php echo htmlspecialchars($currentUser['position'] ?? $currentUser['role']); ?></p>
-                
-                <hr class="border-secondary opacity-25">
-                
-                <p class="text-start text-muted" style="font-size: 0.85rem;">
-                    <strong>คำแนะนำ:</strong> รูปภาพโปรไฟล์จะถูกนำไปใช้ในการ์ดความปลอดภัยช่าง กรุณาใช้ภาพถ่ายหน้าตรงที่เห็นใบหน้าชัดเจน
-                </p>
-                
-                <button type="button" class="btn btn-outline-danger w-100 rounded-pill mt-2" onclick="window.location.href='../components/logout.php'">
-                    <i class="fas fa-sign-out-alt me-1"></i> ออกจากระบบ
-                </button>
-            </div>
-        </div>
-
         <!-- Floating Action Button -->
         <?php if (hasPermission(['create_maintenance'])): ?>
         <button class="tech-fab" onclick="TechModule.loadData()">
@@ -134,10 +98,6 @@ $profileUrl = $hasPhoto ? $photoPath . "?v=" . time() : "";
             <div class="nav-item-btn text-secondary" data-target="section-alljobs" data-title="งานซ่อมทั้งหมด" data-icon="fa-list" data-color="text-secondary" onclick="TechModule.setFilter('all')">
                 <i class="fas fa-list"></i>
                 <span>งานทั้งหมด</span>
-            </div>
-            <div class="nav-item-btn text-secondary" data-target="section-profile" data-title="โปรไฟล์" data-icon="fa-user-circle" data-color="text-secondary" onclick="TechModule.setFilter('profile')">
-                <i class="fas fa-user-circle"></i>
-                <span>โปรไฟล์</span>
             </div>
         </nav>
 
