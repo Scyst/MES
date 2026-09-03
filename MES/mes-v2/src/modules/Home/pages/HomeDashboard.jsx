@@ -204,7 +204,7 @@ export default function HomeDashboard() {
 
   const systemAdminServices = [
     { title: 'System Settings', desc: 'ตั้งค่าระบบหลัก', icon: Settings, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/systemSettings/systemSettings.php', roles: ['admin', 'creator'] },
-    { title: 'User Manager', desc: 'จัดการผู้ใช้งานและสิทธิ์', icon: Users, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/userManage/userManageUI.php', roles: ['admin', 'creator'] },
+    { title: 'User Manager', desc: 'จัดการผู้ใช้งานและสิทธิ์', icon: Users, colorClass: 'bg-gray-100 text-gray-700', to: '/admin/users', roles: ['admin', 'creator'] },
   ];
 
   const sandboxServices = [

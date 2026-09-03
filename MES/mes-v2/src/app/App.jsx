@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '../shared/contexts/AuthContext';
 const HomeDashboard = lazy(() => import('../modules/Home/pages/HomeDashboard'));
 const QmsDashboard = lazy(() => import('../modules/QMS/pages/QmsDashboard'));
 const MoodInsightDashboard = lazy(() => import('../modules/MoodInsight/pages/MoodInsightDashboard'));
+const UserManagement = lazy(() => import('../modules/Admin/pages/UserManagement'));
 const Login = lazy(() => import('../modules/Auth/pages/Login'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
@@ -46,6 +47,11 @@ export default function App() {
             <Route path="mood-insight/*" element={
               <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดโมดูล Mood Insight...</div>}>
                 <MoodInsightDashboard />
+              </Suspense>
+            } />
+            <Route path="admin/users" element={
+              <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดโมดูล User Management...</div>}>
+                <UserManagement />
               </Suspense>
             } />
             <Route path="*" element={<Navigate to="/" replace />} />

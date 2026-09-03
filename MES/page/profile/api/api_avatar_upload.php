@@ -33,7 +33,7 @@ const MAX_FILE_SIZE    = 2 * 1024 * 1024; // 2MB
 const ALLOWED_MIMES    = ['image/jpeg', 'image/png', 'image/webp'];
 const OUTPUT_WIDTH     = 256;
 const OUTPUT_HEIGHT    = 256;
-const FTP_UPLOAD_PATH  = '/uploads/profile_pictures/';
+const FTP_UPLOAD_PATH  = '/MES/MES/uploads/profile_pictures/';
 
 try {
     if (!isset($_FILES['avatar']) || $_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
@@ -186,7 +186,7 @@ try {
         @unlink($tmpForFtp);
         ftp_close($ftpConn);
 
-        $pictureUrl = $ftpRemotePath; // เก็บ path สัมพัทธ์ใน DB
+        $pictureUrl = BASE_URL . '/uploads/profile_pictures/' . $ftpFileName;
     }
 
     // 10. อัปเดต DB
