@@ -18,8 +18,10 @@ $headerSubtitle = isset($pageHeaderSubtitle) ? $pageHeaderSubtitle : 'Manufactur
 $helpModalId    = isset($pageHelpId) ? $pageHelpId : '';
 $backLink       = isset($pageBackLink) ? $pageBackLink : ''; 
 
-$userRole = $_SESSION['user']['role'] ?? 'guest';
-$fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'Guest User';
+$userRole    = $_SESSION['user']['role'] ?? 'guest';
+$fullName    = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'Guest User';
+$profilePic  = $_SESSION['user']['profile_picture'] ?? null;
+$userTheme   = $_SESSION['user']['theme_preference'] ?? 'light';
 ?>
 
 <header class="portal-top-header border-bottom shadow-sm">
@@ -63,7 +65,17 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
         <?php if (isset($_SESSION['user'])): ?>
         <div class="dropdown d-none d-md-block">
             <a class="nav-link dropdown-toggle text-secondary d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="fas fa-user-circle fa-lg me-2 profile-icon-hover" style="transition: color 0.2s;"></i> 
+                <?php if ($profilePic): ?>
+                    <img id="headerAvatarImg" src="<?= htmlspecialchars($profilePic) ?>" alt="โปรไฟล์"
+                         class="rounded-circle me-2 profile-icon-hover"
+                         style="width:32px;height:32px;object-fit:cover;border:2px solid var(--bs-border-color);"
+                         onerror="this.style.display='none';document.getElementById('headerAvatarFallback').style.display='inline-block';">
+                    <i id="headerAvatarFallback" class="fas fa-user-circle fa-lg me-2 profile-icon-hover d-none" style="transition: color 0.2s;"></i>
+                <?php else: ?>
+                    <i id="headerAvatarFallback" class="fas fa-user-circle fa-lg me-2 profile-icon-hover" style="transition: color 0.2s;"></i>
+                    <img id="headerAvatarImg" src="" alt="" class="rounded-circle me-2 profile-icon-hover d-none"
+                         style="width:32px;height:32px;object-fit:cover;border:2px solid var(--bs-border-color);">
+                <?php endif; ?>
                 <span class="d-none d-md-inline small fw-bold">
                     <?php echo htmlspecialchars($fullName); ?>
                 </span>
@@ -71,7 +83,14 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
             </a>
             <ul class="dropdown-menu dropdown-menu-end shadow border border-light mt-2 p-2" style="min-width: 280px; border-radius: 12px;">
                 <li class="text-center p-3 border-bottom mb-2 bg-light rounded">
-                    <i class="fas fa-user-circle fa-3x text-secondary mb-2"></i>
+                    <?php if ($profilePic): ?>
+                        <img src="<?= htmlspecialchars($profilePic) ?>" alt="โปรไฟล์"
+                             class="rounded-circle mb-2" style="width:56px;height:56px;object-fit:cover;border:2px solid var(--bs-border-color);"
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+                        <i class="fas fa-user-circle fa-3x text-secondary mb-2 d-none"></i>
+                    <?php else: ?>
+                        <i class="fas fa-user-circle fa-3x text-secondary mb-2"></i>
+                    <?php endif; ?>
                     <h6 class="mb-0 fw-bold text-dark"><?php echo htmlspecialchars($fullName); ?></h6>
                     <small class="text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;"><?php echo htmlspecialchars($userRole); ?></small>
                 </li>
@@ -89,6 +108,11 @@ $fullName = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'G
                         <span class="small text-secondary">Ratio:</span>
                         <span class="small fw-bold text-success" id="headerRatioDisplay">0.00</span>
                     </div>
+                </li>
+                <li>
+                    <a class="dropdown-item rounded py-2 d-flex align-items-center" href="<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/page/profile/profileUI.php">
+                        <i class="fas fa-user-edit fa-fw me-3 text-muted"></i> โปรไฟล์ของฉัน
+                    </a>
                 </li>
                 <li>
                     <a class="dropdown-item rounded py-2 d-flex align-items-center" href="#" id="theme-switcher-btn">

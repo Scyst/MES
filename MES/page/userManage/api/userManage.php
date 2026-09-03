@@ -35,7 +35,9 @@ try {
 
     switch ($action) {
         case 'read':
-            $stmt = $pdo->query("SELECT id, username, fullname, role, line, team_group, emp_id, is_active, is_auto_generated, created_at 
+            $stmt = $pdo->query("SELECT id, username, fullname, role, line, team_group, emp_id,
+                                        is_active, is_auto_generated, created_at,
+                                        profile_picture, pwd_changed_at, last_login
                                  FROM " . USERS_TABLE . " 
                                  WHERE role != 'creator' 
                                  ORDER BY is_active DESC, role ASC, id ASC");

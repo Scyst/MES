@@ -128,10 +128,21 @@ function renderTable(users) {
         const tr = document.createElement('tr');
         if (!isActive) tr.style.opacity = '0.5';
 
+        const pwdChangedAt = u.pwd_changed_at
+            ? new Date(u.pwd_changed_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
+            : null;
+
         tr.innerHTML = `
             <td class="ps-4">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="avatar-circle ${isActive ? '' : 'bg-secondary'}">${nameChar}</div>
+                    ${u.profile_picture
+                        ? `<img src="${u.profile_picture}" alt=""
+                                class="rounded-circle flex-shrink-0"
+                                style="width:36px;height:36px;object-fit:cover;border:2px solid var(--bs-border-color);"
+                                onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                           <div class="avatar-circle ${isActive ? '' : 'bg-secondary'}" style="display:none;">${nameChar}</div>`
+                        : `<div class="avatar-circle ${isActive ? '' : 'bg-secondary'}">${nameChar}</div>`
+                    }
                     <div>
                         <div class="fw-bold mb-0 text-dark">${u.fullname || '-'}</div>
                         <small class="text-muted"><i class="fas fa-id-badge me-1"></i> ${u.emp_id || 'No ID'}</small>
@@ -155,6 +166,11 @@ function renderTable(users) {
                 ${u.is_auto_generated == 1 
                     ? '<span class="badge bg-primary bg-opacity-10 text-primary"><i class="fas fa-robot me-1"></i> System</span>' 
                     : '<span class="badge bg-light text-dark border"><i class="fas fa-user-edit me-1"></i> Manual</span>'}
+                <div class="mt-1">
+                    ${pwdChangedAt
+                        ? `<small class="text-muted"><i class="fas fa-key me-1"></i>${pwdChangedAt}</small>`
+                        : `<small class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>ยังไม่เปลี่ยน Password</small>`}
+                </div>
             </td>
             <td class="text-end pe-4">
                 <button class="btn btn-sm btn-light border btn-edit" title="Edit"><i class="fas fa-edit text-warning"></i></button>

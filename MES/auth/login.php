@@ -22,7 +22,8 @@ if (empty($username) || empty($password)) {
 try {
     // 1. แก้ไข SQL: เพิ่ม u.is_active = 1 (บล็อคคนโดน Disable)
     // 2. ดึง u.fullname และ u.team_group เพิ่มเข้ามา
-    $sql = "SELECT u.id, u.username, u.password, u.role, u.line, u.emp_id, u.fullname, u.team_group, m.position 
+    $sql = "SELECT u.id, u.username, u.password, u.role, u.line, u.emp_id, u.fullname, u.team_group,
+                   u.profile_picture, u.theme_preference, u.preferred_lang, m.position 
             FROM " . USERS_TABLE . " u
             LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " m ON u.emp_id = m.emp_id
             WHERE u.username = ? AND u.is_active = 1";
@@ -53,23 +54,30 @@ try {
 
         // สร้างข้อมูลผู้ใช้ใน Session
         $_SESSION['user'] = [
-            'id' => $user['id'],
-            'username' => $user['username'],
-            'fullname' => $displayName,
-            'role' => $user['role'],       
-            'position' => $displayPosition, 
-            'line' => $user['line'],
-            'emp_id' => $user['emp_id'],
-            'team_group' => $user['team_group'],
-            'permissions' => $permissions // <-- ยัด Permission Array ลง Session
+            'id'               => $user['id'],
+            'username'         => $user['username'],
+            'fullname'         => $displayName,
+            'role'             => $user['role'],
+            'position'         => $displayPosition,
+            'line'             => $user['line'],
+            'emp_id'           => $user['emp_id'],
+            'team_group'       => $user['team_group'],
+            'profile_picture'  => $user['profile_picture'] ?? null,
+            'theme_preference' => $user['theme_preference'] ?? 'light',
+            'preferred_lang'   => $user['preferred_lang']   ?? 'th',
+            'permissions'      => $permissions,
         ];
 
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         
-        // เขียน Log การเข้าสู่ระบบแบบเงียบๆ (ไม่จับ Error ถ้า Insert ไม่ผ่าน)
+        // เขียน Log การเข้าสู่ระบบ + อัปเดต last_login
         try {
             $logStmt = $pdo->prepare("INSERT INTO dbo.SYSTEM_LOGS (username, role, action, module, ref_id, ip_address, user_agent, created_at) VALUES (?, ?, 'LOGIN', 'AUTH', ?, ?, ?, GETDATE())");
             $logStmt->execute([$user['username'], $user['role'], $user['id'], $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT']]);
+
+            // บันทึก last_login timestamp
+            $lastLoginStmt = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='UPDATE_LAST_LOGIN', @UserId=?, @ActionBy=?");
+            $lastLoginStmt->execute([$user['id'], $user['username']]);
         } catch (Exception $e) {}
 
         echo json_encode(['success' => true, 'message' => 'Login successful.']);
