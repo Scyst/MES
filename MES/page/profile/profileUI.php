@@ -14,6 +14,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
 <head>
     <title><?= $pageTitle ?></title>
     <?php include_once '../components/common_head.php'; ?>
+    <style>
         /* ─── Profile Page Layout ─── */
         .profile-content-grid {
             display: grid;
