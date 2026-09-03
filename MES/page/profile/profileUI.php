@@ -344,7 +344,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
             <hr class="text-muted opacity-25">
 
             <!-- Performance Widget -->
-            <div class="p-3 mb-3 rounded border text-start d-none" id="sidebarPerformanceCard" style="background-color: var(--bs-light);">
+            <div class="p-3 mb-3 rounded border text-start" id="sidebarPerformanceCard" style="background-color: var(--bs-light);">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="small fw-bold text-muted"><i class="fas fa-star text-warning me-1"></i>เกรดประเมิน</span>
                     <span class="badge bg-secondary" id="sidebarGradeDisplay">รอประเมิน</span>
@@ -422,19 +422,19 @@ $currentUserId = (int)$_SESSION['user']['id'];
                             <div class="row g-3">
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">ชื่อ-นามสกุล</label>
-                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldFullname" style="min-height: 32px; min-width: 160px; font-size: 0.85rem; font-weight: 500;">—</span></div>
+                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldFullname" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">ตำแหน่งงาน</label>
-                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldPosition" style="min-height: 32px; min-width: 160px; font-size: 0.85rem; font-weight: 500;">—</span></div>
+                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldPosition" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">สาย / Line</label>
-                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldLine" style="min-height: 32px; min-width: 160px; font-size: 0.85rem; font-weight: 500;">—</span></div>
+                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldLine" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">แผนก</label>
-                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldDept" style="min-height: 32px; min-width: 160px; font-size: 0.85rem; font-weight: 500;">—</span></div>
+                                    <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldDept" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-4 pro-field-group">
                                     <label class="form-label">วันเกิด</label>
