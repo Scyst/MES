@@ -1022,6 +1022,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.documentElement.setAttribute('data-bs-theme', theme);
                 localStorage.setItem('theme', theme);
                 showAlert(json.message, 'success');
+                // Reload the page to apply PHP-side translations
+                setTimeout(() => window.location.reload(), 1200);
             } else {
                 showAlert(json.message);
             }
