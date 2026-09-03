@@ -565,15 +565,20 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
                 <!-- ─── Section: ความปลอดภัย ─── -->
                 <div id="section-security" class="d-none">
+                    <div class="pro-section-header">
+                        <i class="fas fa-lock text-primary"></i>
+                        ความปลอดภัยบัญชี
+                    </div>
+
                     <div class="pro-notice" style="border-color: rgba(var(--bs-info-rgb),.25); background: rgba(var(--bs-info-rgb),.05);">
                         <i class="fas fa-shield-alt notice-icon text-info"></i>
                         <span><strong>เปลี่ยนรหัสผ่านเพื่อความปลอดภัย</strong> — แนะนำให้รหัสผ่านมีอย่างน้อย 8 ตัวอักษร ผสมตัวอักษรใหญ่-เล็ก และตัวเลข</span>
                     </div>
 
                     <form id="changePasswordForm" autocomplete="off">
-                        <div class="row g-4">
-                            <div class="col-12">
-                                <label class="form-label fw-bold">รหัสผ่านเดิม</label>
+                        <div class="row g-3">
+                            <div class="col-12 pro-field-group">
+                                <label class="form-label">รหัสผ่านเดิม</label>
                                 <div class="input-group">
                                     <input type="password" class="form-control" id="fieldOldPwd"
                                            name="old_password" placeholder="กรอกรหัสผ่านเดิม" autocomplete="current-password">
@@ -582,8 +587,8 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                     </button>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">รหัสผ่านใหม่</label>
+                            <div class="col-md-6 pro-field-group">
+                                <label class="form-label">รหัสผ่านใหม่</label>
                                 <div class="input-group">
                                     <input type="password" class="form-control" id="fieldNewPwd"
                                            name="new_password" placeholder="อย่างน้อย 6 ตัวอักษร" autocomplete="new-password">
@@ -591,7 +596,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                         <i class="fas fa-eye text-muted"></i>
                                     </button>
                                 </div>
-                                <div class="mt-3 d-flex gap-1" id="pwdStrengthBars">
+                                <div class="mt-2 d-flex gap-1" id="pwdStrengthBars">
                                     <div class="pwd-strength-bar flex-fill bg-secondary" data-bar="1"></div>
                                     <div class="pwd-strength-bar flex-fill bg-secondary" data-bar="2"></div>
                                     <div class="pwd-strength-bar flex-fill bg-secondary" data-bar="3"></div>
@@ -602,8 +607,8 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                     <small class="text-muted" id="pwdSuggestionLabel" style="font-size: 0.7rem;"></small>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">ยืนยันรหัสผ่านใหม่</label>
+                            <div class="col-md-6 pro-field-group">
+                                <label class="form-label">ยืนยันรหัสผ่านใหม่</label>
                                 <div class="input-group">
                                     <input type="password" class="form-control" id="fieldConfirmPwd"
                                            name="confirm_password" placeholder="กรอกรหัสผ่านใหม่อีกครั้ง" autocomplete="new-password">
@@ -618,22 +623,22 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         </div>
 
                         <div class="mt-4 d-flex justify-content-end">
-                            <button type="submit" class="btn btn-warning px-4 py-2 fw-bold rounded" id="btnChangePassword">
+                            <button type="submit" class="btn btn-primary px-4 py-2 fw-bold" id="btnChangePassword">
                                 <i class="fas fa-key me-2"></i>เปลี่ยนรหัสผ่าน
                             </button>
                         </div>
                     </form>
                 </div>
 
-                <!-- ─── Section: ประวัติกิจกรรม (Activity Log) ─── -->
+                <!-- ─── Section: ประวัติกิจกรรม ─── -->
                 <div id="section-activity" class="d-none">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h5 class="fw-bold mb-0">ประวัติกิจกรรมล่าสุด</h5>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="loadActivityLog()">
+                    <div class="pro-section-header">
+                        <i class="fas fa-history text-primary"></i>
+                        ประวัติกิจกรรมล่าสุด
+                        <button class="btn btn-sm btn-outline-secondary ms-auto" style="font-size:0.75rem; padding: 0.2rem 0.6rem;" onclick="loadActivityLog()">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
-                    
                     <div id="activityLogContainer" class="activity-timeline">
                         <div class="text-center text-muted py-4 skeleton" style="min-height: 100px;">กำลังโหลด...</div>
                     </div>
@@ -641,18 +646,21 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
                 <!-- ─── Section: การตั้งค่า ─── -->
                 <div id="section-preferences" class="d-none">
-                    <h6 class="fw-bold mb-4">การตั้งค่าส่วนตัว</h6>
+                    <div class="pro-section-header">
+                        <i class="fas fa-sliders-h text-primary"></i>
+                        การตั้งค่าส่วนตัว
+                    </div>
                     <form id="preferencesForm">
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">ธีมที่ใช้งาน (Theme)</label>
+                            <div class="col-md-6 pro-field-group">
+                                <label class="form-label">ธีมที่ใช้งาน (Theme)</label>
                                 <select class="form-select" id="fieldTheme" name="theme_preference">
                                     <option value="light">☀️ โหมดกลางวัน (Light)</option>
                                     <option value="dark">🌙 โหมดกลางคืน (Dark)</option>
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">ภาษาที่ใช้งาน (Language)</label>
+                            <div class="col-md-6 pro-field-group">
+                                <label class="form-label">ภาษาที่ใช้งาน (Language)</label>
                                 <select class="form-select" id="fieldLang" name="preferred_lang">
                                     <option value="th">🇹🇭 ภาษาไทย</option>
                                     <option value="en">🇺🇸 English</option>
@@ -660,7 +668,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                             </div>
                         </div>
                         <div class="mt-4 d-flex justify-content-end">
-                            <button type="submit" class="btn btn-primary px-4" id="btnSavePrefs">
+                            <button type="submit" class="btn btn-primary px-4 py-2 fw-bold" id="btnSavePrefs">
                                 <i class="fas fa-save me-2"></i>บันทึกการตั้งค่า
                             </button>
                         </div>
