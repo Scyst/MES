@@ -162,6 +162,20 @@ try {
             break;
 
         // ─────────────────────────────────────────────
+        case 'get_activity_log':
+            $stmt = $pdo->prepare("
+                SELECT TOP 20
+                    action, module, remark, ip_address, user_agent, created_at
+                FROM SYSTEM_LOGS
+                WHERE user_id = ? OR username = ?
+                ORDER BY created_at DESC
+            ");
+            $stmt->execute([$currentId, $username]);
+            $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'data' => $logs]);
+            break;
+
+        // ─────────────────────────────────────────────
         default:
             throw new Exception('Invalid action specified.');
     }
