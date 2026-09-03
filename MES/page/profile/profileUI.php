@@ -149,9 +149,6 @@ $currentUserId = (int)$_SESSION['user']['id'];
 <main id="main-content">
     <div class="container-fluid py-4">
 
-    <!-- Alert zone -->
-    <div id="profileAlert" class="alert d-none mb-3" role="alert"></div>
-
     <div class="profile-content-grid">
 
         <!-- ══════════ LEFT: Avatar Card ══════════ -->
@@ -382,11 +379,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ─── Helpers ─────────────────────────────────────────────
     function showAlert(msg, type = 'danger') {
-        const el = document.getElementById('profileAlert');
-        el.className = `alert alert-${type} mb-3`;
-        el.textContent = msg;
-        el.classList.remove('d-none');
-        setTimeout(() => el.classList.add('d-none'), 5000);
+        if (typeof showToast === 'function') {
+            const color = type === 'success' ? '#28a745' : (type === 'warning' ? '#ffc107' : '#dc3545');
+            showToast(msg, color);
+        } else {
+            alert(msg);
+        }
     }
 
     function apiPost(url, body) {
