@@ -54,5 +54,40 @@ export const userManageApi = {
       _t: Date.now() 
     });
     return response.data;
+  },
+
+  getPermissionMatrix: async () => {
+    const response = await getApi(API_URL, { action: 'get_permission_matrix' });
+    return response.data;
+  },
+
+  togglePermission: async (roleCode, permCode, isGranted) => {
+    const response = await postApi(`${API_URL}?action=toggle_permission`, {
+      role_code: roleCode,
+      perm_code: permCode,
+      is_granted: isGranted ? 1 : 0
+    });
+    return response.data;
+  },
+
+  addPermission: async (permCode, description, moduleName) => {
+    const response = await postApi(`${API_URL}?action=add_permission`, {
+      perm_code: permCode,
+      description: description,
+      module_name: moduleName
+    });
+    return response.data;
+  },
+
+  deletePermission: async (permCode) => {
+    const response = await postApi(`${API_URL}?action=delete_permission`, {
+      perm_code: permCode
+    });
+    return response.data;
+  },
+
+  getLogs: async (filters) => {
+    const response = await getApi(API_URL, { action: 'logs', ...filters });
+    return response.data;
   }
 };
