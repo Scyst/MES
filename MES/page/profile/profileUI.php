@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/../components/init.php';
 
-$pageTitle          = 'โปรไฟล์ของฉัน';
-$pageHeaderTitle    = 'โปรไฟล์ของฉัน';
+$pageTitle          = __('profile.title');
+$pageHeaderTitle    = __('profile.title');
 $pageHeaderSubtitle = 'จัดการข้อมูลส่วนตัวและความปลอดภัย';
 $pageIcon           = 'fas fa-user-circle';
 $pageBackLink       = '../dailyLog/dailyLogUI.php';
@@ -371,16 +371,16 @@ $currentUserId = (int)$_SESSION['user']['id'];
             <!-- Tab Nav -->
             <div class="pro-tab-nav">
                 <button class="pro-tab-btn active" data-section="info">
-                    <i class="fas fa-id-card"></i>ข้อมูลส่วนตัว
+                    <i class="fas fa-id-card"></i><?= __('profile.tab_info'); ?>
                 </button>
                 <button class="pro-tab-btn" data-section="security">
-                    <i class="fas fa-lock"></i>ความปลอดภัย
+                    <i class="fas fa-lock"></i><?= __('profile.tab_security'); ?>
                 </button>
                 <button class="pro-tab-btn" data-section="activity">
-                    <i class="fas fa-history"></i>ประวัติกิจกรรม
+                    <i class="fas fa-history"></i><?= __('profile.tab_activity'); ?>
                 </button>
                 <button class="pro-tab-btn" data-section="preferences">
-                    <i class="fas fa-sliders-h"></i>การตั้งค่า
+                    <i class="fas fa-sliders-h"></i><?= __('profile.tab_preferences'); ?>
                 </button>
             </div>
 
