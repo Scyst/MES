@@ -422,19 +422,19 @@ $currentUserId = (int)$_SESSION['user']['id'];
                             <div class="row g-3">
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">ชื่อ-นามสกุล</label>
-                                    <div class="form-control skeleton border-0 read-only-display" id="fieldFullname" style="min-height: 38px;">—</div>
+                                    <div><span class="badge bg-light text-dark border px-3 py-2 skeleton" id="fieldFullname" style="min-height: 28px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">ตำแหน่งงาน</label>
-                                    <div><span class="badge bg-info text-dark px-3 py-2 skeleton" id="fieldPosition" style="min-height: 28px;">—</span></div>
+                                    <div><span class="badge bg-info text-dark px-3 py-2 skeleton" id="fieldPosition" style="min-height: 28px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">สาย / Line</label>
-                                    <div><span class="badge bg-success px-3 py-2 skeleton" id="fieldLine" style="min-height: 28px;">—</span></div>
+                                    <div><span class="badge bg-success px-3 py-2 skeleton" id="fieldLine" style="min-height: 28px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
                                     <label class="form-label">แผนก</label>
-                                    <div><span class="badge bg-primary px-3 py-2 skeleton" id="fieldDept" style="min-height: 28px;">—</span></div>
+                                    <div><span class="badge bg-primary px-3 py-2 skeleton" id="fieldDept" style="min-height: 28px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-4 pro-field-group">
                                     <label class="form-label">วันเกิด</label>
