@@ -439,10 +439,13 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                 </div>
                                 <div class="col-12 pro-field-group">
                                     <label class="form-label">คำแนะนำตัว (ไม่บังคับ)</label>
-                                    <textarea class="form-control" id="fieldBio" name="bio" rows="3"
-                                              placeholder="แนะนำตัวคุณสั้นๆ..." maxlength="500"></textarea>
-                                    <div class="text-end mt-1">
-                                        <small class="text-muted"><span id="bioCharCount">0</span>/500</small>
+                                    <div class="position-relative">
+                                        <textarea class="form-control" id="fieldBio" name="bio" rows="3"
+                                                  placeholder="แนะนำตัวคุณสั้นๆ..." maxlength="500"
+                                                  style="padding-bottom: 1.6rem;"></textarea>
+                                        <small class="text-muted position-absolute" style="bottom: 0.4rem; right: 0.6rem; font-size: 0.7rem; pointer-events: none; line-height:1;">
+                                            <span id="bioCharCount">0</span>/500
+                                        </small>
                                     </div>
                                 </div>
                             </div>
