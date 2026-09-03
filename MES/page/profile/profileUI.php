@@ -384,14 +384,14 @@ $currentUserId = (int)$_SESSION['user']['id'];
                 </button>
             </div>
 
-            <div class="card-body p-4 p-md-5">
+            <div class="card-body p-3 p-md-4">
 
                 <!-- ─── Section: ข้อมูลส่วนตัว ─── -->
                 <div id="section-info">
                     <form id="profileInfoForm">
                         
                         <!-- 1. ข้อมูลพื้นฐาน -->
-                        <div class="mb-5">
+                        <div class="mb-4">
                             <div class="pro-section-header">
                                 <i class="fas fa-user-circle text-primary"></i>
                                 ข้อมูลพื้นฐาน (Basic Info)
@@ -449,7 +449,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         </div>
 
                         <!-- สวัสดิการและอุปกรณ์ -->
-                        <div class="mb-5">
+                        <div class="mb-4">
                             <div class="pro-section-header">
                                 <i class="fas fa-tshirt text-primary"></i>
                                 สวัสดิการและอุปกรณ์ (Welfare &amp; Equipment)
@@ -476,7 +476,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         </div>
 
                         <!-- 2. ข้อมูลการติดต่อ & โซเชียล -->
-                        <div class="mb-5">
+                        <div class="mb-4">
                             <div class="pro-section-header">
                                 <i class="fas fa-address-book text-primary"></i>
                                 ข้อมูลการติดต่อ (Contact Info)
@@ -503,7 +503,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         </div>
 
                         <!-- 3. การเดินทาง -->
-                        <div class="mb-5">
+                        <div class="mb-4">
                             <div class="pro-section-header">
                                 <i class="fas fa-car text-primary"></i>
                                 การเดินทาง (Commute)
