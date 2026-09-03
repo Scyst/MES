@@ -15,160 +15,288 @@ $currentUserId = (int)$_SESSION['user']['id'];
     <title><?= $pageTitle ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <style>
-        /* ─── Profile Page Layout ─── */
+        /* ═══════════════════════════════════════════════════════════
+           PROFILE PAGE — Enterprise Design System
+           Tokens, Layout, Components
+        ═══════════════════════════════════════════════════════════ */
+
+        /* ── Design Tokens ── */
+        :root {
+            --pro-radius-sm  : 6px;
+            --pro-radius-md  : 10px;
+            --pro-radius-lg  : 16px;
+            --pro-shadow-sm  : 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+            --pro-shadow-md  : 0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+            --pro-shadow-card: 0 1px 4px rgba(0,0,0,.06), 0 4px 24px rgba(0,0,0,.06);
+            --pro-border     : 1px solid var(--bs-border-color);
+            --pro-section-gap: 2rem;
+        }
+
+        /* ── Page Layout ── */
         .profile-content-grid {
             display: grid;
-            grid-template-columns: 320px 1fr;
+            grid-template-columns: 300px 1fr;
             gap: 1.5rem;
             align-items: start;
         }
-
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
             .profile-content-grid { grid-template-columns: 1fr; }
         }
 
-        /* ─── Skeleton Loading ─── */
+        /* ── Skeleton Loader ── */
         @keyframes shimmer {
-            0% { background-position: -1000px 0; }
-            100% { background-position: 1000px 0; }
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
         }
         .skeleton {
-            background: #f6f7f8;
-            background-image: linear-gradient(90deg, #f6f7f8 0px, #edeef1 40px, #f6f7f8 80px);
-            background-size: 1000px 100%;
-            animation: shimmer 2s infinite linear forwards;
+            background: #eef0f3;
+            background-image: linear-gradient(90deg, #eef0f3 0px, #e2e5ea 40px, #eef0f3 80px);
+            background-size: 800px 100%;
+            animation: shimmer 1.6s infinite linear;
             color: transparent !important;
-            border-radius: 4px;
+            border-radius: var(--pro-radius-sm);
             pointer-events: none;
             user-select: none;
         }
         [data-bs-theme="dark"] .skeleton {
-            background: #2b2b2b;
-            background-image: linear-gradient(90deg, #2b2b2b 0px, #3b3b3b 40px, #2b2b2b 80px);
+            background: #2a2d33;
+            background-image: linear-gradient(90deg, #2a2d33 0px, #35393f 40px, #2a2d33 80px);
         }
 
-        /* ─── Glassmorphism & Cards ─── */
-        .glass-card {
+        /* ── Cards ── */
+        .pro-card {
             background: var(--bs-body-bg);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-            backdrop-filter: blur(10px);
+            border: var(--pro-border);
+            border-radius: var(--pro-radius-lg);
+            box-shadow: var(--pro-shadow-card);
         }
-        
+
+        /* ── Sidebar Avatar Card ── */
         .avatar-card {
             position: sticky;
             top: 1.5rem;
         }
-
         .avatar-wrapper {
             position: relative;
-            width: 140px;
-            height: 140px;
+            width: 120px;
+            height: 120px;
             margin: 0 auto;
             cursor: pointer;
             border-radius: 50%;
-            transition: transform 0.3s ease;
+            transition: transform 0.2s ease;
         }
-
-        .avatar-wrapper:hover {
-            transform: scale(1.05);
-        }
-
+        .avatar-wrapper:hover { transform: scale(1.04); }
         .avatar-img {
             width: 100%;
             height: 100%;
             border-radius: 50%;
             object-fit: cover;
-            border: 4px solid var(--bs-border-color);
-            transition: all 0.3s;
+            border: 3px solid var(--bs-border-color);
+            transition: filter 0.2s;
         }
-
-        .avatar-wrapper:hover .avatar-img { 
-            filter: brightness(0.7);
-        }
-
+        .avatar-wrapper:hover .avatar-img { filter: brightness(0.65); }
         .avatar-overlay {
             position: absolute;
             inset: 0;
             border-radius: 50%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,.45);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.2s ease;
             pointer-events: none;
             color: #fff;
+            font-size: 0.7rem;
+            gap: 3px;
         }
-
         .avatar-wrapper:hover .avatar-overlay { opacity: 1; }
-
         .avatar-placeholder {
             width: 100%;
             height: 100%;
             border-radius: 50%;
             background: var(--bs-secondary-bg);
-            border: 4px solid var(--bs-border-color);
+            border: 3px solid var(--bs-border-color);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 4rem;
+            font-size: 3rem;
             color: var(--bs-secondary);
         }
 
-        /* ─── Tabs ─── */
-        .section-tab-btn {
+        /* Sidebar meta rows */
+        .sidebar-meta-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.55rem 0;
+            border-bottom: 1px solid var(--bs-border-color-translucent);
+            font-size: 0.8125rem;
+        }
+        .sidebar-meta-row:last-child { border-bottom: none; }
+        .sidebar-meta-label {
+            color: var(--bs-secondary-color);
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            flex-shrink: 0;
+        }
+        .sidebar-meta-value {
+            font-weight: 600;
+            color: var(--bs-body-color);
+            text-align: right;
+            word-break: break-word;
+        }
+
+        /* ── Tab Navigation ── */
+        .pro-tab-nav {
+            display: flex;
+            gap: 2px;
+            padding: 0.6rem 1rem;
+            border-bottom: var(--pro-border);
+            background: var(--bs-tertiary-bg);
+            border-radius: var(--pro-radius-lg) var(--pro-radius-lg) 0 0;
+            flex-wrap: wrap;
+        }
+        .pro-tab-btn {
             border: none;
             background: transparent;
-            padding: 0.6rem 1.2rem;
-            border-radius: 10px;
-            font-size: 0.9rem;
+            padding: 0.45rem 1rem;
+            border-radius: var(--pro-radius-sm);
+            font-size: 0.8125rem;
+            font-weight: 500;
             color: var(--bs-secondary-color);
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
             white-space: nowrap;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
-
-        .section-tab-btn.active,
-        .section-tab-btn:hover {
+        .pro-tab-btn:hover {
+            background: var(--bs-secondary-bg);
+            color: var(--bs-body-color);
+        }
+        .pro-tab-btn.active {
             background: var(--bs-primary);
             color: #fff;
-            box-shadow: 0 4px 12px rgba(var(--bs-primary-rgb), 0.3);
+            box-shadow: 0 2px 8px rgba(var(--bs-primary-rgb), 0.35);
         }
 
-        /* ─── Security & Badges ─── */
+        /* ── Section Headers ── */
+        .pro-section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            padding-bottom: 0.6rem;
+            margin-bottom: 1.25rem;
+            border-bottom: 2px solid var(--bs-border-color);
+            font-size: 0.875rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+        .pro-section-header .section-tag {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--bs-secondary-color);
+            background: var(--bs-secondary-bg);
+            padding: 0.15rem 0.5rem;
+            border-radius: 20px;
+            border: var(--pro-border);
+            white-space: nowrap;
+        }
+        .pro-section-header.danger {
+            border-bottom-color: rgba(var(--bs-danger-rgb), 0.4);
+            color: var(--bs-danger);
+        }
+        .pro-section-header.danger .section-tag {
+            color: var(--bs-danger);
+            background: rgba(var(--bs-danger-rgb), 0.08);
+            border-color: rgba(var(--bs-danger-rgb), 0.25);
+        }
+
+        /* ── Form Controls ── */
+        .pro-field-group { margin-bottom: 0; }
+        .pro-field-group label.form-label {
+            font-size: 0.775rem;
+            font-weight: 600;
+            color: var(--bs-secondary-color);
+            margin-bottom: 0.35rem;
+            display: block;
+            letter-spacing: 0.015em;
+        }
+        .pro-field-group .form-control,
+        .pro-field-group .form-select {
+            font-size: 0.875rem;
+            border-radius: var(--pro-radius-sm);
+            border-color: var(--bs-border-color);
+            box-shadow: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .pro-field-group .form-control:focus,
+        .pro-field-group .form-select:focus {
+            border-color: rgba(var(--bs-primary-rgb), 0.6);
+            box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.12);
+        }
+        .pro-field-group .form-control[readonly],
+        .pro-field-group .form-control.read-only-display {
+            background: var(--bs-tertiary-bg);
+            color: var(--bs-secondary-color);
+            cursor: default;
+        }
+
+        /* ── Info Notice Banner ── */
+        .pro-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            padding: 0.65rem 0.9rem;
+            border-radius: var(--pro-radius-sm);
+            background: var(--bs-tertiary-bg);
+            border: var(--pro-border);
+            font-size: 0.78rem;
+            color: var(--bs-secondary-color);
+            margin-bottom: 1.25rem;
+            line-height: 1.5;
+        }
+        .pro-notice .notice-icon { flex-shrink: 0; margin-top: 1px; }
+
+        /* ── Role Badge ── */
         .role-badge {
-            font-size: 0.75rem;
-            letter-spacing: 0.5px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
             text-transform: uppercase;
-            padding: 0.4em 0.8em;
+            padding: 0.3em 0.75em;
             border-radius: 20px;
         }
 
+        /* ── Password strength bar ── */
         .pwd-strength-bar {
-            height: 6px;
-            border-radius: 3px;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 4px;
+            border-radius: 2px;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* ── Activity Timeline ── */
         .activity-timeline {
             border-left: 2px solid var(--bs-border-color);
-            margin-left: 1rem;
-            padding-left: 1.5rem;
+            margin-left: 0.75rem;
+            padding-left: 1.25rem;
             position: relative;
         }
         .activity-item {
             position: relative;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
         }
         .activity-item::before {
             content: '';
             position: absolute;
-            left: -1.85rem;
-            top: 0.2rem;
-            width: 12px;
-            height: 12px;
+            left: -1.65rem;
+            top: 0.3rem;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background: var(--bs-primary);
             border: 2px solid var(--bs-body-bg);
@@ -185,7 +313,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
     <div class="profile-content-grid">
 
         <!-- ══════════ LEFT: Avatar Card ══════════ -->
-        <div class="card glass-card avatar-card p-4 text-center">
+        <div class="pro-card avatar-card p-4 text-center">
             <div class="avatar-wrapper mb-3" id="avatarTrigger" title="คลิกเพื่อเปลี่ยนรูปโปรไฟล์">
                 <img id="profileAvatarImg" src="" alt="รูปโปรไฟล์"
                      class="avatar-img d-none"
@@ -194,8 +322,8 @@ $currentUserId = (int)$_SESSION['user']['id'];
                     <i class="fas fa-user"></i>
                 </div>
                 <div class="avatar-overlay">
-                    <i class="fas fa-camera fa-lg mb-1"></i>
-                    <small style="font-size: 0.7rem;">เปลี่ยนรูป</small>
+                    <i class="fas fa-camera"></i>
+                    <span>เปลี่ยนรูป</span>
                 </div>
             </div>
 
@@ -212,47 +340,47 @@ $currentUserId = (int)$_SESSION['user']['id'];
             <h5 class="fw-bold mb-0 skeleton" id="profileFullname" style="min-height: 24px;">—</h5>
             <div><span class="badge bg-primary role-badge mt-2 skeleton" id="profileRoleBadge" style="min-height: 18px;">—</span></div>
 
-            <hr class="my-4">
+            <hr class="my-3">
 
             <div class="text-start">
-                <div class="d-flex justify-content-between small text-muted mb-2">
-                    <span><i class="fas fa-user-tag me-2"></i>Username</span>
-                    <span class="fw-bold text-body skeleton" id="sideUsername">—</span>
+                <div class="sidebar-meta-row">
+                    <span class="sidebar-meta-label"><i class="fas fa-user-tag"></i> Username</span>
+                    <span class="sidebar-meta-value skeleton" id="sideUsername">—</span>
                 </div>
-                <div class="d-flex justify-content-between small text-muted mb-2">
-                    <span><i class="fas fa-id-badge me-2"></i>รหัสพนักงาน</span>
-                    <span class="fw-bold text-body skeleton" id="sideEmpId">—</span>
+                <div class="sidebar-meta-row">
+                    <span class="sidebar-meta-label"><i class="fas fa-id-badge"></i> รหัสพนักงาน</span>
+                    <span class="sidebar-meta-value skeleton" id="sideEmpId">—</span>
                 </div>
-                <div class="d-flex justify-content-between small text-muted mb-2">
-                    <span><i class="fas fa-users me-2"></i>ทีม</span>
-                    <span class="fw-bold text-body skeleton" id="sideTeam">—</span>
+                <div class="sidebar-meta-row">
+                    <span class="sidebar-meta-label"><i class="fas fa-users"></i> ทีม</span>
+                    <span class="sidebar-meta-value skeleton" id="sideTeam">—</span>
                 </div>
-                <div class="d-flex justify-content-between small text-muted mb-2">
-                    <span><i class="fas fa-sign-in-alt me-2"></i>เข้าสู่ระบบล่าสุด</span>
-                    <span class="fw-bold text-body skeleton" id="sideLastLogin">—</span>
+                <div class="sidebar-meta-row">
+                    <span class="sidebar-meta-label"><i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบล่าสุด</span>
+                    <span class="sidebar-meta-value skeleton" id="sideLastLogin">—</span>
                 </div>
-                <div class="d-flex justify-content-between small text-muted">
-                    <span><i class="fas fa-key me-2"></i>เปลี่ยนรหัสผ่านล่าสุด</span>
-                    <span id="sidePwdChanged" class="fw-bold text-body skeleton">—</span>
+                <div class="sidebar-meta-row">
+                    <span class="sidebar-meta-label"><i class="fas fa-key"></i> เปลี่ยน Password</span>
+                    <span class="sidebar-meta-value skeleton" id="sidePwdChanged">—</span>
                 </div>
             </div>
         </div>
 
         <!-- ══════════ RIGHT: Info + Forms ══════════ -->
-        <div class="card glass-card">
+        <div class="pro-card">
             <!-- Tab Nav -->
-            <div class="card-header bg-transparent border-bottom d-flex gap-2 flex-wrap p-3">
-                <button class="section-tab-btn active" data-section="info">
-                    <i class="fas fa-id-card me-2"></i>ข้อมูลส่วนตัว
+            <div class="pro-tab-nav">
+                <button class="pro-tab-btn active" data-section="info">
+                    <i class="fas fa-id-card"></i>ข้อมูลส่วนตัว
                 </button>
-                <button class="section-tab-btn" data-section="security">
-                    <i class="fas fa-lock me-2"></i>ความปลอดภัย
+                <button class="pro-tab-btn" data-section="security">
+                    <i class="fas fa-lock"></i>ความปลอดภัย
                 </button>
-                <button class="section-tab-btn" data-section="activity">
-                    <i class="fas fa-history me-2"></i>ประวัติกิจกรรม
+                <button class="pro-tab-btn" data-section="activity">
+                    <i class="fas fa-history"></i>ประวัติกิจกรรม
                 </button>
-                <button class="section-tab-btn" data-section="preferences">
-                    <i class="fas fa-sliders-h me-2"></i>การตั้งค่า
+                <button class="pro-tab-btn" data-section="preferences">
+                    <i class="fas fa-sliders-h"></i>การตั้งค่า
                 </button>
             </div>
 
@@ -260,43 +388,43 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
                 <!-- ─── Section: ข้อมูลส่วนตัว ─── -->
                 <div id="section-info">
-                    <h5 class="fw-bold mb-4">ข้อมูลส่วนตัว</h5>
                     <form id="profileInfoForm">
                         
                         <!-- 1. ข้อมูลพื้นฐาน -->
-                        <div class="mb-4">
-                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="fas fa-user-circle me-2"></i>ข้อมูลพื้นฐาน (Basic Info)</h6>
+                        <div class="mb-5">
+                            <div class="pro-section-header">
+                                <i class="fas fa-user-circle text-primary"></i>
+                                ข้อมูลพื้นฐาน (Basic Info)
+                            </div>
                             
-                            <div class="alert alert-secondary border-0 d-flex align-items-center mb-3 py-2 px-3">
-                                <i class="fas fa-info-circle text-muted me-2"></i>
-                                <small class="text-muted mb-0" style="font-size: 0.8rem;">
-                                    <strong>หมายเหตุ:</strong> ข้อมูลชื่อ ตำแหน่ง แผนก และสายการผลิต ซิงค์อัตโนมัติจากระบบ HR หากต้องการแก้ไขกรุณาติดต่อฝ่ายบุคคล
-                                </small>
+                            <div class="pro-notice">
+                                <i class="fas fa-info-circle notice-icon text-secondary"></i>
+                                <span><strong>หมายเหตุ:</strong> ข้อมูลชื่อ ตำแหน่ง แผนก และสายการผลิต ซิงค์อัตโนมัติจากระบบ HR หากต้องการแก้ไขกรุณาติดต่อฝ่ายบุคคล</span>
                             </div>
 
                             <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">ชื่อ-นามสกุล</label>
-                                    <div class="form-control bg-light skeleton border-0" id="fieldFullname" style="min-height: 38px;">—</div>
+                                <div class="col-md-6 pro-field-group">
+                                    <label class="form-label">ชื่อ-นามสกุล</label>
+                                    <div class="form-control skeleton border-0 read-only-display" id="fieldFullname" style="min-height: 38px;">—</div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">ตำแหน่งงาน</label>
+                                <div class="col-md-6 pro-field-group">
+                                    <label class="form-label">ตำแหน่งงาน</label>
                                     <div><span class="badge bg-info text-dark px-3 py-2 skeleton" id="fieldPosition" style="min-height: 28px;">—</span></div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">สาย / Line</label>
+                                <div class="col-md-6 pro-field-group">
+                                    <label class="form-label">สาย / Line</label>
                                     <div><span class="badge bg-success px-3 py-2 skeleton" id="fieldLine" style="min-height: 28px;">—</span></div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">แผนก</label>
+                                <div class="col-md-6 pro-field-group">
+                                    <label class="form-label">แผนก</label>
                                     <div><span class="badge bg-primary px-3 py-2 skeleton" id="fieldDept" style="min-height: 28px;">—</span></div>
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold text-primary"><i class="fas fa-calendar-alt me-1"></i> วันเกิด (DOB)</label>
+                                <div class="col-md-4 pro-field-group">
+                                    <label class="form-label">วันเกิด</label>
                                     <input type="date" class="form-control" id="fieldDOB" name="date_of_birth">
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold text-primary"><i class="fas fa-ring me-1"></i> สถานภาพสมรส</label>
+                                <div class="col-md-4 pro-field-group">
+                                    <label class="form-label">สถานภาพสมรส</label>
                                     <select class="form-select" id="fieldMarital" name="marital_status">
                                         <option value="">-- เลือกสถานภาพ --</option>
                                         <option value="โสด">โสด (Single)</option>
@@ -305,12 +433,12 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                         <option value="หม้าย">หม้าย (Widowed)</option>
                                     </select>
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold text-primary"><i class="fas fa-child me-1"></i> จำนวนบุตร (คน)</label>
+                                <div class="col-md-4 pro-field-group">
+                                    <label class="form-label">จำนวนบุตร (คน)</label>
                                     <input type="number" class="form-control" id="fieldChildren" name="children_count" min="0" placeholder="0">
                                 </div>
-                                <div class="col-12">
-                                    <label class="form-label fw-bold text-primary"><i class="fas fa-edit me-1"></i> คำแนะนำตัว (ไม่บังคับ)</label>
+                                <div class="col-12 pro-field-group">
+                                    <label class="form-label">คำแนะนำตัว (ไม่บังคับ)</label>
                                     <textarea class="form-control" id="fieldBio" name="bio" rows="3"
                                               placeholder="แนะนำตัวคุณสั้นๆ..." maxlength="500"></textarea>
                                     <div class="text-end mt-1">
@@ -321,14 +449,15 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         </div>
 
                         <!-- สวัสดิการและอุปกรณ์ -->
-                        <div class="mb-4">
-                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
-                                <i class="fas fa-tshirt me-2"></i>สวัสดิการและอุปกรณ์ (Welfare & Equipment) 
-                                <small class="text-muted fw-normal ms-2" style="font-size: 0.8rem;">(ระบุตามความสมัครใจ)</small>
-                            </h6>
+                        <div class="mb-5">
+                            <div class="pro-section-header">
+                                <i class="fas fa-tshirt text-primary"></i>
+                                สวัสดิการและอุปกรณ์ (Welfare &amp; Equipment)
+                                <span class="section-tag">ระบุตามความสมัครใจ</span>
+                            </div>
                             <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold text-primary">ขนาดเสื้อยูนิฟอร์ม (Shirt Size)</label>
+                                <div class="col-md-6 pro-field-group">
+                                    <label class="form-label">ขนาดเสื้อยูนิฟอร์ม (Shirt Size)</label>
                                     <select class="form-select" id="fieldShirt" name="shirt_size">
                                         <option value="">-- เลือกขนาดเสื้อ --</option>
                                         <option value="S">S</option>
@@ -339,48 +468,50 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                         <option value="3XL">3XL</option>
                                     </select>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold text-primary">ขนาดรองเท้าเซฟตี้ (Shoe Size)</label>
-                                    <input type="text" class="form-control" id="fieldShoe" name="shoe_size" placeholder="เช่น 39, 40, 42 หรือเบอร์ US" maxlength="10">
+                                <div class="col-md-6 pro-field-group">
+                                    <label class="form-label">ขนาดรองเท้าเซฟตี้ (Shoe Size)</label>
+                                    <input type="text" class="form-control" id="fieldShoe" name="shoe_size" placeholder="เช่น 39, 40, 42" maxlength="10">
                                 </div>
                             </div>
                         </div>
 
                         <!-- 2. ข้อมูลการติดต่อ & โซเชียล -->
-                        <div class="mb-4">
-                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
-                                <i class="fas fa-address-book me-2"></i>ข้อมูลการติดต่อ (Contact Info)
-                                <small class="text-muted fw-normal ms-2" style="font-size: 0.8rem;">(ระบุตามความสมัครใจ)</small>
-                            </h6>
+                        <div class="mb-5">
+                            <div class="pro-section-header">
+                                <i class="fas fa-address-book text-primary"></i>
+                                ข้อมูลการติดต่อ (Contact Info)
+                                <span class="section-tag">ระบุตามความสมัครใจ</span>
+                            </div>
                             <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold text-primary"><i class="fas fa-phone-alt me-1"></i> เบอร์โทรศัพท์</label>
+                                <div class="col-md-4 pro-field-group">
+                                    <label class="form-label">เบอร์โทรศัพท์</label>
                                     <input type="tel" class="form-control" id="fieldPhone" name="phone" placeholder="08X-XXX-XXXX" maxlength="20">
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold text-primary"><i class="fab fa-line me-1"></i> Line ID</label>
+                                <div class="col-md-4 pro-field-group">
+                                    <label class="form-label">Line ID</label>
                                     <input type="text" class="form-control" id="fieldLineId" name="social_line_id" placeholder="Line ID" maxlength="100">
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold text-primary"><i class="fab fa-facebook-square me-1"></i> Facebook</label>
+                                <div class="col-md-4 pro-field-group">
+                                    <label class="form-label">Facebook</label>
                                     <input type="text" class="form-control" id="fieldFacebook" name="social_facebook" placeholder="Facebook Name/URL" maxlength="200">
                                 </div>
-                                <div class="col-12">
-                                    <label class="form-label fw-bold text-primary"><i class="fas fa-map-marker-alt me-1"></i> ที่อยู่ปัจจุบัน (Current Address)</label>
+                                <div class="col-12 pro-field-group">
+                                    <label class="form-label">ที่อยู่ปัจจุบัน</label>
                                     <textarea class="form-control" id="fieldAddress" name="current_address" rows="2" placeholder="ที่อยู่สำหรับติดต่อ..."></textarea>
                                 </div>
                             </div>
                         </div>
 
                         <!-- 3. การเดินทาง -->
-                        <div class="mb-4">
-                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
-                                <i class="fas fa-car me-2"></i>การเดินทาง (Commute)
-                                <small class="text-muted fw-normal ms-2" style="font-size: 0.8rem;">(ระบุตามความสมัครใจ)</small>
-                            </h6>
+                        <div class="mb-5">
+                            <div class="pro-section-header">
+                                <i class="fas fa-car text-primary"></i>
+                                การเดินทาง (Commute)
+                                <span class="section-tag">ระบุตามความสมัครใจ</span>
+                            </div>
                             <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold text-primary"><i class="fas fa-route me-1"></i> วิธีการเดินทางมาทำงาน</label>
+                                <div class="col-md-6 pro-field-group">
+                                    <label class="form-label">วิธีการเดินทางมาทำงาน</label>
                                     <select class="form-select" id="fieldCommute" name="commute_method">
                                         <option value="">-- เลือกวิธีการเดินทาง --</option>
                                         <option value="รถรับส่งบริษัท">รถรับส่งบริษัท (Company Bus)</option>
@@ -391,8 +522,8 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                         <option value="อื่นๆ">อื่นๆ (Others)</option>
                                     </select>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold text-primary"><i class="fas fa-id-card-alt me-1"></i> ทะเบียนรถ (ถ้ามี)</label>
+                                <div class="col-md-6 pro-field-group">
+                                    <label class="form-label">ทะเบียนรถ (ถ้ามี)</label>
                                     <input type="text" class="form-control" id="fieldVehicle" name="vehicle_registration" placeholder="เช่น กข 1234 กทม" maxlength="50">
                                 </div>
                             </div>
@@ -400,21 +531,22 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
                         <!-- 4. ข้อมูลฉุกเฉิน -->
                         <div class="mb-4">
-                            <h6 class="fw-bold text-danger border-bottom pb-2 mb-3">
-                                <i class="fas fa-heartbeat me-2"></i>ผู้ติดต่อฉุกเฉิน (Emergency Contact)
-                                <small class="text-danger fw-normal ms-2" style="font-size: 0.8rem;">(แนะนำให้ระบุ)</small>
-                            </h6>
+                            <div class="pro-section-header danger">
+                                <i class="fas fa-heartbeat"></i>
+                                ผู้ติดต่อฉุกเฉิน (Emergency Contact)
+                                <span class="section-tag">แนะนำให้ระบุ</span>
+                            </div>
                             <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold text-danger"><i class="fas fa-user-shield me-1"></i> ชื่อผู้ติดต่อฉุกเฉิน</label>
+                                <div class="col-md-4 pro-field-group">
+                                    <label class="form-label">ชื่อผู้ติดต่อฉุกเฉิน</label>
                                     <input type="text" class="form-control" id="fieldEmergName" name="emergency_contact_name" placeholder="ชื่อ - นามสกุล" maxlength="200">
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold text-danger"><i class="fas fa-users me-1"></i> ความสัมพันธ์</label>
+                                <div class="col-md-4 pro-field-group">
+                                    <label class="form-label">ความสัมพันธ์</label>
                                     <input type="text" class="form-control" id="fieldEmergRel" name="emergency_contact_relation" placeholder="เช่น บิดา, มารดา, พี่น้อง" maxlength="100">
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold text-danger"><i class="fas fa-phone me-1"></i> เบอร์โทรศัพท์ฉุกเฉิน</label>
+                                <div class="col-md-4 pro-field-group">
+                                    <label class="form-label">เบอร์โทรศัพท์ฉุกเฉิน</label>
                                     <input type="tel" class="form-control" id="fieldEmergPhone" name="emergency_contact_phone" placeholder="08X-XXX-XXXX" maxlength="50">
                                 </div>
                             </div>
@@ -430,14 +562,9 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
                 <!-- ─── Section: ความปลอดภัย ─── -->
                 <div id="section-security" class="d-none">
-                    <h5 class="fw-bold mb-4">ความปลอดภัยบัญชี</h5>
-                    
-                    <div class="alert alert-info border-0 mb-4 d-flex align-items-center">
-                        <i class="fas fa-shield-alt fa-2x me-3"></i>
-                        <div>
-                            <strong>เปลี่ยนรหัสผ่านเพื่อความปลอดภัย</strong><br>
-                            แนะนำให้รหัสผ่านมีอย่างน้อย 8 ตัวอักษร ผสมตัวอักษรใหญ่-เล็ก และตัวเลข
-                        </div>
+                    <div class="pro-notice" style="border-color: rgba(var(--bs-info-rgb),.25); background: rgba(var(--bs-info-rgb),.05);">
+                        <i class="fas fa-shield-alt notice-icon text-info"></i>
+                        <span><strong>เปลี่ยนรหัสผ่านเพื่อความปลอดภัย</strong> — แนะนำให้รหัสผ่านมีอย่างน้อย 8 ตัวอักษร ผสมตัวอักษรใหญ่-เล็ก และตัวเลข</span>
                     </div>
 
                     <form id="changePasswordForm" autocomplete="off">
@@ -579,9 +706,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ─── Tab Switching ────────────────────────────────────────
     let activityLoaded = false;
-    document.querySelectorAll('.section-tab-btn').forEach(btn => {
+    document.querySelectorAll('.pro-tab-btn').forEach(btn => {
         btn.addEventListener('click', function () {
-            document.querySelectorAll('.section-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.pro-tab-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             const target = this.dataset.section;
             ['info', 'security', 'activity', 'preferences'].forEach(s => {
