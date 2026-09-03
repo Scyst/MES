@@ -9,16 +9,23 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Axios interceptor for 401 Unauthorized
+  // Axios interceptor for 401 Unauthorized and 403 Forbidden
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
       response => response,
       error => {
-        if (error.response && error.response.status === 401) {
-          // Check if we are already on the login page to prevent redirect loops
-          if (window.location.hash !== '#/login') {
-            setUser(null);
-            navigate('/login');
+        if (error.response) {
+          if (error.response.status === 401) {
+            if (window.location.hash !== '#/login') {
+              setUser(null);
+              navigate('/login');
+            }
+          } else if (error.response.status === 403) {
+            alert(error.response.data?.message || 'Permission Denied: คุณไม่มีสิทธิ์เข้าถึงข้อมูลหรือฟังก์ชันนี้');
+            // If they are on a page they shouldn't be, redirect them to home
+            if (window.location.hash.includes('/admin/')) {
+              navigate('/');
+            }
           }
         }
         return Promise.reject(error);
