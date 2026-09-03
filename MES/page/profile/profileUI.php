@@ -137,15 +137,6 @@ $currentUserId = (int)$_SESSION['user']['id'];
             box-shadow: 0 4px 12px rgba(var(--bs-primary-rgb), 0.3);
         }
 
-        .form-label-sm {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--bs-secondary-color);
-            margin-bottom: 0.4rem;
-        }
-
         /* ─── Security & Badges ─── */
         .role-badge {
             font-size: 0.75rem;
@@ -275,29 +266,37 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         <!-- 1. ข้อมูลพื้นฐาน -->
                         <div class="mb-4">
                             <h6 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="fas fa-user-circle me-2"></i>ข้อมูลพื้นฐาน (Basic Info)</h6>
+                            
+                            <div class="alert alert-secondary border-0 d-flex align-items-center mb-3 py-2 px-3">
+                                <i class="fas fa-info-circle text-muted me-2"></i>
+                                <small class="text-muted mb-0" style="font-size: 0.8rem;">
+                                    <strong>หมายเหตุ:</strong> ข้อมูลชื่อ ตำแหน่ง แผนก และสายการผลิต ซิงค์อัตโนมัติจากระบบ HR หากต้องการแก้ไขกรุณาติดต่อฝ่ายบุคคล
+                                </small>
+                            </div>
+
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label-sm">ชื่อ-นามสกุล</label>
+                                    <label class="form-label fw-bold">ชื่อ-นามสกุล</label>
                                     <div class="form-control bg-light skeleton border-0" id="fieldFullname" style="min-height: 38px;">—</div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label-sm">ตำแหน่งงาน</label>
-                                    <div><span class="badge bg-info text-dark px-3 py-2 skeleton" id="fieldPosition" style="font-size: 0.85rem; min-height: 28px;">—</span></div>
+                                    <label class="form-label fw-bold">ตำแหน่งงาน</label>
+                                    <div><span class="badge bg-info text-dark px-3 py-2 skeleton" id="fieldPosition" style="min-height: 28px;">—</span></div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label-sm">สาย / Line</label>
-                                    <div><span class="badge bg-success px-3 py-2 skeleton" id="fieldLine" style="font-size: 0.85rem; min-height: 28px;">—</span></div>
+                                    <label class="form-label fw-bold">สาย / Line</label>
+                                    <div><span class="badge bg-success px-3 py-2 skeleton" id="fieldLine" style="min-height: 28px;">—</span></div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label-sm">แผนก</label>
-                                    <div><span class="badge bg-primary px-3 py-2 skeleton" id="fieldDept" style="font-size: 0.85rem; min-height: 28px;">—</span></div>
+                                    <label class="form-label fw-bold">แผนก</label>
+                                    <div><span class="badge bg-primary px-3 py-2 skeleton" id="fieldDept" style="min-height: 28px;">—</span></div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label-sm text-primary"><i class="fas fa-calendar-alt me-1"></i> วันเกิด (DOB)</label>
+                                    <label class="form-label fw-bold text-primary"><i class="fas fa-calendar-alt me-1"></i> วันเกิด (DOB)</label>
                                     <input type="date" class="form-control" id="fieldDOB" name="date_of_birth">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label-sm text-primary"><i class="fas fa-ring me-1"></i> สถานภาพสมรส</label>
+                                    <label class="form-label fw-bold text-primary"><i class="fas fa-ring me-1"></i> สถานภาพสมรส</label>
                                     <select class="form-select" id="fieldMarital" name="marital_status">
                                         <option value="">-- เลือกสถานภาพ --</option>
                                         <option value="โสด">โสด (Single)</option>
@@ -307,11 +306,11 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label-sm text-primary"><i class="fas fa-child me-1"></i> จำนวนบุตร (คน)</label>
+                                    <label class="form-label fw-bold text-primary"><i class="fas fa-child me-1"></i> จำนวนบุตร (คน)</label>
                                     <input type="number" class="form-control" id="fieldChildren" name="children_count" min="0" placeholder="0">
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label-sm text-primary"><i class="fas fa-edit me-1"></i> คำแนะนำตัว (ไม่บังคับ)</label>
+                                    <label class="form-label fw-bold text-primary"><i class="fas fa-edit me-1"></i> คำแนะนำตัว (ไม่บังคับ)</label>
                                     <textarea class="form-control" id="fieldBio" name="bio" rows="3"
                                               placeholder="แนะนำตัวคุณสั้นๆ..." maxlength="500"></textarea>
                                     <div class="text-end mt-1">
@@ -323,10 +322,13 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
                         <!-- สวัสดิการและอุปกรณ์ -->
                         <div class="mb-4">
-                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="fas fa-tshirt me-2"></i>สวัสดิการและอุปกรณ์ (Welfare & Equipment)</h6>
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                <i class="fas fa-tshirt me-2"></i>สวัสดิการและอุปกรณ์ (Welfare & Equipment) 
+                                <small class="text-muted fw-normal ms-2" style="font-size: 0.8rem;">(ระบุตามความสมัครใจ)</small>
+                            </h6>
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label-sm text-primary">ขนาดเสื้อยูนิฟอร์ม (Shirt Size)</label>
+                                    <label class="form-label fw-bold text-primary">ขนาดเสื้อยูนิฟอร์ม (Shirt Size)</label>
                                     <select class="form-select" id="fieldShirt" name="shirt_size">
                                         <option value="">-- เลือกขนาดเสื้อ --</option>
                                         <option value="S">S</option>
@@ -338,7 +340,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label-sm text-primary">ขนาดรองเท้าเซฟตี้ (Shoe Size)</label>
+                                    <label class="form-label fw-bold text-primary">ขนาดรองเท้าเซฟตี้ (Shoe Size)</label>
                                     <input type="text" class="form-control" id="fieldShoe" name="shoe_size" placeholder="เช่น 39, 40, 42 หรือเบอร์ US" maxlength="10">
                                 </div>
                             </div>
@@ -346,22 +348,25 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
                         <!-- 2. ข้อมูลการติดต่อ & โซเชียล -->
                         <div class="mb-4">
-                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="fas fa-address-book me-2"></i>ข้อมูลการติดต่อ (Contact Info)</h6>
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                <i class="fas fa-address-book me-2"></i>ข้อมูลการติดต่อ (Contact Info)
+                                <small class="text-muted fw-normal ms-2" style="font-size: 0.8rem;">(ระบุตามความสมัครใจ)</small>
+                            </h6>
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label class="form-label-sm text-primary"><i class="fas fa-phone-alt me-1"></i> เบอร์โทรศัพท์</label>
+                                    <label class="form-label fw-bold text-primary"><i class="fas fa-phone-alt me-1"></i> เบอร์โทรศัพท์</label>
                                     <input type="tel" class="form-control" id="fieldPhone" name="phone" placeholder="08X-XXX-XXXX" maxlength="20">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label-sm text-primary"><i class="fab fa-line me-1"></i> Line ID</label>
+                                    <label class="form-label fw-bold text-primary"><i class="fab fa-line me-1"></i> Line ID</label>
                                     <input type="text" class="form-control" id="fieldLineId" name="social_line_id" placeholder="Line ID" maxlength="100">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label-sm text-primary"><i class="fab fa-facebook-square me-1"></i> Facebook</label>
+                                    <label class="form-label fw-bold text-primary"><i class="fab fa-facebook-square me-1"></i> Facebook</label>
                                     <input type="text" class="form-control" id="fieldFacebook" name="social_facebook" placeholder="Facebook Name/URL" maxlength="200">
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label-sm text-primary"><i class="fas fa-map-marker-alt me-1"></i> ที่อยู่ปัจจุบัน (Current Address)</label>
+                                    <label class="form-label fw-bold text-primary"><i class="fas fa-map-marker-alt me-1"></i> ที่อยู่ปัจจุบัน (Current Address)</label>
                                     <textarea class="form-control" id="fieldAddress" name="current_address" rows="2" placeholder="ที่อยู่สำหรับติดต่อ..."></textarea>
                                 </div>
                             </div>
@@ -369,10 +374,13 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
                         <!-- 3. การเดินทาง -->
                         <div class="mb-4">
-                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="fas fa-car me-2"></i>การเดินทาง (Commute)</h6>
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                <i class="fas fa-car me-2"></i>การเดินทาง (Commute)
+                                <small class="text-muted fw-normal ms-2" style="font-size: 0.8rem;">(ระบุตามความสมัครใจ)</small>
+                            </h6>
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label-sm text-primary"><i class="fas fa-route me-1"></i> วิธีการเดินทางมาทำงาน</label>
+                                    <label class="form-label fw-bold text-primary"><i class="fas fa-route me-1"></i> วิธีการเดินทางมาทำงาน</label>
                                     <select class="form-select" id="fieldCommute" name="commute_method">
                                         <option value="">-- เลือกวิธีการเดินทาง --</option>
                                         <option value="รถรับส่งบริษัท">รถรับส่งบริษัท (Company Bus)</option>
@@ -384,7 +392,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label-sm text-primary"><i class="fas fa-id-card-alt me-1"></i> ทะเบียนรถ (ถ้ามี)</label>
+                                    <label class="form-label fw-bold text-primary"><i class="fas fa-id-card-alt me-1"></i> ทะเบียนรถ (ถ้ามี)</label>
                                     <input type="text" class="form-control" id="fieldVehicle" name="vehicle_registration" placeholder="เช่น กข 1234 กทม" maxlength="50">
                                 </div>
                             </div>
@@ -392,18 +400,21 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
                         <!-- 4. ข้อมูลฉุกเฉิน -->
                         <div class="mb-4">
-                            <h6 class="fw-bold text-danger border-bottom pb-2 mb-3"><i class="fas fa-heartbeat me-2"></i>ผู้ติดต่อฉุกเฉิน (Emergency Contact)</h6>
+                            <h6 class="fw-bold text-danger border-bottom pb-2 mb-3">
+                                <i class="fas fa-heartbeat me-2"></i>ผู้ติดต่อฉุกเฉิน (Emergency Contact)
+                                <small class="text-danger fw-normal ms-2" style="font-size: 0.8rem;">(แนะนำให้ระบุ)</small>
+                            </h6>
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label class="form-label-sm text-danger"><i class="fas fa-user-shield me-1"></i> ชื่อผู้ติดต่อฉุกเฉิน</label>
+                                    <label class="form-label fw-bold text-danger"><i class="fas fa-user-shield me-1"></i> ชื่อผู้ติดต่อฉุกเฉิน</label>
                                     <input type="text" class="form-control" id="fieldEmergName" name="emergency_contact_name" placeholder="ชื่อ - นามสกุล" maxlength="200">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label-sm text-danger"><i class="fas fa-users me-1"></i> ความสัมพันธ์</label>
+                                    <label class="form-label fw-bold text-danger"><i class="fas fa-users me-1"></i> ความสัมพันธ์</label>
                                     <input type="text" class="form-control" id="fieldEmergRel" name="emergency_contact_relation" placeholder="เช่น บิดา, มารดา, พี่น้อง" maxlength="100">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label-sm text-danger"><i class="fas fa-phone me-1"></i> เบอร์โทรศัพท์ฉุกเฉิน</label>
+                                    <label class="form-label fw-bold text-danger"><i class="fas fa-phone me-1"></i> เบอร์โทรศัพท์ฉุกเฉิน</label>
                                     <input type="tel" class="form-control" id="fieldEmergPhone" name="emergency_contact_phone" placeholder="08X-XXX-XXXX" maxlength="50">
                                 </div>
                             </div>
@@ -415,15 +426,6 @@ $currentUserId = (int)$_SESSION['user']['id'];
                             </button>
                         </div>
                     </form>
-
-                    <hr class="my-5">
-                    <div class="alert alert-secondary border-0 d-flex align-items-center mb-0">
-                        <i class="fas fa-info-circle fa-2x text-muted me-3"></i>
-                        <small class="text-muted mb-0">
-                            <strong>หมายเหตุ:</strong> ชื่อ ตำแหน่ง และสายการผลิต ซิงค์อัตโนมัติจากระบบ HR<br>
-                            หากต้องการแก้ไขข้อมูลเหล่านี้ กรุณาติดต่อ Admin หรือฝ่ายบุคคล
-                        </small>
-                    </div>
                 </div>
 
                 <!-- ─── Section: ความปลอดภัย ─── -->
@@ -441,7 +443,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                     <form id="changePasswordForm" autocomplete="off">
                         <div class="row g-4">
                             <div class="col-12">
-                                <label class="form-label-sm">รหัสผ่านเดิม</label>
+                                <label class="form-label fw-bold">รหัสผ่านเดิม</label>
                                 <div class="input-group">
                                     <input type="password" class="form-control" id="fieldOldPwd"
                                            name="old_password" placeholder="กรอกรหัสผ่านเดิม" autocomplete="current-password">
@@ -451,7 +453,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label-sm">รหัสผ่านใหม่</label>
+                                <label class="form-label fw-bold">รหัสผ่านใหม่</label>
                                 <div class="input-group">
                                     <input type="password" class="form-control" id="fieldNewPwd"
                                            name="new_password" placeholder="อย่างน้อย 6 ตัวอักษร" autocomplete="new-password">
@@ -471,7 +473,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label-sm">ยืนยันรหัสผ่านใหม่</label>
+                                <label class="form-label fw-bold">ยืนยันรหัสผ่านใหม่</label>
                                 <div class="input-group">
                                     <input type="password" class="form-control" id="fieldConfirmPwd"
                                            name="confirm_password" placeholder="กรอกรหัสผ่านใหม่อีกครั้ง" autocomplete="new-password">
@@ -513,14 +515,14 @@ $currentUserId = (int)$_SESSION['user']['id'];
                     <form id="preferencesForm">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label-sm">ธีมการแสดงผล</label>
+                                <label class="form-label fw-bold">ธีมที่ใช้งาน (Theme)</label>
                                 <select class="form-select" id="fieldTheme" name="theme_preference">
                                     <option value="light">☀️ โหมดกลางวัน (Light)</option>
                                     <option value="dark">🌙 โหมดกลางคืน (Dark)</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label-sm">ภาษา (สำรองไว้สำหรับอนาคต)</label>
+                                <label class="form-label fw-bold">ภาษาที่ใช้งาน (Language)</label>
                                 <select class="form-select" id="fieldLang" name="preferred_lang">
                                     <option value="th">🇹🇭 ภาษาไทย</option>
                                     <option value="en">🇺🇸 English</option>
