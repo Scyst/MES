@@ -18,7 +18,16 @@ export default function RolesPermissionsTab() {
     try {
       const res = await userManageApi.getPermissionMatrix();
       if (res.success) {
-        setMatrixData(res.data);
+        // Map data to match UI expectations
+        const mappedRoles = res.data.roles.map(r => r.role_code);
+        const mappedPerms = res.data.permissions.map(p => {
+          const grants = {};
+          mappedRoles.forEach(r => {
+            grants[r] = res.data.mappings[r]?.includes(p.perm_code) || false;
+          });
+          return { ...p, role_grants: grants };
+        });
+        setMatrixData({ roles: mappedRoles, permissions: mappedPerms });
       }
     } catch (e) {
       console.error(e);
@@ -97,6 +106,7 @@ export default function RolesPermissionsTab() {
   if (loading && !matrixData) {
     return <div className="py-12 flex justify-center"><div className="animate-spin h-8 w-8 border-b-2 border-blue-600 rounded-full"></div></div>;
   }
+  if (!matrixData) return <div className="text-center py-4 text-red-500">Error: Could not load matrix data</div>;
 
   return (
     <div className="space-y-6">
