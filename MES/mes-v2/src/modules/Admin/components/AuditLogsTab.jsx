@@ -23,8 +23,8 @@ export default function AuditLogsTab() {
     try {
       const res = await userManageApi.getLogs(filters);
       if (res.success) {
-        setLogs(res.data.logs || []);
-        setTotal(res.data.total_found || 0);
+        setLogs(res.data || []);
+        setTotal(res.total || 0);
       }
     } catch (e) {
       console.error(e);
