@@ -20,8 +20,12 @@ function showToast(message, color = '#28a745') {
       boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
       width: 'max-content',
       maxWidth: '90vw',
-      maxHeight: '100px',
-      overflow: 'hidden'
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
   });
 
   //-- กำหนดข้อความและสี พร้อมทำให้ Toast แสดงขึ้นมา --
