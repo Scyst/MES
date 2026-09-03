@@ -339,10 +339,27 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
             <h5 class="fw-bold mb-0 skeleton" id="profileFullname" style="min-height: 24px;">—</h5>
             <div><span class="badge bg-primary role-badge mt-2 skeleton" id="profileRoleBadge" style="min-height: 18px;">—</span></div>
+            <p class="text-muted small mb-3" id="sideRole"><?= htmlspecialchars($userRole) ?></p>
 
-            <hr class="my-3">
+            <hr class="text-muted opacity-25">
 
-            <div class="text-start">
+            <!-- Performance Widget -->
+            <div class="p-3 mb-3 rounded border text-start d-none" id="sidebarPerformanceCard" style="background-color: var(--bs-light);">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small fw-bold text-muted"><i class="fas fa-star text-warning me-1"></i>เกรดประเมิน</span>
+                    <span class="badge bg-secondary" id="sidebarGradeDisplay">รอประเมิน</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small text-secondary">ค่าผลงาน</span>
+                    <span class="small fw-bold text-primary" id="sidebarIncomeDisplay">฿0.00</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small text-secondary">Ratio</span>
+                    <span class="small fw-bold text-success" id="sidebarRatioDisplay">0.00</span>
+                </div>
+            </div>
+
+            <div class="text-start mt-3">
                 <div class="sidebar-meta-row">
                     <span class="sidebar-meta-label"><i class="fas fa-user-tag"></i> Username</span>
                     <span class="sidebar-meta-value skeleton" id="sideUsername">—</span>
@@ -797,7 +814,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
     loadProfile();
 
-    // ─── Activity Log ─────────────────────────────────────────
+    // ─── Load Performance ─────────────────────────────────────
+    function loadSidebarPerformance() {
+        fetch('<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/page/manpower/api/api_my_performance.php')
+            .then(res => res.json())
+            .then(json => {
+                if (json.success && json.data && json.data.has_data) {
+                    document.getElementById('sidebarPerformanceCard').classList.remove('d-none');
+                    
+                    let grade = json.data.grade;
+                    let isSystemGrade = false;
+                    if (!grade || grade === '-' || grade === 'N/A') {
+                        if (json.data.system_grade && json.data.system_grade !== 'N/A') {
+                            grade = json.data.system_grade;
+                            isSystemGrade = true;
+                        }
+                    }
+                    
+                    const gradeEl = document.getElementById('sidebarGradeDisplay');
+                    gradeEl.className = 'badge';
+                    if (grade === 'A') gradeEl.classList.add('bg-success');
+                    else if (grade === 'B') gradeEl.classList.add('bg-primary');
+                    else if (grade === 'C') gradeEl.classList.add('bg-warning', 'text-dark');
+                    else if (grade === 'D' || grade === 'F') gradeEl.classList.add('bg-danger');
+                    else gradeEl.classList.add('bg-secondary');
+                    
+                    gradeEl.textContent = grade + (isSystemGrade ? ' (Sys)' : '');
+                    document.getElementById('sidebarIncomeDisplay').textContent = '฿' + parseFloat(json.data.total_income || 0).toFixed(2);
+                    document.getElementById('sidebarRatioDisplay').textContent = parseFloat(json.data.ratio || 0).toFixed(2);
+                }
+            })
+            .catch(err => console.error('Error fetching performance:', err));
+    }
+    loadSidebarPerformance();    // ─── Activity Log ─────────────────────────────────────────
     window.loadActivityLog = function() {
         const container = document.getElementById('activityLogContainer');
         container.innerHTML = '<div class="text-center text-muted py-4 skeleton" style="min-height: 100px;">กำลังโหลด...</div>';
