@@ -14,9 +14,9 @@ function showToast(message, color = '#28a745') {
   }
   
   Object.assign(toast.style, {
-      position: 'fixed', top: 'auto', bottom: '20px', right: '20px', padding: '15px 25px', 
+      position: 'fixed', top: '80px', bottom: 'auto', right: '20px', padding: '15px 25px', 
       borderRadius: '8px', color: 'white', opacity: '0', 
-      transform: 'translateY(20px)', transition: 'all 0.3s ease', zIndex: '99999', 
+      transform: 'translateY(-20px)', transition: 'all 0.3s ease', zIndex: '99999', 
       boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
       width: 'max-content',
       maxWidth: '90vw',
@@ -28,11 +28,11 @@ function showToast(message, color = '#28a745') {
   toast.textContent = message;
   toast.style.backgroundColor = color;
   toast.style.opacity = 1;
-  toast.style.transform = 'translateY(0)'; //-- ทำให้ Toast เลื่อนขึ้นมาในตำแหน่งที่มองเห็น --
+  toast.style.transform = 'translateY(0)'; //-- ทำให้ Toast เลื่อนลงมาในตำแหน่งที่มองเห็น --
 
   //-- ตั้งเวลาเพื่อซ่อน Toast หลังจากผ่านไป 3 วินาที --
   setTimeout(() => {
     toast.style.opacity = 0;
-    toast.style.transform = 'translateY(20px)'; //-- ทำให้ Toast เลื่อนลงและจางหายไป --
+    toast.style.transform = 'translateY(-20px)'; //-- ทำให้ Toast เลื่อนขึ้นและจางหายไป --
   }, 3000);
 }
