@@ -674,24 +674,13 @@ $currentUserId = (int)$_SESSION['user']['id'];
                     <form id="preferencesForm">
                         <div class="row g-3">
                             <div class="col-md-6 pro-field-group">
-                                <label class="form-label">ธีมที่ใช้งาน (Theme) <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">อยู่ระหว่างการพัฒนา</span></label>
-                                <select class="form-select bg-light text-muted" id="fieldTheme" name="theme_preference" disabled>
-                                    <option value="light">☀️ โหมดกลางวัน (Light)</option>
-                                    <option value="dark">🌙 โหมดกลางคืน (Dark)</option>
-                                </select>
+                                <label class="form-label">ธีมที่ใช้งาน (Theme) <i class="fas fa-info-circle text-warning ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ฟีเจอร์นี้อยู่ระหว่างการพัฒนา"></i></label>
+                                <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldThemeDisplay" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                             </div>
                             <div class="col-md-6 pro-field-group">
-                                <label class="form-label">ภาษาที่ใช้งาน (Language) <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">อยู่ระหว่างการพัฒนา</span></label>
-                                <select class="form-select bg-light text-muted" id="fieldLang" name="preferred_lang" disabled>
-                                    <option value="th">🇹🇭 ภาษาไทย</option>
-                                    <option value="en">🇺🇸 English</option>
-                                </select>
+                                <label class="form-label">ภาษาที่ใช้งาน (Language) <i class="fas fa-info-circle text-warning ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ฟีเจอร์นี้อยู่ระหว่างการพัฒนา"></i></label>
+                                <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldLangDisplay" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                             </div>
-                        </div>
-                        <div class="mt-4 d-flex justify-content-end">
-                            <button type="button" class="btn btn-secondary px-4 py-2 fw-bold" id="btnSavePrefs" disabled>
-                                <i class="fas fa-save me-2"></i>บันทึกการตั้งค่า
-                            </button>
                         </div>
                     </form>
                 </div>
@@ -816,8 +805,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.getElementById('fieldShirt').value    = d.shirt_size || '';
                 document.getElementById('fieldShoe').value     = d.shoe_size || '';
 
-                document.getElementById('fieldTheme').value = d.theme_preference || 'light';
-                document.getElementById('fieldLang').value  = d.preferred_lang   || 'th';
+                const tVal = d.theme_preference || 'light';
+                const lVal = d.preferred_lang || 'th';
+
+                const tEl = document.getElementById('fieldThemeDisplay');
+                if (tEl) {
+                    tEl.textContent = tVal === 'dark' ? '🌙 โหมดกลางคืน (Dark)' : '☀️ โหมดกลางวัน (Light)';
+                    tEl.classList.remove('skeleton');
+                }
+
+                const lEl = document.getElementById('fieldLangDisplay');
+                if (lEl) {
+                    lEl.textContent = lVal === 'en' ? '🇺🇸 English' : '🇹🇭 ภาษาไทย';
+                    lEl.classList.remove('skeleton');
+                }
             })
             .catch(() => showAlert('ไม่สามารถโหลดข้อมูลโปรไฟล์ได้'));
     }
