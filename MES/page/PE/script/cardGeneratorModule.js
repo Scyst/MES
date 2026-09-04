@@ -203,18 +203,25 @@ const CardGeneratorModule = (function() {
         }
     }
 
-    function getLotoHTML(name) {
+    function getLotoHTML(name, empId, photoUrl = '') {
+        let photoHtml = photoUrl ? `<img style="width: 100%; height: 100%; object-fit: cover;" src="${photoUrl}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"> <i class="fas fa-lock cg-loto-icon" style="display:none;"></i>` : `<i class="fas fa-lock cg-loto-icon"></i>`;
+        if(name === '' && (!empId || empId === '')) {
+            photoHtml = `<i class="fas fa-lock cg-loto-icon"></i>`;
+        }
+        
         return `<div class="cg-card-loto">
             <div class="cg-loto-header">LOCKOUT / TAGOUT</div>
             <div class="cg-loto-body">
-                <div class="cg-loto-left">
-                    <i class="fas fa-lock cg-loto-icon"></i>
-                    <div class="cg-loto-danger">ห้ามเดินเครื่อง</div>
+                <div class="cg-loto-left" style="padding: 0; justify-content: space-between;">
+                    <div style="flex: 1; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                        ${photoHtml}
+                    </div>
+                    <div class="cg-loto-danger" style="margin-top: 0; border-radius: 0; width: 100%; padding: 4px 0;">ห้ามเดินเครื่อง</div>
                 </div>
                 <div class="cg-loto-right">
                     <div class="cg-loto-line" style="border-bottom: 1.5px solid #ef4444; padding-bottom: 5px;">ช่าง: ${name || '................................'}</div>
-                    <div class="cg-loto-line" style="border-bottom: 1.5px dotted #ef4444; color: #64748b; font-weight: 500; margin-top: 8px;">วันที่: ................................</div>
-                    <div class="cg-loto-line" style="border: none; margin-bottom: 0; color: #64748b; font-weight: 500;">เวลา: ................................</div>
+                    <div class="cg-loto-line" style="border-bottom: 1.5px dotted #ef4444; color: #64748b; font-weight: 500; margin-top: 8px;">รหัส: ${empId || '................................'}</div>
+                    <div class="cg-loto-line" style="border: none; margin-bottom: 0; color: #64748b; font-weight: 500;">วันที่: .................. เวลา: ..................</div>
                 </div>
             </div>
         </div>`;
@@ -227,13 +234,17 @@ const CardGeneratorModule = (function() {
             return;
         }
         const selected = select.options[select.selectedIndex];
+        const empId = select.value;
         const name = selected.getAttribute('data-name');
-        cardQueue.push({ id: cardIdCounter++, html: getLotoHTML(name) });
+        const dbPhoto = selected.getAttribute('data-photo');
+        const photoUrl = dbPhoto ? dbPhoto : `../../../assets/img/employees/${empId}.jpg`; 
+        
+        cardQueue.push({ id: cardIdCounter++, html: getLotoHTML(name, empId, photoUrl) });
         renderPreview();
     }
 
     function addBlankLotoCard() {
-        cardQueue.push({ id: cardIdCounter++, html: getLotoHTML('') });
+        cardQueue.push({ id: cardIdCounter++, html: getLotoHTML('', '') });
         renderPreview();
     }
 
