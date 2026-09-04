@@ -193,5 +193,24 @@
         "th_cost": "Cost",
         "processing": "Processing...",
         "syncing": "Syncing data with cloud server..."
+    },
+    "holiday": {
+        "page_title": "Holiday Settings",
+        "header_title": "Manage Holidays",
+        "header_subtitle": "Click on a date to add, or click a color bar to edit",
+        "btn_today": "Today",
+        "btn_month": "Month",
+        "btn_list": "List",
+        "edit_modal_title": "Edit Holiday",
+        "lbl_date": "Date",
+        "lbl_desc": "Description",
+        "lbl_type": "Type",
+        "type_holiday": "🔴 Holiday",
+        "type_offday": "🟡 Off-day",
+        "type_sunday": "⚪ Sunday",
+        "type_normal": "🟢 Normal Day",
+        "lbl_work_rate": "Work Rate",
+        "lbl_ot_rate": "OT Rate",
+        "btn_save": "Save"
     }
 }

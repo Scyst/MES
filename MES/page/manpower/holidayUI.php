@@ -6,9 +6,9 @@ if (!hasPermission('manage_manpower')) {
     die("Access Denied: You do not have permission to manage holiday settings.");
 }
 
-$pageTitle = "Holiday Settings";
-$pageHeaderTitle = "จัดการวันหยุด (Holiday Calendar)";
-$pageHeaderSubtitle = "คลิกช่องวันที่เพื่อเพิ่ม หรือคลิกแถบสีเพื่อแก้ไข";
+$pageTitle = __('holiday.page_title');
+$pageHeaderTitle = __('holiday.header_title');
+$pageHeaderSubtitle = __('holiday.header_subtitle');
 $pageIcon = "fas fa-calendar-alt";
 $pageBackLink = "manpowerUI.php";
 ?>
@@ -86,36 +86,36 @@ $pageBackLink = "manpowerUI.php";
         <div class="modal-dialog modal-sm modal-dialog-centered">
             <div class="modal-content shadow rounded-4 border-0">
                 <div class="modal-header bg-light border-bottom-0 pb-0">
-                    <h6 class="modal-title fw-bold" id="editorTitle">Edit Holiday</h6>
+                    <h6 class="modal-title fw-bold" id="editorTitle"><?php _e('holiday.edit_modal_title'); ?></h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body pt-2">
                     <form id="holidayForm">
                         <input type="hidden" id="hDate">
                         <div class="mb-2">
-                            <label class="small text-muted fw-bold">Date</label>
+                            <label class="small text-muted fw-bold"><?php _e('holiday.lbl_date'); ?></label>
                             <div id="hDateDisplay" class="fw-bold text-primary"></div>
                         </div>
                         <div class="mb-2">
-                            <label class="small text-muted fw-bold">Description</label>
+                            <label class="small text-muted fw-bold"><?php _e('holiday.lbl_desc'); ?></label>
                             <input type="text" class="form-control form-control-sm" id="hDesc" required>
                         </div>
                         <div class="mb-2">
-                            <label class="small text-muted fw-bold">Type</label>
+                            <label class="small text-muted fw-bold"><?php _e('holiday.lbl_type'); ?></label>
                             <select class="form-select form-select-sm" id="hType">
-                                <option value="HOLIDAY">🔴 Holiday (นักขัตฤกษ์)</option>
-                                <option value="OFFDAY">🟡 Off-day (หยุดบริษัท)</option>
-                                <option value="SUNDAY">⚪ Sunday (วันอาทิตย์)</option>
-                                <option value="NORMAL">🟢 Normal Day (วันทำงานปกติ)</option>
+                                <option value="HOLIDAY"><?php _e('holiday.type_holiday'); ?></option>
+                                <option value="OFFDAY"><?php _e('holiday.type_offday'); ?></option>
+                                <option value="SUNDAY"><?php _e('holiday.type_sunday'); ?></option>
+                                <option value="NORMAL"><?php _e('holiday.type_normal'); ?></option>
                             </select>
                         </div>
                         <div class="row g-2 mb-2">
                             <div class="col-6">
-                                <label class="small text-muted fw-bold">Work Rate</label>
+                                <label class="small text-muted fw-bold"><?php _e('holiday.lbl_work_rate'); ?></label>
                                 <input type="number" class="form-control form-control-sm" id="hWorkRate" value="2.0" step="0.5">
                             </div>
                             <div class="col-6">
-                                <label class="small text-muted fw-bold">OT Rate</label>
+                                <label class="small text-muted fw-bold"><?php _e('holiday.lbl_ot_rate'); ?></label>
                                 <input type="number" class="form-control form-control-sm" id="hOtRate" value="3.0" step="0.5">
                             </div>
                         </div>
@@ -125,7 +125,7 @@ $pageBackLink = "manpowerUI.php";
                     <button type="button" class="btn btn-outline-danger btn-sm me-auto" id="btnDeleteHoliday" style="display:none;">
                         <i class="fas fa-trash"></i>
                     </button>
-                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-4" onclick="saveHoliday()">Save</button>
+                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-4" onclick="saveHoliday()"><?php _e('holiday.btn_save'); ?></button>
                 </div>
             </div>
         </div>
@@ -146,9 +146,9 @@ $pageBackLink = "manpowerUI.php";
                     right: 'dayGridMonth,listYear' 
                 },
                 buttonText: {
-                    today: 'วันนี้',
-                    month: 'ปฏิทิน',
-                    list: 'รายการ'
+                    today: '<?php _e('holiday.btn_today'); ?>',
+                    month: '<?php _e('holiday.btn_month'); ?>',
+                    list: '<?php _e('holiday.btn_list'); ?>'
                 },
                 events: function(fetchInfo, successCallback, failureCallback) {
                     fetch(`api/api_holiday.php?action=read&start=${encodeURIComponent(fetchInfo.startStr)}&end=${encodeURIComponent(fetchInfo.endStr)}`)

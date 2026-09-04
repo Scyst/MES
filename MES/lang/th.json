@@ -193,5 +193,24 @@
         "th_cost": "Cost",
         "processing": "Processing...",
         "syncing": "Syncing data with cloud server..."
+    },
+    "holiday": {
+        "page_title": "Holiday Settings",
+        "header_title": "จัดการวันหยุด (Holiday Calendar)",
+        "header_subtitle": "คลิกช่องวันที่เพื่อเพิ่ม หรือคลิกแถบสีเพื่อแก้ไข",
+        "btn_today": "วันนี้",
+        "btn_month": "ปฏิทิน",
+        "btn_list": "รายการ",
+        "edit_modal_title": "Edit Holiday",
+        "lbl_date": "Date",
+        "lbl_desc": "Description",
+        "lbl_type": "Type",
+        "type_holiday": "🔴 Holiday (นักขัตฤกษ์)",
+        "type_offday": "🟡 Off-day (หยุดบริษัท)",
+        "type_sunday": "⚪ Sunday (วันอาทิตย์)",
+        "type_normal": "🟢 Normal Day (วันทำงานปกติ)",
+        "lbl_work_rate": "Work Rate",
+        "lbl_ot_rate": "OT Rate",
+        "btn_save": "Save"
     }
 }
