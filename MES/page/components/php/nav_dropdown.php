@@ -142,7 +142,15 @@
 <div class="offcanvas offcanvas-start" tabindex="-1" id="globalMobileMenu">
     <div class="offcanvas-header border-bottom bg-light">
         <h6 class="offcanvas-title fw-bold d-flex align-items-center">
-            <i class="fas fa-user-circle fa-2x text-dark me-2"></i>
+            <?php if ($profilePic): ?>
+                <img src="<?= htmlspecialchars($profilePic) ?>" alt="โปรไฟล์"
+                     class="rounded-circle me-3 shadow-sm"
+                     style="width:40px;height:40px;object-fit:cover;border:2px solid var(--bs-border-color);"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+                <i class="fas fa-user-circle fa-2x text-dark me-3 d-none"></i>
+            <?php else: ?>
+                <i class="fas fa-user-circle fa-2x text-dark me-3"></i>
+            <?php endif; ?>
             <div>
                 <span class="d-block text-dark"><?php echo htmlspecialchars($fullName); ?></span>
                 <span class="badge bg-dark" style="font-size: 0.6rem;"><?php echo htmlspecialchars($userRole); ?></span>
