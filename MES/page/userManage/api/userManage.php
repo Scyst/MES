@@ -191,6 +191,14 @@ try {
             $targetId = (int)($input['id'] ?? $_GET['id'] ?? 0);
             if (!$targetId) throw new Exception("Missing user ID.");
             
+            // Security Check
+            $stmtRoleCheck = $pdo->prepare("SELECT role FROM " . USERS_TABLE . " WHERE id = ?");
+            $stmtRoleCheck->execute([$targetId]);
+            $targetRole = $stmtRoleCheck->fetchColumn();
+            
+            if ($targetRole === 'creator') throw new Exception("Cannot manage 'creator' role via UI.");
+            if ($targetRole === 'admin' && !hasRole('creator')) throw new Exception("Only creators can manage admin users.");
+            
             // Logically we can use 123456 as the default password for fast resets
             $hashedPassword = password_hash('123456', PASSWORD_DEFAULT);
             $stmtPwd = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='RESET_PWD', @UserId=?, @PasswordHash=?, @ActionBy=?");
@@ -203,6 +211,14 @@ try {
             $targetId = (int)($input['id'] ?? $_GET['id'] ?? 0);
             if (!$targetId) throw new Exception("Missing user ID.");
             if ($targetId === (int)$currentUser['id']) throw new Exception("You cannot disable your own account.");
+            
+            // Security Check
+            $stmtRoleCheck = $pdo->prepare("SELECT role FROM " . USERS_TABLE . " WHERE id = ?");
+            $stmtRoleCheck->execute([$targetId]);
+            $targetRole = $stmtRoleCheck->fetchColumn();
+            
+            if ($targetRole === 'creator') throw new Exception("Cannot manage 'creator' role via UI.");
+            if ($targetRole === 'admin' && !hasRole('creator')) throw new Exception("Only creators can manage admin users.");
             
             $stmtToggle = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='TOGGLE_STATUS', @UserId=?, @ActionBy=?");
             $stmtToggle->execute([$targetId, $actionBy]);
