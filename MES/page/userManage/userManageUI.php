@@ -29,7 +29,7 @@ $pageIcon = "fas fa-users-cog";
     <?php include_once('../components/php/top_header.php'); ?>
 
     <main id="main-content">
-        <div class="container-fluid py-4">
+        <div class="container-fluid py-3">
 
             <ul class="nav nav-tabs" id="userManageTabs" role="tablist">
                 <li class="nav-item" role="presentation">
