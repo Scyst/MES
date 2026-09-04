@@ -31,7 +31,7 @@ $userTheme   = $_SESSION['user']['theme_preference'] ?? 'light';
         </button>
 
         <?php if($backLink): ?>
-            <a href="<?php echo $backLink; ?>" class="btn btn-light bg-white border text-secondary shadow-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;" title="กลับ">
+            <a href="<?php echo $backLink; ?>" class="btn btn-light bg-white border text-secondary shadow-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;" title="<?php _e('header.back'); ?>">
                 <i class="fas fa-arrow-left"></i>
             </a>
         <?php else: ?>
@@ -52,7 +52,7 @@ $userTheme   = $_SESSION['user']['theme_preference'] ?? 'light';
 
     <div class="d-flex align-items-center gap-3">
         <?php if($helpModalId): ?>
-        <button class="btn btn-link text-secondary p-0" onclick="new bootstrap.Modal(document.getElementById('<?php echo $helpModalId; ?>')).show()" title="คู่มือการใช้งาน">
+        <button class="btn btn-link text-secondary p-0" onclick="new bootstrap.Modal(document.getElementById('<?php echo $helpModalId; ?>')).show()" title="<?php _e('header.user_manual'); ?>">
             <i class="far fa-question-circle fa-lg"></i>
         </button>
         <?php endif; ?>
@@ -66,7 +66,7 @@ $userTheme   = $_SESSION['user']['theme_preference'] ?? 'light';
         <div class="dropdown d-none d-md-block">
             <a class="nav-link dropdown-toggle text-secondary d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <?php if ($profilePic): ?>
-                    <img id="headerAvatarImg" src="<?= htmlspecialchars($profilePic) ?>" alt="โปรไฟล์"
+                    <img id="headerAvatarImg" src="<?= htmlspecialchars($profilePic) ?>" alt="<?php _e('header.profile'); ?>"
                          class="rounded-circle me-2 profile-icon-hover"
                          style="width:32px;height:32px;object-fit:cover;border:2px solid var(--bs-border-color);"
                          onerror="this.style.display='none';document.getElementById('headerAvatarFallback').style.display='inline-block';">
@@ -84,7 +84,7 @@ $userTheme   = $_SESSION['user']['theme_preference'] ?? 'light';
             <ul class="dropdown-menu dropdown-menu-end shadow border border-light mt-2 p-2" style="min-width: 280px; border-radius: 12px;">
                 <li class="text-center p-3 border-bottom mb-2 bg-light rounded">
                     <?php if ($profilePic): ?>
-                        <img src="<?= htmlspecialchars($profilePic) ?>" alt="โปรไฟล์"
+                        <img src="<?= htmlspecialchars($profilePic) ?>" alt="<?php _e('header.profile'); ?>"
                              class="rounded-circle mb-2" style="width:56px;height:56px;object-fit:cover;border:2px solid var(--bs-border-color);"
                              onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
                         <i class="fas fa-user-circle fa-3x text-secondary mb-2 d-none"></i>
@@ -97,11 +97,11 @@ $userTheme   = $_SESSION['user']['theme_preference'] ?? 'light';
                 <!-- Performance Summary -->
                 <li class="px-3 py-2 border-bottom mb-2 d-none" id="headerPerformanceCard">
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="small fw-bold text-muted">เกรดประเมิน:</span>
-                        <span class="badge bg-secondary" id="headerGradeDisplay">รอประเมิน</span>
+                        <span class="small fw-bold text-muted"><?php _e('header.eval_grade_colon'); ?></span>
+                        <span class="badge bg-secondary" id="headerGradeDisplay"><?php _e('header.grade_waiting'); ?></span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="small text-secondary">ค่าผลงาน:</span>
+                        <span class="small text-secondary"><?php _e('header.income'); ?></span>
                         <span class="small fw-bold text-primary" id="headerIncomeDisplay">฿0.00</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
@@ -111,17 +111,17 @@ $userTheme   = $_SESSION['user']['theme_preference'] ?? 'light';
                 </li>
                 <li>
                     <a class="dropdown-item rounded py-2 d-flex align-items-center" href="<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/page/profile/profileUI.php">
-                        <i class="fas fa-user-edit fa-fw me-3 text-muted"></i> โปรไฟล์ของฉัน
+                        <i class="fas fa-user-edit fa-fw me-3 text-muted"></i> <?php _e('header.my_profile'); ?>
                     </a>
                 </li>
                 <li>
                     <a class="dropdown-item rounded py-2 d-flex align-items-center" href="#" id="theme-switcher-btn">
-                        <i class="fas fa-adjust fa-fw me-3 text-muted"></i> สลับธีมระบบ
+                        <i class="fas fa-adjust fa-fw me-3 text-muted"></i> <?php _e('header.theme_switch'); ?>
                     </a>
                 </li>
                 <li>
                     <a class="dropdown-item text-danger fw-bold logout-action rounded py-2 mt-1 d-flex align-items-center" href="<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/auth/logout.php">
-                        <i class="fas fa-sign-out-alt fa-fw me-3"></i> ออกจากระบบ
+                        <i class="fas fa-sign-out-alt fa-fw me-3"></i> <?php _e('header.logout'); ?>
                     </a>
                 </li>
             </ul>
@@ -179,13 +179,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (mobileGradeEl) mobileGradeEl.className = 'badge';
                         
                         if (grade && grade !== '-' && grade !== 'N/A') {
-                            const gradeText = grade + (isSystemGrade ? ' (คาดการณ์)' : '');
+                            const gradeText = grade + (isSystemGrade ? ' (' + __('header.grade_forecast') + ')' : '');
                             if (gradeEl) gradeEl.textContent = gradeText;
                             if (mobileGradeEl) mobileGradeEl.textContent = gradeText;
                             
                             if (quickBadge) {
                                 quickBadge.classList.remove('d-none');
-                                quickBadge.textContent = 'เกรด: ' + grade + (isSystemGrade ? '*' : '');
+                                quickBadge.textContent = __('header.eval_grade_colon').replace(':', '') + ': ' + grade + (isSystemGrade ? '*' : '');
                                 quickBadge.className = 'badge ms-2';
                             }
                             
@@ -220,11 +220,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                         } else {
                             if (gradeEl) {
-                                gradeEl.textContent = 'รอประเมิน';
+                                gradeEl.textContent = __('header.grade_waiting');
                                 gradeEl.classList.add('bg-secondary');
                             }
                             if (mobileGradeEl) {
-                                mobileGradeEl.textContent = 'รอประเมิน';
+                                mobileGradeEl.textContent = __('header.grade_waiting');
                                 mobileGradeEl.classList.add('bg-secondary');
                             }
                             if (quickBadge) quickBadge.classList.add('d-none');
@@ -251,9 +251,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         const ratioEl = document.getElementById('headerRatioDisplay');
                         const quickBadge = document.getElementById('topHeaderQuickGrade');
                         
-                        if (gradeEl) gradeEl.textContent = 'รอประเมิน';
+                        if (gradeEl) gradeEl.textContent = __('header.grade_waiting');
                         if (incomeEl) {
-                            incomeEl.textContent = 'ไม่มีข้อมูล';
+                            incomeEl.textContent = __('header.income_no_data');
                             incomeEl.classList.replace('text-primary', 'text-muted');
                         }
                         if (ratioEl) {
@@ -267,9 +267,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         const mobileIncomeEl = document.getElementById('mobileHeaderIncomeDisplay');
                         const mobileRatioEl = document.getElementById('mobileHeaderRatioDisplay');
                         
-                        if (mobileGradeEl) mobileGradeEl.textContent = 'รอประเมิน';
+                        if (mobileGradeEl) mobileGradeEl.textContent = __('header.grade_waiting');
                         if (mobileIncomeEl) {
-                            mobileIncomeEl.textContent = 'ไม่มีข้อมูล';
+                            mobileIncomeEl.textContent = __('header.income_no_data');
                             mobileIncomeEl.classList.replace('text-primary', 'text-muted');
                         }
                         if (mobileRatioEl) {

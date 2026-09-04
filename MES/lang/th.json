@@ -11,5 +11,25 @@
     "nav": {
         "home": "หน้าหลัก",
         "logout": "ออกจากระบบ"
+    },
+    "header": {
+        "back": "กลับ",
+        "user_manual": "คู่มือการใช้งาน",
+        "profile": "โปรไฟล์",
+        "my_profile": "โปรไฟล์ของฉัน",
+        "eval_grade": "เกรดประเมิน",
+        "eval_grade_colon": "เกรดประเมิน:",
+        "grade_waiting": "รอประเมิน",
+        "grade_forecast": "คาดการณ์",
+        "income": "ค่าผลงาน:",
+        "income_no_data": "ไม่มีข้อมูล",
+        "theme_switch": "สลับธีมระบบ",
+        "logout": "ออกจากระบบ"
+    },
+    "sidebar": {
+        "search_menu": "ค้นหาเมนู...",
+        "prod_mobile": "ลงยอดผลิต (Mobile)",
+        "repair_request": "แจ้งซ่อม & หยุดไลน์",
+        "logout": "ออกจากระบบ"
     }
 }

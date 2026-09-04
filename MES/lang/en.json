@@ -11,5 +11,25 @@
     "nav": {
         "home": "Home",
         "logout": "Logout"
+    },
+    "header": {
+        "back": "Back",
+        "user_manual": "User Manual",
+        "profile": "Profile",
+        "my_profile": "My Profile",
+        "eval_grade": "Grade",
+        "eval_grade_colon": "Grade:",
+        "grade_waiting": "Pending",
+        "grade_forecast": "Forecast",
+        "income": "Income:",
+        "income_no_data": "No Data",
+        "theme_switch": "Toggle Theme",
+        "logout": "Logout"
+    },
+    "sidebar": {
+        "search_menu": "Search Menu...",
+        "prod_mobile": "Prod. Input (Mobile)",
+        "repair_request": "Repair & Line Stop",
+        "logout": "Logout"
     }
 }

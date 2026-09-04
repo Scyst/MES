@@ -17,6 +17,22 @@
         const theme = storedTheme ? storedTheme : (prefersDark ? 'dark' : 'light');
         document.documentElement.setAttribute('data-bs-theme', theme);
     })();
+
+    // i18n Translation Engine
+    window.Translations = <?php echo isset($GLOBALS['i18n_translations']) ? json_encode($GLOBALS['i18n_translations'], JSON_UNESCAPED_UNICODE) : '{}'; ?>;
+    window.__ = function(keyPath, fallback = null) {
+        if (!keyPath) return fallback !== null ? fallback : '';
+        const keys = keyPath.split('.');
+        let current = window.Translations;
+        for (let k of keys) {
+            if (current && typeof current === 'object' && k in current) {
+                current = current[k];
+            } else {
+                return fallback !== null ? fallback : keyPath;
+            }
+        }
+        return typeof current === 'string' ? current : (fallback !== null ? fallback : keyPath);
+    };
 </script>
 
 <script src="../../utils/libs/bootstrap.bundle.min.js"></script>

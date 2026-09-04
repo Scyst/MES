@@ -4,7 +4,7 @@
         <li class="p-2 position-sticky top-0 bg-body" style="z-index: 10;">
             <div class="input-group input-group-sm">
                 <span class="input-group-text bg-light border-end-0 border-0"><i class="fas fa-search text-dark"></i></span>
-                <input type="text" id="desktopMenuSearch" class="form-control border-0 bg-light" placeholder="ค้นหาเมนู..." autocomplete="off">
+                <input type="text" id="desktopMenuSearch" class="form-control border-0 bg-light" placeholder="<?php _e('sidebar.search_menu'); ?>" autocomplete="off">
             </div>
         </li>
 
@@ -25,11 +25,11 @@
             <div class="collapse" id="collapseProd" data-bs-parent="#desktopAccordionMenu">
                 <ul class="list-unstyled ms-3 ps-2 border-start py-1">
                     <li><a class="dropdown-item-icon py-1" href="../production/productionUI.php"><i class="fas fa-boxes fa-fw"></i><span>Production & Inventory</span></a></li>
-                    <li><a class="dropdown-item-icon py-1" href="/iot-toolbox/sandbox-b9/MobileApp/index.html"><i class="fas fa-mobile-alt fa-fw"></i><span>ลงยอดผลิต (Mobile)</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="/iot-toolbox/sandbox-b9/MobileApp/index.html"><i class="fas fa-mobile-alt fa-fw"></i><span><?php _e('sidebar.prod_mobile'); ?></span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../production/jobQueueUI.php"><i class="fas fa-list-ol fa-fw"></i><span>Live Job Queue</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../production/label_printer.php"><i class="fas fa-print fa-fw"></i><span>Tag Printer (WIP/FG)</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../scanBarcode/scanBarcodeUI.php"><i class="fas fa-barcode fa-fw"></i><span>Scan Barcode</span></a></li>
-                    <li><a class="dropdown-item-icon py-1" href="../PE/peRequest.php"><i class="fas fa-tools fa-fw"></i><span>แจ้งซ่อม & หยุดไลน์</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../PE/peRequest.php"><i class="fas fa-tools fa-fw"></i><span><?php _e('sidebar.repair_request'); ?></span></a></li>
                 </ul>
             </div>
         </li>
@@ -143,7 +143,7 @@
     <div class="offcanvas-header border-bottom bg-light">
         <h6 class="offcanvas-title fw-bold d-flex align-items-center">
             <?php if ($profilePic): ?>
-                <img src="<?= htmlspecialchars($profilePic) ?>" alt="โปรไฟล์"
+                <img src="<?= htmlspecialchars($profilePic) ?>" alt="<?php _e('header.profile'); ?>"
                      class="rounded-circle me-3 shadow-sm"
                      style="width:40px;height:40px;object-fit:cover;border:2px solid var(--bs-border-color);"
                      onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
@@ -162,11 +162,11 @@
         
         <div class="p-3 bg-white border-bottom d-none" id="mobilePerformanceCard">
             <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="small fw-bold text-muted">เกรดประเมิน:</span>
-                <span class="badge bg-secondary" id="mobileHeaderGradeDisplay">รอประเมิน</span>
+                <span class="small fw-bold text-muted"><?php _e('header.eval_grade_colon'); ?></span>
+                <span class="badge bg-secondary" id="mobileHeaderGradeDisplay"><?php _e('header.grade_waiting'); ?></span>
             </div>
             <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="small text-secondary">ค่าผลงาน:</span>
+                <span class="small text-secondary"><?php _e('header.income'); ?></span>
                 <span class="small fw-bold text-primary" id="mobileHeaderIncomeDisplay">฿0.00</span>
             </div>
             <div class="d-flex justify-content-between align-items-center">
@@ -178,7 +178,7 @@
         <div class="p-3 bg-white border-bottom sticky-top" style="z-index: 10;">
             <div class="input-group">
                 <span class="input-group-text bg-light border-0"><i class="fas fa-search text-dark"></i></span>
-                <input type="text" id="mobileMenuSearch" class="form-control border-0 bg-light" placeholder="ค้นหาเมนู..." autocomplete="off">
+                <input type="text" id="mobileMenuSearch" class="form-control border-0 bg-light" placeholder="<?php _e('sidebar.search_menu'); ?>" autocomplete="off">
             </div>
         </div>
         
@@ -193,10 +193,10 @@
             <?php if ($userRole && in_array($userRole, ['operator', 'supervisor', 'admin', 'creator'])): ?>
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">PRODUCTION</div>
             <a class="list-group-item list-group-item-action text-dark" href="../production/productionUI.php"><i class="fas fa-boxes fa-fw me-3"></i> Production & Inventory</a>
-            <a class="list-group-item list-group-item-action text-dark" href="/iot-toolbox/sandbox-b9/MobileApp/index.html"><i class="fas fa-mobile-alt fa-fw me-3"></i> ลงยอดผลิต (Mobile)</a>
+            <a class="list-group-item list-group-item-action text-dark" href="/iot-toolbox/sandbox-b9/MobileApp/index.html"><i class="fas fa-mobile-alt fa-fw me-3"></i> <?php _e('sidebar.prod_mobile'); ?></a>
             <a class="list-group-item list-group-item-action text-dark" href="../production/jobQueueUI.php"><i class="fas fa-list-ol fa-fw me-3"></i> Live Job Queue</a>
             <a class="list-group-item list-group-item-action text-dark" href="../scanBarcode/scanBarcodeUI.php"><i class="fas fa-barcode fa-fw me-3"></i> Scan Barcode</a>
-            <a class="list-group-item list-group-item-action text-dark" href="../PE/peRequest.php"><i class="fas fa-tools fa-fw me-3"></i> แจ้งซ่อม & หยุดไลน์</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../PE/peRequest.php"><i class="fas fa-tools fa-fw me-3"></i> <?php _e('sidebar.repair_request'); ?></a>
 
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">WAREHOUSE & LOGISTICS</div>
             <?php if (in_array($userRole, ['admin', 'creator', 'supervisor'])): ?>
@@ -253,7 +253,7 @@
             <?php endif; ?>
             <div class="p-3 mt-4 border-top">
                 <a class="btn btn-outline-danger w-100 logout-action" href="<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/auth/logout.php">
-                    <i class="fas fa-sign-out-alt me-2"></i> ออกจากระบบ
+                    <i class="fas fa-sign-out-alt me-2"></i> <?php _e('sidebar.logout'); ?>
                 </a>
             </div>
         </div>
