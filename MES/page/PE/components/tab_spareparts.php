@@ -6,28 +6,28 @@
 <div class="pe-kpi-row" id="spKpiRow">
     <div class="pe-kpi-card kpi-primary pe-animate-in">
         <div>
-            <div class="pe-kpi-label">Total SKU</div>
+            <div class="pe-kpi-label"><?php _e('pe.kpi_total_sku'); ?></div>
             <div class="pe-kpi-value" id="kpiTotalSKU">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-boxes-stacked"></i></div>
     </div>
     <div class="pe-kpi-card kpi-danger pe-animate-in">
         <div>
-            <div class="pe-kpi-label">Low Stock Alert</div>
+            <div class="pe-kpi-label"><?php _e('pe.kpi_low_stock'); ?></div>
             <div class="pe-kpi-value" id="kpiLowStock">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-exclamation-circle"></i></div>
     </div>
     <div class="pe-kpi-card kpi-success pe-animate-in">
         <div>
-            <div class="pe-kpi-label">Total Value</div>
+            <div class="pe-kpi-label"><?php _e('pe.kpi_total_value'); ?></div>
             <div class="pe-kpi-value" id="kpiTotalValue">฿0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-coins"></i></div>
     </div>
     <div class="pe-kpi-card kpi-info pe-animate-in">
         <div>
-            <div class="pe-kpi-label">This Month Issues</div>
+            <div class="pe-kpi-label"><?php _e('pe.kpi_month_issues'); ?></div>
             <div class="pe-kpi-value" id="kpiMonthIssues">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-arrow-up"></i></div>
@@ -67,21 +67,21 @@
         <ul class="nav pe-header-nav" id="spNavTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="sp-onhand-tab" data-bs-toggle="pill" data-bs-target="#sp-onhand-pane" type="button" role="tab" onclick="SparePartsModule.switchTab('onhand')">
-                    <span class="fw-bold fs-6"><i class="fas fa-boxes me-2"></i>Stock On-Hand</span>
+                    <span class="fw-bold fs-6"><i class="fas fa-boxes me-2"></i><?php _e('pe.tab_stock_onhand'); ?></span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="sp-master-tab" data-bs-toggle="pill" data-bs-target="#sp-master-pane" type="button" role="tab" onclick="SparePartsModule.switchTab('master')">
-                    <span class="fw-bold fs-6"><i class="fas fa-database me-2"></i>Item Master</span>
+                    <span class="fw-bold fs-6"><i class="fas fa-database me-2"></i><?php _e('pe.tab_item_master'); ?></span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="sp-history-tab" data-bs-toggle="pill" data-bs-target="#sp-history-pane" type="button" role="tab" onclick="SparePartsModule.switchTab('history')">
-                    <span class="fw-bold fs-6"><i class="fas fa-history me-2"></i>History Log</span>
+                    <span class="fw-bold fs-6"><i class="fas fa-history me-2"></i><?php _e('pe.tab_history_log'); ?></span>
                 </button>
             </li>
         </ul>
-        <span class="pe-text-xs pe-text-muted pb-2">Last update: <span id="spLastSync">-</span></span>
+        <span class="pe-text-xs pe-text-muted pb-2"><?php _e('pe.txt_last_update'); ?> <span id="spLastSync">-</span></span>
     </div>
 
     <!-- Body with Tab Contents -->
@@ -93,37 +93,37 @@
                 <div class="pe-filter-bar" style="border-bottom: 1px solid var(--pe-border-color); border-radius: 0;">
                     <div class="pe-search">
                         <i class="fas fa-search"></i>
-                        <input type="search" id="spSearchInput" placeholder="ค้นหา Item Code, ชื่อ, รายละเอียด..." oninput="SparePartsModule.filterTable()" autocomplete="new-password">
+                        <input type="search" id="spSearchInput" placeholder="<?php _e('pe.search_item'); ?>" oninput="SparePartsModule.filterTable()" autocomplete="new-password">
                     </div>
                     <select class="pe-filter-select" id="spFilterLocation" onchange="SparePartsModule.loadData()">
-                        <option value="">ทุกคลัง</option>
+                        <option value=""><?php _e('pe.filter_all_locations'); ?></option>
                     </select>
                     <select class="pe-filter-select ms-2" id="spFilterStatus" onchange="SparePartsModule.filterTable()" style="max-width: 130px;">
-                        <option value="">ทุกสถานะ (All)</option>
-                        <option value="NORMAL">ปกติ (Normal)</option>
-                        <option value="LOW">ใกล้หมด (Low Stock)</option>
-                        <option value="OUT">หมด (Out of Stock)</option>
-                        <option value="OVERSTOCK">ล้นคลัง (Overstock)</option>
+                        <option value=""><?php _e('pe.filter_sp_all_status'); ?></option>
+                        <option value="NORMAL"><?php _e('pe.filter_sp_normal'); ?></option>
+                        <option value="LOW"><?php _e('pe.filter_sp_low'); ?></option>
+                        <option value="OUT"><?php _e('pe.filter_sp_out'); ?></option>
+                        <option value="OVERSTOCK"><?php _e('pe.filter_sp_overstock'); ?></option>
                     </select>
                     <select class="pe-filter-select ms-2" id="spFilterSupplier" onchange="SparePartsModule.filterTable()" style="max-width: 150px;">
-                        <option value="">ทุก Supplier</option>
+                        <option value=""><?php _e('pe.filter_all_suppliers'); ?></option>
                     </select>
                     <select class="pe-filter-select ms-2" id="spFilterPrice" onchange="SparePartsModule.filterTable()" style="max-width: 140px;">
-                        <option value="">ทุกช่วงราคา</option>
-                        <option value="LOW">ต่ำกว่า 1,000</option>
-                        <option value="MID">1,000 - 10,000</option>
-                        <option value="HIGH">มากกว่า 10,000</option>
+                        <option value=""><?php _e('pe.filter_all_prices'); ?></option>
+                        <option value="LOW"><?php _e('pe.filter_price_low'); ?></option>
+                        <option value="MID"><?php _e('pe.filter_price_mid'); ?></option>
+                        <option value="HIGH"><?php _e('pe.filter_price_high'); ?></option>
                     </select>
                     <div class="pe-filter-spacer"></div>
                     <div class="d-flex gap-2 flex-wrap align-items-center">
                         <button class="pe-btn pe-btn-success pe-btn-sm" onclick="SparePartsModule.openReceiveModal()">
-                            <i class="fas fa-arrow-down"></i> Receive
+                            <i class="fas fa-arrow-down"></i> <?php _e('pe.btn_receive'); ?>
                         </button>
                         <button class="pe-btn pe-btn-ghost pe-btn-sm" style="border-color:var(--pe-text-primary);color:var(--pe-text-primary);" onclick="SparePartsModule.openIssueModal()">
-                            <i class="fas fa-arrow-up"></i> Issue
+                            <i class="fas fa-arrow-up"></i> <?php _e('pe.btn_issue'); ?>
                         </button>
                         <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.exportExcel()" title="Export">
-                            <i class="fas fa-file-excel" style="color:var(--pe-success);"></i> Export
+                            <i class="fas fa-file-excel" style="color:var(--pe-success);"></i> <?php _e('pe.btn_export'); ?>
                         </button>
                         <div class="btn-group btn-group-sm ms-2" role="group">
                             <button type="button" class="btn btn-outline-secondary active" id="btnViewGrid" onclick="SparePartsModule.toggleView('grid')"><i class="fas fa-th-large"></i></button>
@@ -135,7 +135,7 @@
                 <div id="spGridBody" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 mt-1 px-2 pb-3 pe-table-scroll-y" style="">
                     <div class="col-12 text-center text-muted py-5">
                         <div class="spinner-border text-primary" role="status"></div>
-                        <div class="mt-2">กำลังโหลดข้อมูล...</div>
+                        <div class="mt-2"><?php _e('pe.txt_loading'); ?></div>
                     </div>
                 </div>
                 <!-- Table View -->
@@ -143,21 +143,21 @@
                     <table class="pe-table" id="spTable">
                         <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-secondary);">
                             <tr>
-                                <th style="width:12%;">Item Code</th>
-                                <th style="width:20%;">Item Name</th>
-                                <th style="width:18%;">Description</th>
-                                <th style="width:12%;">Location</th>
-                                <th style="width:10%;" class="pe-text-center">Min / Max</th>
-                                <th style="width:10%;" class="pe-text-end">On-Hand</th>
-                                <th style="width:8%;" class="pe-text-center">Unit</th>
-                                <th style="width:10%;" class="pe-text-center">Actions</th>
+                                <th style="width:12%;"><?php _e('pe.th_item_code'); ?></th>
+                                <th style="width:20%;"><?php _e('pe.th_item_name'); ?></th>
+                                <th style="width:18%;"><?php _e('pe.th_description'); ?></th>
+                                <th style="width:12%;"><?php _e('pe.th_location'); ?></th>
+                                <th style="width:10%;" class="pe-text-center"><?php _e('pe.th_min_max'); ?></th>
+                                <th style="width:10%;" class="pe-text-end"><?php _e('pe.th_onhand'); ?></th>
+                                <th style="width:8%;" class="pe-text-center"><?php _e('pe.th_unit'); ?></th>
+                                <th style="width:10%;" class="pe-text-center"><?php _e('pe.th_actions'); ?></th>
                             </tr>
                         </thead>
                         <tbody id="spTableBody">
                             <tr>
                                 <td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">
                                     <div class="spinner-border text-primary" role="status"></div>
-                                    <div class="mt-2">กำลังโหลดข้อมูล...</div>
+                                    <div class="mt-2"><?php _e('pe.txt_loading'); ?></div>
                                 </td>
                             </tr>
                         </tbody>
@@ -170,19 +170,19 @@
                 <div class="pe-filter-bar" style="border-bottom: 1px solid var(--pe-border-color); border-radius: 0;">
                     <div class="pe-search">
                         <i class="fas fa-search"></i>
-                        <input type="search" id="spMasterSearchInput" placeholder="ค้นหา Item Code, ชื่อ, Supplier..." oninput="SparePartsModule.filterMasterTable()" autocomplete="new-password">
+                        <input type="search" id="spMasterSearchInput" placeholder="<?php _e('pe.search_master'); ?>" oninput="SparePartsModule.filterMasterTable()" autocomplete="new-password">
                     </div>
                     <div class="pe-filter-spacer"></div>
                     <div class="d-flex gap-2 flex-wrap align-items-center">
                         <button class="pe-btn pe-btn-primary pe-btn-sm" onclick="SparePartsModule.openItemModal()">
-                            <i class="fas fa-plus"></i> Add Item
+                            <i class="fas fa-plus"></i> <?php _e('pe.btn_add_item'); ?>
                         </button>
                         <input type="file" id="spImportFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="SparePartsModule.importMasterExcel(event)">
                         <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="document.getElementById('spImportFileInput').click()" title="Import Master Data">
-                            <i class="fas fa-file-import" style="color:var(--pe-primary);"></i> Import
+                            <i class="fas fa-file-import" style="color:var(--pe-primary);"></i> <?php _e('pe.btn_import'); ?>
                         </button>
                         <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.exportMasterExcel()" title="Export Master Data">
-                            <i class="fas fa-file-excel" style="color:var(--pe-success);"></i> Export
+                            <i class="fas fa-file-excel" style="color:var(--pe-success);"></i> <?php _e('pe.btn_export'); ?>
                         </button>
                         <div class="btn-group btn-group-sm ms-2" role="group">
                             <button type="button" class="btn btn-outline-secondary active" id="btnMasterViewGrid" onclick="SparePartsModule.toggleMasterView('grid')"><i class="fas fa-th-large"></i></button>
@@ -194,7 +194,7 @@
                 <div id="spMasterGridBody" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 mt-1 px-2 pb-3 pe-table-scroll-y" style="">
                     <div class="col-12 text-center text-muted py-5">
                         <div class="spinner-border text-primary" role="status"></div>
-                        <div class="mt-2">กำลังโหลดข้อมูล...</div>
+                        <div class="mt-2"><?php _e('pe.txt_loading'); ?></div>
                     </div>
                 </div>
                 <!-- Table View -->
@@ -202,21 +202,21 @@
                     <table class="pe-table" id="spMasterTable">
                         <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-secondary);">
                             <tr>
-                                <th style="width:12%;">Item Code</th>
-                                <th style="width:20%;">Item Name</th>
-                                <th style="width:20%;">Description</th>
-                                <th style="width:12%;">Supplier</th>
-                                <th style="width:10%;" class="pe-text-end">Price (฿)</th>
-                                <th style="width:10%;" class="pe-text-center">Min / Max</th>
-                                <th style="width:8%;" class="pe-text-center">Status</th>
-                                <th style="width:8%;" class="pe-text-center">Actions</th>
+                                <th style="width:12%;"><?php _e('pe.th_item_code'); ?></th>
+                                <th style="width:20%;"><?php _e('pe.th_item_name'); ?></th>
+                                <th style="width:20%;"><?php _e('pe.th_description'); ?></th>
+                                <th style="width:12%;"><?php _e('pe.th_supplier'); ?></th>
+                                <th style="width:10%;" class="pe-text-end"><?php _e('pe.th_price'); ?></th>
+                                <th style="width:10%;" class="pe-text-center"><?php _e('pe.th_min_max'); ?></th>
+                                <th style="width:8%;" class="pe-text-center"><?php _e('pe.th_status'); ?></th>
+                                <th style="width:8%;" class="pe-text-center"><?php _e('pe.th_actions'); ?></th>
                             </tr>
                         </thead>
                         <tbody id="spMasterTableBody">
                             <tr>
                                 <td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">
                                     <div class="spinner-border text-primary" role="status"></div>
-                                    <div class="mt-2">กำลังโหลดข้อมูล...</div>
+                                    <div class="mt-2"><?php _e('pe.txt_loading'); ?></div>
                                 </td>
                             </tr>
                         </tbody>
@@ -229,12 +229,12 @@
                 <div class="pe-filter-bar" style="border-bottom: 1px solid var(--pe-border-color); border-radius: 0;">
                     <div class="pe-search">
                         <i class="fas fa-search"></i>
-                        <input type="search" id="spHistorySearchInput" placeholder="ค้นหา รหัส, ชื่อ, ผู้ทำรายการ..." oninput="SparePartsModule.filterHistoryTable()" autocomplete="new-password">
+                        <input type="search" id="spHistorySearchInput" placeholder="<?php _e('pe.search_history'); ?>" oninput="SparePartsModule.filterHistoryTable()" autocomplete="new-password">
                     </div>
                     <div class="pe-filter-spacer"></div>
                     <div class="d-flex gap-2 flex-wrap">
                         <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.loadHistory()" title="Refresh">
-                            <i class="fas fa-sync-alt"></i> Refresh
+                            <i class="fas fa-sync-alt"></i> <?php _e('pe.btn_refresh'); ?>
                         </button>
                     </div>
                 </div>
@@ -242,20 +242,20 @@
                     <table class="pe-table" id="spHistoryTable">
                         <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-secondary);">
                             <tr>
-                                <th style="width: 15%;">Date / Time</th>
-                                <th style="width: 10%;">Type</th>
-                                <th style="width: 25%;">Item</th>
-                                <th style="width: 15%;">Location</th>
-                                <th class="pe-text-end" style="width: 10%;">Qty</th>
-                                <th style="width: 15%;">User</th>
-                                <th style="width: 10%;">Job / Note</th>
+                                <th style="width: 15%;"><?php _e('pe.th_date_time'); ?></th>
+                                <th style="width: 10%;"><?php _e('pe.th_type'); ?></th>
+                                <th style="width: 25%;"><?php _e('pe.th_item'); ?></th>
+                                <th style="width: 15%;"><?php _e('pe.th_location'); ?></th>
+                                <th class="pe-text-end" style="width: 10%;"><?php _e('pe.th_qty'); ?></th>
+                                <th style="width: 15%;"><?php _e('pe.th_user'); ?></th>
+                                <th style="width: 10%;"><?php _e('pe.th_job_note'); ?></th>
                             </tr>
                         </thead>
                         <tbody id="spHistoryTableBody">
                             <tr>
                                 <td colspan="7" class="pe-text-center pe-text-muted" style="padding:60px;">
                                     <div class="spinner-border text-primary" role="status"></div>
-                                    <div class="mt-2">กำลังโหลดข้อมูล...</div>
+                                    <div class="mt-2"><?php _e('pe.txt_loading'); ?></div>
                                 </td>
                             </tr>
                         </tbody>
