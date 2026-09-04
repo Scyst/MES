@@ -154,7 +154,7 @@ $pageIcon = "fas fa-users-cog";
                     
                     <div class="card user-card">
                         <div class="card-body p-0">
-                            <div class="table-responsive" style="max-height: calc(100vh - 340px); min-height: 400px;">
+                            <div class="table-responsive table-fixed-height">
                                 <table class="table table-hover table-custom align-middle mb-0" style="font-size: 0.85rem; table-layout: fixed;">
                                     <thead class="position-sticky top-0" style="z-index: 1; background-color: var(--bs-tertiary-bg);">
                                         <tr>
