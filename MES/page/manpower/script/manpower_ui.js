@@ -3372,13 +3372,31 @@ const Actions = {
                     picEl.style.cursor = 'pointer';
                     picEl.title = 'Click to enlarge';
                     picEl.onclick = () => {
+                        const infoHtml = `
+                            <div class="text-center mt-3" style="line-height: 1.4;">
+                                <h6 class="fw-bold text-dark mb-1" style="font-size: 1.1rem;">${emp.name_th}</h6>
+                                <div class="text-muted font-monospace" style="font-size: 0.85rem;"><i class="fas fa-id-badge me-1 opacity-50"></i>${emp.emp_id}</div>
+                                <div class="d-flex justify-content-center flex-wrap gap-2 mt-3">
+                                    <span class="badge bg-light text-dark border"><i class="fas fa-user-tag me-1 text-muted"></i>${emp.position || '-'}</span>
+                                    <span class="badge bg-light text-dark border"><i class="fas fa-industry me-1 text-muted"></i>${emp.line || '-'}</span>
+                                    <span class="badge bg-light text-dark border"><i class="fas fa-users me-1 text-muted"></i>${emp.team_group || 'No Team'}</span>
+                                </div>
+                            </div>
+                        `;
+
                         Swal.fire({
-                            title: emp.name_th,
+                            html: infoHtml,
                             imageUrl: emp.profile_picture,
                             imageAlt: 'Profile Picture',
+                            width: '450px',
+                            imageWidth: '100%',
+                            padding: '1.5rem',
                             showConfirmButton: false,
                             showCloseButton: true,
-                            customClass: { image: 'rounded shadow-sm' },
+                            customClass: { 
+                                image: 'rounded shadow-sm m-0',
+                                popup: 'rounded-4 border-0 shadow-lg'
+                            },
                             didOpen: () => {
                                 const container = Swal.getContainer();
                                 if (container) container.style.zIndex = '1080';
