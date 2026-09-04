@@ -285,6 +285,24 @@
         "th_requested_by": "Requested By",
         "th_date_time": "Date/Time",
         "th_assigned_to": "Assigned To",
-        "th_time": "Time"
+        "th_time": "Time",
+        "kpi_total_downtime": "Total Downtime",
+        "kpi_events": "Events",
+        "kpi_avg_duration": "Avg Duration",
+        "kpi_top_cause": "Top Cause",
+        "search_dt": "Search Machine, Cause, Note...",
+        "filter_all_cause": "All Causes",
+        "btn_record_downtime": "Record Downtime",
+        "txt_loading_summary": "Loading summary...",
+        "title_dt_history": "Downtime History",
+        "txt_showing": "Showing",
+        "txt_records": "records",
+        "th_date": "Date",
+        "th_start": "Start",
+        "th_end": "End",
+        "th_duration": "Duration",
+        "th_category": "Category",
+        "th_cause_detail": "Cause Detail",
+        "th_recovered_by": "Recovered By"
     }
 }
