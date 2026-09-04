@@ -232,7 +232,7 @@ const App = {
                     <td class="fw-bold text-primary">${emp.emp_id}</td>
                     <td class="text-start px-3">
                         <div class="d-flex align-items-center justify-content-between w-100">
-                            <span class="fw-bold text-dark text-truncate pe-2">${emp.name_th}</span>
+                            <span class="fw-bold text-dark text-truncate pe-2" style="cursor: pointer; transition: color 0.2s;" onclick="App.viewEmployeeProfile('${emp.emp_id}')" onmouseover="this.classList.replace('text-dark','text-primary')" onmouseout="this.classList.replace('text-primary','text-dark')" title="ดูข้อมูลโปรไฟล์">${emp.name_th}</span>
                             <span class="text-muted small text-nowrap">
                                 (${emp.team_group || '-'} <span class="mx-1">|</span> ${emp.line || '-'})
                             </span>
@@ -1366,6 +1366,64 @@ const App = {
         } catch (e) {
             console.error(e);
             Swal.fire('Error', 'Failed to capture image', 'error');
+        }
+    },
+
+    async viewEmployeeProfile(empId) {
+        if (!empId) return;
+        try {
+            Swal.fire({
+                title: 'Loading profile...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const res = await fetch(`api/api_master_data.php?action=read_single_employee&emp_id=${empId}`);
+            const json = await res.json();
+            
+            if (json.success && json.data) {
+                const emp = json.data;
+                const infoHtml = `
+                    <div class="text-center mt-3" style="line-height: 1.4;">
+                        <h6 class="fw-bold text-dark mb-1" style="font-size: 1.1rem;">${emp.name_th}</h6>
+                        <div class="text-muted font-monospace" style="font-size: 0.85rem;"><i class="fas fa-id-badge me-1 opacity-50"></i>${emp.emp_id}</div>
+                        <div class="d-flex justify-content-center flex-wrap gap-2 mt-3">
+                            <span class="badge bg-light text-dark border"><i class="fas fa-user-tag me-1 text-muted"></i>${emp.position || '-'}</span>
+                            <span class="badge bg-light text-dark border"><i class="fas fa-industry me-1 text-muted"></i>${emp.line || '-'}</span>
+                            <span class="badge bg-light text-dark border"><i class="fas fa-users me-1 text-muted"></i>${emp.team_group || 'No Team'}</span>
+                        </div>
+                        <div class="mt-4 pt-3 border-top text-start px-2">
+                            <div class="small mb-2 d-flex"><div style="width:25px;" class="text-center text-muted"><i class="fas fa-quote-left"></i></div><span class="text-secondary fw-semibold flex-grow-1">${emp.bio || '-'}</span></div>
+                            <div class="small mb-2 d-flex"><div style="width:25px;" class="text-center text-muted"><i class="fas fa-phone-alt"></i></div><span class="text-secondary fw-semibold flex-grow-1">${emp.phone || '-'}</span></div>
+                            <div class="small d-flex"><div style="width:25px;" class="text-center text-danger"><i class="fas fa-first-aid"></i></div><span class="text-danger fw-semibold flex-grow-1">${emp.emergency_contact_name ? emp.emergency_contact_name + ' (' + emp.emergency_contact_phone + ')' : (emp.emergency_contact_phone || '-')}</span></div>
+                        </div>
+                    </div>
+                `;
+
+                Swal.fire({
+                    html: infoHtml,
+                    imageUrl: emp.profile_picture || null,
+                    icon: emp.profile_picture ? null : 'info',
+                    imageAlt: 'Profile Picture',
+                    width: '450px',
+                    imageWidth: '100%',
+                    padding: '1.5rem',
+                    showConfirmButton: false,
+                    showCloseButton: true,
+                    customClass: { 
+                        image: 'rounded shadow-sm m-0',
+                        popup: 'rounded-4 border-0 shadow-lg'
+                    },
+                    didOpen: () => {
+                        const container = Swal.getContainer();
+                        if (container) container.style.zIndex = '1080';
+                    }
+                });
+            } else {
+                Swal.fire('Error', 'ไม่พบข้อมูลพนักงาน', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Error', e.message, 'error');
         }
     }
 };
