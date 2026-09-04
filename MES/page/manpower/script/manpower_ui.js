@@ -1972,7 +1972,7 @@ const Actions = {
                     ${firstCellHtml}
                     <td class="ps-4">
                         <div class="fw-bold text-dark text-truncate" style="max-width: 150px; cursor: pointer; transition: color 0.2s;" onclick="Actions.viewEmployeeProfile('${row.emp_id}')" onmouseover="this.classList.replace('text-dark','text-primary')" onmouseout="this.classList.replace('text-primary','text-dark')" title="ดูข้อมูลโปรไฟล์">
-                            <i class="fas fa-user-circle text-secondary opacity-50 me-1"></i>${row.name_th}
+                            ${row.name_th}
                         </div>
                         <small class="text-muted font-monospace" style="font-size:0.75rem;">${row.emp_id}</small>
                     </td>
@@ -3157,7 +3157,7 @@ const Actions = {
         `;
     },
     async openKpiDashboard(empId, name) {
-        document.getElementById('empKpiSubtitle').innerHTML = `<span onclick="Actions.viewEmployeeProfile('${empId}')" style="cursor: pointer; transition: color 0.2s;" onmouseover="this.classList.add('text-primary')" onmouseout="this.classList.remove('text-primary')" title="ดูข้อมูลโปรไฟล์"><i class="fas fa-user-circle me-1"></i>${name} (${empId})</span>`;
+        document.getElementById('empKpiSubtitle').innerHTML = `<span onclick="Actions.viewEmployeeProfile('${empId}')" style="cursor: pointer; transition: color 0.2s;" onmouseover="this.classList.add('text-primary')" onmouseout="this.classList.remove('text-primary')" title="ดูข้อมูลโปรไฟล์">${name} (${empId})</span>`;
         document.getElementById('empKpiRate').innerText = '--%';
         document.getElementById('empKpiTotal').innerText = '--';
         document.getElementById('empKpiPresent').innerText = '--';
