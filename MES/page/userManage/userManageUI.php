@@ -21,7 +21,7 @@ $pageIcon = "fas fa-users-cog";
         .table-custom th { background-color: var(--bs-tertiary-bg); color: var(--bs-secondary-color); font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; position: sticky; top: 0; z-index: 1; }
         .badge-role { font-size: 0.75rem; padding: 0.4em 0.6em; }
         .avatar-circle { width: 40px; height: 40px; background: var(--bs-primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        .table-fixed-height { max-height: calc(100vh - 280px); min-height: 400px; overflow-y: auto; }
+        .table-fixed-height { height: calc(100vh - 280px); overflow-y: auto; }
     </style>
 </head>
 <body class="layout-top-header">
