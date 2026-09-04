@@ -3350,14 +3350,26 @@ const Actions = {
                 
                 const picEl = document.getElementById('empEditProfilePic');
                 const initEl = document.getElementById('empEditProfileInitials');
+                
+                // Helper to toggle visibility properly with Bootstrap classes
+                const showPic = () => {
+                    picEl.classList.remove('d-none');
+                    initEl.classList.add('d-none');
+                    initEl.classList.remove('d-flex');
+                };
+                
+                const showInitials = () => {
+                    picEl.classList.add('d-none');
+                    initEl.classList.remove('d-none');
+                    initEl.classList.add('d-flex');
+                };
+
                 if (emp.profile_picture) {
                     picEl.src = emp.profile_picture;
-                    picEl.style.display = 'block';
-                    initEl.style.display = 'none';
-                    picEl.onerror = () => { picEl.style.display = 'none'; initEl.style.display = 'flex'; };
+                    showPic();
+                    picEl.onerror = showInitials;
                 } else {
-                    picEl.style.display = 'none';
-                    initEl.style.display = 'flex';
+                    showInitials();
                 }
 
                 const isActive = parseInt(emp.is_active) === 1;

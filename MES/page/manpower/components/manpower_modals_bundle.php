@@ -259,8 +259,8 @@
                         </div>
                         <div class="col-12 d-flex align-items-center mb-2 gap-3">
                             <div>
-                                <img id="empEditProfilePic" src="" alt="Profile" class="rounded-circle border shadow-sm" style="width: 50px; height: 50px; object-fit: cover; display: none;">
-                                <div id="empEditProfileInitials" class="avatar-initial rounded-circle bg-secondary bg-opacity-25 text-secondary border d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; font-size: 1.5rem;">
+                                <img id="empEditProfilePic" src="" alt="Profile" class="rounded-circle border shadow-sm d-none" style="width: 50px; height: 50px; object-fit: cover;">
+                                <div id="empEditProfileInitials" class="avatar-initial rounded-circle bg-secondary bg-opacity-25 text-secondary border d-none align-items-center justify-content-center" style="width: 50px; height: 50px; font-size: 1.5rem;">
                                     <i class="fas fa-user"></i>
                                 </div>
                             </div>
