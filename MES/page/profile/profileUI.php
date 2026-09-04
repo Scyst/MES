@@ -3,7 +3,7 @@ require_once __DIR__ . '/../components/init.php';
 
 $pageTitle          = __('profile.title');
 $pageHeaderTitle    = __('profile.title');
-$pageHeaderSubtitle = 'จัดการข้อมูลส่วนตัวและความปลอดภัย';
+$pageHeaderSubtitle = __('profile.subtitle');
 $pageIcon           = 'fas fa-user-circle';
 $pageBackLink       = '../dailyLog/dailyLogUI.php';
 
@@ -324,7 +324,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
         <!-- ══════════ LEFT: Avatar Card ══════════ -->
         <div class="pro-card avatar-card p-4 text-center">
             <div class="avatar-wrapper mb-3" id="avatarTrigger" title="คลิกเพื่อเปลี่ยนรูปโปรไฟล์">
-                <img id="profileAvatarImg" src="" alt="รูปโปรไฟล์"
+                <img id="profileAvatarImg" src="" alt="<?php _e('header.profile'); ?>"
                      class="avatar-img d-none"
                      onerror="this.classList.add('d-none'); document.getElementById('profileAvatarPlaceholder').classList.remove('d-none');">
                 <div id="profileAvatarPlaceholder" class="avatar-placeholder skeleton">
@@ -332,7 +332,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                 </div>
                 <div class="avatar-overlay">
                     <i class="fas fa-camera"></i>
-                    <span>เปลี่ยนรูป</span>
+                    <span><?php _e('profile.change_pic'); ?></span>
                 </div>
             </div>
 
@@ -341,7 +341,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                 <div class="progress" style="height: 6px;">
                     <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 100%"></div>
                 </div>
-                <small class="text-muted mt-1 d-block">กำลังอัปโหลด...</small>
+                <small class="text-muted mt-1 d-block"><?php _e('profile.uploading'); ?></small>
             </div>
 
             <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" class="d-none">
@@ -355,11 +355,11 @@ $currentUserId = (int)$_SESSION['user']['id'];
             <!-- Performance Widget -->
             <div class="p-3 mb-3 rounded border text-start" id="sidebarPerformanceCard" style="background-color: var(--bs-tertiary-bg);">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="small fw-bold text-muted"><i class="fas fa-star text-warning me-1"></i>เกรดประเมิน</span>
-                    <span class="badge bg-secondary" id="sidebarGradeDisplay">รอประเมิน</span>
+                    <span class="small fw-bold text-muted"><i class="fas fa-star text-warning me-1"></i><?php _e('header.eval_grade'); ?></span>
+                    <span class="badge bg-secondary" id="sidebarGradeDisplay"><?php _e('header.grade_waiting'); ?></span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="small text-secondary">ค่าผลงาน</span>
+                    <span class="small text-secondary"><?php _e('header.income'); ?></span>
                     <span class="small fw-bold text-primary" id="sidebarIncomeDisplay">฿0.00</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
@@ -420,46 +420,46 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         <div class="mb-4">
                             <div class="pro-section-header mb-3">
                                 <i class="fas fa-user-circle text-primary"></i>
-                                <span>ข้อมูลพื้นฐาน <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;">(Basic Info)</span></span>
+                                <span><?php _e('profile.basic_info'); ?> <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;"><?php _e('profile.basic_info_en'); ?></span></span>
                             </div>
 
                             <div class="row g-3">
                                 <div class="col-md-6 pro-field-group">
-                                    <label class="form-label">ชื่อ-นามสกุล <i class="fas fa-info-circle text-secondary ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ข้อมูลส่วนนี้อ้างอิงจากระบบ HR หากต้องการแก้ไข โปรดแจ้งหัวหน้างานหรือ Admin"></i></label>
+                                    <label class="form-label"><?php _e('profile.fullname'); ?> <i class="fas fa-info-circle text-secondary ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ข้อมูลส่วนนี้อ้างอิงจากระบบ HR หากต้องการแก้ไข โปรดแจ้งหัวหน้างานหรือ Admin"></i></label>
                                     <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldFullname" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
-                                    <label class="form-label">ตำแหน่งงาน <i class="fas fa-info-circle text-secondary ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ข้อมูลส่วนนี้อ้างอิงจากระบบ HR หากต้องการแก้ไข โปรดแจ้งหัวหน้างานหรือ Admin"></i></label>
+                                    <label class="form-label"><?php _e('profile.position'); ?> <i class="fas fa-info-circle text-secondary ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ข้อมูลส่วนนี้อ้างอิงจากระบบ HR หากต้องการแก้ไข โปรดแจ้งหัวหน้างานหรือ Admin"></i></label>
                                     <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldPosition" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
-                                    <label class="form-label">สาย / Line <i class="fas fa-info-circle text-secondary ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ข้อมูลส่วนนี้อ้างอิงจากระบบ HR หากต้องการแก้ไข โปรดแจ้งหัวหน้างานหรือ Admin"></i></label>
+                                    <label class="form-label"><?php _e('profile.line'); ?> <i class="fas fa-info-circle text-secondary ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ข้อมูลส่วนนี้อ้างอิงจากระบบ HR หากต้องการแก้ไข โปรดแจ้งหัวหน้างานหรือ Admin"></i></label>
                                     <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldLine" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
-                                    <label class="form-label">แผนก <i class="fas fa-info-circle text-secondary ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ข้อมูลส่วนนี้อ้างอิงจากระบบ HR หากต้องการแก้ไข โปรดแจ้งหัวหน้างานหรือ Admin"></i></label>
+                                    <label class="form-label"><?php _e('profile.department'); ?> <i class="fas fa-info-circle text-secondary ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ข้อมูลส่วนนี้อ้างอิงจากระบบ HR หากต้องการแก้ไข โปรดแจ้งหัวหน้างานหรือ Admin"></i></label>
                                     <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldDept" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-4 pro-field-group">
-                                    <label class="form-label">วันเกิด</label>
+                                    <label class="form-label"><?php _e('profile.dob'); ?></label>
                                     <input type="date" class="form-control" id="fieldDOB" name="date_of_birth">
                                 </div>
                                 <div class="col-md-4 pro-field-group">
-                                    <label class="form-label">สถานภาพสมรส</label>
+                                    <label class="form-label"><?php _e('profile.marital_status'); ?></label>
                                     <select class="form-select" id="fieldMarital" name="marital_status">
-                                        <option value="">-- เลือกสถานภาพ --</option>
-                                        <option value="โสด">โสด (Single)</option>
-                                        <option value="สมรส">สมรส (Married)</option>
-                                        <option value="หย่าร้าง">หย่าร้าง (Divorced)</option>
-                                        <option value="หม้าย">หม้าย (Widowed)</option>
+                                        <option value="">-- <?php _e('profile.marital_status'); ?> --</option>
+                                        <option value="โสด"><?php _e('profile.marital_single'); ?></option>
+                                        <option value="สมรส"><?php _e('profile.marital_married'); ?></option>
+                                        <option value="หย่าร้าง"><?php _e('profile.marital_divorced'); ?></option>
+                                        <option value="หม้าย"><?php _e('profile.marital_widowed'); ?></option>
                                     </select>
                                 </div>
                                 <div class="col-md-4 pro-field-group">
-                                    <label class="form-label">จำนวนบุตร (คน)</label>
+                                    <label class="form-label"><?php _e('profile.children'); ?></label>
                                     <input type="number" class="form-control" id="fieldChildren" name="children_count" min="0" placeholder="0">
                                 </div>
                                 <div class="col-12 pro-field-group">
-                                    <label class="form-label">คำแนะนำตัว (ไม่บังคับ)</label>
+                                    <label class="form-label"><?php _e('profile.bio'); ?></label>
                                     <div class="position-relative">
                                         <textarea class="form-control" id="fieldBio" name="bio" rows="3"
                                                   placeholder="แนะนำตัวคุณสั้นๆ..." maxlength="500"
@@ -476,14 +476,13 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         <div class="mb-4">
                             <div class="pro-section-header">
                                 <i class="fas fa-tshirt text-primary"></i>
-                                <span>สวัสดิการและอุปกรณ์ <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;">(Welfare &amp; Equipment)</span></span>
-                                <span class="section-tag">ระบุตามความสมัครใจ</span>
+                                <span><?php _e('profile.welfare_eq'); ?> <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;"><?php _e('profile.welfare_eq_en'); ?></span></span>
                             </div>
                             <div class="row g-3">
                                 <div class="col-md-6 pro-field-group">
-                                    <label class="form-label">ขนาดเสื้อยูนิฟอร์ม (Shirt Size)</label>
+                                    <label class="form-label"><?php _e('profile.shirt_size'); ?></label>
                                     <select class="form-select" id="fieldShirt" name="shirt_size">
-                                        <option value="">-- เลือกขนาดเสื้อ --</option>
+                                        <option value="">-- <?php _e('profile.shirt_size'); ?> --</option>
                                         <option value="S">S</option>
                                         <option value="M">M</option>
                                         <option value="L">L</option>
@@ -493,8 +492,8 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                     </select>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
-                                    <label class="form-label">ขนาดรองเท้าเซฟตี้ (Shoe Size)</label>
-                                    <input type="text" class="form-control" id="fieldShoe" name="shoe_size" placeholder="เช่น 39, 40, 42" maxlength="10">
+                                    <label class="form-label"><?php _e('profile.shoe_size'); ?></label>
+                                    <input type="text" class="form-control" id="fieldShoe" name="shoe_size" placeholder="e.g. 39, 40, 42" maxlength="10">
                                 </div>
                             </div>
                         </div>
@@ -503,12 +502,11 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         <div class="mb-4">
                             <div class="pro-section-header">
                                 <i class="fas fa-address-book text-primary"></i>
-                                <span>ข้อมูลการติดต่อ <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;">(Contact Info)</span></span>
-                                <span class="section-tag">ระบุตามความสมัครใจ</span>
+                                <span><?php _e('profile.contact_info'); ?> <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;"><?php _e('profile.contact_info_en'); ?></span></span>
                             </div>
                             <div class="row g-3">
                                 <div class="col-md-4 pro-field-group">
-                                    <label class="form-label">เบอร์โทรศัพท์</label>
+                                    <label class="form-label"><?php _e('profile.phone'); ?></label>
                                     <input type="tel" class="form-control" id="fieldPhone" name="phone" placeholder="08X-XXX-XXXX" maxlength="20">
                                 </div>
                                 <div class="col-md-4 pro-field-group">
@@ -520,8 +518,8 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                     <input type="text" class="form-control" id="fieldFacebook" name="social_facebook" placeholder="Facebook Name/URL" maxlength="200">
                                 </div>
                                 <div class="col-12 pro-field-group">
-                                    <label class="form-label">ที่อยู่ปัจจุบัน</label>
-                                    <textarea class="form-control" id="fieldAddress" name="current_address" rows="2" placeholder="ที่อยู่สำหรับติดต่อ..."></textarea>
+                                    <label class="form-label"><?php _e('profile.address'); ?></label>
+                                    <textarea class="form-control" id="fieldAddress" name="current_address" rows="2"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -530,25 +528,24 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         <div class="mb-4">
                             <div class="pro-section-header">
                                 <i class="fas fa-car text-primary"></i>
-                                <span>การเดินทาง <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;">(Commute)</span></span>
-                                <span class="section-tag">ระบุตามความสมัครใจ</span>
+                                <span><?php _e('profile.commute'); ?> <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;"><?php _e('profile.commute_en'); ?></span></span>
                             </div>
                             <div class="row g-3">
                                 <div class="col-md-6 pro-field-group">
-                                    <label class="form-label">วิธีการเดินทางมาทำงาน</label>
+                                    <label class="form-label"><?php _e('profile.commute_method'); ?></label>
                                     <select class="form-select" id="fieldCommute" name="commute_method">
-                                        <option value="">-- เลือกวิธีการเดินทาง --</option>
-                                        <option value="รถรับส่งบริษัท">รถรับส่งบริษัท (Company Bus)</option>
-                                        <option value="รถยนต์ส่วนตัว">รถยนต์ส่วนตัว (Personal Car)</option>
-                                        <option value="รถจักรยานยนต์ส่วนตัว">รถจักรยานยนต์ส่วนตัว (Motorcycle)</option>
-                                        <option value="รถโดยสารประจำทาง">รถโดยสารประจำทาง (Public Transport)</option>
-                                        <option value="เดิน">เดิน (Walk)</option>
-                                        <option value="อื่นๆ">อื่นๆ (Others)</option>
+                                        <option value="">-- <?php _e('profile.commute_method'); ?> --</option>
+                                        <option value="รถรับส่งบริษัท">Company Bus</option>
+                                        <option value="รถยนต์ส่วนตัว">Personal Car</option>
+                                        <option value="รถจักรยานยนต์ส่วนตัว">Motorcycle</option>
+                                        <option value="รถโดยสารประจำทาง">Public Transport</option>
+                                        <option value="เดิน">Walk</option>
+                                        <option value="อื่นๆ">Others</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
-                                    <label class="form-label">ทะเบียนรถ (ถ้ามี)</label>
-                                    <input type="text" class="form-control" id="fieldVehicle" name="vehicle_registration" placeholder="เช่น กข 1234 กทม" maxlength="50">
+                                    <label class="form-label"><?php _e('profile.vehicle_reg'); ?></label>
+                                    <input type="text" class="form-control" id="fieldVehicle" name="vehicle_registration" maxlength="50">
                                 </div>
                             </div>
                         </div>
@@ -557,20 +554,19 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         <div class="mb-4">
                             <div class="pro-section-header danger">
                                 <i class="fas fa-heartbeat"></i>
-                                <span>ผู้ติดต่อฉุกเฉิน <span class="d-none d-md-inline fw-normal" style="font-size:0.75rem; opacity: 0.7;">(Emergency Contact)</span></span>
-                                <span class="section-tag">แนะนำให้ระบุ</span>
+                                <span><?php _e('profile.emergency'); ?> <span class="d-none d-md-inline fw-normal" style="font-size:0.75rem; opacity: 0.7;"><?php _e('profile.emergency_en'); ?></span></span>
                             </div>
                             <div class="row g-3">
                                 <div class="col-md-4 pro-field-group">
-                                    <label class="form-label">ชื่อผู้ติดต่อฉุกเฉิน</label>
-                                    <input type="text" class="form-control" id="fieldEmergName" name="emergency_contact_name" placeholder="ชื่อ - นามสกุล" maxlength="200">
+                                    <label class="form-label"><?php _e('profile.em_name'); ?></label>
+                                    <input type="text" class="form-control" id="fieldEmergName" name="emergency_contact_name" maxlength="200">
                                 </div>
                                 <div class="col-md-4 pro-field-group">
-                                    <label class="form-label">ความสัมพันธ์</label>
-                                    <input type="text" class="form-control" id="fieldEmergRel" name="emergency_contact_relation" placeholder="เช่น บิดา, มารดา, พี่น้อง" maxlength="100">
+                                    <label class="form-label"><?php _e('profile.em_relation'); ?></label>
+                                    <input type="text" class="form-control" id="fieldEmergRel" name="emergency_contact_relation" maxlength="100">
                                 </div>
                                 <div class="col-md-4 pro-field-group">
-                                    <label class="form-label">เบอร์โทรศัพท์ฉุกเฉิน</label>
+                                    <label class="form-label"><?php _e('profile.em_phone'); ?></label>
                                     <input type="tel" class="form-control" id="fieldEmergPhone" name="emergency_contact_phone" placeholder="08X-XXX-XXXX" maxlength="50">
                                 </div>
                             </div>
@@ -578,7 +574,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
                         <div class="mt-4 d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary px-4 py-2 fw-bold rounded" id="btnSaveInfo">
-                                <i class="fas fa-save me-2"></i>บันทึกข้อมูลส่วนตัว
+                                <i class="fas fa-save me-2"></i><?php _e('profile.btn_save_info'); ?>
                             </button>
                         </div>
                     </form>
@@ -588,18 +584,18 @@ $currentUserId = (int)$_SESSION['user']['id'];
                 <div id="section-security" class="d-none">
                     <div class="pro-section-header">
                         <i class="fas fa-lock text-primary"></i>
-                        ความปลอดภัยบัญชี
+                        <?php _e('profile.account_security'); ?>
                     </div>
 
                     <div class="pro-notice" style="border-color: rgba(var(--bs-info-rgb),.25); background: rgba(var(--bs-info-rgb),.05);">
                         <i class="fas fa-shield-alt notice-icon text-info"></i>
-                        <span><strong>เปลี่ยนรหัสผ่านเพื่อความปลอดภัย</strong> — แนะนำให้รหัสผ่านมีอย่างน้อย 8 ตัวอักษร ผสมตัวอักษรใหญ่-เล็ก และตัวเลข</span>
+                        <span><?php _e('profile.change_pwd_hint'); ?></span>
                     </div>
 
                     <form id="changePasswordForm" autocomplete="off">
                         <div class="row g-3">
                             <div class="col-12 pro-field-group">
-                                <label class="form-label">รหัสผ่านเดิม</label>
+                                <label class="form-label"><?php _e('profile.old_pwd'); ?></label>
                                 <div class="input-group">
                                     <input type="password" class="form-control" id="fieldOldPwd"
                                            name="old_password" placeholder="กรอกรหัสผ่านเดิม" autocomplete="current-password">
@@ -609,7 +605,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                 </div>
                             </div>
                             <div class="col-md-6 pro-field-group">
-                                <label class="form-label">รหัสผ่านใหม่</label>
+                                <label class="form-label"><?php _e('profile.new_pwd'); ?></label>
                                 <div class="input-group">
                                     <input type="password" class="form-control" id="fieldNewPwd"
                                            name="new_password" placeholder="อย่างน้อย 6 ตัวอักษร" autocomplete="new-password">
@@ -629,7 +625,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                 </div>
                             </div>
                             <div class="col-md-6 pro-field-group">
-                                <label class="form-label">ยืนยันรหัสผ่านใหม่</label>
+                                <label class="form-label"><?php _e('profile.confirm_pwd'); ?></label>
                                 <div class="input-group">
                                     <input type="password" class="form-control" id="fieldConfirmPwd"
                                            name="confirm_password" placeholder="กรอกรหัสผ่านใหม่อีกครั้ง" autocomplete="new-password">
@@ -645,7 +641,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
                         <div class="mt-4 d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary px-4 py-2 fw-bold" id="btnChangePassword">
-                                <i class="fas fa-key me-2"></i>เปลี่ยนรหัสผ่าน
+                                <i class="fas fa-key me-2"></i><?php _e('profile.btn_change_pwd'); ?>
                             </button>
                         </div>
                     </form>
@@ -655,7 +651,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                 <div id="section-activity" class="d-none">
                     <div class="pro-section-header">
                         <i class="fas fa-history text-primary"></i>
-                        ประวัติกิจกรรมล่าสุด
+                        <?php _e('profile.recent_activity'); ?>
                         <button class="btn btn-sm btn-outline-secondary ms-auto" style="font-size:0.75rem; padding: 0.2rem 0.6rem;" onclick="loadActivityLog()">
                             <i class="fas fa-sync-alt"></i>
                         </button>
@@ -669,16 +665,16 @@ $currentUserId = (int)$_SESSION['user']['id'];
                 <div id="section-preferences" class="d-none">
                     <div class="pro-section-header">
                         <i class="fas fa-sliders-h text-primary"></i>
-                        การตั้งค่าส่วนตัว
+                        <?php _e('profile.personal_settings'); ?>
                     </div>
                     <form id="preferencesForm">
                         <div class="row g-3">
                             <div class="col-md-6 pro-field-group">
-                                <label class="form-label">ธีมที่ใช้งาน (Theme) <i class="fas fa-info-circle text-warning ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ฟีเจอร์นี้อยู่ระหว่างการพัฒนา"></i></label>
+                                <label class="form-label"><?php _e('profile.theme'); ?> <i class="fas fa-info-circle text-warning ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ฟีเจอร์นี้อยู่ระหว่างการพัฒนา"></i></label>
                                 <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldThemeDisplay" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                             </div>
                             <div class="col-md-6 pro-field-group">
-                                <label class="form-label">ภาษาที่ใช้งาน (Language) <i class="fas fa-info-circle text-warning ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ฟีเจอร์นี้อยู่ระหว่างการพัฒนา"></i></label>
+                                <label class="form-label"><?php _e('profile.language'); ?> <i class="fas fa-info-circle text-warning ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ฟีเจอร์นี้อยู่ระหว่างการพัฒนา"></i></label>
                                 <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldLangDisplay" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                             </div>
                         </div>
