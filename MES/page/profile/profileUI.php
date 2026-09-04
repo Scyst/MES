@@ -424,7 +424,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                                     ข้อมูลพื้นฐาน <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;">(Basic Info)</span>
                                 </div>
                                 <div class="text-secondary" style="font-size: 0.75rem; font-weight: normal;">
-                                    <i class="fas fa-info-circle"></i> หากข้อมูลไม่ถูกต้อง โปรดแจ้งหัวหน้างานหรือ Admin
+                                    <i class="fas fa-info-circle"></i> แจ้งแก้ไขที่ Admin
                                 </div>
                             </div>
 
