@@ -52,75 +52,75 @@ $pageTitle = "PE Enterprise";
 
         <nav class="pe-sidebar-nav">
             <div class="pe-nav-section">
-                <div class="pe-nav-section-label">Main</div>
+                <div class="pe-nav-section-label"><?php _e('pe.sidebar_main'); ?></div>
                 <button class="pe-nav-item" data-tab="machines">
                     <i class="fas fa-industry"></i>
-                    <span class="nav-label">Machine Registry</span>
+                    <span class="nav-label"><?php _e('pe.menu_machines'); ?></span>
                 </button>
                 <button class="pe-nav-item active" data-tab="workorders">
                     <i class="fas fa-clipboard-list"></i>
-                    <span class="nav-label">Work Orders</span>
+                    <span class="nav-label"><?php _e('pe.menu_workorders'); ?></span>
                     <span class="nav-badge" id="woOpenBadge" style="display:none;">0</span>
                 </button>
                 <button class="pe-nav-item" data-tab="downtime">
                     <i class="fas fa-clock"></i>
-                    <span class="nav-label">Downtime Tracker</span>
+                    <span class="nav-label"><?php _e('pe.menu_downtime'); ?></span>
                 </button>
                 <button class="pe-nav-item" data-tab="spareparts">
                     <i class="fas fa-boxes"></i>
-                    <span class="nav-label">Spare Parts</span>
+                    <span class="nav-label"><?php _e('pe.menu_spareparts'); ?></span>
                     <span class="nav-badge" id="lowStockBadge" style="display:none;">0</span>
                 </button>
                 <button class="pe-nav-item" data-tab="safety">
                       <i class="fas fa-hard-hat"></i>
-                      <span class="nav-label">Safety & Hazards</span>
+                      <span class="nav-label"><?php _e('pe.menu_safety'); ?></span>
                   </button>
                 <button class="pe-nav-item" data-tab="print_safety">
                     <i class="fas fa-print"></i>
-                    <span class="nav-label">Safety Print Center</span>
+                    <span class="nav-label"><?php _e('pe.menu_print_safety'); ?></span>
                 </button>
             </div>
 
             <div class="pe-nav-section">
-                <div class="pe-nav-section-label">Analytics & IIoT</div>
+                <div class="pe-nav-section-label"><?php _e('pe.sidebar_analytics'); ?></div>
                 <button class="pe-nav-item" data-tab="machine_timeline">
                     <i class="fas fa-stream"></i>
-                    <span class="nav-label">Machine Timeline</span>
+                    <span class="nav-label"><?php _e('pe.menu_machine_timeline'); ?></span>
                 </button>
                 <button class="pe-nav-item" data-tab="iiot">
                     <i class="fas fa-satellite-dish"></i>
-                    <span class="nav-label">Live IIoT Monitor</span>
+                    <span class="nav-label"><?php _e('pe.menu_iiot'); ?></span>
                 </button>
 
                                   <button class="pe-nav-item" data-tab="iiot_analytics">
                       <i class="fas fa-history"></i>
-                      <span class="nav-label">IIoT Historical Analytics</span>
+                      <span class="nav-label"><?php _e('pe.menu_iiot_analytics'); ?></span>
                   </button>
 
                 <button class="pe-nav-item" data-tab="analytics">
                     <i class="fas fa-chart-line"></i>
-                    <span class="nav-label">Maintenance Analytics</span>
+                    <span class="nav-label"><?php _e('pe.menu_analytics'); ?></span>
                 </button>
             </div>
 
             <div class="pe-nav-section">
-                <div class="pe-nav-section-label">Quick Links</div>
+                <div class="pe-nav-section-label"><?php _e('pe.sidebar_quick_links'); ?></div>
                 <a class="pe-nav-item" href="peTechMobile.php" target="_blank">
                     <i class="fas fa-mobile-alt"></i>
-                    <span class="nav-label">Technician Portal</span>
+                    <span class="nav-label"><?php _e('pe.menu_tech_portal'); ?></span>
                 </a>
                 <a class="pe-nav-item" href="peRequest.php" target="_blank">
                     <i class="fas fa-external-link-alt"></i>
-                    <span class="nav-label">PE Request Portal</span>
+                    <span class="nav-label"><?php _e('pe.menu_pe_request'); ?></span>
                 </a>
 
                 <a class="pe-nav-item" href="quick_hazard_report.php" target="_blank">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <span class="nav-label">Quick Hazard Report</span>
+                    <span class="nav-label"><?php _e('pe.menu_quick_hazard'); ?></span>
                 </a>
                 <a class="pe-nav-item" href="../dailyLog/dailyLogUI.php" style="color: var(--pe-danger);">
                     <i class="fas fa-sign-out-alt"></i>
-                    <span class="nav-label">Exit to Main System</span>
+                    <span class="nav-label"><?php _e('pe.menu_exit'); ?></span>
                 </a>
             </div>
         </nav>
@@ -142,10 +142,10 @@ $pageTitle = "PE Enterprise";
             </button>
             <div class="pe-topbar-title">
                 <i class="fas fa-cogs"></i>
-                <span id="topbarTitle">Machine Registry</span>
+                <span id="topbarTitle"><?php _e('pe.menu_machines'); ?></span>
             </div>
             <div class="pe-topbar-breadcrumb">
-                PE Enterprise <i class="fas fa-chevron-right" style="font-size:9px;"></i> <span id="topbarBreadcrumb">Machines</span>
+                <?php _e('pe.topbar_pe_enterprise'); ?> <i class="fas fa-chevron-right" style="font-size:9px;"></i> <span id="topbarBreadcrumb"><?php _e('pe.topbar_machines'); ?></span>
             </div>
             <div class="pe-topbar-actions">
                 <!-- Notification Bell -->
@@ -157,10 +157,10 @@ $pageTitle = "PE Enterprise";
                     <!-- Dropdown -->
                     <div id="notifyDropdown" class="pe-notify-dropdown" style="display: none; position: absolute; right: 0; top: 100%; width: 320px; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1050; max-height: 400px; overflow-y: auto;">
                         <div style="padding: 10px 15px; border-bottom: 1px solid #eee; font-weight: bold; background: #f8f9fa; border-radius: 8px 8px 0 0;">
-                            การแจ้งเตือนระบบ <span id="notifyCountText" class="text-muted" style="font-size:0.85em; font-weight:normal;">(0)</span>
+                            <?php _e('pe.notify_title'); ?> <span id="notifyCountText" class="text-muted" style="font-size:0.85em; font-weight:normal;">(0)</span>
                         </div>
                         <div id="notifyList" style="padding: 0;">
-                            <div style="padding: 15px; text-align: center; color: #888; font-size: 0.9em;">ไม่มีการแจ้งเตือนใหม่</div>
+                            <div style="padding: 15px; text-align: center; color: #888; font-size: 0.9em;"><?php _e('pe.notify_empty'); ?></div>
                         </div>
                     </div>
                 </div>
@@ -253,7 +253,7 @@ $pageTitle = "PE Enterprise";
     <div class="modal-dialog modal-fullscreen-sm-down modal-dialog-centered">
     <div class="modal-content">
         <div class="modal-header">
-        <h5 class="modal-title" id="cropImageModalLabel"><i class="fas fa-crop-alt"></i> จัดการรูปภาพ</h5>
+        <h5 class="modal-title" id="cropImageModalLabel"><i class="fas fa-crop-alt"></i> <?php _e('pe.crop_title'); ?></h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btnCancelCrop"></button>
         </div>
         <div class="modal-body p-2 text-center d-flex flex-column" style="background-color: #000; overflow: hidden; max-height: 70vh;">
@@ -265,16 +265,16 @@ $pageTitle = "PE Enterprise";
                   <button type="button" class="btn btn-outline-light btn-sm btn-aspect" data-ratio="1">1:1</button>
                   <button type="button" class="btn btn-outline-light btn-sm btn-aspect" data-ratio="1.3333333333333333">4:3</button>
                   <button type="button" class="btn btn-outline-light btn-sm btn-aspect" data-ratio="0.75">3:4</button>
-                  <button type="button" class="btn btn-outline-light btn-sm btn-aspect active" data-ratio="NaN">อิสระ</button>
+                  <button type="button" class="btn btn-outline-light btn-sm btn-aspect active" data-ratio="NaN"><?php _e('pe.crop_free'); ?></button>
               </div>
           </div>
         </div>
         <div class="modal-footer d-flex justify-content-between bg-light">
         <div>
-            <button type="button" class="btn btn-secondary me-1" id="btnRotateLeft" title="หมุนซ้าย"><i class="fas fa-undo"></i></button>
-            <button type="button" class="btn btn-secondary" id="btnRotateRight" title="หมุนขวา"><i class="fas fa-redo"></i></button>
+            <button type="button" class="btn btn-secondary me-1" id="btnRotateLeft" title="<?php _e('pe.crop_rotate_left'); ?>"><i class="fas fa-undo"></i></button>
+            <button type="button" class="btn btn-secondary" id="btnRotateRight" title="<?php _e('pe.crop_rotate_right'); ?>"><i class="fas fa-redo"></i></button>
         </div>
-        <button type="button" class="btn btn-primary" id="btnConfirmCrop"><i class="fas fa-check"></i> ยืนยันรูปภาพ</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmCrop"><i class="fas fa-check"></i> <?php _e('pe.crop_confirm'); ?></button>
         </div>
     </div>
     </div>
