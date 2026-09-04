@@ -6,9 +6,9 @@ if (!hasPermission('manage_users') && !hasPermission('manage_roles')) {
 }
 
 $canManage = true;
-$pageTitle = "User Management";
-$pageHeaderTitle = "User & Access Management"; 
-$pageHeaderSubtitle = "จัดการผู้ใช้งาน สิทธิ์การเข้าถึง และซิงค์ข้อมูลพนักงาน";
+$pageTitle = __('userManage.header_title');
+$pageHeaderTitle = __('userManage.header_title'); 
+$pageHeaderSubtitle = __('userManage.header_subtitle');
 $pageIcon = "fas fa-users-cog";
 ?>
 <!DOCTYPE html>
@@ -33,15 +33,15 @@ $pageIcon = "fas fa-users-cog";
 
             <ul class="nav nav-tabs" id="userManageTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active fw-bold" id="users-tab" data-bs-toggle="tab" data-bs-target="#tab-users" type="button" role="tab"><i class="fas fa-users me-2"></i>Users List</button>
+                    <button class="nav-link active fw-bold" id="users-tab" data-bs-toggle="tab" data-bs-target="#tab-users" type="button" role="tab"><i class="fas fa-users me-2"></i><?php _e('userManage.tab_users'); ?></button>
                 </li>
                 <?php if(hasPermission('manage_roles')): ?>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold text-primary" id="roles-tab" data-bs-toggle="tab" data-bs-target="#tab-roles" type="button" role="tab"><i class="fas fa-key me-2"></i>Roles & Permissions</button>
+                    <button class="nav-link fw-bold text-primary" id="roles-tab" data-bs-toggle="tab" data-bs-target="#tab-roles" type="button" role="tab"><i class="fas fa-key me-2"></i><?php _e('userManage.tab_roles'); ?></button>
                 </li>
                 <?php endif; ?>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold text-secondary" id="logs-tab" data-bs-toggle="tab" data-bs-target="#tab-logs" type="button" role="tab"><i class="fas fa-history me-2"></i>Audit Logs</button>
+                    <button class="nav-link fw-bold text-secondary" id="logs-tab" data-bs-toggle="tab" data-bs-target="#tab-logs" type="button" role="tab"><i class="fas fa-history me-2"></i><?php _e('userManage.tab_logs'); ?></button>
                 </li>
             </ul>
 
@@ -53,24 +53,24 @@ $pageIcon = "fas fa-users-cog";
                             <div class="d-flex gap-2 flex-wrap">
                                 <div class="input-group input-group-sm" style="width: 250px;">
                                     <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                                    <input type="text" id="searchUserInput" class="form-control border-start-0 ps-0" placeholder="Search by Name, ID...">
+                                    <input type="text" id="searchUserInput" class="form-control border-start-0 ps-0" placeholder="<?php _e('userManage.search_placeholder'); ?>">
                                 </div>
                                 <select id="filterTeam" class="form-select form-select-sm" style="width: 150px;">
-                                    <option value="">All Teams</option>
+                                    <option value=""><?php _e('userManage.filter_team'); ?></option>
                                 </select>
                                 <select id="filterLine" class="form-select form-select-sm" style="width: 140px;">
-                                    <option value="">All Lines</option>
+                                    <option value=""><?php _e('userManage.filter_line'); ?></option>
                                 </select>
                                 <select id="filterRole" class="form-select form-select-sm" style="width: 140px;">
-                                    <option value="">All Roles</option>
+                                    <option value=""><?php _e('userManage.filter_role'); ?></option>
                                 </select>
                             </div>
                             <div class="d-flex gap-2">
                                 <button class="btn btn-primary btn-sm shadow-sm fw-bold" onclick="openModal('addUserModal')">
-                                    <i class="fas fa-user-plus me-1"></i> Add User
+                                    <i class="fas fa-user-plus me-1"></i> <?php _e('userManage.btn_add_user'); ?>
                                 </button>
                                 <button class="btn btn-outline-success btn-sm shadow-sm fw-bold" id="btnSyncManpower">
-                                    <i class="fas fa-sync-alt me-1"></i> Sync Manpower
+                                    <i class="fas fa-sync-alt me-1"></i> <?php _e('userManage.btn_sync'); ?>
                                 </button>
                             </div>
                         </div>
@@ -82,16 +82,16 @@ $pageIcon = "fas fa-users-cog";
                                 <table class="table table-hover table-custom align-middle mb-0" style="font-size: 0.85rem;">
                                     <thead class="position-sticky top-0" style="z-index: 1; background-color: var(--bs-tertiary-bg);">
                                         <tr>
-                                            <th class="ps-4">Employee Details</th> 
-                                            <th>Username</th> 
-                                            <th>Role & Dept</th>
-                                            <th>Status</th>
-                                            <th>Source</th>
-                                            <th class="text-end pe-4">Actions</th>
+                                            <th class="ps-4"><?php _e('userManage.th_emp_details'); ?></th> 
+                                            <th><?php _e('userManage.th_username'); ?></th> 
+                                            <th><?php _e('userManage.th_role_dept'); ?></th>
+                                            <th><?php _e('userManage.th_status'); ?></th>
+                                            <th><?php _e('userManage.th_source'); ?></th>
+                                            <th class="text-end pe-4"><?php _e('userManage.th_actions'); ?></th>
                                         </tr>
                                     </thead>
                                     <tbody id="userTable">
-                                        <tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading users...</td></tr>
+                                        <tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> <?php _e('userManage.loading_users'); ?></td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -105,8 +105,8 @@ $pageIcon = "fas fa-users-cog";
                 <div class="tab-pane fade" id="tab-roles" role="tabpanel">
                       <div class="card user-card border-primary mb-3">
                           <div class="card-header bg-primary bg-opacity-10 text-primary fw-bold d-flex justify-content-between align-items-center">
-                              <div><i class="fas fa-shield-alt me-2"></i> Permission Matrix (PBAC)</div>
-                              <button class="btn btn-sm btn-primary" onclick="openPermissionMasterModal()"><i class="fas fa-cog me-1"></i> Manage Permissions</button>
+                              <div><i class="fas fa-shield-alt me-2"></i> <?php _e('userManage.matrix_title'); ?></div>
+                              <button class="btn btn-sm btn-primary" onclick="openPermissionMasterModal()"><i class="fas fa-cog me-1"></i> <?php _e('userManage.btn_manage_perm'); ?></button>
                           </div>
                           <div class="card-body p-0">
                             <div class="table-responsive">
@@ -114,14 +114,14 @@ $pageIcon = "fas fa-users-cog";
                                     <thead class="table-light text-center" id="matrixThead">
                                         </thead>
                                     <tbody id="matrixTbody">
-                                        <tr><td class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading Matrix...</td></tr>
+                                        <tr><td class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> <?php _e('userManage.loading_matrix'); ?></td></tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
                     <div class="alert alert-info py-2 small mb-0">
-                        <i class="fas fa-info-circle me-1"></i> สิทธิ์ระดับ <b>System Owner (creator)</b> ไม่สามารถแก้ไขได้เพื่อป้องกันการสูญเสียการควบคุมระบบ
+                        <i class="fas fa-info-circle me-1"></i> <?php _e('userManage.sys_owner_warning'); ?>
                     </div>
                 </div>
 
@@ -137,16 +137,16 @@ $pageIcon = "fas fa-users-cog";
                                     </div>
                                 </div>
                                 <div class="col-md-2">
-                                    <input type="text" class="form-control form-control-sm" id="logActionType" name="action_type" placeholder="e.g. UPDATE, LOGIN, API_ERROR">
+                                    <input type="text" class="form-control form-control-sm" id="logActionType" name="action_type" placeholder="<?php _e('userManage.ph_action_type'); ?>">
                                 </div>
                                 <div class="col-md-2">
-                                    <input type="text" class="form-control form-control-sm" id="logModule" name="module" placeholder="e.g. INVENTORY_API">
+                                    <input type="text" class="form-control form-control-sm" id="logModule" name="module" placeholder="<?php _e('userManage.ph_module'); ?>">
                                 </div>
                                 <div class="col-md-3">
-                                    <input type="text" class="form-control form-control-sm" id="logSearch" name="search" placeholder="Search in remark, values, ref_id...">
+                                    <input type="text" class="form-control form-control-sm" id="logSearch" name="search" placeholder="<?php _e('userManage.ph_search_log'); ?>">
                                 </div>
                                 <div class="col-md-2 d-grid">
-                                    <button type="submit" class="btn btn-primary btn-sm fw-bold"><i class="fas fa-search me-1"></i> Search Logs</button>
+                                    <button type="submit" class="btn btn-primary btn-sm fw-bold"><i class="fas fa-search me-1"></i> <?php _e('userManage.btn_search_log'); ?></button>
                                 </div>
                             </form>
                         </div>
@@ -158,16 +158,16 @@ $pageIcon = "fas fa-users-cog";
                                 <table class="table table-hover table-custom align-middle mb-0" style="font-size: 0.85rem; table-layout: fixed;">
                                     <thead class="position-sticky top-0" style="z-index: 1; background-color: var(--bs-tertiary-bg);">
                                         <tr>
-                                            <th style="width: 15%;">Timestamp</th>
-                                            <th style="width: 18%;">User & IP</th>
-                                            <th style="width: 20%;">Action & Module</th>
-                                            <th style="width: 6%;">Ref ID</th>
-                                            <th style="width: 33%;">Details / Remark</th>
-                                            <th style="width: 8%;" class="text-center">Raw Data</th>
+                                            <th style="width: 15%;"><?php _e('userManage.th_timestamp'); ?></th>
+                                            <th style="width: 18%;"><?php _e('userManage.th_user_ip'); ?></th>
+                                            <th style="width: 20%;"><?php _e('userManage.th_action_module'); ?></th>
+                                            <th style="width: 6%;"><?php _e('userManage.th_ref_id'); ?></th>
+                                            <th style="width: 33%;"><?php _e('userManage.th_details'); ?></th>
+                                            <th style="width: 8%;" class="text-center"><?php _e('userManage.th_raw'); ?></th>
                                         </tr>
                                     </thead>
                                     <tbody id="logsTbody">
-                                        <tr><td colspan="6" class="text-center py-4 text-muted">Click Search to load logs.</td></tr>
+                                        <tr><td colspan="6" class="text-center py-4 text-muted"><?php _e('userManage.click_search_log'); ?></td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -187,7 +187,7 @@ $pageIcon = "fas fa-users-cog";
                     <div class="modal-dialog modal-lg">
                         <div class="modal-content">
                             <div class="modal-header bg-dark text-white py-2">
-                                <h5 class="modal-title fs-6"><i class="fas fa-code me-2"></i>Raw Log Data</h5>
+                                <h5 class="modal-title fs-6"><i class="fas fa-code me-2"></i><?php _e('userManage.raw_log_title'); ?></h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body p-0 bg-dark">
@@ -205,26 +205,26 @@ $pageIcon = "fas fa-users-cog";
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-light">
-                    <h5 class="modal-title"><i class="fas fa-cogs me-2 text-primary"></i>Manage Permissions</h5>
+                    <h5 class="modal-title"><i class="fas fa-cogs me-2 text-primary"></i><?php _e('userManage.perm_modal_title'); ?></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-0">
                     <div class="p-3 border-bottom bg-white">
                         <form id="addPermissionForm" class="row g-2 align-items-end">
                             <div class="col-md-3">
-                                <label class="form-label small mb-1">Code (e.g. view_reports)</label>
+                                <label class="form-label small mb-1"><?php _e('userManage.lbl_code'); ?></label>
                                 <input type="text" name="perm_code" class="form-control form-control-sm" required pattern="[a-z0-9_]+">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label small mb-1">Description</label>
+                                <label class="form-label small mb-1"><?php _e('userManage.lbl_desc'); ?></label>
                                 <input type="text" name="description" class="form-control form-control-sm" required>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label small mb-1">Module</label>
-                                <input type="text" name="module_name" class="form-control form-control-sm" placeholder="e.g. General" required>
+                                <label class="form-label small mb-1"><?php _e('userManage.lbl_module'); ?></label>
+                                <input type="text" name="module_name" class="form-control form-control-sm" placeholder="<?php _e('userManage.ph_module_perm'); ?>" required>
                             </div>
                             <div class="col-md-2">
-                                <button type="submit" class="btn btn-sm btn-primary w-100"><i class="fas fa-plus me-1"></i> Add</button>
+                                <button type="submit" class="btn btn-sm btn-primary w-100"><i class="fas fa-plus me-1"></i> <?php _e('userManage.btn_add'); ?></button>
                             </div>
                         </form>
                     </div>
@@ -232,10 +232,10 @@ $pageIcon = "fas fa-users-cog";
                         <table class="table table-sm table-hover table-custom align-middle mb-0">
                             <thead class="position-sticky top-0" style="z-index: 1; background-color: var(--bs-tertiary-bg);">
                                 <tr>
-                                    <th class="ps-2 border-bottom-0">Code</th>
-                                    <th class="border-bottom-0">Description</th>
-                                    <th class="border-bottom-0">Module</th>
-                                    <th class="text-end pe-2 border-bottom-0">Action</th>
+                                    <th class="ps-2 border-bottom-0"><?php _e('userManage.lbl_code'); ?></th>
+                                    <th class="border-bottom-0"><?php _e('userManage.lbl_desc'); ?></th>
+                                    <th class="border-bottom-0"><?php _e('userManage.lbl_module'); ?></th>
+                                    <th class="text-end pe-2 border-bottom-0"><?php _e('userManage.th_actions'); ?></th>
                                 </tr>
                             </thead>
                             <tbody id="permissionMasterList">
