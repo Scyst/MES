@@ -67,7 +67,13 @@ try {
             break;
 
         case 'get_employees_for_cards':
-            $empStmt = $pdo->query("SELECT emp_id, name_th, line FROM dbo.MANPOWER_EMPLOYEES WHERE is_active = 1 ORDER BY name_th");
+            $empStmt = $pdo->query("
+                SELECT E.emp_id, E.name_th, E.line, U.profile_picture 
+                FROM dbo.MANPOWER_EMPLOYEES E
+                LEFT JOIN dbo.USERS U ON E.emp_id = U.emp_id
+                WHERE E.is_active = 1 
+                ORDER BY E.name_th
+            ");
             $employees = $empStmt->fetchAll(PDO::FETCH_ASSOC);
 
             $lines = [];

@@ -40,7 +40,8 @@ const CardGeneratorModule = (function() {
         
         employees.forEach(emp => {
             const line = emp.line || emp.department_api || '';
-            const option = `<option value="${emp.emp_id}" data-name="${emp.name_th}" data-dept="${line}">${emp.emp_id} - ${emp.name_th}</option>`;
+            const photo = emp.profile_picture || '';
+            const option = `<option value="${emp.emp_id}" data-name="${emp.name_th}" data-dept="${line}" data-photo="${photo}">${emp.emp_id} - ${emp.name_th}</option>`;
             if (opSelect) opSelect.insertAdjacentHTML('beforeend', option);
             if (lotoSelect) lotoSelect.insertAdjacentHTML('beforeend', option);
         });
@@ -159,7 +160,8 @@ const CardGeneratorModule = (function() {
         const empId = select.value;
         const name = selected.getAttribute('data-name');
         const dept = selected.getAttribute('data-dept');
-        const photoUrl = `../../../assets/img/employees/${empId}.jpg`; 
+        const dbPhoto = selected.getAttribute('data-photo');
+        const photoUrl = dbPhoto ? dbPhoto : `../../../assets/img/employees/${empId}.jpg`; 
         
         cardQueue.push({ id: cardIdCounter++, html: getOperatorHTML(name, empId, dept, photoUrl) });
         renderPreview();
@@ -184,7 +186,7 @@ const CardGeneratorModule = (function() {
         allEmployees.forEach(emp => {
             const empLine = emp.line || emp.department_api;
             if (empLine === selectedLine) {
-                const photoUrl = `../../../assets/img/employees/${emp.emp_id}.jpg`;
+                const photoUrl = emp.profile_picture ? emp.profile_picture : `../../../assets/img/employees/${emp.emp_id}.jpg`;
                 cardQueue.push({ 
                     id: cardIdCounter++, 
                     html: getOperatorHTML(emp.name_th, emp.emp_id, empLine, photoUrl) 
