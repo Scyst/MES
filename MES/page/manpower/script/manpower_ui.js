@@ -3368,8 +3368,24 @@ const Actions = {
                     picEl.src = emp.profile_picture;
                     showPic();
                     picEl.onerror = showInitials;
+                    
+                    picEl.style.cursor = 'pointer';
+                    picEl.title = 'Click to enlarge';
+                    picEl.onclick = () => {
+                        Swal.fire({
+                            title: emp.name_th,
+                            imageUrl: emp.profile_picture,
+                            imageAlt: 'Profile Picture',
+                            showConfirmButton: false,
+                            showCloseButton: true,
+                            customClass: { image: 'rounded shadow-sm' }
+                        });
+                    };
                 } else {
                     showInitials();
+                    picEl.onclick = null;
+                    picEl.style.cursor = 'default';
+                    picEl.title = '';
                 }
 
                 const isActive = parseInt(emp.is_active) === 1;
