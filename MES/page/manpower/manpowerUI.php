@@ -8,9 +8,9 @@ if (!hasPermission('view_manpower') && !hasPermission('manage_manpower')) {
 }
 
 $currentUser = $_SESSION['user'];
-$pageTitle = "Manpower Management";
-$pageHeaderTitle = "Manpower Dashboard"; 
-$pageHeaderSubtitle = "ติดตามสถานะพนักงานและการเข้ากะ (Real-time)";
+$pageTitle = __('manpower.page_title');
+$pageHeaderTitle = __('manpower.header_title'); 
+$pageHeaderSubtitle = __('manpower.header_subtitle');
 ?>
 
 <!DOCTYPE html>
@@ -48,14 +48,14 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                             <span class="position-absolute top-0 start-0 h-100 w-100 rounded-circle bg-success opacity-75 animate-ping"></span>
                             <span class="position-relative d-inline-flex rounded-circle h-2 w-2 bg-success" style="width: 8px; height: 8px;"></span>
                         </span>
-                        <span class="fw-bold text-dark">Manpower Live</span>
+                        <span class="fw-bold text-dark"><?php _e('manpower.live_status'); ?></span>
                         <span class="text-muted small border-start ps-2 ms-1" id="live-clock">--:--:--</span>
                     </div>
                 </div>
 
                 <div class="d-flex align-items-center bg-white p-1 rounded shadow-sm border dashboard-toolbar">
                     <div class="d-flex align-items-center px-2">
-                        <span class="text-muted small text-uppercase fw-bold me-2"><i class="far fa-calendar-alt"></i> Date:</span>
+                        <span class="text-muted small text-uppercase fw-bold me-2"><i class="far fa-calendar-alt"></i> <?php _e('manpower.lbl_date'); ?></span>
                         <input type="date" id="filterDate" class="form-control form-control-sm border-0 bg-transparent text-primary fw-bold p-0" 
                                value="<?php echo date('Y-m-d'); ?>" 
                                style="width: 125px; cursor: pointer;">
@@ -64,45 +64,45 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                     <div class="vr mx-1 text-muted opacity-25 my-1"></div>
 
                     <div class="d-flex align-items-center px-2">
-                        <span class="text-muted small text-uppercase fw-bold me-2"><i class="fas fa-users-cog"></i> Group:</span>
+                        <span class="text-muted small text-uppercase fw-bold me-2"><i class="fas fa-users-cog"></i> <?php _e('manpower.lbl_group'); ?></span>
                         <select id="filterHcGroup" class="form-select form-select-sm border-0 bg-transparent text-primary fw-bold p-0 ps-1" style="width: 100px; cursor: pointer; box-shadow: none;">
                             <option value="TEAM 1">TEAM 1</option>
-                            <option value="ALL">ALL GROUPS</option>
+                            <option value="ALL"><?php _e('manpower.all_groups'); ?></option>
                         </select>
                     </div>
 
                     <div class="vr mx-1 text-muted opacity-25 my-1"></div>
 
-                    <button class="btn btn-light btn-sm text-secondary fw-bold px-2 py-1 rounded ms-1 shadow-sm" onclick="App.loadData()" title="Reload Data">
+                    <button class="btn btn-light btn-sm text-secondary fw-bold px-2 py-1 rounded ms-1 shadow-sm" onclick="App.loadData()" title="<?php _e('manpower.btn_reload'); ?>">
                         <i class="fas fa-sync-alt"></i>
                     </button>
 
                     <button id="btnFormulaToggle" class="btn btn-warning btn-sm shadow-sm fw-bold transition-btn text-dark ms-1" title="Switch Calculation Formula">
-                        <i class="fas fa-flask me-2"></i>New Logic (Sim)
+                        <i class="fas fa-flask me-2"></i><?php _e('manpower.btn_sim_logic'); ?>
                     </button>
 
                     <button class="btn btn-primary btn-sm fw-bold px-3 py-1 rounded ms-1 shadow-sm" onclick="App.syncNow()" title="Sync from Cloud">
-                        <i class="fas fa-cloud-download-alt me-1"></i> Sync
+                        <i class="fas fa-cloud-download-alt me-1"></i> <?php _e('manpower.btn_sync'); ?>
                     </button>
 
                     <div class="dropdown ms-1">
-                        <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm" type="button" data-bs-toggle="dropdown" title="More Actions">
+                        <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm" type="button" data-bs-toggle="dropdown" title="<?php _e('manpower.btn_more'); ?>">
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem;">
-                            <li><h6 class="dropdown-header">Export</h6></li>
+                            <li><h6 class="dropdown-header"><?php _e('manpower.export_header'); ?></h6></li>
                             
-                            <li><a class="dropdown-item" href="#" onclick="Actions.exportDailyRaw()"><i class="fas fa-file-excel text-success me-2"></i>Export to Excel</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="Actions.exportDailyRaw()"><i class="fas fa-file-excel text-success me-2"></i><?php _e('manpower.export_excel'); ?></a></li>
                             
                             <?php if (hasPermission('manage_manpower')): ?>
                                 
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openIntegratedAnalysis()"><i class="fas fa-chart-pie text-primary me-2"></i>Analysis Report</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openIntegratedAnalysis()"><i class="fas fa-chart-pie text-primary me-2"></i><?php _e('manpower.analysis_report'); ?></a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmployeeManager()"><i class="fas fa-cogs text-secondary me-2"></i>Master Settings</a></li>
-                                <li><a class="dropdown-item" href="holidayUI.php"><i class="fas fa-calendar-day text-success me-2"></i>Holiday Settings</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="Actions.openEmployeeManager()"><i class="fas fa-cogs text-secondary me-2"></i><?php _e('manpower.master_settings'); ?></a></li>
+                                <li><a class="dropdown-item" href="holidayUI.php"><i class="fas fa-calendar-day text-success me-2"></i><?php _e('manpower.holiday_settings'); ?></a></li>
                                 
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#" onclick="App.resetDailyData()">Reset Daily Data</a></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="App.resetDailyData()"><?php _e('manpower.reset_daily'); ?></a></li>
                             <?php endif; ?>
                         </ul>
                     </div>
@@ -115,9 +115,9 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center h-100">
                                 <div>
-                                    <div class="text-uppercase text-primary small fw-bold mb-1">Total Plan</div>
+                                    <div class="text-uppercase text-primary small fw-bold mb-1"><?php _e('manpower.total_plan'); ?></div>
                                     <h2 class="text-dark" id="kpi-plan">0</h2>
-                                    <div class="small text-muted mt-1 pt-1">Persons Target</div>
+                                    <div class="small text-muted mt-1 pt-1"><?php _e('manpower.persons_target'); ?></div>
                                 </div>
                                 <div class="icon-circle bg-primary-soft">
                                     <i class="fas fa-clipboard-list"></i>
@@ -132,7 +132,7 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center h-100">
                                 <div>
-                                    <div class="text-uppercase text-success small fw-bold mb-1">Present</div>
+                                    <div class="text-uppercase text-success small fw-bold mb-1"><?php _e('manpower.present'); ?></div>
                                     <h2 class="text-success" id="kpi-actual">0</h2>
                                     <div class="mt-1 pt-1">
                                         <span class="badge bg-success-soft border border-success border-opacity-25 text-success" id="kpi-rate" style="font-size: 0.80rem;">0% Rate</span>
@@ -151,9 +151,9 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center h-100">
                                 <div>
-                                    <div class="text-uppercase text-warning small fw-bold mb-1" style="color: #d39e00 !important;">Est. Cost</div>
+                                    <div class="text-uppercase text-warning small fw-bold mb-1" style="color: #d39e00 !important;"><?php _e('manpower.est_cost'); ?></div>
                                     <h2 class="text-warning" style="color: #d39e00 !important;" id="kpi-cost">0</h2>
-                                    <div class="small text-muted mt-1 pt-1">THB (Estimated)</div>
+                                    <div class="small text-muted mt-1 pt-1"><?php _e('manpower.thb_est'); ?></div>
                                 </div>
                                 <div class="icon-circle bg-warning-soft">
                                     <i class="fas fa-coins"></i>
@@ -168,7 +168,7 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
-                                    <div class="text-uppercase text-danger small fw-bold mb-1">Abnormalities</div>
+                                    <div class="text-uppercase text-danger small fw-bold mb-1"><?php _e('manpower.abnormalities'); ?></div>
                                     <h2 class="text-danger" id="kpi-absent">0</h2>
                                 </div>
                                 <div class="icon-circle bg-danger-soft">
@@ -178,10 +178,10 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                             
                             <div class="d-flex gap-2 mt-1 pt-1 border-top border-light">
                                 <div id="card-late" class="btn-kpi-action bg-warning-soft w-50 text-center text-truncate text-dark" title="Click to view Late">
-                                    <i class="fas fa-clock me-1"></i> Late: <span id="kpi-late" class="fw-bold">0</span>
+                                    <i class="fas fa-clock me-1"></i> <?php _e('manpower.late'); ?> <span id="kpi-late" class="fw-bold">0</span>
                                 </div>
                                 <div id="card-leave" class="btn-kpi-action bg-info-soft w-50 text-center text-truncate text-dark" title="Click to view Leave">
-                                    <i class="fas fa-bed me-1"></i> Leave: <span id="kpi-leave" class="fw-bold">0</span>
+                                    <i class="fas fa-bed me-1"></i> <?php _e('manpower.leave'); ?> <span id="kpi-leave" class="fw-bold">0</span>
                                 </div>
                             </div>
                         </div>
@@ -195,10 +195,10 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                     <div class="chart-card h-100 d-flex flex-column"> 
                         
                         <div class="d-flex justify-content-between align-items-center mb-2 flex-shrink-0">
-                            <h4 id="chart-title"><i class="fas fa-chart-line text-primary me-2"></i>Manpower Analytics</h4>
+                            <h4 id="chart-title"><i class="fas fa-chart-line text-primary me-2"></i><?php _e('manpower.chart_title'); ?></h4>
                             <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-outline-primary chart-toggle-btn active" id="btn-chart-daily" onclick="UI.switchChartView('daily')">Daily</button>
-                                <button type="button" class="btn btn-outline-primary chart-toggle-btn" id="btn-chart-trend" onclick="UI.switchChartView('trend')">Trend</button>
+                                <button type="button" class="btn btn-outline-primary chart-toggle-btn active" id="btn-chart-daily" onclick="UI.switchChartView('daily')"><?php _e('manpower.btn_daily'); ?></button>
+                                <button type="button" class="btn btn-outline-primary chart-toggle-btn" id="btn-chart-trend" onclick="UI.switchChartView('trend')"><?php _e('manpower.btn_trend'); ?></button>
                             </div>
                         </div>
                         
@@ -220,19 +220,19 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                         <div class="mt-2 w-100 d-flex align-items-center" style="height: 40px;">
                             
                             <div id="footer-daily" class="w-100 text-end">
-                                <small class="text-muted" style="font-size: 0.7rem;">* Scroll horizontal to view all lines</small>
+                                <small class="text-muted" style="font-size: 0.7rem;"><?php _e('manpower.chart_note'); ?></small>
                             </div>
 
                             <div id="footer-trend" class="w-100 d-flex justify-content-between align-items-center" style="display: none !important;">
                                 <div>
                                      <button class="btn btn-xs btn-success text-white shadow-sm" style="font-size: 0.65rem;" onclick="exportCurrentTrend()">
-                                        <i class="fas fa-file-excel me-1"></i> Export Data
+                                        <i class="fas fa-file-excel me-1"></i> <?php _e('manpower.btn_export_data'); ?>
                                     </button>
                                 </div>
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(7)">7 Days</button>
-                                    <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(14)">14 Days</button>
-                                    <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(30)">30 Days</button>
+                                    <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(7)"><?php _e('manpower.btn_7days'); ?></button>
+                                    <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(14)"><?php _e('manpower.btn_14days'); ?></button>
+                                    <button class="btn btn-xs btn-outline-secondary" style="font-size: 0.65rem;" onclick="App.loadTrend(30)"><?php _e('manpower.btn_30days'); ?></button>
                                 </div>
                             </div>
 
@@ -251,7 +251,7 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                 <div class="col-lg-4">
                     <div class="chart-card h-100 d-flex flex-column">
                         <div class="mb-2">
-                            <h4><i class="fas fa-chart-pie text-primary me-2"></i>Distribution</h4>
+                            <h4><i class="fas fa-chart-pie text-primary me-2"></i><?php _e('manpower.dist_title'); ?></h4>
                         </div>
                         <div class="chart-container-box d-flex justify-content-center align-items-center flex-grow-1">
                             <canvas id="pieChart"></canvas>
@@ -262,23 +262,23 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold text-dark small text-uppercase"><i class="fas fa-list-alt text-primary me-2"></i>Status Detail</h6>
+                    <h6 class="mb-0 fw-bold text-dark small text-uppercase"><i class="fas fa-list-alt text-primary me-2"></i><?php _e('manpower.status_detail'); ?></h6>
                     
                     <div class="btn-group btn-group-sm">
                         <input type="radio" class="btn-check" name="viewMode" id="viewLine" checked onchange="App.setView('LINE')">
-                        <label class="btn btn-outline-secondary" for="viewLine">Line</label>
+                        <label class="btn btn-outline-secondary" for="viewLine"><?php _e('manpower.view_line'); ?></label>
 
                         <input type="radio" class="btn-check" name="viewMode" id="viewShift" onchange="App.setView('SHIFT')">
-                        <label class="btn btn-outline-secondary" for="viewShift">Shift</label>
+                        <label class="btn btn-outline-secondary" for="viewShift"><?php _e('manpower.view_shift'); ?></label>
 
                         <input type="radio" class="btn-check" name="viewMode" id="viewType" onchange="App.setView('TYPE')">
-                        <label class="btn btn-outline-secondary" for="viewType">Type</label>
+                        <label class="btn btn-outline-secondary" for="viewType"><?php _e('manpower.view_type'); ?></label>
 
                         <input type="radio" class="btn-check" name="viewMode" id="viewPaymentLine" onchange="App.setView('PAYMENT_LINE')">
-                        <label class="btn btn-outline-secondary" for="viewPaymentLine">Pay (Line)</label>
+                        <label class="btn btn-outline-secondary" for="viewPaymentLine"><?php _e('manpower.view_pay_line'); ?></label>
 
                         <input type="radio" class="btn-check" name="viewMode" id="viewPayment" onchange="App.setView('PAYMENT')">
-                        <label class="btn btn-outline-secondary" for="viewPayment">Pay (Type)</label>
+                        <label class="btn btn-outline-secondary" for="viewPayment"><?php _e('manpower.view_pay_type'); ?></label>
                     </div>
                 </div>
                 
@@ -287,16 +287,16 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
                         <table class="table table-hover mb-0 w-100" id="manpowerTable">
                             <thead class="sticky-top" style="z-index: 5;">
                                 <tr>
-                                    <th class="ps-3">Group / Line</th>
-                                    <th class="text-center">HC</th>
-                                    <th class="text-center" style="display: none;">Plan</th>
-                                    <th class="text-center text-success">Present</th>
-                                    <th class="text-center text-warning">Late</th>
-                                    <th class="text-center text-danger">Absent</th>
-                                    <th class="text-center text-info">Leave</th>
-                                    <th class="text-center border-start bg-light">Actual</th>
-                                    <th class="text-center">Diff</th>
-                                    <th class="text-end pe-3">Cost</th>
+                                    <th class="ps-3"><?php _e('manpower.th_group_line'); ?></th>
+                                    <th class="text-center"><?php _e('manpower.th_hc'); ?></th>
+                                    <th class="text-center" style="display: none;"><?php _e('manpower.th_plan'); ?></th>
+                                    <th class="text-center text-success"><?php _e('manpower.th_present'); ?></th>
+                                    <th class="text-center text-warning"><?php _e('manpower.th_late'); ?></th>
+                                    <th class="text-center text-danger"><?php _e('manpower.th_absent'); ?></th>
+                                    <th class="text-center text-info"><?php _e('manpower.th_leave'); ?></th>
+                                    <th class="text-center border-start bg-light"><?php _e('manpower.th_actual'); ?></th>
+                                    <th class="text-center"><?php _e('manpower.th_diff'); ?></th>
+                                    <th class="text-end pe-3"><?php _e('manpower.th_cost'); ?></th>
                                 </tr>
                             </thead>
                             <tbody id="tableBody"></tbody>
@@ -313,8 +313,8 @@ $pageHeaderSubtitle = "ติดตามสถานะพนักงานแ
     <div id="syncLoader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; backdrop-filter: blur(2px);">
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
             <div class="spinner-border text-white mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
-            <h5 class="text-white">Processing...</h5>
-            <p class="text-white-50 small">Syncing data with cloud server...</p>
+            <h5 class="text-white"><?php _e('manpower.processing'); ?></h5>
+            <p class="text-white-50 small"><?php _e('manpower.syncing'); ?></p>
         </div>
     </div>
 
