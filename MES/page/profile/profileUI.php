@@ -158,7 +158,13 @@ $currentUserId = (int)$_SESSION['user']['id'];
             border-bottom: var(--pro-border);
             background: var(--bs-tertiary-bg);
             border-radius: var(--pro-radius-lg) var(--pro-radius-lg) 0 0;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .pro-tab-nav::-webkit-scrollbar {
+            display: none;
         }
         .pro-tab-btn {
             border: none;
@@ -170,6 +176,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
             color: var(--bs-secondary-color);
             transition: all 0.15s ease;
             white-space: nowrap;
+            flex-shrink: 0;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -413,7 +420,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                             <div class="pro-section-header d-flex justify-content-between align-items-center mb-3">
                                 <div>
                                     <i class="fas fa-user-circle text-primary"></i>
-                                    ข้อมูลพื้นฐาน (Basic Info)
+                                    ข้อมูลพื้นฐาน <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;">(Basic Info)</span>
                                 </div>
                                 <div class="text-secondary" style="font-size: 0.75rem; font-weight: normal;">
                                     <i class="fas fa-info-circle"></i> ข้อมูลซิงค์จาก HR (แก้ไขผ่านระบบไม่ได้)
@@ -473,7 +480,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         <div class="mb-4">
                             <div class="pro-section-header">
                                 <i class="fas fa-tshirt text-primary"></i>
-                                สวัสดิการและอุปกรณ์ (Welfare &amp; Equipment)
+                                <span>สวัสดิการและอุปกรณ์ <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;">(Welfare &amp; Equipment)</span></span>
                                 <span class="section-tag">ระบุตามความสมัครใจ</span>
                             </div>
                             <div class="row g-3">
@@ -500,7 +507,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         <div class="mb-4">
                             <div class="pro-section-header">
                                 <i class="fas fa-address-book text-primary"></i>
-                                ข้อมูลการติดต่อ (Contact Info)
+                                <span>ข้อมูลการติดต่อ <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;">(Contact Info)</span></span>
                                 <span class="section-tag">ระบุตามความสมัครใจ</span>
                             </div>
                             <div class="row g-3">
@@ -527,7 +534,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         <div class="mb-4">
                             <div class="pro-section-header">
                                 <i class="fas fa-car text-primary"></i>
-                                การเดินทาง (Commute)
+                                <span>การเดินทาง <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;">(Commute)</span></span>
                                 <span class="section-tag">ระบุตามความสมัครใจ</span>
                             </div>
                             <div class="row g-3">
@@ -554,7 +561,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         <div class="mb-4">
                             <div class="pro-section-header danger">
                                 <i class="fas fa-heartbeat"></i>
-                                ผู้ติดต่อฉุกเฉิน (Emergency Contact)
+                                <span>ผู้ติดต่อฉุกเฉิน <span class="d-none d-md-inline fw-normal" style="font-size:0.75rem; opacity: 0.7;">(Emergency Contact)</span></span>
                                 <span class="section-tag">แนะนำให้ระบุ</span>
                             </div>
                             <div class="row g-3">
