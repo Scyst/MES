@@ -16,7 +16,15 @@
                     
                     <div class="mb-3">
                         <label class="form-label text-muted small">Employee</label>
-                        <input type="text" class="form-control form-control-plaintext fw-bold" id="editEmpName" readonly>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0">
+                                <i class="fas fa-user text-secondary"></i>
+                            </span>
+                            <input type="text" class="form-control fw-bold border-0 bg-light" id="editEmpName" readonly>
+                            <button type="button" class="btn btn-outline-primary shadow-sm" id="btnViewProfileLog" title="ดูข้อมูลโปรไฟล์ (View Profile)">
+                                <i class="fas fa-id-badge me-1"></i>ดูโปรไฟล์
+                            </button>
+                        </div>
                     </div>
 
                     <div class="row g-2 mb-3 bg-warning bg-opacity-10 p-2 rounded border border-warning mx-0">

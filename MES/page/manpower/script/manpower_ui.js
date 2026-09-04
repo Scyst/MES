@@ -1971,7 +1971,9 @@ const Actions = {
                 <tr class="${trClass}" data-uid="${uid}" data-logid="${logId}" data-team="${row.actual_team || row.team_group || ''}">
                     ${firstCellHtml}
                     <td class="ps-4">
-                        <div class="fw-bold text-dark text-truncate" style="max-width: 150px;">${row.name_th}</div>
+                        <div class="fw-bold text-dark text-truncate" style="max-width: 150px; cursor: pointer; transition: color 0.2s;" onclick="Actions.viewEmployeeProfile('${row.emp_id}')" onmouseover="this.classList.replace('text-dark','text-primary')" onmouseout="this.classList.replace('text-primary','text-dark')" title="ดูข้อมูลโปรไฟล์">
+                            <i class="fas fa-user-circle text-secondary opacity-50 me-1"></i>${row.name_th}
+                        </div>
                         <small class="text-muted font-monospace" style="font-size:0.75rem;">${row.emp_id}</small>
                     </td>
                     <td class="text-center align-middle text-secondary small fw-bold">${row.actual_line || row.line || '-'}</td>
@@ -2229,6 +2231,7 @@ const Actions = {
         document.getElementById('editLogId').value = data.log_id || '';
         document.getElementById('editEmpIdHidden').value = data.emp_id;
         document.getElementById('editEmpName').value = data.name_th + ' (' + data.emp_id + ')';
+        document.getElementById('btnViewProfileLog').onclick = () => Actions.viewEmployeeProfile(data.emp_id);
         document.getElementById('editStatus').value = data.status || 'PRESENT';
         document.getElementById('editLogShift').value = data.shift_id || data.default_shift_id || '1';
 
@@ -3023,9 +3026,9 @@ const Actions = {
             const isActive = parseInt(emp.is_active) === 1;
             let avatarHtml = '';
             if (emp.profile_picture) {
-                avatarHtml = `<img src="${emp.profile_picture}" class="rounded bg-white text-primary fw-bold me-3 d-flex align-items-center justify-content-center border shadow-sm" style="width:40px; height:40px; object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-initial rounded bg-light text-primary fw-bold me-3 d-flex align-items-center justify-content-center\\' style=\\'width:40px; height:40px; font-size:1.2rem;\\'>${emp.name_th.charAt(0)}</div>';">`;
+                avatarHtml = `<img src="${emp.profile_picture}" class="rounded bg-white text-primary fw-bold me-3 d-flex align-items-center justify-content-center border shadow-sm" style="width:40px; height:40px; object-fit:cover; cursor:pointer;" onclick="Actions.viewEmployeeProfile('${emp.emp_id}')" title="ดูข้อมูลโปรไฟล์" onerror="this.outerHTML='<div class=\\'avatar-initial rounded bg-light text-primary fw-bold me-3 d-flex align-items-center justify-content-center\\' style=\\'width:40px; height:40px; font-size:1.2rem; cursor:pointer;\\' onclick=\\'Actions.viewEmployeeProfile(\\'${emp.emp_id}\\')\\' title=\\'ดูข้อมูลโปรไฟล์\\'>${emp.name_th.charAt(0)}</div>';">`;
             } else {
-                avatarHtml = `<div class="avatar-initial rounded bg-light text-primary fw-bold me-3 d-flex align-items-center justify-content-center" style="width:40px; height:40px; font-size:1.2rem;">
+                avatarHtml = `<div class="avatar-initial rounded bg-light text-primary fw-bold me-3 d-flex align-items-center justify-content-center" style="width:40px; height:40px; font-size:1.2rem; cursor:pointer;" onclick="Actions.viewEmployeeProfile('${emp.emp_id}')" title="ดูข้อมูลโปรไฟล์">
                         ${emp.name_th.charAt(0)}
                     </div>`;
             }
@@ -3154,7 +3157,7 @@ const Actions = {
         `;
     },
     async openKpiDashboard(empId, name) {
-        document.getElementById('empKpiSubtitle').innerText = name + ' (' + empId + ')';
+        document.getElementById('empKpiSubtitle').innerHTML = `<span onclick="Actions.viewEmployeeProfile('${empId}')" style="cursor: pointer; transition: color 0.2s;" onmouseover="this.classList.add('text-primary')" onmouseout="this.classList.remove('text-primary')" title="ดูข้อมูลโปรไฟล์"><i class="fas fa-user-circle me-1"></i>${name} (${empId})</span>`;
         document.getElementById('empKpiRate').innerText = '--%';
         document.getElementById('empKpiTotal').innerText = '--';
         document.getElementById('empKpiPresent').innerText = '--';
@@ -3371,38 +3374,7 @@ const Actions = {
                     
                     picEl.style.cursor = 'pointer';
                     picEl.title = 'Click to enlarge';
-                    picEl.onclick = () => {
-                        const infoHtml = `
-                            <div class="text-center mt-3" style="line-height: 1.4;">
-                                <h6 class="fw-bold text-dark mb-1" style="font-size: 1.1rem;">${emp.name_th}</h6>
-                                <div class="text-muted font-monospace" style="font-size: 0.85rem;"><i class="fas fa-id-badge me-1 opacity-50"></i>${emp.emp_id}</div>
-                                <div class="d-flex justify-content-center flex-wrap gap-2 mt-3">
-                                    <span class="badge bg-light text-dark border"><i class="fas fa-user-tag me-1 text-muted"></i>${emp.position || '-'}</span>
-                                    <span class="badge bg-light text-dark border"><i class="fas fa-industry me-1 text-muted"></i>${emp.line || '-'}</span>
-                                    <span class="badge bg-light text-dark border"><i class="fas fa-users me-1 text-muted"></i>${emp.team_group || 'No Team'}</span>
-                                </div>
-                            </div>
-                        `;
-
-                        Swal.fire({
-                            html: infoHtml,
-                            imageUrl: emp.profile_picture,
-                            imageAlt: 'Profile Picture',
-                            width: '450px',
-                            imageWidth: '100%',
-                            padding: '1.5rem',
-                            showConfirmButton: false,
-                            showCloseButton: true,
-                            customClass: { 
-                                image: 'rounded shadow-sm m-0',
-                                popup: 'rounded-4 border-0 shadow-lg'
-                            },
-                            didOpen: () => {
-                                const container = Swal.getContainer();
-                                if (container) container.style.zIndex = '1080';
-                            }
-                        });
-                    };
+                    picEl.onclick = () => Actions.viewEmployeeProfile(emp.emp_id);
                 } else {
                     showInitials();
                     picEl.onclick = null;
@@ -3450,6 +3422,64 @@ const Actions = {
         }
 
         modal.show();
+    },
+
+    async viewEmployeeProfile(empId) {
+        if (!empId) return;
+        try {
+            Swal.fire({
+                title: 'Loading profile...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const res = await fetch(`api/api_master_data.php?action=read_single_employee&emp_id=${empId}`);
+            const json = await res.json();
+            
+            if (json.success && json.data) {
+                const emp = json.data;
+                const infoHtml = `
+                    <div class="text-center mt-3" style="line-height: 1.4;">
+                        <h6 class="fw-bold text-dark mb-1" style="font-size: 1.1rem;">${emp.name_th}</h6>
+                        <div class="text-muted font-monospace" style="font-size: 0.85rem;"><i class="fas fa-id-badge me-1 opacity-50"></i>${emp.emp_id}</div>
+                        <div class="d-flex justify-content-center flex-wrap gap-2 mt-3">
+                            <span class="badge bg-light text-dark border"><i class="fas fa-user-tag me-1 text-muted"></i>${emp.position || '-'}</span>
+                            <span class="badge bg-light text-dark border"><i class="fas fa-industry me-1 text-muted"></i>${emp.line || '-'}</span>
+                            <span class="badge bg-light text-dark border"><i class="fas fa-users me-1 text-muted"></i>${emp.team_group || 'No Team'}</span>
+                        </div>
+                        <div class="mt-4 pt-3 border-top text-start px-2">
+                            <div class="small mb-2 d-flex"><div style="width:25px;" class="text-center text-muted"><i class="fas fa-quote-left"></i></div><span class="text-secondary fw-semibold flex-grow-1">${emp.bio || '-'}</span></div>
+                            <div class="small mb-2 d-flex"><div style="width:25px;" class="text-center text-muted"><i class="fas fa-phone-alt"></i></div><span class="text-secondary fw-semibold flex-grow-1">${emp.phone || '-'}</span></div>
+                            <div class="small d-flex"><div style="width:25px;" class="text-center text-danger"><i class="fas fa-first-aid"></i></div><span class="text-danger fw-semibold flex-grow-1">${emp.emergency_contact_name ? emp.emergency_contact_name + ' (' + emp.emergency_contact_phone + ')' : (emp.emergency_contact_phone || '-')}</span></div>
+                        </div>
+                    </div>
+                `;
+
+                Swal.fire({
+                    html: infoHtml,
+                    imageUrl: emp.profile_picture || null,
+                    icon: emp.profile_picture ? null : 'info',
+                    imageAlt: 'Profile Picture',
+                    width: '450px',
+                    imageWidth: '100%',
+                    padding: '1.5rem',
+                    showConfirmButton: false,
+                    showCloseButton: true,
+                    customClass: { 
+                        image: 'rounded shadow-sm m-0',
+                        popup: 'rounded-4 border-0 shadow-lg'
+                    },
+                    didOpen: () => {
+                        const container = Swal.getContainer();
+                        if (container) container.style.zIndex = '1080';
+                    }
+                });
+            } else {
+                Swal.fire('Error', 'ไม่พบข้อมูลพนักงาน', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Error', e.message, 'error');
+        }
     },
 
     detectWorkChange() {
