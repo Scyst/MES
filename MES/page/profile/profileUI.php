@@ -674,22 +674,22 @@ $currentUserId = (int)$_SESSION['user']['id'];
                     <form id="preferencesForm">
                         <div class="row g-3">
                             <div class="col-md-6 pro-field-group">
-                                <label class="form-label">ธีมที่ใช้งาน (Theme)</label>
-                                <select class="form-select" id="fieldTheme" name="theme_preference">
+                                <label class="form-label">ธีมที่ใช้งาน (Theme) <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">อยู่ระหว่างการพัฒนา</span></label>
+                                <select class="form-select bg-light text-muted" id="fieldTheme" name="theme_preference" disabled>
                                     <option value="light">☀️ โหมดกลางวัน (Light)</option>
                                     <option value="dark">🌙 โหมดกลางคืน (Dark)</option>
                                 </select>
                             </div>
                             <div class="col-md-6 pro-field-group">
-                                <label class="form-label">ภาษาที่ใช้งาน (Language)</label>
-                                <select class="form-select" id="fieldLang" name="preferred_lang">
+                                <label class="form-label">ภาษาที่ใช้งาน (Language) <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">อยู่ระหว่างการพัฒนา</span></label>
+                                <select class="form-select bg-light text-muted" id="fieldLang" name="preferred_lang" disabled>
                                     <option value="th">🇹🇭 ภาษาไทย</option>
                                     <option value="en">🇺🇸 English</option>
                                 </select>
                             </div>
                         </div>
                         <div class="mt-4 d-flex justify-content-end">
-                            <button type="submit" class="btn btn-primary px-4 py-2 fw-bold" id="btnSavePrefs">
+                            <button type="button" class="btn btn-secondary px-4 py-2 fw-bold" id="btnSavePrefs" disabled>
                                 <i class="fas fa-save me-2"></i>บันทึกการตั้งค่า
                             </button>
                         </div>

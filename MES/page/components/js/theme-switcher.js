@@ -6,13 +6,19 @@
     const getStoredTheme = () => localStorage.getItem('theme')
     const setStoredTheme = theme => localStorage.setItem('theme', theme)
 
-    // --- ส่วนตรวจสอบ Theme ---
+    // --- ส่วนตรวจสอบ Theme (แก้: บังคับ return 'light' เสมอ) ---
     const getPreferredTheme = () => {
+        // [TEMP] ปิดการเช็คค่าเดิมและ System Preference ชั่วคราว
+        /*
         const storedTheme = getStoredTheme()
         if (storedTheme) {
             return storedTheme
         }
         return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        */
+       
+        // [TEMP] บังคับเป็น Light Mode เท่านั้น
+        return 'light'
     }
 
     const setTheme = theme => {
@@ -30,13 +36,18 @@
         const themeSwitcher = document.getElementById('theme-switcher-btn')
 
         if (themeSwitcher) {
-            themeSwitcher.addEventListener('click', (e) => {
-                e.preventDefault()
+            // [TEMP] ซ่อนปุ่มไม่ให้ user เห็น (ไม่ต้องไปลบ html)
+            themeSwitcher.style.display = 'none';
+
+            // [TEMP] ปิด Event Listener ชั่วคราว
+            /*
+            themeSwitcher.addEventListener('click', () => {
                 const currentTheme = getStoredTheme() || getPreferredTheme()
                 const newTheme = currentTheme === 'light' ? 'dark' : 'light'
                 setStoredTheme(newTheme)
                 setTheme(newTheme)
             })
+            */
         }
     })
 })()
