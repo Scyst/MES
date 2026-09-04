@@ -4,28 +4,28 @@
 <div class="pe-kpi-row" id="safetyKpiRow">
     <div class="pe-kpi-card kpi-primary pe-animate-in" style="--delay: 0.1s">
         <div>
-            <div class="pe-kpi-label">Pre-Op Audits (Today)</div>
+            <div class="pe-kpi-label"><?php _e('pe.kpi_preop_audits'); ?></div>
             <div class="pe-kpi-value" id="kpiPreOpTotal">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-clipboard-check"></i></div>
     </div>
     <div class="pe-kpi-card kpi-success pe-animate-in" style="--delay: 0.2s" style="cursor:pointer;" onclick="SafetyModule.openStatsModal()" title="ดูกราฟ Compliance">
         <div>
-            <div class="pe-kpi-label">Compliance Rate</div>
+            <div class="pe-kpi-label"><?php _e('pe.kpi_compliance_rate'); ?></div>
             <div class="pe-kpi-value"><span id="kpiPreOpCompliance">0</span><span class="unit">%</span></div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-chart-pie"></i></div>
     </div>
     <div class="pe-kpi-card kpi-danger pe-animate-in" style="--delay: 0.3s">
         <div>
-            <div class="pe-kpi-label">Active Hazards</div>
+            <div class="pe-kpi-label"><?php _e('pe.kpi_active_hazards'); ?></div>
             <div class="pe-kpi-value" id="kpiActiveHazards">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
     </div>
     <div class="pe-kpi-card kpi-warning pe-animate-in" style="--delay: 0.4s">
         <div>
-            <div class="pe-kpi-label">Avg Response Time</div>
+            <div class="pe-kpi-label"><?php _e('pe.kpi_avg_response'); ?></div>
             <div class="pe-kpi-value"><span id="kpiResponseTime">--</span><span class="unit">m</span></div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-stopwatch"></i></div>
@@ -38,12 +38,12 @@
         <ul class="nav pe-header-nav" id="safetyTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="hazard-tab" data-bs-toggle="pill" data-bs-target="#hazard-panel" type="button" role="tab">
-                    <span class="fw-bold fs-6"><i class="fas fa-exclamation-triangle me-1 text-danger"></i> Hazard Reports</span>
+                    <span class="fw-bold fs-6"><i class="fas fa-exclamation-triangle me-1 text-danger"></i> <?php _e('pe.tab_hazard_reports'); ?></span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="preop-tab" data-bs-toggle="pill" data-bs-target="#preop-panel" type="button" role="tab" onclick="SafetyModule.loadPreOpData()">
-                    <span class="fw-bold fs-6"><i class="fas fa-clipboard-list me-1 text-primary"></i> Pre-Op Audits</span>
+                    <span class="fw-bold fs-6"><i class="fas fa-clipboard-list me-1 text-primary"></i> <?php _e('pe.tab_preop_audits'); ?></span>
                 </button>
             </li>
         </ul>
@@ -68,25 +68,25 @@
                 <div class="pe-filter-bar">
                     <div class="pe-search" style="max-width: 260px;">
                         <i class="fas fa-search"></i>
-                        <input type="search" id="safetySearchInput" placeholder="ค้นหา Machine, Issue..." oninput="SafetyModule.filterTable()" autocomplete="new-password">
+                        <input type="search" id="safetySearchInput" placeholder="<?php _e('pe.search_safety'); ?>" oninput="SafetyModule.filterTable()" autocomplete="new-password">
                     </div>
                     <select class="pe-filter-select" id="safetyStatusFilter" onchange="SafetyModule.loadData()">
-                        <option value="all">All Status</option>
-                        <option value="Pending" selected>Pending</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Completed">Resolved</option>
+                        <option value="all"><?php _e('pe.filter_sf_all_status'); ?></option>
+                        <option value="Pending" selected><?php _e('pe.filter_sf_pending'); ?></option>
+                        <option value="In Progress"><?php _e('pe.filter_sf_in_progress'); ?></option>
+                        <option value="Completed"><?php _e('pe.filter_sf_resolved'); ?></option>
                     </select>
                 </div>
                 <div class="pe-table-scroll-y">
                     <table class="pe-table mb-0" id="safetyTable">
                         <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-table-header);">
                             <tr>
-                                <th>WO</th>
-                                <th>วันที่</th>
-                                <th>ปัญหา</th>
-                                <th>เครื่องจักร</th>
-                                <th>Status</th>
-                                <th class="text-center">Action</th>
+                                <th><?php _e('pe.th_wo_no'); ?></th>
+                                <th><?php _e('pe.th_date'); ?></th>
+                                <th><?php _e('pe.th_issue'); ?></th>
+                                <th><?php _e('pe.th_machine'); ?></th>
+                                <th><?php _e('pe.th_status'); ?></th>
+                                <th class="text-center"><?php _e('pe.th_actions'); ?></th>
                             </tr>
                         </thead>
                         <tbody id="safetyTableBody"></tbody>
@@ -100,12 +100,12 @@
                     <table class="pe-table mb-0" id="preopTable">
                         <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-table-header);">
                             <tr>
-                                <th>วันที่</th>
-                                <th>เครื่องจักร</th>
-                                <th>Shift</th>
-                                <th>ผู้ตรวจ</th>
-                                <th>ผลลัพธ์</th>
-                                <th class="text-center">WO</th>
+                                <th><?php _e('pe.th_date'); ?></th>
+                                <th><?php _e('pe.th_machine'); ?></th>
+                                <th><?php _e('pe.th_shift'); ?></th>
+                                <th><?php _e('pe.th_inspector'); ?></th>
+                                <th><?php _e('pe.th_result'); ?></th>
+                                <th class="text-center"><?php _e('pe.th_wo_no'); ?></th>
                             </tr>
                         </thead>
                         <tbody id="preopTableBody"></tbody>
@@ -123,20 +123,20 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="safetyStatsModalLabel">
-                    <i class="fas fa-chart-bar me-2 text-primary"></i>Safety Statistics
+                    <i class="fas fa-chart-bar me-2 text-primary"></i><?php _e('pe.title_safety_stats'); ?>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="row g-3">
                     <div class="col-md-5">
-                        <div class="text-center mb-2 fw-bold text-muted" style="font-size:12px; text-transform:uppercase;">Pre-Op Compliance</div>
+                        <div class="text-center mb-2 fw-bold text-muted" style="font-size:12px; text-transform:uppercase;"><?php _e('pe.chart_preop_compliance'); ?></div>
                         <div style="height: 240px; position: relative;">
                             <canvas id="preopComplianceChart"></canvas>
                         </div>
                     </div>
                     <div class="col-md-7">
-                        <div class="text-center mb-2 fw-bold text-muted" style="font-size:12px; text-transform:uppercase;">Hazard Trend (7 Days)</div>
+                        <div class="text-center mb-2 fw-bold text-muted" style="font-size:12px; text-transform:uppercase;"><?php _e('pe.chart_hazard_trend'); ?></div>
                         <div style="height: 240px; position: relative;">
                             <canvas id="hazardTrendChart"></canvas>
                         </div>
@@ -153,7 +153,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="hazardModalLabel">
-                    <i class="fas fa-exclamation-circle me-2 text-danger"></i>รายละเอียดปัญหา
+                    <i class="fas fa-exclamation-circle me-2 text-danger"></i><?php _e('pe.title_hazard_detail'); ?>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -168,29 +168,29 @@
                 
                 <div class="p-3">
                     <div class="mb-3">
-                        <div class="small text-muted fw-bold mb-1">เครื่องจักร (Machine)</div>
+                        <div class="small text-muted fw-bold mb-1"><?php _e('pe.lbl_machine'); ?></div>
                         <div class="pe-kpi-value fs-5" id="hazModalMachine">--</div>
                     </div>
                     <div class="mb-3">
-                        <div class="small text-muted fw-bold mb-1">ผู้แจ้ง (Reported By)</div>
+                        <div class="small text-muted fw-bold mb-1"><?php _e('pe.lbl_reported_by'); ?></div>
                         <div><i class="fas fa-user-circle me-1"></i> <span id="hazModalReporter">--</span></div>
                     </div>
                     <div class="mb-3">
-                        <div class="small text-muted fw-bold mb-1">รายละเอียดเพิ่มเติม</div>
+                        <div class="small text-muted fw-bold mb-1"><?php _e('pe.lbl_additional_details'); ?></div>
                         <div class="p-2 bg-light rounded border" id="hazModalDetail" style="min-height: 60px;">--</div>
                     </div>
                     <div id="hazModalImageContainer">
-                        <div class="small text-muted fw-bold mb-2">รูปภาพประกอบ</div>
+                        <div class="small text-muted fw-bold mb-2"><?php _e('pe.lbl_attached_image'); ?></div>
                         <img id="hazModalImage" src="" alt="Hazard Image" class="img-fluid rounded border" style="display: none; width: 100%; max-height: 250px; object-fit: contain;">
                         <div id="hazModalNoImage" class="bg-light rounded border d-flex flex-column align-items-center justify-content-center text-muted" style="height: 150px;">
                             <i class="fas fa-image fa-2x mb-2 opacity-50"></i>
-                            <small>ไม่มีรูปภาพประกอบ</small>
+                            <small><?php _e('pe.txt_no_image'); ?></small>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด (Close)</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php _e('pe.btn_close'); ?></button>
             </div>
         </div>
     </div>
