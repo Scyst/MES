@@ -30,18 +30,13 @@
         const themeSwitcher = document.getElementById('theme-switcher-btn')
 
         if (themeSwitcher) {
-            // [TEMP] ซ่อนปุ่มไม่ให้ user เห็น (ไม่ต้องไปลบ html)
-            themeSwitcher.style.display = 'none';
-
-            // [TEMP] ปิด Event Listener ชั่วคราว
-            /*
-            themeSwitcher.addEventListener('click', () => {
+            themeSwitcher.addEventListener('click', (e) => {
+                e.preventDefault()
                 const currentTheme = getStoredTheme() || getPreferredTheme()
                 const newTheme = currentTheme === 'light' ? 'dark' : 'light'
                 setStoredTheme(newTheme)
                 setTheme(newTheme)
             })
-            */
         }
     })
 })()
