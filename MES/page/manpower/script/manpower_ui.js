@@ -3378,7 +3378,11 @@ const Actions = {
                             imageAlt: 'Profile Picture',
                             showConfirmButton: false,
                             showCloseButton: true,
-                            customClass: { image: 'rounded shadow-sm' }
+                            customClass: { image: 'rounded shadow-sm' },
+                            didOpen: () => {
+                                const container = Swal.getContainer();
+                                if (container) container.style.zIndex = '1080';
+                            }
                         });
                     };
                 } else {
