@@ -56,10 +56,12 @@ try {
             $empId = $_GET['emp_id'] ?? '';
             if (!$empId) throw new Exception("Employee ID is required.");
 
-            $sql = "SELECT emp_id, name_th, position, line, team_group, 
-                           default_shift_id, is_active, start_date, resign_date 
-                    FROM dbo.MANPOWER_EMPLOYEES 
-                    WHERE emp_id = ?";
+            $sql = "SELECT E.emp_id, E.name_th, E.position, E.line, E.team_group, 
+                           E.default_shift_id, E.is_active, E.start_date, E.resign_date,
+                           U.profile_picture, U.phone, U.bio, U.emergency_contact_name, U.emergency_contact_phone
+                    FROM dbo.MANPOWER_EMPLOYEES E
+                    LEFT JOIN dbo.USERS U ON E.emp_id = U.emp_id
+                    WHERE E.emp_id = ?";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$empId]);
@@ -85,11 +87,17 @@ try {
                         S.shift_name,
                         TS.hc_group,
                         CONVERT(VARCHAR(10), E.start_date, 120) as start_date,
-                        CONVERT(VARCHAR(10), E.resign_date, 120) as resign_date
+                        CONVERT(VARCHAR(10), E.resign_date, 120) as resign_date,
+                        U.profile_picture,
+                        U.phone,
+                        U.bio,
+                        U.emergency_contact_name,
+                        U.emergency_contact_phone
 
                     FROM dbo.MANPOWER_EMPLOYEES E
                     LEFT JOIN dbo.MANPOWER_SHIFTS S ON E.default_shift_id = S.shift_id
                     LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS ON E.department_api = TS.department_api
+                    LEFT JOIN dbo.USERS U ON E.emp_id = U.emp_id
                     OUTER APPLY (
                         SELECT TOP 1 rate_type 
                         FROM dbo.MANPOWER_CATEGORY_MAPPING M 

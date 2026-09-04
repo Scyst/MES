@@ -3021,11 +3021,18 @@ const Actions = {
 
         displayList.forEach(emp => {
             const isActive = parseInt(emp.is_active) === 1;
+            let avatarHtml = '';
+            if (emp.profile_picture) {
+                avatarHtml = `<img src="${emp.profile_picture}" class="rounded bg-white text-primary fw-bold me-3 d-flex align-items-center justify-content-center border shadow-sm" style="width:40px; height:40px; object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-initial rounded bg-light text-primary fw-bold me-3 d-flex align-items-center justify-content-center\\' style=\\'width:40px; height:40px; font-size:1.2rem;\\'>${emp.name_th.charAt(0)}</div>';">`;
+            } else {
+                avatarHtml = `<div class="avatar-initial rounded bg-light text-primary fw-bold me-3 d-flex align-items-center justify-content-center" style="width:40px; height:40px; font-size:1.2rem;">
+                        ${emp.name_th.charAt(0)}
+                    </div>`;
+            }
+
             const profileHtml = `
                 <div class="d-flex align-items-center">
-                    <div class="avatar-initial rounded bg-light text-primary fw-bold me-3 d-flex align-items-center justify-content-center" style="width:40px; height:40px; font-size:1.2rem;">
-                        ${emp.name_th.charAt(0)}
-                    </div>
+                    ${avatarHtml}
                     <div>
                         <div class="fw-bold text-dark" style="font-size: 0.85rem;">${emp.name_th}</div>
                         <div class="text-muted font-monospace" style="font-size: 0.75rem;"><i class="fas fa-id-badge me-1 opacity-50"></i>${emp.emp_id}</div>
@@ -3333,6 +3340,26 @@ const Actions = {
                         team: emp.team_group
                     };
                 }, 50);
+
+                // Populate synced profile info
+                document.getElementById('empEditBio').value = emp.bio || '';
+                document.getElementById('empEditPhone').value = emp.phone || '';
+                document.getElementById('empEditEmergency').value = (emp.emergency_contact_name && emp.emergency_contact_phone) ? 
+                    `${emp.emergency_contact_name} (${emp.emergency_contact_phone})` : 
+                    (emp.emergency_contact_name || emp.emergency_contact_phone || '');
+                
+                const picEl = document.getElementById('empEditProfilePic');
+                const initEl = document.getElementById('empEditProfileInitials');
+                if (emp.profile_picture) {
+                    picEl.src = emp.profile_picture;
+                    picEl.style.display = 'block';
+                    initEl.style.display = 'none';
+                    picEl.onerror = () => { picEl.style.display = 'none'; initEl.style.display = 'flex'; };
+                } else {
+                    picEl.style.display = 'none';
+                    initEl.style.display = 'flex';
+                }
+
                 const isActive = parseInt(emp.is_active) === 1;
                 document.getElementById('currentActiveStatus').value = isActive ? '1' : '0';
 

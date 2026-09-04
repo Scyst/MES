@@ -253,6 +253,32 @@
                         </div>
                     </div>
 
+                    <div class="row g-2 mb-3 p-2 rounded border" style="background-color: #f8fafc;">
+                        <div class="col-12 d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" style="font-size: 0.65rem;">Personal Profile (Synced)</span>
+                        </div>
+                        <div class="col-12 d-flex align-items-center mb-2 gap-3">
+                            <div>
+                                <img id="empEditProfilePic" src="" alt="Profile" class="rounded-circle border shadow-sm" style="width: 50px; height: 50px; object-fit: cover; display: none;">
+                                <div id="empEditProfileInitials" class="avatar-initial rounded-circle bg-secondary bg-opacity-25 text-secondary border d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; font-size: 1.5rem;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <label class="form-label small text-muted mb-0">Bio / Notes</label>
+                                <input type="text" class="form-control form-control-sm bg-white" id="empEditBio" readonly placeholder="-">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted mb-0"><i class="fas fa-phone-alt me-1"></i>Phone</label>
+                            <input type="text" class="form-control form-control-sm bg-white" id="empEditPhone" readonly placeholder="-">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted mb-0"><i class="fas fa-first-aid me-1"></i>Emergency</label>
+                            <input type="text" class="form-control form-control-sm bg-white" id="empEditEmergency" readonly placeholder="-">
+                        </div>
+                    </div>
+
                     <div id="divRetroUpdate" style="display:none;">
                         <hr class="border-secondary opacity-10 my-3">
                         
