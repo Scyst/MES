@@ -418,31 +418,26 @@ $currentUserId = (int)$_SESSION['user']['id'];
                         
                         <!-- 1. ข้อมูลพื้นฐาน -->
                         <div class="mb-4">
-                            <div class="pro-section-header d-flex justify-content-between align-items-center mb-3">
-                                <div>
-                                    <i class="fas fa-user-circle text-primary"></i>
-                                    ข้อมูลพื้นฐาน <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;">(Basic Info)</span>
-                                </div>
-                                <div class="text-secondary" style="font-size: 0.75rem; font-weight: normal;">
-                                    <i class="fas fa-info-circle"></i> แจ้งแก้ไขที่ Admin
-                                </div>
+                            <div class="pro-section-header mb-3">
+                                <i class="fas fa-user-circle text-primary"></i>
+                                <span>ข้อมูลพื้นฐาน <span class="d-none d-md-inline text-muted fw-normal" style="font-size:0.75rem;">(Basic Info)</span></span>
                             </div>
 
                             <div class="row g-3">
                                 <div class="col-md-6 pro-field-group">
-                                    <label class="form-label">ชื่อ-นามสกุล</label>
+                                    <label class="form-label">ชื่อ-นามสกุล <i class="fas fa-info-circle text-secondary ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ข้อมูลส่วนนี้อ้างอิงจากระบบ HR หากต้องการแก้ไข โปรดแจ้งหัวหน้างานหรือ Admin"></i></label>
                                     <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldFullname" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
-                                    <label class="form-label">ตำแหน่งงาน</label>
+                                    <label class="form-label">ตำแหน่งงาน <i class="fas fa-info-circle text-secondary ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ข้อมูลส่วนนี้อ้างอิงจากระบบ HR หากต้องการแก้ไข โปรดแจ้งหัวหน้างานหรือ Admin"></i></label>
                                     <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldPosition" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
-                                    <label class="form-label">สาย / Line</label>
+                                    <label class="form-label">สาย / Line <i class="fas fa-info-circle text-secondary ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ข้อมูลส่วนนี้อ้างอิงจากระบบ HR หากต้องการแก้ไข โปรดแจ้งหัวหน้างานหรือ Admin"></i></label>
                                     <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldLine" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-6 pro-field-group">
-                                    <label class="form-label">แผนก</label>
+                                    <label class="form-label">แผนก <i class="fas fa-info-circle text-secondary ms-1" style="cursor:help;" data-bs-toggle="tooltip" title="ข้อมูลส่วนนี้อ้างอิงจากระบบ HR หากต้องการแก้ไข โปรดแจ้งหัวหน้างานหรือ Admin"></i></label>
                                     <div><span class="form-control read-only-display border-0 d-inline-block w-auto px-3 py-1 skeleton" id="fieldDept" style="min-height: 32px; min-width: 200px; font-size: 0.85rem; font-weight: 500;">—</span></div>
                                 </div>
                                 <div class="col-md-4 pro-field-group">
@@ -713,6 +708,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     const API_URL    = 'api/api_profile.php';
     const AVATAR_URL = 'api/api_avatar_upload.php';
+
+    // Initialize Tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 
     // ─── Helpers ─────────────────────────────────────────────
     function showAlert(msg, type = 'danger') {
