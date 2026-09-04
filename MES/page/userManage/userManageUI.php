@@ -172,14 +172,13 @@ $pageIcon = "fas fa-users-cog";
                                 </table>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <small class="text-muted" id="logRecordInfo">Showing 0 records</small>
-                        <div class="d-flex gap-2 align-items-center">
-                            <button class="btn btn-sm btn-outline-secondary" id="btnPrevLog" disabled><i class="fas fa-chevron-left"></i></button>
-                            <span class="fw-bold" id="logCurrentPage">1</span>
-                            <button class="btn btn-sm btn-outline-secondary" id="btnNextLog" disabled><i class="fas fa-chevron-right"></i></button>
+                        <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
+                            <span class="text-muted small fw-medium" id="logRecordInfo">Showing 0 records</span>
+                            <div class="d-flex gap-2 align-items-center">
+                                <button class="btn btn-sm btn-outline-secondary" id="btnPrevLog" disabled><i class="fas fa-chevron-left"></i></button>
+                                <span class="fw-bold" id="logCurrentPage">1</span>
+                                <button class="btn btn-sm btn-outline-secondary" id="btnNextLog" disabled><i class="fas fa-chevron-right"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
