@@ -187,6 +187,18 @@ try {
             }
             break;
 
+        case 'reset_password_default':
+            $targetId = (int)($input['id'] ?? $_GET['id'] ?? 0);
+            if (!$targetId) throw new Exception("Missing user ID.");
+            
+            // Logically we can use 123456 as the default password for fast resets
+            $hashedPassword = password_hash('123456', PASSWORD_DEFAULT);
+            $stmtPwd = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='RESET_PWD', @UserId=?, @PasswordHash=?, @ActionBy=?");
+            $stmtPwd->execute([$targetId, $hashedPassword, $actionBy]);
+            
+            echo json_encode(['success' => true, 'message' => 'Password reset to 123456 successfully.']);
+            break;
+
         case 'toggle_status':
             $targetId = (int)($input['id'] ?? $_GET['id'] ?? 0);
             if (!$targetId) throw new Exception("Missing user ID.");

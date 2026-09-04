@@ -172,8 +172,9 @@ function renderTable(users) {
                         : `<small class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>ยังไม่เปลี่ยน Password</small>`}
                 </div>
             </td>
-            <td class="text-end pe-4">
+            <td class="text-end pe-4 text-nowrap">
                 <button class="btn btn-sm btn-light border btn-edit" title="Edit"><i class="fas fa-edit text-warning"></i></button>
+                <button class="btn btn-sm btn-light border ms-1 btn-reset-pwd" title="Reset Password"><i class="fas fa-key text-primary"></i></button>
                 <button class="btn btn-sm btn-light border ms-1 btn-toggle" title="${isActive ? 'Disable' : 'Enable'}">
                     <i class="fas ${isActive ? 'fa-ban text-danger' : 'fa-check text-success'}"></i>
                 </button>
@@ -181,6 +182,7 @@ function renderTable(users) {
         `;
 
         tr.querySelector('.btn-edit').onclick = () => openEdit(u);
+        tr.querySelector('.btn-reset-pwd').onclick = () => resetPasswordDefault(u);
         tr.querySelector('.btn-toggle').onclick = () => toggleStatus(u.id, isActive);
         
         tbody.appendChild(tr);
@@ -316,6 +318,32 @@ window.toggleAllPerms = function(containerId, state) {
     const checkboxes = container.querySelectorAll('input[type="checkbox"]:not(:disabled)');
     checkboxes.forEach(cb => cb.checked = state);
 };
+
+async function resetPasswordDefault(user) {
+    Swal.fire({
+        title: 'Reset Password?',
+        html: `Are you sure you want to reset the password for <b>@${user.username}</b>?<br><br>The new password will be: <b class="text-danger">123456</b>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#0d6efd',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, reset it!'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const res = await sendUserRequest('reset_password_default', 'POST', { id: user.id });
+                if (res.success) {
+                    Swal.fire('Reset!', 'Password has been reset to 123456.', 'success');
+                    loadUsers();
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Operation failed', 'error');
+            }
+        }
+    });
+}
 
 async function toggleStatus(id, isActive) {
     const act = isActive ? 'disable' : 'enable';
