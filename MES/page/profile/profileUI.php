@@ -70,6 +70,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
             border: var(--pro-border);
             border-radius: var(--pro-radius-lg);
             box-shadow: var(--pro-shadow-card);
+            min-width: 0;
         }
 
         /* ── Sidebar Avatar Card ── */
