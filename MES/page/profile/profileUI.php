@@ -353,7 +353,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
             <hr class="text-muted opacity-25">
 
             <!-- Performance Widget -->
-            <div class="p-3 mb-3 rounded border text-start" id="sidebarPerformanceCard" style="background-color: var(--bs-light);">
+            <div class="p-3 mb-3 rounded border text-start" id="sidebarPerformanceCard" style="background-color: var(--bs-tertiary-bg);">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="small fw-bold text-muted"><i class="fas fa-star text-warning me-1"></i>เกรดประเมิน</span>
                     <span class="badge bg-secondary" id="sidebarGradeDisplay">รอประเมิน</span>

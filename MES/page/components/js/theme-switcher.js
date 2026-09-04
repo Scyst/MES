@@ -6,19 +6,13 @@
     const getStoredTheme = () => localStorage.getItem('theme')
     const setStoredTheme = theme => localStorage.setItem('theme', theme)
 
-    // --- ส่วนตรวจสอบ Theme (แก้: บังคับ return 'light' เสมอ) ---
+    // --- ส่วนตรวจสอบ Theme ---
     const getPreferredTheme = () => {
-        // [TEMP] ปิดการเช็คค่าเดิมและ System Preference ชั่วคราว
-        /*
         const storedTheme = getStoredTheme()
         if (storedTheme) {
             return storedTheme
         }
         return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-        */
-       
-        // [TEMP] บังคับเป็น Light Mode เท่านั้น
-        return 'light'
     }
 
     const setTheme = theme => {
