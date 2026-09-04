@@ -41,7 +41,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
         }
         @media (max-width: 900px) {
             .profile-content-grid { grid-template-columns: 1fr; }
-            .avatar-card { position: relative; top: auto; z-index: 1; }
+            .avatar-card { position: static !important; top: auto !important; }
         }
 
         /* ── Skeleton Loader ── */
