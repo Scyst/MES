@@ -263,17 +263,20 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                         <table class="table table-hover table-striped mb-0 text-center align-middle" id="gradingTable">
                             <thead class="table-light sticky-top shadow-sm" style="z-index: 10;">
                                 <tr>
-                                    <th style="width: 10%;" class="sortable" data-sort="emp_id" role="button">Emp ID <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 18%;" class="sortable" data-sort="name_th" role="button">Name & Department <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 10%;" class="sortable" data-sort="position" role="button">Position <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 13%;" class="sortable" data-sort="ratio" role="button">Income & Ratio <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 14%;" class="sortable" data-sort="total_wage" role="button">
+                                    <th style="width: 8%;" class="sortable" data-sort="emp_id" role="button">Emp ID <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 13%;" class="sortable" data-sort="name_th" role="button">Name & Dept <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 9%;" class="sortable" data-sort="position" role="button">Position <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 9%;" class="sortable" data-sort="ratio" role="button">Income & Ratio <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 11%;" class="sortable" data-sort="total_wage" role="button">
                                         Total Wage 
-                                        <i class="fas fa-eye-slash ms-2 text-muted" id="thWageEyeToggle" style="cursor: pointer;" onclick="event.stopPropagation(); App.toggleWageVisibility()" title="Show/Hide Wage"></i>
-                                        <i class="fas fa-sort text-muted ms-1"></i>
+                                        <i class="fas fa-eye-slash ms-1 text-muted" id="thWageEyeToggle" style="cursor: pointer;" onclick="event.stopPropagation(); App.toggleWageVisibility()" title="Show/Hide Wage"></i>
                                     </th>
-                                    <th style="width: 15%; text-align: center;" class="sortable" data-sort="grade" role="button">Executive Grade <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 20%;">Notes</th>
+                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_iph" role="button">IPH <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_5s" role="button">5S <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_attendance" role="button">Attd <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_learning" role="button">Learn <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_overall" role="button">Overall <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 10%;">Notes</th>
                                 </tr>
                             </thead>
                             <tbody id="gradingTableBody">
@@ -542,10 +545,13 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                         <table class="table table-hover table-striped mb-0 text-center align-middle">
                             <thead class="table-light sticky-top shadow-sm">
                                 <tr>
-                                    <th class="text-center" style="width: 25%;">LINE</th>
-                                    <th style="width: 25%;">Ratio A (>=)</th>
-                                    <th style="width: 25%;">Ratio B (>=)</th>
-                                    <th style="width: 25%;">Ratio C (>=)</th>
+                                    <th class="text-center" style="width: 16%;">LINE</th>
+                                    <th style="width: 14%; font-size: 0.85rem;">Ratio A (>=)</th>
+                                    <th style="width: 14%; font-size: 0.85rem;">Ratio B (>=)</th>
+                                    <th style="width: 14%; font-size: 0.85rem;">Ratio C (>=)</th>
+                                    <th style="width: 14%; font-size: 0.85rem;">Attd A (<= Lates)</th>
+                                    <th style="width: 14%; font-size: 0.85rem;">Attd B (<= Lates)</th>
+                                    <th style="width: 14%; font-size: 0.85rem;">Attd C (<= Lates)</th>
                                 </tr>
                             </thead>
                             <tbody id="criteriaTableBody">
@@ -555,7 +561,8 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     </div>
                     <div class="p-3 text-muted small bg-light border-top">
                         <i class="fas fa-info-circle me-1"></i> Below Grade C will automatically be marked as <strong class="text-danger">D</strong><br>
-                        <i class="fas fa-lightbulb me-1 mt-1 text-warning"></i> <strong>Ratio</strong> = Total Income / Total Wage (e.g. 2.0 = earned twice their wage)
+                        <i class="fas fa-lightbulb me-1 mt-1 text-warning"></i> <strong>Ratio</strong> = Total Income / Total Wage (e.g. 2.0 = earned twice their wage)<br>
+                        <i class="fas fa-clock me-1 mt-1 text-primary"></i> <strong>Attendance (Attd)</strong> counts the total sum of Late + Absent days.
                     </div>
                 </div>
                 <div class="modal-footer border-top-0">

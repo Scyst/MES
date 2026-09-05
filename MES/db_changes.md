@@ -58,3 +58,26 @@
 - **SQL**: `ALTER TABLE dbo.STOCK_TRANSFER_ORDERS ADD tag_serial_no VARCHAR(100) NULL;`
 - **Reason**: เพิ่ม column เพื่อเก็บ `serial_no` ของแท็กที่เกี่ยวข้องกับการโอนย้าย แทนการฝัง `[TAG: ...]` ไว้ใน `notes` — เสถียรกว่า, queryable, ไม่ต้อง parse string
 - **Impact**: `NULL`able — ไม่กระทบ record เดิม
+
+---
+
+## 2026-09-05
+
+### [ADD COLUMNS] `EMPLOYEE_GRADES` and `EMPLOYEE_GRADING_CRITERIA`
+- **Agent**: Antigravity
+- **SQL**:
+  ```sql
+  ALTER TABLE dbo.EMPLOYEE_GRADES
+  ADD grade_iph VARCHAR(2) NULL,
+      grade_5s VARCHAR(2) NULL,
+      grade_attendance VARCHAR(2) NULL,
+      grade_learning VARCHAR(2) NULL,
+      grade_overall VARCHAR(2) NULL;
+
+  ALTER TABLE dbo.EMPLOYEE_GRADING_CRITERIA
+  ADD att_max_late_a INT NULL DEFAULT 0,
+      att_max_late_b INT NULL DEFAULT 1,
+      att_max_late_c INT NULL DEFAULT 2;
+  ```
+- **Reason**: Expand employee grading system into 4 distinct dimensions (IPH, 5S, Attendance, Learning).
+- **Impact**: New columns allow storing multiple grades per employee/period instead of just a single overall grade. Nullable, so it doesn't break existing data.

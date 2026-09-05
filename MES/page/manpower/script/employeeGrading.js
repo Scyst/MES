@@ -220,12 +220,24 @@ const App = {
             totalDl += parseFloat(emp.dl_wage) || 0;
             totalOt += parseFloat(emp.ot_wage) || 0;
 
-            let systemGradeBadge = '';
-            if (emp.system_grade && emp.system_grade !== 'N/A') {
-                const colors = { A: 'success', B: 'primary', C: 'warning', D: 'danger' };
-                const c = colors[emp.system_grade] || 'secondary';
-                systemGradeBadge = `<span class="badge bg-${c}-subtle text-${c} border border-${c}-subtle ms-2" title="System Recommended Grade">SYS: ${emp.system_grade}</span>`;
-            }
+            const renderSelect = (col, val, sysVal) => {
+                let actualVal = val || '';
+                let sysBadge = sysVal && sysVal !== 'N/A' ? `<br><small class="text-muted" style="font-size:0.65rem">SYS: ${sysVal}</small>` : '';
+                return `
+                    <div class="d-flex flex-column align-items-center justify-content-center">
+                        <select class="form-select form-select-sm d-inline-block grade-select ${this.getGradeClass(actualVal)}" 
+                                data-empid="${emp.emp_id}" data-col="${col}"
+                                onchange="App.updateGradeState('${emp.emp_id}', '${col}', this.value, this)" style="min-width: 60px;">
+                            <option value="" class="grade-empty">-</option>
+                            <option value="A" class="grade-A" ${actualVal === 'A' ? 'selected' : ''}>A</option>
+                            <option value="B" class="grade-B" ${actualVal === 'B' ? 'selected' : ''}>B</option>
+                            <option value="C" class="grade-C" ${actualVal === 'C' ? 'selected' : ''}>C</option>
+                            <option value="D" class="grade-D" ${actualVal === 'D' ? 'selected' : ''}>D</option>
+                        </select>
+                        ${sysBadge}
+                    </div>
+                `;
+            };
 
             html += `
                 <tr>
@@ -257,19 +269,20 @@ const App = {
                             <span class="fw-bold text-muted opacity-50">******</span>
                         `}
                     </td>
-                    <td>
-                        <div class="d-flex align-items-center justify-content-center">
-                            <select class="form-select form-select-sm d-inline-block grade-select ${this.getGradeClass(emp.grade)}" 
-                                    data-empid="${emp.emp_id}" 
-                                    onchange="App.updateGradeState('${emp.emp_id}', this.value, this)">
-                                <option value="" class="grade-empty">Select</option>
-                                <option value="A" class="grade-A" ${emp.grade === 'A' ? 'selected' : ''}>A</option>
-                                <option value="B" class="grade-B" ${emp.grade === 'B' ? 'selected' : ''}>B</option>
-                                <option value="C" class="grade-C" ${emp.grade === 'C' ? 'selected' : ''}>C</option>
-                                <option value="D" class="grade-D" ${emp.grade === 'D' ? 'selected' : ''}>D</option>
-                            </select>
-                            ${systemGradeBadge}
-                        </div>
+                    <td class="px-1">
+                        ${renderSelect('grade_iph', emp.grade_iph, emp.system_grade_iph)}
+                    </td>
+                    <td class="px-1">
+                        ${renderSelect('grade_5s', emp.grade_5s, null)}
+                    </td>
+                    <td class="px-1">
+                        ${renderSelect('grade_attendance', emp.grade_attendance, emp.system_grade_attendance)}
+                    </td>
+                    <td class="px-1">
+                        ${renderSelect('grade_learning', emp.grade_learning, null)}
+                    </td>
+                    <td class="px-1 border-start">
+                        ${renderSelect('grade_overall', emp.grade_overall, null)}
                     </td>
                     <td>
                         <input type="text" class="form-control form-control-sm text-center" 
@@ -282,7 +295,7 @@ const App = {
         });
 
         if (filtered.length === 0) {
-            html = `<tr><td colspan="7" class="text-muted py-4">No employees found for this selection.</td></tr>`;
+            html = `<tr><td colspan="11" class="text-muted py-4">No employees found for this selection.</td></tr>`;
         }
 
         tbody.innerHTML = html;
@@ -357,9 +370,9 @@ const App = {
             lineData[line].count += 1;
             totalIncome += parseFloat(emp.income_per_head) || 0;
             totalWage   += parseFloat(emp.total_wage) || 0;
-            if (emp.grade && ['A','B','C','D'].includes(emp.grade)) {
-                grades[emp.grade]++;
-                lineData[line].grades[emp.grade]++;
+            if (emp.grade_overall && ['A','B','C','D'].includes(emp.grade_overall)) {
+                grades[emp.grade_overall]++;
+                lineData[line].grades[emp.grade_overall]++;
             } else {
                 grades.Unassigned++;
             }
@@ -685,13 +698,48 @@ const App = {
         return `grade-${grade}`;
     },
 
-    updateGradeState: function(empId, grade, selectElement) {
+    updateGradeState: function(empId, col, grade, selectElement) {
         selectElement.className = `form-select form-select-sm d-inline-block grade-select ${this.getGradeClass(grade)}`;
         
         const emp = this.state.employees.find(e => e.emp_id === empId);
         if (emp) {
-            emp.grade = grade;
+            emp[col] = grade;
+            
+            // Auto-recalculate Overall Grade if a component changes
+            if (['grade_iph', 'grade_5s', 'grade_attendance', 'grade_learning'].includes(col)) {
+                this.recalculateOverall(emp);
+                
+                // Update DOM for overall select
+                const overallSelect = document.querySelector(`select[data-empid="${empId}"][data-col="grade_overall"]`);
+                if (overallSelect) {
+                    overallSelect.value = emp.grade_overall || '';
+                    overallSelect.className = `form-select form-select-sm d-inline-block grade-select ${this.getGradeClass(emp.grade_overall)}`;
+                }
+            }
         }
+    },
+    
+    recalculateOverall: function(emp) {
+        // Simple average calculation: A=4, B=3, C=2, D=1
+        const grades = [emp.grade_iph, emp.grade_5s, emp.grade_attendance, emp.grade_learning].filter(g => g && ['A','B','C','D'].includes(g));
+        if (grades.length === 0) {
+            emp.grade_overall = null;
+            return;
+        }
+        
+        let total = 0;
+        grades.forEach(g => {
+            if (g === 'A') total += 4;
+            else if (g === 'B') total += 3;
+            else if (g === 'C') total += 2;
+            else if (g === 'D') total += 1;
+        });
+        
+        const avg = total / grades.length;
+        if (avg >= 3.5) emp.grade_overall = 'A';
+        else if (avg >= 2.5) emp.grade_overall = 'B';
+        else if (avg >= 1.5) emp.grade_overall = 'C';
+        else emp.grade_overall = 'D';
     },
     
     updateNotesState: function(empId, notes) {
@@ -704,7 +752,7 @@ const App = {
     autoGrade: function() {
         Swal.fire({
             title: 'Auto Grade',
-            text: "This will apply the System Recommended Grade to all employees (where available). Overwrite existing grades?",
+            text: "This will apply the System Recommended Grade for IPH and Attendance to all employees, and auto-calculate their Overall Grade. Overwrite existing grades?",
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Yes, apply it!'
@@ -712,8 +760,18 @@ const App = {
             if (result.isConfirmed) {
                 let count = 0;
                 this.state.employees.forEach(emp => {
-                    if (emp.system_grade && ['A', 'B', 'C', 'D'].includes(emp.system_grade)) {
-                        emp.grade = emp.system_grade;
+                    let changed = false;
+                    if (emp.system_grade_iph && ['A', 'B', 'C', 'D'].includes(emp.system_grade_iph)) {
+                        emp.grade_iph = emp.system_grade_iph;
+                        changed = true;
+                    }
+                    if (emp.system_grade_attendance && ['A', 'B', 'C', 'D'].includes(emp.system_grade_attendance)) {
+                        emp.grade_attendance = emp.system_grade_attendance;
+                        changed = true;
+                    }
+                    
+                    if (changed) {
+                        this.recalculateOverall(emp);
                         count++;
                     }
                 });
@@ -733,13 +791,17 @@ const App = {
             ? document.getElementById('filterPeriodDate').value 
             : document.getElementById('filterPeriodMonth').value;
         
-        // Filter out employees that have a grade assigned
+        // Filter out employees that have at least one grade assigned
         const gradesToSave = this.state.employees
-            .filter(emp => emp.grade && emp.grade.trim() !== '')
+            .filter(emp => emp.grade_overall || emp.grade_iph || emp.grade_5s || emp.grade_attendance || emp.grade_learning || emp.notes)
             .map(emp => ({
                 emp_id: emp.emp_id,
-                grade: emp.grade,
-                notes: emp.notes
+                grade_iph: emp.grade_iph || null,
+                grade_5s: emp.grade_5s || null,
+                grade_attendance: emp.grade_attendance || null,
+                grade_learning: emp.grade_learning || null,
+                grade_overall: emp.grade_overall || null,
+                notes: emp.notes || null
             }));
 
         if (gradesToSave.length === 0) {
@@ -815,13 +877,16 @@ const App = {
                 } else {
                     const sortedLines = Array.from(this.state.lines).sort();
                     sortedLines.forEach(line => {
-                        const crit = criteriaMap[line] || { threshold_a: '', threshold_b: '', threshold_c: '' };
+                        const crit = criteriaMap[line] || { threshold_a: '', threshold_b: '', threshold_c: '', att_max_late_a: '', att_max_late_b: '', att_max_late_c: '' };
                         html += `
                             <tr data-line="${line}">
-                                <td class="fw-bold text-start ps-5">${line}</td>
-                                <td><input type="number" step="0.1" class="form-control form-control-sm text-center crit-a" value="${crit.threshold_a || ''}" placeholder="e.g. 2.0"></td>
-                                <td><input type="number" step="0.1" class="form-control form-control-sm text-center crit-b" value="${crit.threshold_b || ''}" placeholder="e.g. 1.5"></td>
-                                <td><input type="number" step="0.1" class="form-control form-control-sm text-center crit-c" value="${crit.threshold_c || ''}" placeholder="e.g. 1.0"></td>
+                                <td class="fw-bold text-start ps-4" style="font-size: 0.9rem;">${line}</td>
+                                <td><input type="number" step="0.1" class="form-control form-control-sm text-center crit-a" value="${crit.threshold_a || ''}" placeholder="Ratio A"></td>
+                                <td><input type="number" step="0.1" class="form-control form-control-sm text-center crit-b" value="${crit.threshold_b || ''}" placeholder="Ratio B"></td>
+                                <td><input type="number" step="0.1" class="form-control form-control-sm text-center crit-c" value="${crit.threshold_c || ''}" placeholder="Ratio C"></td>
+                                <td><input type="number" step="1" class="form-control form-control-sm text-center att-a" value="${crit.att_max_late_a || ''}" placeholder="Lates A"></td>
+                                <td><input type="number" step="1" class="form-control form-control-sm text-center att-b" value="${crit.att_max_late_b || ''}" placeholder="Lates B"></td>
+                                <td><input type="number" step="1" class="form-control form-control-sm text-center att-c" value="${crit.att_max_late_c || ''}" placeholder="Lates C"></td>
                             </tr>
                         `;
                     });
@@ -852,14 +917,20 @@ const App = {
             const a = row.querySelector('.crit-a').value;
             const b = row.querySelector('.crit-b').value;
             const c = row.querySelector('.crit-c').value;
+            const att_a = row.querySelector('.att-a').value;
+            const att_b = row.querySelector('.att-b').value;
+            const att_c = row.querySelector('.att-c').value;
 
             // Only save if at least one field is filled, or if they just want to save 0
-            if (a !== '' || b !== '' || c !== '') {
+            if (a !== '' || b !== '' || c !== '' || att_a !== '' || att_b !== '' || att_c !== '') {
                 criteriaArray.push({
                     line: line,
-                    threshold_a: parseFloat(a) || 0,
-                    threshold_b: parseFloat(b) || 0,
-                    threshold_c: parseFloat(c) || 0
+                    threshold_a: a !== '' ? parseFloat(a) : null,
+                    threshold_b: b !== '' ? parseFloat(b) : null,
+                    threshold_c: c !== '' ? parseFloat(c) : null,
+                    att_max_late_a: att_a !== '' ? parseInt(att_a, 10) : null,
+                    att_max_late_b: att_b !== '' ? parseInt(att_b, 10) : null,
+                    att_max_late_c: att_c !== '' ? parseInt(att_c, 10) : null
                 });
             }
         });
@@ -980,17 +1051,19 @@ const App = {
                 'Total Wage': wage,
                 'Income': income,
                 'Ratio': ratio,
-                'System Grade': emp.system_grade || '-',
-                'Adjusted Grade': emp.adjusted_grade || '-',
-                'Final Grade': emp.final_grade || '-',
-                'Note': emp.manager_note || ''
+                'Grade IPH': emp.grade_iph || '-',
+                'Grade 5S': emp.grade_5s || '-',
+                'Grade Attd': emp.grade_attendance || '-',
+                'Grade Learn': emp.grade_learning || '-',
+                'Grade Overall': emp.grade_overall || '-',
+                'Note': emp.notes || ''
             };
         });
 
         const ws = XLSX.utils.json_to_sheet(exportData);
         
         // Apply right-align style to Grade columns and their headers (requires xlsx-js-style)
-        const rightAlignHeaders = ['OT Hours', 'DL Wage', 'OT Wage', 'Total Wage', 'Income', 'Ratio', 'System Grade', 'Adjusted Grade', 'Final Grade'];
+        const rightAlignHeaders = ['OT Hours', 'DL Wage', 'OT Wage', 'Total Wage', 'Income', 'Ratio', 'Grade IPH', 'Grade 5S', 'Grade Attd', 'Grade Learn', 'Grade Overall'];
         for (const cellAddress in ws) {
             if (cellAddress.startsWith('!')) continue;
             const val = ws[cellAddress].v;
@@ -1217,10 +1290,12 @@ const App = {
                 'Total Wage': wage,
                 'Income': income,
                 'Ratio': ratio,
-                'System Grade': emp.system_grade || '-',
-                'Adjusted Grade': emp.adjusted_grade || '-',
-                'Final Grade': emp.final_grade || '-',
-                'Note': emp.manager_note || ''
+                'Grade IPH': emp.grade_iph || '-',
+                'Grade 5S': emp.grade_5s || '-',
+                'Grade Attd': emp.grade_attendance || '-',
+                'Grade Learn': emp.grade_learning || '-',
+                'Grade Overall': emp.grade_overall || '-',
+                'Note': emp.notes || ''
             };
         });
 
@@ -1285,7 +1360,7 @@ const App = {
         doc.setTextColor(100);
         doc.text(`Period: ${period} | Line: ${line}`, 14, 22);
 
-        const tableColumn = ["EMP ID", "Name", "Position", "Line", "OT Hrs", "DL Wage", "OT Wage", "Total Wage", "Income", "Ratio", "Sys. Grade", "Adj.", "Final"];
+        const tableColumn = ["EMP ID", "Name", "Position", "Line", "OT Hrs", "DL Wage", "OT Wage", "Total Wage", "Income", "Ratio", "IPH", "5S", "Attd", "Learn", "Overall"];
         const tableRows = [];
 
         this.state.employees.forEach(emp => {
@@ -1306,9 +1381,11 @@ const App = {
                 wage.toFixed(2),
                 income.toFixed(2),
                 ratio,
-                emp.system_grade || '-',
-                emp.adjusted_grade || '-',
-                emp.final_grade || '-'
+                emp.grade_iph || '-',
+                emp.grade_5s || '-',
+                emp.grade_attendance || '-',
+                emp.grade_learning || '-',
+                emp.grade_overall || '-'
             ]);
         });
 

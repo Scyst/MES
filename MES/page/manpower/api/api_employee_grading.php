@@ -49,9 +49,19 @@ try {
                 ISNULL(WAGE.dl_wage, 350.0) AS dl_wage,
                 ISNULL(WAGE.ot_wage, 0.0) AS ot_wage,
                 ISNULL(WAGE.ot_hours, 0.0) AS ot_hours,
+                ISNULL(WAGE.late_days, 0) AS late_days,
+                ISNULL(WAGE.absent_days, 0) AS absent_days,
                 C.threshold_a,
                 C.threshold_b,
-                C.threshold_c
+                C.threshold_c,
+                G.grade_iph,
+                G.grade_5s,
+                G.grade_attendance,
+                G.grade_learning,
+                G.grade_overall,
+                C.att_max_late_a,
+                C.att_max_late_b,
+                C.att_max_late_c
             FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
             INNER JOIN (
                 SELECT DISTINCT emp_id 
@@ -83,13 +93,17 @@ try {
                     LOGS.present_days * RATES.daily_rate AS dl_wage,
                     LOGS.ot_hours * RATES.ot_rate AS ot_wage,
                     (LOGS.present_days * RATES.daily_rate) + (LOGS.ot_hours * RATES.ot_rate) AS total_wage,
-                    LOGS.ot_hours
+                    LOGS.ot_hours,
+                    LOGS.late_days,
+                    LOGS.absent_days
                 FROM (
                     SELECT 
                         ml.emp_id,
-                        COUNT(ml.log_date) AS present_days,
+                        SUM(CASE WHEN ml.status IN ('PRESENT', 'LATE') THEN 1 ELSE 0 END) AS present_days,
+                        SUM(CASE WHEN ml.status = 'LATE' THEN 1 ELSE 0 END) AS late_days,
+                        SUM(CASE WHEN ml.status = 'ABSENT' THEN 1 ELSE 0 END) AS absent_days,
                         SUM(
-                            CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL 
+                            CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL AND ml.status IN ('PRESENT', 'LATE') 
                             THEN 
                                 CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) > 570 
                                 THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5 
@@ -100,7 +114,6 @@ try {
                     LEFT JOIN dbo.MANPOWER_EMPLOYEES emp WITH (NOLOCK) ON ml.emp_id = emp.emp_id COLLATE Thai_CI_AS
                     LEFT JOIN dbo.MANPOWER_SHIFTS ms WITH (NOLOCK) ON ms.shift_id = ISNULL(ml.shift_id, emp.default_shift_id)
                     WHERE ml.log_date >= :start4 AND ml.log_date < :end4
-                      AND ml.status IN ('PRESENT', 'LATE')
                     GROUP BY ml.emp_id
                 ) LOGS
                 LEFT JOIN (
@@ -155,7 +168,7 @@ try {
             $wage = (float)$emp['total_wage'];
             $ratio = $wage > 0 ? ($income / $wage) : 0;
             
-            // Calculate System Grade based on Ratio
+            // Calculate System Grade based on Ratio (IPH)
             $systemGrade = 'N/A';
             if (isset($emp['threshold_a']) && $emp['threshold_a'] > 0) {
                 if ($ratio >= $emp['threshold_a']) {
@@ -180,6 +193,29 @@ try {
                 }
             }
             
+            // Calculate System Attendance Grade
+            $lateDays = (int)($emp['late_days'] ?? 0);
+            $absentDays = (int)($emp['absent_days'] ?? 0);
+            $infractions = $lateDays + $absentDays;
+
+            $attGrade = 'N/A';
+            // Only calculate if attendance criteria is configured for this line
+            if (isset($emp['att_max_late_a']) || isset($emp['att_max_late_b']) || isset($emp['att_max_late_c'])) {
+                $maxA = (int)($emp['att_max_late_a'] ?? 0);
+                $maxB = (int)($emp['att_max_late_b'] ?? 1);
+                $maxC = (int)($emp['att_max_late_c'] ?? 2);
+
+                if ($infractions <= $maxA) {
+                    $attGrade = 'A';
+                } else if ($infractions <= $maxB) {
+                    $attGrade = 'B';
+                } else if ($infractions <= $maxC) {
+                    $attGrade = 'C';
+                } else {
+                    $attGrade = 'D';
+                }
+            }
+            
             $results[] = [
                 'emp_id' => $emp['emp_id'],
                 'name_th' => $emp['name_th'],
@@ -191,9 +227,17 @@ try {
                 'dl_wage' => (float)($emp['dl_wage'] ?? 0),
                 'ot_wage' => (float)($emp['ot_wage'] ?? 0),
                 'ot_hours' => (float)($emp['ot_hours'] ?? 0),
+                'late_days' => $lateDays,
+                'absent_days' => $absentDays,
                 'ratio' => round($ratio, 2),
-                'system_grade' => $systemGrade,
-                'grade' => $emp['grade'] ?? '',
+                'system_grade_iph' => $systemGrade,
+                'system_grade_attendance' => $attGrade,
+                'grade' => $emp['grade'] ?? '', // legacy
+                'grade_iph' => $emp['grade_iph'] ?? '',
+                'grade_5s' => $emp['grade_5s'] ?? '',
+                'grade_attendance' => $emp['grade_attendance'] ?? '',
+                'grade_learning' => $emp['grade_learning'] ?? '',
+                'grade_overall' => $emp['grade_overall'] ?? '',
                 'notes' => $emp['notes'] ?? ''
             ];
         }
@@ -214,13 +258,13 @@ try {
         $pdo->beginTransaction();
         
         $stmtInsert = $pdo->prepare("
-            INSERT INTO dbo.EMPLOYEE_GRADES (emp_id, evaluation_period, grade, evaluated_by, notes, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, GETDATE(), GETDATE())
+            INSERT INTO dbo.EMPLOYEE_GRADES (emp_id, evaluation_period, grade, grade_iph, grade_5s, grade_attendance, grade_learning, grade_overall, evaluated_by, notes, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
         ");
         
         $stmtUpdate = $pdo->prepare("
             UPDATE dbo.EMPLOYEE_GRADES 
-            SET grade = ?, evaluated_by = ?, notes = ?, updated_at = GETDATE()
+            SET grade = ?, grade_iph = ?, grade_5s = ?, grade_attendance = ?, grade_learning = ?, grade_overall = ?, evaluated_by = ?, notes = ?, updated_at = GETDATE()
             WHERE emp_id = ? AND evaluation_period = ?
         ");
         
@@ -228,14 +272,19 @@ try {
         
         foreach ($grades as $g) {
             $empId = $g['emp_id'];
-            $grade = $g['grade'];
+            $gradeIph = $g['grade_iph'] ?? '';
+            $grade5s = $g['grade_5s'] ?? '';
+            $gradeAttendance = $g['grade_attendance'] ?? '';
+            $gradeLearning = $g['grade_learning'] ?? '';
+            $gradeOverall = $g['grade_overall'] ?? '';
+            $grade = $gradeOverall; // Map legacy to overall
             $notes = $g['notes'] ?? '';
             
             $stmtCheck->execute([$empId, $period]);
             if ($stmtCheck->fetchColumn()) {
-                $stmtUpdate->execute([$grade, $userId, $notes, $empId, $period]);
+                $stmtUpdate->execute([$grade, $gradeIph, $grade5s, $gradeAttendance, $gradeLearning, $gradeOverall, $userId, $notes, $empId, $period]);
             } else {
-                $stmtInsert->execute([$empId, $period, $grade, $userId, $notes]);
+                $stmtInsert->execute([$empId, $period, $grade, $gradeIph, $grade5s, $gradeAttendance, $gradeLearning, $gradeOverall, $userId, $notes]);
             }
         }
         
@@ -267,7 +316,7 @@ try {
         exit;
     }
     else if ($action === 'get_criteria') {
-        $sql = "SELECT line, threshold_a, threshold_b, threshold_c FROM dbo.EMPLOYEE_GRADING_CRITERIA WITH (NOLOCK)";
+        $sql = "SELECT line, threshold_a, threshold_b, threshold_c, att_max_late_a, att_max_late_b, att_max_late_c FROM dbo.EMPLOYEE_GRADING_CRITERIA WITH (NOLOCK)";
         $stmt = $pdo->query($sql);
         $criteria = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         
@@ -286,13 +335,15 @@ try {
             IF EXISTS (SELECT 1 FROM dbo.EMPLOYEE_GRADING_CRITERIA WHERE line = :line)
             BEGIN
                 UPDATE dbo.EMPLOYEE_GRADING_CRITERIA 
-                SET threshold_a = :a, threshold_b = :b, threshold_c = :c, updated_at = GETDATE(), updated_by = :user_id
+                SET threshold_a = :a, threshold_b = :b, threshold_c = :c,
+                    att_max_late_a = :aa, att_max_late_b = :ab, att_max_late_c = :ac,
+                    updated_at = GETDATE(), updated_by = :user_id
                 WHERE line = :line2
             END
             ELSE
             BEGIN
-                INSERT INTO dbo.EMPLOYEE_GRADING_CRITERIA (line, threshold_a, threshold_b, threshold_c, updated_by)
-                VALUES (:line3, :a2, :b2, :c2, :user_id2)
+                INSERT INTO dbo.EMPLOYEE_GRADING_CRITERIA (line, threshold_a, threshold_b, threshold_c, att_max_late_a, att_max_late_b, att_max_late_c, updated_by)
+                VALUES (:line3, :a2, :b2, :c2, :aa2, :ab2, :ac2, :user_id2)
             END
         ";
         
@@ -308,12 +359,18 @@ try {
                 ':a' => $c['threshold_a'] ?? 0,
                 ':b' => $c['threshold_b'] ?? 0,
                 ':c' => $c['threshold_c'] ?? 0,
+                ':aa' => $c['att_max_late_a'] ?? 0,
+                ':ab' => $c['att_max_late_b'] ?? 1,
+                ':ac' => $c['att_max_late_c'] ?? 2,
                 ':user_id' => $userId,
                 ':line2' => $line,
                 ':line3' => $line,
                 ':a2' => $c['threshold_a'] ?? 0,
                 ':b2' => $c['threshold_b'] ?? 0,
                 ':c2' => $c['threshold_c'] ?? 0,
+                ':aa2' => $c['att_max_late_a'] ?? 0,
+                ':ab2' => $c['att_max_late_b'] ?? 1,
+                ':ac2' => $c['att_max_late_c'] ?? 2,
                 ':user_id2' => $userId
             ]);
         }
