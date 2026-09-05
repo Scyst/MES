@@ -61,8 +61,13 @@ try {
                 G.grade_overall,
                 C.att_max_late_a,
                 C.att_max_late_b,
-                C.att_max_late_c
+                C.att_max_late_c,
+                ISNULL(TS.weight_iph, 25) AS weight_iph,
+                ISNULL(TS.weight_5s, 25) AS weight_5s,
+                ISNULL(TS.weight_attendance, 25) AS weight_attendance,
+                ISNULL(TS.weight_learning, 25) AS weight_learning
             FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+            LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
             INNER JOIN (
                 SELECT DISTINCT emp_id 
                 FROM dbo.MANPOWER_DAILY_LOGS WITH (NOLOCK)
@@ -238,6 +243,10 @@ try {
                 'grade_attendance' => $emp['grade_attendance'] ?? '',
                 'grade_learning' => $emp['grade_learning'] ?? '',
                 'grade_overall' => $emp['grade_overall'] ?? '',
+                'weight_iph' => (int)($emp['weight_iph'] ?? 25),
+                'weight_5s' => (int)($emp['weight_5s'] ?? 25),
+                'weight_attendance' => (int)($emp['weight_attendance'] ?? 25),
+                'weight_learning' => (int)($emp['weight_learning'] ?? 25),
                 'notes' => $emp['notes'] ?? ''
             ];
         }
@@ -270,6 +279,8 @@ try {
         
         $stmtCheck = $pdo->prepare("SELECT id FROM dbo.EMPLOYEE_GRADES WHERE emp_id = ? AND evaluation_period = ?");
         
+        $stmtGetOld = $pdo->prepare("SELECT grade, grade_iph, grade_5s, grade_attendance, grade_learning, grade_overall, notes FROM dbo.EMPLOYEE_GRADES WHERE id = ?");
+        
         foreach ($grades as $g) {
             $empId = $g['emp_id'];
             $gradeIph = $g['grade_iph'] ?? '';
@@ -281,14 +292,64 @@ try {
             $notes = $g['notes'] ?? '';
             
             $stmtCheck->execute([$empId, $period]);
-            if ($stmtCheck->fetchColumn()) {
+            $existingId = $stmtCheck->fetchColumn();
+            
+            $newData = [
+                'grade' => $grade, 'grade_iph' => $gradeIph, 'grade_5s' => $grade5s, 
+                'grade_attendance' => $gradeAttendance, 'grade_learning' => $gradeLearning, 
+                'grade_overall' => $gradeOverall, 'notes' => $notes
+            ];
+            
+            if ($existingId) {
+                $stmtGetOld->execute([$existingId]);
+                $oldData = $stmtGetOld->fetch(PDO::FETCH_ASSOC);
+                
                 $stmtUpdate->execute([$grade, $gradeIph, $grade5s, $gradeAttendance, $gradeLearning, $gradeOverall, $userId, $notes, $empId, $period]);
+                
+                if (function_exists('writeLog')) {
+                    writeLog($pdo, 'UPDATE', 'EmployeeGrading', $empId, json_encode($oldData), json_encode($newData), "Updated grades for period $period");
+                }
             } else {
                 $stmtInsert->execute([$empId, $period, $grade, $gradeIph, $grade5s, $gradeAttendance, $gradeLearning, $gradeOverall, $userId, $notes]);
+                
+                if (function_exists('writeLog')) {
+                    writeLog($pdo, 'INSERT', 'EmployeeGrading', $empId, null, json_encode($newData), "Created grades for period $period");
+                }
             }
         }
         
         $pdo->commit();
+        echo json_encode(['success' => true]);
+        exit;
+    }
+    
+    if ($action === 'save_weightage') {
+        $department_api = $_POST['department_api'] ?? '';
+        $w_iph = (int)($_POST['weight_iph'] ?? 25);
+        $w_5s = (int)($_POST['weight_5s'] ?? 25);
+        $w_att = (int)($_POST['weight_attendance'] ?? 25);
+        $w_lrn = (int)($_POST['weight_learning'] ?? 25);
+        
+        if (empty($department_api)) {
+            throw new Exception("Department API is required.");
+        }
+        if (($w_iph + $w_5s + $w_att + $w_lrn) !== 100) {
+            throw new Exception("Total weightage must be exactly 100%.");
+        }
+        
+        // Update MANPOWER_TEAM_SETTINGS
+        $sql = "UPDATE dbo.MANPOWER_TEAM_SETTINGS 
+                SET weight_iph = ?, weight_5s = ?, weight_attendance = ?, weight_learning = ? 
+                WHERE department_api = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$w_iph, $w_5s, $w_att, $w_lrn, $department_api]);
+        
+        if (function_exists('writeLog')) {
+            $userId = $_SESSION['user']['id'] ?? '';
+            $newData = ['weight_iph' => $w_iph, 'weight_5s' => $w_5s, 'weight_attendance' => $w_att, 'weight_learning' => $w_lrn];
+            writeLog($pdo, 'UPDATE_WEIGHTAGE', 'EmployeeGrading', $department_api, null, json_encode($newData), "Updated weightage for department $department_api");
+        }
+        
         echo json_encode(['success' => true]);
         exit;
     }

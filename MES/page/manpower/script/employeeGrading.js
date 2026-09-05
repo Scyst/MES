@@ -51,6 +51,20 @@ const App = {
         document.getElementById('btnCriteriaSettings').addEventListener('click', () => this.openCriteriaModal());
         document.getElementById('btnSaveCriteria').addEventListener('click', () => this.saveCriteria());
         
+        const btnWeightageSettings = document.getElementById('btnWeightageSettings');
+        if (btnWeightageSettings) {
+            btnWeightageSettings.addEventListener('click', () => this.openWeightageModal());
+        }
+        
+        const btnSaveWeightage = document.getElementById('btnSaveWeightage');
+        if (btnSaveWeightage) {
+            btnSaveWeightage.addEventListener('click', () => this.saveWeightage());
+        }
+        
+        document.querySelectorAll('.weight-input').forEach(input => {
+            input.addEventListener('input', () => this.calculateWeightTotal());
+        });
+        
         document.querySelectorAll('th.sortable').forEach(th => {
             th.addEventListener('click', () => this.handleSort(th.dataset.sort));
         });
@@ -222,19 +236,21 @@ const App = {
 
             const renderSelect = (col, val, sysVal) => {
                 let actualVal = val || '';
-                let sysBadge = sysVal && sysVal !== 'N/A' ? `<br><small class="text-muted" style="font-size:0.65rem">SYS: ${sysVal}</small>` : '';
+                let emptyText = '-';
+                if (sysVal && sysVal !== 'N/A') {
+                    emptyText = `(${sysVal})`;
+                }
                 return `
                     <div class="d-flex flex-column align-items-center justify-content-center">
                         <select class="form-select form-select-sm d-inline-block grade-select ${this.getGradeClass(actualVal)}" 
                                 data-empid="${emp.emp_id}" data-col="${col}"
                                 onchange="App.updateGradeState('${emp.emp_id}', '${col}', this.value, this)" style="min-width: 60px;">
-                            <option value="" class="grade-empty">-</option>
+                            <option value="" class="grade-empty">${emptyText}</option>
                             <option value="A" class="grade-A" ${actualVal === 'A' ? 'selected' : ''}>A</option>
                             <option value="B" class="grade-B" ${actualVal === 'B' ? 'selected' : ''}>B</option>
                             <option value="C" class="grade-C" ${actualVal === 'C' ? 'selected' : ''}>C</option>
                             <option value="D" class="grade-D" ${actualVal === 'D' ? 'selected' : ''}>D</option>
                         </select>
-                        ${sysBadge}
                     </div>
                 `;
             };
@@ -720,25 +736,43 @@ const App = {
     },
     
     recalculateOverall: function(emp) {
-        // Simple average calculation: A=4, B=3, C=2, D=1
-        const grades = [emp.grade_iph, emp.grade_5s, emp.grade_attendance, emp.grade_learning].filter(g => g && ['A','B','C','D'].includes(g));
-        if (grades.length === 0) {
+        // Use configured weights (percentages out of 100)
+        let wIph = emp.weight_iph !== undefined ? parseInt(emp.weight_iph) : 25;
+        let w5s = emp.weight_5s !== undefined ? parseInt(emp.weight_5s) : 25;
+        let wAtt = emp.weight_attendance !== undefined ? parseInt(emp.weight_attendance) : 25;
+        let wLrn = emp.weight_learning !== undefined ? parseInt(emp.weight_learning) : 25;
+
+        // Make sure it adds up to 100 (fallback if data is corrupt)
+        if (wIph + w5s + wAtt + wLrn === 0) {
+            wIph = 25; w5s = 25; wAtt = 25; wLrn = 25;
+        }
+
+        const mapScore = (g) => {
+            if (g === 'A') return 4;
+            if (g === 'B') return 3;
+            if (g === 'C') return 2;
+            if (g === 'D') return 1;
+            return 0;
+        };
+
+        const sIph = mapScore(emp.grade_iph);
+        const s5s = mapScore(emp.grade_5s);
+        const sAtt = mapScore(emp.grade_attendance);
+        const sLrn = mapScore(emp.grade_learning);
+        
+        // If no grades are selected at all, keep overall as empty
+        if (sIph === 0 && s5s === 0 && sAtt === 0 && sLrn === 0) {
             emp.grade_overall = null;
             return;
         }
+
+        // Weighted sum (Max score is 4.0)
+        // Note: If some grades are missing (0), they pull down the average.
+        const totalScore = (sIph * wIph + s5s * w5s + sAtt * wAtt + sLrn * wLrn) / 100;
         
-        let total = 0;
-        grades.forEach(g => {
-            if (g === 'A') total += 4;
-            else if (g === 'B') total += 3;
-            else if (g === 'C') total += 2;
-            else if (g === 'D') total += 1;
-        });
-        
-        const avg = total / grades.length;
-        if (avg >= 3.5) emp.grade_overall = 'A';
-        else if (avg >= 2.5) emp.grade_overall = 'B';
-        else if (avg >= 1.5) emp.grade_overall = 'C';
+        if (totalScore >= 3.5) emp.grade_overall = 'A';
+        else if (totalScore >= 2.5) emp.grade_overall = 'B';
+        else if (totalScore >= 1.5) emp.grade_overall = 'C';
         else emp.grade_overall = 'D';
     },
     
@@ -958,6 +992,95 @@ const App = {
             }
         } catch (e) {
             Swal.fire('Error', e.message, 'error');
+        }
+    },
+
+    openWeightageModal: function() {
+        const hcGroup = document.getElementById('filterHcGroup').value;
+        if (hcGroup === 'ALL') {
+            Swal.fire('Warning', 'Please select a specific TEAM/GROUP to set weightages.', 'warning');
+            return;
+        }
+        
+        document.getElementById('weightageDepartment').value = hcGroup;
+        
+        // Find an employee in this group to read the current weights, since weights are joined per employee.
+        // If no employees, we just default to 25/25/25/25
+        let emp = this.state.employees.find(e => e.team_group === hcGroup);
+        if (emp) {
+            document.getElementById('weightIph').value = emp.weight_iph !== undefined ? emp.weight_iph : 25;
+            document.getElementById('weight5s').value = emp.weight_5s !== undefined ? emp.weight_5s : 25;
+            document.getElementById('weightAtt').value = emp.weight_attendance !== undefined ? emp.weight_attendance : 25;
+            document.getElementById('weightLrn').value = emp.weight_learning !== undefined ? emp.weight_learning : 25;
+        } else {
+            document.getElementById('weightIph').value = 25;
+            document.getElementById('weight5s').value = 25;
+            document.getElementById('weightAtt').value = 25;
+            document.getElementById('weightLrn').value = 25;
+        }
+        
+        this.calculateWeightTotal();
+        
+        const myModal = new bootstrap.Modal(document.getElementById('weightageModal'));
+        myModal.show();
+    },
+
+    calculateWeightTotal: function() {
+        const wIph = parseInt(document.getElementById('weightIph').value) || 0;
+        const w5s = parseInt(document.getElementById('weight5s').value) || 0;
+        const wAtt = parseInt(document.getElementById('weightAtt').value) || 0;
+        const wLrn = parseInt(document.getElementById('weightLrn').value) || 0;
+        
+        const total = wIph + w5s + wAtt + wLrn;
+        const totalDisplay = document.getElementById('weightTotalDisplay');
+        totalDisplay.textContent = total + '%';
+        
+        if (total === 100) {
+            totalDisplay.className = 'mb-0 fw-bold text-success';
+        } else {
+            totalDisplay.className = 'mb-0 fw-bold text-danger';
+        }
+    },
+
+    saveWeightage: async function() {
+        const hcGroup = document.getElementById('weightageDepartment').value;
+        const wIph = parseInt(document.getElementById('weightIph').value) || 0;
+        const w5s = parseInt(document.getElementById('weight5s').value) || 0;
+        const wAtt = parseInt(document.getElementById('weightAtt').value) || 0;
+        const wLrn = parseInt(document.getElementById('weightLrn').value) || 0;
+        
+        if (wIph + w5s + wAtt + wLrn !== 100) {
+            Swal.fire('Error', 'Total weightage must be exactly 100%', 'error');
+            return;
+        }
+        
+        try {
+            Swal.fire({ title: 'Saving...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            const formData = new URLSearchParams();
+            formData.append('action', 'save_weightage');
+            formData.append('department_api', hcGroup);
+            formData.append('weight_iph', wIph);
+            formData.append('weight_5s', w5s);
+            formData.append('weight_attendance', wAtt);
+            formData.append('weight_learning', wLrn);
+
+            const response = await fetch('api/api_employee_grading.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                bootstrap.Modal.getInstance(document.getElementById('weightageModal')).hide();
+                Swal.fire('Saved', 'Team weightage updated successfully.', 'success');
+                this.loadData(); // Reload data to apply new weights
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (e) {
+            Swal.fire('Error', e.message || 'An error occurred while saving.', 'error');
         }
     },
 

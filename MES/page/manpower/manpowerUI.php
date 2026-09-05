@@ -283,7 +283,7 @@ $pageHeaderSubtitle = __('manpower.header_subtitle');
                 </div>
                 
                 <div class="card-body p-0">
-                    <div class="table-responsive border-0" style="max-height: 500px;">
+                    <div class="table-responsive border-0" style="height: calc(100vh - 380px); overflow-y: auto;">
                         <table class="table table-hover mb-0 w-100" id="manpowerTable">
                             <thead class="sticky-top" style="z-index: 5;">
                                 <tr>

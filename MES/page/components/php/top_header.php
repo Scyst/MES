@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/i18n.php';
 if (!function_exists('getThaiDateHeader')) {
     function getThaiDateHeader() {
         $thaiMonths = [

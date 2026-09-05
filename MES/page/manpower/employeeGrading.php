@@ -145,6 +145,10 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                             <i class="fas fa-chart-pie"></i>
                         </button>
                         
+                        <button class="btn btn-light btn-sm text-secondary rounded-circle shadow-sm d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; padding: 0;" id="btnWeightageSettings" title="Team Weightage Settings">
+                            <i class="fas fa-balance-scale"></i>
+                        </button>
+                        
                         <button class="btn btn-light btn-sm text-secondary rounded-circle shadow-sm d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; padding: 0;" id="btnCriteriaSettings" title="Criteria Settings">
                             <i class="fas fa-cog"></i>
                         </button>
@@ -257,7 +261,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
             </div>
 
             <!-- Table Card -->
-            <div class="card shadow-sm border-0 mb-3 flex-grow-1 d-flex flex-column" style="min-height: calc(100vh - 280px);">
+            <div class="card shadow-sm border-0 mb-3 flex-grow-1 d-flex flex-column" style="height: calc(100vh - 280px);">
                 <div class="card-body p-0 d-flex flex-column h-100">
                     <div class="table-responsive flex-grow-1">
                         <table class="table table-hover table-striped mb-0 text-center align-middle" id="gradingTable">
@@ -568,6 +572,54 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                 <div class="modal-footer border-top-0">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary btn-sm px-4" id="btnSaveCriteria">Save All Criteria</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weightage Settings Modal -->
+    <div class="modal fade" id="weightageModal" tabindex="-1" aria-labelledby="weightageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0 py-3 px-4" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);">
+                    <h5 class="modal-title fw-bold text-white mb-0 w-100" id="weightageModalLabel"><i class="fas fa-balance-scale opacity-75 me-2"></i> Team Weightage Settings</h5>
+                    <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-4">Set the percentage weight for each grading dimension. The total must equal 100%. This setting applies to the selected group.</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small">Department/Group</label>
+                        <input type="text" class="form-control bg-light" id="weightageDepartment" readonly>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-secondary small"><i class="fas fa-coins text-warning me-1"></i> IPH (%)</label>
+                            <input type="number" class="form-control weight-input" id="weightIph" min="0" max="100" value="25">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-secondary small"><i class="fas fa-broom text-success me-1"></i> 5S (%)</label>
+                            <input type="number" class="form-control weight-input" id="weight5s" min="0" max="100" value="25">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-secondary small"><i class="fas fa-clock text-primary me-1"></i> Attendance (%)</label>
+                            <input type="number" class="form-control weight-input" id="weightAtt" min="0" max="100" value="25">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-secondary small"><i class="fas fa-book-reader text-info me-1"></i> Learning (%)</label>
+                            <input type="number" class="form-control weight-input" id="weightLrn" min="0" max="100" value="25">
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-3 rounded bg-light d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-secondary">Total Weight:</span>
+                        <h4 class="mb-0 fw-bold" id="weightTotalDisplay">100%</h4>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4" id="btnSaveWeightage">Save Weightage</button>
                 </div>
             </div>
         </div>
