@@ -220,6 +220,5 @@ $pageHeaderSubtitle = "ความเป็นมาของเกรดพน
     document.addEventListener('DOMContentLoaded', () => Trend.init());
     </script>
 
-    <?php include_once __DIR__ . '/../components/php/scripts_footer.php'; ?>
 </body>
 </html>

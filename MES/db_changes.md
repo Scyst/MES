@@ -1,83 +1,61 @@
-# MES Database Change Log
+# DB Changes Log
 
-> **Protocol**: All schema alterations MUST be documented here per AGENTS.md.
-> Format: Date | Agent | Table | Change | Reason
-
----
-
-## 2026-08-24
-
-### [ADD COLUMNS] `PE_MACHINES`
-- **Agent**: Antigravity (Audit & Fix)
-- **Time**: 10:31
-- **SQL**:
-  ```sql
-  ALTER TABLE dbo.PE_MACHINES
-  ADD is_loto     BIT           NOT NULL DEFAULT 0,
-      loto_reason NVARCHAR(500) NULL
-  ```
-- **Reason**: `lotoAPI.php` (implemented 21/08) required these columns to store the LOTO lock state on a machine. They were missing from DB causing the E-LOTO feature to throw runtime errors on any lock/unlock attempt.
+All schema changes to the production database must be documented here.
 
 ---
 
-### [CREATE TABLE] `PE_LOTO_LOGS`
-- **Agent**: Antigravity (Audit & Fix)
-- **Time**: 10:31
-- **SQL**:
-  ```sql
-  CREATE TABLE dbo.PE_LOTO_LOGS (
-      log_id       INT IDENTITY(1,1) PRIMARY KEY,
-      machine_id   INT           NOT NULL,
-      wo_id        INT           NULL,
-      locked_by    NVARCHAR(100) NOT NULL,
-      locked_at    DATETIME      NOT NULL DEFAULT GETDATE(),
-      unlocked_by  NVARCHAR(100) NULL,
-      unlocked_at  DATETIME      NULL,
-      status       NVARCHAR(20)  NOT NULL DEFAULT 'Locked',
-      reason       NVARCHAR(500) NULL,
-      updated_at   DATETIME      NOT NULL DEFAULT GETDATE(),
-      CONSTRAINT FK_LOTO_MACHINE FOREIGN KEY (machine_id)
-          REFERENCES dbo.PE_MACHINES(machine_id)
-  )
-  ```
-- **Reason**: Audit log table for all LOTO lock/unlock events. Required by `lotoAPI.php` for the `lock`, `unlock`, and `status` actions. Missing table caused every LOTO action to fail silently.
+## 2026-09-07 — Employee Grading Phase 2
 
----
+**Agent:** Antigravity (Phase 2 Feature Agent)  
+**Commit:** `38d10eb`
 
-### 2026-08-24: In-App Notification Center
-- **Created Table**: PE_NOTIFICATIONS
-  - Columns: id (INT IDENTITY PK), module (VARCHAR 50), ef_id (VARCHAR 50), 	itle (NVARCHAR 255), message (NVARCHAR MAX),  lert_level (VARCHAR 20), created_at (DATETIME DEFAULT GETDATE()), is_active (BIT DEFAULT 1)
-  - Purpose: Global notification center for LOTO and other PE alerts.
+### Tables Created
 
----
+#### `dbo.AUDIT_5S`
+Stores 5S cross-audit results per production line.
 
-## 2026-08-26
+| Column | Type | Notes |
+|---|---|---|
+| audit_id | INT IDENTITY PK | |
+| line | VARCHAR(100) | Production line name |
+| audit_date | DATE | Date of audit |
+| auditor_emp_id | VARCHAR(50) | Who did the audit (cross-audit) |
+| score_seiri/seiton/seiso/seiketsu/shitsuke | INT (0-20 each) | 5 S scores |
+| total_score | Computed PERSISTED | Sum of 5 scores |
+| grade | Computed PERSISTED | A>=85, B>=70, C>=55, D<55 |
+| remarks | NVARCHAR(500) | Optional notes |
+| created_at | DATETIME | |
 
-### [ADD COLUMN] `STOCK_TRANSFER_ORDERS`
-- **Agent**: Antigravity
-- **SQL**: `ALTER TABLE dbo.STOCK_TRANSFER_ORDERS ADD tag_serial_no VARCHAR(100) NULL;`
-- **Reason**: เพิ่ม column เพื่อเก็บ `serial_no` ของแท็กที่เกี่ยวข้องกับการโอนย้าย แทนการฝัง `[TAG: ...]` ไว้ใน `notes` — เสถียรกว่า, queryable, ไม่ต้อง parse string
-- **Impact**: `NULL`able — ไม่กระทบ record เดิม
+#### `dbo.SKILL_DEFINITIONS`
+Master table for skill catalog.
 
----
+| Column | Type | Notes |
+|---|---|---|
+| skill_id | INT IDENTITY PK | |
+| skill_code | VARCHAR(50) UNIQUE | e.g. WELD_MIG |
+| skill_name | NVARCHAR(200) | Thai/English skill name |
+| category | NVARCHAR(100) | e.g. Machine, Process, Quality |
+| line | VARCHAR(100) NULL | NULL = all lines |
+| display_order | INT | Sort order in matrix |
+| is_active | BIT | Soft delete |
+| created_at | DATETIME | |
 
-## 2026-09-05
+#### `dbo.EMP_SKILLS`
+Employee skill assessments with level tracking.
 
-### [ADD COLUMNS] `EMPLOYEE_GRADES` and `EMPLOYEE_GRADING_CRITERIA`
-- **Agent**: Antigravity
-- **SQL**:
-  ```sql
-  ALTER TABLE dbo.EMPLOYEE_GRADES
-  ADD grade_iph VARCHAR(2) NULL,
-      grade_5s VARCHAR(2) NULL,
-      grade_attendance VARCHAR(2) NULL,
-      grade_learning VARCHAR(2) NULL,
-      grade_overall VARCHAR(2) NULL;
+| Column | Type | Notes |
+|---|---|---|
+| id | INT IDENTITY PK | |
+| emp_id | VARCHAR(50) | FK to MANPOWER_EMPLOYEES |
+| skill_id | INT FK | FK to SKILL_DEFINITIONS |
+| level | INT (1-4) | 1=รู้จัก, 2=ทำได้, 3=ชำนาญ, 4=สอนได้ |
+| certified_at | DATE NULL | Auto-set when level >= 3 first time |
+| certified_by | VARCHAR(50) NULL | emp_id of assessor |
+| notes | NVARCHAR(500) | |
+| updated_at | DATETIME | |
+| updated_by | INT NULL | user_id |
+| UNIQUE (emp_id, skill_id) | Constraint | One record per employee per skill |
 
-  ALTER TABLE dbo.EMPLOYEE_GRADING_CRITERIA
-  ADD att_max_late_a INT NULL DEFAULT 0,
-      att_max_late_b INT NULL DEFAULT 1,
-      att_max_late_c INT NULL DEFAULT 2;
-  ```
-- **Reason**: Expand employee grading system into 4 distinct dimensions (IPH, 5S, Attendance, Learning).
-- **Impact**: New columns allow storing multiple grades per employee/period instead of just a single overall grade. Nullable, so it doesn't break existing data.
+**Business Logic:**
+- `system_grade_learning` = A if skill_count>=5, B>=3, C>=1, D=0 (where skill_count = level>=2 skills)
+- `system_grade_5s` = latest AUDIT_5S.grade for the employee's line within the current period

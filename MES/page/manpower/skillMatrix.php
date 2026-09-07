@@ -333,6 +333,5 @@ $pageHeaderSubtitle = "ตารางทักษะพนักงานรา
     document.addEventListener('DOMContentLoaded', () => SkillMatrix.init());
     </script>
 
-    <?php include_once __DIR__ . '/../components/php/scripts_footer.php'; ?>
 </body>
 </html>
