@@ -203,7 +203,7 @@ try {
                 }
 
                 foreach ($updatableFields as $f) {
-                    if (isset($input[$f])) {
+                    if (array_key_exists($f, $input)) {
                         $fields[] = "$f = ?";
                         $params[] = $input[$f];
                     }
