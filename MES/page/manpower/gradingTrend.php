@@ -154,8 +154,10 @@ $pageHeaderSubtitle = "ความเป็นมาของเกรดพน
             document.getElementById('trendLineCount').textContent = `${data.lines.length} lines`;
 
             // Chart 1: % Grade A line chart
+            const lineSeries = data.line_series && data.line_series.length > 0 ? data.line_series : [{ name: 'No Data', data: [] }];
+            
             this.charts.trendLine = new ApexCharts(document.getElementById('chart-trend-line'), {
-                series: data.line_series,
+                series: lineSeries,
                 chart: { type: 'line', height: 280, toolbar: { show: false }, animations: { speed: 400 } },
                 stroke: { width: 2, curve: 'smooth' },
                 xaxis: { categories: periodLabels, labels: { style: { fontSize: '11px' } } },
