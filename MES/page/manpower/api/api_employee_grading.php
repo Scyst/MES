@@ -65,7 +65,10 @@ try {
                 ISNULL(TS.weight_iph, 25) AS weight_iph,
                 ISNULL(TS.weight_5s, 25) AS weight_5s,
                 ISNULL(TS.weight_attendance, 25) AS weight_attendance,
-                ISNULL(TS.weight_learning, 25) AS weight_learning
+                ISNULL(TS.weight_learning, 25) AS weight_learning,
+                AUDIT5S.grade AS system_grade_5s,
+                AUDIT5S.total_score AS score_5s,
+                ISNULL(SKL.skill_count, 0) AS skill_count
             FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
             LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
             INNER JOIN (
@@ -138,17 +141,37 @@ try {
                 ) RATES ON RATES.emp_id = LOGS.emp_id COLLATE Thai_CI_AS
             ) WAGE ON WAGE.emp_id = E.emp_id COLLATE Thai_CI_AS
             LEFT JOIN dbo.EMPLOYEE_GRADING_CRITERIA C WITH (NOLOCK) ON C.line = E.line
+            LEFT JOIN (
+                -- Latest 5S audit result for each line within the period
+                SELECT a.line, a.grade, a.total_score
+                FROM dbo.AUDIT_5S a WITH (NOLOCK)
+                INNER JOIN (
+                    SELECT line, MAX(audit_date) AS max_date
+                    FROM dbo.AUDIT_5S WITH (NOLOCK)
+                    WHERE audit_date >= :start5 AND audit_date < :end5
+                    GROUP BY line
+                ) latest ON a.line = latest.line AND a.audit_date = latest.max_date
+            ) AUDIT5S ON AUDIT5S.line = E.line
+            LEFT JOIN (
+                -- Count skills at level >= 2 (can perform) per employee
+                SELECT es.emp_id, COUNT(*) AS skill_count
+                FROM dbo.EMP_SKILLS es WITH (NOLOCK)
+                WHERE es.level >= 2
+                GROUP BY es.emp_id
+            ) SKL ON SKL.emp_id = E.emp_id COLLATE Thai_CI_AS
             WHERE E.is_active = 1
         ";
         
         $params = [
-            ':start1' => $startDate,
-            ':end1' => $endDate,
-            ':period2' => $period, // Grade period remains 'YYYY-MM'
-            ':start3' => $startDate,
-            ':end3' => $endDate,
-            ':start4' => $startDate,
-            ':end4' => $endDate
+            ':start1'  => $startDate,
+            ':end1'    => $endDate,
+            ':period2' => $period,
+            ':start3'  => $startDate,
+            ':end3'    => $endDate,
+            ':start4'  => $startDate,
+            ':end4'    => $endDate,
+            ':start5'  => $startDate,
+            ':end5'    => $endDate,
         ];
         
         if ($line !== 'ALL') {
@@ -221,40 +244,116 @@ try {
                 }
             }
             
+            // Calculate System Learning Grade from skill count
+            $skillCount = (int)($emp['skill_count'] ?? 0);
+            $learningGrade = 'N/A';
+            if ($skillCount >= 5) {
+                $learningGrade = 'A';
+            } elseif ($skillCount >= 3) {
+                $learningGrade = 'B';
+            } elseif ($skillCount >= 1) {
+                $learningGrade = 'C';
+            } else {
+                $learningGrade = 'D';
+            }
+
             $results[] = [
-                'emp_id' => $emp['emp_id'],
-                'name_th' => $emp['name_th'],
-                'position' => $emp['position'],
-                'line' => $emp['line'],
-                'team_group' => $emp['team_group'],
-                'income_per_head' => $income,
-                'total_wage' => $wage,
-                'dl_wage' => (float)($emp['dl_wage'] ?? 0),
-                'ot_wage' => (float)($emp['ot_wage'] ?? 0),
-                'ot_hours' => (float)($emp['ot_hours'] ?? 0),
-                'late_days' => $lateDays,
-                'absent_days' => $absentDays,
-                'ratio' => round($ratio, 2),
-                'system_grade_iph' => $systemGrade,
-                'system_grade_attendance' => $attGrade,
-                'grade' => $emp['grade'] ?? '', // legacy
-                'grade_iph' => $emp['grade_iph'] ?? '',
-                'grade_5s' => $emp['grade_5s'] ?? '',
-                'grade_attendance' => $emp['grade_attendance'] ?? '',
-                'grade_learning' => $emp['grade_learning'] ?? '',
-                'grade_overall' => $emp['grade_overall'] ?? '',
-                'weight_iph' => (int)($emp['weight_iph'] ?? 25),
-                'weight_5s' => (int)($emp['weight_5s'] ?? 25),
-                'weight_attendance' => (int)($emp['weight_attendance'] ?? 25),
-                'weight_learning' => (int)($emp['weight_learning'] ?? 25),
-                'notes' => $emp['notes'] ?? ''
+                'emp_id'                   => $emp['emp_id'],
+                'name_th'                  => $emp['name_th'],
+                'position'                 => $emp['position'],
+                'line'                     => $emp['line'],
+                'team_group'               => $emp['team_group'],
+                'income_per_head'          => $income,
+                'total_wage'               => $wage,
+                'dl_wage'                  => (float)($emp['dl_wage'] ?? 0),
+                'ot_wage'                  => (float)($emp['ot_wage'] ?? 0),
+                'ot_hours'                 => (float)($emp['ot_hours'] ?? 0),
+                'late_days'                => $lateDays,
+                'absent_days'              => $absentDays,
+                'ratio'                    => round($ratio, 2),
+                'system_grade_iph'         => $systemGrade,
+                'system_grade_attendance'  => $attGrade,
+                'system_grade_5s'          => $emp['system_grade_5s'] ?? null,
+                'score_5s'                 => (int)($emp['score_5s'] ?? 0),
+                'skill_count'              => $skillCount,
+                'system_grade_learning'    => $learningGrade,
+                'grade'                    => $emp['grade'] ?? '',
+                'grade_iph'                => $emp['grade_iph'] ?? '',
+                'grade_5s'                 => $emp['grade_5s'] ?? '',
+                'grade_attendance'         => $emp['grade_attendance'] ?? '',
+                'grade_learning'           => $emp['grade_learning'] ?? '',
+                'grade_overall'            => $emp['grade_overall'] ?? '',
+                'weight_iph'               => (int)($emp['weight_iph'] ?? 25),
+                'weight_5s'                => (int)($emp['weight_5s'] ?? 25),
+                'weight_attendance'        => (int)($emp['weight_attendance'] ?? 25),
+                'weight_learning'          => (int)($emp['weight_learning'] ?? 25),
+                'notes'                    => $emp['notes'] ?? '',
             ];
         }
         
         echo json_encode(['success' => true, 'data' => $results]);
         exit;
     }
-    
+
+    if ($action === 'get_5s_audits') {
+        $auditLine = $_GET['line'] ?? 'ALL';
+        $sql = "
+            SELECT audit_id, line, audit_date, auditor_emp_id,
+                   score_seiri, score_seiton, score_seiso, score_seiketsu, score_shitsuke,
+                   total_score, grade, remarks, created_at
+            FROM dbo.AUDIT_5S WITH (NOLOCK)
+        ";
+        $auditParams = [];
+        if ($auditLine !== 'ALL') {
+            $sql .= " WHERE line = :line";
+            $auditParams[':line'] = $auditLine;
+        }
+        $sql .= " ORDER BY audit_date DESC, audit_id DESC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($auditParams);
+        echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+        exit;
+    }
+
+    if ($action === 'save_5s_audit') {
+        $auditLine      = trim($_POST['line'] ?? '');
+        $auditDate      = trim($_POST['audit_date'] ?? '');
+        $auditorEmpId   = trim($_SESSION['user']['emp_id'] ?? '');
+        $scoreSeiri     = max(0, min(20, (int)($_POST['score_seiri']    ?? 0)));
+        $scoreSeiton    = max(0, min(20, (int)($_POST['score_seiton']   ?? 0)));
+        $scoreSeiso     = max(0, min(20, (int)($_POST['score_seiso']    ?? 0)));
+        $scoreSeiketsu  = max(0, min(20, (int)($_POST['score_seiketsu'] ?? 0)));
+        $scoreShitsuke  = max(0, min(20, (int)($_POST['score_shitsuke'] ?? 0)));
+        $remarks        = substr(trim($_POST['remarks'] ?? ''), 0, 500);
+
+        if (empty($auditLine) || empty($auditDate)) {
+            throw new Exception("Line and audit date are required.");
+        }
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $auditDate)) {
+            throw new Exception("Invalid audit date format.");
+        }
+
+        $stmt = $pdo->prepare("
+            INSERT INTO dbo.AUDIT_5S
+                (line, audit_date, auditor_emp_id, score_seiri, score_seiton, score_seiso, score_seiketsu, score_shitsuke, remarks)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([
+            $auditLine, $auditDate, $auditorEmpId,
+            $scoreSeiri, $scoreSeiton, $scoreSeiso, $scoreSeiketsu, $scoreShitsuke,
+            $remarks
+        ]);
+        $newId = $pdo->lastInsertId();
+
+        if (function_exists('writeLog')) {
+            $newData = compact('auditLine', 'auditDate', 'scoreSeiri', 'scoreSeiton', 'scoreSeiso', 'scoreSeiketsu', 'scoreShitsuke');
+            writeLog($pdo, 'INSERT', 'Audit5S', $auditLine, null, json_encode($newData), "5S Audit recorded by {$auditorEmpId}");
+        }
+
+        echo json_encode(['success' => true, 'audit_id' => $newId]);
+        exit;
+    }
+
     if ($action === 'save_grades') {
         $grades = json_decode($_POST['grades'] ?? '[]', true);
         $period = $_POST['period'] ?? date('Y-m');

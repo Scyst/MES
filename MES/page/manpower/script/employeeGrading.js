@@ -289,13 +289,13 @@ const App = {
                         ${renderSelect('grade_iph', emp.grade_iph, emp.system_grade_iph)}
                     </td>
                     <td class="px-1">
-                        ${renderSelect('grade_5s', emp.grade_5s, null)}
+                        ${renderSelect('grade_5s', emp.grade_5s, emp.system_grade_5s || null)}
                     </td>
                     <td class="px-1">
                         ${renderSelect('grade_attendance', emp.grade_attendance, emp.system_grade_attendance)}
                     </td>
                     <td class="px-1">
-                        ${renderSelect('grade_learning', emp.grade_learning, null)}
+                        ${renderSelect('grade_learning', emp.grade_learning, emp.system_grade_learning || null)}
                     </td>
                     <td class="px-1 border-start">
                         ${renderSelect('grade_overall', emp.grade_overall, null)}
@@ -1624,6 +1624,143 @@ const App = {
             }
         } catch (e) {
             Swal.fire('Error', e.message, 'error');
+        }
+    },
+
+    // ── 5S Audit ──────────────────────────────────────────────────────────────
+    open5sAuditModal: function() {
+        const lines = Array.from(this.state.lines).sort();
+        const lineOptions = lines.map(l => `<option value="${l}">${l}</option>`).join('');
+        const today = new Date().toISOString().split('T')[0];
+
+        Swal.fire({
+            title: '<i class="fas fa-broom me-2 text-success"></i>บันทึกคะแนน 5S',
+            width: 560,
+            html: `
+                <div class="text-start">
+                    <div class="row g-2 mb-3">
+                        <div class="col-7">
+                            <label class="form-label fw-bold text-secondary small">Production Line</label>
+                            <select id="audit5sLine" class="form-select form-select-sm">
+                                ${lineOptions}
+                            </select>
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label fw-bold text-secondary small">วันที่ตรวจ</label>
+                            <input type="date" id="audit5sDate" class="form-control form-control-sm" value="${today}">
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered text-center mb-2">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-start">หมวด 5S</th>
+                                    <th style="width:80px">คะแนน (0-20)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="text-start"><span class="fw-bold text-danger">S1</span> คัดแยก (Seiri)</td>
+                                    <td><input type="number" id="scoreSeiri" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-start"><span class="fw-bold text-warning">S2</span> จัดเป็นระเบียบ (Seiton)</td>
+                                    <td><input type="number" id="scoreSeiton" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-start"><span class="fw-bold text-primary">S3</span> ทำความสะอาด (Seiso)</td>
+                                    <td><input type="number" id="scoreSeiso" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-start"><span class="fw-bold text-info">S4</span> รักษามาตรฐาน (Seiketsu)</td>
+                                    <td><input type="number" id="scoreSeiketsu" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-start"><span class="fw-bold text-success">S5</span> สร้างวินัย (Shitsuke)</td>
+                                    <td><input type="number" id="scoreShitsuke" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="table-light fw-bold">
+                                <tr>
+                                    <td class="text-start">รวม / เกรด</td>
+                                    <td><span id="audit5sTotal">75</span> → <span id="audit5sGrade" class="badge bg-success">B</span></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-bold text-secondary small">หมายเหตุ (ไม่บังคับ)</label>
+                        <textarea id="audit5sRemarks" class="form-control form-control-sm" rows="2" maxlength="500" placeholder="ระบุจุดที่ต้องปรับปรุง..."></textarea>
+                    </div>
+                    <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>A=85+, B=70+, C=55+, D=&lt;55</p>
+                </div>
+            `,
+            didOpen: () => {
+                // Live total calculation
+                document.querySelectorAll('.audit-score').forEach(input => {
+                    input.addEventListener('input', () => {
+                        const total = ['scoreSeiri','scoreSeiton','scoreSeiso','scoreSeiketsu','scoreShitsuke']
+                            .reduce((sum, id) => sum + (parseInt(document.getElementById(id)?.value) || 0), 0);
+                        const totalEl = document.getElementById('audit5sTotal');
+                        const gradeEl = document.getElementById('audit5sGrade');
+                        if (totalEl) totalEl.textContent = total;
+                        if (gradeEl) {
+                            const g = total >= 85 ? 'A' : total >= 70 ? 'B' : total >= 55 ? 'C' : 'D';
+                            const cls = { A: 'bg-success', B: 'bg-primary', C: 'bg-warning text-dark', D: 'bg-danger' };
+                            gradeEl.textContent = g;
+                            gradeEl.className = `badge ${cls[g]}`;
+                        }
+                    });
+                });
+            },
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-save me-1"></i>บันทึก',
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => App.save5sAudit()
+        });
+    },
+
+    save5sAudit: async function() {
+        const line       = document.getElementById('audit5sLine')?.value;
+        const auditDate  = document.getElementById('audit5sDate')?.value;
+        const scoreSeiri    = parseInt(document.getElementById('scoreSeiri')?.value) || 0;
+        const scoreSeiton   = parseInt(document.getElementById('scoreSeiton')?.value) || 0;
+        const scoreSeiso    = parseInt(document.getElementById('scoreSeiso')?.value) || 0;
+        const scoreSeiketsu = parseInt(document.getElementById('scoreSeiketsu')?.value) || 0;
+        const scoreShitsuke = parseInt(document.getElementById('scoreShitsuke')?.value) || 0;
+        const remarks    = document.getElementById('audit5sRemarks')?.value || '';
+
+        if (!line || !auditDate) {
+            Swal.showValidationMessage('กรุณาเลือก Line และวันที่');
+            return false;
+        }
+
+        try {
+            const formData = new URLSearchParams();
+            formData.append('action', 'save_5s_audit');
+            formData.append('line', line);
+            formData.append('audit_date', auditDate);
+            formData.append('score_seiri', scoreSeiri);
+            formData.append('score_seiton', scoreSeiton);
+            formData.append('score_seiso', scoreSeiso);
+            formData.append('score_seiketsu', scoreSeiketsu);
+            formData.append('score_shitsuke', scoreShitsuke);
+            formData.append('remarks', remarks);
+
+            const resp = await fetch('api/api_employee_grading.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+            const result = await resp.json();
+            if (!result.success) throw new Error(result.message || 'บันทึกล้มเหลว');
+
+            // Reload grading data to refresh system_grade_5s hints
+            await App.loadData();
+            return true;
+        } catch (err) {
+            Swal.showValidationMessage(err.message);
+            return false;
         }
     }
 };

@@ -685,6 +685,103 @@ $currentUserId = (int)$_SESSION['user']['id'];
         </div><!-- end info-card -->
 
     </div><!-- end grid -->
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         MY PERFORMANCE SECTION (4 Dimensions + Trend)
+         Only visible to employees who are linked to MANPOWER_EMPLOYEES
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <?php if (!empty($_SESSION['user']['emp_id'])): ?>
+    <div class="container-fluid px-3 pb-3 mt-0">
+        <div class="card shadow-sm border-0">
+            <div class="card-header border-0 py-3 px-4" style="background: linear-gradient(135deg, #1a1f5e 0%, #2d3561 50%, #1e4fa3 100%);">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                        <h6 class="fw-bold text-white mb-0"><i class="fas fa-chart-line me-2 opacity-75"></i>My Performance</h6>
+                        <div class="text-white opacity-50 small mt-1" id="perfPeriodLabel">กำลังโหลด...</div>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="badge bg-white bg-opacity-20 text-white px-3 py-2" id="perfOverallBadge" style="font-size:1rem;">—</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-3">
+
+                <!-- 4 KPI Grade Cards -->
+                <div class="row g-2 mb-3" id="perfGradeCards">
+                    <?php
+                    $dimensions = [
+                        ['id' => 'perfGradeIph',  'label' => 'IPH',        'icon' => 'fa-coins',      'color' => 'warning'],
+                        ['id' => 'perfGrade5s',   'label' => '5S',         'icon' => 'fa-broom',      'color' => 'success'],
+                        ['id' => 'perfGradeAttd', 'label' => 'Attendance', 'icon' => 'fa-clock',      'color' => 'primary'],
+                        ['id' => 'perfGradeLrn',  'label' => 'Learning',   'icon' => 'fa-book-reader','color' => 'info'],
+                    ];
+                    foreach ($dimensions as $dim): ?>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm h-100 text-center p-2">
+                            <div class="text-uppercase text-<?= $dim['color'] ?> small fw-bold mb-1">
+                                <i class="fas <?= $dim['icon'] ?> me-1"></i><?= $dim['label'] ?>
+                            </div>
+                            <h2 class="mb-0 fw-bold text-dark" id="<?= $dim['id'] ?>">—</h2>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Extra Stats Row -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 bg-light p-3 text-center h-100">
+                            <div class="text-muted small fw-bold mb-1"><i class="fas fa-hand-holding-usd me-1 text-success"></i>Income / Head</div>
+                            <div class="fw-bold text-success" id="perfIncome">—</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 bg-light p-3 text-center h-100">
+                            <div class="text-muted small fw-bold mb-1"><i class="fas fa-balance-scale me-1 text-primary"></i>IPH Ratio</div>
+                            <div class="fw-bold text-primary" id="perfRatio">—</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 bg-light p-3 text-center h-100">
+                            <div class="text-muted small fw-bold mb-1"><i class="fas fa-calendar-check me-1 text-danger"></i>Late / Absent</div>
+                            <div class="fw-bold text-danger" id="perfAttd">—</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 bg-light p-3 text-center h-100">
+                            <div class="text-muted small fw-bold mb-1"><i class="fas fa-tools me-1 text-info"></i>Skills (Level ≥2)</div>
+                            <div class="fw-bold text-info" id="perfSkillCount">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6-Month Trend -->
+                <div id="perfTrendSection">
+                    <div class="text-muted small fw-bold mb-2"><i class="fas fa-history me-1"></i>ประวัติเกรด (6 เดือนล่าสุด)</div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered text-center align-middle mb-0" id="perfTrendTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Period</th>
+                                    <th>IPH</th><th>5S</th><th>Attendance</th><th>Learning</th><th>Overall</th>
+                                </tr>
+                            </thead>
+                            <tbody id="perfTrendBody">
+                                <tr><td colspan="6" class="text-muted py-3">กำลังโหลด...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="perfNoData" class="d-none text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-2x mb-2 opacity-50"></i><br>
+                    ยังไม่มีข้อมูลผลงานในเดือนนี้
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     </div><!-- end container-fluid -->
 </main>
 
@@ -1091,6 +1188,88 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+
+<?php if (!empty($_SESSION['user']['emp_id'])): ?>
+<script>
+// ── My Performance Section ────────────────────────────────────────────────────
+(async function loadMyPerformance() {
+    const gradeColorMap = {
+        'A': 'text-success', 'B': 'text-primary',
+        'C': 'text-warning',  'D': 'text-danger', '-': 'text-muted'
+    };
+
+    const setEl = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+    const setGrade = (id, grade) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = grade || '—';
+        el.className = `mb-0 fw-bold ${gradeColorMap[grade] || 'text-muted'}`;
+    };
+
+    try {
+        const resp   = await fetch('../manpower/api/api_my_performance.php');
+        const result = await resp.json();
+        if (!result.success) throw new Error(result.message);
+
+        const d = result.data;
+        const now = new Date();
+        const period = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        setEl('perfPeriodLabel', `ผลงานประจำเดือน ${period}`);
+
+        // Overall badge
+        const overallBadge = document.getElementById('perfOverallBadge');
+        if (overallBadge) {
+            const g = d.grade_overall && d.grade_overall !== '-' ? d.grade_overall : (d.grade !== '-' ? d.grade : '—');
+            const badgeCls = { A: 'bg-success', B: 'bg-primary', C: 'bg-warning text-dark', D: 'bg-danger' };
+            overallBadge.textContent = `Overall: ${g}`;
+            if (badgeCls[g]) { overallBadge.classList.remove('bg-white','bg-opacity-20'); overallBadge.classList.add(badgeCls[g]); }
+        }
+
+        if (d.has_data || d.skill_count > 0 || (d.trend && d.trend.length > 0)) {
+            // 4 Grade cards
+            setGrade('perfGradeIph',  d.grade_iph);
+            setGrade('perfGrade5s',   d.grade_5s);
+            setGrade('perfGradeAttd', d.grade_attendance);
+            setGrade('perfGradeLrn',  d.grade_learning);
+
+            // Stats
+            setEl('perfIncome', d.income_per_head > 0 ? parseFloat(d.income_per_head).toLocaleString('th-TH', {maximumFractionDigits:0}) + ' ฿' : '—');
+            setEl('perfRatio', d.income_ratio > 0 ? parseFloat(d.income_ratio).toFixed(2) + 'x' : '—');
+            setEl('perfAttd', `${d.late_days} L / ${d.absent_days} A`);
+            setEl('perfSkillCount', d.skill_count);
+        } else {
+            document.getElementById('perfGradeCards')?.classList.add('d-none');
+            document.getElementById('perfTrendSection')?.classList.add('d-none');
+            document.getElementById('perfNoData')?.classList.remove('d-none');
+        }
+
+        // Trend table
+        if (d.trend && d.trend.length > 0) {
+            const rows = d.trend.map(t => {
+                const gradeCell = (g) => `<td class="${gradeColorMap[g] || 'text-muted'} fw-bold">${g || '—'}</td>`;
+                return `<tr>
+                    <td class="fw-semibold">${t.evaluation_period}</td>
+                    ${gradeCell(t.grade_iph)}
+                    ${gradeCell(t.grade_5s)}
+                    ${gradeCell(t.grade_attendance)}
+                    ${gradeCell(t.grade_learning)}
+                    ${gradeCell(t.grade_overall)}
+                </tr>`;
+            }).join('');
+            const tbody = document.getElementById('perfTrendBody');
+            if (tbody) tbody.innerHTML = rows;
+        } else {
+            const tbody = document.getElementById('perfTrendBody');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-muted py-2">ยังไม่มีประวัติเกรด</td></tr>';
+        }
+    } catch (err) {
+        console.warn('My Performance load error:', err.message);
+        const tbody = document.getElementById('perfTrendBody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-danger py-2">โหลดข้อมูลไม่ได้</td></tr>';
+    }
+})();
+</script>
+<?php endif; ?>
 
 </body>
 </html>

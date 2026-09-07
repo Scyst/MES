@@ -153,6 +153,9 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                             <i class="fas fa-cog"></i>
                         </button>
 
+                        <button class="btn btn-light btn-sm text-success rounded-circle shadow-sm d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; padding: 0;" onclick="App.open5sAuditModal()" title="บันทึกคะแนน 5S Audit">
+                            <i class="fas fa-broom"></i>
+                        </button>
                         <div class="dropdown me-2">
                             <button class="btn btn-light btn-sm text-secondary rounded-circle shadow-sm d-flex align-items-center justify-content-center" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px; padding: 0;" title="Export Data">
                                 <i class="fas fa-file-export"></i>
