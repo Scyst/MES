@@ -13,6 +13,7 @@ const App = {
 
     init: async function() {
         this.bindEvents();
+        this.init5sModal();
         await this.loadData();
         
         // Start Live Clock
@@ -1625,129 +1626,105 @@ const App = {
         } catch (e) {
             Swal.fire('Error', e.message, 'error');
         }
-    },
 
-    // ── 5S Audit ──────────────────────────────────────────────────────────────
-    open5sAuditModal: function() {
-        const lines = Array.from(this.state.lines).sort();
-        const lineOptions = lines.map(l => `<option value="${l}">${l}</option>`).join('');
-        const today = new Date().toISOString().split('T')[0];
+    // ── 5S Audit Modal ────────────────────────────────────────────────────────
+    init5sModal: function() {
+        const modalEl = document.getElementById('audit5sModal');
+        if (!modalEl) return;
 
-        Swal.fire({
-            title: '<i class="fas fa-broom me-2 text-success"></i>บันทึกคะแนน 5S',
-            width: 560,
-            html: `
-                <div class="text-start">
-                    <div class="row g-2 mb-3">
-                        <div class="col-7">
-                            <label class="form-label fw-bold text-secondary small">Production Line</label>
-                            <select id="audit5sLine" class="form-select form-select-sm">
-                                ${lineOptions}
-                            </select>
-                        </div>
-                        <div class="col-5">
-                            <label class="form-label fw-bold text-secondary small">วันที่ตรวจ</label>
-                            <input type="date" id="audit5sDate" class="form-control form-control-sm" value="${today}">
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered text-center mb-2">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="text-start">หมวด 5S</th>
-                                    <th style="width:80px">คะแนน (0-20)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="text-start"><span class="fw-bold text-danger">S1</span> คัดแยก (Seiri)</td>
-                                    <td><input type="number" id="scoreSeiri" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
-                                </tr>
-                                <tr>
-                                    <td class="text-start"><span class="fw-bold text-warning">S2</span> จัดเป็นระเบียบ (Seiton)</td>
-                                    <td><input type="number" id="scoreSeiton" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
-                                </tr>
-                                <tr>
-                                    <td class="text-start"><span class="fw-bold text-primary">S3</span> ทำความสะอาด (Seiso)</td>
-                                    <td><input type="number" id="scoreSeiso" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
-                                </tr>
-                                <tr>
-                                    <td class="text-start"><span class="fw-bold text-info">S4</span> รักษามาตรฐาน (Seiketsu)</td>
-                                    <td><input type="number" id="scoreSeiketsu" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
-                                </tr>
-                                <tr>
-                                    <td class="text-start"><span class="fw-bold text-success">S5</span> สร้างวินัย (Shitsuke)</td>
-                                    <td><input type="number" id="scoreShitsuke" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
-                                </tr>
-                            </tbody>
-                            <tfoot class="table-light fw-bold">
-                                <tr>
-                                    <td class="text-start">รวม / เกรด</td>
-                                    <td><span id="audit5sTotal">75</span> → <span id="audit5sGrade" class="badge bg-success">B</span></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label fw-bold text-secondary small">หมายเหตุ (ไม่บังคับ)</label>
-                        <textarea id="audit5sRemarks" class="form-control form-control-sm" rows="2" maxlength="500" placeholder="ระบุจุดที่ต้องปรับปรุง..."></textarea>
-                    </div>
-                    <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>A=85+, B=70+, C=55+, D=&lt;55</p>
-                </div>
-            `,
-            didOpen: () => {
-                // Live total calculation
-                document.querySelectorAll('.audit-score').forEach(input => {
-                    input.addEventListener('input', () => {
-                        const total = ['scoreSeiri','scoreSeiton','scoreSeiso','scoreSeiketsu','scoreShitsuke']
-                            .reduce((sum, id) => sum + (parseInt(document.getElementById(id)?.value) || 0), 0);
-                        const totalEl = document.getElementById('audit5sTotal');
-                        const gradeEl = document.getElementById('audit5sGrade');
-                        if (totalEl) totalEl.textContent = total;
-                        if (gradeEl) {
-                            const g = total >= 85 ? 'A' : total >= 70 ? 'B' : total >= 55 ? 'C' : 'D';
-                            const cls = { A: 'bg-success', B: 'bg-primary', C: 'bg-warning text-dark', D: 'bg-danger' };
-                            gradeEl.textContent = g;
-                            gradeEl.className = `badge ${cls[g]}`;
-                        }
-                    });
-                });
-            },
-            showCancelButton: true,
-            confirmButtonText: '<i class="fas fa-save me-1"></i>บันทึก',
-            cancelButtonText: 'ยกเลิก',
-            preConfirm: () => App.save5sAudit()
+        // Populate line dropdowns and set today's date on modal open
+        modalEl.addEventListener('show.bs.modal', () => {
+            const lines = Array.from(this.state.lines).sort();
+
+            ['audit5sLine', 'historyLineFilter'].forEach(selectId => {
+                const sel = document.getElementById(selectId);
+                if (!sel) return;
+                const currentVal = sel.value;
+                // Keep "ทุก Line" option for history filter
+                const baseOption = selectId === 'historyLineFilter'
+                    ? '<option value="ALL">ทุก Line</option>'
+                    : '';
+                sel.innerHTML = baseOption + lines.map(l => `<option value="${l}">${l}</option>`).join('');
+                if (currentVal) sel.value = currentVal;
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+            const dateEl = document.getElementById('audit5sDate');
+            if (dateEl && !dateEl.value) dateEl.value = today;
         });
+
+        // Live score calculator
+        modalEl.addEventListener('input', e => {
+            if (!e.target.classList.contains('audit-score')) return;
+            const total = ['scoreSeiri', 'scoreSeiton', 'scoreSeiso', 'scoreSeiketsu', 'scoreShitsuke']
+                .reduce((sum, id) => sum + (parseInt(document.getElementById(id)?.value) || 0), 0);
+            const totalEl = document.getElementById('audit5sTotal');
+            const gradeEl = document.getElementById('audit5sGrade');
+            if (totalEl) totalEl.textContent = total;
+            if (gradeEl) {
+                const g = total >= 85 ? 'A' : total >= 70 ? 'B' : total >= 55 ? 'C' : 'D';
+                const cls = { A: 'bg-success', B: 'bg-primary', C: 'bg-warning text-dark', D: 'bg-danger' };
+                gradeEl.textContent = g;
+                gradeEl.className = `badge ${cls[g]}`;
+            }
+        });
+
+        // Show/hide Save button based on active tab
+        modalEl.addEventListener('shown.bs.tab', e => {
+            const saveBtn = document.getElementById('btnSave5sAudit');
+            if (!saveBtn) return;
+            saveBtn.classList.toggle('d-none', e.target.id === 'tab-history-btn');
+        });
+
+        // Save button
+        document.getElementById('btnSave5sAudit')?.addEventListener('click', () => App.save5sAudit());
+
+        // Refresh history button
+        document.getElementById('btnRefreshHistory')?.addEventListener('click', () => App.load5sHistory(1));
+
+        // Auto-load history when switching to history tab
+        document.getElementById('tab-history-btn')?.addEventListener('shown.bs.tab', () => {
+            if (!document.getElementById('historyTableBody')?.dataset.loaded) {
+                App.load5sHistory(1);
+            }
+        });
+
+        // Line filter change auto-reload
+        document.getElementById('historyLineFilter')?.addEventListener('change', () => App.load5sHistory(1));
     },
 
     save5sAudit: async function() {
-        const line       = document.getElementById('audit5sLine')?.value;
-        const auditDate  = document.getElementById('audit5sDate')?.value;
+        const line          = document.getElementById('audit5sLine')?.value;
+        const auditDate     = document.getElementById('audit5sDate')?.value;
         const scoreSeiri    = parseInt(document.getElementById('scoreSeiri')?.value) || 0;
         const scoreSeiton   = parseInt(document.getElementById('scoreSeiton')?.value) || 0;
         const scoreSeiso    = parseInt(document.getElementById('scoreSeiso')?.value) || 0;
         const scoreSeiketsu = parseInt(document.getElementById('scoreSeiketsu')?.value) || 0;
         const scoreShitsuke = parseInt(document.getElementById('scoreShitsuke')?.value) || 0;
-        const remarks    = document.getElementById('audit5sRemarks')?.value || '';
+        const remarks       = document.getElementById('audit5sRemarks')?.value || '';
+        const alertEl       = document.getElementById('audit5sAlert');
+
+        const showAlert = (msg, type = 'danger') => {
+            if (!alertEl) return;
+            alertEl.className = `alert alert-${type} mt-3 py-2 small`;
+            alertEl.textContent = msg;
+        };
 
         if (!line || !auditDate) {
-            Swal.showValidationMessage('กรุณาเลือก Line และวันที่');
-            return false;
+            showAlert('กรุณาเลือก Line และวันที่ก่อนบันทึก');
+            return;
         }
 
-        try {
-            const formData = new URLSearchParams();
-            formData.append('action', 'save_5s_audit');
-            formData.append('line', line);
-            formData.append('audit_date', auditDate);
-            formData.append('score_seiri', scoreSeiri);
-            formData.append('score_seiton', scoreSeiton);
-            formData.append('score_seiso', scoreSeiso);
-            formData.append('score_seiketsu', scoreSeiketsu);
-            formData.append('score_shitsuke', scoreShitsuke);
-            formData.append('remarks', remarks);
+        const saveBtn = document.getElementById('btnSave5sAudit');
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>กำลังบันทึก...'; }
 
-            const resp = await fetch('api/api_employee_grading.php', {
+        try {
+            const formData = new URLSearchParams({
+                action: 'save_5s_audit', line, audit_date: auditDate,
+                score_seiri: scoreSeiri, score_seiton: scoreSeiton, score_seiso: scoreSeiso,
+                score_seiketsu: scoreSeiketsu, score_shitsuke: scoreShitsuke, remarks
+            });
+            const resp   = await fetch('api/api_employee_grading.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData.toString()
@@ -1755,12 +1732,103 @@ const App = {
             const result = await resp.json();
             if (!result.success) throw new Error(result.message || 'บันทึกล้มเหลว');
 
-            // Reload grading data to refresh system_grade_5s hints
+            showAlert(`บันทึกสำเร็จ — Line: ${line}, วันที่: ${auditDate}`, 'success');
+
+            // Reset form fields
+            ['scoreSeiri','scoreSeiton','scoreSeiso','scoreSeiketsu','scoreShitsuke'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = 15;
+            });
+            const remarksEl = document.getElementById('audit5sRemarks');
+            if (remarksEl) remarksEl.value = '';
+            const totalEl = document.getElementById('audit5sTotal');
+            if (totalEl) totalEl.textContent = 75;
+            const gradeEl = document.getElementById('audit5sGrade');
+            if (gradeEl) { gradeEl.textContent = 'B'; gradeEl.className = 'badge bg-primary'; }
+
+            // Mark history as stale so it reloads next time
+            const historyBody = document.getElementById('historyTableBody');
+            if (historyBody) delete historyBody.dataset.loaded;
+
+            // Reload grading data to refresh system_grade_5s hints in the table
             await App.loadData();
-            return true;
+
         } catch (err) {
-            Swal.showValidationMessage(err.message);
-            return false;
+            showAlert(err.message);
+        } finally {
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>บันทึกคะแนน'; }
+        }
+    },
+
+    load5sHistory: async function(page = 1) {
+        const line      = document.getElementById('historyLineFilter')?.value || 'ALL';
+        const tbody     = document.getElementById('historyTableBody');
+        const metaEl    = document.getElementById('historyMeta');
+        const pagEl     = document.getElementById('historyPagination');
+
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4"><i class="fas fa-spinner fa-spin me-1"></i>กำลังโหลด...</td></tr>';
+        if (metaEl) metaEl.textContent = '';
+        if (pagEl)  pagEl.innerHTML = '';
+
+        try {
+            const params = new URLSearchParams({ action: 'get_5s_audits', line, page });
+            const resp   = await fetch(`api/api_employee_grading.php?${params}`);
+            const result = await resp.json();
+            if (!result.success) throw new Error(result.message || 'โหลดล้มเหลว');
+
+            const rows  = result.data || [];
+            const pag   = result.pagination || {};
+
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">ไม่พบข้อมูลการตรวจ 5S</td></tr>';
+                return;
+            }
+
+            const gradeBadge = g => {
+                const cls = { A: 'bg-success', B: 'bg-primary', C: 'bg-warning text-dark', D: 'bg-danger' };
+                return `<span class="badge ${cls[g] || 'bg-secondary'}">${g || '-'}</span>`;
+            };
+
+            tbody.innerHTML = rows.map(r => `
+                <tr style="font-size:0.83rem;">
+                    <td class="text-nowrap">${r.audit_date || '-'}</td>
+                    <td class="text-center fw-semibold">${r.line || '-'}</td>
+                    <td class="text-center">${r.score_seiri}</td>
+                    <td class="text-center">${r.score_seiton}</td>
+                    <td class="text-center">${r.score_seiso}</td>
+                    <td class="text-center">${r.score_seiketsu}</td>
+                    <td class="text-center">${r.score_shitsuke}</td>
+                    <td class="text-center fw-bold">${r.total_score}</td>
+                    <td class="text-center">${gradeBadge(r.grade)}</td>
+                    <td class="text-muted" style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r.remarks || ''}">${r.remarks || '-'}</td>
+                </tr>
+            `).join('');
+
+            tbody.dataset.loaded = '1';
+
+            if (metaEl && pag.total !== undefined) {
+                metaEl.textContent = `รวม ${pag.total} รายการ`;
+            }
+
+            // Render pagination controls
+            if (pagEl && pag.pages > 1) {
+                const prevDisabled = page <= 1 ? 'disabled' : '';
+                const nextDisabled = page >= pag.pages ? 'disabled' : '';
+                pagEl.innerHTML = `
+                    <span>หน้า ${pag.page} / ${pag.pages}</span>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" ${prevDisabled}
+                            onclick="App.load5sHistory(${page - 1})">‹ ก่อนหน้า</button>
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" ${nextDisabled}
+                            onclick="App.load5sHistory(${page + 1})">ถัดไป ›</button>
+                    </div>
+                `;
+            }
+
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4"><i class="fas fa-exclamation-triangle me-1"></i>${err.message}</td></tr>`;
         }
     }
 };

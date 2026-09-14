@@ -153,7 +153,7 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                             <i class="fas fa-cog"></i>
                         </button>
 
-                        <button class="btn btn-light btn-sm text-success rounded-circle shadow-sm d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; padding: 0;" onclick="App.open5sAuditModal()" title="บันทึกคะแนน 5S Audit">
+                        <button class="btn btn-light btn-sm text-success rounded-circle shadow-sm d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; padding: 0;" data-bs-toggle="modal" data-bs-target="#audit5sModal" title="บันทึกและดูประวัติ 5S Audit">
                             <i class="fas fa-broom"></i>
                         </button>
                         <div class="dropdown me-2">
@@ -302,6 +302,150 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
         <button id="btnSaveGrades" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem;" title="Save Grades">
             <i class="fas fa-save"></i>
         </button>
+    </div>
+
+    <!-- 5S Audit Modal -->
+    <div class="modal fade" id="audit5sModal" tabindex="-1" aria-labelledby="audit5sModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg overflow-hidden">
+
+                <!-- Modal Header -->
+                <div class="modal-header border-0 py-3 px-4" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);">
+                    <h5 class="modal-title fw-bold text-white mb-0" id="audit5sModalLabel">
+                        <i class="fas fa-broom opacity-75 me-2"></i>5S Audit
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Tabs -->
+                <ul class="nav nav-tabs px-4 pt-2 bg-white border-bottom" id="audit5sTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-semibold" id="tab-record-btn" data-bs-toggle="tab" data-bs-target="#tab-record" type="button" role="tab" aria-selected="true">
+                            <i class="fas fa-pen me-1 text-success"></i>บันทึก
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold" id="tab-history-btn" data-bs-toggle="tab" data-bs-target="#tab-history" type="button" role="tab" aria-selected="false">
+                            <i class="fas fa-history me-1 text-info"></i>ประวัติการตรวจ
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="modal-body p-0" style="background: #f8f9fc;">
+                    <div class="tab-content">
+
+                        <!-- ── Tab: Record ── -->
+                        <div class="tab-pane fade show active p-4" id="tab-record" role="tabpanel">
+                            <div class="row g-3 mb-3">
+                                <div class="col-7">
+                                    <label class="form-label fw-bold text-secondary small">Production Line</label>
+                                    <select id="audit5sLine" class="form-select form-select-sm">
+                                        <!-- Populated by JS on modal open -->
+                                    </select>
+                                </div>
+                                <div class="col-5">
+                                    <label class="form-label fw-bold text-secondary small">วันที่ตรวจ</label>
+                                    <input type="date" id="audit5sDate" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm table-bordered text-center mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-start">หมวด 5S</th>
+                                            <th style="width:100px">คะแนน (0–20)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-start"><span class="fw-bold text-danger">S1</span> คัดแยก (Seiri)</td>
+                                            <td><input type="number" id="scoreSeiri" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-start"><span class="fw-bold text-warning">S2</span> จัดเป็นระเบียบ (Seiton)</td>
+                                            <td><input type="number" id="scoreSeiton" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-start"><span class="fw-bold text-primary">S3</span> ทำความสะอาด (Seiso)</td>
+                                            <td><input type="number" id="scoreSeiso" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-start"><span class="fw-bold text-info">S4</span> รักษามาตรฐาน (Seiketsu)</td>
+                                            <td><input type="number" id="scoreSeiketsu" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-start"><span class="fw-bold text-success">S5</span> สร้างวินัย (Shitsuke)</td>
+                                            <td><input type="number" id="scoreShitsuke" class="form-control form-control-sm text-center audit-score" min="0" max="20" value="15"></td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot class="table-light fw-bold">
+                                        <tr>
+                                            <td class="text-start">รวม / เกรด</td>
+                                            <td><span id="audit5sTotal">75</span> → <span id="audit5sGrade" class="badge bg-primary">B</span></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label fw-bold text-secondary small">หมายเหตุ (ไม่บังคับ)</label>
+                                <textarea id="audit5sRemarks" class="form-control form-control-sm" rows="2" maxlength="500" placeholder="ระบุจุดที่ต้องปรับปรุง..."></textarea>
+                            </div>
+                            <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>A=85+, B=70+, C=55+, D=&lt;55</p>
+
+                            <div id="audit5sAlert" class="alert mt-3 py-2 small d-none" role="alert"></div>
+                        </div>
+
+                        <!-- ── Tab: History ── -->
+                        <div class="tab-pane fade p-3" id="tab-history" role="tabpanel">
+                            <!-- Filter bar -->
+                            <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+                                <select id="historyLineFilter" class="form-select form-select-sm" style="max-width:160px;">
+                                    <option value="ALL">ทุก Line</option>
+                                    <!-- Populated by JS -->
+                                </select>
+                                <button class="btn btn-sm btn-outline-teal" id="btnRefreshHistory" style="color:#0d9488; border-color:#0d9488;">
+                                    <i class="fas fa-sync-alt me-1"></i>โหลดใหม่
+                                </button>
+                                <small id="historyMeta" class="text-muted ms-auto"></small>
+                            </div>
+
+                            <!-- Table -->
+                            <div class="table-responsive" style="max-height:380px; overflow-y:auto;">
+                                <table class="table table-sm table-hover align-middle mb-0">
+                                    <thead class="table-light sticky-top shadow-sm">
+                                        <tr class="text-center" style="font-size:0.82rem;">
+                                            <th class="text-start">วันที่</th>
+                                            <th>Line</th>
+                                            <th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th>
+                                            <th>รวม</th>
+                                            <th>เกรด</th>
+                                            <th class="text-start">หมายเหตุ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="historyTableBody">
+                                        <tr><td colspan="10" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-1"></i>กรุณากดโหลดประวัติ</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Pagination -->
+                            <div id="historyPagination" class="d-flex justify-content-between align-items-center mt-2 small text-muted"></div>
+                        </div>
+
+                    </div><!-- /tab-content -->
+                </div><!-- /modal-body -->
+
+                <div class="modal-footer py-2 px-4 border-top bg-white" id="audit5sFooter">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" class="btn btn-sm btn-success px-4" id="btnSave5sAudit">
+                        <i class="fas fa-save me-1"></i>บันทึกคะแนน
+                    </button>
+                </div>
+
+            </div>
+        </div>
     </div>
 
     <!-- Analytics Modal -->

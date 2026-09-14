@@ -297,21 +297,48 @@ try {
 
     if ($action === 'get_5s_audits') {
         $auditLine = $_GET['line'] ?? 'ALL';
-        $sql = "
+        $page      = max(1, (int)($_GET['page'] ?? 1));
+        $pageSize  = 50;
+        $offset    = ($page - 1) * $pageSize;
+
+        $whereClause = '';
+        $auditParams = [];
+        if ($auditLine !== 'ALL') {
+            $whereClause = ' WHERE line = :line';
+            $auditParams[':line'] = $auditLine;
+        }
+
+        // Count total rows for pagination metadata
+        $countSql  = "SELECT COUNT(*) FROM dbo.AUDIT_5S WITH (NOLOCK)" . $whereClause;
+        $stmtCount = $pdo->prepare($countSql);
+        $stmtCount->execute($auditParams);
+        $total = (int)$stmtCount->fetchColumn();
+
+        $dataSql = "
             SELECT audit_id, line, audit_date, auditor_emp_id,
                    score_seiri, score_seiton, score_seiso, score_seiketsu, score_shitsuke,
                    total_score, grade, remarks, created_at
             FROM dbo.AUDIT_5S WITH (NOLOCK)
+            {$whereClause}
+            ORDER BY audit_date DESC, audit_id DESC
+            OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY
         ";
-        $auditParams = [];
-        if ($auditLine !== 'ALL') {
-            $sql .= " WHERE line = :line";
-            $auditParams[':line'] = $auditLine;
-        }
-        $sql .= " ORDER BY audit_date DESC, audit_id DESC";
-        $stmt = $pdo->prepare($sql);
+        $auditParams[':offset']   = $offset;
+        $auditParams[':pageSize'] = $pageSize;
+
+        $stmt = $pdo->prepare($dataSql);
         $stmt->execute($auditParams);
-        echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+
+        echo json_encode([
+            'success'    => true,
+            'data'       => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'pagination' => [
+                'total'     => $total,
+                'page'      => $page,
+                'page_size' => $pageSize,
+                'pages'     => (int)ceil($total / $pageSize)
+            ]
+        ]);
         exit;
     }
 
