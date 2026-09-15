@@ -647,12 +647,10 @@ document.addEventListener('DOMContentLoaded', function() {
     window.setWeightDecimal = function(val) {
         const parsed = (val === 3) ? 3 : 2;
         document.getElementById('editWeightDecimals').value = parsed;
-        document.getElementById('wdec-btn-2').classList.toggle('active', parsed === 2);
         document.getElementById('wdec-btn-2').classList.toggle('btn-secondary', parsed === 2);
         document.getElementById('wdec-btn-2').classList.toggle('btn-outline-secondary', parsed !== 2);
-        document.getElementById('wdec-btn-3').classList.toggle('active', parsed === 3);
-        document.getElementById('wdec-btn-3').classList.toggle('btn-warning', parsed === 3);
-        document.getElementById('wdec-btn-3').classList.toggle('btn-outline-warning', parsed !== 3);
+        document.getElementById('wdec-btn-3').classList.toggle('btn-secondary', parsed === 3);
+        document.getElementById('wdec-btn-3').classList.toggle('btn-outline-secondary', parsed !== 3);
     };
 
     window.openWebEdit = function(id) {
