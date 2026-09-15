@@ -287,13 +287,13 @@ const AnalyticsModule = (() => {
                 const pct = Math.round(((d.total_min || 0) / maxMin) * 100);
                 return `
                 <tr>
-                    <td class="pe-text-muted pe-fw-bold">${i + 1}</td>
-                    <td class="pe-fw-bold">${PEApp.escapeHtml(d.machine_name || '-')}</td>
-                    <td>${PEApp.escapeHtml(d.line || '-')}</td>
-                    <td class="pe-text-center">${d.event_count || 0}</td>
-                    <td class="pe-text-end pe-fw-bold" style="color:var(--pe-danger);">${PEApp.formatNumber(Number(d.total_min) || 0)}</td>
-                    <td class="pe-text-end">${Math.round(Number(d.avg_min) || 0)}</td>
-                    <td>
+                    <td class="pe-text-muted pe-fw-bold" data-label="#">${i + 1}</td>
+                    <td class="pe-fw-bold" data-label="Machine">${PEApp.escapeHtml(d.machine_name || '-')}</td>
+                    <td data-label="Line">${PEApp.escapeHtml(d.line || '-')}</td>
+                    <td class="pe-text-center" data-label="Events">${d.event_count || 0}</td>
+                    <td class="pe-text-end pe-fw-bold" style="color:var(--pe-danger);" data-label="Total (min)">${PEApp.formatNumber(Number(d.total_min) || 0)}</td>
+                    <td class="pe-text-end" data-label="Avg (min)">${Math.round(Number(d.avg_min) || 0)}</td>
+                    <td data-label="Distribution">
                         <div style="background:var(--pe-border-light);border-radius:4px;height:8px;overflow:hidden;">
                             <div style="background:linear-gradient(90deg,var(--pe-danger),var(--pe-warning));width:${pct}%;height:100%;border-radius:4px;transition:width 0.6s ease;"></div>
                         </div>
@@ -421,11 +421,11 @@ const AnalyticsModule = (() => {
                 
                 return `
                 <tr>
-                    <td class="pe-text-muted pe-fw-bold">${i + 1}</td>
-                    <td class="pe-fw-bold">${PEApp.escapeHtml(d.tech_name || '-')}</td>
-                    <td class="pe-text-center">${total}</td>
-                    <td class="pe-text-center pe-fw-bold" style="color:var(--pe-success);">${completed}</td>
-                    <td class="pe-text-end">
+                    <td class="pe-text-muted pe-fw-bold" data-label="#">${i + 1}</td>
+                    <td class="pe-fw-bold" data-label="Technician">${PEApp.escapeHtml(d.tech_name || '-')}</td>
+                    <td class="pe-text-center" data-label="Total WO">${total}</td>
+                    <td class="pe-text-center pe-fw-bold" style="color:var(--pe-success);" data-label="Completed">${completed}</td>
+                    <td class="pe-text-end" data-label="Completion Rate">
                         <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px;">
                             <span>${pct}%</span>
                             <div style="background:var(--pe-border-light);border-radius:4px;height:6px;width:60px;overflow:hidden;">
@@ -433,7 +433,7 @@ const AnalyticsModule = (() => {
                             </div>
                         </div>
                     </td>
-                    <td class="pe-text-end">${Math.round(Number(d.avg_repair) || 0)}</td>
+                    <td class="pe-text-end" data-label="Avg Repair Time (min)">${Math.round(Number(d.avg_repair) || 0)}</td>
                 </tr>`;
             }).join('');
         } catch (e) { console.error('Technician Stats Error:', e); }

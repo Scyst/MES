@@ -99,20 +99,20 @@ const SafetyModule = (function() {
 
             html += `
                 <tr class="align-middle">
-                    <td class="fw-bold pe-text-primary">${item.wo_number}</td>
-                    <td>
+                    <td class="fw-bold pe-text-primary" data-label="WO No">${item.wo_number}</td>
+                    <td data-label="Date">
                         <div>${new Date(item.requested_at).toLocaleDateString('en-GB')}</div>
                         <div class="small text-muted">${new Date(item.requested_at).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'})}</div>
                     </td>
-                    <td>
+                    <td data-label="Issue">
                         <div class="fw-bold text-dark">${item.issue_title}</div>
                         <div class="small text-muted text-truncate" style="max-width: 200px;">${item.issue_detail || '-'}</div>
                     </td>
-                    <td>
+                    <td data-label="Machine">
                         <div class="fw-medium">${item.machine_name}</div>
                     </td>
-                    <td><span class="badge ${badgeClass}">${item.status}</span></td>
-                    <td class="text-center">
+                    <td data-label="Status"><span class="badge ${badgeClass}">${item.status}</span></td>
+                    <td class="text-center" data-label="Actions">
                         <button class="pe-btn pe-btn-sm pe-btn-ghost" onclick='SafetyModule.viewDetails(${JSON.stringify(item).replace(/'/g, "&apos;")})' title="View Details">
                             <i class="fas fa-search"></i>
                         </button>
@@ -155,18 +155,18 @@ const SafetyModule = (function() {
             }
             html += `
                 <tr class="align-middle">
-                    <td>
+                    <td data-label="Date">
                         <div>${new Date(item.audited_at).toLocaleDateString('en-GB')}</div>
                         <div class="small text-muted">${new Date(item.audited_at).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'})}</div>
                     </td>
-                    <td>
+                    <td data-label="Machine">
                         <div class="fw-medium">${item.machine_name || item.machine_code}</div>
                         <div class="small text-muted">${item.line || ''}</div>
                     </td>
-                    <td>${item.shift_name}</td>
-                    <td>${item.audited_by}</td>
-                    <td><span class="badge ${badgeClass}">${item.status}</span></td>
-                    <td class="text-center">${woLink}</td>
+                    <td data-label="Shift">${item.shift_name}</td>
+                    <td data-label="Inspector">${item.audited_by}</td>
+                    <td data-label="Result"><span class="badge ${badgeClass}">${item.status}</span></td>
+                    <td class="text-center" data-label="WO No">${woLink}</td>
                 </tr>
             `;
         });

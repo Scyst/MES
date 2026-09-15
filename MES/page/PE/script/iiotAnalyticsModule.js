@@ -239,13 +239,13 @@ const IIoTAnalyticsModule = (() => {
             const isUnassigned = m.machine_code.includes('(Unassigned)');
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td class="pe-fw-bold ${isUnassigned ? 'text-gray-400 italic' : ''}">${m.machine_code}</td>
-                <td class="pe-text-end text-success">${isUnassigned ? '-' : (m.online_seconds / 3600).toFixed(1)}</td>
-                <td class="pe-text-end text-danger">${isUnassigned ? '-' : (m.offline_seconds / 3600).toFixed(1)}</td>
-                <td class="px-6 py-4 text-right font-bold text-gray-700 dark:text-gray-200">${isUnassigned ? '-' : Number(m.output).toLocaleString()}</td>
-                <td class="px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/10">${Number(m.erp_output || 0).toLocaleString()}</td>
-                <td class="px-6 py-4 text-right font-bold text-red-500">${Number(m.defects).toLocaleString()}</td>
-                <td class="pe-text-end">
+                <td class="pe-fw-bold ${isUnassigned ? 'text-gray-400 italic' : ''}" data-label="Machine">${m.machine_code}</td>
+                <td class="pe-text-end text-success" data-label="Online Time (Hrs)">${isUnassigned ? '-' : (m.online_seconds / 3600).toFixed(1)}</td>
+                <td class="pe-text-end text-danger" data-label="Offline Time (Hrs)">${isUnassigned ? '-' : (m.offline_seconds / 3600).toFixed(1)}</td>
+                <td class="px-6 py-4 text-right font-bold text-gray-700 dark:text-gray-200" data-label="Total Strokes">${isUnassigned ? '-' : Number(m.output).toLocaleString()}</td>
+                <td class="px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/10" data-label="ERP Prod. (Pcs)">${Number(m.erp_output || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 text-right font-bold text-red-500" data-label="Defects">${Number(m.defects).toLocaleString()}</td>
+                <td class="pe-text-end" data-label="Availability">
                     ${isUnassigned ? '-' : `
                     <div class="progress" style="height: 6px; background-color: #e2e8f0; margin-bottom: 2px;">
                         <div class="progress-bar bg-success" style="width: ${m.availability}%"></div>
@@ -253,7 +253,7 @@ const IIoTAnalyticsModule = (() => {
                     <small>${m.availability.toFixed(1)}%</small>
                     `}
                 </td>
-                <td class="pe-text-end">
+                <td class="pe-text-end" data-label="Performance">
                     ${isUnassigned ? '-' : `
                     <div class="progress" style="height: 6px; background-color: #e2e8f0; margin-bottom: 2px;">
                         <div class="progress-bar bg-warning" style="width: ${m.performance}%"></div>
@@ -261,7 +261,7 @@ const IIoTAnalyticsModule = (() => {
                     <small>${m.performance.toFixed(1)}%</small>
                     `}
                 </td>
-                <td class="pe-text-end">
+                <td class="pe-text-end" data-label="Quality">
                     ${isUnassigned ? '-' : `
                     <div class="progress" style="height: 6px; background-color: #e2e8f0; margin-bottom: 2px;">
                         <div class="progress-bar" style="width: ${m.quality}%; background-color: #6366f1;"></div>
@@ -269,7 +269,7 @@ const IIoTAnalyticsModule = (() => {
                     <small>${m.quality.toFixed(1)}%</small>
                     `}
                 </td>
-                <td class="pe-text-end">
+                <td class="pe-text-end" data-label="OEE">
                     ${isUnassigned ? '-' : `
                     <h5 class="pe-m-0 ${m.oee >= 80 ? 'text-success' : (m.oee >= 60 ? 'text-warning' : 'text-danger')}">
                         ${m.oee.toFixed(1)}%

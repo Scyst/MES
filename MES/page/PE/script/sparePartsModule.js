@@ -168,14 +168,14 @@ const SparePartsModule = (() => {
             
             tableHtml += `
             <tr ${isLow ? 'style="background:var(--pe-danger-light);"' : (isOver ? 'style="background:var(--pe-warning-light);"' : '')}>
-                <td class="pe-fw-bold">${PEApp.escapeHtml(r.item_code)}</td>
-                <td>${PEApp.escapeHtml(r.item_name)}</td>
-                <td class="pe-text-sm pe-text-muted">${PEApp.escapeHtml(r.description || '-')}</td>
-                <td class="pe-text-sm">${PEApp.escapeHtml(r.location_name || '-')}</td>
-                <td class="pe-text-center pe-text-sm">${PEApp.formatNumber(r.min_stock)} / ${PEApp.formatNumber(r.max_stock)}</td>
-                <td class="pe-text-end pe-fw-bold ${isLow ? 'pe-text-danger' : (isOver ? 'pe-text-warning' : '')}">${PEApp.formatNumber(r.onhand_qty)}</td>
-                <td class="pe-text-center pe-text-sm">${PEApp.escapeHtml(r.uom || '-')}</td>
-                <td class="pe-text-center">
+                <td class="pe-fw-bold" data-label="Item Code">${PEApp.escapeHtml(r.item_code)}</td>
+                <td data-label="Item Name">${PEApp.escapeHtml(r.item_name)}</td>
+                <td class="pe-text-sm pe-text-muted" data-label="Description">${PEApp.escapeHtml(r.description || '-')}</td>
+                <td class="pe-text-sm" data-label="Location">${PEApp.escapeHtml(r.location_name || '-')}</td>
+                <td class="pe-text-center pe-text-sm" data-label="Min/Max">${PEApp.formatNumber(r.min_stock)} / ${PEApp.formatNumber(r.max_stock)}</td>
+                <td class="pe-text-end pe-fw-bold ${isLow ? 'pe-text-danger' : (isOver ? 'pe-text-warning' : '')}" data-label="On Hand">${PEApp.formatNumber(r.onhand_qty)}</td>
+                <td class="pe-text-center pe-text-sm" data-label="Unit">${PEApp.escapeHtml(r.uom || '-')}</td>
+                <td class="pe-text-center" data-label="Actions">
                     ${statusBadge}
                 </td>
             </tr>`;
@@ -543,19 +543,19 @@ const SparePartsModule = (() => {
             const tableImgHtml = r.image_path ? `<img src="../../${r.image_path}" class="rounded me-2" style="width:40px;height:40px;object-fit:cover;border:1px solid #ddd;">` : `<div class="rounded me-2 d-inline-flex align-items-center justify-content-center text-muted" style="width:40px;height:40px;background:#f8f9fa;border:1px dashed #ddd;"><i class="fas fa-image"></i></div>`;
             tableHtml += `
             <tr>
-                <td class="pe-fw-bold">${PEApp.escapeHtml(r.item_code)}</td>
-                <td>
-                    <div class="d-flex align-items-center">
+                <td class="pe-fw-bold" data-label="Item Code">${PEApp.escapeHtml(r.item_code)}</td>
+                <td data-label="Item Name">
+                    <div class="d-flex align-items-center justify-content-end w-100">
                         ${tableImgHtml}
                         <span>${PEApp.escapeHtml(r.item_name)}</span>
                     </div>
                 </td>
-                <td class="pe-text-sm pe-text-muted">${PEApp.escapeHtml(r.description || '-')}</td>
-                <td class="pe-text-sm">${PEApp.escapeHtml(r.supplier || '-')}</td>
-                <td class="pe-text-end">${PEApp.formatCurrency(r.unit_price || 0)}</td>
-                <td class="pe-text-center pe-text-sm">${PEApp.formatNumber(r.min_stock)} / ${PEApp.formatNumber(r.max_stock)}</td>
-                <td class="pe-text-center">${statusBadge}</td>
-                <td class="pe-text-center">
+                <td class="pe-text-sm pe-text-muted" data-label="Description">${PEApp.escapeHtml(r.description || '-')}</td>
+                <td class="pe-text-sm" data-label="Supplier">${PEApp.escapeHtml(r.supplier || '-')}</td>
+                <td class="pe-text-end" data-label="Price">${PEApp.formatCurrency(r.unit_price || 0)}</td>
+                <td class="pe-text-center pe-text-sm" data-label="Min/Max">${PEApp.formatNumber(r.min_stock)} / ${PEApp.formatNumber(r.max_stock)}</td>
+                <td class="pe-text-center" data-label="Status">${statusBadge}</td>
+                <td class="pe-text-center" data-label="Actions">
                     <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.openItemModal('${r.item_id}')" title="Edit"><i class="fas fa-edit pe-text-primary"></i></button>
                     <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.toggleItemStatus('${r.item_id}')" title="Toggle Status"><i class="fas fa-power-off ${isActive ? 'pe-text-danger' : 'pe-text-success'}"></i></button>
                 </td>
@@ -821,16 +821,16 @@ const SparePartsModule = (() => {
 
             return `
             <tr>
-                <td class="pe-text-sm">${dateStr}</td>
-                <td>${typeBadge}</td>
-                <td>
+                <td class="pe-text-sm" data-label="Date/Time">${dateStr}</td>
+                <td data-label="Type">${typeBadge}</td>
+                <td data-label="Item">
                     <b>${PEApp.escapeHtml(r.item_code)}</b><br>
                     <span class="pe-text-sm pe-text-muted">${PEApp.escapeHtml(r.item_name)}</span>
                 </td>
-                <td class="pe-text-sm">${PEApp.escapeHtml(r.location_name || '-')}</td>
-                <td class="pe-text-end ${qtyClass}">${PEApp.formatNumber(Math.abs(r.quantity))} <span class="pe-text-xs pe-text-muted">${PEApp.escapeHtml(r.uom)}</span></td>
-                <td class="pe-text-sm">${PEApp.escapeHtml(r.created_by_name || 'System')}</td>
-                <td class="pe-text-sm">${r.notes ? `<i>${PEApp.escapeHtml(r.notes)}</i><br>` : ''}${jobStr}</td>
+                <td class="pe-text-sm" data-label="Location">${PEApp.escapeHtml(r.location_name || '-')}</td>
+                <td class="pe-text-end ${qtyClass}" data-label="Qty">${PEApp.formatNumber(Math.abs(r.quantity))} <span class="pe-text-xs pe-text-muted">${PEApp.escapeHtml(r.uom)}</span></td>
+                <td class="pe-text-sm" data-label="User">${PEApp.escapeHtml(r.created_by_name || 'System')}</td>
+                <td class="pe-text-sm" data-label="Job/Note">${r.notes ? `<i>${PEApp.escapeHtml(r.notes)}</i><br>` : ''}${jobStr}</td>
             </tr>`;
         }).join('');
     }
