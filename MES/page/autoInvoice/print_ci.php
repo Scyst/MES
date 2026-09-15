@@ -21,7 +21,7 @@ try {
     $customer = json_decode($header['customer_data_json'], true) ?: [];
     $shipping = json_decode($header['shipping_data_json'], true) ?: [];
 
-    $pDec = max(2, min(6, (int)($header['price_decimals'] ?? 4)));
+    $pDec = max(0, min(6, (int)($header['price_decimals'] ?? 4)));
     $qDec = (int)($header['qty_decimals'] ?? 0);
     $aDec = (int)($header['amount_decimals'] ?? 2);
 

@@ -141,11 +141,14 @@
                                                     <div class="input-group input-group-sm">
                                                         <span class="input-group-text bg-light text-secondary" style="width: 75px;"><i class="fas fa-cube opacity-50 me-1"></i>CBM</span>
                                                         <select class="form-select" id="editCbmDecimals">
+                                                            <option value="0">0 ตำแหน่ง</option>
+                                                            <option value="1">1 ตำแหน่ง</option>
                                                             <option value="2">2 ตำแหน่ง</option>
                                                             <option value="3">3 ตำแหน่ง</option>
                                                             <option value="4">4 ตำแหน่ง</option>
                                                             <option value="5">5 ตำแหน่ง</option>
                                                             <option value="6">6 ตำแหน่ง</option>
+
                                                         </select>
                                                     </div>
                                                 </div>
@@ -155,21 +158,27 @@
                                                     <div class="input-group input-group-sm mb-1">
                                                         <span class="input-group-text bg-light text-secondary" style="width: 75px;"><i class="fas fa-tag opacity-50 me-1"></i>Price</span>
                                                         <select class="form-select" id="editPriceDecimals">
+                                                            <option value="0">0 ตำแหน่ง</option>
+                                                            <option value="1">1 ตำแหน่ง</option>
                                                             <option value="2">2 ตำแหน่ง</option>
                                                             <option value="3">3 ตำแหน่ง</option>
                                                             <option value="4">4 ตำแหน่ง</option>
                                                             <option value="5">5 ตำแหน่ง</option>
                                                             <option value="6">6 ตำแหน่ง</option>
+
                                                         </select>
                                                     </div>
                                                     <div class="input-group input-group-sm">
                                                         <span class="input-group-text bg-light text-secondary" style="width: 75px;"><i class="fas fa-dollar-sign opacity-50 me-1"></i>Amount</span>
                                                         <select class="form-select" id="editAmountDecimals">
+                                                            <option value="0">0 ตำแหน่ง</option>
+                                                            <option value="1">1 ตำแหน่ง</option>
                                                             <option value="2">2 ตำแหน่ง</option>
                                                             <option value="3">3 ตำแหน่ง</option>
                                                             <option value="4">4 ตำแหน่ง</option>
                                                             <option value="5">5 ตำแหน่ง</option>
                                                             <option value="6">6 ตำแหน่ง</option>
+
                                                         </select>
                                                     </div>
                                                 </div>

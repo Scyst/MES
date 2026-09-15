@@ -372,10 +372,10 @@ try {
 
             if ($invoice_id <= 0) throw new Exception("ระบุรหัส Invoice ไม่ถูกต้อง");
             if ($weight_decimals < 0 || $weight_decimals > 6) throw new Exception("ค่าทศนิยม N.W./G.W. ต้องอยู่ในช่วง 0-6");
-            if ($price_decimals < 2 || $price_decimals > 6) throw new Exception("ค่าทศนิยม Unit Price ต้องอยู่ในช่วง 2-6");
+            if ($price_decimals < 0 || $price_decimals > 6) throw new Exception("ค่าทศนิยม Unit Price ต้องอยู่ในช่วง 0-6");
             if ($qty_decimals < 0 || $qty_decimals > 6) throw new Exception("ค่าทศนิยม QTY ต้องอยู่ในช่วง 0-6");
-            if ($cbm_decimals < 2 || $cbm_decimals > 6) throw new Exception("ค่าทศนิยม CBM ต้องอยู่ในช่วง 2-6");
-            if ($amount_decimals < 2 || $amount_decimals > 6) throw new Exception("ค่าทศนิยม Amount ต้องอยู่ในช่วง 2-6");
+            if ($cbm_decimals < 0 || $cbm_decimals > 6) throw new Exception("ค่าทศนิยม CBM ต้องอยู่ในช่วง 0-6");
+            if ($amount_decimals < 0 || $amount_decimals > 6) throw new Exception("ค่าทศนิยม Amount ต้องอยู่ในช่วง 0-6");
 
             $stmt = $pdo->prepare(
                 "UPDATE dbo.FINANCE_INVOICES 
