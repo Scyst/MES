@@ -105,38 +105,68 @@
                                         <div class="col-12 mb-1">
                                             <div class="row g-2 p-2 rounded" style="border: 1px dashed #dee2e6;">
                                                 <div class="col-12 mb-1">
-                                                    <small class="text-muted"><i class="fas fa-sliders-h me-1"></i>การตั้งค่าทศนิยม</small>
+                                                    <small class="text-muted"><i class="fas fa-sliders-h me-1"></i>การตั้งค่าทศนิยม (Decimal Settings)</small>
                                                 </div>
 
-                                                <div class="col-6">
-                                                    <label class="form-label small text-secondary mb-1">
-                                                        <i class="fas fa-weight-hanging me-1 opacity-50"></i>PL — N.W./G.W.
-                                                    </label>
-                                                    <div>
-                                                        <div class="btn-group btn-group-sm" id="weightDecimalToggle" role="group" aria-label="Weight decimal places">
-                                                            <button type="button" class="btn btn-secondary" id="wdec-btn-2" onclick="setWeightDecimal(2)">2</button>
-                                                            <button type="button" class="btn btn-outline-secondary" id="wdec-btn-3" onclick="setWeightDecimal(3)">3</button>
-                                                        </div>
-                                                        <small class="text-muted ms-1">ตำแหน่ง</small>
+                                                <div class="col-12 col-md-4">
+                                                    <label class="form-label small text-secondary mb-1">Shared</label>
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-light text-secondary" style="width: 75px;"><i class="fas fa-boxes opacity-50 me-1"></i>QTY</span>
+                                                        <select class="form-select" id="editQtyDecimals">
+                                                            <option value="0">0 ตำแหน่ง</option>
+                                                            <option value="1">1 ตำแหน่ง</option>
+                                                            <option value="2">2 ตำแหน่ง</option>
+                                                            <option value="3">3 ตำแหน่ง</option>
+                                                            <option value="4">4 ตำแหน่ง</option>
+                                                            <option value="5">5 ตำแหน่ง</option>
+                                                            <option value="6">6 ตำแหน่ง</option>
+                                                        </select>
                                                     </div>
-                                                    <input type="hidden" id="editWeightDecimals" value="2">
                                                 </div>
 
-                                                <div class="col-6">
-                                                    <label class="form-label small text-secondary mb-1">
-                                                        <i class="fas fa-dollar-sign me-1 opacity-50"></i>CI — Unit Price
-                                                    </label>
-                                                    <div>
-                                                        <div class="btn-group btn-group-sm" id="priceDecimalToggle" role="group" aria-label="Price decimal places">
-                                                            <button type="button" class="btn btn-outline-secondary" id="pdec-btn-2" onclick="setPriceDecimal(2)">2</button>
-                                                            <button type="button" class="btn btn-outline-secondary" id="pdec-btn-3" onclick="setPriceDecimal(3)">3</button>
-                                                            <button type="button" class="btn btn-secondary"         id="pdec-btn-4" onclick="setPriceDecimal(4)">4</button>
-                                                            <button type="button" class="btn btn-outline-secondary" id="pdec-btn-5" onclick="setPriceDecimal(5)">5</button>
-                                                            <button type="button" class="btn btn-outline-secondary" id="pdec-btn-6" onclick="setPriceDecimal(6)">6</button>
-                                                        </div>
-                                                        <small class="text-muted ms-1">ตำแหน่ง</small>
+                                                <div class="col-12 col-md-4">
+                                                    <label class="form-label small text-secondary mb-1">Packing List</label>
+                                                    <div class="input-group input-group-sm mb-1">
+                                                        <span class="input-group-text bg-light text-secondary" style="width: 75px;"><i class="fas fa-weight-hanging opacity-50 me-1"></i>Weight</span>
+                                                        <select class="form-select" id="editWeightDecimals">
+                                                            <option value="2">2 ตำแหน่ง</option>
+                                                            <option value="3">3 ตำแหน่ง</option>
+                                                        </select>
                                                     </div>
-                                                    <input type="hidden" id="editPriceDecimals" value="4">
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-light text-secondary" style="width: 75px;"><i class="fas fa-cube opacity-50 me-1"></i>CBM</span>
+                                                        <select class="form-select" id="editCbmDecimals">
+                                                            <option value="2">2 ตำแหน่ง</option>
+                                                            <option value="3">3 ตำแหน่ง</option>
+                                                            <option value="4">4 ตำแหน่ง</option>
+                                                            <option value="5">5 ตำแหน่ง</option>
+                                                            <option value="6">6 ตำแหน่ง</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-12 col-md-4">
+                                                    <label class="form-label small text-secondary mb-1">Commercial Inv.</label>
+                                                    <div class="input-group input-group-sm mb-1">
+                                                        <span class="input-group-text bg-light text-secondary" style="width: 75px;"><i class="fas fa-tag opacity-50 me-1"></i>Price</span>
+                                                        <select class="form-select" id="editPriceDecimals">
+                                                            <option value="2">2 ตำแหน่ง</option>
+                                                            <option value="3">3 ตำแหน่ง</option>
+                                                            <option value="4">4 ตำแหน่ง</option>
+                                                            <option value="5">5 ตำแหน่ง</option>
+                                                            <option value="6">6 ตำแหน่ง</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-light text-secondary" style="width: 75px;"><i class="fas fa-dollar-sign opacity-50 me-1"></i>Amount</span>
+                                                        <select class="form-select" id="editAmountDecimals">
+                                                            <option value="2">2 ตำแหน่ง</option>
+                                                            <option value="3">3 ตำแหน่ง</option>
+                                                            <option value="4">4 ตำแหน่ง</option>
+                                                            <option value="5">5 ตำแหน่ง</option>
+                                                            <option value="6">6 ตำแหน่ง</option>
+                                                        </select>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

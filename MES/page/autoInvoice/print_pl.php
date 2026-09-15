@@ -20,6 +20,10 @@ try {
 
     $customer = json_decode($header['customer_data_json'], true) ?: [];
     $shipping = json_decode($header['shipping_data_json'], true) ?: [];
+    
+    $wDec = (int)($header['weight_decimals'] ?? 2);
+    $qDec = (int)($header['qty_decimals'] ?? 0);
+    $cbmDec = (int)($header['cbm_decimals'] ?? 4);
 
     $sqlDetails = "
         SELECT *
@@ -282,15 +286,18 @@ function formatDocDate($dateStr) {
                 $seals = array_map('trim', explode(',', $shipping['seal_no'] ?? ''));
                 // NOTE: Clamp weight_decimals to valid range (2-3) to prevent display errors
                 $wDec = max(2, min(3, (int)($header['weight_decimals'] ?? 2)));
+                $qDec = (int)($header['qty_decimals'] ?? 0);
+                $cbmDec = (int)($header['cbm_decimals'] ?? 2);
                 
                 if (!empty($details)): 
                     foreach ($details as $index => $row): 
+                        $qty = round((float)($row['qty_carton'] ?? 0), $qDec);
                         $nw = round((float)($row['net_weight'] ?? 0), $wDec);
                         $gw = round((float)($row['gross_weight'] ?? 0), $wDec);
                         $cbm_raw = (float)($row['cbm'] ?? 0);
-                        $cbm = ceil(round($cbm_raw * 100, 4)) / 100;
+                        $cbm = ceil(round($cbm_raw * pow(10, $cbmDec), 4)) / pow(10, $cbmDec);
 
-                        $sumQty += (float)($row['qty_carton'] ?? 0);
+                        $sumQty += $qty;
                         $sumNW  += $nw;
                         $sumGW  += $gw;
                         $sumCBM += $cbm;
@@ -338,10 +345,10 @@ function formatDocDate($dateStr) {
                         <?php endif; ?>
                     </td>
                     
-                    <td class="text-center" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
+                    <td class="text-center" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['qty_carton'] ?? 0), $qDec) ?></td>
                     <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format($nw, $wDec) ?></td>
                     <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format($gw, $wDec) ?></td>
-                    <td class="text-right fw-bold" style="border-right: none; vertical-align: top; padding-top: 5px;"><?= number_format($cbm, 2) ?></td>
+                    <td class="text-right fw-bold" style="border-right: none; vertical-align: top; padding-top: 5px;"><?= number_format($cbm, $cbmDec) ?></td>
                 </tr>
 
                 <?php 
@@ -354,11 +361,11 @@ function formatDocDate($dateStr) {
                     <td class="text-right fw-bold" style="padding-bottom: 5px; padding-right: 5px;">
                         TOTAL:
                     </td>
-                    <td class="text-center fw-bold" style="padding-bottom: 5px;"><?= number_format($sumQty, 0) ?></td>
+                    <td class="text-center fw-bold" style="padding-bottom: 5px;"><?= number_format($sumQty, $qDec) ?></td>
                     <td class="text-right fw-bold" style="padding-bottom: 5px;"><?= number_format($sumNW, $wDec) ?></td>
                     <td class="text-right fw-bold" style="padding-bottom: 5px;"><?= number_format($sumGW, $wDec) ?></td>
                     <td class="text-right fw-bold" style="text-decoration: underline double; text-underline-offset: 3px; border-right: none; padding-bottom: 5px;">
-                        <?= number_format($sumCBM, 2) ?>
+                        <?= number_format($sumCBM, $cbmDec) ?>
                     </td>
                 </tr>
             </tbody>

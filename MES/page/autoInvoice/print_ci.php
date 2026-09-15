@@ -21,6 +21,10 @@ try {
     $customer = json_decode($header['customer_data_json'], true) ?: [];
     $shipping = json_decode($header['shipping_data_json'], true) ?: [];
 
+    $pDec = max(2, min(6, (int)($header['price_decimals'] ?? 4)));
+    $qDec = (int)($header['qty_decimals'] ?? 0);
+    $aDec = (int)($header['amount_decimals'] ?? 2);
+
     $stmtDetails = $pdo->prepare("SELECT * FROM dbo.FINANCE_INVOICE_DETAILS WITH (NOLOCK) WHERE invoice_id = ? ORDER BY detail_id ASC");
     $stmtDetails->execute([$invoice_id]);
     $details = $stmtDetails->fetchAll(PDO::FETCH_ASSOC);
@@ -297,14 +301,14 @@ function formatDocDate($dateStr) {
                 $sumQty = 0; $sumTotal = 0;
                 $currentProductType = null;
                 $containers = array_map('trim', explode(',', $shipping['container_no'] ?? ''));
+                $containers = array_map('trim', explode(',', $shipping['container_no'] ?? ''));
                 $seals = array_map('trim', explode(',', $shipping['seal_no'] ?? ''));
-                // NOTE: Clamp price_decimals to valid range (2-6) to prevent display errors
-                $pDec = max(2, min(6, (int)($header['price_decimals'] ?? 4)));
 
                 if (!empty($details)): 
                     foreach ($details as $index => $row): 
-                        $lineTotal = round((float)($row['line_total'] ?? 0), 2);
-                        $sumQty += (float)($row['qty_carton'] ?? 0);
+                        $qty = round((float)($row['qty_carton'] ?? 0), $qDec);
+                        $lineTotal = round((float)($row['line_total'] ?? 0), $aDec);
+                        $sumQty += $qty;
                         $sumTotal += $lineTotal;
                         $rowProductType = trim($row['product_type'] ?? '');
                         
@@ -347,9 +351,9 @@ function formatDocDate($dateStr) {
                         <?php endif; ?>
                     </td>
                     
-                    <td class="text-center" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
+                    <td class="text-center" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['qty_carton'] ?? 0), $qDec) ?></td>
                     <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['unit_price'] ?? 0), $pDec) ?></td>
-                    <td class="text-right fw-bold" style="border-right: none; vertical-align: top; padding-top: 5px;"><?= number_format($lineTotal, 2) ?></td>
+                    <td class="text-right fw-bold" style="border-right: none; vertical-align: top; padding-top: 5px;"><?= number_format($lineTotal, $aDec) ?></td>
                 </tr>
 
                 <?php 
@@ -362,10 +366,10 @@ function formatDocDate($dateStr) {
                     <td style="padding-bottom: 5px; color: #0d1adf;">
                         "ORIGIN OF GOODS: THAILAND"
                     </td>
-                    <td class="text-center fw-bold" style="padding-bottom: 5px;"><?= number_format($sumQty, 0) ?></td>
+                    <td class="text-center fw-bold" style="padding-bottom: 5px;"><?= number_format($sumQty, $qDec) ?></td>
                     <td style="padding-bottom: 5px;"></td>
                     <td class="text-right fw-bold" style="text-decoration: underline double; text-underline-offset: 3px; border-right: none; padding-bottom: 5px;">
-                        <?= number_format($sumTotal, 2) ?>
+                        <?= number_format($sumTotal, $aDec) ?>
                     </td>
                 </tr>
                 <tr class="total-text-row bg-light">
