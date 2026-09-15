@@ -23,7 +23,7 @@ try {
     
     $wDec = (int)($header['weight_decimals'] ?? 2);
     $qDec = (int)($header['qty_decimals'] ?? 0);
-    $cbmDec = (int)($header['cbm_decimals'] ?? 4);
+    $cbmDec = (int)($header['cbm_decimals'] ?? 2);
 
     $sqlDetails = "
         SELECT *

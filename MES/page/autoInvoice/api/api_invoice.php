@@ -56,7 +56,7 @@ try {
                         remark, ISNULL(weight_decimals, 2) AS weight_decimals,
                         ISNULL(price_decimals, 4) AS price_decimals,
                         ISNULL(qty_decimals, 0) AS qty_decimals,
-                        ISNULL(cbm_decimals, 4) AS cbm_decimals,
+                        ISNULL(cbm_decimals, 2) AS cbm_decimals,
                         ISNULL(amount_decimals, 2) AS amount_decimals
                     FROM dbo.FINANCE_INVOICES WITH (NOLOCK) 
                     WHERE $whereSql";
@@ -91,7 +91,7 @@ try {
                     'weight_decimals' => (int)($row['weight_decimals'] ?? 2),
                     'price_decimals' => (int)($row['price_decimals'] ?? 4),
                     'qty_decimals' => (int)($row['qty_decimals'] ?? 0),
-                    'cbm_decimals' => (int)($row['cbm_decimals'] ?? 4),
+                    'cbm_decimals' => (int)($row['cbm_decimals'] ?? 2),
                     'amount_decimals' => (int)($row['amount_decimals'] ?? 2),
                     'created_at' => date('d/m/Y H:i', strtotime($row['created_at']))
                 ];
@@ -215,7 +215,7 @@ try {
                 'weight_decimals' => (int)($header['weight_decimals'] ?? 2),
                 'price_decimals' => (int)($header['price_decimals'] ?? 4),
                 'qty_decimals' => (int)($header['qty_decimals'] ?? 0),
-                'cbm_decimals' => (int)($header['cbm_decimals'] ?? 4),
+                'cbm_decimals' => (int)($header['cbm_decimals'] ?? 2),
                 'amount_decimals' => (int)($header['amount_decimals'] ?? 2)
             ]);
             break;
@@ -357,7 +357,7 @@ try {
                 'weight_decimals' => (int)($header['weight_decimals'] ?? 2),
                 'price_decimals' => (int)($header['price_decimals'] ?? 4),
                 'qty_decimals' => (int)($header['qty_decimals'] ?? 0),
-                'cbm_decimals' => (int)($header['cbm_decimals'] ?? 4),
+                'cbm_decimals' => (int)($header['cbm_decimals'] ?? 2),
                 'amount_decimals' => (int)($header['amount_decimals'] ?? 2)
             ]);
             break;
@@ -367,7 +367,7 @@ try {
             $weight_decimals = (int)($input['weight_decimals'] ?? 2);
             $price_decimals = (int)($input['price_decimals'] ?? 4);
             $qty_decimals = (int)($input['qty_decimals'] ?? 0);
-            $cbm_decimals = (int)($input['cbm_decimals'] ?? 4);
+            $cbm_decimals = (int)($input['cbm_decimals'] ?? 2);
             $amount_decimals = (int)($input['amount_decimals'] ?? 2);
 
             if ($invoice_id <= 0) throw new Exception("ระบุรหัส Invoice ไม่ถูกต้อง");

@@ -956,7 +956,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // โหลด Decimal settings
         document.getElementById('editQtyDecimals').value = inv.qty_decimals ?? inv.header?.qty_decimals ?? 0;
         document.getElementById('editWeightDecimals').value = inv.weight_decimals ?? inv.header?.weight_decimals ?? 2;
-        document.getElementById('editCbmDecimals').value = inv.cbm_decimals ?? inv.header?.cbm_decimals ?? 4;
+        document.getElementById('editCbmDecimals').value = inv.cbm_decimals ?? inv.header?.cbm_decimals ?? 2;
         document.getElementById('editPriceDecimals').value = inv.price_decimals ?? inv.header?.price_decimals ?? 4;
         document.getElementById('editAmountDecimals').value = inv.amount_decimals ?? inv.header?.amount_decimals ?? 2;
         
