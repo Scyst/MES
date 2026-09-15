@@ -112,6 +112,20 @@
                                             </div>
                                             <input type="hidden" id="editWeightDecimals" value="2">
                                         </div>
+
+                                        <div class="col-12 mb-2">
+                                            <label class="form-label small text-secondary">ทศนิยม Unit Price (CI)</label>
+                                            <div>
+                                                <div class="btn-group btn-group-sm" id="priceDecimalToggle" role="group" aria-label="Price decimal places">
+                                                    <button type="button" class="btn btn-outline-secondary" id="pdec-btn-2" onclick="setPriceDecimal(2)">2</button>
+                                                    <button type="button" class="btn btn-outline-secondary" id="pdec-btn-3" onclick="setPriceDecimal(3)">3</button>
+                                                    <button type="button" class="btn btn-secondary"         id="pdec-btn-4" onclick="setPriceDecimal(4)">4</button>
+                                                    <button type="button" class="btn btn-outline-secondary" id="pdec-btn-5" onclick="setPriceDecimal(5)">5</button>
+                                                    <button type="button" class="btn btn-outline-secondary" id="pdec-btn-6" onclick="setPriceDecimal(6)">6</button>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" id="editPriceDecimals" value="4">
+                                        </div>
                                     </div>
                                 </div>
                             </div>

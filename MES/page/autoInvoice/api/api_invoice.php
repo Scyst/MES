@@ -53,7 +53,8 @@ try {
                         id, invoice_no, version, total_amount, created_at, 
                         customer_data_json, shipping_data_json, 
                         ISNULL(doc_status, 'Pending') AS doc_status,
-                        remark, ISNULL(weight_decimals, 2) AS weight_decimals
+                        remark, ISNULL(weight_decimals, 2) AS weight_decimals,
+                        ISNULL(price_decimals, 4) AS price_decimals
                     FROM dbo.FINANCE_INVOICES WITH (NOLOCK) 
                     WHERE $whereSql";
             
@@ -85,6 +86,7 @@ try {
                     'total_amount' => number_format((float)$row['total_amount'], 2),
                     'remark' => $row['remark'] ? $row['remark'] : '-',
                     'weight_decimals' => (int)($row['weight_decimals'] ?? 2),
+                    'price_decimals' => (int)($row['price_decimals'] ?? 4),
                     'created_at' => date('d/m/Y H:i', strtotime($row['created_at']))
                 ];
             }, $invoices);
@@ -204,7 +206,8 @@ try {
                 'customer' => json_decode($header['customer_data_json'], true) ?: [],
                 'shipping' => json_decode($header['shipping_data_json'], true) ?: [],
                 'details' => $details,
-                'weight_decimals' => (int)($header['weight_decimals'] ?? 2)
+                'weight_decimals' => (int)($header['weight_decimals'] ?? 2),
+                'price_decimals' => (int)($header['price_decimals'] ?? 4)
             ]);
             break;
 
@@ -342,7 +345,8 @@ try {
                 'customer' => $customer,
                 'shipping' => $shipping,
                 'details' => $details,
-                'weight_decimals' => (int)($header['weight_decimals'] ?? 2)
+                'weight_decimals' => (int)($header['weight_decimals'] ?? 2),
+                'price_decimals' => (int)($header['price_decimals'] ?? 4)
             ]);
             break;
 
@@ -361,6 +365,23 @@ try {
             $stmt->execute([$weight_decimals, $invoice_id]);
 
             echo json_encode(['success' => true, 'message' => "อัปเดตทศนิยมน้ำหนักเป็น {$weight_decimals} ตำแหน่ง สำเร็จ"]);
+            break;
+
+        case 'update_price_decimals':
+            $invoice_id = (int)($input['invoice_id'] ?? 0);
+            $price_decimals = (int)($input['price_decimals'] ?? 4);
+
+            if ($invoice_id <= 0) throw new Exception("ระบุรหัส Invoice ไม่ถูกต้อง");
+            if ($price_decimals < 2 || $price_decimals > 6) {
+                throw new Exception("ค่าทศนิยมราคาต้องอยู่ในช่วง 2-6");
+            }
+
+            $stmt = $pdo->prepare(
+                "UPDATE dbo.FINANCE_INVOICES SET price_decimals = ? WHERE id = ?"
+            );
+            $stmt->execute([$price_decimals, $invoice_id]);
+
+            echo json_encode(['success' => true, 'message' => "อัปเดตทศนิยมราคาเป็น {$price_decimals} ตำแหน่ง สำเร็จ"]);
             break;
 
         case 'update_memo':

@@ -653,6 +653,18 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('wdec-btn-3').classList.toggle('btn-outline-secondary', parsed !== 3);
     };
 
+    window.setPriceDecimal = function(val) {
+        const parsed = Math.max(2, Math.min(6, parseInt(val) || 4));
+        document.getElementById('editPriceDecimals').value = parsed;
+        [2, 3, 4, 5, 6].forEach(n => {
+            const btn = document.getElementById(`pdec-btn-${n}`);
+            if (btn) {
+                btn.classList.toggle('btn-secondary', parsed === n);
+                btn.classList.toggle('btn-outline-secondary', parsed !== n);
+            }
+        });
+    };
+
     window.openWebEdit = function(id) {
         Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         fetch(`api/api_invoice.php?action=get_invoice_detail&id=${id}`)
@@ -882,6 +894,7 @@ document.addEventListener('DOMContentLoaded', function() {
         Swal.fire({ title: 'กำลังบันทึกข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
         const weightDecimals = parseInt(document.getElementById('editWeightDecimals').value) || 2;
+        const priceDecimals  = parseInt(document.getElementById('editPriceDecimals').value)  || 4;
         
         fetch('api/api_invoice.php', {
             method: 'POST',
@@ -896,15 +909,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     .then(r => r.json())
                     .then(versionData => {
                         if (versionData.success && versionData.header?.id) {
-                            return fetch('api/api_invoice.php', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    action: 'update_weight_decimals',
-                                    invoice_id: versionData.header.id,
-                                    weight_decimals: weightDecimals
+                            const newId = versionData.header.id;
+                            return Promise.all([
+                                fetch('api/api_invoice.php', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ action: 'update_weight_decimals', invoice_id: newId, weight_decimals: weightDecimals })
+                                }),
+                                fetch('api/api_invoice.php', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ action: 'update_price_decimals', invoice_id: newId, price_decimals: priceDecimals })
                                 })
-                            });
+                            ]);
                         }
                     })
                     .then(() => {
@@ -954,6 +971,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // โหลด weight_decimals setting สำหรับ toggle
         const wDec = (inv.weight_decimals === 3 || parseInt(inv.header?.weight_decimals) === 3) ? 3 : 2;
         window.setWeightDecimal(wDec);
+
+        // โหลด price_decimals setting สำหรับ toggle
+        const pDec = Math.max(2, Math.min(6, parseInt(inv.price_decimals || inv.header?.price_decimals) || 4));
+        window.setPriceDecimal(pDec);
         
         const tbody = document.querySelector('#editItemsTable tbody');
         tbody.innerHTML = '';

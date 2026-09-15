@@ -298,6 +298,8 @@ function formatDocDate($dateStr) {
                 $currentProductType = null;
                 $containers = array_map('trim', explode(',', $shipping['container_no'] ?? ''));
                 $seals = array_map('trim', explode(',', $shipping['seal_no'] ?? ''));
+                // NOTE: Clamp price_decimals to valid range (2-6) to prevent display errors
+                $pDec = max(2, min(6, (int)($header['price_decimals'] ?? 4)));
 
                 if (!empty($details)): 
                     foreach ($details as $index => $row): 
@@ -346,7 +348,7 @@ function formatDocDate($dateStr) {
                     </td>
                     
                     <td class="text-center" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
-                    <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['unit_price'] ?? 0), 4) ?></td>
+                    <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['unit_price'] ?? 0), $pDec) ?></td>
                     <td class="text-right fw-bold" style="border-right: none; vertical-align: top; padding-top: 5px;"><?= number_format($lineTotal, 2) ?></td>
                 </tr>
 
