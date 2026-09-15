@@ -53,7 +53,7 @@ try {
                         id, invoice_no, version, total_amount, created_at, 
                         customer_data_json, shipping_data_json, 
                         ISNULL(doc_status, 'Pending') AS doc_status,
-                        remark
+                        remark, ISNULL(weight_decimals, 2) AS weight_decimals
                     FROM dbo.FINANCE_INVOICES WITH (NOLOCK) 
                     WHERE $whereSql";
             
@@ -84,6 +84,7 @@ try {
                     'eta_date' => $shipping['eta_date'] ?? '-',
                     'total_amount' => number_format((float)$row['total_amount'], 2),
                     'remark' => $row['remark'] ? $row['remark'] : '-',
+                    'weight_decimals' => (int)($row['weight_decimals'] ?? 2),
                     'created_at' => date('d/m/Y H:i', strtotime($row['created_at']))
                 ];
             }, $invoices);
@@ -202,7 +203,8 @@ try {
                 'header' => $header,
                 'customer' => json_decode($header['customer_data_json'], true) ?: [],
                 'shipping' => json_decode($header['shipping_data_json'], true) ?: [],
-                'details' => $details
+                'details' => $details,
+                'weight_decimals' => (int)($header['weight_decimals'] ?? 2)
             ]);
             break;
 
@@ -339,8 +341,26 @@ try {
                 'header' => $header,
                 'customer' => $customer,
                 'shipping' => $shipping,
-                'details' => $details
+                'details' => $details,
+                'weight_decimals' => (int)($header['weight_decimals'] ?? 2)
             ]);
+            break;
+
+        case 'update_weight_decimals':
+            $invoice_id = (int)($input['invoice_id'] ?? 0);
+            $weight_decimals = (int)($input['weight_decimals'] ?? 2);
+
+            if ($invoice_id <= 0) throw new Exception("ระบุรหัส Invoice ไม่ถูกต้อง");
+            if (!in_array($weight_decimals, [2, 3], true)) {
+                throw new Exception("ค่าทศนิยมต้องเป็น 2 หรือ 3 เท่านั้น");
+            }
+
+            $stmt = $pdo->prepare(
+                "UPDATE dbo.FINANCE_INVOICES SET weight_decimals = ? WHERE id = ?"
+            );
+            $stmt->execute([$weight_decimals, $invoice_id]);
+
+            echo json_encode(['success' => true, 'message' => "อัปเดตทศนิยมน้ำหนักเป็น {$weight_decimals} ตำแหน่ง สำเร็จ"]);
             break;
 
         case 'update_memo':

@@ -280,11 +280,13 @@ function formatDocDate($dateStr) {
                 $currentProductType = null;
                 $containers = array_map('trim', explode(',', $shipping['container_no'] ?? ''));
                 $seals = array_map('trim', explode(',', $shipping['seal_no'] ?? ''));
+                // NOTE: Clamp weight_decimals to valid range (2-3) to prevent display errors
+                $wDec = max(2, min(3, (int)($header['weight_decimals'] ?? 2)));
                 
                 if (!empty($details)): 
                     foreach ($details as $index => $row): 
-                        $nw = round((float)($row['net_weight'] ?? 0), 2);
-                        $gw = round((float)($row['gross_weight'] ?? 0), 2);
+                        $nw = round((float)($row['net_weight'] ?? 0), $wDec);
+                        $gw = round((float)($row['gross_weight'] ?? 0), $wDec);
                         $cbm_raw = (float)($row['cbm'] ?? 0);
                         $cbm = ceil(round($cbm_raw * 100, 4)) / 100;
 
@@ -337,8 +339,8 @@ function formatDocDate($dateStr) {
                     </td>
                     
                     <td class="text-center" style="vertical-align: top; padding-top: 5px;"><?= number_format((float)($row['qty_carton'] ?? 0), 0) ?></td>
-                    <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format($nw, 2) ?></td>
-                    <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format($gw, 2) ?></td>
+                    <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format($nw, $wDec) ?></td>
+                    <td class="text-right" style="vertical-align: top; padding-top: 5px;"><?= number_format($gw, $wDec) ?></td>
                     <td class="text-right fw-bold" style="border-right: none; vertical-align: top; padding-top: 5px;"><?= number_format($cbm, 2) ?></td>
                 </tr>
 
@@ -353,8 +355,8 @@ function formatDocDate($dateStr) {
                         TOTAL:
                     </td>
                     <td class="text-center fw-bold" style="padding-bottom: 5px;"><?= number_format($sumQty, 0) ?></td>
-                    <td class="text-right fw-bold" style="padding-bottom: 5px;"><?= number_format($sumNW, 2) ?></td>
-                    <td class="text-right fw-bold" style="padding-bottom: 5px;"><?= number_format($sumGW, 2) ?></td>
+                    <td class="text-right fw-bold" style="padding-bottom: 5px;"><?= number_format($sumNW, $wDec) ?></td>
+                    <td class="text-right fw-bold" style="padding-bottom: 5px;"><?= number_format($sumGW, $wDec) ?></td>
                     <td class="text-right fw-bold" style="text-decoration: underline double; text-underline-offset: 3px; border-right: none; padding-bottom: 5px;">
                         <?= number_format($sumCBM, 2) ?>
                     </td>

@@ -101,6 +101,21 @@
 
                                         <div class="col-12 mb-2"><label class="form-label small">Feeder Vessel</label><input type="text" id="editVessel" class="form-control form-control-sm"></div>
                                         <div class="col-12 mb-2"><label class="form-label small">Mother Vessel</label><input type="text" id="editMotherVessel" class="form-control form-control-sm"></div>
+
+                                        <div class="col-12 mb-2">
+                                            <label class="form-label small fw-bold text-warning">
+                                                <i class="fas fa-balance-scale me-1"></i>ทศนิยม N.W./G.W. (Packing List)
+                                            </label>
+                                            <div class="btn-group btn-group-sm w-100" id="weightDecimalToggle" role="group" aria-label="Weight decimal places">
+                                                <button type="button" class="btn btn-outline-secondary" id="wdec-btn-2" onclick="setWeightDecimal(2)">
+                                                    <i class="fas fa-sort-numeric-down me-1"></i>2 ตำแหน่ง <small class="opacity-75">(ค่าเริ่มต้น)</small>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-warning" id="wdec-btn-3" onclick="setWeightDecimal(3)">
+                                                    <i class="fas fa-sort-numeric-up me-1"></i>3 ตำแหน่ง
+                                                </button>
+                                            </div>
+                                            <input type="hidden" id="editWeightDecimals" value="2">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
