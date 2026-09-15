@@ -1,0 +1,298 @@
+/* =========================================================
+   Link Loading Report Feature Styles
+   Standalone CSS - Zero impact on existing styles
+   ========================================================= */
+
+/* Modal Styling */
+.link-modal-content {
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.link-modal-header {
+    background: linear-gradient(135deg, #0062ff 0%, #3385ff 50%, #00b4d8 100%);
+    color: #fff;
+    border-bottom: none;
+    padding: 1.25rem 1.5rem;
+}
+
+.link-modal-header .modal-title {
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: 0.3px;
+}
+
+.link-modal-header .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.link-modal-header .btn-close:hover {
+    opacity: 1;
+}
+
+.link-modal-body {
+    padding: 1.5rem;
+    background: #fafbfc;
+}
+
+.link-modal-footer {
+    border-top: 1px solid #e2e8f0;
+    padding: 1rem 1.5rem;
+    background: #fff;
+}
+
+/* Search Area */
+.link-search-area {
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Table Container */
+.link-table-wrap {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    max-height: 45vh;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+/* Table Styling */
+.link-table {
+    font-size: 0.88rem;
+    margin-bottom: 0;
+}
+
+.link-table thead th {
+    background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+    border-bottom: 2px solid #e2e8f0;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    font-size: 0.73rem;
+    letter-spacing: 0.5px;
+    padding: 0.75rem 0.6rem;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.link-table tbody tr {
+    transition: all 0.15s ease;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+}
+
+.link-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.link-table tbody tr:hover {
+    background-color: #eff6ff;
+}
+
+.link-table tbody tr.row-exists {
+    background-color: #fffbeb;
+}
+
+.link-table tbody tr.row-exists:hover {
+    background-color: #fef3c7;
+}
+
+.link-table tbody tr.row-selected {
+    background-color: #dbeafe !important;
+}
+
+.link-table tbody tr.row-selected:hover {
+    background-color: #bfdbfe !important;
+}
+
+.link-table td {
+    padding: 0.6rem 0.6rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.link-table .form-check-input {
+    cursor: pointer;
+    width: 1.1em;
+    height: 1.1em;
+}
+
+.link-table .form-check-input:checked {
+    background-color: #0062ff;
+    border-color: #0062ff;
+}
+
+/* Row number */
+.link-row-num {
+    font-weight: 700;
+    color: #94a3b8;
+    font-size: 0.8rem;
+}
+
+/* Report ID */
+.link-report-id {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.78rem;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 0.15rem 0.45rem;
+    border-radius: 0.3rem;
+    white-space: nowrap;
+}
+
+/* PO Number */
+.link-po-number {
+    font-weight: 700;
+    color: #0062ff;
+}
+
+/* Time display */
+.link-time-cell {
+    font-family: 'Inter', 'Segoe UI', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Status badges */
+.link-status-badge {
+    font-size: 0.72rem;
+    padding: 0.25em 0.55em;
+    border-radius: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.link-status-none {
+    background-color: #f1f5f9;
+    color: #94a3b8;
+}
+
+.link-status-downloaded {
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.link-status-downloading {
+    background-color: #e0f2fe;
+    color: #075985;
+    border: 1px solid #bae6fd;
+}
+
+.link-status-queued {
+    background-color: #fef9c3;
+    color: #854d0e;
+    border: 1px solid #fef08a;
+}
+
+/* Link Button styling */
+#btnLinkLoading {
+    position: relative;
+    transition: all 0.3s ease;
+    border-color: #0062ff;
+    color: #0062ff;
+    font-weight: 600;
+}
+
+#btnLinkLoading:hover {
+    background: rgba(0, 98, 255, 0.08);
+    color: #0062ff;
+    box-shadow: 0 0 12px rgba(0, 98, 255, 0.12);
+}
+
+/* Badge count animation */
+#linkBadgeCount {
+    font-size: 0.65rem;
+    padding: 0.2em 0.45em;
+    border-radius: 1rem;
+    min-width: 1.2em;
+    line-height: 1.2;
+    animation: linkBadgePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes linkBadgePop {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Empty & Loading states */
+.link-empty-state,
+.link-loading-state {
+    padding: 2.5rem 1rem;
+    text-align: center;
+}
+
+.link-empty-state i,
+.link-loading-state i {
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+/* Result count badge */
+.link-result-badge {
+    font-size: 0.82rem;
+    padding: 0.35em 0.75em;
+    border-radius: 2rem;
+    font-weight: 600;
+}
+
+/* Apply button */
+#btnApplyLink {
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+#btnApplyLink:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 98, 255, 0.3);
+}
+
+#btnApplyLink:disabled {
+    opacity: 0.5;
+}
+
+/* Search button inside modal */
+#btnFetchLoading {
+    white-space: nowrap;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    padding: 0.75rem 1.25rem;
+}
+
+/* Custom scrollbar for table */
+.link-table-wrap::-webkit-scrollbar {
+    width: 6px;
+}
+
+.link-table-wrap::-webkit-scrollbar-track {
+    background: #f8fafc;
+}
+
+.link-table-wrap::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.link-table-wrap::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}

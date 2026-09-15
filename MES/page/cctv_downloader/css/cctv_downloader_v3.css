@@ -1,0 +1,235 @@
+/* Premium Glassmorphism Light Mode for CCTV Downloader */
+:root {
+    --glass-bg: rgba(255, 255, 255, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    --primary-blue: #0062ff;
+    --primary-gradient: linear-gradient(135deg, #0062ff, #3385ff);
+    --text-primary: #1e293b;
+    --text-muted: #64748b;
+    --light-bg: #f1f5f9;
+}
+
+body.layout-top-header {
+    background-color: var(--light-bg);
+    background-image: radial-gradient(circle at 15% 50%, rgba(0, 98, 255, 0.03), transparent 25%),
+                      radial-gradient(circle at 85% 30%, rgba(0, 198, 255, 0.05), transparent 25%);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Glass Card */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 1.5rem;
+    box-shadow: var(--glass-shadow);
+    padding: 2rem;
+    color: var(--text-primary);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-card:hover {
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.glass-card .card-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding-bottom: 1rem;
+}
+
+.glass-card .card-title i {
+    color: var(--primary-blue);
+}
+
+/* Form Controls */
+.form-label {
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.form-control, .form-select, .input-group-text {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: var(--text-primary) !important;
+    border-radius: 0.75rem !important;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+/* Input Group styling */
+.input-group > .form-control,
+.input-group > .input-group-text,
+.input-group > .btn {
+    border-radius: 0 !important;
+}
+
+.input-group > :first-child {
+    border-radius: 0.75rem 0 0 0.75rem !important;
+}
+
+.input-group > :last-child {
+    border-radius: 0 0.75rem 0.75rem 0 !important;
+}
+
+.input-group > .input-group-text {
+    background: #f8fafc !important;
+    color: var(--primary-blue) !important;
+    font-weight: 600;
+}
+
+.form-control:focus, .form-select:focus {
+    box-shadow: 0 0 0 0.25rem rgba(0, 98, 255, 0.15) !important;
+    border-color: var(--primary-blue) !important;
+    background: #ffffff !important;
+}
+
+/* Date/Time inputs icon */
+::-webkit-calendar-picker-indicator {
+    opacity: 0.6;
+    cursor: pointer;
+}
+::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+/* Primary Button */
+.btn-primary {
+    background: var(--primary-gradient);
+    border: none;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 1rem 2rem;
+    box-shadow: 0 4px 15px rgba(0, 98, 255, 0.25);
+    transition: all 0.3s ease;
+    color: #fff;
+    text-transform: uppercase;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 98, 255, 0.4);
+    background: linear-gradient(135deg, #3385ff, #0062ff);
+}
+
+.btn-primary:active {
+    transform: translateY(1px);
+}
+
+/* Secondary / Outline Button */
+.btn-outline-info {
+    border: 1px solid var(--primary-blue);
+    color: var(--primary-blue);
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    background: transparent;
+}
+
+.btn-outline-info:hover {
+    background: rgba(0, 98, 255, 0.05);
+    color: var(--primary-blue);
+    box-shadow: 0 0 10px rgba(0, 98, 255, 0.1);
+}
+
+.input-group > .btn {
+    margin-left: -1px;
+}
+
+/* Status Badges */
+.badge {
+    padding: 0.4em 0.8em;
+    border-radius: 2rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+.bg-success { background: #dcfce7 !important; color: #166534 !important; border: 1px solid #bbf7d0; }
+.bg-danger { background: #fee2e2 !important; color: #991b1b !important; border: 1px solid #fecaca; }
+.bg-warning { background: #fef9c3 !important; color: #854d0e !important; border: 1px solid #fef08a; }
+.bg-info { background: #e0f2fe !important; color: #075985 !important; border: 1px solid #bae6fd; }
+.bg-secondary { background: #f1f5f9 !important; color: #475569 !important; border: 1px solid #e2e8f0; }
+
+/* List Group (Task Manager style) */
+.list-group {
+    border-radius: 1rem;
+    overflow: hidden;
+    background: transparent;
+}
+
+.list-group-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-bottom: 1px solid #f1f5f9;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    border-radius: 0.75rem !important;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+.list-group-item:hover {
+    background: #f8fafc;
+    transform: translateX(4px);
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.list-group-item.bg-danger.bg-opacity-10 {
+    background: #fff5f5 !important;
+    border-left: 4px solid #ef4444;
+}
+
+.list-group-item.bg-light {
+    background: #f0fdf4 !important;
+    border-left: 4px solid #22c55e;
+}
+
+/* Alert Boxes */
+.alert {
+    border-radius: 0.75rem;
+    border: none;
+    backdrop-filter: blur(8px);
+}
+.alert-info { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+.alert-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.alert-warning { background: #fef9c3; color: #a16207; border: 1px solid #fef08a; }
+.alert-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+/* Utilities */
+.text-muted { color: var(--text-muted) !important; }
+.text-primary { color: var(--primary-blue) !important; }
+.text-info { color: #0284c7 !important; }
+.text-danger { color: #dc2626 !important; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--light-bg);
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
