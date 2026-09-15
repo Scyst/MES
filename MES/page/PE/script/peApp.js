@@ -271,14 +271,19 @@ let sidebarCollapsed = false;
             });
 
             // Attach event listeners for global header controls
-            const btnRefresh = document.getElementById('btnRefreshTab');
+            const btnRefresh = document.getElementById('topbarRefreshBtn');
             if (btnRefresh) {
                 btnRefresh.addEventListener('click', refreshCurrentTab);
             }
 
-            const btnToggle = document.getElementById('btnToggleSidebar');
-            if (btnToggle) {
-                btnToggle.addEventListener('click', toggleSidebar);
+            const btnToggleMobile = document.getElementById('sidebarMobileToggleBtn');
+            if (btnToggleMobile) {
+                btnToggleMobile.addEventListener('click', () => toggleSidebar());
+            }
+
+            const btnToggleDesktop = document.getElementById('sidebarToggleBtn');
+            if (btnToggleDesktop) {
+                btnToggleDesktop.addEventListener('click', () => toggleSidebar());
             }
         }
     });

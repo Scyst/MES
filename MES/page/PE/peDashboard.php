@@ -38,7 +38,7 @@ $pageTitle = "PE Enterprise";
 <div class="pe-app" id="peApp">
 
     <!-- Sidebar Overlay (Mobile) -->
-    <div class="pe-sidebar-overlay" id="sidebarOverlay" id="sidebarOverlayBtn"></div>
+    <div class="pe-sidebar-overlay" id="sidebarOverlay" onclick="if(window.PEApp && window.PEApp.toggleSidebar) { window.PEApp.toggleSidebar(false); } else { document.getElementById('sidebarOverlay').classList.remove('show'); document.getElementById('peSidebar').classList.remove('mobile-open'); }"></div>
 
     <!-- Sidebar -->
     <aside class="pe-sidebar" id="peSidebar">
