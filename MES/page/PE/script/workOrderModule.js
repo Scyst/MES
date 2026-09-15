@@ -102,24 +102,24 @@ const WorkOrderModule = (() => {
 
             return `
             <tr style="cursor:pointer;" onclick="${rowAction}">
-                <td class="pe-text-center" onclick="event.stopPropagation();">
+                <td class="pe-text-center" data-label="Select" onclick="event.stopPropagation();">
                     <input type="checkbox" class="wo-bulk-check" value="${w.wo_id}" onchange="WorkOrderModule.toggleBulkPrintBtn()">
                 </td>
-                <td>${PEApp.getStatusBadge(w.status)}</td>
-                <td class="pe-fw-bold" style="color:var(--pe-primary);">${PEApp.escapeHtml(w.wo_number)}</td>
-                <td class="pe-text-sm">${PEApp.escapeHtml(w.wo_type || '-')}</td>
-                <td>${PEApp.getPriorityBadge(w.priority)}</td>
-                <td class="pe-text-sm">
+                <td data-label="Status">${PEApp.getStatusBadge(w.status)}</td>
+                <td class="pe-fw-bold" data-label="WO No" style="color:var(--pe-primary);">${PEApp.escapeHtml(w.wo_number)}</td>
+                <td class="pe-text-sm" data-label="Type">${PEApp.escapeHtml(w.wo_type || '-')}</td>
+                <td data-label="Priority">${PEApp.getPriorityBadge(w.priority)}</td>
+                <td class="pe-text-sm" data-label="Machine">
                     ${w.is_loto == 1 ? '<span class="badge bg-danger me-1" style="font-size:0.7rem;" title="LOCKED"><i class="fas fa-lock"></i></span>' : ''}
                     ${machineTxt}
                 </td>
-                <td>${PEApp.escapeHtml(w.line || '-')}</td>
-                <td class="pe-text-sm" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${PEApp.escapeHtml(w.issue_title || '-')}</td>
-                <td class="pe-text-sm" style="font-weight:600; color:var(--pe-text-secondary);">${PEApp.escapeHtml(w.requested_by || '-')}</td>
-                <td class="pe-text-sm">${PEApp.formatDate(w.requested_at)}</td>
-                <td class="pe-text-sm">${PEApp.escapeHtml(w.assigned_to || '-')}</td>
-                <td class="pe-text-sm pe-text-center">${w.repair_minutes ? w.repair_minutes + ' min' : '-'}</td>
-                <td class="pe-text-center" style="white-space:nowrap;">
+                <td data-label="Line">${PEApp.escapeHtml(w.line || '-')}</td>
+                <td class="pe-text-sm" data-label="Issue" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${PEApp.escapeHtml(w.issue_title || '-')}</td>
+                <td class="pe-text-sm" data-label="Requested By" style="font-weight:600; color:var(--pe-text-secondary);">${PEApp.escapeHtml(w.requested_by || '-')}</td>
+                <td class="pe-text-sm" data-label="Date/Time">${PEApp.formatDate(w.requested_at)}</td>
+                <td class="pe-text-sm" data-label="Assigned To">${PEApp.escapeHtml(w.assigned_to || '-')}</td>
+                <td class="pe-text-sm pe-text-center" data-label="Time">${w.repair_minutes ? w.repair_minutes + ' min' : '-'}</td>
+                <td class="pe-text-center" data-label="Actions" style="white-space:nowrap;">
                     ${quickActionBtn}
                     <button class="pe-btn pe-btn-ghost pe-btn-sm pe-btn-icon" onclick="event.stopPropagation(); WorkOrderModule.printPDF(${w.wo_id})" title="Print PDF" style="color:var(--pe-primary); margin-right:4px;">
                         <i class="fas fa-print"></i>

@@ -142,18 +142,18 @@ const MachineModule = (() => {
 
         tbody.innerHTML = data.map(m => `
             <tr>
-                <td class="pe-fw-bold" style="color:var(--pe-primary);">
+                <td class="pe-fw-bold" data-label="Code" style="color:var(--pe-primary);">
                     ${m.is_loto == 1 ? '<span class="badge bg-danger me-1" style="font-size:0.7rem;" title="LOCKED"><i class="fas fa-lock"></i></span>' : ''}
                     ${PEApp.escapeHtml(m.machine_code)}
                 </td>
-                <td>${PEApp.escapeHtml(m.machine_name)}</td>
-                <td>${PEApp.escapeHtml(m.line || '-')}</td>
-                <td>${PEApp.escapeHtml(m.area || '-')}</td>
-                <td>${PEApp.escapeHtml(m.machine_type || '-')}</td>
-                <td>${PEApp.getMachineStatusBadge(m.status)}</td>
-                <td>${PEApp.getCriticalityBadge(m.criticality || 'Medium')}</td>
-                <td class="pe-text-sm">${PEApp.formatDate(m.install_date)}</td>
-                <td class="pe-text-center">
+                <td data-label="Machine Name">${PEApp.escapeHtml(m.machine_name)}</td>
+                <td data-label="Line">${PEApp.escapeHtml(m.line || '-')}</td>
+                <td data-label="Area">${PEApp.escapeHtml(m.area || '-')}</td>
+                <td data-label="Type">${PEApp.escapeHtml(m.machine_type || '-')}</td>
+                <td data-label="Status">${PEApp.getMachineStatusBadge(m.status)}</td>
+                <td data-label="Criticality">${PEApp.getCriticalityBadge(m.criticality || 'Medium')}</td>
+                <td class="pe-text-sm" data-label="Install Date">${PEApp.formatDate(m.install_date)}</td>
+                <td class="pe-text-center" data-label="Actions">
                     <button class="pe-btn pe-btn-ghost pe-btn-sm pe-btn-icon" onclick="event.stopPropagation(); MachineModule.openModal(${m.machine_id})" title="Edit">
                         <i class="fas fa-pen"></i>
                     </button>

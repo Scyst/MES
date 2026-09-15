@@ -77,18 +77,18 @@ const DowntimeModule = (() => {
             const catColor = getCauseColor(d.cause_category);
             return `
             <tr>
-                <td class="pe-text-sm">${PEApp.formatDate(d.log_date)}</td>
-                <td class="pe-text-sm">${PEApp.formatTime(d.start_time)}</td>
-                <td class="pe-text-sm">
+                <td class="pe-text-sm" data-label="Date">${PEApp.formatDate(d.log_date)}</td>
+                <td class="pe-text-sm" data-label="Start">${PEApp.formatTime(d.start_time)}</td>
+                <td class="pe-text-sm" data-label="End">
                     ${d.end_time ? PEApp.formatTime(d.end_time) : '<span class="pe-badge pe-badge-danger pe-animate-pulse" style="animation: pulse-red 1.5s infinite;"><div class="dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#fff;margin-right:4px;"></div>Ongoing</span>'}
                 </td>
-                <td class="pe-fw-bold" style="color:var(--pe-warning);">${d.end_time ? (d.duration_min || 0) + ' min' : '-'}</td>
-                <td>${PEApp.escapeHtml(d.line || '-')}</td>
-                <td class="pe-text-sm">${PEApp.escapeHtml(d.machine_code || d.machine_name || '-')}</td>
-                <td><span class="pe-badge" style="background:${catColor.bg};color:${catColor.text};">${PEApp.escapeHtml(d.cause_category || '-')}</span></td>
-                <td class="pe-text-sm" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${PEApp.escapeHtml(d.cause_detail || '-')}</td>
-                <td class="pe-text-sm">${PEApp.escapeHtml(d.recovered_by || '-')}</td>
-                <td class="pe-text-center">
+                <td class="pe-fw-bold" data-label="Duration" style="color:var(--pe-warning);">${d.end_time ? (d.duration_min || 0) + ' min' : '-'}</td>
+                <td data-label="Line">${PEApp.escapeHtml(d.line || '-')}</td>
+                <td class="pe-text-sm" data-label="Machine">${PEApp.escapeHtml(d.machine_code || d.machine_name || '-')}</td>
+                <td data-label="Category"><span class="pe-badge" style="background:${catColor.bg};color:${catColor.text};">${PEApp.escapeHtml(d.cause_category || '-')}</span></td>
+                <td class="pe-text-sm" data-label="Detail" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${PEApp.escapeHtml(d.cause_detail || '-')}</td>
+                <td class="pe-text-sm" data-label="Recovered By">${PEApp.escapeHtml(d.recovered_by || '-')}</td>
+                <td class="pe-text-center" data-label="Actions">
                     <div class="pe-d-flex pe-gap-8 justify-content-center">
                         <button class="pe-btn pe-btn-ghost pe-btn-sm pe-btn-icon" onclick="DowntimeModule.editRow(${d.downtime_id})" title="Edit"><i class="fas fa-pen"></i></button>
                         ${PE_CONFIG.canManage ? `<button class="pe-btn pe-btn-ghost pe-btn-sm pe-btn-icon" onclick="DowntimeModule.deleteRow(${d.downtime_id})" title="Delete" style="color:var(--pe-danger);"><i class="fas fa-trash"></i></button>` : ''}
