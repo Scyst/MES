@@ -129,8 +129,13 @@
                                                     <div class="input-group input-group-sm mb-1">
                                                         <span class="input-group-text bg-light text-secondary" style="width: 75px;"><i class="fas fa-weight-hanging opacity-50 me-1"></i>Weight</span>
                                                         <select class="form-select" id="editWeightDecimals">
+                                                            <option value="0">0 ตำแหน่ง</option>
+                                                            <option value="1">1 ตำแหน่ง</option>
                                                             <option value="2">2 ตำแหน่ง</option>
                                                             <option value="3">3 ตำแหน่ง</option>
+                                                            <option value="4">4 ตำแหน่ง</option>
+                                                            <option value="5">5 ตำแหน่ง</option>
+                                                            <option value="6">6 ตำแหน่ง</option>
                                                         </select>
                                                     </div>
                                                     <div class="input-group input-group-sm">

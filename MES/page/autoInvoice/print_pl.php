@@ -284,8 +284,8 @@ function formatDocDate($dateStr) {
                 $currentProductType = null;
                 $containers = array_map('trim', explode(',', $shipping['container_no'] ?? ''));
                 $seals = array_map('trim', explode(',', $shipping['seal_no'] ?? ''));
-                // NOTE: Clamp weight_decimals to valid range (2-3) to prevent display errors
-                $wDec = max(2, min(3, (int)($header['weight_decimals'] ?? 2)));
+                // NOTE: Clamp weight_decimals to valid range (0-6)
+                $wDec = max(0, min(6, (int)($header['weight_decimals'] ?? 2)));
                 $qDec = (int)($header['qty_decimals'] ?? 0);
                 $cbmDec = (int)($header['cbm_decimals'] ?? 2);
                 

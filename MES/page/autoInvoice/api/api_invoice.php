@@ -371,7 +371,7 @@ try {
             $amount_decimals = (int)($input['amount_decimals'] ?? 2);
 
             if ($invoice_id <= 0) throw new Exception("ระบุรหัส Invoice ไม่ถูกต้อง");
-            if ($weight_decimals < 2 || $weight_decimals > 3) throw new Exception("ค่าทศนิยม N.W./G.W. ต้องเป็น 2-3");
+            if ($weight_decimals < 0 || $weight_decimals > 6) throw new Exception("ค่าทศนิยม N.W./G.W. ต้องอยู่ในช่วง 0-6");
             if ($price_decimals < 2 || $price_decimals > 6) throw new Exception("ค่าทศนิยม Unit Price ต้องอยู่ในช่วง 2-6");
             if ($qty_decimals < 0 || $qty_decimals > 6) throw new Exception("ค่าทศนิยม QTY ต้องอยู่ในช่วง 0-6");
             if ($cbm_decimals < 2 || $cbm_decimals > 6) throw new Exception("ค่าทศนิยม CBM ต้องอยู่ในช่วง 2-6");
