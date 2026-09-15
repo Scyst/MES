@@ -1938,8 +1938,15 @@
     .pe-table thead {
         display: none;
     }
+    .pe-table tbody {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
     .pe-table tbody tr {
         display: block;
+        width: 100%;
+        box-sizing: border-box;
         margin-bottom: 12px;
         background: #fff;
         border: 1px solid var(--pe-border);
@@ -1954,6 +1961,7 @@
         border-bottom: 1px solid var(--pe-border-light);
         text-align: right;
         padding: 10px 14px;
+        box-sizing: border-box;
         white-space: normal;
         word-break: break-word;
     }
