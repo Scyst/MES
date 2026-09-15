@@ -102,29 +102,43 @@
                                         <div class="col-12 mb-2"><label class="form-label small">Feeder Vessel</label><input type="text" id="editVessel" class="form-control form-control-sm"></div>
                                         <div class="col-12 mb-2"><label class="form-label small">Mother Vessel</label><input type="text" id="editMotherVessel" class="form-control form-control-sm"></div>
 
-                                        <div class="col-12 mb-2">
-                                            <label class="form-label small text-secondary">ทศนิยม N.W./G.W.</label>
-                                            <div>
-                                                <div class="btn-group btn-group-sm" id="weightDecimalToggle" role="group" aria-label="Weight decimal places">
-                                                    <button type="button" class="btn btn-secondary" id="wdec-btn-2" onclick="setWeightDecimal(2)">2 ตำแหน่ง</button>
-                                                    <button type="button" class="btn btn-outline-secondary" id="wdec-btn-3" onclick="setWeightDecimal(3)">3 ตำแหน่ง</button>
+                                        <div class="col-12 mb-1">
+                                            <div class="row g-2 p-2 rounded" style="border: 1px dashed #dee2e6;">
+                                                <div class="col-12 mb-1">
+                                                    <small class="text-muted"><i class="fas fa-sliders-h me-1"></i>การตั้งค่าทศนิยม</small>
                                                 </div>
-                                            </div>
-                                            <input type="hidden" id="editWeightDecimals" value="2">
-                                        </div>
 
-                                        <div class="col-12 mb-2">
-                                            <label class="form-label small text-secondary">ทศนิยม Unit Price (CI)</label>
-                                            <div>
-                                                <div class="btn-group btn-group-sm" id="priceDecimalToggle" role="group" aria-label="Price decimal places">
-                                                    <button type="button" class="btn btn-outline-secondary" id="pdec-btn-2" onclick="setPriceDecimal(2)">2</button>
-                                                    <button type="button" class="btn btn-outline-secondary" id="pdec-btn-3" onclick="setPriceDecimal(3)">3</button>
-                                                    <button type="button" class="btn btn-secondary"         id="pdec-btn-4" onclick="setPriceDecimal(4)">4</button>
-                                                    <button type="button" class="btn btn-outline-secondary" id="pdec-btn-5" onclick="setPriceDecimal(5)">5</button>
-                                                    <button type="button" class="btn btn-outline-secondary" id="pdec-btn-6" onclick="setPriceDecimal(6)">6</button>
+                                                <div class="col-6">
+                                                    <label class="form-label small text-secondary mb-1">
+                                                        <i class="fas fa-weight-hanging me-1 opacity-50"></i>PL — N.W./G.W.
+                                                    </label>
+                                                    <div>
+                                                        <div class="btn-group btn-group-sm" id="weightDecimalToggle" role="group" aria-label="Weight decimal places">
+                                                            <button type="button" class="btn btn-secondary" id="wdec-btn-2" onclick="setWeightDecimal(2)">2</button>
+                                                            <button type="button" class="btn btn-outline-secondary" id="wdec-btn-3" onclick="setWeightDecimal(3)">3</button>
+                                                        </div>
+                                                        <small class="text-muted ms-1">ตำแหน่ง</small>
+                                                    </div>
+                                                    <input type="hidden" id="editWeightDecimals" value="2">
+                                                </div>
+
+                                                <div class="col-6">
+                                                    <label class="form-label small text-secondary mb-1">
+                                                        <i class="fas fa-dollar-sign me-1 opacity-50"></i>CI — Unit Price
+                                                    </label>
+                                                    <div>
+                                                        <div class="btn-group btn-group-sm" id="priceDecimalToggle" role="group" aria-label="Price decimal places">
+                                                            <button type="button" class="btn btn-outline-secondary" id="pdec-btn-2" onclick="setPriceDecimal(2)">2</button>
+                                                            <button type="button" class="btn btn-outline-secondary" id="pdec-btn-3" onclick="setPriceDecimal(3)">3</button>
+                                                            <button type="button" class="btn btn-secondary"         id="pdec-btn-4" onclick="setPriceDecimal(4)">4</button>
+                                                            <button type="button" class="btn btn-outline-secondary" id="pdec-btn-5" onclick="setPriceDecimal(5)">5</button>
+                                                            <button type="button" class="btn btn-outline-secondary" id="pdec-btn-6" onclick="setPriceDecimal(6)">6</button>
+                                                        </div>
+                                                        <small class="text-muted ms-1">ตำแหน่ง</small>
+                                                    </div>
+                                                    <input type="hidden" id="editPriceDecimals" value="4">
                                                 </div>
                                             </div>
-                                            <input type="hidden" id="editPriceDecimals" value="4">
                                         </div>
                                     </div>
                                 </div>
