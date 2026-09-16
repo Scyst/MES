@@ -5,7 +5,7 @@ import {
   Store, Warehouse, Package, MapPin, ShieldCheck, 
   ShieldAlert, Wrench, HeartPulse, ChevronRight,
   Settings, Users, DollarSign, FileText, Zap, Sun, Calendar, Rocket,
-  Video, Cuboid, Star
+  Video, Cuboid, Star, FlaskConical
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { dailyLogApi } from '../../../shared/services/dailyLogApi';
@@ -167,6 +167,7 @@ export default function HomeDashboard() {
     { title: 'Scan Barcode', desc: 'ระบบสแกนบาร์โค้ด', icon: Barcode, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/scanBarcode/scanBarcodeUI.php' },
     { title: 'Tag Printer', desc: 'พิมพ์แท็กส่งงาน (WIP/FG)', icon: Printer, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/production/label_printer.php' },
     { title: 'Stop Causes', desc: 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', icon: Ban, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/PE/peRequest.php' },
+    { title: 'PAINT Chemical', desc: 'ระบบบันทึกเคมีสี (Check Sheet)', icon: FlaskConical, colorClass: 'bg-blue-100 text-blue-600', to: '/paint-chem' },
   ];
 
   const warehouseServices = [
