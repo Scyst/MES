@@ -185,7 +185,7 @@ export default function PaintChemEntryPage() {
   const isReadOnly = header?.status === 'APPROVED' || header?.status === 'SUBMITTED';
 
   return (
-    <div className="max-w-2xl mx-auto px-3 py-4 pb-24">
+    <div className="max-w-screen-xl mx-auto px-3 py-4 pb-24 w-full">
       {/* Offline banner */}
       {!isOnline && (
         <div className="flex items-center gap-2 bg-red-600 text-white text-sm px-4 py-2 rounded-lg mb-3">
@@ -211,7 +211,7 @@ export default function PaintChemEntryPage() {
 
       {/* Time Slot Selector */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 pt-3 pb-2 mb-4">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">เลือก Time Slot</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">เลือก TIME SLOT</p>
         <TimeSlotSelector
           slots={SHIFT_SLOTS[shift]}
           selected={selectedSlot}
@@ -219,38 +219,42 @@ export default function PaintChemEntryPage() {
         />
       </div>
 
-      {/* Station Cards */}
-      {STATIONS.map((station) => (
-        <StationCard
-          key={station.no}
-          station={station}
-          slotValues={slotValues[station.no]}
-          onChange={handleValueChange}
-          disabled={isReadOnly || !isOnline}
-        />
-      ))}
+      {/* Station Cards in a responsive grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3 md:gap-4">
+        {STATIONS.map((station) => (
+          <StationCard
+            key={station.no}
+            station={station}
+            slotValues={slotValues[station.no]}
+            onChange={handleValueChange}
+            disabled={isReadOnly || !isOnline}
+          />
+        ))}
+      </div>
 
       {/* Action Bar */}
       {!isReadOnly && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 flex gap-3 z-40">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || !isOnline}
-            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
-          >
-            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            บันทึก Slot {selectedSlot}
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={submitting || !isOnline || !header?.header_id}
-            className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
-          >
-            {submitting ? <Loader2 size={16} className="animate-spin" /> : <SendHorizonal size={16} />}
-            ส่งใบ
-          </button>
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          <div className="max-w-screen-xl mx-auto flex gap-3 justify-center md:justify-end">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || !isOnline}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+              บันทึก Slot {selectedSlot}
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={submitting || !isOnline || !header?.header_id}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {submitting ? <Loader2 size={18} className="animate-spin" /> : <SendHorizonal size={18} />}
+              ส่งใบ
+            </button>
+          </div>
         </div>
       )}
     </div>

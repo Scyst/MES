@@ -1,4 +1,4 @@
-﻿// SheetHeader.jsx — Top section: date picker, shift selector, Painting Condition fields
+// SheetHeader.jsx — Top section: date picker, shift selector, Painting Condition fields
 import { Sun, Moon } from 'lucide-react';
 
 const inputCls = 'w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -32,7 +32,7 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
       </div>
 
       {/* Date + Shift */}
-      <div className="flex gap-3 mb-3">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="flex-1">
           <label className={labelCls}>วันที่ตรวจ</label>
           <input type="date" className={inputCls} value={date} onChange={(e) => onDateChange(e.target.value)} disabled={disabled} />
@@ -70,7 +70,7 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
 
       {/* Painting Condition */}
       <p className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Painting Condition</p>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className={labelCls}>Speed Conveyor (m/min) <span className="text-gray-400">2.5–5.0</span></label>
           <input

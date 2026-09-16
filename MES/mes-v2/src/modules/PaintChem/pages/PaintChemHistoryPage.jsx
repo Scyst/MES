@@ -42,7 +42,7 @@ export default function PaintChemHistoryPage() {
   const handleSearch = () => { setPage(1); fetchHistory(); };
 
   return (
-    <div className="max-w-4xl mx-auto px-3 py-4">
+    <div className="max-w-screen-xl mx-auto px-3 py-4 w-full">
       <h1 className="text-base font-bold text-gray-800 mb-4">ประวัติบันทึกเคมีสี — PAINT Line</h1>
 
       {/* Filters */}
