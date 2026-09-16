@@ -1,4 +1,4 @@
-﻿// PaintChemEntryPage.jsx — Main entry page for recording chemical check sheet per slot
+// PaintChemEntryPage.jsx — Main entry page for recording chemical check sheet per slot
 
 // NOTE: Intentionally >50 lines — complex multi-station form with async state management
 // across 9 stations x 6 time slots requires inline orchestration for clarity.
@@ -11,7 +11,7 @@ import TimeSlotSelector from '../components/TimeSlotSelector';
 import StationCard from '../components/StationCard';
 import { STATIONS, SHIFT_SLOTS, detectCurrentShift, detectCurrentSlot } from '../paintChemConfig';
 
-const API_BASE = '/MES/page/paintChem/api';
+const API_BASE = '/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api';
 
 // Build empty slot values: { [stationNo]: { [paramKey]: { before, after, kg, isOverflow } } }
 function buildEmptySlotValues() {

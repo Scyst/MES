@@ -1,9 +1,9 @@
-﻿// PaintChemHistoryPage.jsx — History table with date filter + OOR summary
+// PaintChemHistoryPage.jsx — History table with date filter + OOR summary
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 
-const API_BASE = '/MES/page/paintChem/api';
+const API_BASE = '/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api';
 
 function StatusBadge({ status }) {
   const map = {
