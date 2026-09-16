@@ -46,6 +46,11 @@ export const AuthProvider = ({ children }) => {
         const response = await axios.get(`${import.meta.env.BASE_URL}check.php`);
         if (response.data.success) {
           setUser(response.data.user);
+          if (response.data.csrf_token) {
+            axios.defaults.headers.common['X-CSRF-TOKEN'] = response.data.csrf_token;
+            // Also store it on window so specific modules can read it if needed
+            window.csrf_token = response.data.csrf_token;
+          }
         } else {
           setUser(null);
         }
@@ -63,6 +68,10 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post(`${import.meta.env.BASE_URL}login.php`, { username, password });
       if (response.data.success) {
         setUser(response.data.user);
+        if (response.data.csrf_token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = response.data.csrf_token;
+          window.csrf_token = response.data.csrf_token;
+        }
         return { success: true };
       }
       return { success: false, message: response.data.message };

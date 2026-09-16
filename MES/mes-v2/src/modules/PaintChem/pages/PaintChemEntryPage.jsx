@@ -65,10 +65,9 @@ export default function PaintChemEntryPage() {
     return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
   }, []);
 
-  // Fetch CSRF token from meta tag (injected by PHP session)
+  // Fetch CSRF token from window object (set by AuthContext)
   useEffect(() => {
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    if (meta) setCsrf(meta.getAttribute('content'));
+    if (window.csrf_token) setCsrf(window.csrf_token);
   }, []);
 
   // Fetch sheet data whenever date or shift changes

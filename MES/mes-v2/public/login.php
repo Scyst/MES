@@ -74,7 +74,8 @@ try {
         echo json_encode([
             'success' => true, 
             'message' => 'Login successful.',
-            'user' => $_SESSION['user']
+            'user' => $_SESSION['user'],
+            'csrf_token' => $_SESSION['csrf_token']
         ]);
     } else {
         usleep(500000); 

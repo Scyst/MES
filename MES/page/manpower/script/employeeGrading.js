@@ -1626,6 +1626,7 @@ const App = {
         } catch (e) {
             Swal.fire('Error', e.message, 'error');
         }
+    },
 
     // ── 5S Audit Modal ────────────────────────────────────────────────────────
     init5sModal: function() {
