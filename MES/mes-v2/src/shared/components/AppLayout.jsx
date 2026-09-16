@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Settings, Menu, X, LogOut, Sun, Moon, Coffee, UserCircle, Clock } from 'lucide-react';
+import { LayoutDashboard, Settings, Menu, X, LogOut, Sun, Moon, Coffee, UserCircle, Clock, FlaskConical, History } from 'lucide-react';
+
 import { useAuth } from '../contexts/AuthContext';
 
 export default function AppLayout() {
@@ -198,14 +199,38 @@ export default function AppLayout() {
              </div>
           </div>
           <div className="mt-2">
-            <button 
+            {/* Navigation Links */}
+            <Link
+              to="/paint-chem"
+              onClick={closeMenu}
+              className="flex items-center gap-3 w-full p-3 rounded-lg text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 transition-colors"
+            >
+              <FlaskConical size={20} className="text-blue-500" />
+              <div>
+                <p className="text-sm font-semibold">บันทึกเคมีสี</p>
+                <p className="text-xs text-gray-400">PAINT Line — Chemical Check Sheet</p>
+              </div>
+            </Link>
+            <Link
+              to="/paint-chem/history"
+              onClick={closeMenu}
+              className="flex items-center gap-3 w-full p-3 rounded-lg text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 transition-colors"
+            >
+              <History size={20} className="text-blue-400" />
+              <div>
+                <p className="text-sm font-semibold">ประวัติเคมีสี</p>
+                <p className="text-xs text-gray-400">ดูรายงานและประวัติย้อนหลัง</p>
+              </div>
+            </Link>
+            <button
               onClick={handleLogout}
-              className="flex items-center gap-3 w-full p-3 rounded-lg text-red-600 font-medium hover:bg-red-50 transition-colors"
+              className="flex items-center gap-3 w-full p-3 rounded-lg text-red-600 font-medium hover:bg-red-50 transition-colors mt-2 border-t border-gray-100"
             >
               <LogOut size={20} />
               <span>ออกจากระบบ (Logout)</span>
             </button>
           </div>
+
         </div>
       )}
 

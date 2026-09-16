@@ -9,6 +9,9 @@ const QmsDashboard = lazy(() => import('../modules/QMS/pages/QmsDashboard'));
 const MoodInsightDashboard = lazy(() => import('../modules/MoodInsight/pages/MoodInsightDashboard'));
 const UserManagement = lazy(() => import('../modules/Admin/pages/UserManagement'));
 const Login = lazy(() => import('../modules/Auth/pages/Login'));
+const PaintChemEntryPage = lazy(() => import('../modules/PaintChem/pages/PaintChemEntryPage'));
+const PaintChemHistoryPage = lazy(() => import('../modules/PaintChem/pages/PaintChemHistoryPage'));
+
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -54,7 +57,18 @@ export default function App() {
                 <UserManagement />
               </Suspense>
             } />
+            <Route path="paint-chem" element={
+              <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดโมดูลบันทึกเคมีสี...</div>}>
+                <PaintChemEntryPage />
+              </Suspense>
+            } />
+            <Route path="paint-chem/history" element={
+              <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดประวัติเคมีสี...</div>}>
+                <PaintChemHistoryPage />
+              </Suspense>
+            } />
             <Route path="*" element={<Navigate to="/" replace />} />
+
           </Route>
         </Routes>
       </AuthProvider>
