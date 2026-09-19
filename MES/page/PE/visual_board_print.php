@@ -300,8 +300,12 @@ if (!isset($_SESSION['user'])) {
                                         ${escapeHtml(m.model || '-')}
                                     </div>
                                     <div class="vb-detail-item">
-                                        <span>หมายเลขเครื่อง (Serial / Asset No)</span>
-                                        ${escapeHtml(m.serial_number || m.asset_no || '-')}
+                                        <span>หมายเลขเครื่อง (Serial No)</span>
+                                        ${escapeHtml(m.serial_number || '-')}
+                                    </div>
+                                    <div class="vb-detail-item">
+                                        <span>รหัสทรัพย์สิน (Asset No)</span>
+                                        ${escapeHtml(m.asset_no || '-')}
                                     </div>
                                     <div class="vb-detail-item">
                                         <span>ความสำคัญ (Criticality)</span>
