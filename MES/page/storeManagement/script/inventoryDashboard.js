@@ -735,33 +735,35 @@ async function openCreateTransferModal(itemId, itemNo, itemDesc, availQty) {
         }
     });
 
-    const tagSelect = document.getElementById('transTag');
-    if (tagSelect) {
-        tagSelect.innerHTML = '<option value="">กำลังโหลดแท็ก...</option>';
+    const tagContainer = document.getElementById('transTagContainer');
+    if (tagContainer) {
+        tagContainer.innerHTML = '<div class="text-muted small">กำลังโหลดแท็ก...</div>';
         currentTransferTags = [];
         fetchAPI(`get_available_tags_for_item&item_code=${encodeURIComponent(itemNo)}&item_id=${itemId}&location_id=ALL`, 'GET')
             .then(res => {
                 if (res.data && res.data.length > 0) {
                     currentTransferTags = res.data;
-                    // มีแท็ก → บังคับเลือก Tag ปิด Manual
-                    tagSelect.innerHTML = '<option value="" disabled selected>กรุณาเลือกแท็ก (Required)</option>';
+                    let html = '';
                     res.data.forEach(t => {
-                        tagSelect.add(new Option(`Tag: ${t.serial_no} (Qty: ${fmtQty(t.current_qty)}) - ${t.location_name || t.location_id}`, t.serial_no));
+                        html += `
+                        <div class="form-check mb-1">
+                            <input class="form-check-input trans-tag-checkbox" type="checkbox" value="${t.serial_no}" id="tag_${t.serial_no}" onchange="onTransferTagChange()">
+                            <label class="form-check-label" style="font-size: 0.9rem; cursor: pointer;" for="tag_${t.serial_no}">
+                                Tag: <strong>${t.serial_no}</strong> (Qty: ${fmtQty(t.current_qty)}) - ${t.location_name || t.location_id}
+                            </label>
+                        </div>`;
                     });
-                    tagSelect.required = true;
+                    tagContainer.innerHTML = html;
                     document.getElementById('transQty').readOnly = true;
                     document.getElementById('transFromLoc').style.pointerEvents = 'none';
                     document.getElementById('transFromLoc').classList.add('bg-light');
                 } else {
-                    // ไม่มีแท็ก → อนุญาต Manual QTY
-                    tagSelect.innerHTML = '<option value="">ระบุจำนวนเอง (ไม่มีแท็กพร้อมใช้)</option>';
-                    tagSelect.required = false;
+                    tagContainer.innerHTML = '<div class="text-muted small">ระบุจำนวนเอง (ไม่มีแท็กพร้อมใช้)</div>';
                     document.getElementById('transQty').readOnly = false;
                 }
             })
             .catch(() => {
-                tagSelect.innerHTML = '<option value="">ระบุจำนวนเอง (Manual QTY)</option>';
-                tagSelect.required = false;
+                tagContainer.innerHTML = '<div class="text-danger small">ไม่สามารถโหลดแท็กได้ (Manual QTY)</div>';
             });
     }
 
@@ -770,17 +772,13 @@ async function openCreateTransferModal(itemId, itemNo, itemDesc, availQty) {
 }
 
 function onTransferTagChange() {
-    const tagSelect = document.getElementById('transTag');
+    const checkboxes = document.querySelectorAll('.trans-tag-checkbox:checked');
     const fromLoc = document.getElementById('transFromLoc');
     const qtyInput = document.getElementById('transQty');
     
-    if (!tagSelect || !fromLoc || !qtyInput) return;
+    if (!fromLoc || !qtyInput) return;
     
-    const selectedOptions = Array.from(tagSelect.selectedOptions);
-    const hasManual = selectedOptions.some(opt => opt.value === "");
-    
-    // หากมีการเลือกแท็ก ให้กรองเอาเฉพาะตัวที่ไม่ใช่ค่าว่าง (Manual)
-    const selectedSerials = selectedOptions.map(opt => opt.value).filter(val => val !== "");
+    const selectedSerials = Array.from(checkboxes).map(cb => cb.value).filter(val => val !== "");
     
     if (selectedSerials.length > 0 && currentTransferTags.length > 0) {
         let totalQty = 0;
@@ -829,11 +827,9 @@ async function submitTransferRequest(e) {
     formData.append('quantity', document.getElementById('transQty').value);
     formData.append('remark', document.getElementById('transRemark').value);
     
-    const tagSelect = document.getElementById('transTag');
-    if (tagSelect) {
-        const selectedTags = Array.from(tagSelect.selectedOptions)
-                                  .map(opt => opt.value)
-                                  .filter(val => val !== "");
+    const checkboxes = document.querySelectorAll('.trans-tag-checkbox:checked');
+    if (checkboxes.length > 0) {
+        const selectedTags = Array.from(checkboxes).map(cb => cb.value).filter(val => val !== "");
         if (selectedTags.length > 0) {
             formData.append('transfer_tags', selectedTags.join(','));
         }
