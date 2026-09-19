@@ -108,8 +108,8 @@ if (!isset($_SESSION['user'])) {
             grid-template-columns: 1fr 1fr;
             gap: 8px 15px;
             margin-top: 10px;
-            font-size: 11pt;
-            font-weight: 600;
+            font-size: 13pt; /* Increased from 11pt */
+            font-weight: 700; /* Increased weight slightly for better visibility */
             background: white;
             padding: 12px;
             border-radius: 10px;
@@ -117,9 +117,10 @@ if (!isset($_SESSION['user'])) {
         }
         .vb-detail-item span {
             color: #6c757d;
-            font-weight: 500;
-            font-size: 10pt;
+            font-weight: 600; /* Increased weight */
+            font-size: 11pt; /* Increased from 10pt */
             display: block;
+            margin-bottom: 2px;
         }
         
         .vb-qr-section {
