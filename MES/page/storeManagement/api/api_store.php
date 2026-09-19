@@ -1141,23 +1141,67 @@ try {
             $to_loc_id = (int)($_POST['to_loc_id'] ?? 0);
             $qty = (float)($_POST['quantity'] ?? 0);
             $remark = trim($_POST['remark'] ?? '');
-            $transfer_tag = trim($_POST['transfer_tag'] ?? '') ?: null;
+            
+            $transfer_tag = trim($_POST['transfer_tag'] ?? '');
+            $transfer_tags_str = trim($_POST['transfer_tags'] ?? '');
+            
+            $all_tags = [];
+            if (!empty($transfer_tags_str)) {
+                $all_tags = array_filter(array_map('trim', explode(',', $transfer_tags_str)));
+            } elseif (!empty($transfer_tag)) {
+                $all_tags = [$transfer_tag];
+            }
 
-            if ($item_id === 0 || $from_loc_id === 0 || $to_loc_id === 0 || $qty <= 0) {
+            if ($item_id === 0 || $from_loc_id === 0 || $to_loc_id === 0 || ($qty <= 0 && empty($all_tags))) {
                 throw new Exception("ข้อมูลไม่ครบถ้วน (Item, Locations, Qty)");
             }
             if ($from_loc_id === $to_loc_id) {
                 throw new Exception("คลังต้นทางและปลายทางต้องไม่ซ้ำกัน");
             }
-
-            $uuid = 'TRF-' . strtoupper(substr(md5(uniqid()), 0, 8));
-            $sql = "INSERT INTO dbo.STOCK_TRANSFER_ORDERS 
-                    (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes, tag_serial_no, created_at) 
-                    VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, GETDATE())";
             
-            $pdo->prepare($sql)->execute([$uuid, $item_id, $qty, $from_loc_id, $to_loc_id, $currentUser['id'], $remark, $transfer_tag]);
-            
-            $response = ['success' => true, 'message' => 'สร้างรายการรอโอนย้ายสำเร็จ'];
+            $pdo->beginTransaction();
+            try {
+                if (!empty($all_tags)) {
+                    $insertedCount = 0;
+                    foreach ($all_tags as $tag) {
+                        $stmt = $pdo->prepare("SELECT current_qty, location_id FROM dbo.RM_SERIAL_TAGS WHERE serial_no = ?");
+                        $stmt->execute([$tag]);
+                        $tagData = $stmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        if ($tagData) {
+                            $tagQty = $tagData['current_qty'];
+                            $tagLoc = $tagData['location_id'];
+                            if ($tagLoc != $from_loc_id) {
+                                throw new Exception("แท็ก {$tag} ไม่ได้อยู่ในคลังต้นทางที่ระบุ");
+                            }
+                            
+                            $uuid = 'TRF-' . strtoupper(substr(md5(uniqid()), 0, 8));
+                            $sql = "INSERT INTO dbo.STOCK_TRANSFER_ORDERS 
+                                    (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes, tag_serial_no, created_at) 
+                                    VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, GETDATE())";
+                            
+                            $pdo->prepare($sql)->execute([$uuid, $item_id, $tagQty, $from_loc_id, $to_loc_id, $currentUser['id'], $remark, $tag]);
+                            $insertedCount++;
+                        }
+                    }
+                    if ($insertedCount == 0) {
+                        throw new Exception("ไม่พบข้อมูลแท็กที่ระบุในระบบ");
+                    }
+                } else {
+                    $uuid = 'TRF-' . strtoupper(substr(md5(uniqid()), 0, 8));
+                    $sql = "INSERT INTO dbo.STOCK_TRANSFER_ORDERS 
+                            (transfer_uuid, item_id, quantity, from_location_id, to_location_id, status, created_by_user_id, notes, tag_serial_no, created_at) 
+                            VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, NULL, GETDATE())";
+                    
+                    $pdo->prepare($sql)->execute([$uuid, $item_id, $qty, $from_loc_id, $to_loc_id, $currentUser['id'], $remark]);
+                }
+                
+                $pdo->commit();
+                $response = ['success' => true, 'message' => 'สร้างรายการรอโอนย้ายสำเร็จ'];
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
             break;
 
         case 'get_pending_transfers':

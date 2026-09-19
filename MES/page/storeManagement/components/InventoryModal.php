@@ -263,9 +263,10 @@
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-secondary mb-1">เลือกแท็กอ้างอิง (Select Tag) - <span class="text-muted fw-normal">Optional</span></label>
-                        <select id="transTag" class="form-select border-secondary-subtle shadow-sm" onchange="onTransferTagChange()">
-                            <option value="">ระบุจำนวนเอง (Manual QTY)</option>
+                        <select id="transTag" class="form-select border-secondary-subtle shadow-sm" onchange="onTransferTagChange()" multiple size="5">
+                            <option value="">-- ระบุจำนวนเอง (Manual QTY) --</option>
                         </select>
+                        <div class="form-text small text-muted"><i class="fas fa-info-circle"></i> กด Ctrl (หรือ Command บน Mac) ค้างไว้เพื่อเลือกหลายรายการ หรือเลือกบรรทัดแรกเพื่อระบุจำนวนเอง</div>
                     </div>
 
                     <div class="row g-2 mb-3">

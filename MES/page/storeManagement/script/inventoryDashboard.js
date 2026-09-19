@@ -770,19 +770,49 @@ async function openCreateTransferModal(itemId, itemNo, itemDesc, availQty) {
 }
 
 function onTransferTagChange() {
-    const selectedSerial = document.getElementById('transTag')?.value;
+    const tagSelect = document.getElementById('transTag');
     const fromLoc = document.getElementById('transFromLoc');
     const qtyInput = document.getElementById('transQty');
     
-    if (selectedSerial && currentTransferTags.length > 0) {
-        const tag = currentTransferTags.find(t => t.serial_no === selectedSerial);
-        if (tag) {
-            fromLoc.value = tag.location_id;
-            qtyInput.value = parseFloat(tag.current_qty);
+    if (!tagSelect || !fromLoc || !qtyInput) return;
+    
+    const selectedOptions = Array.from(tagSelect.selectedOptions);
+    const hasManual = selectedOptions.some(opt => opt.value === "");
+    
+    // หากมีการเลือกแท็ก ให้กรองเอาเฉพาะตัวที่ไม่ใช่ค่าว่าง (Manual)
+    const selectedSerials = selectedOptions.map(opt => opt.value).filter(val => val !== "");
+    
+    if (selectedSerials.length > 0 && currentTransferTags.length > 0) {
+        let totalQty = 0;
+        let firstLocId = null;
+        let locMismatch = false;
+        
+        selectedSerials.forEach(serial => {
+            const tag = currentTransferTags.find(t => t.serial_no === serial);
+            if (tag) {
+                totalQty += parseFloat(tag.current_qty);
+                if (firstLocId === null) {
+                    firstLocId = tag.location_id;
+                } else if (firstLocId !== tag.location_id) {
+                    locMismatch = true;
+                }
+            }
+        });
+        
+        qtyInput.value = totalQty;
+        qtyInput.readOnly = true; // ล็อคไม่ให้แก้ไขจำนวน ถ้าระบุแท็ก
+        
+        if (!locMismatch && firstLocId !== null) {
+            fromLoc.value = firstLocId;
             fromLoc.style.pointerEvents = 'none';
             fromLoc.classList.add('bg-light');
+        } else {
+            // หากเผลอเลือกแท็กจากคนละคลัง ให้เปิดให้เลือกคลังเอง (หรืออาจจะจัดการแยก Request ที่หลังบ้าน)
+            fromLoc.style.pointerEvents = 'auto';
+            fromLoc.classList.remove('bg-light');
         }
     } else {
+        qtyInput.readOnly = false;
         fromLoc.style.pointerEvents = 'auto';
         fromLoc.classList.remove('bg-light');
     }
@@ -799,8 +829,15 @@ async function submitTransferRequest(e) {
     formData.append('quantity', document.getElementById('transQty').value);
     formData.append('remark', document.getElementById('transRemark').value);
     
-    const selectedTag = document.getElementById('transTag')?.value;
-    if (selectedTag) formData.append('transfer_tag', selectedTag);
+    const tagSelect = document.getElementById('transTag');
+    if (tagSelect) {
+        const selectedTags = Array.from(tagSelect.selectedOptions)
+                                  .map(opt => opt.value)
+                                  .filter(val => val !== "");
+        if (selectedTags.length > 0) {
+            formData.append('transfer_tags', selectedTags.join(','));
+        }
+    }
 
     const res = await fetchAPI('create_transfer_request', 'POST', formData, 'btnSubmitTransfer');
     if (res) {
