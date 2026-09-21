@@ -309,7 +309,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
     return PERSON_COLORS[idx % PERSON_COLORS.length] || PERSON_COLORS[0];
   };
 
-  if (loading || !hasSetDefaultAssignee) return (
+  if (loading) return (
     <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-500 dark:text-slate-400">
       <div className="w-8 h-8 border-4 border-slate-200 dark:border-slate-700 border-t-indigo-500 rounded-full animate-spin" />
       <span className="text-sm font-medium">Loading Timeline...</span>
