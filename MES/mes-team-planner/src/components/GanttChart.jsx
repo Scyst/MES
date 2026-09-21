@@ -293,6 +293,19 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   const monthDays = Array.from({ length: daysInMonth }).map((_, i) => addDays(monthStart, i));
   const thaiDayNames = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
+  // Auto-scroll to today's row in monthly view
+  const scrollContainerRef = React.useRef(null);
+  const todayRowRef = React.useRef(null);
+  React.useEffect(() => {
+    if (viewMode === 'monthly' && scrollContainerRef.current && todayRowRef.current) {
+      const container = scrollContainerRef.current;
+      const todayRow = todayRowRef.current;
+      // Scroll so today's row appears near the top (with small offset for the sticky header)
+      const offset = todayRow.offsetTop - 60;
+      container.scrollTo({ top: offset, behavior: 'smooth' });
+    }
+  }, [viewMode, currentDate, loading]);
+
   const getPersonColor = (name) => {
     const firstName = (name || '').split(',')[0].trim();
     const canonicalName = getCanonicalName(firstName, users);
@@ -571,7 +584,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
 
       {/* ═══ MONTHLY VIEW ═══ */}
       {viewMode === 'monthly' && (
-        <div className="flex-1 overflow-auto border border-slate-200 dark:border-slate-700/80 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 relative shadow-inner">
+        <div ref={scrollContainerRef} className="flex-1 overflow-auto border border-slate-200 dark:border-slate-700/80 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 relative shadow-inner">
           <div id="gantt-export-target" className="min-w-[1200px] bg-slate-50 dark:bg-slate-800/20">
             
             {/* Header Row (Hours) */}
@@ -642,7 +655,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
               const offsetY = (requiredHeight - blockHeight) / 2;
 
               return (
-                <div key={dayStr} className={`flex border-b border-slate-200/40 dark:border-slate-700/40 group relative ${isToday ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : 'hover:bg-slate-100/50 dark:hover:bg-slate-800/30'}`} style={{ minHeight: `${requiredHeight}px` }}>
+                <div key={dayStr} ref={isToday ? todayRowRef : null} className={`flex border-b border-slate-200/40 dark:border-slate-700/40 group relative ${isToday ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : 'hover:bg-slate-100/50 dark:hover:bg-slate-800/30'}`} style={{ minHeight: `${requiredHeight}px` }}>
                   {/* Left Sidebar Day Cell */}
                   <div className={`w-28 md:w-40 shrink-0 px-2 py-2 flex items-center gap-2 md:gap-3 border-r border-slate-200 dark:border-slate-700 z-20 sticky left-0 shadow-[2px_0_8px_rgba(0,0,0,0.08)] dark:shadow-[2px_0_8px_rgba(0,0,0,0.3)] ${isToday ? 'bg-indigo-50 dark:bg-slate-800' : 'bg-white dark:bg-slate-900/95'}`}>
                     <div className={`w-9 h-9 md:w-10 md:h-10 rounded-lg flex flex-col items-center justify-center shrink-0 ${isToday ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}>
