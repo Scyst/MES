@@ -25,6 +25,7 @@ import InviteTeamModal from './components/InviteTeamModal';
 import ProfileSettingsModal from './components/ProfileSettingsModal';
 import ConfirmDialog from './components/common/ConfirmDialog';
 import { canManageSpace } from './utils/permissions';
+import { getCanonicalName } from './utils/userUtils';
 import UserAvatar from './components/UserAvatar';
 
 const RealTimeClock = () => {
@@ -367,9 +368,22 @@ function App() {
     setIsGlobalProjectModalOpen(true);
   };
 
-  ﻿  const pageContent = useMemo(() => {
+  const pageContent = useMemo(() => {
     const isAppLoading = dataLoading || userLoading;
-    const sharedTaskProps = { currentUser, tasks, setTasks, onSaveTask: handleSaveTask, onDeleteTask: handleDeleteTask, loading: isAppLoading, users };
+
+    // Compute default assignee here — at the App level where BOTH currentUser and users
+    // are guaranteed to be fully loaded before isAppLoading becomes false.
+    // This eliminates all race conditions inside GanttChart.
+    const defaultAssignee = (!isAppLoading && currentUser && users.length > 0)
+      ? (getCanonicalName(currentUser.username, users) || 'All')
+      : 'All';
+
+    const sharedTaskProps = {
+      currentUser, tasks, setTasks,
+      onSaveTask: handleSaveTask, onDeleteTask: handleDeleteTask,
+      loading: isAppLoading, users,
+      defaultAssignee,
+    };
 
     switch (activeTab) {
       case 'dashboard': 

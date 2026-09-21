@@ -19,7 +19,7 @@ const PERSON_COLORS = [
   { bg: 'bg-teal-500', text: 'text-teal-500', light: 'bg-teal-500/20', border: 'border-teal-400/40' },
 ];
 
-export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loading, currentUser, users = [] }) {
+export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loading, currentUser, users = [], defaultAssignee = 'All' }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('monthly'); // 'daily' | 'monthly'
   
@@ -34,24 +34,23 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   }, [timelineRange]);
   const [editingTask, setEditingTask] = useState(null);
   
+  // defaultAssignee is computed in App.jsx once both currentUser and users are fully loaded.
+  // Start as 'All'; when the prop arrives with a real name, apply it once (if user hasn't
+  // manually changed the filter themselves).
   const [selectedAssignee, setSelectedAssignee] = useState('All');
-  const [hasSetDefaultAssignee, setHasSetDefaultAssignee] = useState(false);
+  const hasUserChangedFilter = React.useRef(false);
 
   React.useEffect(() => {
-    if (!hasSetDefaultAssignee && !loading && currentUser && users.length > 0) {
-      const rawName = currentUser.username;
-      if (rawName) setSelectedAssignee(getCanonicalName(rawName, users));
-      setHasSetDefaultAssignee(true);
+    // Only auto-apply when App.jsx resolves to a real name and user hasn't touched the filter
+    if (!hasUserChangedFilter.current && defaultAssignee !== 'All') {
+      setSelectedAssignee(defaultAssignee);
     }
-  }, [currentUser, users, loading, hasSetDefaultAssignee]);
+  }, [defaultAssignee]);
 
-  // Fallback timeout in case currentUser or users never load
-  React.useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!hasSetDefaultAssignee) setHasSetDefaultAssignee(true);
-    }, 2000);
-    return () => clearTimeout(timeout);
-  }, [hasSetDefaultAssignee]);
+  const handleAssigneeChange = (value) => {
+    hasUserChangedFilter.current = true;
+    setSelectedAssignee(value);
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -356,7 +355,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
             {/* Assignee Filter */}
             <select 
               value={selectedAssignee} 
-              onChange={(e) => setSelectedAssignee(e.target.value)}
+              onChange={(e) => handleAssigneeChange(e.target.value)}
               className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl px-3 h-10 text-xs font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer hidden md:block"
             >
               <option value="All">ทุกคน</option>
@@ -769,7 +768,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
                 return (
                   <button 
                     key={name} 
-                    onClick={() => setSelectedAssignee(name)}
+                    onClick={() => handleAssigneeChange(name)}
                     className={`flex items-center gap-1.5 text-[11px] md:text-xs px-2 py-1 rounded-lg border transition-all hover:scale-105 shadow-sm hover:shadow ${color.light} ${color.border} ${color.text}`}
                   >
                     <div className={`w-2 h-2 rounded-full ${color.bg}`}></div>
