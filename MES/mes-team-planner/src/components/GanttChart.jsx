@@ -34,22 +34,14 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   }, [timelineRange]);
   const [editingTask, setEditingTask] = useState(null);
   
-  // defaultAssignee is computed in App.jsx once both currentUser and users are fully loaded.
-  // Start as 'All'; when the prop arrives with a real name, apply it once (if user hasn't
-  // manually changed the filter themselves).
-  const [selectedAssignee, setSelectedAssignee] = useState('All');
-  const hasUserChangedFilter = React.useRef(false);
-
-  React.useEffect(() => {
-    // Only auto-apply when App.jsx resolves to a real name and user hasn't touched the filter
-    if (!hasUserChangedFilter.current && defaultAssignee !== 'All') {
-      setSelectedAssignee(defaultAssignee);
-    }
-  }, [defaultAssignee]);
+  // Pattern: manualAssignee=null means "follow defaultAssignee prop" (auto mode).
+  // Once the user explicitly picks someone, manualAssignee is set and overrides the prop.
+  // This is zero-lag — no useState('All') + useEffect gap = no flash.
+  const [manualAssignee, setManualAssignee] = useState(null);
+  const selectedAssignee = manualAssignee ?? defaultAssignee;
 
   const handleAssigneeChange = (value) => {
-    hasUserChangedFilter.current = true;
-    setSelectedAssignee(value);
+    setManualAssignee(value);
   };
 
   const [searchQuery, setSearchQuery] = useState('');
