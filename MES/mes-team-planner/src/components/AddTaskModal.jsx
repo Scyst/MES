@@ -93,6 +93,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
   const [isUploading, setIsUploading] = useState(false);
   const [attachmentToDelete, setAttachmentToDelete] = useState(null);
   const [attachmentsToDeleteOnSave, setAttachmentsToDeleteOnSave] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '', status: 'todo', visibility: 'public', assignee: '',
@@ -318,8 +319,11 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+
+    // Guard: prevent double-submit
+    if (isSaving) return;
 
     if (!formData.title || !formData.title.trim()) {
       alert('กรุณาระบุชื่องาน');
@@ -333,31 +337,36 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
       return;
     }
 
-    // Process physical deletions now
-    attachmentsToDeleteOnSave.forEach(async (url) => {
-      try {
-        await axios.post('/api/delete_attachment.php', { url });
-      } catch (err) {
-        console.error('Delete on save failed:', err);
+    setIsSaving(true);
+    try {
+      // Process physical deletions now
+      attachmentsToDeleteOnSave.forEach(async (url) => {
+        try {
+          await axios.post('/api/delete_attachment.php', { url });
+        } catch (err) {
+          console.error('Delete on save failed:', err);
+        }
+      });
+      
+      let computedEndDate = formData.recurrenceEndDate;
+      if (!isEditing && formData.recurrence !== 'none') {
+          const d = new Date(formData.startDate || new Date());
+          if (formData.recurrenceDuration === '1m') d.setMonth(d.getMonth() + 1);
+          else if (formData.recurrenceDuration === '3m') d.setMonth(d.getMonth() + 3);
+          else if (formData.recurrenceDuration === '6m') d.setMonth(d.getMonth() + 6);
+          else if (formData.recurrenceDuration === '1y') d.setFullYear(d.getFullYear() + 1);
+          computedEndDate = d.toISOString().split('T')[0];
       }
-    });
-    
-    let computedEndDate = formData.recurrenceEndDate;
-    if (!isEditing && formData.recurrence !== 'none') {
-        const d = new Date(formData.startDate || new Date());
-        if (formData.recurrenceDuration === '1m') d.setMonth(d.getMonth() + 1);
-        else if (formData.recurrenceDuration === '3m') d.setMonth(d.getMonth() + 3);
-        else if (formData.recurrenceDuration === '6m') d.setMonth(d.getMonth() + 6);
-        else if (formData.recurrenceDuration === '1y') d.setFullYear(d.getFullYear() + 1);
-        computedEndDate = d.toISOString().split('T')[0];
+      
+      await onSave({
+        ...formData,
+        recurrenceEndDate: computedEndDate,
+        subtasks: JSON.stringify(subtasksArr),
+        attachments: JSON.stringify(attachmentsArr)
+      });
+    } finally {
+      setIsSaving(false);
     }
-    
-    onSave({
-      ...formData,
-      recurrenceEndDate: computedEndDate,
-      subtasks: JSON.stringify(subtasksArr),
-      attachments: JSON.stringify(attachmentsArr)
-    });
   };
 
   const isEditing = !!initialData?.Id;
@@ -1006,8 +1015,20 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
                 ยกเลิก
               </button>
               {/* Only submit the form if we are on general tab, or just use a button that triggers handleSubmit directly */}
-              <button type="button" onClick={handleSubmit} className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl font-semibold shadow-lg shadow-indigo-900/30 transition-all active:scale-95 text-sm flex items-center gap-2">
-                {isEditing ? '💾 บันทึกทั้งหมด' : '✨ สร้างงาน'}
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSaving}
+                className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl font-semibold shadow-lg shadow-indigo-900/30 transition-all active:scale-95 text-sm flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+              >
+                {isSaving ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    กำลังบันทึก...
+                  </>
+                ) : (
+                  isEditing ? '💾 บันทึกทั้งหมด' : '✨ สร้างงาน'
+                )}
               </button>
             </div>
           </div>
