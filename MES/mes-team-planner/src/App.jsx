@@ -57,9 +57,20 @@ function App() {
   const [activeTab, setActiveTab] = useState('gantt');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+
+  useEffect(() => {
+    axios.get('api/auth.php?action=me')
+      .then(res => {
+        if (res.data && res.data.user) setCurrentUser(res.data.user);
+      })
+      .catch(err => console.error('Failed to fetch user:', err))
+      .finally(() => setUserLoading(false));
+  }, []);
+
   const [isGlobalTaskModalOpen, setIsGlobalTaskModalOpen] = useState(false);
   const [globalEditingTask, setGlobalEditingTask] = useState(null);
   const [isGlobalProjectModalOpen, setIsGlobalProjectModalOpen] = useState(false);
@@ -356,8 +367,9 @@ function App() {
     setIsGlobalProjectModalOpen(true);
   };
 
-  const pageContent = useMemo(() => {
-    const sharedTaskProps = { currentUser, tasks, setTasks, onSaveTask: handleSaveTask, onDeleteTask: handleDeleteTask, loading: dataLoading, users };
+  ﻿  const pageContent = useMemo(() => {
+    const isAppLoading = dataLoading || userLoading;
+    const sharedTaskProps = { currentUser, tasks, setTasks, onSaveTask: handleSaveTask, onDeleteTask: handleDeleteTask, loading: isAppLoading, users };
 
     switch (activeTab) {
       case 'dashboard': 
@@ -365,7 +377,7 @@ function App() {
           tasks={tasks} 
           events={events} 
           activities={activities} 
-          loading={dataLoading} 
+          loading={isAppLoading} 
           users={users}
           currentUser={currentUser}
           onNav={handleNav} 
@@ -377,7 +389,7 @@ function App() {
           onProjectClick={(proj) => { setGlobalEditingProject(proj); setIsGlobalProjectModalOpen(true); }}
         />;
       case 'calendar': 
-        return <CalendarView tasks={tasks} events={events} onSaveTask={handleSaveTask} onDeleteTask={handleDeleteTask} onSaveEvent={handleSaveEvent} onDeleteEvent={handleDeleteEvent} loading={dataLoading} users={users} />;
+        return <CalendarView tasks={tasks} events={events} onSaveTask={handleSaveTask} onDeleteTask={handleDeleteTask} onSaveEvent={handleSaveEvent} onDeleteEvent={handleDeleteEvent} loading={isAppLoading} users={users} />;
       case 'tasks': 
         return <TaskBoard {...sharedTaskProps} />;
       case 'gantt': 
@@ -392,51 +404,17 @@ function App() {
           currentUser={currentUser} 
           refreshData={refreshData} 
           onSaveTask={handleSaveTask}
-          onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
-          onCreateTask={handleCreateTask}
         />;
       case 'timeline':
         return <GanttChart {...sharedTaskProps} />;
       case 'resources':
         return <Resources currentUser={currentUser} />;
       default: 
-        // Fallback for Spaces and mock tabs
-        if (activeTab.startsWith('space-') || activeTab.startsWith('team-')) {
-          return <SpaceView 
-            activeTab={activeTab} 
-            spaces={spaces} 
-            tasks={tasks} 
-            projects={projects} 
-            currentUser={currentUser} 
-            refreshData={refreshData} 
-            users={users} 
-            onEditSpace={(s) => { setEditingSpace(s); setIsAddSpaceModalOpen(true); }} 
-            onDeleteSpace={(id) => setSpaceToDelete(id)} 
-            openInviteModal={(sId) => { setInviteModalSpaceId(sId); setIsInviteModalOpen(true); }}
-            onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
-            onCreateTask={handleCreateTask}
-            onCreateProject={handleCreateProject}
-            onProjectClick={handleProjectClick}
-            onSaveTask={handleSaveTask}
-          />;
-        }
-        return <Dashboard 
-          tasks={tasks} 
-          events={events} 
-          activities={activities} 
-          loading={dataLoading} 
-          users={users}
-          onNav={handleNav} 
-          openTaskModal={() => { setGlobalEditingTask(null); setIsGlobalTaskModalOpen(true); }}
-          openProjectModal={() => { setGlobalEditingProject(null); setIsGlobalProjectModalOpen(true); }}
-          openSpaceModal={canManageSpace(currentUser) ? () => { setEditingSpace(null); setIsAddSpaceModalOpen(true); } : undefined}
-          openInviteModal={() => { setInviteModalSpaceId(null); setIsInviteModalOpen(true); }}
-          onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
-          onProjectClick={(proj) => { setGlobalEditingProject(proj); setIsGlobalProjectModalOpen(true); }}
-        />;
+        return <Dashboard tasks={tasks} events={events} activities={activities} loading={isAppLoading} users={users} currentUser={currentUser} onNav={handleNav} />;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, tasks, events, activities, projects, spaces, users, dataLoading, currentUser]);
+  }, [activeTab, tasks, events, activities, projects, spaces, users, dataLoading, userLoading, currentUser]);
+
 
   // ══════════ Theme ══════════
   const [isDarkMode, setIsDarkMode] = useState(() => {
