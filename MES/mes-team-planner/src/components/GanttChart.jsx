@@ -40,14 +40,16 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   React.useEffect(() => {
     let timeout;
     if (!hasSetDefaultAssignee) {
-      if (currentUser) {
+      if (currentUser && users.length > 0) {
         const rawName = currentUser.fullname || currentUser.username;
         if (rawName) setSelectedAssignee(getCanonicalName(rawName, users));
         setHasSetDefaultAssignee(true);
       } else {
         timeout = setTimeout(() => {
-          setHasSetDefaultAssignee(true);
-        }, 1000); // give it a second to load currentUser before falling back
+          if (!hasSetDefaultAssignee) {
+            setHasSetDefaultAssignee(true);
+          }
+        }, 1500); // Wait up to 1.5s for BOTH currentUser and users to load
       }
     }
     return () => clearTimeout(timeout);
