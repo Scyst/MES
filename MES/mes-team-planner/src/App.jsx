@@ -468,7 +468,7 @@ function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#f4f9f8] dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans overflow-hidden">
+    <div className="flex flex-col h-[100dvh] bg-[#f4f9f8] dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans overflow-hidden">
       
       {/* ══════════ Desktop Top Header ══════════ */}
       <header className="hidden md:flex h-16 bg-white dark:bg-slate-900 border-b border-transparent dark:border-slate-800 shrink-0 px-5 items-center justify-between shadow-soft z-50">

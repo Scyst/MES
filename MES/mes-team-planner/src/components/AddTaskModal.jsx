@@ -31,61 +31,15 @@ const WEEK_DAYS = [
 ];
 
 const TimeInput24 = ({ name, value, onChange, disabled, className }) => {
-  const [inputType, setInputType] = React.useState('text');
-
-  const handleChange = (e) => {
-    let val = e.target.value;
-    if (inputType === 'text') {
-      val = val.replace(/[^0-9:]/g, '');
-      if (val.length > 5) val = val.slice(0, 5);
-      
-      // Auto-insert colon
-      if (val.length === 3 && !val.includes(':')) {
-        val = val.slice(0, 2) + ':' + val.slice(2);
-      }
-    }
-    
-    onChange({ target: { name, value: val } });
-  };
-
-  const handleBlur = (e) => {
-    setInputType('text');
-    let val = e.target.value;
-    if (val && !val.includes(':')) {
-      val = val.replace(/[^0-9]/g, '');
-      if (val.length > 0) {
-        if (val.length === 1) {
-          val = '0' + val + '00';
-        } else if (val.length === 2) {
-          val = val + '00';
-        } else if (val.length === 3) {
-          val = '0' + val;
-        }
-        const h = Math.min(parseInt(val.slice(0, 2) || '0', 10), 23).toString().padStart(2, '0');
-        const m = Math.min(parseInt(val.slice(2, 4) || '0', 10), 59).toString().padStart(2, '0');
-        val = `${h}:${m}`;
-      }
-    }
-    if (!val) val = '00:00';
-    onChange({ target: { name, value: val } });
-  };
-
-  const handleFocus = () => {
-    setInputType('time');
-  };
-
   return (
     <input
-      type={inputType}
+      type="time"
       name={name}
       value={value}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      onFocus={handleFocus}
+      onChange={onChange}
       disabled={disabled}
-      placeholder="HH:MM"
       className={className}
-      maxLength={5}
+      step="60"
     />
   );
 };
