@@ -38,22 +38,20 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   const [hasSetDefaultAssignee, setHasSetDefaultAssignee] = useState(false);
 
   React.useEffect(() => {
-    let timeout;
-    if (!hasSetDefaultAssignee) {
-      if (currentUser && users.length > 0) {
-        const rawName = currentUser.fullname || currentUser.username;
-        if (rawName) setSelectedAssignee(getCanonicalName(rawName, users));
-        setHasSetDefaultAssignee(true);
-      } else {
-        timeout = setTimeout(() => {
-          if (!hasSetDefaultAssignee) {
-            setHasSetDefaultAssignee(true);
-          }
-        }, 1500); // Wait up to 1.5s for BOTH currentUser and users to load
-      }
+    if (!hasSetDefaultAssignee && !loading && currentUser && users.length > 0) {
+      const rawName = currentUser.fullname || currentUser.username;
+      if (rawName) setSelectedAssignee(getCanonicalName(rawName, users));
+      setHasSetDefaultAssignee(true);
     }
+  }, [currentUser, users, loading, hasSetDefaultAssignee]);
+
+  // Fallback timeout in case currentUser or users never load
+  React.useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!hasSetDefaultAssignee) setHasSetDefaultAssignee(true);
+    }, 2000);
     return () => clearTimeout(timeout);
-  }, [currentUser, users, hasSetDefaultAssignee]);
+  }, [hasSetDefaultAssignee]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
