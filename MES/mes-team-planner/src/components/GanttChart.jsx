@@ -33,9 +33,20 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
     localStorage.setItem('timelineRange', timelineRange);
   }, [timelineRange]);
   const [editingTask, setEditingTask] = useState(null);
-  const [selectedAssignee, setSelectedAssignee] = useState(() => {
-    return currentUser?.name ? getCanonicalName(currentUser.name, users) : 'All';
-  });
+  
+  const [selectedAssignee, setSelectedAssignee] = useState('All');
+  const [hasSetDefaultAssignee, setHasSetDefaultAssignee] = useState(false);
+
+  React.useEffect(() => {
+    if (currentUser && users.length > 0 && !hasSetDefaultAssignee) {
+      const rawName = currentUser.fullname || currentUser.username;
+      if (rawName) {
+        setSelectedAssignee(getCanonicalName(rawName, users));
+      }
+      setHasSetDefaultAssignee(true);
+    }
+  }, [currentUser, users, hasSetDefaultAssignee]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
