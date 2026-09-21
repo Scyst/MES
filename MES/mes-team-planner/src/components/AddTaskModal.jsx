@@ -31,15 +31,52 @@ const WEEK_DAYS = [
 ];
 
 const TimeInput24 = ({ name, value, onChange, disabled, className }) => {
+  const handleChange = (e) => {
+    let val = e.target.value.replace(/[^0-9:]/g, '');
+    if (val.length > 5) val = val.slice(0, 5);
+    
+    // Auto-insert colon when typing the 3rd digit
+    if (val.length === 3 && !val.includes(':')) {
+      val = val.slice(0, 2) + ':' + val.slice(2);
+    }
+    
+    onChange({ target: { name, value: val } });
+  };
+
+  const handleBlur = (e) => {
+    let val = e.target.value;
+    if (val && !val.includes(':')) {
+      val = val.replace(/[^0-9]/g, '');
+      if (val.length > 0) {
+        if (val.length === 1) val = '0' + val + '00';
+        else if (val.length === 2) val = val + '00';
+        else if (val.length === 3) val = '0' + val;
+        const h = Math.min(parseInt(val.slice(0, 2) || '0', 10), 23).toString().padStart(2, '0');
+        const m = Math.min(parseInt(val.slice(2, 4) || '0', 10), 59).toString().padStart(2, '0');
+        val = `${h}:${m}`;
+      }
+    }
+    // Pad incomplete times like "09:3" -> "09:30"
+    if (val && val.includes(':') && val.length < 5) {
+      const [h, m] = val.split(':');
+      val = `${h.padStart(2, '0')}:${m.padEnd(2, '0')}`;
+    }
+    if (!val) val = '00:00';
+    onChange({ target: { name, value: val } });
+  };
+
   return (
     <input
-      type="time"
+      type="text"
+      inputMode="numeric"
       name={name}
       value={value}
-      onChange={onChange}
+      onChange={handleChange}
+      onBlur={handleBlur}
       disabled={disabled}
+      placeholder="09:00"
       className={className}
-      step="60"
+      maxLength={5}
     />
   );
 };
