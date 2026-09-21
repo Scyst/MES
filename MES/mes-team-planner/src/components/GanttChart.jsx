@@ -33,7 +33,9 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
     localStorage.setItem('timelineRange', timelineRange);
   }, [timelineRange]);
   const [editingTask, setEditingTask] = useState(null);
-  const [selectedAssignee, setSelectedAssignee] = useState('All');
+  const [selectedAssignee, setSelectedAssignee] = useState(() => {
+    return currentUser?.name ? getCanonicalName(currentUser.name, users) : 'All';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 

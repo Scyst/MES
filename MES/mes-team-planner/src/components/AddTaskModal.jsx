@@ -75,7 +75,7 @@ const TimeInput24 = ({ name, value, onChange, disabled, className }) => {
       onBlur={handleBlur}
       disabled={disabled}
       placeholder="09:00"
-      className={className}
+      className={`${className} text-center`}
       maxLength={5}
     />
   );
@@ -452,18 +452,18 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
           </div>
           
           {/* Tabs */}
-          <div className="flex border-b border-slate-200 dark:border-slate-800 px-2 bg-white dark:bg-slate-900/50">
+          <div className="flex overflow-x-auto no-scrollbar whitespace-nowrap border-b border-slate-200 dark:border-slate-800 px-2 bg-white dark:bg-slate-900/50">
             <button 
               type="button"
               onClick={() => setActiveTab('general')}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'general' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
+              className={`flex items-center justify-center shrink-0 gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'general' ? 'border-indigo-500 text-indigo-500 dark:text-indigo-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-300'}`}
             >
               <FiAlignLeft /> รายละเอียด
             </button>
             <button 
               type="button"
               onClick={() => setActiveTab('checklist')}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'checklist' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
+              className={`flex items-center justify-center shrink-0 gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'checklist' ? 'border-emerald-500 text-emerald-500 dark:text-emerald-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-300'}`}
             >
               <FiList /> งานย่อย & โปรเจ็ค
               {subtasksArr.length > 0 && (
@@ -473,7 +473,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
             <button 
               type="button"
               onClick={() => setActiveTab('attachments')}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'attachments' ? 'border-pink-500 text-pink-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
+              className={`flex items-center justify-center shrink-0 gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'attachments' ? 'border-pink-500 text-pink-500 dark:text-pink-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-300'}`}
             >
               <FiType /> แนบไฟล์
               {attachmentsArr.length > 0 && (
@@ -484,7 +484,7 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
               <button 
                 type="button"
                 onClick={() => setActiveTab('comments')}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'comments' ? 'border-sky-500 text-sky-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-300'}`}
+                className={`flex items-center justify-center shrink-0 gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'comments' ? 'border-sky-500 text-sky-500 dark:text-sky-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-300'}`}
               >
                 <FiMessageSquare /> ความคิดเห็น
                 {comments.length > 0 && (
