@@ -21,7 +21,7 @@ const PERSON_COLORS = [
 
 export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loading, currentUser, users = [] }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState('daily'); // 'daily' | 'monthly'
+  const [viewMode, setViewMode] = useState('monthly'); // 'daily' | 'monthly'
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [timelineRange, setTimelineRange] = useState(() => localStorage.getItem('timelineRange') || '24h');
@@ -38,13 +38,19 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
   const [hasSetDefaultAssignee, setHasSetDefaultAssignee] = useState(false);
 
   React.useEffect(() => {
-    if (currentUser && users.length > 0 && !hasSetDefaultAssignee) {
-      const rawName = currentUser.fullname || currentUser.username;
-      if (rawName) {
-        setSelectedAssignee(getCanonicalName(rawName, users));
+    let timeout;
+    if (!hasSetDefaultAssignee) {
+      if (currentUser) {
+        const rawName = currentUser.fullname || currentUser.username;
+        if (rawName) setSelectedAssignee(getCanonicalName(rawName, users));
+        setHasSetDefaultAssignee(true);
+      } else {
+        timeout = setTimeout(() => {
+          setHasSetDefaultAssignee(true);
+        }, 1000); // give it a second to load currentUser before falling back
       }
-      setHasSetDefaultAssignee(true);
     }
+    return () => clearTimeout(timeout);
   }, [currentUser, users, hasSetDefaultAssignee]);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -221,12 +227,13 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
 
   const currentDateStr = format(currentDate, 'yyyy-MM-dd');
 
-  const allAssignees = [...new Set(
-    tasks.flatMap(t => {
+  const allAssignees = [...new Set([
+    ...tasks.flatMap(t => {
       const names = (t.Assignee || '').split(',').map(a => getCanonicalName(a.trim(), users)).filter(Boolean);
       return names.length > 0 ? names : ['Unassigned'];
-    })
-  )].sort();
+    }),
+    ...(currentUser?.fullname || currentUser?.username ? [getCanonicalName(currentUser.fullname || currentUser.username, users)] : [])
+  ])].sort();
   if (allAssignees.length === 0) allAssignees.push('Unassigned');
 
   const assignees = selectedAssignee === 'All' ? allAssignees : [selectedAssignee];
@@ -303,7 +310,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
     return PERSON_COLORS[idx % PERSON_COLORS.length] || PERSON_COLORS[0];
   };
 
-  if (loading) return (
+  if (loading || !hasSetDefaultAssignee) return (
     <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-500 dark:text-slate-400">
       <div className="w-8 h-8 border-4 border-slate-200 dark:border-slate-700 border-t-indigo-500 rounded-full animate-spin" />
       <span className="text-sm font-medium">Loading Timeline...</span>
@@ -318,17 +325,17 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
           {/* Left Group: View Toggle + Date Nav */}
           <div className="flex items-center gap-3 shrink-0">
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
-              <button onClick={() => setViewMode('daily')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'daily' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
+            <div className="flex items-center h-10 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
+              <button onClick={() => setViewMode('daily')} className={`flex items-center h-full gap-1.5 px-3 rounded-lg text-xs font-medium transition-all ${viewMode === 'daily' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
                 <FiUsers className="text-sm" /> รายวัน
               </button>
-              <button onClick={() => setViewMode('monthly')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'monthly' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
+              <button onClick={() => setViewMode('monthly')} className={`flex items-center h-full gap-1.5 px-3 rounded-lg text-xs font-medium transition-all ${viewMode === 'monthly' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
                 <FiUser className="text-sm" /> รายเดือน
               </button>
             </div>
 
             {/* Date/Week Nav */}
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-1 h-10 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
               <button onClick={viewMode === 'daily' ? prevDay : prevMonth} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors active:scale-90">
                 <FiChevronLeft />
               </button>
