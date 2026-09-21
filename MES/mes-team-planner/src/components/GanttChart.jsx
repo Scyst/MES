@@ -39,7 +39,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
 
   React.useEffect(() => {
     if (!hasSetDefaultAssignee && !loading && currentUser && users.length > 0) {
-      const rawName = currentUser.fullname || currentUser.username;
+      const rawName = currentUser.username;
       if (rawName) setSelectedAssignee(getCanonicalName(rawName, users));
       setHasSetDefaultAssignee(true);
     }
@@ -232,7 +232,7 @@ export default function GanttChart({ tasks = [], onSaveTask, onDeleteTask, loadi
       const names = (t.Assignee || '').split(',').map(a => getCanonicalName(a.trim(), users)).filter(Boolean);
       return names.length > 0 ? names : ['Unassigned'];
     }),
-    ...(currentUser?.fullname || currentUser?.username ? [getCanonicalName(currentUser.fullname || currentUser.username, users)] : [])
+    ...(currentUser?.username ? [getCanonicalName(currentUser.username, users)] : [])
   ])].sort();
   if (allAssignees.length === 0) allAssignees.push('Unassigned');
 
