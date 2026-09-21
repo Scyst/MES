@@ -417,12 +417,12 @@ export default function AddTaskModal({ isOpen, onClose, onSave, onDelete, initia
     )}
 
     <div 
-      className="fixed inset-0 h-[100dvh] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6"
+      className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6"
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
     >
-      <div className="relative bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl max-h-[90dvh] flex flex-col overflow-hidden animate-scale-up">
+      <div className="relative bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-scale-up">
         
         {/* Header */}
         <div className="flex flex-col shrink-0">
