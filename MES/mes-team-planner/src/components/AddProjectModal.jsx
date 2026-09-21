@@ -194,9 +194,9 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
       }}
       onCancel={() => setShowConfirmClose(false)}
     />
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 h-[100dvh] z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={handleClose}></div>
-      <div className="relative bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 animate-scale-up shadow-2xl my-8">
+      <div className="relative bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 animate-scale-up shadow-2xl my-auto">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold">{formData.Id ? 'แก้ไขโปรเจ็ค' : 'สร้างโปรเจ็คใหม่'}</h3>
           <div className="flex items-center gap-3">
