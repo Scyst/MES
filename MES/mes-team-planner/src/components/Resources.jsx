@@ -1,4 +1,4 @@
-Ôªøimport React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
   FiFolder, FiUploadCloud, FiSearch, FiGrid, FiList,
@@ -7,7 +7,7 @@ import {
   FiAlertCircle, FiLoader, FiEdit2
 } from 'react-icons/fi';
 
-// ‚ïê‚ïê‚ïê Helpers ‚ïê‚ïê‚ïê
+// ÕÕÕ Helpers ÕÕÕ
 const CATEGORIES = ['General', 'Document', 'Image', 'Spreadsheet', 'Drawing', 'Reference', 'Archive'];
 
 function formatBytes(bytes) {
@@ -46,7 +46,7 @@ function getFileAccentColor(mimeType = '') {
   return 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700';
 }
 
-// ‚ïê‚ïê‚ïê Edit Modal ‚ïê‚ïê‚ïê
+// ÕÕÕ Edit Modal ÕÕÕ
 function EditModal({ file, onClose, onSuccess }) {
   const [name, setName] = useState(file.Name);
   const [category, setCategory] = useState(file.Category || 'General');
@@ -56,43 +56,43 @@ function EditModal({ file, onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name) { setError('‡∏Å‡∏£‡∏∏‡∏ì‡∏≤‡∏£‡∏∞‡∏ö‡∏∏‡∏ä‡∏∑‡πà‡∏≠‡πÑ‡∏ü‡∏•‡πå'); return; }
+    if (!name) { setError('°√ÿ≥“√–∫ÿ™◊ËÕ‰ø≈Ï'); return; }
     setLoading(true); setError('');
     try {
       await axios.put(`/api/resources.php?id=${file.Id}`, { name, category, description });
       onSuccess({ ...file, Name: name, Category: category, Description: description });
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || '‡πÅ‡∏Å‡πâ‡πÑ‡∏Ç‡∏•‡πâ‡∏°‡πÄ‡∏´‡∏•‡∏ß');
+      setError(err.response?.data?.message || '·°È‰¢≈È¡‡À≈«');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 h-[100dvh] z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
           <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <FiEdit2 className="text-indigo-500" /> ‡πÅ‡∏Å‡πâ‡πÑ‡∏Ç‡∏Ç‡πâ‡∏≠‡∏°‡∏π‡∏•‡πÑ‡∏ü‡∏•‡πå
+            <FiEdit2 className="text-indigo-500" /> ·°È‰¢¢ÈÕ¡Ÿ≈‰ø≈Ï
           </h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><FiX /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">‡∏ä‡∏∑‡πà‡∏≠‡πÑ‡∏ü‡∏•‡πå</label>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">™◊ËÕ‰ø≈Ï</label>
             <input value={name} onChange={(e) => setName(e.target.value)} 
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">‡∏´‡∏°‡∏ß‡∏î‡∏´‡∏°‡∏π‡πà</label>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">À¡«¥À¡ŸË</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">‡∏Ñ‡∏≥‡∏≠‡∏ò‡∏¥‡∏ö‡∏≤‡∏¢</label>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">§”Õ∏‘∫“¬</label>
             <input value={description} onChange={(e) => setDesc(e.target.value)} 
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
@@ -102,9 +102,9 @@ function EditModal({ file, onClose, onSuccess }) {
             </div>
           )}
           <div className="flex justify-end gap-3 pt-1">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">‡∏¢‡∏Å‡πÄ‡∏•‡∏¥‡∏Å</button>
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">¬°‡≈‘°</button>
             <button type="submit" disabled={loading} className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-              {loading ? <><FiLoader className="animate-spin" />‡∏Å‡∏≥‡∏•‡∏±‡∏á‡∏ö‡∏±‡∏ô‡∏ó‡∏∂‡∏Å...</> : <><FiCheck />‡∏ö‡∏±‡∏ô‡∏ó‡∏∂‡∏Å</>}
+              {loading ? <><FiLoader className="animate-spin" />°”≈—ß∫—π∑÷°...</> : <><FiCheck />∫—π∑÷°</>}
             </button>
           </div>
         </form>
@@ -113,7 +113,7 @@ function EditModal({ file, onClose, onSuccess }) {
   );
 }
 
-// ‚ïê‚ïê‚ïê Upload Modal ‚ïê‚ïê‚ïê
+// ÕÕÕ Upload Modal ÕÕÕ
 function UploadModal({ onClose, onSuccess }) {
   const [file, setFile]           = useState(null);
   const [category, setCategory]   = useState('General');
@@ -124,7 +124,7 @@ function UploadModal({ onClose, onSuccess }) {
   const inputRef = useRef();
 
   const handleFile = (f) => {
-    if (f && f.size > 50 * 1024 * 1024) { setError('‡∏Ç‡∏ô‡∏≤‡∏î‡πÑ‡∏ü‡∏•‡πå‡πÄ‡∏Å‡∏¥‡∏ô 50 MB'); return; }
+    if (f && f.size > 50 * 1024 * 1024) { setError('¢π“¥‰ø≈Ï‡°‘π 50 MB'); return; }
     setFile(f);
     setError('');
   };
@@ -136,7 +136,7 @@ function UploadModal({ onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) { setError('‡∏Å‡∏£‡∏∏‡∏ì‡∏≤‡πÄ‡∏•‡∏∑‡∏≠‡∏Å‡πÑ‡∏ü‡∏•‡πå'); return; }
+    if (!file) { setError('°√ÿ≥“‡≈◊Õ°‰ø≈Ï'); return; }
     setUploading(true); setError('');
     try {
       const fd = new FormData();
@@ -155,18 +155,18 @@ function UploadModal({ onClose, onSuccess }) {
       onSuccess(regRes.data.data);
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || '‡∏≠‡∏±‡∏õ‡πÇ‡∏´‡∏•‡∏î‡∏•‡πâ‡∏°‡πÄ‡∏´‡∏•‡∏ß');
+      setError(err.response?.data?.message || err.response?.data?.error || 'Õ—ª‚À≈¥≈È¡‡À≈«');
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 h-[100dvh] z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
           <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <FiUploadCloud className="text-indigo-500" /> ‡∏≠‡∏±‡∏õ‡πÇ‡∏´‡∏•‡∏î‡πÑ‡∏ü‡∏•‡πå
+            <FiUploadCloud className="text-indigo-500" /> Õ—ª‚À≈¥‰ø≈Ï
           </h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><FiX /></button>
         </div>
@@ -195,21 +195,21 @@ function UploadModal({ onClose, onSuccess }) {
             ) : (
               <>
                 <FiUploadCloud className="mx-auto text-4xl text-slate-300 dark:text-slate-600 mb-3" />
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">‡∏Ñ‡∏•‡∏¥‡∏Å‡∏´‡∏£‡∏∑‡∏≠‡∏•‡∏≤‡∏Å‡πÑ‡∏ü‡∏•‡πå‡∏°‡∏≤‡∏ß‡∏≤‡∏á‡∏ó‡∏µ‡πà‡∏ô‡∏µ‡πà</p>
-                <p className="text-xs text-slate-400 mt-1">PDF, Word, Excel, ‡∏£‡∏π‡∏õ‡∏†‡∏≤‡∏û ‚Äî ‡∏™‡∏π‡∏á‡∏™‡∏∏‡∏î 50 MB</p>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">§≈‘°À√◊Õ≈“°‰ø≈Ï¡“«“ß∑’Ëπ’Ë</p>
+                <p className="text-xs text-slate-400 mt-1">PDF, Word, Excel, √Ÿª¿“æ ó  Ÿß ÿ¥ 50 MB</p>
               </>
             )}
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">‡∏´‡∏°‡∏ß‡∏î‡∏´‡∏°‡∏π‡πà</label>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">À¡«¥À¡ŸË</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">‡∏Ñ‡∏≥‡∏≠‡∏ò‡∏¥‡∏ö‡∏≤‡∏¢ (‡πÑ‡∏°‡πà‡∏ö‡∏±‡∏á‡∏Ñ‡∏±‡∏ö)</label>
-            <input value={description} onChange={(e) => setDesc(e.target.value)} placeholder="‡∏£‡∏∞‡∏ö‡∏∏‡∏£‡∏≤‡∏¢‡∏•‡∏∞‡πÄ‡∏≠‡∏µ‡∏¢‡∏î‡πÑ‡∏ü‡∏•‡πå..."
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">§”Õ∏‘∫“¬ (‰¡Ë∫—ß§—∫)</label>
+            <input value={description} onChange={(e) => setDesc(e.target.value)} placeholder="√–∫ÿ√“¬≈–‡Õ’¬¥‰ø≈Ï..."
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           {error && (
@@ -218,9 +218,9 @@ function UploadModal({ onClose, onSuccess }) {
             </div>
           )}
           <div className="flex justify-end gap-3 pt-1">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">‡∏¢‡∏Å‡πÄ‡∏•‡∏¥‡∏Å</button>
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">¬°‡≈‘°</button>
             <button type="submit" disabled={uploading} className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-              {uploading ? <><FiLoader className="animate-spin" />‡∏Å‡∏≥‡∏•‡∏±‡∏á‡∏≠‡∏±‡∏õ‡πÇ‡∏´‡∏•‡∏î...</> : <><FiUploadCloud />‡∏≠‡∏±‡∏õ‡πÇ‡∏´‡∏•‡∏î</>}
+              {uploading ? <><FiLoader className="animate-spin" />°”≈—ßÕ—ª‚À≈¥...</> : <><FiUploadCloud />Õ—ª‚À≈¥</>}
             </button>
           </div>
         </form>
@@ -229,7 +229,7 @@ function UploadModal({ onClose, onSuccess }) {
   );
 }
 
-// ‚ïê‚ïê‚ïê Main Component ‚ïê‚ïê‚ïê
+// ÕÕÕ Main Component ÕÕÕ
 export default function Resources({ currentUser }) {
   const [files, setFiles]             = useState([]);
   const [categories, setCategories]   = useState([]);
@@ -250,7 +250,7 @@ export default function Resources({ currentUser }) {
         setCategories(res.data.categories || []);
       }
     } catch (err) {
-      setError('‡πÇ‡∏´‡∏•‡∏î‡∏Ç‡πâ‡∏≠‡∏°‡∏π‡∏•‡∏•‡πâ‡∏°‡πÄ‡∏´‡∏•‡∏ß');
+      setError('‚À≈¥¢ÈÕ¡Ÿ≈≈È¡‡À≈«');
       console.error(err);
     } finally {
       setLoading(false);
@@ -260,13 +260,13 @@ export default function Resources({ currentUser }) {
   useEffect(() => { fetchFiles(); }, [fetchFiles]);
 
   const handleDelete = async (file) => {
-    if (!window.confirm(`‡∏ï‡πâ‡∏≠‡∏á‡∏Å‡∏≤‡∏£‡∏•‡∏ö "${file.Name}" ‡πÉ‡∏ä‡πà‡∏´‡∏£‡∏∑‡∏≠‡πÑ‡∏°‡πà?`)) return;
+    if (!window.confirm(`µÈÕß°“√≈∫ "${file.Name}" „™ËÀ√◊Õ‰¡Ë?`)) return;
     setDeleting(file.Id);
     try {
       await axios.delete(`/api/resources.php?id=${file.Id}`);
       setFiles(prev => prev.filter(f => f.Id !== file.Id));
     } catch (err) {
-      alert(err.response?.data?.message || '‡∏•‡∏ö‡πÑ‡∏°‡πà‡∏™‡∏≥‡πÄ‡∏£‡πá‡∏à');
+      alert(err.response?.data?.message || '≈∫‰¡Ë ”‡√Á®');
     } finally {
       setDeleting(null);
     }
@@ -305,12 +305,12 @@ export default function Resources({ currentUser }) {
       <div className="flex items-center justify-between shrink-0">
         <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <span className="text-indigo-500"><FiFolder /></span>
-          ‡∏Ñ‡∏•‡∏±‡∏á‡∏Ç‡πâ‡∏≠‡∏°‡∏π‡∏•
-          <span className="text-sm font-normal text-slate-400 ml-1">({files.length} ‡πÑ‡∏ü‡∏•‡πå)</span>
+          §≈—ß¢ÈÕ¡Ÿ≈
+          <span className="text-sm font-normal text-slate-400 ml-1">({files.length} ‰ø≈Ï)</span>
         </h2>
         <button onClick={() => setShowUpload(true)}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors active:scale-95">
-          <FiUploadCloud /> ‡∏≠‡∏±‡∏õ‡πÇ‡∏´‡∏•‡∏î‡πÑ‡∏ü‡∏•‡πå
+          <FiUploadCloud /> Õ—ª‚À≈¥‰ø≈Ï
         </button>
       </div>
 
@@ -318,7 +318,7 @@ export default function Resources({ currentUser }) {
       <div className="flex flex-wrap items-center gap-3 shrink-0">
         <div className="relative flex-1 min-w-[200px]">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="‡∏Ñ‡πâ‡∏ô‡∏´‡∏≤‡πÑ‡∏ü‡∏•‡πå..."
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="§ÈπÀ“‰ø≈Ï..."
             className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
@@ -338,7 +338,7 @@ export default function Resources({ currentUser }) {
         <div className="w-44 shrink-0 flex flex-col gap-1 hidden md:flex">
           <button onClick={() => setSelectedCat('all')}
             className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-colors ${selectedCat === 'all' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-            <span className="flex items-center gap-2"><FiFolder size={14} />‡∏ó‡∏±‡πâ‡∏á‡∏´‡∏°‡∏î</span>
+            <span className="flex items-center gap-2"><FiFolder size={14} />∑—ÈßÀ¡¥</span>
             <span className="text-xs bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">{files.length}</span>
           </button>
           {CATEGORIES.map(cat => (
@@ -353,15 +353,15 @@ export default function Resources({ currentUser }) {
         <div className="flex-1 min-w-0 overflow-y-auto custom-scrollbar">
           {loading ? (
             <div className="flex items-center justify-center h-40 text-slate-400">
-              <FiLoader className="animate-spin mr-2" /> ‡∏Å‡∏≥‡∏•‡∏±‡∏á‡πÇ‡∏´‡∏•‡∏î...
+              <FiLoader className="animate-spin mr-2" /> °”≈—ß‚À≈¥...
             </div>
           ) : error ? (
             <div className="flex items-center justify-center h-40 text-rose-500 gap-2"><FiAlertCircle />{error}</div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-slate-400 gap-3">
               <FiFolder size={40} className="opacity-30" />
-              <div className="text-sm">{search ? '‡πÑ‡∏°‡πà‡∏û‡∏ö‡πÑ‡∏ü‡∏•‡πå‡∏ó‡∏µ‡πà‡∏Ñ‡πâ‡∏ô‡∏´‡∏≤' : '‡∏¢‡∏±‡∏á‡πÑ‡∏°‡πà‡∏°‡∏µ‡πÑ‡∏ü‡∏•‡πå‡πÉ‡∏ô‡∏´‡∏°‡∏ß‡∏î‡∏ô‡∏µ‡πâ'}</div>
-              {!search && <button onClick={() => setShowUpload(true)} className="flex items-center gap-1.5 text-indigo-500 text-sm hover:text-indigo-600 font-medium"><FiPlus size={14} />‡∏≠‡∏±‡∏õ‡πÇ‡∏´‡∏•‡∏î‡πÑ‡∏ü‡∏•‡πå‡πÅ‡∏£‡∏Å</button>}
+              <div className="text-sm">{search ? '‰¡Ëæ∫‰ø≈Ï∑’Ë§ÈπÀ“' : '¬—ß‰¡Ë¡’‰ø≈Ï„πÀ¡«¥π’È'}</div>
+              {!search && <button onClick={() => setShowUpload(true)} className="flex items-center gap-1.5 text-indigo-500 text-sm hover:text-indigo-600 font-medium"><FiPlus size={14} />Õ—ª‚À≈¥‰ø≈Ï·√°</button>}
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -402,11 +402,11 @@ export default function Resources({ currentUser }) {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-500 uppercase tracking-wider">
-                    <th className="px-4 py-3 font-bold">‡∏ä‡∏∑‡πà‡∏≠‡πÑ‡∏ü‡∏•‡πå</th>
-                    <th className="px-4 py-3 font-bold hidden md:table-cell">‡∏´‡∏°‡∏ß‡∏î‡∏´‡∏°‡∏π‡πà</th>
-                    <th className="px-4 py-3 font-bold hidden md:table-cell">‡∏Ç‡∏ô‡∏≤‡∏î</th>
-                    <th className="px-4 py-3 font-bold hidden lg:table-cell">‡∏≠‡∏±‡∏õ‡πÇ‡∏´‡∏•‡∏î‡πÇ‡∏î‡∏¢</th>
-                    <th className="px-4 py-3 font-bold hidden lg:table-cell">‡∏ß‡∏±‡∏ô‡∏ó‡∏µ‡πà</th>
+                    <th className="px-4 py-3 font-bold">™◊ËÕ‰ø≈Ï</th>
+                    <th className="px-4 py-3 font-bold hidden md:table-cell">À¡«¥À¡ŸË</th>
+                    <th className="px-4 py-3 font-bold hidden md:table-cell">¢π“¥</th>
+                    <th className="px-4 py-3 font-bold hidden lg:table-cell">Õ—ª‚À≈¥‚¥¬</th>
+                    <th className="px-4 py-3 font-bold hidden lg:table-cell">«—π∑’Ë</th>
                     <th className="px-4 py-3 font-bold text-right">Actions</th>
                   </tr>
                 </thead>
