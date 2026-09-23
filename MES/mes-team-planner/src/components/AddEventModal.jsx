@@ -12,6 +12,7 @@ export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSe
   });
   const [initialFormState, setInitialFormState] = useState(null);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (isOpen && initialData) {
@@ -66,9 +67,15 @@ export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSe
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(formData);
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await onSave(formData);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -138,8 +145,10 @@ export default function AddEventModal({ isOpen, onClose, onSave, onDelete, preSe
             </div>
             <div className="flex gap-3">
               <button type="button" onClick={onClose} className="px-4 py-2 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition">ยกเลิก</button>
-              <button type="submit" className="px-6 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-lg font-semibold shadow-lg shadow-fuchsia-900/20 transition">
-                {isEditing ? '💾 บันทึก' : 'สร้าง'}
+              <button type="submit" disabled={isSaving} className="px-6 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-lg font-semibold shadow-lg shadow-fuchsia-900/20 transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2">
+                {isSaving ? (
+                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />กำลังบันทึก...</>
+                ) : (isEditing ? '💾 บันทึก' : 'สร้าง')}
               </button>
             </div>
           </div>

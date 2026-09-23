@@ -11,6 +11,7 @@ export default function LinkHub() {
   const [searchQuery, setSearchQuery] = useState('');
   
   const [formData, setFormData] = useState({ title: '', url: '', category: 'General' });
+  const [isSaving, setIsSaving] = useState(false);
 
   const fetchLinks = async () => {
     try {
@@ -29,6 +30,8 @@ export default function LinkHub() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       const res = await axios.post('/api/links.php', { 
         ...formData, 
@@ -37,9 +40,11 @@ export default function LinkHub() {
       });
       setLinks([res.data, ...links]);
       setFormData({ title: '', url: '', category: 'General' });
-      setIsModalOpen(false); // Close modal on success
+      setIsModalOpen(false);
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -202,8 +207,8 @@ export default function LinkHub() {
               </div>
               
               <div className="pt-2">
-                <button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-slate-900 dark:text-white px-4 py-3 rounded-xl font-semibold transition-all active:scale-95 shadow-lg shadow-blue-900/30 flex items-center justify-center gap-2 text-sm">
-                  <FiPlus /> บันทึกลิงก์
+                <button type="submit" disabled={isSaving} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-slate-900 dark:text-white px-4 py-3 rounded-xl font-semibold transition-all active:scale-95 shadow-lg shadow-blue-900/30 flex items-center justify-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100">
+                  {isSaving ? (<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />กำลังบันทึก...</>) : (<><FiPlus /> บันทึกลิงก์</>)}
                 </button>
               </div>
             </form>

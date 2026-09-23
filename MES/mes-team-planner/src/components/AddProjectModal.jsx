@@ -26,6 +26,7 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
   const [isUploading, setIsUploading] = useState(false);
   const [attachmentToDelete, setAttachmentToDelete] = useState(null);
   const [attachmentsToDeleteOnSave, setAttachmentsToDeleteOnSave] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '', description: '', status: 'active', assignee: '', 
@@ -147,33 +148,39 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
     onClose();
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
 
     if (!formData.title || !formData.title.trim()) {
       alert('กรุณาระบุชื่อโปรเจ็ค');
       setActiveModalTab('general');
       return;
     }
-    
-    // Process physical deletions now
-    attachmentsToDeleteOnSave.forEach(async (url) => {
-      try {
-        await axios.post('/api/delete_attachment.php', { url });
-      } catch (err) {
-        console.error('Delete on save failed:', err);
-      }
-    });
 
-    let finalData = { ...formData };
-    if (newChecklistItem.trim()) {
-      finalData.checklist = [...finalData.checklist, { id: Date.now().toString(), text: newChecklistItem.trim(), isDone: false }];
-      setNewChecklistItem('');
-    }
-    
-    finalData.attachments = JSON.stringify(attachmentsArr);
-    if (onSave) {
-      onSave(finalData);
+    setIsSaving(true);
+    try {
+      // Process physical deletions now
+      attachmentsToDeleteOnSave.forEach(async (url) => {
+        try {
+          await axios.post('/api/delete_attachment.php', { url });
+        } catch (err) {
+          console.error('Delete on save failed:', err);
+        }
+      });
+
+      let finalData = { ...formData };
+      if (newChecklistItem.trim()) {
+        finalData.checklist = [...finalData.checklist, { id: Date.now().toString(), text: newChecklistItem.trim(), isDone: false }];
+        setNewChecklistItem('');
+      }
+      
+      finalData.attachments = JSON.stringify(attachmentsArr);
+      if (onSave) {
+        await onSave(finalData);
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -481,7 +488,9 @@ export default function AddProjectModal({ isOpen, onClose, onSave, initialData, 
 
           <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
             <button type="button" onClick={handleClose} className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors">ยกเลิก</button>
-            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">บันทึก</button>
+            <button type="submit" disabled={isSaving} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2">
+              {isSaving ? (<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />กำลังบันทึก...</>) : 'บันทึก'}
+            </button>
           </div>
         </form>
       </div>
