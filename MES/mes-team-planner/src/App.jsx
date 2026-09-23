@@ -423,7 +423,45 @@ function App() {
         return <GanttChart {...sharedTaskProps} />;
       case 'resources':
         return <Resources currentUser={currentUser} />;
-      default: 
+      case 'space-home':
+        return <SpaceView
+          activeTab={activeTab}
+          spaces={spaces}
+          tasks={tasks}
+          projects={projects}
+          users={users}
+          currentUser={currentUser}
+          refreshData={refreshData}
+          onEditSpace={(space) => { setEditingSpace(space); setIsAddSpaceModalOpen(true); }}
+          onDeleteSpace={(id) => setSpaceToDelete(id)}
+          openInviteModal={(spaceId) => { setInviteModalSpaceId(spaceId); setIsInviteModalOpen(true); }}
+          onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
+          onCreateTask={(init) => { setGlobalEditingTask(init || null); setIsGlobalTaskModalOpen(true); }}
+          onCreateProject={handleCreateProject}
+          onProjectClick={handleProjectClick}
+          onSaveTask={handleSaveTask}
+        />;
+      default:
+        // Handle dynamic space-{id} tabs
+        if (activeTab && activeTab.startsWith('space-')) {
+          return <SpaceView
+            activeTab={activeTab}
+            spaces={spaces}
+            tasks={tasks}
+            projects={projects}
+            users={users}
+            currentUser={currentUser}
+            refreshData={refreshData}
+            onEditSpace={(space) => { setEditingSpace(space); setIsAddSpaceModalOpen(true); }}
+            onDeleteSpace={(id) => setSpaceToDelete(id)}
+            openInviteModal={(spaceId) => { setInviteModalSpaceId(spaceId); setIsInviteModalOpen(true); }}
+            onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
+            onCreateTask={(init) => { setGlobalEditingTask(init || null); setIsGlobalTaskModalOpen(true); }}
+            onCreateProject={handleCreateProject}
+            onProjectClick={handleProjectClick}
+            onSaveTask={handleSaveTask}
+          />;
+        }
         return <Dashboard tasks={tasks} events={events} activities={activities} loading={isAppLoading} users={users} currentUser={currentUser} onNav={handleNav} />;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
