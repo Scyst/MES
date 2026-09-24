@@ -193,7 +193,7 @@ export default function AppLayout() {
 
       {/* Main Container */}
       <div className="flex flex-1 min-h-0 overflow-hidden relative">
-        <DesktopSidebar />
+        {location.pathname !== "/" && location.pathname !== "/iot-toolbox/sandbox-b9/Toolbox2/" && location.pathname !== "/iot-toolbox/sandbox-b9/Toolbox2" && <DesktopSidebar />}
 
 
       {/* Mobile Slide-down Menu */}

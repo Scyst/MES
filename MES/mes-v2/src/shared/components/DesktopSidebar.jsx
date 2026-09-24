@@ -25,8 +25,8 @@ const MENU_DATA = [
       { name: 'Live Job Queue', icon: ListOrdered, href: '/MES/page/production/jobQueueUI.php', external: true },
       { name: 'Tag Printer (WIP/FG)', icon: Printer, href: '/MES/page/production/label_printer.php', external: true },
       { name: 'Scan Barcode', icon: ScanLine, href: '/MES/page/scanBarcode/scanBarcodeUI.php', external: true },
-      { name: 'บันทึกเคมีสี (Paint Chem)', icon: FlaskConical, to: '/paint-chem' },
-      { name: 'ประวัติเคมีสี', icon: History, to: '/paint-chem/history' },
+      { name: "บันทึกเคมีสี (Paint Chem)", icon: FlaskConical, to: "/paint-chem" },
+      { name: "ประวัติเคมีสี", icon: History, to: "/paint-chem/history" },
     ]
   },
   {
@@ -73,16 +73,16 @@ export default function DesktopSidebar() {
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-64 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0 z-20 transition-all duration-300">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+    <aside className="hidden md:flex flex-col w-16 hover:w-64 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0 z-20 transition-all duration-300 group overflow-hidden">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-center group-hover:justify-start">
+        <div className="relative w-full flex items-center justify-center group-hover:justify-start">
+          <Search className="text-gray-400 group-hover:absolute group-hover:left-3" size={20} />
           <input 
             type="text" 
             placeholder="ค้นหาเมนู..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow opacity-0 group-hover:opacity-100 absolute group-hover:relative invisible group-hover:visible"
           />
         </div>
       </div>
@@ -100,8 +100,10 @@ export default function DesktopSidebar() {
                 onClick={() => toggleSection(section.title)}
                 className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors uppercase tracking-wider"
               >
-                <span>{section.title}</span>
-                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity truncate whitespace-nowrap">{section.title}</span>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </div>
               </button>
               
               {isExpanded && (
@@ -117,8 +119,10 @@ export default function DesktopSidebar() {
                           href={item.href}
                           className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-400 rounded-lg transition-colors group"
                         >
-                          <Icon size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
-                          <span className="truncate">{item.name}</span>
+                          <div className="min-w-[20px] flex items-center justify-center">
+                            <Icon size={20} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
+                          </div>
+                          <span className="ml-3 truncate opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">{item.name}</span>
                         </a>
                       );
                     }
@@ -129,8 +133,10 @@ export default function DesktopSidebar() {
                         to={item.to}
                         className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors group ${isActive ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                       >
-                        <Icon size={16} className={`${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'} transition-colors`} />
-                        <span className="truncate">{item.name}</span>
+                        <div className="min-w-[20px] flex items-center justify-center">
+                            <Icon size={20} className={`${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'} transition-colors`} />
+                          </div>
+                          <span className="ml-3 truncate opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">{item.name}</span>
                       </Link>
                     );
                   })}
