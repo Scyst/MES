@@ -519,7 +519,46 @@ function formatExcelDate(excelDate) {
         date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
         return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
     }
-    return String(excelDate).split(' ')[0].trim();
+    
+    let strDate = String(excelDate).split(' ')[0].trim();
+    let parts;
+    if (strDate.includes('.')) parts = strDate.split('.');
+    else if (strDate.includes('/')) parts = strDate.split('/');
+    else if (strDate.includes('-')) parts = strDate.split('-');
+    
+    if (parts && parts.length === 3) {
+        let y, m, d;
+        if (parts[0].length === 4) { // YYYY-MM-DD
+            y = parts[0];
+            m = parts[1];
+            d = parts[2];
+        } else { // DD-MM-YYYY
+            d = parts[0];
+            m = parts[1];
+            y = parts[2];
+        }
+        
+        if (y.length === 2) {
+            let numY = parseInt(y, 10);
+            if (numY > 50) { 
+                y = (2500 + numY - 543).toString();
+            } else {
+                y = "20" + y;
+            }
+        } else if (y.length === 4) {
+            let numY = parseInt(y, 10);
+            if (numY > 2500) {
+                y = (numY - 543).toString();
+            }
+        }
+        
+        d = d.padStart(2, '0');
+        m = m.padStart(2, '0');
+        
+        return `${y}-${m}-${d}`;
+    }
+    
+    return strDate;
 }
 
 async function submitToDatabase() {
