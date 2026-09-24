@@ -84,6 +84,18 @@ export default function AppLayout() {
           </div>
         </div>
 
+        {/* Center: Desktop Navigation */}
+        <nav className="hidden md:flex flex-1 items-center gap-6 mx-8">
+          <Link to="/paint-chem" className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <FlaskConical size={18} />
+            <span>บันทึกเคมีสี</span>
+          </Link>
+          <Link to="/paint-chem/history" className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <History size={18} />
+            <span>ประวัติเคมีสี</span>
+          </Link>
+        </nav>
+
           {/* Right: Desktop Tools & Profile */}
           <div className="hidden md:flex items-center gap-2">
             
