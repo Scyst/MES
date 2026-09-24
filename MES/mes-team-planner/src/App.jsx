@@ -418,6 +418,8 @@ function App() {
           currentUser={currentUser} 
           refreshData={refreshData} 
           onSaveTask={handleSaveTask}
+          onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
+          onCreateTask={(init) => { setGlobalEditingTask(init || null); setIsGlobalTaskModalOpen(true); }}
         />;
       case 'timeline':
         return <GanttChart {...sharedTaskProps} />;
