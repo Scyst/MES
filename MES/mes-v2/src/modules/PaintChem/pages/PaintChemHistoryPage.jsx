@@ -1,7 +1,7 @@
 // PaintChemHistoryPage.jsx — History table with date filter + OOR summary
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Clock, FileText } from 'lucide-react';
 
 const API_BASE = '/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api';
 
@@ -94,6 +94,7 @@ export default function PaintChemHistoryPage() {
                   <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">รายการทั้งหมด</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ผู้เตรียม</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">อัปเดต</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">จัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -123,6 +124,17 @@ export default function PaintChemHistoryPage() {
                     <td className="px-4 py-3 text-gray-600 text-xs">{row.prepared_by_name ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-400 text-xs">
                       <span className="flex items-center gap-1"><Clock size={11} />{row.updated_at?.slice(0, 16)}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <a 
+                        href={`${API_BASE}/export_pdf.php?date=${row.log_date}&shift=${row.shift}`} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                        title="ดาวน์โหลด PDF"
+                      >
+                        <FileText size={16} />
+                      </a>
                     </td>
                   </tr>
                 ))}
