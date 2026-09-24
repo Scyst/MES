@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Settings, Menu, X, LogOut, Sun, Moon, Coffee, UserCircle, Clock, FlaskConical, History } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
+import DesktopSidebar from './DesktopSidebar';
 
 export default function AppLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -68,7 +69,7 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">`n      <DesktopSidebar />`n      <div className="flex flex-col flex-1 h-full min-w-0 overflow-hidden">
       
       {/* Top Navbar */}
       <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-8 z-30 shadow-sm flex-shrink-0">
@@ -84,17 +85,7 @@ export default function AppLayout() {
           </div>
         </div>
 
-        {/* Center: Desktop Navigation */}
-        <nav className="hidden md:flex flex-1 items-center gap-6 mx-8">
-          <Link to="/paint-chem" className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            <FlaskConical size={18} />
-            <span>บันทึกเคมีสี</span>
-          </Link>
-          <Link to="/paint-chem/history" className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            <History size={18} />
-            <span>ประวัติเคมีสี</span>
-          </Link>
-        </nav>
+
 
           {/* Right: Desktop Tools & Profile */}
           <div className="hidden md:flex items-center gap-2">
@@ -261,5 +252,8 @@ export default function AppLayout() {
         </div>
       </main>
     </div>
+    </div>
   );
 }
+
+
