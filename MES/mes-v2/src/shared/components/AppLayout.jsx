@@ -69,10 +69,10 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">`n      <DesktopSidebar />`n      <div className="flex flex-col flex-1 h-full min-w-0 overflow-hidden">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
       
       {/* Top Navbar */}
-      <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-8 z-30 shadow-sm flex-shrink-0">
+      <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-8 z-30 shadow-sm flex-shrink-0 w-full">
         
         {/* Left: Logo & Title */}
         <div className="flex items-center gap-4">
@@ -191,6 +191,11 @@ export default function AppLayout() {
         </button>
       </header>
 
+      {/* Main Container */}
+      <div className="flex flex-1 min-h-0 overflow-hidden relative">
+        <DesktopSidebar />
+
+
       {/* Mobile Slide-down Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden absolute top-16 left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-20 flex flex-col p-4 animate-in slide-in-from-top-2">
@@ -251,9 +256,7 @@ export default function AppLayout() {
           <Outlet />
         </div>
       </main>
-    </div>
+          </div>
     </div>
   );
 }
-
-
