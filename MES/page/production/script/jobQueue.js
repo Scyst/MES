@@ -876,10 +876,10 @@ function renderHistoryTable(data) {
 
         // Use the start date as the reference date shown; show time range
         const dateLabel = start ? `<div class="text-muted" style="font-size:0.7rem;letter-spacing:0.2px;">${start.date}</div>` : '';
-        const timeRange = `<div class="fw-semibold text-dark" style="font-size:0.8rem;">
+        const timeRange = `<div class="fw-semibold text-dark text-nowrap" style="font-size:0.8rem;">
                                ${start ? start.time : '—'} <span class="text-muted fw-normal">→</span> ${end ? end.time : '—'}
                            </div>`;
-        const datetimeCell = `<div class="text-center">${dateLabel}${timeRange}</div>`;
+        const datetimeCell = `<div class="text-center text-nowrap">${dateLabel}${timeRange}</div>`;
 
         const locTag = locId === ''
             ? `<div class="mt-1"><span class="badge bg-light text-secondary border" style="font-size:0.65rem;">${job.location_name}</span></div>`

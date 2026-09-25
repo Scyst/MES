@@ -354,19 +354,12 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
         </div>
     </div>
 
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="historyOffcanvas" style="width: min(860px, 95vw); --bs-offcanvas-bg: transparent;">
-        <!-- Header: override Bootstrap's bg via CSS variable above -->
-        <div class="offcanvas-header border-bottom px-4 py-3" style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5986 100%);">
-            <div class="d-flex align-items-center gap-3">
-                <div class="d-flex align-items-center justify-content-center rounded-3" style="width:42px; height:42px; background: rgba(255,255,255,0.15);">
-                    <i class="fas fa-history text-white fs-5"></i>
-                </div>
-                <div>
-                    <h5 class="offcanvas-title fw-bold text-white mb-0">ประวัติคิวงาน</h5>
-                    <div class="text-white-50 small" style="font-size: 0.78rem;">Job Queue History</div>
-                </div>
-            </div>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="historyOffcanvas" style="width: min(860px, 95vw);">
+        <div class="offcanvas-header bg-white border-bottom px-4 py-3">
+            <h5 class="offcanvas-title fw-bold text-dark mb-0">
+                <i class="fas fa-history text-primary me-2"></i> ประวัติคิวงาน <span class="text-secondary fw-normal fs-6 ms-1">(Job Queue History)</span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
 
         <!-- Filter Bar -->
