@@ -885,14 +885,13 @@ function renderHistoryTable(data) {
                                </div>`;
             datetimeCell = `<div class="text-nowrap">${dateLabel}${timeRange}</div>`;
         } else {
-            // Multi-Day or Missing End (Explicit Form - Centered)
-            const sStr = start ? `<span class="text-muted fw-normal" style="font-size:0.65rem;">${start.date}</span> ${start.time}` : '—';
-            const eStr = end ? `<span class="text-muted fw-normal" style="font-size:0.65rem;">${end.date}</span> ${end.time}` : '—';
+            // Multi-Day or Missing End (Explicit Form - Centered Icons)
+            const sStr = start ? `${start.date} ${start.time}` : '—';
+            const eStr = end ? `${end.date} ${end.time}` : '—';
             datetimeCell = `
-                <div class="text-nowrap text-center" style="font-size:0.75rem; font-weight: 500; line-height: 1.2;">
-                    <div class="text-dark">${sStr}</div>
-                    <div class="text-muted fw-normal" style="font-size:0.7rem; margin: 1px 0;">↓</div>
-                    <div class="text-dark">${eStr}</div>
+                <div class="text-nowrap text-center" style="font-size:0.72rem; line-height: 1.4;">
+                    <div class="text-dark"><span class="text-success me-1" style="font-size:0.55rem; vertical-align: middle;">▶</span>${sStr}</div>
+                    <div class="text-dark"><span class="text-danger me-1" style="font-size:0.55rem; vertical-align: middle;">■</span>${eStr}</div>
                 </div>`;
         }
 
