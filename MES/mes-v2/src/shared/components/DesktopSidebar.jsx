@@ -100,7 +100,7 @@ export default function DesktopSidebar() {
               
               <button 
                 onClick={() => toggleSection(section.title)}
-                className="w-full flex items-center px-3 py-2 text-[10px] font-bold text-gray-500 dark:text-gray-400 bg-gray-100/80 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors uppercase tracking-wider mx-2 my-1 rounded-md"
+                className="w-full flex items-center px-3 py-2 text-sm font-bold text-gray-500 dark:text-gray-400 bg-gray-100/80 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors uppercase tracking-wider mx-2 my-1 rounded-md"
                 style={{ width: 'calc(100% - 16px)' }}
               >
                 <div className="min-w-[20px] flex items-center justify-center text-gray-400 dark:text-gray-500">
@@ -124,10 +124,10 @@ export default function DesktopSidebar() {
                         <a 
                           key={iIdx} 
                           href={item.href}
-                          className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-400 rounded-lg transition-colors group"
+                          className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 rounded-lg transition-colors group"
                         >
                           <div className="min-w-[20px] flex items-center justify-center">
-                            <Icon size={20} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
+                            <Icon size={20} className="text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors" />
                           </div>
                           <span className="ml-3 truncate opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">{item.name}</span>
                         </a>
@@ -138,7 +138,7 @@ export default function DesktopSidebar() {
                       <Link 
                         key={iIdx} 
                         to={item.to}
-                        className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors group ${isActive ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                        className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors group ${isActive ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'}`}
                       >
                         <div className="min-w-[20px] flex items-center justify-center">
                             <Icon size={20} className={`${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'} transition-colors`} />
