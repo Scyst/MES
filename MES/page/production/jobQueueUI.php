@@ -369,22 +369,26 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
                     <span class="input-group-text bg-white border-secondary-subtle"><i class="fas fa-search text-muted" style="font-size:0.75rem;"></i></span>
                     <input type="text" id="historySearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="Job No, Part No, Lot No..." onkeyup="filterHistory()">
                 </div>
+                <!-- Custom Date Picker Display -->
                 <div class="input-group input-group-sm shadow-sm" style="width: 170px;">
                     <span class="input-group-text bg-white border-secondary-subtle"><i class="fas fa-calendar-day text-muted" style="font-size:0.75rem;"></i></span>
-                    <input type="date" lang="en-GB" id="historyDate" class="form-control border-secondary-subtle border-start-0 ps-0" onchange="filterHistory()">
+                    <input type="text" id="historyDateDisplay" class="form-control border-secondary-subtle border-start-0 ps-0 bg-white" placeholder="dd/mm/yyyy" readonly style="cursor: pointer;" onclick="document.getElementById('historyDate').showPicker()">
+                    <div style="position: absolute; opacity: 0; width: 0; height: 0; overflow: hidden; pointer-events: none;">
+                        <input type="date" id="historyDate" onchange="const v=this.value; document.getElementById('historyDateDisplay').value = v ? v.split('-').reverse().join('/') : ''; filterHistory();">
+                    </div>
                 </div>
-                <button class="btn btn-sm btn-outline-secondary shadow-sm" onclick="document.getElementById('historySearch').value=''; document.getElementById('historyDate').value=''; filterHistory();" title="ล้างตัวกรอง">
+                <button class="btn btn-sm btn-outline-secondary shadow-sm" onclick="document.getElementById('historySearch').value=''; document.getElementById('historyDate').value=''; document.getElementById('historyDateDisplay').value=''; filterHistory();" title="ล้างตัวกรอง">
                     <i class="fas fa-times me-1"></i>ล้าง
                 </button>
             </div>
             <!-- Summary Strip -->
-            <div class="d-flex gap-3 align-items-center bg-light rounded px-3 py-2 border border-light-subtle shadow-sm flex-wrap" style="font-size:0.8rem;">
+            <div class="d-flex gap-3 align-items-center bg-light rounded px-3 py-2 border border-light-subtle shadow-sm flex-wrap" style="font-size:0.75rem;">
                 <div class="fw-bold text-secondary"><i class="fas fa-calculator me-1"></i> ผลรวมตามตัวกรอง:</div>
                 <div class="ms-auto d-flex gap-3 flex-wrap">
-                    <div>Target: <span class="fw-bold text-dark ms-1" style="font-size:0.85rem;" id="sumTarget">0</span></div>
-                    <div>FG: <span class="fw-bold text-success ms-1" style="font-size:0.85rem;" id="sumFG">0</span></div>
-                    <div>Hold: <span class="fw-bold ms-1" style="color:#c89a00; font-size:0.85rem;" id="sumHold">0</span></div>
-                    <div>Scrap: <span class="fw-bold text-danger ms-1" style="font-size:0.85rem;" id="sumScrap">0</span></div>
+                    <div>Target: <span class="fw-bold text-dark ms-1" id="sumTarget">0</span></div>
+                    <div>FG: <span class="fw-bold text-success ms-1" id="sumFG">0</span></div>
+                    <div>Hold: <span class="fw-bold ms-1" style="color:#c89a00;" id="sumHold">0</span></div>
+                    <div>Scrap: <span class="fw-bold text-danger ms-1" id="sumScrap">0</span></div>
                 </div>
                 <div class="border-start ms-2 ps-3 d-flex align-items-center">
                     <span class="badge bg-secondary-subtle text-secondary border fw-semibold px-2 py-1" id="historyCountBadge" style="font-size: 0.75rem;">— รายการ</span>
