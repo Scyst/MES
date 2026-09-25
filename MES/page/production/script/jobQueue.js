@@ -776,6 +776,8 @@ async function reopenJob(jobId, jobNo) {
     }
 }
 
+let historyJobsData = [];
+
 async function openJobHistory() {
     const locId = document.getElementById('locationSelect').value;
     
@@ -783,46 +785,17 @@ async function openJobHistory() {
     try {
         const response = await fetch(`${JOB_API_URL}?action=get_all_jobs`);
         const result = await response.json();
-        const tbody = document.getElementById('historyTableBody');
-        if(tbody) tbody.innerHTML = '';
 
         if (result.success && result.data.length > 0) {
-            const historyJobs = result.data.filter(j => 
+            historyJobsData = result.data.filter(j => 
                 (locId === '' || j.location_id == locId) && 
                 (j.status === 'COMPLETED' || j.status === 'CANCELLED')
             );
-
-            if (historyJobs.length === 0) {
-                if(tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">ยังไม่มีประวัติการผลิต</td></tr>';
-            } else {
-                historyJobs.forEach(job => {
-                    let badgeClass = job.status === 'COMPLETED' ? 'bg-primary' : 'bg-danger';
-                    let startTime = job.start_time ? new Date(job.start_time).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}) : '-';
-                    let endTime = job.end_time ? new Date(job.end_time).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}) : '-';
-                    let locTag = locId === '' ? `<br><span class="badge bg-light text-dark border mt-1">${job.location_name}</span>` : '';
-                    let actionBtn = (typeof canManage !== 'undefined' && canManage) ? `<button class="btn btn-sm btn-outline-success border-0" onclick="reopenJob(${job.job_id}, '${job.job_no}')" title="เปิดงานอีกครั้ง"><i class="fas fa-redo"></i></button>` : '-';
-
-                    if(tbody) {
-                        let lotTag = job.lot_no ? `<br><span class="text-muted small fw-normal">Lot: ${job.lot_no}</span>` : '';
-                        tbody.insertAdjacentHTML('beforeend', `
-                            <tr>
-                                <td class="fw-bold text-dark text-center">${job.job_no}${locTag}${lotTag}</td>
-                                <td>${job.part_no}</td>
-                                <td class="text-end fw-bold text-muted">${parseFloat(job.target_qty).toLocaleString()}</td>
-                                <td class="text-end fw-bold text-success">${parseFloat(job.actual_qty || 0).toLocaleString()}</td>
-                                <td class="text-end fw-bold text-warning">${parseFloat(job.hold_qty || 0).toLocaleString()}</td>
-                                <td class="text-end fw-bold text-danger">${parseFloat(job.scrap_qty || 0).toLocaleString()}</td>
-                                <td class="text-center"><span class="badge ${badgeClass}">${job.status}</span></td>
-                                <td class="text-center text-muted small">${startTime} - ${endTime}</td>
-                                <td class="text-center">${actionBtn}</td>
-                            </tr>
-                        `);
-                    }
-                });
-            }
         } else {
-            if(tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">ไม่พบข้อมูลประวัติ</td></tr>';
+            historyJobsData = [];
         }
+
+        renderHistoryTable(historyJobsData);
 
         const offcanvasEl = document.getElementById('historyOffcanvas');
         if(offcanvasEl) new bootstrap.Offcanvas(offcanvasEl).show();
@@ -833,6 +806,67 @@ async function openJobHistory() {
     } finally {
         if(typeof hideSpinner === 'function') hideSpinner();
     }
+}
+
+function filterHistory() {
+    const searchTerm = document.getElementById('historySearch').value.toLowerCase().trim();
+    const dateTerm = document.getElementById('historyDate').value;
+    
+    let filtered = historyJobsData.filter(job => {
+        let matchSearch = true;
+        let matchDate = true;
+        
+        if (searchTerm) {
+            const str = `${job.job_no} ${job.part_no} ${job.lot_no || ''}`.toLowerCase();
+            matchSearch = str.includes(searchTerm);
+        }
+        
+        if (dateTerm) {
+            const jobDate = job.start_time ? job.start_time.split(' ')[0] : '';
+            matchDate = (jobDate === dateTerm);
+        }
+        
+        return matchSearch && matchDate;
+    });
+    
+    renderHistoryTable(filtered);
+}
+
+function renderHistoryTable(data) {
+    const tbody = document.getElementById('historyTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    const locId = document.getElementById('locationSelect').value;
+    
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">ไม่พบข้อมูลประวัติ</td></tr>';
+        return;
+    }
+    
+    data.forEach(job => {
+        let badgeClass = job.status === 'COMPLETED' ? 'bg-primary' : 'bg-danger';
+        let startTime = job.start_time ? new Date(job.start_time).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}) : '-';
+        let endTime = job.end_time ? new Date(job.end_time).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}) : '-';
+        let locTag = locId === '' ? `<br><span class="badge bg-light text-dark border mt-1">${job.location_name}</span>` : '';
+        let actionBtn = (typeof canManage !== 'undefined' && canManage) ? `<button class="btn btn-sm btn-outline-success border-0" onclick="reopenJob(${job.job_id}, '${job.job_no}')" title="เปิดงานอีกครั้ง"><i class="fas fa-redo"></i></button>` : '-';
+        let lotNo = job.lot_no ? `<span class="fw-bold">${job.lot_no}</span>` : '<span class="text-muted">-</span>';
+        
+        tbody.insertAdjacentHTML('beforeend', `
+            <tr>
+                <td class="fw-bold text-dark ps-3">${job.job_no}${locTag}</td>
+                <td>${lotNo}</td>
+                <td class="fw-bold text-primary">${job.part_no}</td>
+                <td class="text-end fw-bold text-muted">${parseFloat(job.target_qty).toLocaleString()}</td>
+                <td class="text-end fw-bold text-success">${parseFloat(job.actual_qty || 0).toLocaleString()}</td>
+                <td class="text-end fw-bold text-warning">${parseFloat(job.hold_qty || 0).toLocaleString()}</td>
+                <td class="text-end fw-bold text-danger">${parseFloat(job.scrap_qty || 0).toLocaleString()}</td>
+                <td class="text-center"><span class="badge ${badgeClass}">${job.status}</span></td>
+                <td class="text-center text-muted small">${startTime} - ${endTime}</td>
+                <td class="text-center">${actionBtn}</td>
+            </tr>
+        `);
+    });
 }
 
 async function viewJobLogs(jobNo, jobId, partNo = '', partName = '') {

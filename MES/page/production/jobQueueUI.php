@@ -360,11 +360,25 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body bg-light p-0">
+            <div class="p-2 border-bottom bg-white d-flex gap-2 align-items-center">
+                <div class="input-group input-group-sm flex-grow-1" style="max-width: 300px;">
+                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" id="historySearch" class="form-control" placeholder="ค้นหา Job No, Part No, Lot No..." onkeyup="filterHistory()">
+                </div>
+                <div class="input-group input-group-sm" style="width: 250px;">
+                    <span class="input-group-text bg-white"><i class="fas fa-calendar-alt text-muted"></i></span>
+                    <input type="date" id="historyDate" class="form-control" onchange="filterHistory()">
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('historySearch').value=''; document.getElementById('historyDate').value=''; filterHistory();" title="ล้างตัวกรอง">
+                    <i class="fas fa-times"></i> ล้าง
+                </button>
+            </div>
             <div class="table-responsive h-100">
-                <table class="table table-hover align-middle mb-0 text-nowrap table-sm bg-white">
+                <table class="table table-hover align-middle mb-0 text-nowrap table-sm bg-white" style="font-size: 0.9rem;">
                     <thead class="table-light small text-secondary sticky-top" style="z-index: 2;">
                         <tr>
-                            <th class="ps-3 py-2">Job No<br><span class="text-muted small fw-normal">Lot No.</span></th>
+                            <th class="ps-3 py-2">Job No</th>
+                            <th class="py-2">Lot No.</th>
                             <th class="py-2">Part No</th>
                             <th class="text-end py-2">Target</th>
                             <th class="text-end py-2">FG</th>
