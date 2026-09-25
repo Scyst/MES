@@ -937,7 +937,7 @@ function renderHistoryTable(data) {
                     <span style="color:${scrapQty > 0 ? '#dc3545' : '#ced4da'}; font-weight:${scrapQty > 0 ? '700' : '400'}; font-size:0.82rem;">${scrapQty.toLocaleString()}</span>
                 </td>
                 <td class="py-2 px-2 text-center">${statusCell}</td>
-                <td class="py-2 px-2">${datetimeCell}</td>
+                <td class="py-2 px-2 text-center">${datetimeCell}</td>
                 <td class="py-2 px-3 text-center">${actionBtn}</td>
             </tr>
         `);
