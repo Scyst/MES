@@ -861,7 +861,7 @@ function renderHistoryTable(data) {
         const statusLabel = `<span class="fw-semibold" style="font-size:0.78rem;color:${isCompleted ? '#198754' : '#dc3545'};">${isCompleted ? 'Completed' : 'Cancelled'}</span>`;
         const statusCell  = `<span class="text-nowrap">${statusDot}${statusLabel}</span>`;
 
-        // Compact datetime: "22/09 08:33 → 09:10"
+        // Compact datetime logic
         const fmtDate = (raw) => {
             if (!raw) return null;
             const d = new Date(raw);
@@ -874,12 +874,26 @@ function renderHistoryTable(data) {
         const start = fmtDate(job.start_time);
         const end   = fmtDate(job.end_time);
 
-        // Use the start date as the reference date shown; show time range
-        const dateLabel = start ? `<div class="text-muted" style="font-size:0.7rem;letter-spacing:0.2px;">${start.date}</div>` : '';
-        const timeRange = `<div class="text-dark text-nowrap" style="font-size:0.75rem; font-weight: 500;">
-                               ${start ? start.time : '—'} <span class="text-muted fw-normal">→</span> ${end ? end.time : '—'}
-                           </div>`;
-        const datetimeCell = `<div class="text-center text-nowrap">${dateLabel}${timeRange}</div>`;
+        let datetimeCell = '';
+        if (!start && !end) {
+            datetimeCell = `<div class="text-muted">—</div>`;
+        } else if (start && end && start.date === end.date) {
+            // Same Day (Compact Form)
+            const dateLabel = `<div class="text-muted" style="font-size:0.7rem;letter-spacing:0.2px;">${start.date}</div>`;
+            const timeRange = `<div class="text-dark text-nowrap" style="font-size:0.75rem; font-weight: 500;">
+                                   ${start.time} <span class="text-muted fw-normal">→</span> ${end.time}
+                               </div>`;
+            datetimeCell = `<div class="text-nowrap">${dateLabel}${timeRange}</div>`;
+        } else {
+            // Multi-Day or Missing End (Explicit Form)
+            const sStr = start ? `${start.date} ${start.time}` : '—';
+            const eStr = end ? `${end.date} ${end.time}` : '—';
+            datetimeCell = `
+                <div class="text-nowrap text-start d-inline-block" style="font-size:0.72rem; line-height: 1.4;">
+                    <div class="text-dark"><span class="text-success me-1" style="font-size:0.55rem; vertical-align: middle;">▶</span>${sStr}</div>
+                    <div class="text-dark"><span class="text-danger me-1" style="font-size:0.55rem; vertical-align: middle;">■</span>${eStr}</div>
+                </div>`;
+        }
 
         const locTag = locId === ''
             ? `<div class="mt-1"><span class="badge bg-light text-secondary border" style="font-size:0.65rem;">${job.location_name}</span></div>`
