@@ -354,8 +354,8 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
         </div>
     </div>
 
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="historyOffcanvas" style="width: min(860px, 100vw);">
-        <!-- Header -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="historyOffcanvas" style="width: min(860px, 95vw); --bs-offcanvas-bg: transparent;">
+        <!-- Header: override Bootstrap's bg via CSS variable above -->
         <div class="offcanvas-header border-bottom px-4 py-3" style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5986 100%);">
             <div class="d-flex align-items-center gap-3">
                 <div class="d-flex align-items-center justify-content-center rounded-3" style="width:42px; height:42px; background: rgba(255,255,255,0.15);">
@@ -363,7 +363,7 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
                 </div>
                 <div>
                     <h5 class="offcanvas-title fw-bold text-white mb-0">ประวัติคิวงาน</h5>
-                    <div class="text-white-50 small mt-0" style="font-size: 0.78rem;">Job Queue History</div>
+                    <div class="text-white-50 small" style="font-size: 0.78rem;">Job Queue History</div>
                 </div>
             </div>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
@@ -390,24 +390,24 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
         </div>
 
         <!-- Table -->
-        <div class="offcanvas-body p-0" style="background:#f8f9fa; overflow-y: auto;">
+        <div class="offcanvas-body p-0 bg-white" style="overflow-y: auto; overflow-x: hidden;">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.82rem;">
-                    <thead style="background:#eef1f6; position: sticky; top: 0; z-index: 2;">
+                <table class="table table-hover align-middle mb-0" style="font-size: 0.82rem; min-width: 700px;">
+                    <thead style="background:#eef1f6; position: sticky; top: 0; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
                         <tr>
-                            <th class="ps-4 py-3 text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Job No</th>
-                            <th class="py-3 text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Lot No.</th>
-                            <th class="py-3 text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Part No</th>
-                            <th class="py-3 text-end text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Target</th>
-                            <th class="py-3 text-end fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px; color:#198754;">FG</th>
-                            <th class="py-3 text-end fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px; color:#d39e00;">Hold</th>
-                            <th class="py-3 text-end fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px; color:#dc3545;">Scrap</th>
-                            <th class="py-3 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Status</th>
-                            <th class="py-3 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">วันที่ / เวลา</th>
-                            <th class="py-3 pe-4 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px; width:60px;">จัดการ</th>
+                            <th class="py-2 px-3 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Job No</th>
+                            <th class="py-2 px-2 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Lot No.</th>
+                            <th class="py-2 px-2 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Part No</th>
+                            <th class="py-2 px-2 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Target</th>
+                            <th class="py-2 px-2 text-center fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px; color:#198754;">FG</th>
+                            <th class="py-2 px-2 text-center fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px; color:#c89a00;">Hold</th>
+                            <th class="py-2 px-2 text-center fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px; color:#dc3545;">Scrap</th>
+                            <th class="py-2 px-2 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Status</th>
+                            <th class="py-2 px-2 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">วันที่ / เวลา</th>
+                            <th class="py-2 px-3 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px; width:55px;">จัดการ</th>
                         </tr>
                     </thead>
-                    <tbody id="historyTableBody" class="bg-white"></tbody>
+                    <tbody id="historyTableBody"></tbody>
                 </table>
             </div>
         </div>

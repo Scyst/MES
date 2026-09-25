@@ -839,7 +839,6 @@ function renderHistoryTable(data) {
     tbody.innerHTML = '';
     const locId = document.getElementById('locationSelect').value;
 
-    // Update result count badge
     const countBadge = document.getElementById('historyCountBadge');
     if (countBadge) countBadge.textContent = `${data.length} รายการ`;
 
@@ -847,8 +846,8 @@ function renderHistoryTable(data) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="10" class="text-center py-5">
-                    <i class="fas fa-inbox fa-2x text-secondary opacity-25 mb-2"></i>
-                    <div class="text-muted small mt-2">ไม่พบข้อมูลประวัติ</div>
+                    <i class="fas fa-inbox fa-2x text-secondary opacity-25 d-block mb-2"></i>
+                    <span class="text-muted small">ไม่พบข้อมูลประวัติ</span>
                 </td>
             </tr>`;
         return;
@@ -856,79 +855,76 @@ function renderHistoryTable(data) {
 
     data.forEach(job => {
         const isCompleted = job.status === 'COMPLETED';
-        const rowBg        = isCompleted ? '' : 'table-danger bg-opacity-10';
-        const statusBadge  = isCompleted
-            ? `<span class="badge rounded-pill" style="background:#1a6b3c; font-size:0.7rem; letter-spacing:0.3px;">
-                   <i class="fas fa-check-circle me-1"></i>COMPLETED
-               </span>`
-            : `<span class="badge rounded-pill bg-danger" style="font-size:0.7rem; letter-spacing:0.3px;">
-                   <i class="fas fa-times-circle me-1"></i>CANCELLED
-               </span>`;
 
-        // Format date + time for start and end
-        const fmtDatetime = (raw) => {
-            if (!raw) return '<span class="text-muted">-</span>';
+        // Compact status dot + label
+        const statusDot   = `<span class="d-inline-block rounded-circle me-1" style="width:7px;height:7px;background:${isCompleted ? '#198754' : '#dc3545'};vertical-align:middle;"></span>`;
+        const statusLabel = `<span class="fw-semibold" style="font-size:0.78rem;color:${isCompleted ? '#198754' : '#dc3545'};">${isCompleted ? 'Completed' : 'Cancelled'}</span>`;
+        const statusCell  = `<span class="text-nowrap">${statusDot}${statusLabel}</span>`;
+
+        // Compact datetime: "22/09 08:33 → 09:10"
+        const fmtDate = (raw) => {
+            if (!raw) return null;
             const d = new Date(raw);
-            const date = d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' });
-            const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-            return `<span class="fw-semibold text-dark">${time}</span><br><span class="text-muted" style="font-size:0.7rem;">${date}</span>`;
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yy = String(d.getFullYear()).slice(-2);
+            const hhmm = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            return { date: `${dd}/${mm}/${yy}`, time: hhmm };
         };
+        const start = fmtDate(job.start_time);
+        const end   = fmtDate(job.end_time);
+
+        // Use the start date as the reference date shown; show time range
+        const dateLabel = start ? `<div class="text-muted" style="font-size:0.7rem;letter-spacing:0.2px;">${start.date}</div>` : '';
+        const timeRange = `<div class="fw-semibold text-dark" style="font-size:0.8rem;">
+                               ${start ? start.time : '—'} <span class="text-muted fw-normal">→</span> ${end ? end.time : '—'}
+                           </div>`;
+        const datetimeCell = `<div class="text-center">${dateLabel}${timeRange}</div>`;
 
         const locTag = locId === ''
-            ? `<br><span class="badge bg-light text-secondary border mt-1" style="font-size:0.65rem;">${job.location_name}</span>`
+            ? `<div class="mt-1"><span class="badge bg-light text-secondary border" style="font-size:0.65rem;">${job.location_name}</span></div>`
             : '';
 
         const lotBadge = job.lot_no
-            ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-semibold px-2" style="font-size:0.72rem;">${job.lot_no}</span>`
-            : `<span class="text-muted" style="font-size:0.78rem;">—</span>`;
+            ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-semibold" style="font-size:0.72rem;letter-spacing:0.2px;">${job.lot_no}</span>`
+            : `<span class="text-muted">—</span>`;
 
         const actionBtn = (typeof canManage !== 'undefined' && canManage)
-            ? `<button class="btn btn-sm btn-outline-success px-2 py-1 rounded" onclick="reopenJob(${job.job_id}, '${job.job_no}')" title="เปิดงานอีกครั้ง" style="font-size:0.75rem;">
-                   <i class="fas fa-redo"></i>
+            ? `<button class="btn btn-sm btn-outline-secondary px-2 py-1" onclick="reopenJob(${job.job_id}, '${job.job_no}')" title="เปิดงานอีกครั้ง">
+                   <i class="fas fa-redo fa-sm"></i>
                </button>`
-            : '<span class="text-muted">—</span>';
+            : '';
 
-        const fgQty    = parseFloat(job.actual_qty || 0);
-        const holdQty  = parseFloat(job.hold_qty   || 0);
-        const scrapQty = parseFloat(job.scrap_qty  || 0);
+        const fgQty     = parseFloat(job.actual_qty || 0);
+        const holdQty   = parseFloat(job.hold_qty   || 0);
+        const scrapQty  = parseFloat(job.scrap_qty  || 0);
         const targetQty = parseFloat(job.target_qty);
 
         tbody.insertAdjacentHTML('beforeend', `
-            <tr class="${rowBg}" style="border-left: 3px solid ${isCompleted ? '#198754' : '#dc3545'};">
-                <td class="ps-4 py-3">
-                    <span class="fw-bold text-dark" style="font-size:0.85rem;">${job.job_no}</span>
+            <tr style="border-bottom: 1px solid #f0f2f5;">
+                <td class="py-2 px-3 text-center">
+                    <div class="fw-bold text-dark" style="font-size:0.85rem; white-space:nowrap;">${job.job_no}</div>
                     ${locTag}
                 </td>
-                <td class="py-3">${lotBadge}</td>
-                <td class="py-3">
-                    <span class="fw-semibold text-primary">${job.part_no}</span>
+                <td class="py-2 px-2 text-center">${lotBadge}</td>
+                <td class="py-2 px-2 text-center">
+                    <span class="fw-semibold text-primary" style="font-size:0.82rem;">${job.part_no}</span>
                 </td>
-                <td class="py-3 text-end">
-                    <span class="fw-bold text-secondary">${targetQty.toLocaleString()}</span>
+                <td class="py-2 px-2 text-center">
+                    <span class="fw-semibold text-secondary" style="font-size:0.82rem;">${targetQty.toLocaleString()}</span>
                 </td>
-                <td class="py-3 text-end">
-                    <span class="fw-bold" style="color:#198754;">${fgQty.toLocaleString()}</span>
+                <td class="py-2 px-2 text-center">
+                    <span class="fw-bold" style="color:#198754; font-size:0.82rem;">${fgQty.toLocaleString()}</span>
                 </td>
-                <td class="py-3 text-end">
-                    <span class="fw-bold" style="color:${holdQty > 0 ? '#d39e00' : '#adb5bd'};">${holdQty.toLocaleString()}</span>
+                <td class="py-2 px-2 text-center">
+                    <span style="color:${holdQty > 0 ? '#c89a00' : '#ced4da'}; font-weight:${holdQty > 0 ? '700' : '400'}; font-size:0.82rem;">${holdQty.toLocaleString()}</span>
                 </td>
-                <td class="py-3 text-end">
-                    <span class="fw-bold" style="color:${scrapQty > 0 ? '#dc3545' : '#adb5bd'};">${scrapQty.toLocaleString()}</span>
+                <td class="py-2 px-2 text-center">
+                    <span style="color:${scrapQty > 0 ? '#dc3545' : '#ced4da'}; font-weight:${scrapQty > 0 ? '700' : '400'}; font-size:0.82rem;">${scrapQty.toLocaleString()}</span>
                 </td>
-                <td class="py-3 text-center">${statusBadge}</td>
-                <td class="py-3 text-center" style="line-height:1.3;">
-                    <div class="d-flex flex-column align-items-center gap-1">
-                        <div class="d-flex align-items-center gap-1">
-                            <i class="fas fa-play-circle text-success" style="font-size:0.65rem;"></i>
-                            <span style="font-size:0.75rem;">${fmtDatetime(job.start_time)}</span>
-                        </div>
-                        <div class="d-flex align-items-center gap-1">
-                            <i class="fas fa-stop-circle text-danger" style="font-size:0.65rem;"></i>
-                            <span style="font-size:0.75rem;">${fmtDatetime(job.end_time)}</span>
-                        </div>
-                    </div>
-                </td>
-                <td class="py-3 pe-4 text-center">${actionBtn}</td>
+                <td class="py-2 px-2 text-center">${statusCell}</td>
+                <td class="py-2 px-2">${datetimeCell}</td>
+                <td class="py-2 px-3 text-center">${actionBtn}</td>
             </tr>
         `);
     });
