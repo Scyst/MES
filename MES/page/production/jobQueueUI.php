@@ -354,42 +354,60 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
         </div>
     </div>
 
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="historyOffcanvas" style="width: 800px;">
-        <div class="offcanvas-header bg-white border-bottom">
-            <h5 class="offcanvas-title fw-bold text-dark"><i class="fas fa-clipboard-list me-2 text-secondary"></i>ประวัติคิวงาน (History)</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-        </div>
-        <div class="offcanvas-body bg-light p-0">
-            <div class="p-2 border-bottom bg-white d-flex gap-2 align-items-center">
-                <div class="input-group input-group-sm flex-grow-1" style="max-width: 300px;">
-                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                    <input type="text" id="historySearch" class="form-control" placeholder="ค้นหา Job No, Part No, Lot No..." onkeyup="filterHistory()">
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="historyOffcanvas" style="width: min(860px, 100vw);">
+        <!-- Header -->
+        <div class="offcanvas-header border-bottom px-4 py-3" style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5986 100%);">
+            <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center justify-content-center rounded-3" style="width:42px; height:42px; background: rgba(255,255,255,0.15);">
+                    <i class="fas fa-history text-white fs-5"></i>
                 </div>
-                <div class="input-group input-group-sm" style="width: 250px;">
-                    <span class="input-group-text bg-white"><i class="fas fa-calendar-alt text-muted"></i></span>
-                    <input type="date" id="historyDate" class="form-control" onchange="filterHistory()">
+                <div>
+                    <h5 class="offcanvas-title fw-bold text-white mb-0">ประวัติคิวงาน</h5>
+                    <div class="text-white-50 small mt-0" style="font-size: 0.78rem;">Job Queue History</div>
                 </div>
-                <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('historySearch').value=''; document.getElementById('historyDate').value=''; filterHistory();" title="ล้างตัวกรอง">
-                    <i class="fas fa-times"></i> ล้าง
-                </button>
             </div>
-            <div class="table-responsive h-100">
-                <table class="table table-hover align-middle mb-0 text-nowrap table-sm bg-white" style="font-size: 0.9rem;">
-                    <thead class="table-light small text-secondary sticky-top" style="z-index: 2;">
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="px-3 py-2 bg-white border-bottom">
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <div class="input-group input-group-sm shadow-sm flex-grow-1" style="min-width: 180px; max-width: 280px;">
+                    <span class="input-group-text bg-white border-secondary-subtle"><i class="fas fa-search text-muted" style="font-size:0.75rem;"></i></span>
+                    <input type="text" id="historySearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="Job No, Part No, Lot No..." onkeyup="filterHistory()">
+                </div>
+                <div class="input-group input-group-sm shadow-sm" style="width: 170px;">
+                    <span class="input-group-text bg-white border-secondary-subtle"><i class="fas fa-calendar-day text-muted" style="font-size:0.75rem;"></i></span>
+                    <input type="date" id="historyDate" class="form-control border-secondary-subtle border-start-0 ps-0" onchange="filterHistory()">
+                </div>
+                <button class="btn btn-sm btn-outline-secondary shadow-sm" onclick="document.getElementById('historySearch').value=''; document.getElementById('historyDate').value=''; filterHistory();" title="ล้างตัวกรอง">
+                    <i class="fas fa-times me-1"></i>ล้าง
+                </button>
+                <div class="ms-auto">
+                    <span class="badge bg-secondary-subtle text-secondary border fw-semibold px-2 py-1" id="historyCountBadge" style="font-size: 0.75rem;">— รายการ</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="offcanvas-body p-0" style="background:#f8f9fa; overflow-y: auto;">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.82rem;">
+                    <thead style="background:#eef1f6; position: sticky; top: 0; z-index: 2;">
                         <tr>
-                            <th class="ps-3 py-2">Job No</th>
-                            <th class="py-2">Lot No.</th>
-                            <th class="py-2">Part No</th>
-                            <th class="text-end py-2">Target</th>
-                            <th class="text-end py-2">FG</th>
-                            <th class="text-end py-2">Hold</th>
-                            <th class="text-end py-2">Scrap</th>
-                            <th class="text-center py-2">Status</th>
-                            <th class="text-center py-2">Time</th>
-                            <th class="text-center pe-3 py-2" width="60">จัดการ</th>
+                            <th class="ps-4 py-3 text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Job No</th>
+                            <th class="py-3 text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Lot No.</th>
+                            <th class="py-3 text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Part No</th>
+                            <th class="py-3 text-end text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Target</th>
+                            <th class="py-3 text-end fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px; color:#198754;">FG</th>
+                            <th class="py-3 text-end fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px; color:#d39e00;">Hold</th>
+                            <th class="py-3 text-end fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px; color:#dc3545;">Scrap</th>
+                            <th class="py-3 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">Status</th>
+                            <th class="py-3 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px;">วันที่ / เวลา</th>
+                            <th class="py-3 pe-4 text-center text-secondary fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing:0.5px; width:60px;">จัดการ</th>
                         </tr>
                     </thead>
-                    <tbody id="historyTableBody"></tbody>
+                    <tbody id="historyTableBody" class="bg-white"></tbody>
                 </table>
             </div>
         </div>
