@@ -5,11 +5,12 @@ import {
   ChevronDown, ChevronRight, Package, Smartphone, ListOrdered, 
   Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox, 
   Camera, Settings, Users, MonitorPlay, Zap, Heart, Search, FileText, FlaskConical, History
+, Grid, Factory, ShieldCheck, Briefcase
 } from 'lucide-react';
 
 const MENU_DATA = [
   {
-    title: 'GENERAL',
+    title: 'GENERAL', sectionIcon: Grid,
     items: [
       { name: 'TOOLBOX OS (Home)', icon: Home, href: '/MES/page/dailyLog/dailyLogUI.php', external: true },
       { name: 'OEE Dashboard', icon: Activity, href: '/MES/page/OEE_Dashboard/OEE_Shopfloor.php', external: true },
@@ -19,7 +20,7 @@ const MENU_DATA = [
     ]
   },
   {
-    title: 'PRODUCTION',
+    title: 'PRODUCTION', sectionIcon: Factory,
     items: [
       { name: 'Production & Inventory', icon: Package, href: '/MES/page/production/productionUI.php', external: true },
       { name: 'Live Job Queue', icon: ListOrdered, href: '/MES/page/production/jobQueueUI.php', external: true },
@@ -30,7 +31,7 @@ const MENU_DATA = [
     ]
   },
   {
-    title: 'WAREHOUSE & LOGISTICS',
+    title: 'WAREHOUSE & LOGISTICS', sectionIcon: Warehouse,
     items: [
       { name: 'Store Dashboard', icon: Store, href: '/MES/page/storeManagement/storeDashboard.php', external: true },
       { name: 'Inventory Stock', icon: Box, href: '/MES/page/storeManagement/inventoryDashboard.php', external: true },
@@ -39,7 +40,7 @@ const MENU_DATA = [
     ]
   },
   {
-    title: 'QUALITY & MT',
+    title: 'QUALITY & MT', sectionIcon: ShieldCheck,
     items: [
       { name: 'iQMS (Quality)', icon: MonitorPlay, href: '/MES/page/QMS/qmsDashboard.php', external: true },
       { name: 'Accessories Inspection', icon: Camera, href: '/MES/page/AccessoriesInspection/accessoriesInspectionUI.php', external: true },
@@ -47,7 +48,7 @@ const MENU_DATA = [
     ]
   },
   {
-    title: 'MANAGEMENT',
+    title: 'MANAGEMENT', sectionIcon: Briefcase,
     items: [
       { name: 'Management Dashboard', icon: Activity, href: '/MES/page/management/managementDashboard.php', external: true },
       { name: 'Utility & Energy', icon: Zap, href: '/MES/page/management/utilityDashboard.php', external: true },
@@ -55,7 +56,7 @@ const MENU_DATA = [
     ]
   },
   {
-    title: 'SYSTEM ADMIN',
+    title: 'SYSTEM ADMIN', sectionIcon: Settings,
     items: [
       { name: 'System Settings', icon: Settings, href: '/MES/page/systemSettings/systemSettings.php', external: true },
       { name: 'User Manager', icon: Users, href: '/MES/page/userManage/userManageUI.php', external: true },
@@ -96,15 +97,21 @@ export default function DesktopSidebar() {
 
           return (
             <div key={sIdx} className="mb-1">
+              
               <button 
                 onClick={() => toggleSection(section.title)}
-                className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors uppercase tracking-wider"
+                className="w-full flex items-center px-3 py-2 text-[10px] font-bold text-gray-500 dark:text-gray-400 bg-gray-100/80 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors uppercase tracking-wider mx-2 my-1 rounded-md"
+                style={{ width: 'calc(100% - 16px)' }}
               >
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity truncate whitespace-nowrap">{section.title}</span>
+                <div className="min-w-[20px] flex items-center justify-center text-gray-400 dark:text-gray-500">
+                  {section.sectionIcon && <section.sectionIcon size={16} />}
+                </div>
+                <span className="ml-3 opacity-0 group-hover:opacity-100 transition-opacity truncate whitespace-nowrap flex-1 text-left">{section.title}</span>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                   {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 </div>
               </button>
+
               
               {isExpanded && (
                 <div className="mt-1 space-y-0.5 px-2">
