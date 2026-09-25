@@ -370,9 +370,9 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
                     <input type="text" id="historySearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="Job No, Part No, Lot No..." onkeyup="filterHistory()">
                 </div>
                 <!-- Custom Date Picker Display -->
-                <div class="input-group input-group-sm shadow-sm" style="width: 170px;">
+                <div class="input-group input-group-sm shadow-sm" style="width: 130px;">
                     <span class="input-group-text bg-white border-secondary-subtle"><i class="fas fa-calendar-day text-muted" style="font-size:0.75rem;"></i></span>
-                    <input type="text" id="historyDateDisplay" class="form-control border-secondary-subtle border-start-0 ps-0 bg-white" placeholder="dd/mm/yyyy" readonly style="cursor: pointer;" onclick="document.getElementById('historyDate').showPicker()">
+                    <input type="text" id="historyDateDisplay" class="form-control border-secondary-subtle border-start-0 ps-0 text-center bg-white" placeholder="dd/mm/yyyy" readonly style="cursor: pointer;" onclick="document.getElementById('historyDate').showPicker()">
                     <div style="position: absolute; opacity: 0; width: 0; height: 0; overflow: hidden; pointer-events: none;">
                         <input type="date" id="historyDate" onchange="const v=this.value; document.getElementById('historyDateDisplay').value = v ? v.split('-').reverse().join('/') : ''; filterHistory();">
                     </div>
@@ -382,13 +382,13 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
                 </button>
             </div>
             <!-- Summary Strip -->
-            <div class="d-flex gap-3 align-items-center bg-light rounded px-3 py-2 border border-light-subtle shadow-sm flex-wrap" style="font-size:0.75rem;">
+            <div class="d-flex gap-3 align-items-center bg-light rounded px-3 py-2 border border-light-subtle shadow-sm flex-wrap" style="font-size:0.8rem;">
                 <div class="fw-bold text-secondary"><i class="fas fa-calculator me-1"></i> ผลรวมตามตัวกรอง:</div>
                 <div class="ms-auto d-flex gap-3 flex-wrap">
-                    <div>Target: <span class="fw-bold text-dark ms-1" id="sumTarget">0</span></div>
-                    <div>FG: <span class="fw-bold text-success ms-1" id="sumFG">0</span></div>
-                    <div>Hold: <span class="fw-bold ms-1" style="color:#c89a00;" id="sumHold">0</span></div>
-                    <div>Scrap: <span class="fw-bold text-danger ms-1" id="sumScrap">0</span></div>
+                    <div>Target: <span class="fw-bold text-dark ms-1" style="font-size:0.82rem;" id="sumTarget">0</span></div>
+                    <div>FG: <span class="fw-bold text-success ms-1" style="font-size:0.82rem;" id="sumFG">0</span></div>
+                    <div>Hold: <span class="fw-bold ms-1" style="color:#c89a00; font-size:0.82rem;" id="sumHold">0</span></div>
+                    <div>Scrap: <span class="fw-bold text-danger ms-1" style="font-size:0.82rem;" id="sumScrap">0</span></div>
                 </div>
                 <div class="border-start ms-2 ps-3 d-flex align-items-center">
                     <span class="badge bg-secondary-subtle text-secondary border fw-semibold px-2 py-1" id="historyCountBadge" style="font-size: 0.75rem;">— รายการ</span>
