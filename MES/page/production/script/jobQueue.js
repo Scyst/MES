@@ -889,7 +889,7 @@ function renderHistoryTable(data) {
             const sStr = start ? `${start.date} ${start.time}` : '—';
             const eStr = end ? `${end.date} ${end.time}` : '—';
             datetimeCell = `
-                <div class="text-nowrap text-start d-inline-block" style="font-size:0.72rem; line-height: 1.4;">
+                <div class="text-nowrap text-center d-inline-block" style="font-size:0.72rem; line-height: 1.4;">
                     <div class="text-dark"><span class="text-success me-1" style="font-size:0.55rem; vertical-align: middle;">▶</span>${sStr}</div>
                     <div class="text-dark"><span class="text-danger me-1" style="font-size:0.55rem; vertical-align: middle;">■</span>${eStr}</div>
                 </div>`;
