@@ -27,7 +27,7 @@ const MENU_DATA = [
       { name: 'Tag Printer (WIP/FG)', icon: Printer, href: '/MES/page/production/label_printer.php', external: true },
       { name: 'Scan Barcode', icon: ScanLine, href: '/MES/page/scanBarcode/scanBarcodeUI.php', external: true },
       { name: "บันทึกเคมีสี (Paint Chem)", icon: FlaskConical, to: "/paint-chem" },
-      { name: "ประวัติเคมีสี", icon: History, to: "/paint-chem/history" },
+      
     ]
   },
   {

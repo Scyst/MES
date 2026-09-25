@@ -6,7 +6,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Save, SendHorizonal, Loader2, WifiOff } from 'lucide-react';
+import { History } from 'lucide-react';
 import SheetHeader from '../components/SheetHeader';
+import PaintChemHistoryDrawer from '../components/PaintChemHistoryDrawer';
 import TimeSlotSelector from '../components/TimeSlotSelector';
 import StationCard from '../components/StationCard';
 import { STATIONS, SHIFT_SLOTS, detectCurrentShift, detectCurrentSlot } from '../paintChemConfig';
@@ -48,6 +50,7 @@ export default function PaintChemEntryPage() {
   const [selectedSlot, setSlot]   = useState(() => detectCurrentSlot(detectCurrentShift()));
   const [paintingCond, setPCond]  = useState({ conveyorSpeed: '', bakeOvenTemp: '', dryOvenTemp: '' });
   const [slotValues, setSlotVals] = useState(buildEmptySlotValues());
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [header, setHeader]       = useState(null);
   const [allLogs, setAllLogs]     = useState([]);
   const [saving, setSaving]       = useState(false);
@@ -256,6 +259,15 @@ export default function PaintChemEntryPage() {
           </div>
         </div>
       )}
+      <PaintChemHistoryDrawer 
+        isOpen={isHistoryOpen} 
+        onClose={() => setIsHistoryOpen(false)}
+        onSelectRecord={(selectedDate, selectedShift) => {
+          setDate(selectedDate);
+          setShift(selectedShift);
+          setIsHistoryOpen(false);
+        }}
+      />
     </div>
   );
 }

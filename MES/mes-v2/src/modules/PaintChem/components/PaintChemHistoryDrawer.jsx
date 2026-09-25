@@ -15,7 +15,9 @@ function StatusBadge({ status }) {
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>;
 }
 
-export default function PaintChemHistoryPage() {
+import { Eye, X } from 'lucide-react';
+
+export default function PaintChemHistoryDrawer({ isOpen, onClose, onSelectRecord }) {
   const [dateFrom, setDateFrom] = useState(new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
   const [dateTo,   setDateTo]   = useState(new Date().toISOString().slice(0, 10));
   const [shift,    setShift]    = useState('');
@@ -42,8 +44,22 @@ export default function PaintChemHistoryPage() {
   const handleSearch = () => { setPage(1); fetchHistory(); };
 
   return (
-    <div className="max-w-screen-xl mx-auto px-3 py-4 w-full">
-      <h1 className="text-base font-bold text-gray-800 mb-4">ประวัติบันทึกเคมีสี — PAINT Line</h1>
+    <>
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm transition-opacity"
+          onClick={onClose}
+        ></div>
+      )}
+      <div 
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-5xl bg-gray-50 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      >
+        <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
+          <h2 className="text-lg font-bold text-gray-800">ประวัติบันทึกเคมีสี — PAINT Line</h2>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar w-full max-w-full">
+          <div className="w-full">
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-4">
@@ -126,7 +142,14 @@ export default function PaintChemHistoryPage() {
                       <span className="flex items-center gap-1"><Clock size={11} />{row.updated_at?.slice(0, 16)}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <a 
+                      <button 
+                          onClick={() => onSelectRecord && onSelectRecord(row.log_date, row.shift)}
+                          className="inline-flex items-center justify-center p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded transition-colors mr-2"
+                          title="ดูข้อมูล"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <a 
                         href={`${API_BASE}/export_pdf.php?date=${row.log_date}&shift=${row.shift}`} 
                         target="_blank" 
                         rel="noreferrer"
@@ -163,5 +186,8 @@ export default function PaintChemHistoryPage() {
         )}
       </div>
     </div>
+        </div>
+      </div>
+    </>
   );
 }

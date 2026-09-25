@@ -10,7 +10,7 @@ const MoodInsightDashboard = lazy(() => import('../modules/MoodInsight/pages/Moo
 const UserManagement = lazy(() => import('../modules/Admin/pages/UserManagement'));
 const Login = lazy(() => import('../modules/Auth/pages/Login'));
 const PaintChemEntryPage = lazy(() => import('../modules/PaintChem/pages/PaintChemEntryPage'));
-const PaintChemHistoryPage = lazy(() => import('../modules/PaintChem/pages/PaintChemHistoryPage'));
+
 
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
@@ -62,11 +62,7 @@ export default function App() {
                 <PaintChemEntryPage />
               </Suspense>
             } />
-            <Route path="paint-chem/history" element={
-              <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดประวัติเคมีสี...</div>}>
-                <PaintChemHistoryPage />
-              </Suspense>
-            } />
+            
             <Route path="*" element={<Navigate to="/" replace />} />
 
           </Route>
