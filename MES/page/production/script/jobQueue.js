@@ -795,6 +795,17 @@ async function openJobHistory() {
             historyJobsData = [];
         }
 
+        // Populate Line Filter Dropdown dynamically based on fetched history data
+        const lineSelect = document.getElementById('historyLine');
+        if (lineSelect) {
+            const uniqueLines = [...new Set(historyJobsData.map(j => j.location_name))].filter(Boolean).sort();
+            let opts = '<option value="">ทุกไลน์</option>';
+            uniqueLines.forEach(l => {
+                opts += `<option value="${l}">${l}</option>`;
+            });
+            lineSelect.innerHTML = opts;
+        }
+
         renderHistoryTable(historyJobsData);
 
         const offcanvasEl = document.getElementById('historyOffcanvas');
@@ -811,10 +822,14 @@ async function openJobHistory() {
 function filterHistory() {
     const searchTerm = document.getElementById('historySearch').value.toLowerCase().trim();
     const dateTerm = document.getElementById('historyDate').value;
+    const lineTerm = document.getElementById('historyLine') ? document.getElementById('historyLine').value : '';
+    const statTerm = document.getElementById('historyStatus') ? document.getElementById('historyStatus').value.toUpperCase() : '';
     
     let filtered = historyJobsData.filter(job => {
         let matchSearch = true;
         let matchDate = true;
+        let matchLine = true;
+        let matchStat = true;
         
         if (searchTerm) {
             const str = `${job.job_no} ${job.part_no} ${job.lot_no || ''}`.toLowerCase();
@@ -825,8 +840,16 @@ function filterHistory() {
             const jobDate = job.start_time ? job.start_time.split(' ')[0] : '';
             matchDate = (jobDate === dateTerm);
         }
+
+        if (lineTerm) {
+            matchLine = (job.location_name === lineTerm);
+        }
+
+        if (statTerm) {
+            matchStat = (job.status === statTerm);
+        }
         
-        return matchSearch && matchDate;
+        return matchSearch && matchDate && matchLine && matchStat;
     });
     
     renderHistoryTable(filtered);

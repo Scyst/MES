@@ -365,10 +365,20 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
         <!-- Filter Bar -->
         <div class="px-3 py-2 bg-white border-bottom">
             <div class="d-flex gap-2 align-items-center flex-wrap mb-2">
-                <div class="input-group input-group-sm shadow-sm flex-grow-1" style="min-width: 180px; max-width: 280px;">
+                <div class="input-group input-group-sm shadow-sm flex-grow-1" style="min-width: 150px; max-width: 250px;">
                     <span class="input-group-text bg-white border-secondary-subtle"><i class="fas fa-search text-muted" style="font-size:0.75rem;"></i></span>
-                    <input type="text" id="historySearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="Job No, Part No, Lot No..." onkeyup="filterHistory()">
+                    <input type="text" id="historySearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Job, Part, Lot..." onkeyup="filterHistory()">
                 </div>
+                <!-- Line Filter -->
+                <select id="historyLine" class="form-select form-select-sm border-secondary-subtle shadow-sm" style="width: 110px; cursor: pointer;" onchange="filterHistory()">
+                    <option value="">ทุกไลน์</option>
+                </select>
+                <!-- Status Filter -->
+                <select id="historyStatus" class="form-select form-select-sm border-secondary-subtle shadow-sm" style="width: 110px; cursor: pointer;" onchange="filterHistory()">
+                    <option value="">ทุกสถานะ</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                </select>
                 <!-- Custom Date Picker Display -->
                 <div class="input-group input-group-sm shadow-sm" style="width: 130px;">
                     <span class="input-group-text bg-white border-secondary-subtle"><i class="fas fa-calendar-day text-muted" style="font-size:0.75rem;"></i></span>
@@ -377,8 +387,8 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
                         <input type="date" id="historyDate" onchange="const v=this.value; document.getElementById('historyDateDisplay').value = v ? v.split('-').reverse().join('/') : ''; filterHistory();">
                     </div>
                 </div>
-                <button class="btn btn-sm btn-outline-secondary shadow-sm" onclick="document.getElementById('historySearch').value=''; document.getElementById('historyDate').value=''; document.getElementById('historyDateDisplay').value=''; filterHistory();" title="ล้างตัวกรอง">
-                    <i class="fas fa-times me-1"></i>ล้าง
+                <button class="btn btn-sm btn-outline-secondary shadow-sm" onclick="document.getElementById('historySearch').value=''; document.getElementById('historyDate').value=''; document.getElementById('historyDateDisplay').value=''; document.getElementById('historyLine').value=''; document.getElementById('historyStatus').value=''; filterHistory();" title="ล้างตัวกรอง">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
             <!-- Summary Strip -->
