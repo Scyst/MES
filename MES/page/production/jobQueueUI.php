@@ -354,7 +354,7 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
         </div>
     </div>
 
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="historyOffcanvas" style="width: min(860px, 95vw);">
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="historyOffcanvas" style="width: min(920px, 100vw);">
         <div class="offcanvas-header bg-white border-bottom px-4 py-3">
             <h5 class="offcanvas-title fw-bold text-dark mb-0">
                 <i class="fas fa-history text-primary me-2"></i> ประวัติคิวงาน <span class="text-secondary fw-normal fs-6 ms-1">(Job Queue History)</span>
@@ -383,8 +383,8 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
         </div>
 
         <!-- Table -->
-        <div class="offcanvas-body p-0 bg-white" style="overflow-y: auto; overflow-x: hidden;">
-            <div class="table-responsive">
+        <div class="offcanvas-body p-0 bg-white" style="overflow-y: auto;">
+            <div class="table-responsive h-100">
                 <table class="table table-hover align-middle mb-0" style="font-size: 0.82rem; min-width: 700px;">
                     <thead style="background:#eef1f6; position: sticky; top: 0; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
                         <tr>

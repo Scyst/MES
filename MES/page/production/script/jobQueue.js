@@ -876,7 +876,7 @@ function renderHistoryTable(data) {
 
         // Use the start date as the reference date shown; show time range
         const dateLabel = start ? `<div class="text-muted" style="font-size:0.7rem;letter-spacing:0.2px;">${start.date}</div>` : '';
-        const timeRange = `<div class="fw-semibold text-dark text-nowrap" style="font-size:0.8rem;">
+        const timeRange = `<div class="text-dark text-nowrap" style="font-size:0.75rem; font-weight: 500;">
                                ${start ? start.time : '—'} <span class="text-muted fw-normal">→</span> ${end ? end.time : '—'}
                            </div>`;
         const datetimeCell = `<div class="text-center text-nowrap">${dateLabel}${timeRange}</div>`;
