@@ -74,7 +74,9 @@ export default function DesktopSidebar() {
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-16 hover:w-64 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0 z-20 transition-all duration-300 group overflow-hidden">
+    <>
+      <div className="hidden md:block w-16 h-full flex-shrink-0 z-10" />
+      <aside className="absolute top-0 left-0 hidden md:flex flex-col w-16 hover:w-64 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg z-30 transition-all duration-300 group overflow-hidden">
       <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-center group-hover:justify-start">
         <div className="relative w-full flex items-center justify-center group-hover:justify-start">
           <Search className="text-gray-400 group-hover:absolute group-hover:left-3" size={20} />
@@ -100,7 +102,7 @@ export default function DesktopSidebar() {
               
               <button 
                 onClick={() => toggleSection(section.title)}
-                className="w-full flex items-center px-3 py-2 text-sm font-bold text-gray-500 dark:text-gray-400 bg-gray-100/80 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors uppercase tracking-wider mx-2 my-1 rounded-md"
+                className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors mx-2 my-1 rounded-md"
                 style={{ width: 'calc(100% - 16px)' }}
               >
                 <div className="min-w-[20px] flex items-center justify-center text-gray-400 dark:text-gray-500">
@@ -154,5 +156,6 @@ export default function DesktopSidebar() {
         })}
       </div>
     </aside>
+    </>
   );
 }
