@@ -364,7 +364,7 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
 
         <!-- Filter Bar -->
         <div class="px-3 py-2 bg-white border-bottom">
-            <div class="d-flex gap-2 align-items-center flex-wrap">
+            <div class="d-flex gap-2 align-items-center flex-wrap mb-2">
                 <div class="input-group input-group-sm shadow-sm flex-grow-1" style="min-width: 180px; max-width: 280px;">
                     <span class="input-group-text bg-white border-secondary-subtle"><i class="fas fa-search text-muted" style="font-size:0.75rem;"></i></span>
                     <input type="text" id="historySearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="Job No, Part No, Lot No..." onkeyup="filterHistory()">
@@ -379,6 +379,14 @@ $pageTitle = "Live Job Queue | MES TOOLBOX";
                 <div class="ms-auto">
                     <span class="badge bg-secondary-subtle text-secondary border fw-semibold px-2 py-1" id="historyCountBadge" style="font-size: 0.75rem;">— รายการ</span>
                 </div>
+            </div>
+            <!-- Summary Strip -->
+            <div class="d-flex gap-4 align-items-center bg-light rounded px-3 py-2 border border-light-subtle shadow-sm" style="font-size:0.8rem;">
+                <div class="fw-bold text-secondary"><i class="fas fa-calculator me-1"></i> ผลรวมตามตัวกรอง:</div>
+                <div class="ms-auto">Target: <span class="fw-bold text-dark ms-1 fs-6" id="sumTarget">0</span></div>
+                <div>FG: <span class="fw-bold text-success ms-1 fs-6" id="sumFG">0</span></div>
+                <div>Hold: <span class="fw-bold ms-1 fs-6" style="color:#c89a00;" id="sumHold">0</span></div>
+                <div>Scrap: <span class="fw-bold text-danger ms-1 fs-6" id="sumScrap">0</span></div>
             </div>
         </div>
 

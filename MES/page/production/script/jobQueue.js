@@ -842,6 +842,27 @@ function renderHistoryTable(data) {
     const countBadge = document.getElementById('historyCountBadge');
     if (countBadge) countBadge.textContent = `${data.length} รายการ`;
 
+    // Calculate and update sums
+    let sumTarget = 0, sumFG = 0, sumHold = 0, sumScrap = 0;
+    data.forEach(job => {
+        sumTarget += parseFloat(job.target_qty || 0);
+        sumFG     += parseFloat(job.actual_qty || 0);
+        sumHold   += parseFloat(job.hold_qty   || 0);
+        sumScrap  += parseFloat(job.scrap_qty  || 0);
+    });
+
+    const elTarget = document.getElementById('sumTarget');
+    if (elTarget) elTarget.textContent = sumTarget.toLocaleString();
+    
+    const elFG = document.getElementById('sumFG');
+    if (elFG) elFG.textContent = sumFG.toLocaleString();
+    
+    const elHold = document.getElementById('sumHold');
+    if (elHold) elHold.textContent = sumHold.toLocaleString();
+    
+    const elScrap = document.getElementById('sumScrap');
+    if (elScrap) elScrap.textContent = sumScrap.toLocaleString();
+
     if (data.length === 0) {
         tbody.innerHTML = `
             <tr>
