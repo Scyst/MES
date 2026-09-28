@@ -61,6 +61,13 @@ $pageHeaderSubtitle = '<span style="opacity:0.55;font-size:0.7rem">v1.5.3</span>
                         </div>
 
                         <div class="form-group">
+                            <label>เลขที่ใบสั่งผลิต (Job No.) <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(Optional)</span></label>
+                            <select id="jobNoSelect" class="form-control" onchange="document.getElementById('barcodeInput').focus()">
+                                <option value="">-- ไม่ระบุ --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
                             <label>Production Type <span class="required">*</span></label>
                             <div class="type-selector">
                                 <button type="button" class="type-btn active-fg" data-type="FG"    onclick="selectProductionType('FG')">FG</button>

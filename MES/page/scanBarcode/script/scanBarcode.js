@@ -20,6 +20,7 @@ const sanitizeBarcode = v => v.replace(CTRL_CHAR_RE, '').trim();
 // ===== โหลดเริ่มต้น =====
 document.addEventListener('DOMContentLoaded', () => {
     loadLocations();
+    loadActiveJobs();
     setupBarcodeInput();
     setupAutoClearInvalid();
     setupFieldNavigation();
@@ -34,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('locationSelect').addEventListener('change', () => {
         const locationSelect = document.getElementById('locationSelect');
         const locationId = locationSelect.value;
-        const locationName = locationSelect.selectedIndex >= 0 ? locationSelect.options[locationSelect.selectedIndex].text.toUpperCase() : '';
+        const locationName = locationSelect.options[locationSelect.selectedIndex]?.text.toUpperCase() || '';
         if (locationId && locationName.includes('ASSEMBLY')) {
             selectActiveLineUsers();
         } else {
@@ -123,6 +124,27 @@ async function loadLocations() {
         }
     } catch (err) {
         console.error('Load locations failed:', err);
+    }
+}
+
+// ===== โหลดรายการ Job No ที่ยัง Active =====
+async function loadActiveJobs() {
+    try {
+        const res = await fetch('../production/api/inventoryManage.php?action=get_active_jobs', { headers: { 'Accept': 'application/json' } });
+        const json = await res.json();
+        const select = document.getElementById('jobNoSelect');
+
+        if (json.success && json.data.length > 0) {
+            json.data.forEach(job => {
+                const opt = document.createElement('option');
+                opt.value = job.job_no;
+                const locName = job.location_name ? job.location_name : 'ไม่มี Line';
+                opt.textContent = `${job.job_no} [${job.status}] - Target: ${Math.floor(job.target_qty)} (${locName})`;
+                select.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.error('Load jobs failed:', err);
     }
 }
 
@@ -472,6 +494,7 @@ async function saveScan() {
                 location_name: locationName,
                 type:  currentProductionType,
                 notes,
+                job_no: document.getElementById('jobNoSelect') ? document.getElementById('jobNoSelect').value : '',
                 team_user_ids: document.getElementById('record_team_user_ids')?.value ? document.getElementById('record_team_user_ids').value.split(',') : []
             })
         });
@@ -603,7 +626,7 @@ async function loadRecordTeamUsers() {
             // Auto-select line users if location is already selected, else leave empty
             const locationSelect = document.getElementById('locationSelect');
             const locationId = locationSelect.value;
-            const locationName = locationSelect.selectedIndex >= 0 ? locationSelect.options[locationSelect.selectedIndex].text.toUpperCase() : '';
+            const locationName = locationSelect.options[locationSelect.selectedIndex]?.text.toUpperCase() || '';
             if (locationId && locationName.includes('ASSEMBLY')) {
                 selectActiveLineUsers();
             } else {

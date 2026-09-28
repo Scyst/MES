@@ -105,10 +105,32 @@ try {
             $location_name   = trim($input['location_name']   ?? '');
             $production_type = strtoupper(trim($input['type'] ?? 'FG'));
             $notes           = trim($input['notes']           ?? '');
+            $job_no          = trim($input['job_no']          ?? '');
             $team_user_ids_input = isset($input['team_user_ids']) && is_array($input['team_user_ids']) ? $input['team_user_ids'] : [];
 
             if ((empty($barcode) && empty($sap)) || empty($location_id)) {
                 throw new Exception('กรุณากรอกข้อมูล Barcode และ Location ให้ครบถ้วน');
+            }
+
+            // Job Validation and Formatting
+            $original_lot_ref = $lot_ref; // Keep for SCAN_LOGS_TABLE
+            $job = null;
+            if ($job_no !== '') {
+                $jobStmt = $pdo->prepare("SELECT job_id, status FROM PRODUCTION_JOBS WITH (NOLOCK) WHERE job_no = ?");
+                $jobStmt->execute([$job_no]);
+                $job = $jobStmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($job) {
+                    if (in_array(strtoupper($job['status']), ['COMPLETED', 'CLOSED'])) {
+                        throw new Exception("Cannot log scan for a closed/completed Job.");
+                    }
+                    if (!empty($lot_ref)) {
+                        $notes = "[Lot: " . $lot_ref . "] " . $notes;
+                    }
+                    $lot_ref = $job_no; // Override lot_ref to store Job No as reference_id in transactions
+                } else {
+                    throw new Exception("Job No not found.");
+                }
             }
 
             // Find item_id for Stock Transaction
@@ -129,13 +151,13 @@ try {
 
             $pdo->beginTransaction();
 
-            // 1. Insert Log (1 Row per scan always)
+            // 1. Insert Log (1 Row per scan always) - Using original lot ref
             $stmt = $pdo->prepare("
                 INSERT INTO " . SCAN_LOGS_TABLE . " (
                     barcode_no, sap_no, lot_ref, location_id, location_name, production_type, logdate, notes, scanned_by
                 ) VALUES (?, ?, ?, ?, ?, ?, GETDATE(), ?, ?)
             ");
-            $stmt->execute([$barcode, $final_sap, $lot_ref, $location_id, $location_name, $production_type, $notes, $username]);
+            $stmt->execute([$barcode, $final_sap, $original_lot_ref, $location_id, $location_name, $production_type, $notes, $username]);
 
             // 2. Execute Production (Aggregate by Hour)
             $current_time = date('H:i:s');
@@ -299,11 +321,22 @@ try {
                     $reqStmt->execute([$uuid, $item_id, 1, $store_loc_id, $location_id, $user_id, $repl_notes, $timestamp]);
                 }
             }
+            // NEW: Update PRODUCTION_JOBS quantity
+            if ($job_no !== '' && $job) {
+                $col = null;
+                if ($production_type === 'FG') $col = 'actual_qty';
+                elseif ($production_type === 'HOLD') $col = 'hold_qty';
+                elseif ($production_type === 'SCRAP') $col = 'scrap_qty';
+                
+                if ($col) {
+                    $pdo->prepare("UPDATE PRODUCTION_JOBS SET $col = ISNULL($col, 0) + 1 WHERE job_no = ?")->execute([$job_no]);
+                }
+            }
 
             $pdo->commit();
 
             writeLog($pdo, 'CREATE', 'SCAN_BARCODE', $barcode, null,
-                compact('barcode', 'lot_ref', 'location_name', 'production_type', 'username'));
+                ['barcode' => $barcode, 'lot_ref' => $original_lot_ref, 'location_name' => $location_name, 'production_type' => $production_type, 'username' => $username]);
 
             $logdate_format = (new DateTime('now', new DateTimeZone('Asia/Bangkok')))->format('Y-m-d H:i:s');
             echo json_encode([
@@ -312,7 +345,7 @@ try {
                 'data'    => [
                     'barcode'         => $barcode,
                     'sap'             => $final_sap,
-                    'lot_ref'         => $lot_ref,
+                    'lot_ref'         => $original_lot_ref,
                     'location_name'   => $location_name,
                     'production_type' => $production_type,
                     'logdate'         => $logdate_format,
