@@ -63,13 +63,13 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
             <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
               <Clock3 size={11} /> กะ & ช่วงเวลา
             </label>
-            {/* Shift toggle */}
-            <div className="flex gap-2">
+            {/* Shift + Time Slot on one row */}
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => onShiftChange('DAY')}
                 disabled={disabled}
-                className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all whitespace-nowrap ${
                   shift === 'DAY'
                     ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
                     : 'bg-white border-gray-200 text-gray-500 hover:border-amber-300 hover:text-amber-600'
@@ -81,7 +81,7 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
                 type="button"
                 onClick={() => onShiftChange('NIGHT')}
                 disabled={disabled}
-                className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all whitespace-nowrap ${
                   shift === 'NIGHT'
                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
                     : 'bg-white border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600'
@@ -89,13 +89,19 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
               >
                 <Moon size={14} /> กลางคืน
               </button>
+              {/* Time Slot dropdown — compact, same row */}
+              {timeSlots && (
+                <select
+                  value={selectedSlot ?? ''}
+                  onChange={(e) => onSlotChange(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-700 font-medium cursor-pointer"
+                >
+                  {timeSlots.map((slot) => (
+                    <option key={slot} value={slot}>{slot}</option>
+                  ))}
+                </select>
+              )}
             </div>
-            {/* Time Slot pills — auto-updates when shift changes */}
-            {timeSlots && (
-              <div className="mt-1">
-                <TimeSlotSelector slots={timeSlots} selected={selectedSlot} onChange={onSlotChange} />
-              </div>
-            )}
           </div>
         </div>
 
