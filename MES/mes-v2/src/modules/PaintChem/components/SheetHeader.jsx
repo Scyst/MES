@@ -1,10 +1,10 @@
 // SheetHeader.jsx — Top section: date picker, shift selector, Painting Condition fields
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, History } from 'lucide-react';
 
 const inputCls = 'w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const labelCls = 'block text-xs text-gray-500 mb-0.5';
 
-export default function SheetHeader({ date, shift, paintingCond, onDateChange, onShiftChange, onCondChange, sheetStatus, disabled }) {
+export default function SheetHeader({ date, shift, paintingCond, onDateChange, onShiftChange, onCondChange, sheetStatus, disabled, onHistoryClick }) {
   const statusColors = {
     DRAFT:     'bg-gray-100 text-gray-600',
     SUBMITTED: 'bg-yellow-100 text-yellow-700',
@@ -24,11 +24,20 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
           <h1 className="text-base font-bold text-gray-800">บันทึกเคมีสี — PAINT Line</h1>
           <p className="text-xs text-gray-500">Parameter & Chemicals Control Check Sheet</p>
         </div>
-        {sheetStatus && (
-          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[sheetStatus] ?? ''}`}>
-            {statusLabels[sheetStatus] ?? sheetStatus}
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {sheetStatus && (
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[sheetStatus] ?? ''}`}>
+              {statusLabels[sheetStatus] ?? sheetStatus}
+            </span>
+          )}
+          <button 
+            type="button"
+            onClick={onHistoryClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+          >
+            <History size={16} /> <span className="hidden sm:inline">ประวัติย้อนหลัง</span>
+          </button>
+        </div>
       </div>
 
       {/* Date + Shift */}
