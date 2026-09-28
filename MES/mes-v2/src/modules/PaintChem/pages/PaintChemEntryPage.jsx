@@ -187,7 +187,7 @@ export default function PaintChemEntryPage() {
   const isReadOnly = header?.status === 'APPROVED' || header?.status === 'SUBMITTED';
 
   return (
-    <div className="max-w-screen-xl mx-auto px-3 py-4 pb-24 w-full">
+    <div className="w-full px-3 md:px-6 py-4 pb-24">
       {/* Offline banner */}
       {!isOnline && (
         <div className="flex items-center gap-2 bg-red-600 text-white text-sm px-4 py-2 rounded-lg mb-3">
@@ -230,7 +230,7 @@ export default function PaintChemEntryPage() {
       </div>
 
       {/* Station Cards in a responsive grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-3 md:gap-4">
         {STATIONS.map((station) => (
           <StationCard
             key={station.no}
@@ -245,7 +245,7 @@ export default function PaintChemEntryPage() {
       {/* Action Bar */}
       {!isReadOnly && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <div className="max-w-screen-xl mx-auto flex gap-3 justify-center md:justify-end">
+          <div className="w-full px-2 md:px-6 flex gap-3 justify-center md:justify-end">
             <button
               type="button"
               onClick={handleSave}
