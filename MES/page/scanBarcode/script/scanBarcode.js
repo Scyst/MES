@@ -142,7 +142,7 @@ async function loadActiveJobs() {
                 opt.dataset.locationId = job.location_id || '';
                 opt.dataset.barcode = job.barcode || '';
                 const locName = job.location_name ? job.location_name : 'ไม่มี Line';
-                opt.textContent = `${job.job_no} [${job.status}] - Target: ${Math.floor(job.target_qty)} (${locName})`;
+                opt.textContent = `${job.job_no} | ${job.part_no} (เป้า: ${Math.floor(job.target_qty)})`;
                 select.appendChild(opt);
             });
             
@@ -364,43 +364,34 @@ function processBarcodeInput(val) {
         selectProductionType('FG');
     }
 
-    const lotDom   = document.getElementById('lotRefInput').value.trim();
-    const lotRef   = lotDom || cachedLotRef;
-    const location = document.getElementById('locationSelect').value;
-
-    if (!lotRef || !location) {
-        if (!lotRef)   document.getElementById('lotRefInput').classList.add('invalid');
-        if (!location) document.getElementById('locationSelect').classList.add('invalid');
-        const missingFields = [!lotRef && 'Lot/Ref', !location && 'Location'].filter(Boolean);
-        showStatus(document.getElementById('barcodeStatus'), 'error',
-            `กรุณาใส่ ${missingFields.join(' และ ')} ก่อนสแกน`);
-        document.getElementById('barcodeInput').value = '';
-        barcodeFound = false; currentSap = ''; currentPartNo = '';
-        return;
-    }
-
-    if (!lotDom && lotRef) {
-        document.getElementById('lotRefInput').value = lotRef;
-    }
-
     isProcessing = true;
     lookupProduct(val).then(found => {
-        const lotRef2   = document.getElementById('lotRefInput').value.trim();
-        const location2 = document.getElementById('locationSelect').value;
-
         if (!found) {
             isProcessing = false;
-        } else if (lotRef2 && location2) {
-            saveScan().finally(() => { isProcessing = false; });
-        } else {
-            isProcessing  = false;
-            barcodeFound  = false;
-            currentSap    = '';
-            currentPartNo = '';
-            document.getElementById('barcodeInput').value = '';
-            if (!lotRef2)   document.getElementById('lotRefInput').classList.add('invalid');
-            if (!location2) document.getElementById('locationSelect').classList.add('invalid');
+            return;
         }
+
+        const lotDom   = document.getElementById('lotRefInput').value.trim();
+        const lotRef   = lotDom || cachedLotRef;
+        const location = document.getElementById('locationSelect').value;
+
+        if (!lotRef || !location) {
+            if (!lotRef)   document.getElementById('lotRefInput').classList.add('invalid');
+            if (!location) document.getElementById('locationSelect').classList.add('invalid');
+            const missingFields = [!lotRef && 'Lot/Ref', !location && 'Location'].filter(Boolean);
+            showStatus(document.getElementById('barcodeStatus'), 'error',
+                `กรุณาใส่ ${missingFields.join(' และ ')} ก่อนสแกน`);
+            document.getElementById('barcodeInput').value = '';
+            barcodeFound = false; currentSap = ''; currentPartNo = '';
+            isProcessing = false;
+            return;
+        }
+
+        if (!lotDom && lotRef) {
+            document.getElementById('lotRefInput').value = lotRef;
+        }
+
+        saveScan().finally(() => { isProcessing = false; });
     }).catch(() => { isProcessing = false; });
 }
 
@@ -418,6 +409,19 @@ async function lookupProduct(barcode) {
             barcodeFound  = true;
             currentSap    = json.data.sap_no  || '';
             currentPartNo = json.data.part_no || '';
+            
+            const jobSelect = document.getElementById('jobNoSelect');
+            if (jobSelect) {
+                const matchingOpt = Array.from(jobSelect.options).find(opt => opt.dataset.sapNo === currentSap);
+                if (matchingOpt) {
+                    const selectedOpt = jobSelect.options[jobSelect.selectedIndex];
+                    if (!jobSelect.value || (selectedOpt && selectedOpt.dataset.sapNo !== currentSap)) {
+                        jobSelect.value = matchingOpt.value;
+                        jobSelect.dispatchEvent(new Event('change'));
+                    }
+                }
+            }
+
             showStatus(statusEl, 'success',
                 `✅ ${json.data.part_no || ''} — ${json.data.part_description || ''}`);
             return true;

@@ -527,7 +527,7 @@ async function fetchJobsForItem(itemId = null) {
                 opt.dataset.locationId = job.location_id || '';
                 opt.dataset.lotNo = job.lot_no || job.job_no;
                 const locName = job.location_name ? job.location_name : 'ไม่มี Line';
-                opt.textContent = `${job.job_no} [${job.status}] - Target: ${Math.floor(job.target_qty)} (${locName})`;
+                opt.textContent = `${job.job_no} | ${job.part_no} (เป้า: ${Math.floor(job.target_qty)})`;
                 select.appendChild(opt);
             });
             
