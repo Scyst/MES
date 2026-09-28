@@ -37,6 +37,13 @@ $pageHeaderSubtitle = '<span style="opacity:0.55;font-size:0.7rem">v1.5.3</span>
                     <form id="scanForm" onsubmit="event.preventDefault(); saveScan();" novalidate>
 
                         <div class="form-group">
+                            <label>เลขที่ใบสั่งผลิต (Job No.) <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(Optional)</span></label>
+                            <select id="jobNoSelect" class="form-control">
+                                <option value="">-- ไม่ระบุ --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
                             <label>Barcode <span class="required">*</span> <span id="barcodeSaveOk" class="save-ok-badge"></span></label>
                             <input type="text" id="barcodeInput" class="form-control"
                                    placeholder="ยิงบาร์โค้ดที่นี่..." autocomplete="off" autofocus
@@ -57,13 +64,6 @@ $pageHeaderSubtitle = '<span style="opacity:0.55;font-size:0.7rem">v1.5.3</span>
                             <select id="locationSelect" class="form-control"
                                     onchange="document.getElementById('barcodeInput').focus()">
                                 <option value="">-- เลือก Location --</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>เลขที่ใบสั่งผลิต (Job No.) <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(Optional)</span></label>
-                            <select id="jobNoSelect" class="form-control" onchange="document.getElementById('barcodeInput').focus()">
-                                <option value="">-- ไม่ระบุ --</option>
                             </select>
                         </div>
 

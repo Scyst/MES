@@ -138,9 +138,27 @@ async function loadActiveJobs() {
             json.data.forEach(job => {
                 const opt = document.createElement('option');
                 opt.value = job.job_no;
+                opt.dataset.lotNo = job.lot_no || job.job_no; // Fallback to job_no if lot_no is empty
+                opt.dataset.locationId = job.location_id || '';
+                opt.dataset.barcode = job.barcode || '';
                 const locName = job.location_name ? job.location_name : 'ไม่มี Line';
                 opt.textContent = `${job.job_no} [${job.status}] - Target: ${Math.floor(job.target_qty)} (${locName})`;
                 select.appendChild(opt);
+            });
+            
+            select.addEventListener('change', (e) => {
+                const selectedOpt = select.options[select.selectedIndex];
+                if (selectedOpt && selectedOpt.value) {
+                    const lotNo = selectedOpt.dataset.lotNo;
+                    const locationId = selectedOpt.dataset.locationId;
+                    const barcode = selectedOpt.dataset.barcode;
+                    
+                    if (lotNo) document.getElementById('lotRefInput').value = lotNo;
+                    if (locationId) document.getElementById('locationSelect').value = locationId;
+                    if (barcode) document.getElementById('barcodeInput').value = barcode;
+                    
+                    document.getElementById('barcodeInput').focus();
+                }
             });
         }
     } catch (err) {

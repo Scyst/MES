@@ -643,8 +643,8 @@ try {
                 $params[] = $line;
             }
             
-            $sql = "SELECT j.job_id, j.job_no, j.target_qty, j.actual_qty, j.status, l.location_name,
-                           i.item_id, i.sap_no, i.part_no, i.part_description
+            $sql = "SELECT j.job_id, j.job_no, j.target_qty, j.actual_qty, j.status, l.location_name, j.location_id, j.lot_no,
+                           i.item_id, i.sap_no, i.part_no, i.part_description, i.barcode
                     FROM PRODUCTION_JOBS j WITH (NOLOCK)
                     LEFT JOIN " . LOCATIONS_TABLE . " l ON j.location_id = l.location_id
                     LEFT JOIN " . ITEMS_TABLE . " i ON j.item_id = i.item_id

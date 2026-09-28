@@ -486,11 +486,19 @@ function setupProductionAutocomplete() {
                 const itemId = selectedOpt.dataset.itemId;
                 const sapNo = selectedOpt.dataset.sapNo;
                 const partNo = selectedOpt.dataset.partNo;
+                const locationId = selectedOpt.dataset.locationId;
+                const lotNo = selectedOpt.dataset.lotNo;
                 
                 if (itemId) {
                     searchInput.value = `${sapNo} | ${partNo}`;
                     document.getElementById('out_item_id').value = itemId;
                     selectedOutItem = allItems.find(i => i.item_id == itemId) || null;
+                }
+                if (locationId && document.getElementById('out_location_id')) {
+                    document.getElementById('out_location_id').value = locationId;
+                }
+                if (lotNo && document.getElementById('out_lot_no')) {
+                    document.getElementById('out_lot_no').value = lotNo;
                 }
             }
         });
@@ -516,6 +524,8 @@ async function fetchJobsForItem(itemId = null) {
                 opt.dataset.itemId = job.item_id;
                 opt.dataset.sapNo = job.sap_no;
                 opt.dataset.partNo = job.part_no;
+                opt.dataset.locationId = job.location_id || '';
+                opt.dataset.lotNo = job.lot_no || job.job_no;
                 const locName = job.location_name ? job.location_name : 'ไม่มี Line';
                 opt.textContent = `${job.job_no} [${job.status}] - Target: ${Math.floor(job.target_qty)} (${locName})`;
                 select.appendChild(opt);
