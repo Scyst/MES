@@ -41,12 +41,12 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
       </div>
 
       {/* Date + Shift */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="flex-1">
+      <div className="flex flex-col sm:flex-row gap-4 mb-5">
+        <div className="w-full sm:w-48">
           <label className={labelCls}>วันที่ตรวจ</label>
           <input type="date" className={inputCls} value={date} onChange={(e) => onDateChange(e.target.value)} disabled={disabled} />
         </div>
-        <div className="flex-1">
+        <div className="w-full sm:w-64">
           <label className={labelCls}>กะ</label>
           <div className="flex gap-2">
             <button
@@ -79,7 +79,7 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
 
       {/* Painting Condition */}
       <p className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Painting Condition</p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full xl:w-2/3 2xl:w-1/2 max-w-4xl">
         <div>
           <label className={labelCls}>Speed Conveyor (m/min) <span className="text-gray-400">2.5–5.0</span></label>
           <input
