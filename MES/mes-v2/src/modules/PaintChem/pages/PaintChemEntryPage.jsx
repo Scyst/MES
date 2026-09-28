@@ -3,7 +3,7 @@
 // NOTE: Intentionally >50 lines — complex multi-station form with async state management
 // across 9 stations x 6 time slots requires inline orchestration for clarity.
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { Save, SendHorizonal, Loader2, WifiOff } from 'lucide-react';
 import { History } from 'lucide-react';
@@ -184,14 +184,35 @@ export default function PaintChemEntryPage() {
     }
   };
 
-  const isReadOnly = header?.status === 'APPROVED' || header?.status === 'SUBMITTED';
+    // Time-Lock Constraint: Lock if the sheet date is older than today 12:00 PM (noon)
+  const isTimeLocked = useMemo(() => {
+    if (!date) return false;
+    const now = new Date();
+    const [y, m, d] = date.split('-').map(Number);
+    
+    // Cutoff is 12:00 PM the day AFTER the sheet date
+    const cutoff = new Date(y, m - 1, d);
+    cutoff.setDate(cutoff.getDate() + 1);
+    cutoff.setHours(12, 0, 0, 0);
+    
+    return now > cutoff;
+  }, [date]);
+
+  const isReadOnly = header?.status === 'APPROVED' || header?.status === 'SUBMITTED' || isTimeLocked;
 
   return (
     <div className="w-full px-3 md:px-6 py-4 pb-24">
+      {/* Time-Lock Banner */}
+      {isTimeLocked && header?.status === 'DRAFT' && (
+        <div className="flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm font-medium px-4 py-3 rounded-lg mb-4 shadow-sm">
+          <span>🔒 เอกสารนี้ถูกล็อคเนื่องจากหมดเวลาบันทึก (เกิน 12:00 น. ของวันถัดไป) หากต้องการแก้ไข กรุณาติดต่อหัวหน้างาน</span>
+        </div>
+      )}
+
       {/* Offline banner */}
       {!isOnline && (
-        <div className="flex items-center gap-2 bg-red-600 text-white text-sm px-4 py-2 rounded-lg mb-3">
-          <WifiOff size={16} /> ไม่มีการเชื่อมต่อ — กรุณาอย่ากรอกข้อมูลจนกว่าจะออนไลน์
+        <div className="flex items-center justify-center gap-2 bg-red-600 text-white text-sm font-medium px-4 py-3 rounded-lg mb-4 shadow-sm">
+          <WifiOff size={18} /> ไม่มีการเชื่อมต่ออินเทอร์เน็ต — กรุณาอย่ากรอกข้อมูลจนกว่าจะออนไลน์
         </div>
       )}
 
