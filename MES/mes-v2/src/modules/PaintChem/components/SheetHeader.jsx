@@ -112,45 +112,55 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
           </label>
           <div className="flex items-center gap-2">
             {/* Speed Conveyor */}
-            <div
-              className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-40"
-              title="Speed Conveyor: 2.5–5.0 m/min"
-            >
-              <Wind size={13} className="text-gray-300 flex-shrink-0" />
-              <input
-                type="number" step="0.1" min="2.5" max="5.0"
-                className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
-                value={paintingCond.conveyorSpeed ?? ''}
-                onChange={(e) => onCondChange('conveyorSpeed', e.target.value)}
-                placeholder="Speed (m/min)" disabled={disabled}
-              />
+            <div className="relative group">
+              <div className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-40">
+                <Wind size={13} className="text-gray-300 flex-shrink-0" />
+                <input
+                  type="number" step="0.1" min="2.5" max="5.0"
+                  className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
+                  value={paintingCond.conveyorSpeed ?? ''}
+                  onChange={(e) => onCondChange('conveyorSpeed', e.target.value)}
+                  placeholder="Speed (m/min)" disabled={disabled}
+                />
+              </div>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
+                ความเร็วสายพาน: <span className="font-semibold text-blue-300">2.5–5.0 m/min</span>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-gray-800"></div>
+              </div>
             </div>
             {/* Bake Oven */}
-            <div
-              className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-36"
-              title="Bake Oven: 175–220 °C"
-            >
-              <Thermometer size={13} className="text-orange-300 flex-shrink-0" />
-              <input
-                type="number" step="1" min="175" max="220"
-                className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
-                value={paintingCond.bakeOvenTemp ?? ''}
-                onChange={(e) => onCondChange('bakeOvenTemp', e.target.value)}
-                placeholder="Bake °C" disabled={disabled}
-              />
+            <div className="relative group">
+              <div className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-36">
+                <Thermometer size={13} className="text-orange-300 flex-shrink-0" />
+                <input
+                  type="number" step="1" min="175" max="220"
+                  className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
+                  value={paintingCond.bakeOvenTemp ?? ''}
+                  onChange={(e) => onCondChange('bakeOvenTemp', e.target.value)}
+                  placeholder="Bake °C" disabled={disabled}
+                />
+              </div>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
+                ตู้อบ (Bake Oven): <span className="font-semibold text-orange-300">175–220 °C</span>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-gray-800"></div>
+              </div>
             </div>
             {/* Dry Oven */}
-            <div
-              className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-32"
-              title="Dry Oven: 140–160 °C"
-            >
-              <Thermometer size={13} className="text-blue-300 flex-shrink-0" />
-              <input
-                type="number" step="1" min="140" max="160"
-                className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
-                value={paintingCond.dryOvenTemp ?? ''}
-                onChange={(e) => onCondChange('dryOvenTemp', e.target.value)}
-              />
+            <div className="relative group">
+              <div className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-32">
+                <Thermometer size={13} className="text-blue-300 flex-shrink-0" />
+                <input
+                  type="number" step="1" min="140" max="160"
+                  className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
+                  value={paintingCond.dryOvenTemp ?? ''}
+                  onChange={(e) => onCondChange('dryOvenTemp', e.target.value)}
+                  placeholder="Dry °C" disabled={disabled}
+                />
+              </div>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
+                ตู้อบ (Dry Oven): <span className="font-semibold text-blue-300">140–160 °C</span>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-gray-800"></div>
+              </div>
             </div>
           </div>
         </div>
