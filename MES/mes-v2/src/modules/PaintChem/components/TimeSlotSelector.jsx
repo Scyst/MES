@@ -1,7 +1,7 @@
 ﻿// TimeSlotSelector.jsx — Pill selector for choosing a time slot
 export default function TimeSlotSelector({ slots, selected, onChange }) {
   return (
-    <div className="flex flex-wrap gap-2 mb-4">
+    <div className="flex flex-wrap gap-2">
       {slots.map((slot) => (
         <button
           key={slot}

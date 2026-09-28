@@ -209,18 +209,13 @@ export default function PaintChemEntryPage() {
         onDateChange={(d) => { setDate(d); }}
         onShiftChange={handleShiftChange}
         onCondChange={(k, v) => setPCond((p) => ({ ...p, [k]: v }))}
+          selectedSlot={selectedSlot}
+          onSlotChange={setSlot}
+          timeSlots={SHIFT_SLOTS[shift]}
         disabled={isReadOnly}
       />
 
-      {/* Time Slot Selector */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 pt-3 pb-2 mb-4">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">เลือก TIME SLOT</p>
-        <TimeSlotSelector
-          slots={SHIFT_SLOTS[shift]}
-          selected={selectedSlot}
-          onChange={setSlot}
-        />
-      </div>
+      
 
       {/* Station Cards in a responsive grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-3 md:gap-4">
