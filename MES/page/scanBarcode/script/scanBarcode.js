@@ -142,7 +142,7 @@ async function loadActiveJobs() {
                 opt.dataset.locationId = job.location_id || '';
                 opt.dataset.barcode = job.barcode || '';
                 const locName = job.location_name ? job.location_name : 'ไม่มี Line';
-                opt.textContent = `${job.job_no} | ${job.part_no} (เป้า: ${Math.floor(job.target_qty)})`;
+                opt.textContent = `${job.job_no} | ${job.part_no} (เป้า: ${Math.floor(job.target_qty)}) - ${locName}`;
                 select.appendChild(opt);
             });
             
