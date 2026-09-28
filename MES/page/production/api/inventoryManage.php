@@ -688,6 +688,7 @@ try {
                     if (!empty($lot_no)) {
                         $notes = "[Lot: " . $lot_no . "] " . $notes;
                     }
+                    $notes = "[Job: " . $job['job_no'] . "] " . $notes;
                     $lot_no = $job['job_no'];
                 } else {
                     http_response_code(400);

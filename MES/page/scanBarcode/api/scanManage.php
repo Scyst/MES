@@ -127,6 +127,7 @@ try {
                     if (!empty($lot_ref)) {
                         $notes = "[Lot: " . $lot_ref . "] " . $notes;
                     }
+                    $notes = "[Job: " . $job_no . "] " . $notes;
                     $lot_ref = $job_no; // Override lot_ref to store Job No as reference_id in transactions
                 } else {
                     throw new Exception("Job No not found.");
