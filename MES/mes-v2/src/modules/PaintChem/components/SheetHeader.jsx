@@ -1,15 +1,12 @@
-// SheetHeader.jsx — Top section: date picker, shift selector, Painting Condition fields
-import { Sun, Moon, History } from 'lucide-react';
+// SheetHeader.jsx — Top section: date picker, shift selector, time slot, painting conditions
+import { Sun, Moon, History, CalendarDays, Clock3, Thermometer, Wind } from 'lucide-react';
 import TimeSlotSelector from './TimeSlotSelector';
-
-const inputCls = 'w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
-const labelCls = 'block text-xs text-gray-500 mb-0.5';
 
 export default function SheetHeader({ date, shift, paintingCond, onDateChange, onShiftChange, onCondChange, sheetStatus, disabled, onHistoryClick, selectedSlot, onSlotChange, timeSlots }) {
   const statusColors = {
-    DRAFT:     'bg-gray-100 text-gray-600',
-    SUBMITTED: 'bg-yellow-100 text-yellow-700',
-    APPROVED:  'bg-green-100 text-green-700',
+    DRAFT:     'bg-gray-100 text-gray-500 border-gray-200',
+    SUBMITTED: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    APPROVED:  'bg-green-50 text-green-700 border-green-200',
   };
   const statusLabels = {
     DRAFT:     'ร่าง',
@@ -18,48 +15,63 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-4">
-      {/* Title Row */}
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <h1 className="text-base font-bold text-gray-800">บันทึกเคมีสี — PAINT Line</h1>
-          <p className="text-xs text-gray-500">Parameter & Chemicals Control Check Sheet</p>
-        </div>
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden">
+      {/* Top Bar: Title + Actions */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50/60">
         <div className="flex items-center gap-3">
+          <div className="w-1 h-8 rounded-full bg-blue-500" />
+          <div>
+            <h1 className="text-sm font-bold text-gray-800 leading-tight">บันทึกเคมีสี — PAINT Line</h1>
+            <p className="text-[11px] text-gray-400">Parameter &amp; Chemicals Control Check Sheet</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
           {sheetStatus && (
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[sheetStatus] ?? ''}`}>
+            <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${statusColors[sheetStatus] ?? ''}`}>
               {statusLabels[sheetStatus] ?? sheetStatus}
             </span>
           )}
-          <button 
+          <button
             type="button"
             onClick={onHistoryClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
           >
-            <History size={16} /> <span className="hidden sm:inline">ประวัติย้อนหลัง</span>
+            <History size={14} />
+            <span className="hidden sm:inline">ประวัติย้อนหลัง</span>
           </button>
         </div>
       </div>
 
-      {/* Main Controls Row */}
-      <div className="flex flex-col xl:flex-row gap-6 mb-1">
-        {/* Left Side: Date + Shift */}
-        <div className="flex flex-col sm:flex-row gap-4 flex-shrink-0">
-          <div className="w-full sm:w-44">
-            <label className={labelCls}>วันที่ตรวจ</label>
-            <input type="date" className={inputCls} value={date} onChange={(e) => onDateChange(e.target.value)} disabled={disabled} />
+      {/* Main Controls */}
+      <div className="px-5 py-4 flex flex-col lg:flex-row gap-4 lg:gap-0 lg:divide-x lg:divide-gray-100">
+
+        {/* Section 1: Date + Shift */}
+        <div className="flex flex-col sm:flex-row gap-3 lg:pr-6 flex-shrink-0">
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              <CalendarDays size={11} /> วันที่ตรวจ
+            </label>
+            <input
+              type="date"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white w-44"
+              value={date}
+              onChange={(e) => onDateChange(e.target.value)}
+              disabled={disabled}
+            />
           </div>
-          <div className="w-full sm:w-56">
-            <label className={labelCls}>กะ</label>
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              <Clock3 size={11} /> กะการทำงาน
+            </label>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => onShiftChange('DAY')}
                 disabled={disabled}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded border text-sm font-medium transition-all ${
+                className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
                   shift === 'DAY'
-                    ? 'bg-amber-100 border-amber-400 text-amber-800'
-                    : 'bg-white border-gray-300 text-gray-600 hover:border-amber-300'
+                    ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
+                    : 'bg-white border-gray-200 text-gray-500 hover:border-amber-300 hover:text-amber-600'
                 }`}
               >
                 <Sun size={14} /> กลางวัน
@@ -68,10 +80,10 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
                 type="button"
                 onClick={() => onShiftChange('NIGHT')}
                 disabled={disabled}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded border text-sm font-medium transition-all ${
+                className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
                   shift === 'NIGHT'
-                    ? 'bg-indigo-100 border-indigo-400 text-indigo-800'
-                    : 'bg-white border-gray-300 text-gray-600 hover:border-indigo-300'
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                    : 'bg-white border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600'
                 }`}
               >
                 <Moon size={14} /> กลางคืน
@@ -80,50 +92,64 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
           </div>
         </div>
 
-        {/* Right Side: Painting Condition */}
-        <div className="flex-1 w-full max-w-3xl">
-          <p className="text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Painting Condition</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-        <div>
-          <label className={labelCls}>Speed Conveyor (m/min) <span className="text-gray-400">2.5–5.0</span></label>
-          <input
-            type="number" step="0.1" min="2.5" max="5.0" className={inputCls}
-            value={paintingCond.conveyorSpeed ?? ''}
-            onChange={(e) => onCondChange('conveyorSpeed', e.target.value)}
-            placeholder="—" disabled={disabled}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>Bake Oven (°C) <span className="text-gray-400">175–220</span></label>
-          <input
-            type="number" step="1" min="175" max="220" className={inputCls}
-            value={paintingCond.bakeOvenTemp ?? ''}
-            onChange={(e) => onCondChange('bakeOvenTemp', e.target.value)}
-            placeholder="—" disabled={disabled}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>Dry Oven (°C) <span className="text-gray-400">140–160</span></label>
-          <input
-            type="number" step="1" min="140" max="160" className={inputCls}
-            value={paintingCond.dryOvenTemp ?? ''}
-            onChange={(e) => onCondChange('dryOvenTemp', e.target.value)}
-            placeholder="—" disabled={disabled}
-          />
-        </div>
-      </div>
-        </div>
-      </div>
-
-      {/* Time Slot Selection */}
-      {timeSlots && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">เลือก TIME SLOT:</p>
-            <TimeSlotSelector slots={timeSlots} selected={selectedSlot} onChange={onSlotChange} />
+        {/* Section 2: Painting Conditions */}
+        <div className="flex flex-col gap-1 lg:px-6 flex-shrink-0">
+          <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            <Thermometer size={11} /> Painting Condition
+          </label>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] text-gray-400">Speed Conveyor <span className="text-gray-300">2.5–5.0 m/min</span></span>
+              <div className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-44">
+                <Wind size={13} className="text-gray-300 flex-shrink-0" />
+                <input
+                  type="number" step="0.1" min="2.5" max="5.0"
+                  className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
+                  value={paintingCond.conveyorSpeed ?? ''}
+                  onChange={(e) => onCondChange('conveyorSpeed', e.target.value)}
+                  placeholder="—" disabled={disabled}
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] text-gray-400">Bake Oven <span className="text-gray-300">175–220 °C</span></span>
+              <div className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-36">
+                <Thermometer size={13} className="text-orange-300 flex-shrink-0" />
+                <input
+                  type="number" step="1" min="175" max="220"
+                  className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
+                  value={paintingCond.bakeOvenTemp ?? ''}
+                  onChange={(e) => onCondChange('bakeOvenTemp', e.target.value)}
+                  placeholder="—" disabled={disabled}
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] text-gray-400">Dry Oven <span className="text-gray-300">140–160 °C</span></span>
+              <div className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-36">
+                <Thermometer size={13} className="text-blue-300 flex-shrink-0" />
+                <input
+                  type="number" step="1" min="140" max="160"
+                  className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
+                  value={paintingCond.dryOvenTemp ?? ''}
+                  onChange={(e) => onCondChange('dryOvenTemp', e.target.value)}
+                  placeholder="—" disabled={disabled}
+                />
+              </div>
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Section 3: Time Slot */}
+        {timeSlots && (
+          <div className="flex flex-col gap-1 lg:pl-6 flex-1 min-w-0">
+            <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              <Clock3 size={11} /> เลือก Time Slot
+            </label>
+            <TimeSlotSelector slots={timeSlots} selected={selectedSlot} onChange={onSlotChange} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
