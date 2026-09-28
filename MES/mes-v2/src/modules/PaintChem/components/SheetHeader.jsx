@@ -43,7 +43,7 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
       </div>
 
       {/* Main Controls */}
-      <div className="px-5 py-4 flex flex-col lg:flex-row gap-4 lg:gap-0 lg:divide-x lg:divide-gray-100">
+      <div className="px-5 py-4 flex flex-col lg:flex-row gap-4 lg:gap-0 lg:justify-between">
 
         {/* Section 1: Date + Shift + Time Slot */}
         <div className="flex flex-col sm:flex-row gap-4 lg:pr-6 flex-shrink-0">
@@ -106,7 +106,7 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
         </div>
 
         {/* Section 2: Painting Conditions */}
-        <div className="flex flex-col gap-1 lg:px-6 flex-shrink-0">
+        <div className="flex flex-col gap-1 flex-shrink-0">
           <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
             <Thermometer size={11} /> Painting Condition
           </label>
