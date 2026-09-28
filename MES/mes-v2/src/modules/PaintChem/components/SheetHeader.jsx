@@ -45,8 +45,8 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
       {/* Main Controls */}
       <div className="px-5 py-4 flex flex-col lg:flex-row gap-4 lg:gap-0 lg:divide-x lg:divide-gray-100">
 
-        {/* Section 1: Date + Shift */}
-        <div className="flex flex-col sm:flex-row gap-3 lg:pr-6 flex-shrink-0">
+        {/* Section 1: Date + Shift + Time Slot */}
+        <div className="flex flex-col sm:flex-row gap-4 lg:pr-6 flex-shrink-0">
           <div className="flex flex-col gap-1">
             <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
               <CalendarDays size={11} /> วันที่ตรวจ
@@ -61,8 +61,9 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
           </div>
           <div className="flex flex-col gap-1">
             <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-              <Clock3 size={11} /> กะการทำงาน
+              <Clock3 size={11} /> กะ & ช่วงเวลา
             </label>
+            {/* Shift toggle */}
             <div className="flex gap-2">
               <button
                 type="button"
@@ -89,6 +90,12 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
                 <Moon size={14} /> กลางคืน
               </button>
             </div>
+            {/* Time Slot pills — auto-updates when shift changes */}
+            {timeSlots && (
+              <div className="mt-1">
+                <TimeSlotSelector slots={timeSlots} selected={selectedSlot} onChange={onSlotChange} />
+              </div>
+            )}
           </div>
         </div>
 
@@ -140,15 +147,6 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
           </div>
         </div>
 
-        {/* Section 3: Time Slot */}
-        {timeSlots && (
-          <div className="flex flex-col gap-1 lg:pl-6 flex-1 min-w-0">
-            <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-              <Clock3 size={11} /> เลือก Time Slot
-            </label>
-            <TimeSlotSelector slots={timeSlots} selected={selectedSlot} onChange={onSlotChange} />
-          </div>
-        )}
       </div>
     </div>
   );
