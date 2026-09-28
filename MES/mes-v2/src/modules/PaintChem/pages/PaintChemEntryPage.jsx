@@ -201,7 +201,15 @@ export default function PaintChemEntryPage() {
           ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
           {toast.msg}
         </div>
-      )}
+      )}      <div className="flex justify-between items-center mb-4 mt-2">
+        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">บันทึกเคมีสี — PAINT Line</h1>
+        <button 
+          onClick={() => setIsHistoryOpen(true)}
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+        >
+          <History size={16} /> ประวัติย้อนหลัง
+        </button>
+      </div>
 
       <SheetHeader
         date={date} shift={shift} paintingCond={paintingCond} sheetStatus={header?.status}
