@@ -16,8 +16,11 @@ const PaintChemEntryPage = lazy(() => import('../modules/PaintChem/pages/PaintCh
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
+  const location = require('react-router-dom').useLocation();
+  
   if (loading) return null;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  
   return children;
 };
 
