@@ -39,7 +39,10 @@ export default function PaintChemHistoryDrawer({ isOpen, onClose, onSelectRecord
     }
   };
 
-  useEffect(() => { fetchHistory(); }, [page]);  // eslint-disable-line react-hooks/exhaustive-deps
+  // Fetch when drawer opens, or when page changes
+  useEffect(() => {
+    if (isOpen) fetchHistory();
+  }, [isOpen, page]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = () => { setPage(1); fetchHistory(); };
 
