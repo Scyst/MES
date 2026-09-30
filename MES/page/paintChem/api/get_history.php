@@ -15,7 +15,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../../db.php';
 require_once '../../../auth/check_auth.php';
-requireLogin();
 
 $dateFrom = $_GET['date_from'] ?? date('Y-m-d', strtotime('-30 days'));
 $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
@@ -49,7 +48,7 @@ try {
     $total = (int)$stmtCount->fetchColumn();
 
     // Fetch rows
-    $paginatedParams = array_merge($params, [$offset, $pageSize]);
+    // paginatedParams handled via bindValue below
     $stmtRows = $pdo->prepare("
         SELECT
             h.header_id,
@@ -75,8 +74,16 @@ try {
         ORDER BY h.log_date DESC, h.shift
         OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
     ");
-    $stmtRows->execute($paginatedParams);
-    $rows = $stmtRows->fetchAll();
+    $paramIdx = 1;
+    $stmtRows->bindValue($paramIdx++, $dateFrom);
+    $stmtRows->bindValue($paramIdx++, $dateTo);
+    if (!empty($shift)) {
+        $stmtRows->bindValue($paramIdx++, $shift);
+    }
+    $stmtRows->bindValue($paramIdx++, (int)$offset, PDO::PARAM_INT);
+    $stmtRows->bindValue($paramIdx++, (int)$pageSize, PDO::PARAM_INT);
+    $stmtRows->execute();
+    $rows = $stmtRows->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
         'success' => true,

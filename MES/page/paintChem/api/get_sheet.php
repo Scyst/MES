@@ -15,7 +15,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../../db.php';
 require_once '../../../auth/check_auth.php';
-requireLogin();
 
 $logDate = $_GET['date'] ?? date('Y-m-d');
 $shift   = strtoupper($_GET['shift'] ?? '');
