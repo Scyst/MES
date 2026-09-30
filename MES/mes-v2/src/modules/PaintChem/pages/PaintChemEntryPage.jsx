@@ -1,6 +1,6 @@
-// PaintChemEntryPage.jsx — Main entry page for recording chemical check sheet per slot
+﻿// PaintChemEntryPage.jsx โ€” Main entry page for recording chemical check sheet per slot
 
-// NOTE: Intentionally >50 lines — complex multi-station form with async state management
+// NOTE: Intentionally >50 lines โ€” complex multi-station form with async state management
 // across 9 stations x 6 time slots requires inline orchestration for clarity.
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -90,7 +90,7 @@ export default function PaintChemEntryPage() {
         setSlotVals(hydrateSlotValues(res.data.data.logs, selectedSlot));
       }
     } catch {
-      showToast('error', 'ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่');
+      showToast('error', 'เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เนเธซเธฅเธ”เธเนเธญเธกเธนเธฅเนเธ”เน เธเธฃเธธเธ“เธฒเธฅเธญเธเนเธซเธกเน');
     }
   }, [date, shift]);  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -121,9 +121,9 @@ export default function PaintChemEntryPage() {
     setSlot(detectCurrentSlot(newShift));
   };
 
-  // Save current slot — iterate all station params and POST each
+  // Save current slot โ€” iterate all station params and POST each
   const handleSave = async () => {
-    if (!isOnline) { showToast('error', 'ไม่มีการเชื่อมต่ออินเทอร์เน็ต'); return; }
+    if (!isOnline) { showToast('error', 'เนเธกเนเธกเธตเธเธฒเธฃเน€เธเธทเนเธญเธกเธ•เนเธญเธญเธดเธเน€เธ—เธญเธฃเนเน€เธเนเธ•'); return; }
     setSaving(true);
     try {
       const requests = [];
@@ -148,10 +148,10 @@ export default function PaintChemEntryPage() {
         }
       }
       await Promise.all(requests);
-      showToast('success', `บันทึก Time Slot ${selectedSlot} สำเร็จ`);
+      showToast('success', `เธเธฑเธเธ—เธถเธ Time Slot ${selectedSlot} เธชเธณเน€เธฃเนเธ`);
       await fetchSheet();
     } catch {
-      showToast('error', 'บันทึกไม่สำเร็จ กรุณาลองใหม่');
+      showToast('error', 'เธเธฑเธเธ—เธถเธเนเธกเนเธชเธณเน€เธฃเนเธ เธเธฃเธธเธ“เธฒเธฅเธญเธเนเธซเธกเน');
     } finally {
       setSaving(false);
     }
@@ -159,9 +159,9 @@ export default function PaintChemEntryPage() {
 
   // Submit sheet (DRAFT -> SUBMITTED)
   const handleSubmit = async () => {
-    if (!isOnline) { showToast('error', 'ไม่มีการเชื่อมต่ออินเทอร์เน็ต'); return; }
-    if (!header?.header_id) { showToast('error', 'กรุณาบันทึกข้อมูลอย่างน้อย 1 Slot ก่อนส่งใบ'); return; }
-    if (!window.confirm('ยืนยันการส่งใบบันทึกนี้? หลังจากนี้จะไม่สามารถแก้ไขได้')) return;
+    if (!isOnline) { showToast('error', 'เนเธกเนเธกเธตเธเธฒเธฃเน€เธเธทเนเธญเธกเธ•เนเธญเธญเธดเธเน€เธ—เธญเธฃเนเน€เธเนเธ•'); return; }
+    if (!header?.header_id) { showToast('error', 'เธเธฃเธธเธ“เธฒเธเธฑเธเธ—เธถเธเธเนเธญเธกเธนเธฅเธญเธขเนเธฒเธเธเนเธญเธข 1 Slot เธเนเธญเธเธชเนเธเนเธ'); return; }
+    if (!window.confirm('เธขเธทเธเธขเธฑเธเธเธฒเธฃเธชเนเธเนเธเธเธฑเธเธ—เธถเธเธเธตเน? เธซเธฅเธฑเธเธเธฒเธเธเธตเนเธเธฐเนเธกเนเธชเธฒเธกเธฒเธฃเธ–เนเธเนเนเธเนเธ”เน')) return;
     setSubmitting(true);
     try {
       const formData = new FormData();
@@ -178,7 +178,7 @@ export default function PaintChemEntryPage() {
         showToast('error', res.data.message);
       }
     } catch {
-      showToast('error', 'ส่งใบบันทึกไม่สำเร็จ');
+      showToast('error', 'เธชเนเธเนเธเธเธฑเธเธ—เธถเธเนเธกเนเธชเธณเน€เธฃเนเธ');
     } finally {
       setSubmitting(false);
     }
@@ -205,14 +205,14 @@ export default function PaintChemEntryPage() {
       {/* Time-Lock Banner */}
       {isTimeLocked && header?.status === 'DRAFT' && (
         <div className="flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm font-medium px-4 py-3 rounded-lg mb-4 shadow-sm">
-          <span>🔒 เอกสารนี้ถูกล็อคเนื่องจากหมดเวลาบันทึก (เกิน 12:00 น. ของวันถัดไป) หากต้องการแก้ไข กรุณาติดต่อหัวหน้างาน</span>
+          <span>๐”’ เน€เธญเธเธชเธฒเธฃเธเธตเนเธ–เธนเธเธฅเนเธญเธเน€เธเธทเนเธญเธเธเธฒเธเธซเธกเธ”เน€เธงเธฅเธฒเธเธฑเธเธ—เธถเธ (เน€เธเธดเธ 12:00 เธ. เธเธญเธเธงเธฑเธเธ–เธฑเธ”เนเธ) เธซเธฒเธเธ•เนเธญเธเธเธฒเธฃเนเธเนเนเธ เธเธฃเธธเธ“เธฒเธ•เธดเธ”เธ•เนเธญเธซเธฑเธงเธซเธเนเธฒเธเธฒเธ</span>
         </div>
       )}
 
       {/* Offline banner */}
       {!isOnline && (
         <div className="flex items-center justify-center gap-2 bg-red-600 text-white text-sm font-medium px-4 py-3 rounded-lg mb-4 shadow-sm">
-          <WifiOff size={18} /> ไม่มีการเชื่อมต่ออินเทอร์เน็ต — กรุณาอย่ากรอกข้อมูลจนกว่าจะออนไลน์
+          <WifiOff size={18} /> เนเธกเนเธกเธตเธเธฒเธฃเน€เธเธทเนเธญเธกเธ•เนเธญเธญเธดเธเน€เธ—เธญเธฃเนเน€เธเนเธ• โ€” เธเธฃเธธเธ“เธฒเธญเธขเนเธฒเธเธฃเธญเธเธเนเธญเธกเธนเธฅเธเธเธเธงเนเธฒเธเธฐเธญเธญเธเนเธฅเธเน
         </div>
       )}
 
@@ -262,7 +262,7 @@ export default function PaintChemEntryPage() {
               className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition-colors disabled:opacity-50"
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-              บันทึก Slot {selectedSlot}
+              เธเธฑเธเธ—เธถเธ Slot {selectedSlot}
             </button>
             <button
               type="button"
@@ -271,7 +271,7 @@ export default function PaintChemEntryPage() {
               className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg transition-colors disabled:opacity-50"
             >
               {submitting ? <Loader2 size={18} className="animate-spin" /> : <SendHorizonal size={18} />}
-              ส่งใบ
+              เธชเนเธเนเธ
             </button>
           </div>
         </div>
@@ -288,3 +288,4 @@ export default function PaintChemEntryPage() {
     </div>
   );
 }
+

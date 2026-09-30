@@ -1,10 +1,8 @@
-﻿<?php
+<?php
 // page/paintChem/api/export_pdf.php
 require_once '../../db.php';
 require_once '../../../auth/check_auth.php';
-require_once '../../utils/libs/tcpdf/tcpdf.php';
-
-requireLogin();
+require_once '../../../utils/libs/tcpdf/tcpdf.php';
 
 $logDate = $_GET['date'] ?? date('Y-m-d');
 $shift = $_GET['shift'] ?? 'DAY';
