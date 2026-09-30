@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AppLayout from '../shared/components/AppLayout';
 import { AuthProvider, useAuth } from '../shared/contexts/AuthContext';
 

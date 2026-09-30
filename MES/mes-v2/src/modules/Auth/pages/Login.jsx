@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { LogIn, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -10,6 +10,8 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname + (location.state?.from?.search || '') + (location.state?.from?.hash || '') || '/';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,7 +20,7 @@ export default function Login() {
     
     const result = await login(username, password);
     if (result.success) {
-      navigate('/');
+      navigate(from, { replace: true });
     } else {
       setError(result.message || 'รหัสผ่านไม่ถูกต้อง');
       setIsLoading(false);

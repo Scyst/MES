@@ -50,7 +50,7 @@ async function submitProductionData(source, payload, submitButtonId) {
                 Swal.fire('สำเร็จ', res.message, 'success');
                 // Hide Modal if triggered from Manual Modal
                 const modalEl = document.querySelector('.modal.show');
-                if (modalEl) bootstrap.Modal.getInstance(modalEl).hide();
+                if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
             }
             
             // Refresh Components based on what is active on the UI
