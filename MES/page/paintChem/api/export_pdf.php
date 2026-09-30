@@ -81,16 +81,16 @@ $html = '
             <th width="6%" rowspan="1" colspan="2">ค่าควบคุม</th>';
             
 foreach ($timeSlots as $ts) {
-    $html .= '<th width="9.33%" colspan="3">' . $ts . '</th>';
+    $html .= '<th width="9.3%" colspan="3">' . $ts . '</th>';
 }
 
 $html .= '
         </tr>
         <tr class="bg-gray bold">
-            <th>ต่ำสุด</th>
-            <th>สูงสุด</th>';
+            <th width="3%">ต่ำสุด</th>
+            <th width="3%">สูงสุด</th>';
 for ($i=0; $i<6; $i++) {
-    $html .= '<th>ก่อนปรับ</th><th>หลังปรับ</th><th>กก.</th>';
+    $html .= '<th width="3.1%">ก่อนปรับ</th><th width="3.1%">หลังปรับ</th><th width="3.1%">กก.</th>';
 }
 $html .= '</tr>
     </thead>
