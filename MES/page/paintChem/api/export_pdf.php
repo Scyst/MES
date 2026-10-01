@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 header('Content-Type: text/html; charset=utf-8');
 // page/paintChem/api/export_pdf.php
 // Renders printable HTML โ€” browser-native print (same pattern as PE/generate_wo_pdf.php)
@@ -96,6 +96,15 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
 <meta charset="UTF-8">
 <title>Paint Chem Check Sheet โ€” <?php echo htmlspecialchars($logDate); ?> <?php echo $shift; ?></title>
 <style>
+  
+  @media screen {
+    html { zoom: 122%; }
+  }
+  @media print {
+    html { zoom: 100%; }
+    .no-print { display: none !important; }
+  }
+
   /* ===== PAGE SETUP ===== */
   @page { size: A4 landscape; margin: 8mm 7mm 8mm 7mm; }
 
@@ -249,7 +258,7 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
 </head>
 <body>
 
-<script>document.documentElement.style.zoom = "122%";</script>
+
 <div class="no-print">
   <button onclick="window.print()">๐–จ&nbsp; เธเธดเธกเธเน / เธเธฑเธเธ—เธถเธ PDF</button>
 </div>
