@@ -48,7 +48,7 @@ export default function PaintChemEntryPage() {
   const [date, setDate]           = useState(new Date().toISOString().slice(0, 10));
   const [shift, setShift]         = useState(detectCurrentShift());
   const [selectedSlot, setSlot]   = useState(() => detectCurrentSlot(detectCurrentShift()));
-  const [paintingCond, setPCond]  = useState({ conveyorSpeed: '', bakeOvenTemp: '', dryOvenTemp: '' });
+  const [paintingCond, setPCond]  = useState({ conveyorSpeed: '', bakeOvenTemp: '', dryOvenTemp: '', note: '' });
   const [slotValues, setSlotVals] = useState(buildEmptySlotValues());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [header, setHeader]       = useState(null);

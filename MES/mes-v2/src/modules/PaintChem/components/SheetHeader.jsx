@@ -1,5 +1,5 @@
 // SheetHeader.jsx — Top section: date picker, shift selector, time slot, painting conditions
-import { Sun, Moon, History, CalendarDays, Clock3, Thermometer, Wind } from 'lucide-react';
+import { Sun, Moon, History, CalendarDays, Clock3, Thermometer, Wind , FileText } from 'lucide-react';
 import TimeSlotSelector from './TimeSlotSelector';
 
 export default function SheetHeader({ date, shift, paintingCond, onDateChange, onShiftChange, onCondChange, sheetStatus, disabled, onHistoryClick, selectedSlot, onSlotChange, timeSlots }) {
@@ -43,7 +43,7 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
       </div>
 
       {/* Main Controls */}
-      <div className="px-5 py-4 flex flex-col lg:flex-row gap-4 lg:gap-0 lg:justify-between">
+      <div className="px-5 py-4 flex flex-col gap-4"><div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:justify-between">
 
         {/* Section 1: Date + Shift + Time Slot */}
         <div className="flex flex-col sm:flex-row gap-4 lg:pr-6 flex-shrink-0">
@@ -164,8 +164,23 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
             </div>
           </div>
         </div>
-
       </div>
+
+      {/* Section 3: Note */}
+      <div className="flex flex-col gap-1 w-full border-t border-gray-100 pt-3">
+        <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+          <FileText size={11} /> หมายเหตุ (Note)
+        </label>
+        <input
+          type="text"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+          value={paintingCond.note ?? ''}
+          onChange={(e) => onCondChange('note', e.target.value)}
+          placeholder="กรอกหมายเหตุ (ถ้ามี)" disabled={disabled}
+        />
+      </div>
+
+    </div>
     </div>
   );
 }

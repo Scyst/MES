@@ -7,7 +7,15 @@ require_once '../../../auth/check_auth.php';
 $logDate = $_GET['date'] ?? date('Y-m-d');
 $shift   = $_GET['shift'] ?? 'DAY';
 
-$stmtH = $pdo->prepare("SELECT * FROM dbo.PAINT_CHEM_SHEET_HEADER WHERE log_date = ? AND shift = ?");
+$stmtH = $pdo->prepare("SELECT h.*, 
+           up.fullname AS prepared_by_name,
+           uc.fullname AS checked_by_name,
+           ua.fullname AS approved_by_name
+    FROM dbo.PAINT_CHEM_SHEET_HEADER h
+    LEFT JOIN dbo.USERS up ON up.id = h.prepared_by
+    LEFT JOIN dbo.USERS uc ON uc.id = h.checked_by
+    LEFT JOIN dbo.USERS ua ON ua.id = h.approved_by
+    WHERE h.log_date = ? AND h.shift = ?");
 $stmtH->execute([$logDate, $shift]);
 $header = $stmtH->fetch();
 
@@ -74,7 +82,10 @@ $stations = [
 $bake       = $header['bake_oven_temp']  ?? '';
 $dry        = $header['dry_oven_temp']   ?? '';
 $speed      = $header['conveyor_speed']  ?? '';
+$note       = $header['note'] ?? '';
 $preparedBy = $header['prepared_by_name'] ?? '';
+$checkedBy  = $header['checked_by_name'] ?? '';
+$approvedBy = $header['approved_by_name'] ?? '';
 $shiftLabel = $shift === 'DAY' ? 'กลางวัน (DAY)' : 'กลางคืน (NIGHT)';
 $dateLabel  = date('d/m/Y', strtotime($logDate));
 ?>
@@ -169,7 +180,7 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
   table.main th,
   table.main td {
     border: 1px solid #374151;
-    padding: 1.5px 2px;
+    padding: 3.5px 2px;
     text-align: center;
     vertical-align: middle;
     word-break: break-word;
@@ -348,31 +359,38 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
   <!-- ===== FOOTER / SIGNATURE SECTION ===== -->
   <table class="footer-tbl">
     <tr>
-      <td rowspan="2" width="15%" style="vertical-align:top;font-weight:bold;font-size:7pt;">Note.</td>
-      <td rowspan="2" width="30%" class="sig-line"></td>
+      <td rowspan="2" width="45%" style="vertical-align:top;font-weight:bold;font-size:7pt;text-align:left;padding:4px 6px;">
+         <div style="margin-bottom: 4px; color:#1e3a5f;">Note.</div>
+         <div style="font-weight:normal; font-size:6.5pt; height:35px;"><?php echo nl2br(htmlspecialchars((string)$note)); ?></div>
+      </td>
       <td width="22%" class="bg-remark">Remark</td>
-      <td width="16.5%" class="bg-std">Standard</td>
-      <td width="16.5%" style="font-weight:bold;text-align:center;">Actual</td>
+      <td colspan="2" style="font-weight:normal; text-align:left;"></td>
     </tr>
     <tr>
       <td class="bg-remark">Painting Condition:<br>1) Speed Conveyor (m/min)</td>
-      <td class="bg-std">2.5 – 5.0</td>
-      <td style="text-align:center;font-weight:bold;"><?php echo htmlspecialchars((string)$speed); ?></td>
+      <td width="16.5%" class="bg-std">2.5 – 5.0</td>
+      <td width="16.5%" style="text-align:center;font-weight:bold;"><?php echo htmlspecialchars((string)$speed); ?></td>
     </tr>
     <tr>
-      <td colspan="2" style="border-top:1.5px solid #374151;height:28px;"></td>
-      <td style="text-align:center;font-weight:bold;">Prepared by</td>
-      <td style="text-align:center;font-weight:bold;">Checked by</td>
-      <td style="text-align:center;font-weight:bold;">Approved by</td>
+      <td colspan="2" style="border-top:1.5px solid #374151;height:35px;"></td>
+      <td style="text-align:center;font-weight:bold; border-top:1.5px solid #374151;">Prepared by</td>
+      <td style="text-align:center;font-weight:bold; border-top:1.5px solid #374151;">Checked by</td>
+      <td style="text-align:center;font-weight:bold; border-top:1.5px solid #374151;">Approved by</td>
     </tr>
     <tr>
-      <td colspan="2" style="height:32px;"></td>
+      <td colspan="2" style="height:45px;"></td>
       <td style="text-align:center;font-size:6pt;">
-        ...............................<br>
+        ...................................................<br>
         <span style="font-size:6.5pt;"><?php echo htmlspecialchars($preparedBy); ?></span>
       </td>
-      <td style="text-align:center;font-size:6pt;">...............................</td>
-      <td style="text-align:center;font-size:6pt;">...............................</td>
+      <td style="text-align:center;font-size:6pt;">
+        ...................................................<br>
+        <span style="font-size:6.5pt;"><?php echo htmlspecialchars($checkedBy); ?></span>
+      </td>
+      <td style="text-align:center;font-size:6pt;">
+        ...................................................<br>
+        <span style="font-size:6.5pt;"><?php echo htmlspecialchars($approvedBy); ?></span>
+      </td>
     </tr>
   </table>
 
