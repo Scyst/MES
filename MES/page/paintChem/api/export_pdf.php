@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 // page/paintChem/api/export_pdf.php
-// Renders printable HTML — browser-native print (same pattern as PE/generate_wo_pdf.php)
+// Renders printable HTML โ€” browser-native print (same pattern as PE/generate_wo_pdf.php)
 require_once '../../db.php';
 require_once '../../../auth/check_auth.php';
 
@@ -35,12 +35,12 @@ $timeSlots = $shift === 'DAY'
 $stations = [
     1 => ['name' => 'Degreasing 1<br>6.3 Kg/pt-up',    'chem' => 'FC-TS008', 'params' => [
         ['key' => 'F_Al',        'label' => 'F.Al',        'std' => '10-12 pt',    'min' => '10',  'max' => '12',  'hasKg' => true,  'isOvf' => false],
-        ['key' => 'Temperature', 'label' => 'Temperature', 'std' => '25-35 °C',    'min' => '25',  'max' => '35',  'hasKg' => false, 'isOvf' => false],
+        ['key' => 'Temperature', 'label' => 'Temperature', 'std' => '25-35 ยฐC',    'min' => '25',  'max' => '35',  'hasKg' => false, 'isOvf' => false],
         ['key' => 'Pressure',    'label' => 'Pressure',    'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
     ]],
     2 => ['name' => 'Degreasing 2<br>12.4 Kg/pt-up',   'chem' => 'FC-TS008', 'params' => [
         ['key' => 'F_Al',        'label' => 'F.Al',        'std' => '10-12 pt',    'min' => '10',  'max' => '12',  'hasKg' => true,  'isOvf' => false],
-        ['key' => 'Temperature', 'label' => 'Temperature', 'std' => '25-35 °C',    'min' => '25',  'max' => '35',  'hasKg' => false, 'isOvf' => false],
+        ['key' => 'Temperature', 'label' => 'Temperature', 'std' => '25-35 ยฐC',    'min' => '25',  'max' => '35',  'hasKg' => false, 'isOvf' => false],
         ['key' => 'Pressure',    'label' => 'Pressure',    'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
     ]],
     3 => ['name' => 'Water Rinse 1', 'chem' => 'Water Rinse 1', 'params' => [
@@ -58,7 +58,7 @@ $stations = [
         ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
     ]],
     6 => ['name' => 'Zinc Phosphate<br>1.1 Kg/pt-down<br>12.9 Kg/pt-up<br>1 Kg/pt-up', 'chem' => 'NT-4055<br>PB-LT5103 RF-1<br>AC-131<br>AJ-T6', 'params' => [
-        ['key' => 'Temperature',    'label' => 'Temperature',        'std' => '25-35 °C',    'min' => '25',  'max' => '35',  'hasKg' => false, 'isOvf' => false],
+        ['key' => 'Temperature',    'label' => 'Temperature',        'std' => '25-35 ยฐC',    'min' => '25',  'max' => '35',  'hasKg' => false, 'isOvf' => false],
         ['key' => 'FA',             'label' => 'F.A.(Free Acid)',    'std' => '0.3-0.5 pt',  'min' => '0.3', 'max' => '0.5', 'hasKg' => true,  'isOvf' => false],
         ['key' => 'TA',             'label' => 'T.A.(Total Acidity)','std' => '23-25 pt',    'min' => '23',  'max' => '25',  'hasKg' => true,  'isOvf' => false],
         ['key' => 'AC',             'label' => 'A.C',                'std' => '2.0-4.0 pt',  'min' => '2.0', 'max' => '4.0', 'hasKg' => true,  'isOvf' => false],
@@ -74,7 +74,7 @@ $stations = [
         ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
     ]],
     9 => ['name' => 'Deionized<br>Water Rinse', 'chem' => 'DI Water Rinse', 'params' => [
-        ['key' => 'EC',             'label' => 'EC',         'std' => '< 10 µS/cm',  'min' => '-',   'max' => '10',  'hasKg' => false, 'isOvf' => false],
+        ['key' => 'EC',             'label' => 'EC',         'std' => '< 10 ยตS/cm',  'min' => '-',   'max' => '10',  'hasKg' => false, 'isOvf' => false],
         ['key' => 'FlowRate',       'label' => 'Flow rate',  'std' => '> 1.5 m3/hr', 'min' => '1.5', 'max' => '-',   'hasKg' => false, 'isOvf' => false],
     ]],
 ];
@@ -86,14 +86,14 @@ $note       = $header['note'] ?? '';
 $preparedBy = $header['prepared_by_name'] ?? '';
 $checkedBy  = $header['checked_by_name'] ?? '';
 $approvedBy = $header['approved_by_name'] ?? '';
-$shiftLabel = $shift === 'DAY' ? 'กลางวัน (DAY)' : 'กลางคืน (NIGHT)';
+$shiftLabel = $shift === 'DAY' ? 'เธเธฅเธฒเธเธงเธฑเธ (DAY)' : 'เธเธฅเธฒเธเธเธทเธ (NIGHT)';
 $dateLabel  = date('d/m/Y', strtotime($logDate));
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>Paint Chem Check Sheet — <?php echo htmlspecialchars($logDate); ?> <?php echo $shift; ?></title>
+<title>Paint Chem Check Sheet โ€” <?php echo htmlspecialchars($logDate); ?> <?php echo $shift; ?></title>
 <style>
   /* ===== PAGE SETUP ===== */
   @page { size: A4 landscape; margin: 8mm 7mm 8mm 7mm; }
@@ -146,7 +146,7 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
     border-collapse: collapse;
     margin-bottom: 3mm;
   }
-  .doc-header td { vertical-align: middle; padding: 0 2mm; }
+  .doc-header td { vertical-align: bottom; padding: 0 2mm; }
   .company-name {
     font-size: 18pt;
     font-weight: 900;
@@ -210,7 +210,7 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
   col.c-std   { width: 14mm; }
   col.c-min   { width: 6mm;  }
   col.c-max   { width: 6mm;  }
-  /* remaining = 273 - 7-20-17-18-14-6-6 = 185mm / 18 sub-cols ≈ 10.3mm each */
+  /* remaining = 273 - 7-20-17-18-14-6-6 = 185mm / 18 sub-cols โ 10.3mm each */
   col.c-bf    { width: 10.3mm; }
   col.c-af    { width: 10.3mm; }
   col.c-kg    { width: 10.3mm; }
@@ -250,29 +250,29 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
 
 <script>document.documentElement.style.zoom = "122%";</script>
 <div class="no-print">
-  <button onclick="window.print()">🖨&nbsp; พิมพ์ / บันทึก PDF</button>
+  <button onclick="window.print()">๐–จ&nbsp; เธเธดเธกเธเน / เธเธฑเธเธ—เธถเธ PDF</button>
 </div>
 
 <div class="page">
 
   <!-- ===== DOCUMENT HEADER ===== -->
   <table class="doc-header">
-    <tr>
-      <td width="16%">
-        <div class="company-name">SCAN</div>
-        <div style="font-size:6.5pt;color:#555;margin-top:1px;">บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด</div>
-      </td>
-      <td width="60%">
-        <div class="doc-title">
-          Parameter &amp; <span>Chemicals</span> Control Check Sheet
-        </div>
-      </td>
-      <td width="24%" class="doc-meta">
-        <div><span class="meta-label">ว/ด/ป: </span><span class="meta-value"><?php echo $dateLabel; ?></span></div>
-        <div><span class="meta-label">กะทำงาน: </span><span class="meta-value"><?php echo $shiftLabel; ?></span></div>
-      </td>
-    </tr>
-  </table>
+      <tr>
+        <td width="25%">
+          <img alt="SNC Logo" src="/iot-toolbox/sandbox-b9/Toolbox2/assets/logo.webp" style="height: 28px; object-fit: contain; margin-bottom: 2px;">
+          <div style="font-size:6.5pt;color:#555;margin-top:1px;">เธเธฃเธดเธฉเธฑเธ— เน€เธญเธช เน€เธญเนเธ เธเธต เธเธญเธฃเนเน€เธกเธญเธฃเน เธเธณเธเธฑเธ”</div>
+        </td>
+        <td width="50%">
+          <div class="doc-title" style="margin-bottom: 2px;">
+            Parameter &amp; <span>Chemicals</span> Control Check Sheet
+          </div>
+        </td>
+        <td width="25%" class="doc-meta">
+          <div><span class="meta-label">เธง/เธ”/เธ: </span><span class="meta-value"><?php echo $dateLabel; ?></span></div>
+          <div><span class="meta-label">เธเธฐเธ—เธณเธเธฒเธ: </span><span class="meta-value"><?php echo $shiftLabel; ?></span></div>
+        </td>
+      </tr>
+    </table>
 
   <!-- ===== MAIN DATA TABLE ===== -->
   <table class="main">
@@ -290,21 +290,21 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
     </colgroup>
     <thead>
       <tr class="bg-header">
-        <th rowspan="2">บ่อ<br>เคมี</th>
-        <th rowspan="2">กระบวนการ</th>
-        <th rowspan="2">สารเคมีที่ใช้</th>
-        <th rowspan="2">หัวข้อควบคุม</th>
-        <th rowspan="2">ค่ามาตรฐาน</th>
-        <th colspan="2">ค่าควบคุม</th>
+        <th rowspan="2">เธเนเธญ<br>เน€เธเธกเธต</th>
+        <th rowspan="2">เธเธฃเธฐเธเธงเธเธเธฒเธฃ</th>
+        <th rowspan="2">เธชเธฒเธฃเน€เธเธกเธตเธ—เธตเนเนเธเน</th>
+        <th rowspan="2">เธซเธฑเธงเธเนเธญเธเธงเธเธเธธเธก</th>
+        <th rowspan="2">เธเนเธฒเธกเธฒเธ•เธฃเธเธฒเธ</th>
+        <th colspan="2">เธเนเธฒเธเธงเธเธเธธเธก</th>
         <?php foreach ($timeSlots as $ts): ?>
         <th colspan="3"><?php echo htmlspecialchars($ts); ?></th>
         <?php endforeach; ?>
       </tr>
       <tr class="bg-sub">
-        <th>ต่ำสุด</th>
-        <th>สูงสุด</th>
+        <th>เธ•เนเธณเธชเธธเธ”</th>
+        <th>เธชเธนเธเธชเธธเธ”</th>
         <?php for ($i = 0; $i < 6; $i++): ?>
-        <th>ก่อนปรับ</th><th>หลังปรับ</th><th>กก.</th>
+        <th>เธเนเธญเธเธเธฃเธฑเธ</th><th>เธซเธฅเธฑเธเธเธฃเธฑเธ</th><th>เธเธ.</th>
         <?php endfor; ?>
       </tr>
     </thead>
@@ -342,17 +342,17 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
       <?php endforeach; ?>
     <?php endforeach; ?>
             <tr>
-        <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Bake Oven Temp. (°C)</td>
+        <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Bake Oven Temp. (ยฐC)</td>
         <td style="font-weight:bold;background:#f8fafc;">Standard</td>
-        <td class="bg-std">175 – 220 °C</td>
+        <td class="bg-std">175 โ€“ 220 ยฐC</td>
         <td colspan="2" style="background-color: #4b5563;"></td>
         <td colspan="3"><?php echo htmlspecialchars((string)$bake); ?></td>
         <?php for($i=1; $i<6; $i++) echo '<td colspan="3"></td>'; ?>
       </tr>
       <tr>
-        <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Dry Oven Temp. (°C)</td>
+        <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Dry Oven Temp. (ยฐC)</td>
         <td style="font-weight:bold;background:#f8fafc;">Standard</td>
-        <td class="bg-std">140 – 160 °C</td>
+        <td class="bg-std">140 โ€“ 160 ยฐC</td>
         <td colspan="2" style="background-color: #4b5563;"></td>
         <td colspan="3"><?php echo htmlspecialchars((string)$dry); ?></td>
         <?php for($i=1; $i<6; $i++) echo '<td colspan="3"></td>'; ?>
@@ -384,7 +384,7 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
       <td colspan="3" style="text-align:center; font-weight:bold;">Actual</td>
     </tr>
     <tr>
-      <td colspan="3" class="bg-std" style="text-align:center;">2.5 – 5.0</td>
+      <td colspan="3" class="bg-std" style="text-align:center;">2.5 โ€“ 5.0</td>
       <td colspan="3" style="text-align:center; font-weight:bold;"><?php echo htmlspecialchars((string)$speed); ?></td>
     </tr>
     <tr>
