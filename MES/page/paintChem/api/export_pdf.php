@@ -237,6 +237,7 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
 </head>
 <body>
 
+<script>document.documentElement.style.zoom = "122%";</script>
 <div class="no-print">
   <button onclick="window.print()">🖨&nbsp; พิมพ์ / บันทึก PDF</button>
 </div>
