@@ -116,6 +116,22 @@ export default function PaintChemEntryPage() {
     }));
   };
 
+  const handleCondBlur = async () => {
+    if (!header?.header_id || !isOnline || header.status !== 'DRAFT') return;
+    try {
+      const formData = new FormData();
+      formData.append('csrf_token', csrfToken);
+      formData.append('header_id', header.header_id);
+      formData.append('conveyor_speed', paintingCond.conveyorSpeed);
+      formData.append('bake_oven_temp', paintingCond.bakeOvenTemp);
+      formData.append('dry_oven_temp', paintingCond.dryOvenTemp);
+      formData.append('note', paintingCond.note ?? '');
+      await axios.post(`${API_BASE}/save_header.php`, formData);
+    } catch (err) {
+      console.error('Failed to auto-save header conditions', err);
+    }
+  };
+
   const handleShiftChange = (newShift) => {
     setShift(newShift);
     setSlot(detectCurrentSlot(newShift));
@@ -230,6 +246,7 @@ export default function PaintChemEntryPage() {
         onDateChange={(d) => { setDate(d); }}
         onShiftChange={handleShiftChange}
         onCondChange={(k, v) => setPCond((p) => ({ ...p, [k]: v }))}
+          onCondBlur={handleCondBlur}
           selectedSlot={selectedSlot}
           onSlotChange={setSlot}
           timeSlots={SHIFT_SLOTS[shift]}

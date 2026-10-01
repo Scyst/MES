@@ -2,7 +2,7 @@
 import { Sun, Moon, History, CalendarDays, Clock3, Thermometer, Wind , FileText } from 'lucide-react';
 import TimeSlotSelector from './TimeSlotSelector';
 
-export default function SheetHeader({ date, shift, paintingCond, onDateChange, onShiftChange, onCondChange, sheetStatus, disabled, onHistoryClick, selectedSlot, onSlotChange, timeSlots }) {
+export default function SheetHeader({ date, shift, paintingCond, onDateChange, onShiftChange, onCondBlur, onCondChange, sheetStatus, disabled, onHistoryClick, selectedSlot, onSlotChange, timeSlots }) {
   const statusColors = {
     DRAFT:     'bg-gray-100 text-gray-500 border-gray-200',
     SUBMITTED: 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -119,7 +119,7 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
                   type="number" step="0.1" min="2.5" max="5.0"
                   className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
                   value={paintingCond.conveyorSpeed ?? ''}
-                  onChange={(e) => onCondChange('conveyorSpeed', e.target.value)}
+                  onChange={(e) => onCondChange('conveyorSpeed', e.target.value)} onBlur={onCondBlur}
                   placeholder="Speed (m/min)" disabled={disabled}
                 />
               </div>
@@ -136,7 +136,7 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
                   type="number" step="1" min="175" max="220"
                   className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
                   value={paintingCond.bakeOvenTemp ?? ''}
-                  onChange={(e) => onCondChange('bakeOvenTemp', e.target.value)}
+                  onChange={(e) => onCondChange('bakeOvenTemp', e.target.value)} onBlur={onCondBlur}
                   placeholder="Bake °C" disabled={disabled}
                 />
               </div>
@@ -153,7 +153,7 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
                   type="number" step="1" min="140" max="160"
                   className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
                   value={paintingCond.dryOvenTemp ?? ''}
-                  onChange={(e) => onCondChange('dryOvenTemp', e.target.value)}
+                  onChange={(e) => onCondChange('dryOvenTemp', e.target.value)} onBlur={onCondBlur}
                   placeholder="Dry °C" disabled={disabled}
                 />
               </div>
@@ -175,7 +175,7 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
           type="text"
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
           value={paintingCond.note ?? ''}
-          onChange={(e) => onCondChange('note', e.target.value)}
+          onChange={(e) => onCondChange('note', e.target.value)} onBlur={onCondBlur}
           placeholder="กรอกหมายเหตุ (ถ้ามี)" disabled={disabled}
         />
       </div>

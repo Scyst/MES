@@ -2484,23 +2484,55 @@ const Actions = {
             const json = await res.json();
 
             if (json.success && json.data.length > 0) {
-                const exportData = json.data.map(row => ({
+                const exportDataAll = json.data.map(row => ({
                     'Date': row.log_date,
                     'Emp ID': row.emp_id,
                     'Name': row.name_th,
                     'Position': row.position,
-                    'Line': row.actual_line || row.line,
-                    'Team': row.actual_team || row.team_group,
-                    'Shift': row.shift_id == 1 ? 'Day' : 'Night',
+                    'Master Line': row.master_line || row.line,
+                    'Actual Line': row.actual_line || row.line,
+                    'Group': row.hc_group || 'UNASSIGNED',
+                    'Master Team': row.master_team || row.team_group,
+                    'Actual Team': row.actual_team || row.team_group,
+                    'Shift': row.shift_name || (row.shift_id == 1 ? 'Day' : 'Night'),
+                    'Rate Type': row.rate_type || '',
                     'Time In': row.in_time || '',
                     'Time Out': row.out_time || '',
+                    'Forgot Out': row.is_forgot_out == 1 ? 'Yes' : 'No',
                     'Status': row.status,
                     'Remark': row.remark,
-                    'Cost (Est)': parseFloat(row.est_cost || 0)
+                    'Normal Cost (Est)': parseFloat(row.normal_cost || 0),
+                    'OT Cost (Est)': parseFloat(row.ot_cost || 0),
+                    'Total Cost (Est)': parseFloat(row.normal_cost || 0) + parseFloat(row.ot_cost || 0)
                 }));
-                const ws = XLSX.utils.json_to_sheet(exportData);
+                
                 const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "Daily_Raw_Data");
+                
+                // Append "All" sheet
+                const wsAll = XLSX.utils.json_to_sheet(exportDataAll);
+                XLSX.utils.book_append_sheet(wb, wsAll, "All");
+
+                // Group by 'Group' and append sheets
+                const groups = [...new Set(exportDataAll.map(row => row['Group']))].sort();
+                
+                groups.forEach(group => {
+                    const groupName = group || 'Unknown Group';
+                    // Clean sheet name to be Excel-compliant (max 31 chars, no forbidden symbols)
+                    const safeSheetName = groupName.replace(/[\\/*?:\[\]]/g, '').substring(0, 31);
+                    const groupData = exportDataAll.filter(row => row['Group'] === group);
+                    
+                    const wsGroup = XLSX.utils.json_to_sheet(groupData);
+                    
+                    // Check if sheet name already exists (just in case of duplicate after truncation)
+                    let finalSheetName = safeSheetName;
+                    let counter = 1;
+                    while (wb.SheetNames.includes(finalSheetName)) {
+                        finalSheetName = `${safeSheetName.substring(0, 28)}_${counter}`;
+                        counter++;
+                    }
+                    
+                    XLSX.utils.book_append_sheet(wb, wsGroup, finalSheetName);
+                });
 
                 XLSX.writeFile(wb, `Manpower_Daily_${date}.xlsx`);
             } else {

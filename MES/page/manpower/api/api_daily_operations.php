@@ -127,6 +127,7 @@ try {
                         AS DECIMAL(10,2)) as ot_cost,
 
                         L.actual_line, L.actual_team, E.line as master_line, E.team_group as master_team,
+                        ISNULL(TS.hc_group, 'UNASSIGNED') as hc_group,
                         
                         CASE 
                             WHEN L.scan_in_time IS NOT NULL AND L.scan_out_time IS NULL AND L.log_date < CAST(GETDATE() AS DATE) THEN 1 
@@ -134,6 +135,7 @@ try {
                         END as is_forgot_out
 
                     FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                    LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
                     LEFT JOIN dbo.MANPOWER_SHIFTS S_Master WITH (NOLOCK) ON E.default_shift_id = S_Master.shift_id
                     OUTER APPLY (
                         SELECT TOP 1 * FROM dbo.MANPOWER_CATEGORY_MAPPING M WITH (NOLOCK)
