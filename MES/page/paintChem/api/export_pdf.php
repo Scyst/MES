@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 header('Content-Type: text/html; charset=utf-8');
 // page/paintChem/api/export_pdf.php
 // Renders printable HTML โ€” browser-native print (same pattern as PE/generate_wo_pdf.php)
