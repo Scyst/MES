@@ -123,10 +123,11 @@ try {
             $provider = 'VENDOR';
             $vehicle_type = $report['container_type'] ?: 'UNKNOWN';
             $ref_doc = $report['po_number'] ?: 'C-TPAT ID: ' . $loading_id;
+            $transport_cost = 1100;
 
             $sql = "INSERT INTO dbo.LOGISTICS_FLEET_LOGS 
-                    (log_timestamp, trans_type, provider_type, vehicle_type, car_license, container_no, seal_no, ref_document, loading_report_id, created_by_user_id)
-                    VALUES (?, 'OUTBOUND', ?, ?, ?, ?, ?, ?, ?, ?)";
+                    (log_timestamp, trans_type, provider_type, vehicle_type, car_license, container_no, seal_no, ref_document, loading_report_id, created_by_user_id, transport_cost)
+                    VALUES (?, 'OUTBOUND', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             $pdo->prepare($sql)->execute([
                 $log_time, 
@@ -137,7 +138,8 @@ try {
                 $report['seal_no'], 
                 $ref_doc, 
                 $loading_id, 
-                $user_id
+                $user_id,
+                $transport_cost
             ]);
 
             echo json_encode(['success' => true, 'message' => 'ซิงค์ข้อมูลรถออกสำเร็จ!']);

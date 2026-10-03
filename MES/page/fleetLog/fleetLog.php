@@ -260,7 +260,7 @@ $defaultEnd = date('Y-m-t');
                             </div>
                             <div class="col-12 col-sm-4">
                                 <label class="form-label small fw-bold text-secondary mb-1">ค่าขนส่ง (THB)</label>
-                                <input type="number" id="man_transport_cost" class="form-control form-control-sm border-secondary-subtle shadow-sm fw-bold text-end text-danger" placeholder="0.00" step="0.01" min="0">
+                                <input type="number" id="man_transport_cost" class="form-control form-control-sm border-secondary-subtle shadow-sm fw-bold text-end text-danger" placeholder="1100.00" value="1100" step="0.01" min="0">
                             </div>
 
                             <div class="col-12 col-sm-6">
@@ -357,7 +357,7 @@ $defaultEnd = date('Y-m-t');
                             </div>
                             <div class="col-12 col-sm-4">
                                 <label class="form-label small fw-bold text-secondary mb-1">ค่าขนส่ง (THB)</label>
-                                <input type="number" id="edit_transport_cost" class="form-control form-control-sm border-secondary-subtle shadow-sm fw-bold text-end text-danger" placeholder="0.00" step="0.01" min="0">
+                                <input type="number" id="edit_transport_cost" class="form-control form-control-sm border-secondary-subtle shadow-sm fw-bold text-end text-danger" placeholder="1100.00" step="0.01" min="0">
                             </div>
 
                             <div class="col-12 col-sm-6">
@@ -394,7 +394,7 @@ $defaultEnd = date('Y-m-t');
                     <div class="modal-body p-4 bg-light">
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-secondary mb-1">ค่าขนส่ง (THB) <span class="text-danger">*</span></label>
-                            <input type="number" id="quick_transport_cost" class="form-control form-control-lg border-danger-subtle shadow-sm fw-bold text-end text-danger" placeholder="0.00" step="0.01" min="0" required>
+                            <input type="number" id="quick_transport_cost" class="form-control form-control-lg border-danger-subtle shadow-sm fw-bold text-end text-danger" placeholder="1100.00" step="0.01" min="0" required>
                         </div>
                         <div class="mb-0">
                             <label class="form-label small fw-bold text-secondary mb-1">หมายเหตุเพิ่มเติม</label>
@@ -616,7 +616,7 @@ $defaultEnd = date('Y-m-t');
                     Swal.fire({ icon: 'success', title: json.message, timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
                     
                     document.getElementById('man_car_license').value = '';
-                    document.getElementById('man_transport_cost').value = '';
+                    document.getElementById('man_transport_cost').value = '1100';
                     document.getElementById('man_remark').value = '';
                     document.getElementById('man_vehicle_type').value = '';
                     toggleContainerOther('man'); 
@@ -646,7 +646,7 @@ $defaultEnd = date('Y-m-t');
                     document.getElementById('edit_log_id').value = r.log_id;
                     document.getElementById('edit_log_time').value = r.log_timestamp.substring(0, 16);
                     document.getElementById('edit_car_license').value = r.car_license || '';
-                    document.getElementById('edit_transport_cost').value = r.transport_cost > 0 ? parseFloat(r.transport_cost).toFixed(2) : '';
+                    document.getElementById('edit_transport_cost').value = r.transport_cost > 0 ? parseFloat(r.transport_cost).toFixed(2) : '1100';
                     document.getElementById('edit_remark').value = r.remark || '';
                     
                     if(r.trans_type === 'OUTBOUND') document.getElementById('edit_trans_out').checked = true;
@@ -825,7 +825,7 @@ $defaultEnd = date('Y-m-t');
                 if (json.success) {
                     const r = json.data;
                     document.getElementById('quick_cost_log_id').value = r.log_id;
-                    document.getElementById('quick_transport_cost').value = r.transport_cost > 0 ? parseFloat(r.transport_cost).toFixed(2) : '';
+                    document.getElementById('quick_transport_cost').value = r.transport_cost > 0 ? parseFloat(r.transport_cost).toFixed(2) : '1100';
                     document.getElementById('quick_remark').value = r.remark || '';
                     
                     new bootstrap.Modal(document.getElementById('quickCostModal')).show();
