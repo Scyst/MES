@@ -126,41 +126,23 @@ try {
             $params = [];
             $conditions = [];
 
-            $hasSearch = false;
-            if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
-                foreach ($_GET['search_terms'] as $term) {
-                    if (trim($term) !== '') {
-                        $hasSearch = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!$hasSearch) {
-                if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
-                    if (!empty($_GET['user_filter'])) {
-                        $conditions[] = "u.username = ?";
-                        $params[] = $_GET['user_filter'];
-                    }
-                } else if ($currentUser['role'] === 'supervisor') {
-                    $conditions[] = "(loc.production_line = ? OR u.line = ?)";
-                    $params[] = $currentUser['line'];
-                    $params[] = $currentUser['line'];
-                    
-                    if (!empty($_GET['user_filter'])) {
-                        $conditions[] = "u.username = ?";
-                        $params[] = $_GET['user_filter'];
-                    }
-                } else {
-                    $conditions[] = "t.created_by_user_id = ?";
-                    $params[] = $currentUser['id'];
-                }
-            } else {
-                // If there is a search term, allow cross-line visibility to verify stock correctly
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
                 if (!empty($_GET['user_filter'])) {
                     $conditions[] = "u.username = ?";
                     $params[] = $_GET['user_filter'];
                 }
+            } else if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "(loc.production_line = ? OR u.line = ?)";
+                $params[] = $currentUser['line'];
+                $params[] = $currentUser['line'];
+                
+                if (!empty($_GET['user_filter'])) {
+                    $conditions[] = "u.username = ?";
+                    $params[] = $_GET['user_filter'];
+                }
+            } else {
+                $conditions[] = "t.created_by_user_id = ?";
+                $params[] = $currentUser['id'];
             }
 
             if ($action === 'get_receipt_history') $conditions[] = "t.transaction_type IN ('RECEIPT', 'TRANSFER', 'TRANSFER_PENDING_SHIPMENT', 'SHIPPED', 'INTERNAL_TRANSFER', 'REVERSAL_TRANSFER')";
@@ -1468,26 +1450,14 @@ try {
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
                 $params[] = $_GET['endDate'];
             }
-            $hasSearch = false;
-            if (isset($_GET['search_terms']) && is_array($_GET['search_terms'])) {
-                foreach ($_GET['search_terms'] as $term) {
-                    if (trim($term) !== '') {
-                        $hasSearch = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!$hasSearch) {
-                if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
-                    // Do nothing, can see all
-                } else if ($currentUser['role'] === 'supervisor') {
-                    $conditions[] = "loc.production_line = ?";
-                    $params[] = $currentUser['line'];
-                } else {
-                    $conditions[] = "t.created_by_user_id = ?";
-                    $params[] = $currentUser['id'];
-                }
+            if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                // Do nothing, can see all
+            } else if ($currentUser['role'] === 'supervisor') {
+                $conditions[] = "loc.production_line = ?";
+                $params[] = $currentUser['line'];
+            } else {
+                $conditions[] = "t.created_by_user_id = ?";
+                $params[] = $currentUser['id'];
             }
 
             if (!empty($_GET['line'])) {
@@ -1579,26 +1549,14 @@ try {
                 $params[] = $target_date;
 
                 $conditions[] = "t.transaction_type LIKE 'PRODUCTION_%'";
-                $hasSearch = false;
-                if (!empty($search_terms_array) && is_array($search_terms_array)) {
-                    foreach ($search_terms_array as $term) {
-                        if (trim($term) !== '') {
-                            $hasSearch = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!$hasSearch) {
-                    if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
-                        // Do nothing, can see all
-                    } else if ($currentUser['role'] === 'supervisor') {
-                        $conditions[] = "l.production_line = ?";
-                        $params[] = $line_filter;
-                    } else {
-                        $conditions[] = "t.created_by_user_id = ?";
-                        $params[] = $currentUser['id'];
-                    }
+                if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
+                    // Do nothing, can see all
+                } else if ($currentUser['role'] === 'supervisor') {
+                    $conditions[] = "l.production_line = ?";
+                    $params[] = $line_filter;
+                } else {
+                    $conditions[] = "t.created_by_user_id = ?";
+                    $params[] = $currentUser['id'];
                 }
                 
                 if (!empty($_GET['line'])) {
