@@ -287,7 +287,7 @@ export default function PaintChemEntryPage() {
       />
 
       {/* Station Cards in a responsive grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-3 md:gap-4 items-start">
         {STATIONS.map((station) => (
           <StationCard
             key={station.no}
@@ -337,17 +337,17 @@ export default function PaintChemEntryPage() {
               className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 min-h-[44px] rounded-lg transition-colors disabled:opacity-50"
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-              บันทึก Slot {selectedSlot}
+              บันทึกข้อมูล
             </button>
             <button
               type="button"
               onClick={handleSubmit}
               disabled={submitting || !isOnline || !header?.header_id}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 px-6 min-h-[44px] rounded-lg transition-colors disabled:opacity-50"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2.5 px-6 min-h-[44px] rounded-lg transition-colors disabled:opacity-50"
             >
               {submitting ? <Loader2 size={18} className="animate-spin" /> : <SendHorizonal size={18} />}
-              ส่งบันทึก
-            </button>
+              ส่งเพื่ออนุมัติ
+              </button>
           </div>
         </div>
       )}
