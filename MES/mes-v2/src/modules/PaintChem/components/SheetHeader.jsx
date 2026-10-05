@@ -10,7 +10,7 @@ const STATUS_COLORS = {
 };
 const STATUS_LABELS = {
   DRAFT:     'ร่าง',
-  SUBMITTED: 'รอตรวจสอบ',
+  SUBMITTED: 'บันทึกสมบูรณ์ (ล็อก)',
   APPROVED:  'อนุมัติแล้ว',
 };
 
