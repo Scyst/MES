@@ -17,7 +17,7 @@ const STATUS_LABELS = {
 export default function SheetHeader({
   date, shift, slotExtras, previousNotes,
   onDateChange, onShiftChange, onExtraChange, onExtraBlur, onUnlockClick,
-  sheetStatus, disabled, isTimeLocked, onHistoryClick, selectedSlot, onSlotChange, timeSlots,
+  sheetStatus, disabled, isTimeLocked, canUnlock, onHistoryClick, selectedSlot, onSlotChange, timeSlots,
 }) {
   const speedOutOfRange = isOutOfRange('ConveyorSpeed', slotExtras.conveyorSpeed);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,7 +45,7 @@ export default function SheetHeader({
         <div className="flex items-center gap-2 relative">
           {/* Desktop: Show buttons */}
           <div className="hidden md:flex items-center gap-2">
-            {(sheetStatus === 'SUBMITTED' || isTimeLocked) && (
+            {(sheetStatus === 'SUBMITTED' || isTimeLocked) && canUnlock && (
               <button type="button" onClick={onUnlockClick} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 rounded-lg shadow-sm transition-colors">
                 <Unlock size={14} /><span>ปลดล็อกแก้ไข</span>
               </button>
@@ -65,7 +65,7 @@ export default function SheetHeader({
             </button>
             {menuOpen && (
               <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
-                {(sheetStatus === 'SUBMITTED' || isTimeLocked) && (
+                {(sheetStatus === 'SUBMITTED' || isTimeLocked) && canUnlock && (
                   <button type="button" onClick={() => { setMenuOpen(false); onUnlockClick(); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 border-b border-gray-100 text-left">
                     <Unlock size={16} /> ปลดล็อกแก้ไข
                   </button>

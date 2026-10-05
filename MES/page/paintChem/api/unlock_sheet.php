@@ -16,6 +16,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once '../../db.php';
 require_once '../../../auth/check_auth.php';
 
+// Check Permissions
+$role = $_SESSION['user']['role'] ?? '';
+$isAllowed = hasPermission('unlock_paint_chem') || in_array(strtolower($role), ['admin', 'creator']);
+
+if (!$isAllowed) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'data' => null, 'message' => 'คุณไม่มีสิทธิ์ปลดล็อกเอกสาร']);
+    exit;
+}
+
 // CSRF guard
 $clientToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? '';
 $serverToken = $_SESSION['csrf_token'] ?? '';

@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { Save, SendHorizonal, Loader2, WifiOff, Wind, FileText } from 'lucide-react';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 import SheetHeader from '../components/SheetHeader';
 import PaintChemHistoryDrawer from '../components/PaintChemHistoryDrawer';
 import StationCard from '../components/StationCard';
@@ -61,6 +62,8 @@ function buildExtrasBySlot(logs) {
 }
 
 export default function PaintChemEntryPage() {
+  const { user } = useAuth();
+  const canUnlock = user?.permissions?.includes('unlock_paint_chem') || user?.role === 'admin' || user?.role === 'creator';
   const [date, setDate]           = useState(new Date().toISOString().slice(0, 10));
   const [shift, setShift]         = useState(detectCurrentShift());
   const [selectedSlot, setSlot]   = useState(() => detectCurrentSlot(detectCurrentShift()));
@@ -299,7 +302,7 @@ export default function PaintChemEntryPage() {
       <SheetHeader
         onHistoryClick={() => setIsHistoryOpen(true)}
         onUnlockClick={handleUnlock}
-        date={date} shift={shift} sheetStatus={header?.status} isTimeLocked={isTimeLocked}
+        date={date} shift={shift} sheetStatus={header?.status} isTimeLocked={isTimeLocked} canUnlock={canUnlock}
         slotExtras={slotExtras} previousNotes={previousNotes}
         onDateChange={(d) => { setDate(d); setOverrideTimeLock(false); }}
         onShiftChange={handleShiftChange}
