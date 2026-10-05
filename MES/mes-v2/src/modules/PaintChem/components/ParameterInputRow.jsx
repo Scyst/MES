@@ -30,7 +30,7 @@ export default function ParameterInputRow({
             onChange={(e) => onChange('isOverflow', e.target.checked)}
             disabled={disabled}
           />
-          <span className="text-xs">{value?.isOverflow ? 'ผ่าน ✓' : 'ไม่ผ่าน ✗'}</span>
+          <span className="text-xs text-gray-800 dark:text-gray-100">{value?.isOverflow ? 'ผ่าน ✓' : 'ไม่ผ่าน ✗'}</span>
         </label>
       </div>
     );
