@@ -1,6 +1,6 @@
 // SheetHeader.jsx — Top section: date picker, shift selector, time slot, painting condition (per slot), note (per slot)
 import { useState } from 'react';
-import { Sun, Moon, MoreVertical, History, Printer, CalendarDays, Clock3, Thermometer, Wind, FileText, Unlock } from 'lucide-react';
+import { Sun, Moon, MoreVertical, History, Printer, CalendarDays, Clock3, Thermometer, Wind, FileText, Unlock, LayoutGrid, TableProperties } from 'lucide-react';
 import { isOutOfRange } from '../paintChemConfig';
 
 const STATUS_COLORS = {
@@ -18,6 +18,7 @@ export default function SheetHeader({
   date, shift, slotExtras, previousNotes,
   onDateChange, onShiftChange, onExtraChange, onExtraBlur, onUnlockClick,
   sheetStatus, disabled, isTimeLocked, canUnlock, onHistoryClick, selectedSlot, onSlotChange, timeSlots,
+  viewMode, onViewModeChange,
 }) {
   const speedOutOfRange = isOutOfRange('ConveyorSpeed', slotExtras.conveyorSpeed);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -141,6 +142,32 @@ export default function SheetHeader({
               </div>
             </div>
           </div>
+
+          {/* Section 2: View mode toggle (right-aligned) */}
+          {onViewModeChange && (
+            <div className="flex flex-col gap-1 lg:items-end lg:justify-end">
+              <span className="hidden lg:block text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">มุมมอง</span>
+              <div className="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-lg w-full lg:w-auto">
+                {[
+                  { mode: 'card', label: 'แบบการ์ด', Icon: LayoutGrid },
+                  { mode: 'table', label: 'แบบตาราง', Icon: TableProperties },
+                ].map(({ mode, label, Icon }) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => onViewModeChange(mode)}
+                    className={`flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-4 min-h-[38px] text-sm font-medium rounded-md transition-all whitespace-nowrap ${
+                      viewMode === mode
+                        ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    <Icon size={15} /> {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
         </div>
       </div>

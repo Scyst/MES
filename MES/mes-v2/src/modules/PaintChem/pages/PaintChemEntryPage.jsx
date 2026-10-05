@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
-import { Save, SendHorizonal, Loader2, WifiOff, Wind, FileText, LayoutGrid, TableProperties } from 'lucide-react';
+import { Save, SendHorizonal, Loader2, WifiOff, Wind, FileText } from 'lucide-react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import SheetHeader from '../components/SheetHeader';
 import PaintChemHistoryDrawer from '../components/PaintChemHistoryDrawer';
@@ -313,28 +313,10 @@ export default function PaintChemEntryPage() {
         selectedSlot={selectedSlot}
         onSlotChange={setSlot}
         timeSlots={SHIFT_SLOTS[shift]}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
         disabled={isReadOnly || !isOnline}
       />
-
-      {/* View Toggle */}
-      <div className="flex justify-end px-1 mb-2">
-        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-          <button 
-            type="button"
-            onClick={() => setViewMode('card')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'card' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
-          >
-            <LayoutGrid size={14} /> แบบการ์ด
-          </button>
-          <button 
-            type="button"
-            onClick={() => setViewMode('table')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'table' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
-          >
-            <TableProperties size={14} /> แบบตาราง
-          </button>
-        </div>
-      </div>
 
       {viewMode === 'card' ? (
         <>
