@@ -84,8 +84,8 @@ export default function AppLayout() {
             
             {/* Date Block */}
               <div className="flex items-center gap-1 border-r border-gray-200 dark:border-gray-700 pr-2 md:pr-3 mr-1">
-                <div className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-gray-50 dark:bg-gray-700 rounded-full text-[10px] sm:text-xs md:text-sm font-medium text-gray-600 dark:text-gray-200 border border-gray-100 dark:border-gray-600" title="Current Date">
-                  <Clock className="text-blue-500 dark:text-blue-400 w-3 h-3 md:w-4 md:h-4" />
+                <div className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-3 py-1 md:py-1.5 bg-gray-50 dark:bg-gray-700 rounded-full text-xs md:text-sm font-medium text-gray-600 dark:text-gray-200 border border-gray-100 dark:border-gray-600" title="Current Date">
+                  <Clock className="text-blue-500 dark:text-blue-400 w-3.5 h-3.5 md:w-4 md:h-4" />
                   <span className="whitespace-nowrap">{currentDate}</span>
                 </div>
               </div>
