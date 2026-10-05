@@ -162,9 +162,9 @@ export default function AppLayout() {
                       </div>
                       <span className="text-xs text-gray-400">{theme === 'dark' ? 'มืด' : 'สว่าง'}</span>
                     </button>
-                    <button className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 transition-colors border-t border-gray-100 dark:border-gray-700">
-                      <Settings size={16} /> <span>ตั้งค่าบัญชี</span>
-                    </button>
+                    <a href="https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES/page/profile/profileUI.php" className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 transition-colors border-t border-gray-100 dark:border-gray-700">
+                        <Settings size={16} /> <span>ตั้งค่าบัญชี</span>
+                      </a>
                     <button 
                       onClick={handleLogout}
                       className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border-t border-gray-100 dark:border-gray-700"

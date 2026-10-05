@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  LineChart, ShoppingCart, Truck, FolderOpen, Boxes, 
-  Smartphone, ListOrdered, Barcode, Printer, Ban, 
-  Store, Warehouse, Package, MapPin, ShieldCheck, 
+import {
+  LineChart, ShoppingCart, Truck, FolderOpen, Boxes,
+  Smartphone, ListOrdered, Barcode, Printer, Ban,
+  Store, Warehouse, Package, MapPin, ShieldCheck,
   ShieldAlert, Wrench, HeartPulse, ChevronRight,
   Settings, Users, DollarSign, FileText, Zap, Sun, Calendar, Rocket,
   Video, Cuboid, Star, FlaskConical
@@ -19,11 +19,11 @@ import { useAuth } from '../../../shared/contexts/AuthContext';
 const ServiceCard = ({ title, desc, icon: Icon, colorClass, to }) => {
   const isLegacy = to.includes('.php') || to.includes('.html') || to.startsWith('http');
   const className = "group bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-[0_8px_16px_rgba(0,0,0,0.06)] hover:border-transparent hover:ring-1 hover:ring-blue-400/50 hover:-translate-y-1 transition-transform transition-shadow duration-300 flex items-center gap-4 px-4 py-3 min-h-[64px] relative overflow-hidden";
-  
+
   const content = (
     <>
       <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent group-hover:from-blue-50/50 dark:group-hover:from-blue-900/20 group-hover:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-      
+
       <div className={`relative flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center shadow-sm ${colorClass} group-hover:scale-110 group-hover:shadow-md transition-all duration-300`}>
         <Icon size={24} strokeWidth={2} />
       </div>
@@ -64,7 +64,7 @@ export default function HomeDashboard() {
     factoryMood: null,
     userRole: 'guest'
   });
-  
+
   const [loading, setLoading] = useState(true);
   const [briefModalOpen, setBriefModalOpen] = useState(false);
   const [standaloneLogModal, setStandaloneLogModal] = useState({ isOpen: false, dateStr: '', pid: null });
@@ -73,7 +73,7 @@ export default function HomeDashboard() {
   const getProductionDate = () => {
     const now = new Date();
     if (now.getHours() < 8) now.setDate(now.getDate() - 1);
-    
+
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -87,7 +87,7 @@ export default function HomeDashboard() {
       const res = await dailyLogApi.getInitialData();
       if (res.success && res.data) {
         setData(res.data);
-        
+
         // Auto show morning brief logic once per day
         const lastSeen = localStorage.getItem('morningBriefSeen');
         if (lastSeen !== todayStr) {
@@ -126,7 +126,7 @@ export default function HomeDashboard() {
       setData(prev => {
         const newData = { ...prev };
         newData.monthlyData[dateStr][pid].is_read = 1;
-        
+
         // Check if day has other unread logs
         const stillHasUnread = [1, 2, 3].some(p => {
           const l = newData.monthlyData[dateStr][p];
@@ -144,7 +144,7 @@ export default function HomeDashboard() {
   };
 
   const { user: authUser } = useAuth();
-  
+
   // Use real user from context, fallback to safe defaults if undefined
   const user = authUser || {
     fullname: 'Guest User',
@@ -188,7 +188,7 @@ export default function HomeDashboard() {
     { title: 'Accessories Inspection', desc: 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', icon: ShieldCheck, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/AccessoriesInspection/accessoriesInspectionUI.php' },
     { title: 'PE Enterprise', desc: 'ศูนย์กลางจัดการเครื่องจักรและซ่อมบำรุง', icon: Wrench, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/PE/peDashboard.php', roles: ['admin', 'creator', 'manager', 'supervisor'] },
     { title: 'PE Tech (Mobile)', desc: 'ระบบรับงานและจัดการซ่อมสำหรับช่าง', icon: Smartphone, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/PE/peTechMobile.php' },
-    { title: 'Digital Twin', desc: 'ระบบ 3D Monitoring ของโรงงาน', icon: Cuboid, colorClass: 'bg-red-100 text-red-600', to: 'http://10.1.8.142:5173/' },
+    { title: 'Digital Twin', desc: 'ระบบ 3D Monitoring ของโรงงาน', icon: Cuboid, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/digitalTwin/digitalTwin.html' },
   ];
 
   const executiveServices = [
@@ -224,16 +224,16 @@ export default function HomeDashboard() {
   const filterByRole = (services) => {
     return services.filter(svc => !svc.roles || svc.roles.includes(role));
   };
-  
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
   }
 
   return (
     <div className="w-full lg:h-full grid grid-cols-1 lg:grid-cols-12 items-start lg:items-stretch gap-6 md:gap-8 pb-12 lg:pb-0 lg:overflow-hidden">
-      
+
       <div className="flex flex-col gap-4 lg:col-span-5 lg:h-full lg:overflow-y-auto hidden-scrollbar pb-6 lg:pb-0 lg:-ml-6 lg:pl-6">
-        
+
         <div className="flex flex-col gap-4 p-6 bg-[#f4f7fb] dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] border-l-4 border-l-blue-500">
           <div className="flex justify-between items-start">
             <div>
@@ -244,19 +244,19 @@ export default function HomeDashboard() {
                 <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800 shadow-sm">{user.position}</span>
               </div>
             </div>
-            
+
             <div className="flex gap-2">
-              <NotificationMenu 
-                unreadDates={data.unreadDates} 
-                monthlyData={data.monthlyData} 
-                onOpenLog={handleOpenStandaloneLog} 
+              <NotificationMenu
+                unreadDates={data.unreadDates}
+                monthlyData={data.monthlyData}
+                onOpenLog={handleOpenStandaloneLog}
               />
             </div>
           </div>
-          
+
           {(data.userRole === 'admin' || data.userRole === 'creator') && (
-            <button 
-              onClick={() => setBriefModalOpen(true)} 
+            <button
+              onClick={() => setBriefModalOpen(true)}
               className="w-full mt-2 bg-[#6b48d6] hover:bg-purple-700 text-white p-3 rounded-xl transition-all shadow-[0_4px_10px_rgba(107,72,214,0.3)] hover:shadow-[0_6px_15px_rgba(107,72,214,0.4)] hover:-translate-y-0.5 flex items-center justify-between"
             >
               <div className="flex items-center gap-3 text-base font-bold tracking-wide drop-shadow-sm">
@@ -268,13 +268,13 @@ export default function HomeDashboard() {
           )}
         </div>
 
-        <DailyPulseWidget 
-          todayLogs={data.todayLogs} 
+        <DailyPulseWidget
+          todayLogs={data.todayLogs}
           todayDate={todayStr}
           onLogSaved={loadInitialData}
         />
-        
-        <CalendarWidget 
+
+        <CalendarWidget
           monthlyData={data.monthlyData}
           unreadDates={data.unreadDates}
           todayDate={todayStr}
@@ -354,10 +354,10 @@ export default function HomeDashboard() {
       </div>
 
       {/* Modals */}
-      <MorningBriefModal 
-        isOpen={briefModalOpen} 
-        onClose={() => setBriefModalOpen(false)} 
-        initialData={data.morningBrief} 
+      <MorningBriefModal
+        isOpen={briefModalOpen}
+        onClose={() => setBriefModalOpen(false)}
+        initialData={data.morningBrief}
       />
 
       {standaloneLogModal.isOpen && (
