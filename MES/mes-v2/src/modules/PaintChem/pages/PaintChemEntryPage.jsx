@@ -210,7 +210,7 @@ export default function PaintChemEntryPage() {
   const handleSubmit = async () => {
     if (!isOnline) { showToast('error', 'ไม่มีการเชื่อมต่ออินเทอร์เน็ต'); return; }
     if (!header?.header_id) { showToast('error', 'กรุณาบันทึกข้อมูลอย่างน้อย 1 Slot ก่อนส่ง'); return; }
-    if (!window.confirm('กรุณายืนยันการส่งบันทึกนี้ หลังจากส่งแล้วจะไม่สามารถแก้ไขได้')) return;
+    if (!window.confirm('กรุณายืนยันการปิดกะ หลังจากปิดกะแล้วจะไม่สามารถแก้ไขข้อมูลได้')) return;
     setSubmitting(true);
     try {
       const formData = new FormData();

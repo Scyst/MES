@@ -8,7 +8,7 @@ const API_BASE = '/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api';
 function StatusBadge({ status }) {
   const map = {
     DRAFT:     { cls: 'bg-gray-100 text-gray-600',    label: 'ร่าง' },
-    SUBMITTED: { cls: 'bg-yellow-100 text-yellow-700', label: 'ล็อกเอกสาร' },
+    SUBMITTED: { cls: 'bg-yellow-100 text-yellow-700', label: 'สมบูรณ์' },
     APPROVED:  { cls: 'bg-green-100 text-green-700',   label: 'อนุมัติแล้ว' },
   };
   const s = map[status] ?? { cls: 'bg-gray-100 text-gray-500', label: status };
