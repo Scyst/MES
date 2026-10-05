@@ -231,6 +231,27 @@ export default function PaintChemEntryPage() {
   };
 
   // Time-Lock Constraint: Lock if the sheet date is older than the next day 12:00 PM (noon)
+  
+  const handleUnlock = async () => {
+    if (!isOnline) { showToast('error', 'ไม่มีการเชื่อมต่ออินเทอร์เน็ต'); return; }
+    if (!header?.header_id) return;
+    if (!window.confirm('คุณต้องการปลดล็อกเอกสารนี้เพื่อแก้ไขข้อมูลใช่หรือไม่?')) return;
+    try {
+      const formData = new FormData();
+      formData.append('csrf_token', csrfToken);
+      formData.append('header_id', header.header_id);
+      const res = await axios.post(`${API_BASE}/unlock_sheet.php`, formData);
+      if (res.data.success) {
+        showToast('success', res.data.message);
+        fetchSheet();
+      } else {
+        showToast('error', res.data.message);
+      }
+    } catch {
+      showToast('error', 'ปลดล็อกไม่สำเร็จ');
+    }
+  };
+
   const isTimeLocked = useMemo(() => {
     if (!date) return false;
     const now = new Date();
@@ -274,6 +295,7 @@ export default function PaintChemEntryPage() {
 
       <SheetHeader
         onHistoryClick={() => setIsHistoryOpen(true)}
+        onUnlockClick={handleUnlock}
         date={date} shift={shift} sheetStatus={header?.status}
         slotExtras={slotExtras} previousNotes={previousNotes}
         onDateChange={(d) => { setDate(d); }}

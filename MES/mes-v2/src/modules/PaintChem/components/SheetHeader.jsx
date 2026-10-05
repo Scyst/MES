@@ -1,11 +1,11 @@
 // SheetHeader.jsx — Top section: date picker, shift selector, time slot, painting condition (per slot), note (per slot)
 import { useState } from 'react';
-import { Sun, Moon, MoreVertical, History, Printer, CalendarDays, Clock3, Thermometer, Wind, FileText } from 'lucide-react';
+import { Sun, Moon, MoreVertical, History, Printer, CalendarDays, Clock3, Thermometer, Wind, FileText, Unlock } from 'lucide-react';
 import { isOutOfRange } from '../paintChemConfig';
 
 const STATUS_COLORS = {
   DRAFT:     'bg-gray-100 text-gray-500 border-gray-200',
-  SUBMITTED: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  SUBMITTED: 'bg-green-50 text-green-700 border-green-200',
   APPROVED:  'bg-green-50 text-green-700 border-green-200',
 };
 const STATUS_LABELS = {
@@ -16,7 +16,7 @@ const STATUS_LABELS = {
 
 export default function SheetHeader({
   date, shift, slotExtras, previousNotes,
-  onDateChange, onShiftChange, onExtraChange, onExtraBlur,
+  onDateChange, onShiftChange, onExtraChange, onExtraBlur, onUnlockClick,
   sheetStatus, disabled, onHistoryClick, selectedSlot, onSlotChange, timeSlots,
 }) {
   const speedOutOfRange = isOutOfRange('ConveyorSpeed', slotExtras.conveyorSpeed);
