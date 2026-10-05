@@ -71,6 +71,7 @@ export default function PaintChemEntryPage() {
   const [header, setHeader]       = useState(null);
   const [allLogs, setAllLogs]     = useState([]);
   const [saving, setSaving]       = useState(false);
+  const [overrideTimeLock, setOverrideTimeLock] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast]         = useState(null);   // { type: 'success'|'error', msg }
   const [isOnline, setIsOnline]   = useState(navigator.onLine);
@@ -232,38 +233,40 @@ export default function PaintChemEntryPage() {
 
   // Time-Lock Constraint: Lock if the sheet date is older than the next day 12:00 PM (noon)
   
-  const handleUnlock = async () => {
-    if (!isOnline) { showToast('error', 'ไม่มีการเชื่อมต่ออินเทอร์เน็ต'); return; }
-    if (!header?.header_id) return;
-    if (!window.confirm('คุณต้องการปลดล็อกเอกสารนี้เพื่อแก้ไขข้อมูลใช่หรือไม่?')) return;
-    try {
-      const formData = new FormData();
-      formData.append('csrf_token', csrfToken);
-      formData.append('header_id', header.header_id);
-      const res = await axios.post(`${API_BASE}/unlock_sheet.php`, formData);
-      if (res.data.success) {
-        showToast('success', res.data.message);
-        fetchSheet();
-      } else {
-        showToast('error', res.data.message);
-      }
-    } catch {
-      showToast('error', 'ปลดล็อกไม่สำเร็จ');
-    }
-  };
-
   const isTimeLocked = useMemo(() => {
+    if (overrideTimeLock) return false;
     if (!date) return false;
     const now = new Date();
     const [y, m, d] = date.split('-').map(Number);
-
-    // Cutoff is 12:00 PM the day AFTER the sheet date
-    const cutoff = new Date(y, m - 1, d);
-    cutoff.setDate(cutoff.getDate() + 1);
-    cutoff.setHours(12, 0, 0, 0);
-
+    const cutoff = new Date(y, m - 1, d + 1, 12, 0, 0, 0);
     return now > cutoff;
-  }, [date]);
+  }, [date, overrideTimeLock]);
+
+  const handleUnlock = async () => {
+    if (!window.confirm('คุณต้องการปลดล็อกเอกสารนี้เพื่อแก้ไขข้อมูลใช่หรือไม่?')) return;
+    
+    // If it's time-locked, we definitely want to override it
+    setOverrideTimeLock(true);
+
+    // If it's also SUBMITTED, we need to call API
+    if (header?.status === 'SUBMITTED' && header?.header_id) {
+      if (!isOnline) { showToast('error', 'ไม่มีการเชื่อมต่ออินเทอร์เน็ต'); return; }
+      try {
+        const formData = new FormData();
+        formData.append('csrf_token', csrfToken);
+        formData.append('header_id', header.header_id);
+        const res = await axios.post(`${API_BASE}/unlock_sheet.php`, formData);
+        if (res.data.success) {
+          showToast('success', res.data.message);
+          fetchSheet();
+        } else {
+          showToast('error', res.data.message);
+        }
+      } catch {
+        showToast('error', 'ปลดล็อกสถานะไม่สำเร็จ');
+      }
+    }
+  };
 
   const isReadOnly = header?.status === 'APPROVED' || header?.status === 'SUBMITTED' || isTimeLocked;
   const speedOutOfRange = isOutOfRange('ConveyorSpeed', slotExtras.conveyorSpeed);
@@ -296,9 +299,9 @@ export default function PaintChemEntryPage() {
       <SheetHeader
         onHistoryClick={() => setIsHistoryOpen(true)}
         onUnlockClick={handleUnlock}
-        date={date} shift={shift} sheetStatus={header?.status}
+        date={date} shift={shift} sheetStatus={header?.status} isTimeLocked={isTimeLocked}
         slotExtras={slotExtras} previousNotes={previousNotes}
-        onDateChange={(d) => { setDate(d); }}
+        onDateChange={(d) => { setDate(d); setOverrideTimeLock(false); }}
         onShiftChange={handleShiftChange}
         onExtraChange={(key, value) => setSlotExtras((prev) => ({ ...prev, [key]: value }))}
         onExtraBlur={handleExtraBlur}
@@ -380,7 +383,7 @@ export default function PaintChemEntryPage() {
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         onSelectRecord={(selectedDate, selectedShift) => {
-          setDate(selectedDate);
+          setDate(selectedDate); setOverrideTimeLock(false);
           setShift(selectedShift);
           setIsHistoryOpen(false);
         }}

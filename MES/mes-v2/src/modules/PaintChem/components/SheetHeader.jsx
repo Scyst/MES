@@ -17,7 +17,7 @@ const STATUS_LABELS = {
 export default function SheetHeader({
   date, shift, slotExtras, previousNotes,
   onDateChange, onShiftChange, onExtraChange, onExtraBlur, onUnlockClick,
-  sheetStatus, disabled, onHistoryClick, selectedSlot, onSlotChange, timeSlots,
+  sheetStatus, disabled, isTimeLocked, onHistoryClick, selectedSlot, onSlotChange, timeSlots,
 }) {
   const speedOutOfRange = isOutOfRange('ConveyorSpeed', slotExtras.conveyorSpeed);
   const [menuOpen, setMenuOpen] = useState(false);
