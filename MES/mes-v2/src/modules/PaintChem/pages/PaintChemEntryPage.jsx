@@ -346,7 +346,7 @@ export default function PaintChemEntryPage() {
               className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2.5 px-6 min-h-[44px] rounded-lg transition-colors disabled:opacity-50"
             >
               {submitting ? <Loader2 size={18} className="animate-spin" /> : <SendHorizonal size={18} />}
-              ยืนยันและปิดเอกสาร
+              ล็อกเอกสาร
               </button>
           </div>
         </div>
