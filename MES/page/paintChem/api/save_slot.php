@@ -72,7 +72,7 @@ $errors = [];
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $logDate)) $errors[] = 'Invalid date';
 if (!in_array($shift, $validShifts))                  $errors[] = 'Invalid shift';
 if ($shift && !in_array($timeSlot, $validSlotsByShift[$shift] ?? [])) $errors[] = 'Invalid time slot';
-if ($stationNo < 0 || $stationNo > 10)                 $errors[] = 'Invalid station';
+if ($stationNo < 0 || $stationNo > 12)                 $errors[] = 'Invalid station';
 if (empty($paramKey))                                  $errors[] = 'Invalid param';
 
 if (!empty($errors)) {
