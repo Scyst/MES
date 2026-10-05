@@ -45,6 +45,11 @@ export default function SheetHeader({
         <div className="flex items-center gap-2 relative">
           {/* Desktop: Show buttons */}
           <div className="hidden md:flex items-center gap-2">
+            {(sheetStatus === 'SUBMITTED' || isTimeLocked) && (
+              <button type="button" onClick={onUnlockClick} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 rounded-lg shadow-sm transition-colors">
+                <Unlock size={14} /><span>ปลดล็อกแก้ไข</span>
+              </button>
+            )}
             <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg shadow-sm transition-colors">
               <Printer size={14} /><span>ฟอร์มเปล่า</span>
             </a>
@@ -60,6 +65,11 @@ export default function SheetHeader({
             </button>
             {menuOpen && (
               <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
+                {(sheetStatus === 'SUBMITTED' || isTimeLocked) && (
+                  <button type="button" onClick={() => { setMenuOpen(false); onUnlockClick(); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 border-b border-gray-100 text-left">
+                    <Unlock size={16} /> ปลดล็อกแก้ไข
+                  </button>
+                )}
                 <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100" onClick={() => setMenuOpen(false)}>
                   <Printer size={16} /> ฟอร์มเปล่า
                 </a>
