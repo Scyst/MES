@@ -1,18 +1,24 @@
-// SheetHeader.jsx — Top section: date picker, shift selector, time slot, painting conditions
-import { Sun, Moon, History, CalendarDays, Clock3, Thermometer, Wind , FileText } from 'lucide-react';
-import TimeSlotSelector from './TimeSlotSelector';
+// SheetHeader.jsx — Top section: date picker, shift selector, time slot, painting condition (per slot), note (per slot)
+import { Sun, Moon, History, CalendarDays, Clock3, Thermometer, Wind, FileText } from 'lucide-react';
+import { isOutOfRange } from '../paintChemConfig';
 
-export default function SheetHeader({ date, shift, paintingCond, onDateChange, onShiftChange, onCondBlur, onCondChange, sheetStatus, disabled, onHistoryClick, selectedSlot, onSlotChange, timeSlots }) {
-  const statusColors = {
-    DRAFT:     'bg-gray-100 text-gray-500 border-gray-200',
-    SUBMITTED: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    APPROVED:  'bg-green-50 text-green-700 border-green-200',
-  };
-  const statusLabels = {
-    DRAFT:     'ร่าง',
-    SUBMITTED: 'รอตรวจสอบ',
-    APPROVED:  'อนุมัติแล้ว',
-  };
+const STATUS_COLORS = {
+  DRAFT:     'bg-gray-100 text-gray-500 border-gray-200',
+  SUBMITTED: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  APPROVED:  'bg-green-50 text-green-700 border-green-200',
+};
+const STATUS_LABELS = {
+  DRAFT:     'ร่าง',
+  SUBMITTED: 'รอตรวจสอบ',
+  APPROVED:  'อนุมัติแล้ว',
+};
+
+export default function SheetHeader({
+  date, shift, slotExtras, previousNotes,
+  onDateChange, onShiftChange, onExtraChange, onExtraBlur,
+  sheetStatus, disabled, onHistoryClick, selectedSlot, onSlotChange, timeSlots,
+}) {
+  const speedOutOfRange = isOutOfRange('ConveyorSpeed', slotExtras.conveyorSpeed);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden">
@@ -27,14 +33,14 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
         </div>
         <div className="flex items-center gap-2">
           {sheetStatus && (
-            <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${statusColors[sheetStatus] ?? ''}`}>
-              {statusLabels[sheetStatus] ?? sheetStatus}
+            <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${STATUS_COLORS[sheetStatus] ?? ''}`}>
+              {STATUS_LABELS[sheetStatus] ?? sheetStatus}
             </span>
           )}
           <button
             type="button"
             onClick={onHistoryClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
           >
             <History size={14} />
             <span className="hidden sm:inline">ประวัติย้อนหลัง</span>
@@ -43,144 +49,121 @@ export default function SheetHeader({ date, shift, paintingCond, onDateChange, o
       </div>
 
       {/* Main Controls */}
-      <div className="px-5 py-4 flex flex-col gap-4"><div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:justify-between">
+      <div className="px-5 py-4 flex flex-col gap-4">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:justify-between">
 
-        {/* Section 1: Date + Shift + Time Slot */}
-        <div className="flex flex-col sm:flex-row gap-4 lg:pr-6 flex-shrink-0">
-          <div className="flex flex-col gap-1">
-            <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-              <CalendarDays size={11} /> วันที่ตรวจ
-            </label>
-            <input
-              type="date"
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white w-44"
-              value={date}
-              onChange={(e) => onDateChange(e.target.value)}
-              disabled={disabled}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-              <Clock3 size={11} /> กะ & ช่วงเวลา
-            </label>
-            {/* Shift + Time Slot on one row */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => onShiftChange('DAY')}
+          {/* Section 1: Date + Shift + Time Slot */}
+          <div className="flex flex-col sm:flex-row gap-4 lg:pr-6 flex-shrink-0">
+            <div className="flex flex-col gap-1">
+              <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                <CalendarDays size={11} /> วันที่ตรวจ
+              </label>
+              <input
+                type="date"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white w-44"
+                value={date}
+                onChange={(e) => onDateChange(e.target.value)}
                 disabled={disabled}
-                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all whitespace-nowrap ${
-                  shift === 'DAY'
-                    ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
-                    : 'bg-white border-gray-200 text-gray-500 hover:border-amber-300 hover:text-amber-600'
-                }`}
-              >
-                <Sun size={14} /> กลางวัน
-              </button>
-              <button
-                type="button"
-                onClick={() => onShiftChange('NIGHT')}
-                disabled={disabled}
-                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all whitespace-nowrap ${
-                  shift === 'NIGHT'
-                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                    : 'bg-white border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600'
-                }`}
-              >
-                <Moon size={14} /> กลางคืน
-              </button>
-              {/* Time Slot dropdown — compact, same row */}
-              {timeSlots && (
-                <select
-                  value={selectedSlot ?? ''}
-                  onChange={(e) => onSlotChange(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-700 font-medium cursor-pointer"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                <Clock3 size={11} /> กะ &amp; ช่วงเวลา
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onShiftChange('DAY')}
+                  disabled={disabled}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all whitespace-nowrap ${
+                    shift === 'DAY'
+                      ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
+                      : 'bg-white border-gray-200 text-gray-500 hover:border-amber-300 hover:text-amber-600'
+                  }`}
                 >
-                  {timeSlots.map((slot) => (
-                    <option key={slot} value={slot}>{slot}</option>
-                  ))}
-                </select>
-              )}
+                  <Sun size={14} /> กลางวัน
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onShiftChange('NIGHT')}
+                  disabled={disabled}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all whitespace-nowrap ${
+                    shift === 'NIGHT'
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                      : 'bg-white border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600'
+                  }`}
+                >
+                  <Moon size={14} /> กลางคืน
+                </button>
+                {timeSlots && (
+                  <select
+                    value={selectedSlot ?? ''}
+                    onChange={(e) => onSlotChange(e.target.value)}
+                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-700 font-medium cursor-pointer"
+                  >
+                    {timeSlots.map((slot) => (
+                      <option key={slot} value={slot}>{slot}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Section 2: Painting Conditions */}
-        <div className="flex flex-col gap-1 flex-shrink-0">
-          <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-            <Thermometer size={11} /> Painting Condition
-          </label>
-          <div className="flex items-center gap-2">
-            {/* Speed Conveyor */}
+          {/* Section 2: Painting Condition (recorded per time slot) */}
+          <div className="flex flex-col gap-1 flex-shrink-0">
+            <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              <Thermometer size={11} /> Painting Condition — ช่วงเวลา {selectedSlot}
+            </label>
             <div className="relative group">
-              <div className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-40">
+              <div className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-full sm:w-56 ${
+                speedOutOfRange ? 'border-red-400 bg-red-50' : 'border-gray-200'
+              }`}>
                 <Wind size={13} className="text-gray-300 flex-shrink-0" />
                 <input
-                  type="number" step="0.1" min="2.5" max="5.0"
+                  type="number" step="0.1" min="0" inputMode="decimal"
                   className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
-                  value={paintingCond.conveyorSpeed ?? ''}
-                  onChange={(e) => onCondChange('conveyorSpeed', e.target.value)} onBlur={onCondBlur}
-                  placeholder="Speed (m/min)" disabled={disabled}
+                  value={slotExtras.conveyorSpeed ?? ''}
+                  onChange={(e) => onExtraChange('conveyorSpeed', e.target.value)}
+                  onBlur={onExtraBlur}
+                  placeholder="Speed Conveyor (m/min)"
+                  disabled={disabled}
                 />
               </div>
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
                 ความเร็วสายพาน: <span className="font-semibold text-blue-300">2.5–5.0 m/min</span>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-gray-800"></div>
-              </div>
-            </div>
-            {/* Bake Oven */}
-            <div className="relative group">
-              <div className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-36">
-                <Thermometer size={13} className="text-orange-300 flex-shrink-0" />
-                <input
-                  type="number" step="1" min="175" max="220"
-                  className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
-                  value={paintingCond.bakeOvenTemp ?? ''}
-                  onChange={(e) => onCondChange('bakeOvenTemp', e.target.value)} onBlur={onCondBlur}
-                  placeholder="Bake °C" disabled={disabled}
-                />
-              </div>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
-                ตู้อบ (Bake Oven): <span className="font-semibold text-orange-300">175–220 °C</span>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-gray-800"></div>
-              </div>
-            </div>
-            {/* Dry Oven */}
-            <div className="relative group">
-              <div className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-32">
-                <Thermometer size={13} className="text-blue-300 flex-shrink-0" />
-                <input
-                  type="number" step="1" min="140" max="160"
-                  className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
-                  value={paintingCond.dryOvenTemp ?? ''}
-                  onChange={(e) => onCondChange('dryOvenTemp', e.target.value)} onBlur={onCondBlur}
-                  placeholder="Dry °C" disabled={disabled}
-                />
-              </div>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
-                ตู้อบ (Dry Oven): <span className="font-semibold text-blue-300">140–160 °C</span>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-gray-800"></div>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-gray-800" />
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Section 3: Note */}
-      <div className="flex flex-col gap-1 w-full border-t border-gray-100 pt-3">
-        <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-          <FileText size={11} /> หมายเหตุ (Note)
-        </label>
-        <input
-          type="text"
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-          value={paintingCond.note ?? ''}
-          onChange={(e) => onCondChange('note', e.target.value)} onBlur={onCondBlur}
-          placeholder="กรอกหมายเหตุ (ถ้ามี)" disabled={disabled}
-        />
+        {/* Section 3: Note (recorded per time slot, accumulated across the shift) */}
+        <div className="flex flex-col gap-1 w-full border-t border-gray-100 pt-3">
+          <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            <FileText size={11} /> หมายเหตุ (Note) — ช่วงเวลา {selectedSlot}
+          </label>
+          <input
+            type="text"
+            maxLength={500}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+            value={slotExtras.note ?? ''}
+            onChange={(e) => onExtraChange('note', e.target.value)}
+            onBlur={onExtraBlur}
+            placeholder="กรอกหมายเหตุของช่วงเวลานี้ (ถ้ามี)"
+            disabled={disabled}
+          />
+          {previousNotes.length > 0 && (
+            <ul className="mt-1 flex flex-col gap-0.5 text-[12px] text-gray-500">
+              {previousNotes.map(({ slot, note }) => (
+                <li key={slot}>
+                  <span className="font-semibold text-gray-600">[{slot}]</span> {note}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
-
-    </div>
     </div>
   );
 }

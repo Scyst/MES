@@ -110,3 +110,8 @@ Log ค่าพารามิเตอร์แต่ละ Station × Time Sl
 | UNIQUE(header_id, time_slot, station_no, parameter_key) | Constraint | UPSERT safe |
 
 **Indexes:** `IX_PCL_HEADER(header_id)`, `IX_PCL_DATE_SLOT(header_id, time_slot)`
+
+### 2026-10-05 — PAINT_CHEM_LOG: station 10 (Ovens) and slot-level extras
+- `CK_PCL_STATION` now allows `station_no` 1-10 (was 1-9). Station 10 = Ovens.
+- Station 10 `parameter_key` values: `BakeOvenTemp`, `DryOvenTemp`, `ConveyorSpeed` (value in `before_value`), `SlotNote` (text in `note`, max 500 chars, one row per time slot).
+- `PAINT_CHEM_SHEET_HEADER.conveyor_speed / bake_oven_temp / dry_oven_temp` are no longer written by the application (legacy columns kept; `note` kept as legacy read-only text shown first in the PDF Note box).

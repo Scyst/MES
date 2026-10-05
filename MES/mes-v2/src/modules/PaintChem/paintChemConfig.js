@@ -1,4 +1,4 @@
-﻿// paintChemConfig.js — Central configuration for PAINT Chem Check Sheet
+// paintChemConfig.js — Central configuration for PAINT Chem Check Sheet
 // Station definitions, parameter specs, and shift/time-slot rules.
 
 export const SHIFT_SLOTS = {
@@ -42,6 +42,9 @@ export const PARAM_STANDARDS = {
   Conta_WR4:   { min: null, max: 0.5,  unit: 'pt' },
   EC:          { min: null, max: 10.0, unit: 'μS/cm' },
   FlowRate:    { min: 1.5,  max: null, unit: 'm³/hr' },
+  BakeOvenTemp:{ min: 175.0, max: 220.0, unit: '°C' },
+  DryOvenTemp: { min: 175.0, max: 220.0, unit: '°C' },
+  ConveyorSpeed: { min: 2.5, max: 5.0, unit: 'm/min' },
 };
 
 export function isOutOfRange(paramKey, value) {
@@ -155,4 +158,21 @@ export const STATIONS = [
       { key: 'FlowRate', label: 'Flow rate', hasKg: false },
     ],
   },
+  {
+    no: 10,
+    name: 'Ovens',
+    chemical: '-',
+    params: [
+      { key: 'BakeOvenTemp', label: 'Bake Oven Temp. (°C)', hasKg: false },
+      { key: 'DryOvenTemp',  label: 'Dry Oven Temp. (°C)',  hasKg: false },
+    ],
+  }
 ];
+
+// Slot-level fields stored per time slot on the oven station (station 10).
+// They are edited in the sheet header area but persisted like any other hourly parameter.
+export const SLOT_EXTRAS_STATION_NO = 10;
+export const SLOT_EXTRA_KEYS = {
+  conveyorSpeed: 'ConveyorSpeed',
+  note: 'SlotNote',
+};

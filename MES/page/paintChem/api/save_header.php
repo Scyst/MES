@@ -23,9 +23,6 @@ if (empty($clientToken) || empty($serverToken) || !hash_equals($serverToken, $cl
 }
 
 $headerId = intval($_POST['header_id'] ?? 0);
-$conveyorSpeed = isset($_POST['conveyor_speed']) && $_POST['conveyor_speed'] !== '' ? floatval($_POST['conveyor_speed']) : null;
-$bakeOvenTemp  = isset($_POST['bake_oven_temp']) && $_POST['bake_oven_temp'] !== '' ? floatval($_POST['bake_oven_temp']) : null;
-$dryOvenTemp   = isset($_POST['dry_oven_temp']) && $_POST['dry_oven_temp'] !== '' ? floatval($_POST['dry_oven_temp']) : null;
 $note          = htmlspecialchars(trim($_POST['note'] ?? ''), ENT_QUOTES, 'UTF-8');
 
 if ($headerId <= 0) {
@@ -54,14 +51,11 @@ try {
 
     $stmtUpd = $pdo->prepare("
         UPDATE dbo.PAINT_CHEM_SHEET_HEADER
-        SET conveyor_speed = ?,
-            bake_oven_temp = ?,
-            dry_oven_temp  = ?,
-            note           = ?,
+        SET note           = ?,
             updated_at     = GETDATE()
         WHERE header_id = ?
     ");
-    $stmtUpd->execute([$conveyorSpeed, $bakeOvenTemp, $dryOvenTemp, $note, $headerId]);
+    $stmtUpd->execute([$note, $headerId]);
 
     echo json_encode(['success' => true, 'data' => null, 'message' => 'บันทึกข้อมูลส่วนหัวสำเร็จ']);
 

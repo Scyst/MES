@@ -37,6 +37,9 @@ const PARAM_STANDARDS = [
     'Conta_WR4'    => ['min' => null,  'max' => 0.5],
     'EC'           => ['min' => null,  'max' => 10.0],
     'FlowRate'     => ['min' => 1.5,   'max' => null],
+    'BakeOvenTemp' => ['min' => 175.0, 'max' => 220.0],
+    'DryOvenTemp'  => ['min' => 175.0, 'max' => 220.0],
+    'ConveyorSpeed'=> ['min' => 2.5,   'max' => 5.0],
 ];
 
 function isOutOfRange(string $paramKey, ?float $value): bool {
@@ -57,7 +60,7 @@ $beforeValue    = isset($_POST['before_value']) && $_POST['before_value'] !== ''
 $afterValue     = isset($_POST['after_value'])  && $_POST['after_value']  !== '' ? floatval($_POST['after_value'])  : null;
 $chemAddedKg    = isset($_POST['chemical_added_kg']) && $_POST['chemical_added_kg'] !== '' ? floatval($_POST['chemical_added_kg']) : null;
 $isOverflow     = isset($_POST['is_overflow']) ? (bool)(int)$_POST['is_overflow'] : null;
-$noteEntry      = htmlspecialchars(trim($_POST['note'] ?? ''), ENT_QUOTES, 'UTF-8');
+$noteEntry      = mb_substr(trim((string)($_POST['note'] ?? '')), 0, 500, 'UTF-8');
 $userId = $_SESSION['user']['id'];
 $validShifts    = ['DAY', 'NIGHT'];
 $validSlotsByShift = [
@@ -69,7 +72,7 @@ $errors = [];
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $logDate)) $errors[] = 'Invalid date';
 if (!in_array($shift, $validShifts))                  $errors[] = 'Invalid shift';
 if ($shift && !in_array($timeSlot, $validSlotsByShift[$shift] ?? [])) $errors[] = 'Invalid time slot';
-if ($stationNo < 0 || $stationNo > 9)                 $errors[] = 'Invalid station';
+if ($stationNo < 0 || $stationNo > 10)                 $errors[] = 'Invalid station';
 if (empty($paramKey))                                  $errors[] = 'Invalid param';
 
 if (!empty($errors)) {

@@ -1,19 +1,21 @@
-﻿// PaintChemEntryPage.jsx โ€” Main entry page for recording chemical check sheet per slot
+// PaintChemEntryPage.jsx — Main entry page for recording chemical check sheet per slot
 
-// NOTE: Intentionally >50 lines โ€” complex multi-station form with async state management
-// across 9 stations x 6 time slots requires inline orchestration for clarity.
+// NOTE: Intentionally >50 lines — complex multi-station form with async state management
+// across 10 stations x 6 time slots requires inline orchestration for clarity.
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { Save, SendHorizonal, Loader2, WifiOff } from 'lucide-react';
-import { History } from 'lucide-react';
 import SheetHeader from '../components/SheetHeader';
 import PaintChemHistoryDrawer from '../components/PaintChemHistoryDrawer';
-import TimeSlotSelector from '../components/TimeSlotSelector';
 import StationCard from '../components/StationCard';
-import { STATIONS, SHIFT_SLOTS, detectCurrentShift, detectCurrentSlot } from '../paintChemConfig';
+import {
+  STATIONS, SHIFT_SLOTS, SLOT_EXTRAS_STATION_NO, SLOT_EXTRA_KEYS,
+  detectCurrentShift, detectCurrentSlot,
+} from '../paintChemConfig';
 
 const API_BASE = '/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api';
+const EMPTY_EXTRAS = { conveyorSpeed: '', note: '' };
 
 // Build empty slot values: { [stationNo]: { [paramKey]: { before, after, kg, isOverflow } } }
 function buildEmptySlotValues() {
@@ -44,11 +46,26 @@ function hydrateSlotValues(logs, selectedSlot) {
   return hydrated;
 }
 
+// Collect per-slot extras (conveyor speed + note): { [timeSlot]: { conveyorSpeed, note } }
+function buildExtrasBySlot(logs) {
+  const bySlot = {};
+  logs
+    .filter((l) => Number(l.station_no) === SLOT_EXTRAS_STATION_NO)
+    .forEach((l) => {
+      const entry = bySlot[l.time_slot] ?? { ...EMPTY_EXTRAS };
+      if (l.parameter_key === SLOT_EXTRA_KEYS.conveyorSpeed) entry.conveyorSpeed = l.before_value ?? '';
+      if (l.parameter_key === SLOT_EXTRA_KEYS.note) entry.note = l.note ?? '';
+      bySlot[l.time_slot] = entry;
+    });
+  return bySlot;
+}
+
 export default function PaintChemEntryPage() {
   const [date, setDate]           = useState(new Date().toISOString().slice(0, 10));
   const [shift, setShift]         = useState(detectCurrentShift());
   const [selectedSlot, setSlot]   = useState(() => detectCurrentSlot(detectCurrentShift()));
-  const [paintingCond, setPCond]  = useState({ conveyorSpeed: '', bakeOvenTemp: '', dryOvenTemp: '', note: '' });
+  const [slotExtras, setSlotExtras] = useState(EMPTY_EXTRAS);
+  const [extrasBySlot, setExtrasBySlot] = useState({});
   const [slotValues, setSlotVals] = useState(buildEmptySlotValues());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [header, setHeader]       = useState(null);
@@ -73,6 +90,11 @@ export default function PaintChemEntryPage() {
     if (window.csrf_token) setCsrf(window.csrf_token);
   }, []);
 
+  const showToast = (type, msg) => {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   // Fetch sheet data whenever date or shift changes
   const fetchSheet = useCallback(async () => {
     try {
@@ -80,17 +102,11 @@ export default function PaintChemEntryPage() {
       if (res.data.success) {
         setHeader(res.data.data.header);
         setAllLogs(res.data.data.logs);
-        if (res.data.data.header) {
-          setPCond({
-            conveyorSpeed: res.data.data.header.conveyor_speed ?? '',
-            bakeOvenTemp:  res.data.data.header.bake_oven_temp ?? '',
-            dryOvenTemp:   res.data.data.header.dry_oven_temp  ?? '',
-          });
-        }
+        setExtrasBySlot(buildExtrasBySlot(res.data.data.logs));
         setSlotVals(hydrateSlotValues(res.data.data.logs, selectedSlot));
       }
     } catch {
-      showToast('error', 'เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เนเธซเธฅเธ”เธเนเธญเธกเธนเธฅเนเธ”เน เธเธฃเธธเธ“เธฒเธฅเธญเธเนเธซเธกเน');
+      showToast('error', 'ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่');
     }
   }, [date, shift]);  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -101,10 +117,17 @@ export default function PaintChemEntryPage() {
     setSlotVals(hydrateSlotValues(allLogs, selectedSlot));
   }, [selectedSlot, allLogs]);
 
-  const showToast = (type, msg) => {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 4000);
-  };
+  // Re-hydrate conveyor speed + note for the selected slot (persisted values only)
+  useEffect(() => {
+    setSlotExtras(extrasBySlot[selectedSlot] ?? EMPTY_EXTRAS);
+  }, [selectedSlot, extrasBySlot]);
+
+  const previousNotes = useMemo(
+    () => (SHIFT_SLOTS[shift] ?? [])
+      .filter((slot) => slot !== selectedSlot && (extrasBySlot[slot]?.note ?? '').trim() !== '')
+      .map((slot) => ({ slot, note: extrasBySlot[slot].note })),
+    [shift, selectedSlot, extrasBySlot],
+  );
 
   const handleValueChange = (stationNo, paramKey, field, val) => {
     setSlotVals((prev) => ({
@@ -116,19 +139,41 @@ export default function PaintChemEntryPage() {
     }));
   };
 
-  const handleCondBlur = async () => {
-    if (!header?.header_id || !isOnline || header.status !== 'DRAFT') return;
+  const buildSlotFormData = (stationNo, paramKey) => {
+    const formData = new FormData();
+    formData.append('csrf_token',    csrfToken);
+    formData.append('log_date',      date);
+    formData.append('shift',         shift);
+    formData.append('time_slot',     selectedSlot);
+    formData.append('station_no',    stationNo);
+    formData.append('parameter_key', paramKey);
+    return formData;
+  };
+
+  // Persist conveyor speed + note of the selected slot (two hourly rows on the oven station)
+  const buildExtraRequests = () => {
+    const speedForm = buildSlotFormData(SLOT_EXTRAS_STATION_NO, SLOT_EXTRA_KEYS.conveyorSpeed);
+    speedForm.append('before_value', slotExtras.conveyorSpeed ?? '');
+    const noteForm = buildSlotFormData(SLOT_EXTRAS_STATION_NO, SLOT_EXTRA_KEYS.note);
+    noteForm.append('note', slotExtras.note ?? '');
+    return [
+      axios.post(`${API_BASE}/save_slot.php`, speedForm),
+      axios.post(`${API_BASE}/save_slot.php`, noteForm),
+    ];
+  };
+
+  // Auto-save conveyor speed + note when leaving the field so they can be edited all day
+  const handleExtraBlur = async () => {
+    if (!isOnline || isReadOnly) return;
+    const persisted = extrasBySlot[selectedSlot] ?? EMPTY_EXTRAS;
+    const unchanged = String(persisted.conveyorSpeed ?? '') === String(slotExtras.conveyorSpeed ?? '')
+      && (persisted.note ?? '') === (slotExtras.note ?? '');
+    if (unchanged) return;
     try {
-      const formData = new FormData();
-      formData.append('csrf_token', csrfToken);
-      formData.append('header_id', header.header_id);
-      formData.append('conveyor_speed', paintingCond.conveyorSpeed);
-      formData.append('bake_oven_temp', paintingCond.bakeOvenTemp);
-      formData.append('dry_oven_temp', paintingCond.dryOvenTemp);
-      formData.append('note', paintingCond.note ?? '');
-      await axios.post(`${API_BASE}/save_header.php`, formData);
-    } catch (err) {
-      console.error('Failed to auto-save header conditions', err);
+      await Promise.all(buildExtraRequests());
+      setExtrasBySlot((prev) => ({ ...prev, [selectedSlot]: { ...slotExtras } }));
+    } catch {
+      showToast('error', 'บันทึกหมายเหตุหรือความเร็วสายพานไม่สำเร็จ กรุณาลองใหม่');
     }
   };
 
@@ -137,22 +182,16 @@ export default function PaintChemEntryPage() {
     setSlot(detectCurrentSlot(newShift));
   };
 
-  // Save current slot โ€” iterate all station params and POST each
+  // Save current slot — iterate all station params and POST each
   const handleSave = async () => {
-    if (!isOnline) { showToast('error', 'เนเธกเนเธกเธตเธเธฒเธฃเน€เธเธทเนเธญเธกเธ•เนเธญเธญเธดเธเน€เธ—เธญเธฃเนเน€เธเนเธ•'); return; }
+    if (!isOnline) { showToast('error', 'ไม่มีการเชื่อมต่ออินเทอร์เน็ต'); return; }
     setSaving(true);
     try {
       const requests = [];
       for (const station of STATIONS) {
         for (const param of station.params) {
           const val = slotValues[station.no]?.[param.key];
-          const formData = new FormData();
-          formData.append('csrf_token',    csrfToken);
-          formData.append('log_date',      date);
-          formData.append('shift',         shift);
-          formData.append('time_slot',     selectedSlot);
-          formData.append('station_no',    station.no);
-          formData.append('parameter_key', param.key);
+          const formData = buildSlotFormData(station.no, param.key);
           if (!param.isOverflow) {
             formData.append('before_value', val?.before ?? '');
             formData.append('after_value',  val?.after  ?? '');
@@ -163,11 +202,11 @@ export default function PaintChemEntryPage() {
           requests.push(axios.post(`${API_BASE}/save_slot.php`, formData));
         }
       }
-      await Promise.all(requests);
-      showToast('success', `เธเธฑเธเธ—เธถเธ Time Slot ${selectedSlot} เธชเธณเน€เธฃเนเธ`);
+      await Promise.all([...requests, ...buildExtraRequests()]);
+      showToast('success', `บันทึก Time Slot ${selectedSlot} สำเร็จ`);
       await fetchSheet();
     } catch {
-      showToast('error', 'เธเธฑเธเธ—เธถเธเนเธกเนเธชเธณเน€เธฃเนเธ เธเธฃเธธเธ“เธฒเธฅเธญเธเนเธซเธกเน');
+      showToast('error', 'บันทึกไม่สำเร็จ กรุณาลองใหม่');
     } finally {
       setSaving(false);
     }
@@ -175,17 +214,14 @@ export default function PaintChemEntryPage() {
 
   // Submit sheet (DRAFT -> SUBMITTED)
   const handleSubmit = async () => {
-    if (!isOnline) { showToast('error', 'เนเธกเนเธกเธตเธเธฒเธฃเน€เธเธทเนเธญเธกเธ•เนเธญเธญเธดเธเน€เธ—เธญเธฃเนเน€เธเนเธ•'); return; }
-    if (!header?.header_id) { showToast('error', 'เธเธฃเธธเธ“เธฒเธเธฑเธเธ—เธถเธเธเนเธญเธกเธนเธฅเธญเธขเนเธฒเธเธเนเธญเธข 1 Slot เธเนเธญเธเธชเนเธเนเธ'); return; }
-    if (!window.confirm('เธขเธทเธเธขเธฑเธเธเธฒเธฃเธชเนเธเนเธเธเธฑเธเธ—เธถเธเธเธตเน? เธซเธฅเธฑเธเธเธฒเธเธเธตเนเธเธฐเนเธกเนเธชเธฒเธกเธฒเธฃเธ–เนเธเนเนเธเนเธ”เน')) return;
+    if (!isOnline) { showToast('error', 'ไม่มีการเชื่อมต่ออินเทอร์เน็ต'); return; }
+    if (!header?.header_id) { showToast('error', 'กรุณาบันทึกข้อมูลอย่างน้อย 1 Slot ก่อนส่ง'); return; }
+    if (!window.confirm('กรุณายืนยันการส่งบันทึกนี้ หลังจากส่งแล้วจะไม่สามารถแก้ไขได้')) return;
     setSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append('csrf_token',    csrfToken);
-      formData.append('header_id',     header.header_id);
-      formData.append('conveyor_speed', paintingCond.conveyorSpeed);
-      formData.append('bake_oven_temp', paintingCond.bakeOvenTemp);
-      formData.append('dry_oven_temp',  paintingCond.dryOvenTemp);
+      formData.append('csrf_token', csrfToken);
+      formData.append('header_id',  header.header_id);
       const res = await axios.post(`${API_BASE}/submit_sheet.php`, formData);
       if (res.data.success) {
         showToast('success', res.data.message);
@@ -194,23 +230,23 @@ export default function PaintChemEntryPage() {
         showToast('error', res.data.message);
       }
     } catch {
-      showToast('error', 'เธชเนเธเนเธเธเธฑเธเธ—เธถเธเนเธกเนเธชเธณเน€เธฃเนเธ');
+      showToast('error', 'ส่งบันทึกไม่สำเร็จ');
     } finally {
       setSubmitting(false);
     }
   };
 
-    // Time-Lock Constraint: Lock if the sheet date is older than today 12:00 PM (noon)
+  // Time-Lock Constraint: Lock if the sheet date is older than the next day 12:00 PM (noon)
   const isTimeLocked = useMemo(() => {
     if (!date) return false;
     const now = new Date();
     const [y, m, d] = date.split('-').map(Number);
-    
+
     // Cutoff is 12:00 PM the day AFTER the sheet date
     const cutoff = new Date(y, m - 1, d);
     cutoff.setDate(cutoff.getDate() + 1);
     cutoff.setHours(12, 0, 0, 0);
-    
+
     return now > cutoff;
   }, [date]);
 
@@ -221,14 +257,14 @@ export default function PaintChemEntryPage() {
       {/* Time-Lock Banner */}
       {isTimeLocked && header?.status === 'DRAFT' && (
         <div className="flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm font-medium px-4 py-3 rounded-lg mb-4 shadow-sm">
-          <span>๐”’ เน€เธญเธเธชเธฒเธฃเธเธตเนเธ–เธนเธเธฅเนเธญเธเน€เธเธทเนเธญเธเธเธฒเธเธซเธกเธ”เน€เธงเธฅเธฒเธเธฑเธเธ—เธถเธ (เน€เธเธดเธ 12:00 เธ. เธเธญเธเธงเธฑเธเธ–เธฑเธ”เนเธ) เธซเธฒเธเธ•เนเธญเธเธเธฒเธฃเนเธเนเนเธ เธเธฃเธธเธ“เธฒเธ•เธดเธ”เธ•เนเธญเธซเธฑเธงเธซเธเนเธฒเธเธฒเธ</span>
+          <span>🔒 เอกสารนี้ถูกล็อกเนื่องจากหมดเวลาบันทึก (เกิน 12:00 น. ของวันถัดไป) หากต้องการแก้ไข กรุณาติดต่อหัวหน้างาน</span>
         </div>
       )}
 
       {/* Offline banner */}
       {!isOnline && (
         <div className="flex items-center justify-center gap-2 bg-red-600 text-white text-sm font-medium px-4 py-3 rounded-lg mb-4 shadow-sm">
-          <WifiOff size={18} /> เนเธกเนเธกเธตเธเธฒเธฃเน€เธเธทเนเธญเธกเธ•เนเธญเธญเธดเธเน€เธ—เธญเธฃเนเน€เธเนเธ• โ€” เธเธฃเธธเธ“เธฒเธญเธขเนเธฒเธเธฃเธญเธเธเนเธญเธกเธนเธฅเธเธเธเธงเนเธฒเธเธฐเธญเธญเธเนเธฅเธเน
+          <WifiOff size={18} /> ไม่มีการเชื่อมต่ออินเทอร์เน็ต — กรุณาอย่ากรอกข้อมูลจนกว่าจะกลับมาออนไลน์
         </div>
       )}
 
@@ -238,22 +274,21 @@ export default function PaintChemEntryPage() {
           ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
           {toast.msg}
         </div>
-      )}      
+      )}
 
       <SheetHeader
-          onHistoryClick={() => setIsHistoryOpen(true)}
-        date={date} shift={shift} paintingCond={paintingCond} sheetStatus={header?.status}
+        onHistoryClick={() => setIsHistoryOpen(true)}
+        date={date} shift={shift} sheetStatus={header?.status}
+        slotExtras={slotExtras} previousNotes={previousNotes}
         onDateChange={(d) => { setDate(d); }}
         onShiftChange={handleShiftChange}
-        onCondChange={(k, v) => setPCond((p) => ({ ...p, [k]: v }))}
-          onCondBlur={handleCondBlur}
-          selectedSlot={selectedSlot}
-          onSlotChange={setSlot}
-          timeSlots={SHIFT_SLOTS[shift]}
-        disabled={isReadOnly}
+        onExtraChange={(key, value) => setSlotExtras((prev) => ({ ...prev, [key]: value }))}
+        onExtraBlur={handleExtraBlur}
+        selectedSlot={selectedSlot}
+        onSlotChange={setSlot}
+        timeSlots={SHIFT_SLOTS[shift]}
+        disabled={isReadOnly || !isOnline}
       />
-
-      
 
       {/* Station Cards in a responsive grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-3 md:gap-4">
@@ -276,25 +311,25 @@ export default function PaintChemEntryPage() {
               type="button"
               onClick={handleSave}
               disabled={saving || !isOnline}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition-colors disabled:opacity-50"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 min-h-[44px] rounded-lg transition-colors disabled:opacity-50"
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-              เธเธฑเธเธ—เธถเธ Slot {selectedSlot}
+              บันทึก Slot {selectedSlot}
             </button>
             <button
               type="button"
               onClick={handleSubmit}
               disabled={submitting || !isOnline || !header?.header_id}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg transition-colors disabled:opacity-50"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 px-6 min-h-[44px] rounded-lg transition-colors disabled:opacity-50"
             >
               {submitting ? <Loader2 size={18} className="animate-spin" /> : <SendHorizonal size={18} />}
-              เธชเนเธเนเธ
+              ส่งบันทึก
             </button>
           </div>
         </div>
       )}
-      <PaintChemHistoryDrawer 
-        isOpen={isHistoryOpen} 
+      <PaintChemHistoryDrawer
+        isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         onSelectRecord={(selectedDate, selectedShift) => {
           setDate(selectedDate);
@@ -305,4 +340,3 @@ export default function PaintChemEntryPage() {
     </div>
   );
 }
-

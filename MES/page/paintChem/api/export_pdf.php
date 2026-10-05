@@ -22,7 +22,7 @@ $header = $stmtH->fetch();
 
 $logs = [];
 if ($header) {
-    $stmtL = $pdo->prepare("SELECT time_slot, station_no, parameter_key, before_value, after_value, chemical_added_kg, is_overflow FROM dbo.PAINT_CHEM_LOG WHERE header_id = ?");
+    $stmtL = $pdo->prepare("SELECT time_slot, station_no, parameter_key, before_value, after_value, chemical_added_kg, is_overflow, note FROM dbo.PAINT_CHEM_LOG WHERE header_id = ?");
     $stmtL->execute([$header['header_id']]);
     while ($row = $stmtL->fetch()) {
         $logs[$row['station_no']][$row['parameter_key']][$row['time_slot']] = $row;
@@ -80,14 +80,18 @@ $stations = [
     ]],
 ];
 
-$bake       = $header['bake_oven_temp']  ?? '';
-$dry        = $header['dry_oven_temp']   ?? '';
-$speed      = $header['conveyor_speed']  ?? '';
-$note       = $header['note'] ?? '';
+$noteLines = [];
+$legacyNote = trim((string)($header['note'] ?? ''));
+if ($legacyNote !== '') $noteLines[] = $legacyNote;
+foreach ($timeSlots as $ts) {
+    $slotNote = trim((string)($logs[10]['SlotNote'][$ts]['note'] ?? ''));
+    if ($slotNote !== '') $noteLines[] = '[' . $ts . '] ' . $slotNote;
+}
+$noteText = implode("\n", $noteLines);
 $preparedBy = $header['prepared_by_name'] ?? '';
 $checkedBy  = $header['checked_by_name'] ?? '';
 $approvedBy = $header['approved_by_name'] ?? '';
-$shiftLabel = $shift === 'DAY' ? '&#3585;&#3621;&#3634;&#3591;&#3623;&#3633;&#3609; (DAY)' : '&#3585;&#3621;&#3634;&#3591;&#3588;&#3639;&#3609; (NIGHT)';
+$shiftLabel = $shift === 'DAY' ? 'กลางวัน (DAY)' : 'กลางคืน (NIGHT)';
 $dateLabel  = date('d/m/Y', strtotime($logDate));
 ?>
 <!DOCTYPE html>
@@ -208,16 +212,16 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
 
   /* ===== COLUMN WIDTHS (total 283mm - 10mm padding = 273mm) ===== */
   col.c-no    { width: 7mm;  }
-  col.c-proc  { width: 20mm; }
-  col.c-chem  { width: 17mm; }
-  col.c-param { width: 18mm; }
-  col.c-std   { width: 14mm; }
+  col.c-proc  { width: 18mm; }
+  col.c-chem  { width: 16mm; }
+  col.c-param { width: 17mm; }
+  col.c-std   { width: 13mm; }
   col.c-min   { width: 6mm;  }
   col.c-max   { width: 6mm;  }
   /* remaining = 273 - 7-20-17-18-14-6-6 = 185mm / 18 sub-cols ≈ 10.3mm each */
-  col.c-bf    { width: 10.3mm; }
-  col.c-af    { width: 10.3mm; }
-  col.c-kg    { width: 10.3mm; }
+  col.c-bf    { width: 10.5mm; }
+  col.c-af    { width: 10.5mm; }
+  col.c-kg    { width: 10.5mm; }
 
   /* ===== OVEN / FOOTER SECTION ===== */
   table.footer-tbl {
@@ -254,7 +258,7 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
 
 
 <div class="no-print">
-  <button onclick="window.print()">&#128424;&nbsp; &#3614;&#3636;&#3617;&#3614;&#3660; / &#3610;&#3633;&#3609;&#3607;&#3638;&#3585; PDF</button>
+  <button onclick="window.print()">&nbsp; พิมพ์ / บันทึก PDF</button>
 </div>
 
 <div class="page">
@@ -264,7 +268,7 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
     <tr>
       <td width="25%">
           <img alt="SNC Logo" src="/iot-toolbox/sandbox-b9/Toolbox2/assets/logo.webp" style="height: 28px; object-fit: contain; margin-bottom: 2px;">
-          <div style="font-size:6.5pt;color:#555;margin-top:1px;">&#3610;&#3619;&#3636;&#3625;&#3633;&#3607;&#32;&#3648;&#3629;&#3626;&#32;&#3648;&#3629;&#3655;&#3609;&#32;&#3595;&#3637;&#32;&#3615;&#3629;&#3619;&#3660;&#3648;&#3617;&#3629;&#3619;&#3660;&#32;&#3592;&#3635;&#3585;&#3633;&#3604;</div>
+          <div style="font-size:6.5pt;color:#555;margin-top:1px;">บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด</div>
         </td>
       <td width="50%">
         <div class="doc-title">
@@ -272,8 +276,8 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
         </div>
       </td>
       <td width="24%" class="doc-meta">
-        <div><span class="meta-label">&#3623;&#47;&#3604;&#47;&#3611;&#58; </span><span class="meta-value"><?php echo $dateLabel; ?></span></div>
-        <div><span class="meta-label">&#3585;&#3632;&#3607;&#3635;&#3591;&#3634;&#3609;&#58; </span><span class="meta-value"><?php echo $shiftLabel; ?></span></div>
+        <div><span class="meta-label">ว/ด/ป: </span><span class="meta-value"><?php echo $dateLabel; ?></span></div>
+        <div><span class="meta-label">กะทำงาน: </span><span class="meta-value"><?php echo $shiftLabel; ?></span></div>
       </td>
     </tr>
   </table>
@@ -294,21 +298,21 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
     </colgroup>
     <thead>
       <tr class="bg-header">
-        <th rowspan="2">&#3594;&#3639;&#3656;&#3629;<br>&#3648;&#3588;&#3617;&#3637;</th>
-        <th rowspan="2">&#3585;&#3619;&#3632;&#3610;&#3623;&#3609;&#3585;&#3634;&#3619;</th>
-        <th rowspan="2">&#3626;&#3634;&#3619;&#3648;&#3588;&#3617;&#3637;&#3607;&#3637;&#3656;&#3651;&#3594;&#3657;</th>
-        <th rowspan="2">&#3627;&#3633;&#3623;&#3586;&#3657;&#3629;&#3588;&#3623;&#3610;&#3588;&#3640;&#3617;</th>
-        <th rowspan="2">&#3588;&#3656;&#3634;&#3617;&#3634;&#3605;&#3619;&#3600;&#3634;&#3609;</th>
-        <th colspan="2">&#3588;&#3656;&#3634;&#3588;&#3623;&#3610;&#3588;&#3640;&#3617;</th>
+        <th rowspan="2">ชื่อ<br>เคมี</th>
+        <th rowspan="2">กระบวนการ</th>
+        <th rowspan="2">สารเคมีที่ใช้</th>
+        <th rowspan="2">หัวข้อควบคุม</th>
+        <th rowspan="2">ค่ามาตรฐาน</th>
+        <th colspan="2">ค่าควบคุม</th>
         <?php foreach ($timeSlots as $ts): ?>
         <th colspan="3"><?php echo htmlspecialchars($ts); ?></th>
         <?php endforeach; ?>
       </tr>
       <tr class="bg-sub">
-        <th>&#3605;&#3656;&#3635;&#3626;&#3640;&#3604;</th>
-        <th>&#3626;&#3641;&#3591;&#3626;&#3640;&#3604;</th>
+        <th>ต่ำสุด</th>
+        <th>สูงสุด</th>
         <?php for ($i = 0; $i < 6; $i++): ?>
-        <th>&#3585;&#3656;&#3629;&#3609;&#3611;&#3619;&#3633;&#3610;</th><th>&#3627;&#3621;&#3633;&#3591;&#3611;&#3619;&#3633;&#3610;</th><th>&#3585;&#3585;&#46;</th>
+        <th>ก่อนปรับ</th><th>หลังปรับ</th><th>กก.</th>
         <?php endfor; ?>
       </tr>
     </thead>
@@ -346,61 +350,68 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
       <?php endforeach; ?>
     <?php endforeach; ?>
             <tr>
-        <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Bake Oven Temp. (°C)</td>
-        <td style="font-weight:bold;background:#f8fafc;">Standard</td>
-        <td class="bg-std">175 – 220 °C</td>
-        <td colspan="2" style="background-color: #4b5563;"></td>
-        <td colspan="3"><?php echo htmlspecialchars((string)$bake); ?></td>
-        <?php for($i=1; $i<6; $i++) echo '<td colspan="3"></td>'; ?>
-      </tr>
+          <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Bake Oven Temp. (°C)</td>
+          <td style="font-weight:bold;background:#f8fafc;">Standard</td>
+          <td class="bg-std">175 – 220 °C</td>
+          <td colspan="2" style="background-color: #4b5563;"></td>
+          <?php foreach ($timeSlots as $ts):
+              $lb = $logs[10]['BakeOvenTemp'][$ts] ?? null;
+              $valb = $lb ? htmlspecialchars((string)$lb['before_value']) : '';
+          ?>
+          <td colspan="3"><?php echo $valb; ?></td>
+          <?php endforeach; ?>
+        </tr>
       <tr>
-        <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Dry Oven Temp. (°C)</td>
-        <td style="font-weight:bold;background:#f8fafc;">Standard</td>
-        <td class="bg-std">140 – 160 °C</td>
-        <td colspan="2" style="background-color: #4b5563;"></td>
-        <td colspan="3"><?php echo htmlspecialchars((string)$dry); ?></td>
-        <?php for($i=1; $i<6; $i++) echo '<td colspan="3"></td>'; ?>
-      </tr>
+          <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Dry Oven Temp. (°C)</td>
+          <td style="font-weight:bold;background:#f8fafc;">Standard</td>
+          <td class="bg-std">175 – 220 °C</td>
+          <td colspan="2" style="background-color: #4b5563;"></td>
+          <?php foreach ($timeSlots as $ts):
+              $ld = $logs[10]['DryOvenTemp'][$ts] ?? null;
+              $vald = $ld ? htmlspecialchars((string)$ld['before_value']) : '';
+          ?>
+          <td colspan="3"><?php echo $vald; ?></td>
+          <?php endforeach; ?>
+        </tr>
+        <tr>
+          <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Speed Conveyor (m/min)</td>
+          <td style="font-weight:bold;background:#f8fafc;">Standard</td>
+          <td class="bg-std">2.5 – 5.0 m/min</td>
+          <td colspan="2" style="background-color: #4b5563;"></td>
+          <?php foreach ($timeSlots as $ts):
+              $lc = $logs[10]['ConveyorSpeed'][$ts] ?? null;
+              $valc = $lc ? htmlspecialchars((string)$lc['before_value']) : '';
+          ?>
+          <td colspan="3"><?php echo $valc; ?></td>
+          <?php endforeach; ?>
+        </tr>
     </tbody>
   </table>
 
   <!-- ===== FOOTER / SIGNATURE SECTION ===== -->
   <table class="footer-tbl">
     <tr>
-      <td rowspan="5" colspan="4" width="35%" style="vertical-align:top; text-align:left; padding:4px;">
+      <td rowspan="2" width="42%" style="vertical-align:top; text-align:left; padding:4px;">
         <div style="font-weight:bold; margin-bottom:4px; color:#1e3a5f;">Note.</div>
-        <div style="font-weight:normal; font-size:6.5pt; height:35px;"><?php echo nl2br(htmlspecialchars((string)$note)); ?></div>
+        <div style="font-weight:normal; font-size:6.5pt; min-height:35px;"><?php echo nl2br(htmlspecialchars($noteText)); ?></div>
       </td>
-      <td rowspan="5" colspan="3" width="20%" style="vertical-align:top; text-align:center; padding:4px;" class="bg-remark">
+      <td rowspan="2" width="16%" style="vertical-align:top; text-align:center; padding:4px;" class="bg-remark">
         <div style="font-weight:bold; color:#1e3a5f;">Remark</div>
       </td>
-      <td colspan="6" width="45%" class="bg-remark" style="text-align:center; font-weight:bold;">
-        Painting Condition: 1) Speed Conveyor (m/min)
-      </td>
+      <td width="14%" style="text-align:center; font-weight:bold; height:20px;">Prepared by</td>
+      <td width="14%" style="text-align:center; font-weight:bold;">Checked by</td>
+      <td width="14%" style="text-align:center; font-weight:bold;">Approved by</td>
     </tr>
     <tr>
-      <td colspan="3" class="bg-std" style="text-align:center; font-weight:bold;">Standard</td>
-      <td colspan="3" style="text-align:center; font-weight:bold;">Actual</td>
-    </tr>
-    <tr>
-      <td colspan="3" class="bg-std" style="text-align:center;">2.5 &#8211; 5.0</td>
-      <td colspan="3" style="text-align:center; font-weight:bold;"><?php echo htmlspecialchars((string)$speed); ?></td>
-    </tr>
-    <tr>
-      <td colspan="2" style="text-align:center; font-weight:bold; height: 20px; border-top:1.5px solid #374151;">Prepared by</td>
-      <td colspan="2" style="text-align:center; font-weight:bold; border-top:1.5px solid #374151;">Checked by</td>
-      <td colspan="2" style="text-align:center; font-weight:bold; border-top:1.5px solid #374151;">Approved by</td>
-    </tr>
-    <tr>
-      <td colspan="2" style="height: 40px; text-align:center; vertical-align:bottom; padding-bottom:5px;">
+      <td style="height:40px; text-align:center; vertical-align:bottom; padding-bottom:5px;">
         ...................................<br>
         <span style="font-size:6.5pt;"><?php echo htmlspecialchars($preparedBy); ?></span>
       </td>
-      <td colspan="2" style="text-align:center; vertical-align:bottom; padding-bottom:5px;">
+      <td style="text-align:center; vertical-align:bottom; padding-bottom:5px;">
         ...................................<br>
         <span style="font-size:6.5pt;"><?php echo htmlspecialchars($checkedBy); ?></span>
       </td>
-      <td colspan="2" style="text-align:center; vertical-align:bottom; padding-bottom:5px;">
+      <td style="text-align:center; vertical-align:bottom; padding-bottom:5px;">
         ...................................<br>
         <span style="font-size:6.5pt;"><?php echo htmlspecialchars($approvedBy); ?></span>
       </td>
