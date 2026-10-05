@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import DesktopSidebar from './DesktopSidebar';
 
 export default function AppLayout() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
@@ -15,8 +15,8 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
-  const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
-  const closeMenu = () => setIsMobileMenuOpen(false);
+  
+  
 
   // Auto-close menu when route changes
   useEffect(() => {
@@ -88,10 +88,10 @@ export default function AppLayout() {
 
 
           {/* Right: Desktop Tools & Profile */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="flex items-center gap-2">
             
             {/* Date Block */}
-            <div className="flex items-center gap-1 border-r border-gray-200 dark:border-gray-700 pr-3 mr-1">
+            <div className="hidden md:flex items-center gap-1 border-r border-gray-200 dark:border-gray-700 pr-3 mr-1">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-700 rounded-full text-sm font-medium text-gray-600 dark:text-gray-200 border border-gray-100 dark:border-gray-600" title="Current Date">
                 <Clock size={16} className="text-blue-500 dark:text-blue-400" />
                 <span>{currentDate}</span>
@@ -185,70 +185,13 @@ export default function AppLayout() {
             </div>
           </div>
 
-        {/* Right: Mobile Menu Toggle */}
-        <button onClick={toggleMenu} className="md:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors">
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        
       </header>
 
       {/* Main Container */}
       <div className="flex flex-1 min-h-0 overflow-hidden relative">
         {location.pathname !== "/" && location.pathname !== "/iot-toolbox/sandbox-b9/Toolbox2/" && location.pathname !== "/iot-toolbox/sandbox-b9/Toolbox2" && <DesktopSidebar />}
 
-
-      {/* Mobile Slide-down Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-16 left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-20 flex flex-col p-4 animate-in slide-in-from-top-2">
-          <div className="flex items-center gap-4 p-3 border-b border-gray-100 mb-2">
-             <UserCircle size={32} className="text-gray-400" />
-             <div>
-               <p className="font-bold text-gray-800">{user?.fullname || 'User'}</p>
-               <p className="text-xs text-gray-500">{currentDate}</p>
-             </div>
-          </div>
-          <div className="mt-2">
-            {/* Navigation Links */}
-            <Link
-              to="/paint-chem"
-              onClick={closeMenu}
-              className="flex items-center gap-3 w-full p-3 rounded-lg text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 transition-colors"
-            >
-              <FlaskConical size={20} className="text-blue-500" />
-              <div>
-                <p className="text-sm font-semibold">บันทึกเคมีสี</p>
-                <p className="text-xs text-gray-400">PAINT Line — Chemical Check Sheet</p>
-              </div>
-            </Link>
-            <Link
-              to="/paint-chem/history"
-              onClick={closeMenu}
-              className="flex items-center gap-3 w-full p-3 rounded-lg text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 transition-colors"
-            >
-              <History size={20} className="text-blue-400" />
-              <div>
-                <p className="text-sm font-semibold">ประวัติเคมีสี</p>
-                <p className="text-xs text-gray-400">ดูรายงานและประวัติย้อนหลัง</p>
-              </div>
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 w-full p-3 rounded-lg text-red-600 font-medium hover:bg-red-50 transition-colors mt-2 border-t border-gray-100"
-            >
-              <LogOut size={20} />
-              <span>ออกจากระบบ (Logout)</span>
-            </button>
-          </div>
-
-        </div>
-      )}
-
-      {/* Mobile Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="md:hidden fixed inset-0 top-16 bg-black/20 z-10 backdrop-blur-sm"
-          onClick={closeMenu}
-        />
-      )}
 
       {/* Main Content */}
       <main className="flex-1 h-full overflow-auto relative z-0">

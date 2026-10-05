@@ -12,20 +12,20 @@ const MENU_DATA = [
   {
     title: 'GENERAL', sectionIcon: Grid,
     items: [
-      { name: 'TOOLBOX OS (Home)', icon: Home, href: '/MES/page/dailyLog/dailyLogUI.php', external: true },
-      { name: 'OEE Dashboard', icon: Activity, href: '/MES/page/OEE_Dashboard/OEE_Shopfloor.php', external: true },
-      { name: 'Material Request', icon: ShoppingCart, href: '/MES/page/storeManagement/materialReq.php', external: true },
-      { name: 'Forklift Booking', icon: Truck, href: '/MES/page/forklift/forkliftUI.php', external: true },
-      { name: 'Document Center', icon: FolderOpen, href: '/MES/page/documentCenter/documentCenterUI.php', external: true },
+      { name: 'TOOLBOX OS (Home)', icon: Home, href: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php', external: true },
+      { name: 'OEE Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php', external: true },
+      { name: 'Material Request', icon: ShoppingCart, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php', external: true },
+      { name: 'Forklift Booking', icon: Truck, href: '/iot-toolbox/sandbox-b9/MES/MES/page/forklift/forkliftUI.php', external: true },
+      { name: 'Document Center', icon: FolderOpen, href: '/iot-toolbox/sandbox-b9/MES/MES/page/documentCenter/documentCenterUI.php', external: true },
     ]
   },
   {
     title: 'PRODUCTION', sectionIcon: Factory,
     items: [
-      { name: 'Production & Inventory', icon: Package, href: '/MES/page/production/productionUI.php', external: true },
-      { name: 'Live Job Queue', icon: ListOrdered, href: '/MES/page/production/jobQueueUI.php', external: true },
-      { name: 'Tag Printer (WIP/FG)', icon: Printer, href: '/MES/page/production/label_printer.php', external: true },
-      { name: 'Scan Barcode', icon: ScanLine, href: '/MES/page/scanBarcode/scanBarcodeUI.php', external: true },
+      { name: 'Production & Inventory', icon: Package, href: '/iot-toolbox/sandbox-b9/MES/MES/page/production/productionUI.php', external: true },
+      { name: 'Live Job Queue', icon: ListOrdered, href: '/iot-toolbox/sandbox-b9/MES/MES/page/production/jobQueueUI.php', external: true },
+      { name: 'Tag Printer (WIP/FG)', icon: Printer, href: '/iot-toolbox/sandbox-b9/MES/MES/page/production/label_printer.php', external: true },
+      { name: 'Scan Barcode', icon: ScanLine, href: '/iot-toolbox/sandbox-b9/MES/MES/page/scanBarcode/scanBarcodeUI.php', external: true },
       { name: "บันทึกเคมีสี (Paint Chem)", icon: FlaskConical, to: "/paint-chem" },
       
     ]
@@ -33,33 +33,33 @@ const MENU_DATA = [
   {
     title: 'WAREHOUSE & LOGISTICS', sectionIcon: Warehouse,
     items: [
-      { name: 'Store Dashboard', icon: Store, href: '/MES/page/storeManagement/storeDashboard.php', external: true },
-      { name: 'Inventory Stock', icon: Box, href: '/MES/page/storeManagement/inventoryDashboard.php', external: true },
-      { name: 'Warehouse Operations', icon: Warehouse, href: '/MES/page/storeManagement/warehouse_operations.php', external: true },
-      { name: 'RM Receiving & Tag', icon: Inbox, href: '/MES/page/storeManagement/rmReceiving.php', external: true },
+      { name: 'Store Dashboard', icon: Store, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/storeDashboard.php', external: true },
+      { name: 'Inventory Stock', icon: Box, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/inventoryDashboard.php', external: true },
+      { name: 'Warehouse Operations', icon: Warehouse, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/warehouse_operations.php', external: true },
+      { name: 'RM Receiving & Tag', icon: Inbox, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/rmReceiving.php', external: true },
     ]
   },
   {
     title: 'QUALITY & MT', sectionIcon: ShieldCheck,
     items: [
-      { name: 'iQMS (Quality)', icon: MonitorPlay, href: '/MES/page/QMS/qmsDashboard.php', external: true },
-      { name: 'Accessories Inspection', icon: Camera, href: '/MES/page/AccessoriesInspection/accessoriesInspectionUI.php', external: true },
-      { name: 'PE Enterprise', icon: Wrench, href: '/MES/page/PE/peDashboard.php', external: true },
+      { name: 'iQMS (Quality)', icon: MonitorPlay, href: '/iot-toolbox/sandbox-b9/MES/MES/page/QMS/qmsDashboard.php', external: true },
+      { name: 'Accessories Inspection', icon: Camera, href: '/iot-toolbox/sandbox-b9/MES/MES/page/AccessoriesInspection/accessoriesInspectionUI.php', external: true },
+      { name: 'PE Enterprise', icon: Wrench, href: '/iot-toolbox/sandbox-b9/MES/MES/page/PE/peDashboard.php', external: true },
     ]
   },
   {
     title: 'MANAGEMENT', sectionIcon: Briefcase,
     items: [
-      { name: 'Management Dashboard', icon: Activity, href: '/MES/page/management/managementDashboard.php', external: true },
-      { name: 'Utility & Energy', icon: Zap, href: '/MES/page/management/utilityDashboard.php', external: true },
-      { name: 'Mood Insight Report', icon: Heart, href: '/MES/page/dailyLog/moodReport.php', external: true },
+      { name: 'Management Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/management/managementDashboard.php', external: true },
+      { name: 'Utility & Energy', icon: Zap, href: '/iot-toolbox/sandbox-b9/MES/MES/page/management/utilityDashboard.php', external: true },
+      { name: 'Mood Insight Report', icon: Heart, href: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/moodReport.php', external: true },
     ]
   },
   {
     title: 'SYSTEM ADMIN', sectionIcon: Settings,
     items: [
-      { name: 'System Settings', icon: Settings, href: '/MES/page/systemSettings/systemSettings.php', external: true },
-      { name: 'User Manager', icon: Users, href: '/MES/page/userManage/userManageUI.php', external: true },
+      { name: 'System Settings', icon: Settings, href: '/iot-toolbox/sandbox-b9/MES/MES/page/systemSettings/systemSettings.php', external: true },
+      { name: 'User Manager', icon: Users, href: '/iot-toolbox/sandbox-b9/MES/MES/page/userManage/userManageUI.php', external: true },
     ]
   }
 ];
