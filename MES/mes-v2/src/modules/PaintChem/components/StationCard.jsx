@@ -15,7 +15,7 @@ export default function StationCard({ station, slotValues, onChange, disabled })
   }, 0);
 
   return (
-    <div className={`rounded-xl border ${oorCount > 0 ? 'border-red-300' : 'border-gray-200'} bg-white shadow-sm mb-3`}>
+    <div className={`rounded-xl border ${oorCount > 0 ? 'border-red-300' : 'border-gray-200'} bg-white shadow-sm mb-3 ${!open ? 'self-start' : 'self-stretch flex flex-col'}`}>
       {/* Header */}
       <button
         type="button"
