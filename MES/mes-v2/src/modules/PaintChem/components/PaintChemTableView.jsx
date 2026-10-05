@@ -128,10 +128,10 @@ export default function PaintChemTableView({
                     key={slot}
                     colSpan={3}
                     onClick={() => onSlotChange(slot)}
-                    className={`${CELL_BORDER} border-b border-gray-200 dark:border-gray-700 px-2 py-2 text-center cursor-pointer select-none transition-colors ${
+                    className={`${CELL_BORDER} border-b border-gray-200 dark:border-gray-700 px-2 py-2 text-center cursor-pointer select-none ${
                       isEditing
                         ? 'bg-blue-600 text-white'
-                        : 'hover:bg-gray-200 dark:hover:bg-gray-800'
+                        : 'bg-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800'
                     }`}
                   >
                     <div className="text-xs font-semibold">{slot}</div>
@@ -154,7 +154,7 @@ export default function PaintChemTableView({
             </tr>
             <tr className="bg-gray-50 dark:bg-gray-900/60 text-[11px] text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
               {timeSlots.map((slot) => {
-                const tint = slot === selectedSlot ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : '';
+                const tint = slot === selectedSlot ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'bg-transparent text-gray-500 dark:text-gray-400';
                 return ['ก่อนปรับ', 'หลังปรับ', 'กก.'].map((label, index) => (
                   <th key={`${slot}-${label}`}
                     className={`${index === 2 ? CELL_BORDER : 'border-r border-gray-100 dark:border-gray-800'} px-1 py-1.5 font-medium ${tint} ${index === 2 ? 'min-w-[56px]' : 'min-w-[76px]'}`}>
@@ -195,7 +195,7 @@ export default function PaintChemTableView({
                     </td>
                     {timeSlots.map((slot) => {
                       const isEditing = slot === selectedSlot;
-                      const tint = isEditing ? 'bg-blue-50/60 dark:bg-blue-900/20' : '';
+                      const tint = isEditing ? 'bg-blue-50/60 dark:bg-blue-900/20' : 'bg-transparent';
                       const handleChange = (field) => (val) => onChange(station.no, param.key, field, val);
 
                       if (param.isOverflowType) {
@@ -242,3 +242,7 @@ export default function PaintChemTableView({
     </div>
   );
 }
+
+
+
+
