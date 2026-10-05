@@ -5,11 +5,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
-import { Save, SendHorizonal, Loader2, WifiOff } from 'lucide-react';
+import { Save, SendHorizonal, Loader2, WifiOff, Wind, FileText } from 'lucide-react';
 import SheetHeader from '../components/SheetHeader';
 import PaintChemHistoryDrawer from '../components/PaintChemHistoryDrawer';
 import StationCard from '../components/StationCard';
 import {
+  isOutOfRange,
   STATIONS, SHIFT_SLOTS, SLOT_EXTRAS_STATION_NO, SLOT_EXTRA_KEYS,
   detectCurrentShift, detectCurrentSlot,
 } from '../paintChemConfig';
@@ -251,6 +252,8 @@ export default function PaintChemEntryPage() {
   }, [date]);
 
   const isReadOnly = header?.status === 'APPROVED' || header?.status === 'SUBMITTED' || isTimeLocked;
+  const speedOutOfRange = isOutOfRange('ConveyorSpeed', slotExtras.conveyorSpeed);
+
 
   return (
     <div className="w-full px-3 md:px-6 py-4 pb-24">
@@ -303,7 +306,60 @@ export default function PaintChemEntryPage() {
         ))}
       </div>
 
-      {/* Action Bar */}
+              {/* Station 11: Painting Condition */}
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm mb-3">
+          <div className="w-full flex items-center justify-between px-4 py-3 text-left">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex-shrink-0">11</span>
+              <div>
+                <p className="font-semibold text-gray-800 text-sm">Painting Condition</p>
+                <p className="text-xs text-gray-500">-</p>
+              </div>
+            </div>
+          </div>
+          <div className="px-4 pb-4 border-t border-gray-100">
+            <div className="py-2">
+              <div className="flex items-center gap-1 mb-2">
+                <span className="text-xs font-medium text-gray-700">Speed Conveyor (m/min)</span>
+                <span className="ml-auto text-xs text-gray-400">≥ 2.5, ≤ 5.0</span>
+              </div>
+              <div className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-full ${speedOutOfRange ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}>
+                <Wind size={13} className="text-gray-300 flex-shrink-0" />
+                <input type="number" step="0.1" min="0" inputMode="decimal" className="flex-1 text-sm bg-transparent focus:outline-none min-w-0" value={slotExtras.conveyorSpeed ?? ''} onChange={(e) => setSlotExtras(prev => ({...prev, conveyorSpeed: e.target.value}))} onBlur={handleExtraBlur} disabled={isReadOnly || !isOnline} placeholder="Speed Conveyor (m/min)" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Station 12: Note */}
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm mb-3 md:col-span-2 lg:col-span-3 xl:col-span-4 2xl:col-span-4">
+          <div className="w-full flex items-center justify-between px-4 py-3 text-left">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex-shrink-0">12</span>
+              <div>
+                <p className="font-semibold text-gray-800 text-sm">Note</p>
+                <p className="text-xs text-gray-500">หมายเหตุของช่วงเวลานี้</p>
+              </div>
+            </div>
+          </div>
+          <div className="px-4 pb-4 border-t border-gray-100">
+            <div className="py-2 flex flex-col gap-2">
+              <input type="text" maxLength={500} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" value={slotExtras.note ?? ''} onChange={(e) => setSlotExtras(prev => ({...prev, note: e.target.value}))} onBlur={handleExtraBlur} disabled={isReadOnly || !isOnline} placeholder={`หมายเหตุช่วงเวลา ${selectedSlot} (ถ้ามี)`} />
+              {previousNotes.length > 0 && (
+                <ul className="mt-2 flex flex-col gap-1 text-[12px] text-gray-600 bg-gray-50 rounded-lg p-3 border border-gray-100">
+                  {previousNotes.map(({ slot, note }) => (
+                    <li key={slot} className="flex gap-2">
+                      <span className="font-semibold text-blue-800 flex-shrink-0">[{slot}]</span> 
+                      <span>{note}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+
+{/* Action Bar */}
       {!isReadOnly && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <div className="w-full px-2 md:px-6 flex gap-3 justify-center md:justify-end">

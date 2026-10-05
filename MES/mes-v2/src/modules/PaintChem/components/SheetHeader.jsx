@@ -110,58 +110,6 @@ export default function SheetHeader({
             </div>
           </div>
 
-          {/* Section 2: Painting Condition (recorded per time slot) */}
-          <div className="flex flex-col gap-1 flex-shrink-0">
-            <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-              <Thermometer size={11} /> Painting Condition — ช่วงเวลา {selectedSlot}
-            </label>
-            <div className="relative group">
-              <div className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-full sm:w-56 ${
-                speedOutOfRange ? 'border-red-400 bg-red-50' : 'border-gray-200'
-              }`}>
-                <Wind size={13} className="text-gray-300 flex-shrink-0" />
-                <input
-                  type="number" step="0.1" min="0" inputMode="decimal"
-                  className="flex-1 text-sm bg-transparent focus:outline-none min-w-0"
-                  value={slotExtras.conveyorSpeed ?? ''}
-                  onChange={(e) => onExtraChange('conveyorSpeed', e.target.value)}
-                  onBlur={onExtraBlur}
-                  placeholder="Speed Conveyor (m/min)"
-                  disabled={disabled}
-                />
-              </div>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
-                ความเร็วสายพาน: <span className="font-semibold text-blue-300">2.5–5.0 m/min</span>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-gray-800" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 3: Note (recorded per time slot, accumulated across the shift) */}
-        <div className="flex flex-col gap-1 w-full border-t border-gray-100 pt-3">
-          <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-            <FileText size={11} /> หมายเหตุ (Note) — ช่วงเวลา {selectedSlot}
-          </label>
-          <input
-            type="text"
-            maxLength={500}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-            value={slotExtras.note ?? ''}
-            onChange={(e) => onExtraChange('note', e.target.value)}
-            onBlur={onExtraBlur}
-            placeholder="กรอกหมายเหตุของช่วงเวลานี้ (ถ้ามี)"
-            disabled={disabled}
-          />
-          {previousNotes.length > 0 && (
-            <ul className="mt-1 flex flex-col gap-0.5 text-[12px] text-gray-500">
-              {previousNotes.map(({ slot, note }) => (
-                <li key={slot}>
-                  <span className="font-semibold text-gray-600">[{slot}]</span> {note}
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </div>
     </div>

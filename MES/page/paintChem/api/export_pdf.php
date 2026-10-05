@@ -352,7 +352,7 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
             <tr>
           <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Bake Oven Temp. (°C)</td>
           <td style="font-weight:bold;background:#f8fafc;">Standard</td>
-          <td class="bg-std">175 – 220 °C</td>
+          <td class="bg-std">175 – 220</td>
           <td colspan="2" style="background-color: #4b5563;"></td>
           <?php foreach ($timeSlots as $ts):
               $lb = $logs[10]['BakeOvenTemp'][$ts] ?? null;
@@ -364,7 +364,7 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
       <tr>
           <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Dry Oven Temp. (°C)</td>
           <td style="font-weight:bold;background:#f8fafc;">Standard</td>
-          <td class="bg-std">175 – 220 °C</td>
+          <td class="bg-std">175 – 220</td>
           <td colspan="2" style="background-color: #4b5563;"></td>
           <?php foreach ($timeSlots as $ts):
               $ld = $logs[10]['DryOvenTemp'][$ts] ?? null;
@@ -376,7 +376,7 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
         <tr>
           <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Speed Conveyor (m/min)</td>
           <td style="font-weight:bold;background:#f8fafc;">Standard</td>
-          <td class="bg-std">2.5 – 5.0 m/min</td>
+          <td class="bg-std">2.5 – 5.0</td>
           <td colspan="2" style="background-color: #4b5563;"></td>
           <?php foreach ($timeSlots as $ts):
               $lc = $logs[10]['ConveyorSpeed'][$ts] ?? null;
