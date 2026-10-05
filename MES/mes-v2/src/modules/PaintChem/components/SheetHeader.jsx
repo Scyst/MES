@@ -1,5 +1,6 @@
 // SheetHeader.jsx — Top section: date picker, shift selector, time slot, painting condition (per slot), note (per slot)
-import { Sun, Moon, History, Printer, CalendarDays, Clock3, Thermometer, Wind, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { Sun, Moon, MoreVertical, History, Printer, CalendarDays, Clock3, Thermometer, Wind, FileText } from 'lucide-react';
 import { isOutOfRange } from '../paintChemConfig';
 
 const STATUS_COLORS = {
@@ -19,31 +20,55 @@ export default function SheetHeader({
   sheetStatus, disabled, onHistoryClick, selectedSlot, onSlotChange, timeSlots,
 }) {
   const speedOutOfRange = isOutOfRange('ConveyorSpeed', slotExtras.conveyorSpeed);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden">
       {/* Top Bar: Title + Actions */}
-      <div className="flex flex-wrap md:flex-nowrap items-center justify-between px-4 sm:px-5 py-3 border-b border-gray-100 bg-gray-50/60 gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-1 h-8 rounded-full bg-blue-500" />
-          <div>
-            <h1 className="text-sm font-bold text-gray-800 leading-tight">บันทึกเคมีสี — PAINT Line</h1>
+      <div className="flex items-start justify-between px-4 sm:px-5 py-3 border-b border-gray-100 bg-gray-50/60">
+        <div className="flex items-start gap-3">
+          <div className="w-1 h-8 rounded-full bg-blue-500 mt-0.5" />
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-sm font-bold text-gray-800 leading-tight">บันทึกเคมีสี — PAINT Line</h1>
+              {sheetStatus && (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${STATUS_COLORS[sheetStatus] ?? ''}`}>
+                  {STATUS_LABELS[sheetStatus] ?? sheetStatus}
+                </span>
+              )}
+            </div>
             <p className="text-[11px] text-gray-400">Parameter &amp; Chemicals Control Check Sheet</p>
           </div>
         </div>
-        <div className="flex items-center w-full md:w-auto justify-end gap-2">
-          {sheetStatus && (
-            <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${STATUS_COLORS[sheetStatus] ?? ''}`}>
-              {STATUS_LABELS[sheetStatus] ?? sheetStatus}
-            </span>
-          )}
-          <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg shadow-sm transition-colors" title="พิมพ์ฟอร์มเปล่า"><Printer size={14} /><span className="hidden sm:inline">ฟอร์มเปล่า</span></a>
-            <button type="button" onClick={onHistoryClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
-          >
-            <History size={14} />
-            <span className="hidden sm:inline">ประวัติย้อนหลัง</span>
-          </button>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 relative">
+          {/* Desktop: Show buttons */}
+          <div className="hidden md:flex items-center gap-2">
+            <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg shadow-sm transition-colors">
+              <Printer size={14} /><span>ฟอร์มเปล่า</span>
+            </a>
+            <button type="button" onClick={onHistoryClick} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">
+              <History size={14} /><span>ประวัติย้อนหลัง</span>
+            </button>
+          </div>
+
+          {/* Mobile: Kebab Menu */}
+          <div className="md:hidden flex items-center">
+            <button type="button" onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 text-gray-500 hover:bg-gray-200 rounded-lg transition-colors">
+              <MoreVertical size={18} />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
+                <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100" onClick={() => setMenuOpen(false)}>
+                  <Printer size={16} /> ฟอร์มเปล่า
+                </a>
+                <button type="button" onClick={() => { setMenuOpen(false); onHistoryClick(); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left">
+                  <History size={16} /> ประวัติย้อนหลัง
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
