@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, Activity, ShoppingCart, Truck, FolderOpen, 
@@ -53,6 +53,8 @@ const MENU_DATA = [
       { name: 'Management Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/management/managementDashboard.php', external: true },
       { name: 'Utility & Energy', icon: Zap, href: '/iot-toolbox/sandbox-b9/MES/MES/page/management/utilityDashboard.php', external: true },
       { name: 'Mood Insight Report', icon: Heart, href: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/moodReport.php', external: true },
+      { name: 'Sales Tracking', icon: Truck, href: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/salesDashboard.php', external: true },
+      { name: 'Shipping Loading', icon: Truck, href: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/shipping_loading.php', external: true },
     ]
   },
   {

@@ -200,6 +200,7 @@ export default function HomeDashboard() {
     { title: 'Daily P&L', desc: 'บันทึกและวิเคราะห์งบกำไรขาดทุน', icon: DollarSign, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyPL/pl_entry.php', roles: ['admin', 'creator'] },
     { title: 'Invoice Management', desc: 'ระบบออกบิลและจัดการเวอร์ชัน', icon: FileText, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/autoInvoice/finance_dashboard.php', roles: ['admin', 'creator', 'manager'] },
     { title: 'Sales Tracking', desc: 'ติดตามสถานะ PO', icon: Truck, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/salesDashboard.php', roles: ['admin', 'creator', 'manager'] },
+    { title: 'Shipping Loading', desc: 'ติดตามการจัดส่งและโหลดตู้', icon: Truck, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/shipping_loading.php', roles: ['admin', 'creator', 'manager'] },
     { title: 'Utility & Energy', desc: 'ติดตามพลังงานและค่าไฟ', icon: Zap, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/management/utilityDashboard.php', roles: ['admin', 'creator', 'manager'] },
   ];
 
