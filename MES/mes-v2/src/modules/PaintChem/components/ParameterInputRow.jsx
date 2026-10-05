@@ -19,11 +19,13 @@ export default function ParameterInputRow({
 
   if (isOverflowType) {
     return (
-      <div className="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-        <span className="w-32 text-xs text-gray-600 dark:text-gray-300 flex-shrink-0">{label}</span>
-        <span className="text-xs text-gray-400 dark:text-gray-500 italic">{'> Over flow'}</span>
-        <div className="flex items-center gap-4 ml-auto">
-          <label className="flex items-center gap-1.5 cursor-pointer">
+      <div className="py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+        <div className="flex items-center gap-1 mb-2">
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-200">{label}</span>
+          <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 italic">{'> Over flow'}</span>
+        </div>
+        <div className="flex items-center justify-around px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
+          <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="radio"
               name={`overflow-${stationNo}-${paramKey}`}
@@ -32,9 +34,10 @@ export default function ParameterInputRow({
               onChange={() => onChange('isOverflow', true)}
               disabled={disabled}
             />
-            <span className="text-xs text-green-700 dark:text-green-400 font-medium">ผ่าน ✓</span>
+            <span className="text-sm text-green-700 dark:text-green-400 font-medium">ผ่าน ✓</span>
           </label>
-          <label className="flex items-center gap-1.5 cursor-pointer">
+          <div className="w-px h-5 bg-gray-200 dark:bg-gray-700" />
+          <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="radio"
               name={`overflow-${stationNo}-${paramKey}`}
@@ -43,7 +46,7 @@ export default function ParameterInputRow({
               onChange={() => onChange('isOverflow', false)}
               disabled={disabled}
             />
-            <span className="text-xs text-red-700 dark:text-red-400 font-medium">ไม่ผ่าน ✗</span>
+            <span className="text-sm text-red-700 dark:text-red-400 font-medium">ไม่ผ่าน ✗</span>
           </label>
         </div>
       </div>
