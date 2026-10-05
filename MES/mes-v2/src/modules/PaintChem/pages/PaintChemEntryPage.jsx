@@ -301,15 +301,18 @@ export default function PaintChemEntryPage() {
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm mb-3 h-full flex flex-col">
           <div className="w-full flex items-center justify-between px-4 py-3 text-left flex-shrink-0">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex-shrink-0">12</span>
-              <div>
-                <p className="font-semibold text-gray-800 text-sm">Note</p>
-                <p className="text-xs text-gray-500">หมายเหตุของช่วงเวลานี้</p>
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex-shrink-0">12</span>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">Note</p>
+                  <p className="text-xs text-gray-500">Additional Remarks</p>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="px-4 pb-4 border-t border-gray-100 flex-1 flex flex-col">
-            <div className="py-2 flex flex-col gap-2 flex-1">
+            <div className="px-4 pb-4 border-t border-gray-100 flex-1 flex flex-col">
+              <div className="py-2 flex flex-col gap-2 flex-1">
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="text-xs font-medium text-gray-700">หมายเหตุของช่วงเวลานี้</span>
+                </div>
               <textarea maxLength={500} className="w-full h-full min-h-[100px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white resize-none" value={slotExtras.note ?? ''} onChange={(e) => setSlotExtras(prev => ({...prev, note: e.target.value}))} onBlur={handleExtraBlur} disabled={isReadOnly || !isOnline} placeholder={`หมายเหตุช่วงเวลา ${selectedSlot} (ถ้ามี)`} />
               {previousNotes.length > 0 && (
                 <ul className="mt-2 flex flex-col gap-1 text-[12px] text-gray-600 bg-gray-50 rounded-lg p-3 border border-gray-100">
