@@ -103,7 +103,7 @@ export default function PaintChemHistoryDrawer({ isOpen, onClose, onSelectRecord
           <div className="flex items-center justify-center py-12 text-gray-400 text-sm">ไม่พบข้อมูล</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm whitespace-nowrap">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">วันที่</th>
