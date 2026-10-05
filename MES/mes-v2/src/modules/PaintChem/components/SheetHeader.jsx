@@ -92,7 +92,7 @@ export default function SheetHeader({
               <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                 <CalendarDays size={11} /> วันที่ตรวจ
               </label>
-              <input type="date" className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 w-full sm:w-44"
+              <input type="date" className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 w-full sm:w-44"
                 value={date}
                 onChange={(e) => onDateChange(e.target.value)}
                 disabled={disabled}

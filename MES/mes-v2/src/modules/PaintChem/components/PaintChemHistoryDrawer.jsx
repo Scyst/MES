@@ -50,12 +50,12 @@ export default function PaintChemHistoryDrawer({ isOpen, onClose, onSelectRecord
     <>
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm transition-opacity"
+          className="fixed top-16 bottom-0 left-0 right-0 bg-black/40 z-40 backdrop-blur-sm transition-opacity"
           onClick={onClose}
         ></div>
       )}
       <div 
-        className={`fixed inset-y-0 right-0 z-50 w-full max-w-5xl bg-gray-50 dark:bg-gray-700/30 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-16 md:top-0 bottom-0 right-0 z-[60] w-full max-w-5xl bg-gray-50 dark:bg-gray-700/30 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0">
           <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">ประวัติบันทึกเคมีสี — PAINT Line</h2>
@@ -69,17 +69,17 @@ export default function PaintChemHistoryDrawer({ isOpen, onClose, onSelectRecord
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">จากวันที่</label>
-            <input type="date" className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm"
+            <input type="date" className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           </div>
           <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">ถึงวันที่</label>
-            <input type="date" className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm"
+            <input type="date" className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
           </div>
           <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">กะ</label>
-            <select className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm"
+            <select className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               value={shift} onChange={(e) => setShift(e.target.value)}>
               <option value="">ทั้งหมด</option>
               <option value="DAY">กลางวัน</option>

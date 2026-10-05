@@ -341,7 +341,7 @@ export default function PaintChemEntryPage() {
                 <div className="flex items-center gap-1 mb-1">
                   <span className="text-xs font-medium text-gray-700 dark:text-gray-200">หมายเหตุของช่วงเวลานี้</span>
                 </div>
-              <textarea maxLength={500} className="w-full h-full min-h-[100px] border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 resize-none" value={slotExtras.note ?? ''} onChange={(e) => setSlotExtras(prev => ({...prev, note: e.target.value}))} onBlur={handleExtraBlur} disabled={isReadOnly || !isOnline} placeholder={`หมายเหตุช่วงเวลา ${selectedSlot} (ถ้ามี)`} />
+              <textarea maxLength={500} className="w-full h-full min-h-[100px] border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 resize-none text-gray-800 dark:text-gray-100" value={slotExtras.note ?? ''} onChange={(e) => setSlotExtras(prev => ({...prev, note: e.target.value}))} onBlur={handleExtraBlur} disabled={isReadOnly || !isOnline} placeholder={`หมายเหตุช่วงเวลา ${selectedSlot} (ถ้ามี)`} />
               {previousNotes.length > 0 && (
                 <ul className="mt-2 flex flex-col gap-1 text-[12px] text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3 border border-gray-100 dark:border-gray-700">
                   {previousNotes.map(({ slot, note }) => (

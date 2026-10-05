@@ -1,7 +1,7 @@
 ﻿// ParameterInputRow.jsx — Single row: parameter label + before/after/kg inputs
 import { isOutOfRange, rangeLabel } from '../paintChemConfig';
 
-const inputBase = 'w-full rounded border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
+const inputBase = 'w-full rounded border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100';
 const oorBorder = 'border-red-500 bg-red-50 dark:bg-red-900/30';
 const normalBorder = 'border-gray-300 dark:border-gray-600';
 
