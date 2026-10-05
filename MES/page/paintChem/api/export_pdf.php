@@ -84,7 +84,7 @@ $noteLines = [];
 $legacyNote = trim((string)($header['note'] ?? ''));
 if ($legacyNote !== '') $noteLines[] = $legacyNote;
 foreach ($timeSlots as $ts) {
-    $slotNote = trim((string)($logs[10]['SlotNote'][$ts]['note'] ?? ''));
+    $slotNote = trim((string)($logs[12]['SlotNote'][$ts]['note'] ?? ''));
     if ($slotNote !== '') $noteLines[] = '[' . $ts . '] ' . $slotNote;
 }
 $noteText = implode("\n", $noteLines);
@@ -379,7 +379,7 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
           <td class="bg-std">2.5 – 5.0</td>
           <td colspan="2" style="background-color: #4b5563;"></td>
           <?php foreach ($timeSlots as $ts):
-              $lc = $logs[10]['ConveyorSpeed'][$ts] ?? null;
+              $lc = $logs[11]['ConveyorSpeed'][$ts] ?? null;
               $valc = $lc ? htmlspecialchars((string)$lc['before_value']) : '';
           ?>
           <td colspan="3"><?php echo $valc; ?></td>
@@ -391,19 +391,19 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
   <!-- ===== FOOTER / SIGNATURE SECTION ===== -->
   <table class="footer-tbl">
     <tr>
-      <td rowspan="2" width="42%" style="vertical-align:top; text-align:left; padding:4px;">
+      <td rowspan="2" width="42%" style="vertical-align:top; text-align:left; padding:6px;">
         <div style="font-weight:bold; margin-bottom:4px; color:#1e3a5f;">Note.</div>
-        <div style="font-weight:normal; font-size:6.5pt; min-height:35px;"><?php echo nl2br(htmlspecialchars($noteText)); ?></div>
+        <div style="font-weight:normal; font-size:6.5pt; min-height:55px;"><?php echo nl2br(htmlspecialchars($noteText)); ?></div>
       </td>
-      <td rowspan="2" width="16%" style="vertical-align:top; text-align:center; padding:4px;" class="bg-remark">
+      <td rowspan="2" width="16%" style="vertical-align:top; text-align:center; padding:6px;" class="bg-remark">
         <div style="font-weight:bold; color:#1e3a5f;">Remark</div>
       </td>
-      <td width="14%" style="text-align:center; font-weight:bold; height:20px;">Prepared by</td>
+      <td width="14%" style="text-align:center; font-weight:bold; height:25px;">Prepared by</td>
       <td width="14%" style="text-align:center; font-weight:bold;">Checked by</td>
       <td width="14%" style="text-align:center; font-weight:bold;">Approved by</td>
     </tr>
     <tr>
-      <td style="height:40px; text-align:center; vertical-align:bottom; padding-bottom:5px;">
+      <td style="height:55px; text-align:center; vertical-align:bottom; padding-bottom:5px;">
         ...................................<br>
         <span style="font-size:6.5pt;"><?php echo htmlspecialchars($preparedBy); ?></span>
       </td>

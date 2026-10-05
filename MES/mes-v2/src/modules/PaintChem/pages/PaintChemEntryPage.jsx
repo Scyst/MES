@@ -16,7 +16,7 @@ import {
 } from '../paintChemConfig';
 
 const API_BASE = '/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api';
-const EMPTY_EXTRAS = { conveyorSpeed: '', note: '' };
+const EMPTY_EXTRAS = { note: '' };
 
 // Build empty slot values: { [stationNo]: { [paramKey]: { before, after, kg, isOverflow } } }
 function buildEmptySlotValues() {
@@ -54,7 +54,6 @@ function buildExtrasBySlot(logs) {
     .filter((l) => Number(l.station_no) === SLOT_EXTRAS_STATION_NO)
     .forEach((l) => {
       const entry = bySlot[l.time_slot] ?? { ...EMPTY_EXTRAS };
-      if (l.parameter_key === SLOT_EXTRA_KEYS.conveyorSpeed) entry.conveyorSpeed = l.before_value ?? '';
       if (l.parameter_key === SLOT_EXTRA_KEYS.note) entry.note = l.note ?? '';
       bySlot[l.time_slot] = entry;
     });
@@ -153,22 +152,16 @@ export default function PaintChemEntryPage() {
 
   // Persist conveyor speed + note of the selected slot (two hourly rows on the oven station)
   const buildExtraRequests = () => {
-    const speedForm = buildSlotFormData(SLOT_EXTRAS_STATION_NO, SLOT_EXTRA_KEYS.conveyorSpeed);
-    speedForm.append('before_value', slotExtras.conveyorSpeed ?? '');
     const noteForm = buildSlotFormData(SLOT_EXTRAS_STATION_NO, SLOT_EXTRA_KEYS.note);
     noteForm.append('note', slotExtras.note ?? '');
-    return [
-      axios.post(`${API_BASE}/save_slot.php`, speedForm),
-      axios.post(`${API_BASE}/save_slot.php`, noteForm),
-    ];
+    return [axios.post(`${API_BASE}/save_slot.php`, noteForm)];
   };
 
   // Auto-save conveyor speed + note when leaving the field so they can be edited all day
   const handleExtraBlur = async () => {
     if (!isOnline || isReadOnly) return;
     const persisted = extrasBySlot[selectedSlot] ?? EMPTY_EXTRAS;
-    const unchanged = String(persisted.conveyorSpeed ?? '') === String(slotExtras.conveyorSpeed ?? '')
-      && (persisted.note ?? '') === (slotExtras.note ?? '');
+    const unchanged = (persisted.note ?? '') === (slotExtras.note ?? '');
     if (unchanged) return;
     try {
       await Promise.all(buildExtraRequests());
@@ -306,33 +299,10 @@ export default function PaintChemEntryPage() {
         ))}
       </div>
 
-              {/* Station 11: Painting Condition */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm mb-3">
-          <div className="w-full flex items-center justify-between px-4 py-3 text-left">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex-shrink-0">11</span>
-              <div>
-                <p className="font-semibold text-gray-800 text-sm">Painting Condition</p>
-                <p className="text-xs text-gray-500">-</p>
-              </div>
-            </div>
-          </div>
-          <div className="px-4 pb-4 border-t border-gray-100">
-            <div className="py-2">
-              <div className="flex items-center gap-1 mb-2">
-                <span className="text-xs font-medium text-gray-700">Speed Conveyor (m/min)</span>
-                <span className="ml-auto text-xs text-gray-400">≥ 2.5, ≤ 5.0</span>
-              </div>
-              <div className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-400 w-full ${speedOutOfRange ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}>
-                <Wind size={13} className="text-gray-300 flex-shrink-0" />
-                <input type="number" step="0.1" min="0" inputMode="decimal" className="flex-1 text-sm bg-transparent focus:outline-none min-w-0" value={slotExtras.conveyorSpeed ?? ''} onChange={(e) => setSlotExtras(prev => ({...prev, conveyorSpeed: e.target.value}))} onBlur={handleExtraBlur} disabled={isReadOnly || !isOnline} placeholder="Speed Conveyor (m/min)" />
-              </div>
-            </div>
-          </div>
-        </div>
+      
 
         {/* Station 12: Note */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm mb-3 md:col-span-2 lg:col-span-3 xl:col-span-4 2xl:col-span-4">
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm mb-3">
           <div className="w-full flex items-center justify-between px-4 py-3 text-left">
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex-shrink-0">12</span>

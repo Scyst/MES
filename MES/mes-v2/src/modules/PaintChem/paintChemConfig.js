@@ -166,13 +166,20 @@ export const STATIONS = [
       { key: 'BakeOvenTemp', label: 'Bake Oven Temp. (°C)', hasKg: false },
       { key: 'DryOvenTemp',  label: 'Dry Oven Temp. (°C)',  hasKg: false },
     ],
+  },
+  {
+    no: 11,
+    name: 'Painting Condition',
+    chemical: '-',
+    params: [
+      { key: 'ConveyorSpeed', label: 'Speed Conveyor (m/min)', hasKg: false },
+    ],
   }
 ];
 
 // Slot-level fields stored per time slot on the oven station (station 10).
 // They are edited in the sheet header area but persisted like any other hourly parameter.
-export const SLOT_EXTRAS_STATION_NO = 10;
+export const SLOT_EXTRAS_STATION_NO = 12;
 export const SLOT_EXTRA_KEYS = {
-  conveyorSpeed: 'ConveyorSpeed',
   note: 'SlotNote',
 };
