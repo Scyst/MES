@@ -95,6 +95,7 @@
                     <li><a class="dropdown-item-icon py-1" href="../autoInvoice/finance_dashboard.php"><i class="fas fa-file-invoice-dollar fa-fw"></i><span>Invoice Management</span></a></li>
                     <?php endif; ?>
                     <li><a class="dropdown-item-icon py-1" href="../sales/salesDashboard.php"><i class="fas fa-shipping-fast fa-fw"></i><span>Sales Tracking</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../sales/shipping_loading.php"><i class="fas fa-truck-loading fa-fw"></i><span>Shipping Loading</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../management/utilityDashboard.php"><i class="fas fa-bolt fa-fw"></i><span>Utility & Energy</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../dailyLog/moodReport.php"><i class="fas fa-heartbeat fa-fw"></i><span>Mood Insight Report</span></a></li>
                 </ul>
@@ -233,6 +234,7 @@
             <a class="list-group-item list-group-item-action text-dark" href="../autoInvoice/finance_dashboard.php"><i class="fas fa-file-invoice-dollar fa-fw me-3"></i> Invoice Management</a>
             <?php endif; ?>
             <a class="list-group-item list-group-item-action text-dark" href="../sales/salesDashboard.php"><i class="fas fa-shipping-fast fa-fw me-3"></i> Sales Tracking</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../sales/shipping_loading.php"><i class="fas fa-truck-loading fa-fw me-3"></i> Shipping Loading</a>
             <a class="list-group-item list-group-item-action text-dark" href="../management/utilityDashboard.php"><i class="fas fa-bolt fa-fw me-3"></i> Utility & Energy</a>
             <a class="list-group-item list-group-item-action text-dark" href="../dailyLog/moodReport.php"><i class="fas fa-heartbeat fa-fw me-3"></i> Mood Insight Report</a>
             <?php endif; ?>

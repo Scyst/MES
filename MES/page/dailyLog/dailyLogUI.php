@@ -229,6 +229,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('Daily P&L', 'บันทึกและวิเคราะห์งบกำไรขาดทุน', '<i class="fas fa-donate"></i>', '../dailyPL/pl_entry.php', 'view_pl', $themeExec);
                         renderServiceLink('Invoice Management', 'ระบบออกบิลและจัดการเวอร์ชัน', '<i class="fas fa-file-invoice-dollar"></i>', '../autoInvoice/finance_dashboard.php', 'manage_invoice', $themeExec);
                         renderServiceLink('Sales Tracking', 'ติดตามสถานะ PO', '<i class="fas fa-shipping-fast"></i>', '../sales/salesDashboard.php', 'view_sales', $themeExec);
+                        renderServiceLink('Shipping Loading', 'ติดตามการจัดส่งและโหลดตู้', '<i class="fas fa-truck-loading"></i>', '../sales/shipping_loading.php', 'view_sales', $themeExec);
                         renderServiceLink('Utility & Energy', 'ติดตามพลังงานและค่าไฟ', '<i class="fas fa-bolt"></i>', '../management/utilityDashboard.php', 'view_executive', $themeExec);
                         ?>
                     </div>
