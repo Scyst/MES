@@ -22,16 +22,30 @@ export default function ParameterInputRow({
       <div className="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
         <span className="w-32 text-xs text-gray-600 dark:text-gray-300 flex-shrink-0">{label}</span>
         <span className="text-xs text-gray-400 dark:text-gray-500 italic">{'> Over flow'}</span>
-        <label className="flex items-center gap-1.5 ml-auto cursor-pointer">
-          <input
-            type="checkbox"
-            className="w-5 h-5 accent-blue-600 cursor-pointer"
-            checked={!!value?.isOverflow}
-            onChange={(e) => onChange('isOverflow', e.target.checked)}
-            disabled={disabled}
-          />
-          <span className="text-xs text-gray-800 dark:text-gray-100">{value?.isOverflow ? 'ผ่าน ✓' : 'ไม่ผ่าน ✗'}</span>
-        </label>
+        <div className="flex items-center gap-4 ml-auto">
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="radio"
+              name={`overflow-${stationNo}-${paramKey}`}
+              className="w-4 h-4 accent-green-600 cursor-pointer"
+              checked={value?.isOverflow === true}
+              onChange={() => onChange('isOverflow', true)}
+              disabled={disabled}
+            />
+            <span className="text-xs text-green-700 dark:text-green-400 font-medium">ผ่าน ✓</span>
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="radio"
+              name={`overflow-${stationNo}-${paramKey}`}
+              className="w-4 h-4 accent-red-600 cursor-pointer"
+              checked={value?.isOverflow === false}
+              onChange={() => onChange('isOverflow', false)}
+              disabled={disabled}
+            />
+            <span className="text-xs text-red-700 dark:text-red-400 font-medium">ไม่ผ่าน ✗</span>
+          </label>
+        </div>
       </div>
     );
   }
