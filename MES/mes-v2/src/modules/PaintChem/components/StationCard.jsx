@@ -15,7 +15,7 @@ export default function StationCard({ station, slotValues, onChange, disabled })
   }, 0);
 
   return (
-    <div className={`rounded-xl border ${oorCount > 0 ? 'border-red-300' : 'border-gray-200'} bg-white shadow-sm mb-3 ${!open ? 'self-start' : 'self-stretch flex flex-col'}`}>
+    <div className={`rounded-xl border ${oorCount > 0 ? 'border-red-300 dark:border-red-800' : 'border-gray-200 dark:border-gray-700'} bg-white dark:bg-gray-800 shadow-sm mb-3 ${!open ? 'self-start' : 'self-stretch flex flex-col'}`}>
       {/* Header */}
       <button
         type="button"
@@ -27,24 +27,24 @@ export default function StationCard({ station, slotValues, onChange, disabled })
             {station.no}
           </span>
           <div>
-            <p className="font-semibold text-gray-800 text-sm">{station.name}</p>
-            <p className="text-xs text-gray-500">{station.chemical}</p>
+            <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{station.name}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{station.chemical}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {oorCount > 0 && (
-            <span className="flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+            <span className="flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400 text-xs rounded-full font-semibold">
               <AlertTriangle size={12} />
               {oorCount} OOR
             </span>
           )}
-          {open ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+          {open ? <ChevronUp size={16} className="text-gray-400 dark:text-gray-500" /> : <ChevronDown size={16} className="text-gray-400 dark:text-gray-500" />}
         </div>
       </button>
 
       {/* Body */}
       {open && (
-        <div className="px-4 pb-4 border-t border-gray-100">
+        <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700">
           {station.params.map((param) => (
             <ParameterInputRow
               key={param.key}

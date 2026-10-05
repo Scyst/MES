@@ -4,9 +4,9 @@ import { Sun, Moon, MoreVertical, History, Printer, CalendarDays, Clock3, Thermo
 import { isOutOfRange } from '../paintChemConfig';
 
 const STATUS_COLORS = {
-  DRAFT:     'bg-gray-100 text-gray-500 border-gray-200',
-  SUBMITTED: 'bg-green-50 text-green-700 border-green-200',
-  APPROVED:  'bg-green-50 text-green-700 border-green-200',
+  DRAFT:     'bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700',
+  SUBMITTED: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
+  APPROVED:  'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
 };
 const STATUS_LABELS = {
   DRAFT:     'ร่าง',
@@ -23,21 +23,21 @@ export default function SheetHeader({
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-4 overflow-hidden">
       {/* Top Bar: Title + Actions */}
-      <div className="flex items-start justify-between px-4 sm:px-5 py-3 border-b border-gray-100 bg-gray-50/60">
+      <div className="flex items-start justify-between px-4 sm:px-5 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-700/30">
         <div className="flex items-start gap-3">
           <div className="w-1 h-8 rounded-full bg-blue-500 mt-0.5" />
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-sm font-bold text-gray-800 leading-tight">บันทึกเคมีสี — PAINT Line</h1>
+              <h1 className="text-sm font-bold text-gray-800 dark:text-gray-100 leading-tight">บันทึกเคมีสี — PAINT Line</h1>
               {sheetStatus && (
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${STATUS_COLORS[sheetStatus] ?? ''}`}>
                   {STATUS_LABELS[sheetStatus] ?? sheetStatus}
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-gray-400">Parameter &amp; Chemicals Control Check Sheet</p>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500">Parameter &amp; Chemicals Control Check Sheet</p>
           </div>
         </div>
 
@@ -46,11 +46,11 @@ export default function SheetHeader({
           {/* Desktop: Show buttons */}
           <div className="hidden md:flex items-center gap-2">
             {(sheetStatus === 'SUBMITTED' || isTimeLocked) && canUnlock && (
-              <button type="button" onClick={onUnlockClick} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 rounded-lg shadow-sm transition-colors">
+              <button type="button" onClick={onUnlockClick} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 hover:bg-red-100 rounded-lg shadow-sm transition-colors">
                 <Unlock size={14} /><span>ปลดล็อกแก้ไข</span>
               </button>
             )}
-            <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg shadow-sm transition-colors">
+            <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg shadow-sm transition-colors">
               <Printer size={14} /><span>ฟอร์มเปล่า</span>
             </a>
             <button type="button" onClick={onHistoryClick} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">
@@ -60,20 +60,20 @@ export default function SheetHeader({
 
           {/* Mobile: Kebab Menu */}
           <div className="md:hidden flex items-center">
-            <button type="button" onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 text-gray-500 hover:bg-gray-200 rounded-lg transition-colors">
+            <button type="button" onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
               <MoreVertical size={18} />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 z-50">
                 {(sheetStatus === 'SUBMITTED' || isTimeLocked) && canUnlock && (
-                  <button type="button" onClick={() => { setMenuOpen(false); onUnlockClick(); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 border-b border-gray-100 text-left">
+                  <button type="button" onClick={() => { setMenuOpen(false); onUnlockClick(); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 border-b border-gray-100 dark:border-gray-700 text-left">
                     <Unlock size={16} /> ปลดล็อกแก้ไข
                   </button>
                 )}
-                <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100" onClick={() => setMenuOpen(false)}>
+                <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700" onClick={() => setMenuOpen(false)}>
                   <Printer size={16} /> ฟอร์มเปล่า
                 </a>
-                <button type="button" onClick={() => { setMenuOpen(false); onHistoryClick(); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left">
+                <button type="button" onClick={() => { setMenuOpen(false); onHistoryClick(); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-left">
                   <History size={16} /> ประวัติย้อนหลัง
                 </button>
               </div>
@@ -89,17 +89,17 @@ export default function SheetHeader({
           {/* Section 1: Date + Shift + Time Slot */}
           <div className="flex flex-col sm:flex-row gap-4 lg:pr-6 flex-shrink-0">
             <div className="flex flex-col gap-1">
-              <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                 <CalendarDays size={11} /> วันที่ตรวจ
               </label>
-              <input type="date" className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white w-full sm:w-44"
+              <input type="date" className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 w-full sm:w-44"
                 value={date}
                 onChange={(e) => onDateChange(e.target.value)}
                 disabled={disabled}
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                 <Clock3 size={11} /> กะ &amp; ช่วงเวลา
               </label>
               <div className="flex flex-wrap items-center gap-2">
@@ -110,7 +110,7 @@ export default function SheetHeader({
                   className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all whitespace-nowrap ${
                     shift === 'DAY'
                       ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
-                      : 'bg-white border-gray-200 text-gray-500 hover:border-amber-300 hover:text-amber-600'
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-amber-300 hover:text-amber-600'
                   }`}
                 >
                   <Sun size={14} /> กลางวัน
@@ -122,7 +122,7 @@ export default function SheetHeader({
                   className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all whitespace-nowrap ${
                     shift === 'NIGHT'
                       ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                      : 'bg-white border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600'
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-indigo-300 hover:text-indigo-600'
                   }`}
                 >
                   <Moon size={14} /> กลางคืน
@@ -131,7 +131,7 @@ export default function SheetHeader({
                   <select
                     value={selectedSlot ?? ''}
                     onChange={(e) => onSlotChange(e.target.value)}
-                    className="flex-1 sm:flex-none border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-700 font-medium cursor-pointer"
+                    className="flex-1 sm:flex-none border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-700 dark:text-gray-200 font-medium cursor-pointer"
                   >
                     {timeSlots.map((slot) => (
                       <option key={slot} value={slot}>{slot}</option>

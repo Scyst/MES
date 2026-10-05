@@ -279,7 +279,7 @@ export default function PaintChemEntryPage() {
     <div className="w-full px-3 md:px-6 py-4 pb-24">
       {/* Time-Lock Banner */}
       {isTimeLocked && header?.status === 'DRAFT' && (
-        <div className="flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm font-medium px-4 py-3 rounded-lg mb-4 shadow-sm">
+        <div className="flex items-center justify-center gap-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400 text-sm font-medium px-4 py-3 rounded-lg mb-4 shadow-sm">
           <span>🔒 เอกสารนี้ถูกล็อกเนื่องจากหมดเวลาบันทึก (เกิน 12:00 น. ของวันถัดไป) หากต้องการแก้ไข กรุณาติดต่อหัวหน้างาน</span>
         </div>
       )}
@@ -326,24 +326,24 @@ export default function PaintChemEntryPage() {
           />
         ))}
         {/* Station 12: Note */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm mb-3 h-full flex flex-col">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm mb-3 h-full flex flex-col">
           <div className="w-full flex items-center justify-between px-4 py-3 text-left flex-shrink-0">
             <div className="flex items-center gap-2">
                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex-shrink-0">12</span>
                 <div>
-                  <p className="font-semibold text-gray-800 text-sm">Note</p>
-                  <p className="text-xs text-gray-500">Additional Remarks</p>
+                  <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">Note</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Additional Remarks</p>
                 </div>
               </div>
             </div>
-            <div className="px-4 pb-4 border-t border-gray-100 flex-1 flex flex-col">
+            <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 flex-1 flex flex-col">
               <div className="py-2 flex flex-col gap-2 flex-1">
                 <div className="flex items-center gap-1 mb-1">
-                  <span className="text-xs font-medium text-gray-700">หมายเหตุของช่วงเวลานี้</span>
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-200">หมายเหตุของช่วงเวลานี้</span>
                 </div>
-              <textarea maxLength={500} className="w-full h-full min-h-[100px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white resize-none" value={slotExtras.note ?? ''} onChange={(e) => setSlotExtras(prev => ({...prev, note: e.target.value}))} onBlur={handleExtraBlur} disabled={isReadOnly || !isOnline} placeholder={`หมายเหตุช่วงเวลา ${selectedSlot} (ถ้ามี)`} />
+              <textarea maxLength={500} className="w-full h-full min-h-[100px] border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 resize-none" value={slotExtras.note ?? ''} onChange={(e) => setSlotExtras(prev => ({...prev, note: e.target.value}))} onBlur={handleExtraBlur} disabled={isReadOnly || !isOnline} placeholder={`หมายเหตุช่วงเวลา ${selectedSlot} (ถ้ามี)`} />
               {previousNotes.length > 0 && (
-                <ul className="mt-2 flex flex-col gap-1 text-[12px] text-gray-600 bg-gray-50 rounded-lg p-3 border border-gray-100">
+                <ul className="mt-2 flex flex-col gap-1 text-[12px] text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3 border border-gray-100 dark:border-gray-700">
                   {previousNotes.map(({ slot, note }) => (
                     <li key={slot} className="flex gap-2">
                       <span className="font-semibold text-blue-800 flex-shrink-0">[{slot}]</span> 
@@ -359,7 +359,7 @@ export default function PaintChemEntryPage() {
 
 {/* Action Bar */}
       {!isReadOnly && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-3 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <div className="w-full px-2 md:px-6 flex gap-3 justify-center md:justify-end">
             <button
               type="button"
@@ -374,7 +374,7 @@ export default function PaintChemEntryPage() {
               type="button"
               onClick={handleSubmit}
               disabled={submitting || !isOnline || !header?.header_id}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2.5 px-6 min-h-[44px] rounded-lg transition-colors disabled:opacity-50"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold py-2.5 px-6 min-h-[44px] rounded-lg transition-colors disabled:opacity-50"
             >
               {submitting ? <Loader2 size={18} className="animate-spin" /> : <SendHorizonal size={18} />}
               ปิดกะ

@@ -7,11 +7,11 @@ const API_BASE = '/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api';
 
 function StatusBadge({ status }) {
   const map = {
-    DRAFT:     { cls: 'bg-gray-100 text-gray-600',    label: 'ร่าง' },
-    SUBMITTED: { cls: 'bg-green-100 text-green-700', label: 'สมบูรณ์' },
-    APPROVED:  { cls: 'bg-green-100 text-green-700',   label: 'อนุมัติแล้ว' },
+    DRAFT:     { cls: 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300',    label: 'ร่าง' },
+    SUBMITTED: { cls: 'bg-green-100 text-green-700 dark:text-green-400', label: 'สมบูรณ์' },
+    APPROVED:  { cls: 'bg-green-100 text-green-700 dark:text-green-400',   label: 'อนุมัติแล้ว' },
   };
-  const s = map[status] ?? { cls: 'bg-gray-100 text-gray-500', label: status };
+  const s = map[status] ?? { cls: 'bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400', label: status };
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>;
 }
 
@@ -55,31 +55,31 @@ export default function PaintChemHistoryDrawer({ isOpen, onClose, onSelectRecord
         ></div>
       )}
       <div 
-        className={`fixed inset-y-0 right-0 z-50 w-full max-w-5xl bg-gray-50 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-5xl bg-gray-50 dark:bg-gray-700/30 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
-        <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
-          <h2 className="text-lg font-bold text-gray-800">ประวัติบันทึกเคมีสี — PAINT Line</h2>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
+        <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0">
+          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">ประวัติบันทึกเคมีสี — PAINT Line</h2>
+          <button onClick={onClose} className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"><X size={20} /></button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar w-full max-w-full">
           <div className="w-full">
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">จากวันที่</label>
-            <input type="date" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">จากวันที่</label>
+            <input type="date" className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm"
               value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">ถึงวันที่</label>
-            <input type="date" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">ถึงวันที่</label>
+            <input type="date" className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm"
               value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">กะ</label>
-            <select className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">กะ</label>
+            <select className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm"
               value={shift} onChange={(e) => setShift(e.target.value)}>
               <option value="">ทั้งหมด</option>
               <option value="DAY">กลางวัน</option>
@@ -96,30 +96,30 @@ export default function PaintChemHistoryDrawer({ isOpen, onClose, onSelectRecord
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-gray-400">กำลังโหลด...</div>
+          <div className="flex items-center justify-center py-12 text-gray-400 dark:text-gray-500">กำลังโหลด...</div>
         ) : data.items.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-gray-400 text-sm">ไม่พบข้อมูล</div>
+          <div className="flex items-center justify-center py-12 text-gray-400 dark:text-gray-500 text-sm">ไม่พบข้อมูล</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm whitespace-nowrap">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 dark:bg-gray-700/30 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">วันที่</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">กะ</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">สถานะ</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">OOR</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">รายการทั้งหมด</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ผู้เตรียม</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">อัปเดต</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">จัดการ</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">วันที่</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">กะ</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">สถานะ</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">OOR</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">รายการทั้งหมด</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">ผู้เตรียม</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">อัปเดต</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">จัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {data.items.map((row) => (
-                  <tr key={row.header_id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-gray-800">{row.log_date}</td>
+                  <tr key={row.header_id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">{row.log_date}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         row.shift === 'DAY' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'
@@ -130,7 +130,7 @@ export default function PaintChemHistoryDrawer({ isOpen, onClose, onSelectRecord
                     <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
                     <td className="px-4 py-3 text-right">
                       {row.oor_count > 0 ? (
-                        <span className="flex items-center justify-end gap-1 text-red-600 font-semibold">
+                        <span className="flex items-center justify-end gap-1 text-red-600 dark:text-red-400 font-semibold">
                           <AlertTriangle size={12} /> {row.oor_count}
                         </span>
                       ) : (
@@ -139,9 +139,9 @@ export default function PaintChemHistoryDrawer({ isOpen, onClose, onSelectRecord
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-600">{row.total_entries}</td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">{row.prepared_by_name ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs">
+                    <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">{row.total_entries}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs">{row.prepared_by_name ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-400 dark:text-gray-500 text-xs">
                       <span className="flex items-center gap-1"><Clock size={11} />{row.updated_at?.slice(0, 16)}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -171,17 +171,17 @@ export default function PaintChemHistoryDrawer({ isOpen, onClose, onSelectRecord
 
         {/* Pagination */}
         {data.total_pages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-            <span className="text-xs text-gray-500">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               {data.total} รายการ — หน้า {data.page} / {data.total_pages}
             </span>
             <div className="flex gap-2">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="p-1.5 rounded border border-gray-300 disabled:opacity-40 hover:border-blue-400 transition-colors">
+                className="p-1.5 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-40 hover:border-blue-400 transition-colors">
                 <ChevronLeft size={14} />
               </button>
               <button onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))} disabled={page === data.total_pages}
-                className="p-1.5 rounded border border-gray-300 disabled:opacity-40 hover:border-blue-400 transition-colors">
+                className="p-1.5 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-40 hover:border-blue-400 transition-colors">
                 <ChevronRight size={14} />
               </button>
             </div>
