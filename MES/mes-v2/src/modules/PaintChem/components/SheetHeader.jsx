@@ -1,5 +1,5 @@
 // SheetHeader.jsx — Top section: date picker, shift selector, time slot, painting condition (per slot), note (per slot)
-import { Sun, Moon, History, CalendarDays, Clock3, Thermometer, Wind, FileText } from 'lucide-react';
+import { Sun, Moon, History, Printer, CalendarDays, Clock3, Thermometer, Wind, FileText } from 'lucide-react';
 import { isOutOfRange } from '../paintChemConfig';
 
 const STATUS_COLORS = {
@@ -37,9 +37,8 @@ export default function SheetHeader({
               {STATUS_LABELS[sheetStatus] ?? sheetStatus}
             </span>
           )}
-          <button
-            type="button"
-            onClick={onHistoryClick}
+          <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg shadow-sm transition-colors" title="พิมพ์ฟอร์มเปล่า"><Printer size={14} /><span className="hidden sm:inline">ฟอร์มเปล่า</span></a>
+            <button type="button" onClick={onHistoryClick}
             className="flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
           >
             <History size={14} />

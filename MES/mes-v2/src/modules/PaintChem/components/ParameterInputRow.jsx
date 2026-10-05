@@ -22,10 +22,10 @@ export default function ParameterInputRow({
       <div className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
         <span className="w-32 text-xs text-gray-600 flex-shrink-0">{label}</span>
         <span className="text-xs text-gray-400 italic">{'> Over flow'}</span>
-        <label className="flex items-center gap-1.5 ml-auto">
+        <label className="flex items-center gap-1.5 ml-auto cursor-pointer">
           <input
             type="checkbox"
-            className="w-5 h-5 accent-blue-600"
+            className="w-5 h-5 accent-blue-600 cursor-pointer"
             checked={!!value?.isOverflow}
             onChange={(e) => onChange('isOverflow', e.target.checked)}
             disabled={disabled}

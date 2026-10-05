@@ -103,9 +103,9 @@ export const STATIONS = [
     name: 'Water Rinse 2',
     chemical: 'Water Rinse 2',
     params: [
-      { key: 'WaterLevel_WR2', label: 'Water level', isOverflow: true, hasKg: false },
       { key: 'Conta_WR2',     label: 'Conta',        hasKg: false },
       { key: 'Pressure',      label: 'Pressure',     hasKg: false },
+      { key: 'WaterLevel_WR2', label: 'Water level', isOverflow: true, hasKg: false },
     ],
   },
   {

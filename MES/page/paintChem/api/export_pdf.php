@@ -5,6 +5,7 @@ header('Content-Type: text/html; charset=utf-8');
 require_once '../../db.php';
 require_once '../../../auth/check_auth.php';
 
+$isBlank = !empty($_GET['blank']);
 $logDate = $_GET['date'] ?? date('Y-m-d');
 $shift   = $_GET['shift'] ?? 'DAY';
 
@@ -17,8 +18,14 @@ $stmtH = $pdo->prepare("SELECT h.*,
     LEFT JOIN dbo.USERS uc ON uc.id = h.checked_by
     LEFT JOIN dbo.USERS ua ON ua.id = h.approved_by
     WHERE h.log_date = ? AND h.shift = ?");
-$stmtH->execute([$logDate, $shift]);
-$header = $stmtH->fetch();
+if (!$isBlank) {
+    $stmtH->execute([$logDate, $shift]);
+    $header = $stmtH->fetch();
+} else {
+    $header = null;
+    $logDate = '';
+    
+}
 
 $logs = [];
 if ($header) {
@@ -49,9 +56,9 @@ $stations = [
         ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
     ]],
     4 => ['name' => 'Water Rinse 2', 'chem' => 'Water Rinse 2', 'params' => [
-        ['key' => 'WaterLevel_WR2', 'label' => 'Water level','std' => '> Overflow',  'min' => '-',   'max' => '-',   'hasKg' => false, 'isOvf' => true],
         ['key' => 'Conta_WR2',      'label' => 'Conta',      'std' => '< 1.0 pt',    'min' => '-',   'max' => '1.0', 'hasKg' => false, 'isOvf' => false],
         ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
+        ['key' => 'WaterLevel_WR2', 'label' => 'Water level','std' => '> Overflow',  'min' => '-',   'max' => '-',   'hasKg' => false, 'isOvf' => true],
     ]],
     5 => ['name' => 'Surface Cond.<br>0.2 Kg/day', 'chem' => 'NT-4055<br>PL-XG<br>AD-4977', 'params' => [
         ['key' => 'pH',             'label' => 'pH',         'std' => '9.0-11.0',    'min' => '9.0', 'max' => '11.0','hasKg' => false, 'isOvf' => false],
@@ -92,7 +99,7 @@ $preparedBy = $header['prepared_by_name'] ?? '';
 $checkedBy  = $header['checked_by_name'] ?? '';
 $approvedBy = $header['approved_by_name'] ?? '';
 $shiftLabel = $shift === 'DAY' ? 'กลางวัน (DAY)' : 'กลางคืน (NIGHT)';
-$dateLabel  = date('d/m/Y', strtotime($logDate));
+$dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logDate));
 ?>
 <!DOCTYPE html>
 <html lang="th">
