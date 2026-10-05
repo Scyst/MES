@@ -382,6 +382,65 @@ try {
             echo json_encode(['success' => true, 'message' => 'เปลี่ยนสถานะการใช้งานสำเร็จ']);
             break;
 
+        case 'transfer_stock':
+            $items = $input['items'] ?? [];
+            $notes = mb_substr(trim((string)($input['notes'] ?? '')), 0, 400);
+
+            if (empty($items) || !is_array($items) || count($items) > 100) {
+                throw new Exception("ข้อมูลการย้ายคลังไม่ครบถ้วน");
+            }
+
+            $locationNames = [];
+            foreach ($pdo->query("SELECT location_id, location_name FROM dbo.LOCATIONS WHERE is_active = 1 AND location_type = 'MAINTENANCE'")->fetchAll(PDO::FETCH_ASSOC) as $locRow) {
+                $locationNames[(int)$locRow['location_id']] = $locRow['location_name'];
+            }
+            $validLocations = array_keys($locationNames);
+
+            $pdo->beginTransaction();
+
+            $lockStmt = $pdo->prepare("SELECT quantity FROM dbo.MT_INVENTORY_ONHAND WITH (UPDLOCK, ROWLOCK) WHERE item_id = ? AND location_id = ?");
+            $logStmt = $pdo->prepare("INSERT INTO dbo.MT_TRANSACTIONS (item_id, location_id, quantity, transaction_type, ref_job_id, notes, created_by_user_id, created_at, pe_wo_id) VALUES (?, ?, ?, ?, NULL, ?, ?, GETDATE(), NULL)");
+            $mergeStmt = $pdo->prepare("MERGE INTO dbo.MT_INVENTORY_ONHAND AS target
+                USING (SELECT ? AS item_id, ? AS location_id) AS source
+                ON (target.item_id = source.item_id AND target.location_id = source.location_id)
+                WHEN MATCHED THEN UPDATE SET target.quantity = target.quantity + ?, target.last_updated = GETDATE()
+                WHEN NOT MATCHED THEN INSERT (item_id, location_id, quantity, last_updated) VALUES (source.item_id, source.location_id, ?, GETDATE());");
+
+            foreach ($items as $item) {
+                $itemId = (int)($item['item_id'] ?? 0);
+                $fromId = (int)($item['from_location_id'] ?? 0);
+                $toId = (int)($item['to_location_id'] ?? 0);
+                $quantity = round((float)($item['quantity'] ?? 0), 3);
+
+                if ($itemId <= 0 || $quantity <= 0 || $quantity > 999999) {
+                    throw new Exception("จำนวนหรือรายการอะไหล่ไม่ถูกต้อง");
+                }
+                if ($fromId === $toId) {
+                    throw new Exception("คลังต้นทางและปลายทางต้องไม่ใช่คลังเดียวกัน");
+                }
+                if (!in_array($fromId, $validLocations, true) || !in_array($toId, $validLocations, true)) {
+                    throw new Exception("คลังที่เลือกไม่ถูกต้อง");
+                }
+
+                $lockStmt->execute([$itemId, $fromId]);
+                $currentQty = (float)($lockStmt->fetchColumn() ?: 0);
+                if ($currentQty < $quantity) {
+                    throw new Exception("สต๊อกต้นทางไม่เพียงพอสำหรับการย้ายคลัง (รหัสอะไหล่ {$itemId})");
+                }
+
+                $noteOut = trim("[ย้ายคลังไปยัง {$locationNames[$toId]}] " . $notes);
+                $noteIn = trim("[ย้ายคลังจาก {$locationNames[$fromId]}] " . $notes);
+
+                $logStmt->execute([$itemId, $fromId, -$quantity, 'TRANSFER_OUT', $noteOut, $userId]);
+                $mergeStmt->execute([$itemId, $fromId, -$quantity, -$quantity]);
+                $logStmt->execute([$itemId, $toId, $quantity, 'TRANSFER_IN', $noteIn, $userId]);
+                $mergeStmt->execute([$itemId, $toId, $quantity, $quantity]);
+            }
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'data' => null, 'message' => 'ย้ายคลังสำเร็จ']);
+            break;
+
         case 'get_transactions':
             $limit = (int)($input['limit'] ?? 200);
             

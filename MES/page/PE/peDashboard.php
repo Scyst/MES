@@ -241,6 +241,8 @@ $pageTitle = "PE Enterprise";
     include __DIR__ . '/components/modals/modal_workorder.php';
     include __DIR__ . '/components/modals/modal_wo_issue_part.php';
     include __DIR__ . '/components/modals/modal_sparepart_tx.php';
+    include __DIR__ . '/components/modals/modal_sparepart_cart.php';
+    include __DIR__ . '/components/modals/modal_sparepart_transfer.php';
     include __DIR__ . '/components/modals/modal_mt_item.php';
     include __DIR__ . '/components/modals/modal_quick_close.php';
     include __DIR__ . '/components/modals/modal_wo_filters.php';

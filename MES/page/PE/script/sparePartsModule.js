@@ -124,6 +124,7 @@ const SparePartsModule = (() => {
             const onHand = parseFloat(r.onhand_qty) || 0;
             const isLow = minStock > 0 && onHand <= minStock;
             const isOver = maxStock > 0 && onHand > maxStock;
+            const locKey = r.location_id ?? '';
             
             // Grid HTML
             let imagePath = r.image_path || (allMasterData && allMasterData.find(x => x.item_id == r.item_id)?.image_path) || null;
@@ -136,6 +137,15 @@ const SparePartsModule = (() => {
                 <div class="card h-100 shadow-sm border-0 position-relative ${isLow ? 'border border-danger' : (isOver ? 'border border-warning' : '')}">
                     ${isLow ? '<span class="badge bg-danger position-absolute top-0 start-0 m-2 shadow" style="z-index:2;"><i class="fas fa-exclamation-triangle"></i> Low Stock</span>' : ''}
                     ${isOver ? '<span class="badge bg-warning text-dark position-absolute top-0 start-0 m-2 shadow" style="z-index:2;"><i class="fas fa-arrow-up"></i> Overstock</span>' : ''}
+                    <div class="dropdown position-absolute top-0 end-0 m-2" style="z-index:3;">
+                        <button type="button" class="btn btn-light btn-sm rounded-circle shadow-sm" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center; border: 1px solid #dee2e6;" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false" aria-label="เมนูเพิ่มเติม">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <li><button type="button" class="dropdown-item py-2" onclick="SparePartsModule.openReceiveModal('${r.item_id}', '${locKey}', SparePartsModule.getCardQty('${r.item_id}', '${locKey}'))"><i class="fas fa-arrow-down text-success me-2"></i>รับเข้า</button></li>
+                            <li><button type="button" class="dropdown-item py-2" ${onHand <= 0 ? 'disabled' : ''} onclick="SparePartsModule.openTransferModal('${r.item_id}', '${locKey}', SparePartsModule.getCardQty('${r.item_id}', '${locKey}'))"><i class="fas fa-exchange-alt text-primary me-2"></i>ย้ายคลัง</button></li>
+                        </ul>
+                    </div>
                     ${imgHtml}
                     <div class="card-body d-flex flex-column p-3">
                         <div class="text-muted pe-text-xs fw-bold mb-1">${PEApp.escapeHtml(r.item_code)}</div>
@@ -152,9 +162,13 @@ const SparePartsModule = (() => {
                                     <span class="pe-text-xs text-muted">${PEApp.escapeHtml(r.uom || '')}</span>
                                 </div>
                             </div>
-                            <div class="d-flex gap-1">
-                                <button class="btn btn-sm btn-outline-success w-50" onclick="SparePartsModule.openReceiveModal('${r.item_id}', '${r.location_id}')"><i class="fas fa-arrow-down"></i> รับ</button>
-                                <button class="btn btn-sm btn-outline-danger w-50" onclick="SparePartsModule.openIssueModal('${r.item_id}', '${r.location_id}')"><i class="fas fa-arrow-up"></i> เบิก</button>
+                            <div class="sp-stepper sp-stepper-full mb-2">
+                                <button type="button" class="btn btn-outline-secondary" onclick="SparePartsModule.stepCardQty('${r.item_id}', '${locKey}', -1)" aria-label="ลด"><i class="fas fa-minus"></i></button>
+                                <input type="number" class="form-control" id="spq_${r.item_id}_${locKey}" value="1" min="1" step="1" inputmode="numeric" aria-label="จำนวน">
+                                <button type="button" class="btn btn-outline-secondary" onclick="SparePartsModule.stepCardQty('${r.item_id}', '${locKey}', 1)" aria-label="เพิ่ม"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <div class="w-100">
+                                <button type="button" class="btn btn-primary w-100 sp-card-action" ${onHand <= 0 ? 'disabled' : ''} onclick="SparePartsModule.addIssueToCart('${r.item_id}', '${locKey}')"><i class="fas fa-cart-plus me-1"></i> ใส่ตะกร้า</button>
                             </div>
                         </div>
                     </div>
@@ -221,7 +235,7 @@ const SparePartsModule = (() => {
         }
     }
 
-    async function openModal(type, initialItemId = null, initialLocationId = null) {
+    async function openModal(type, initialItemId = null, initialLocationId = null, initialQty = null) {
         document.getElementById('spTxType').value = type;
         document.getElementById('spTxModalTitle').innerHTML = type === 'RECEIVE' ? '<i class="fas fa-arrow-down pe-text-success"></i> รับอะไหล่เข้าคลัง (Receive)' : '<i class="fas fa-arrow-up pe-text-danger"></i> เบิกอะไหล่ (Issue)';
         document.getElementById('spTxSaveBtn').innerHTML = type === 'RECEIVE' ? '<i class="fas fa-check-circle me-1"></i> ยืนยันรับเข้า (Receive)' : '<i class="fas fa-check-circle me-1"></i> ยืนยันการเบิก (Issue)';
@@ -251,6 +265,10 @@ const SparePartsModule = (() => {
             }
         }
         
+        if (initialItemId && initialQty) {
+            document.getElementById('spTxQty').value = initialQty;
+        }
+
         PEApp.showModal('spTxModal');
     }
 
@@ -326,12 +344,320 @@ const SparePartsModule = (() => {
         }
     }
 
-    function openReceiveModal(itemId = null, locationId = null) {
-        openModal('RECEIVE', itemId, locationId);
+    function openReceiveModal(itemId = null, locationId = null, qty = null) {
+        openModal('RECEIVE', itemId, locationId, qty);
     }
 
-    function openIssueModal(itemId = null, locationId = null) {
-        openModal('ISSUE', itemId, locationId);
+    // ===== ISSUE CART (E-commerce style) =====
+    let issueCart = [];
+
+    function getCardQtyInput(itemId, locationId) {
+        return document.getElementById(`spq_${itemId}_${locationId}`);
+    }
+
+    function getCardQty(itemId, locationId) {
+        const qty = Math.floor(parseFloat(getCardQtyInput(itemId, locationId)?.value) || 0);
+        return qty > 0 ? qty : 1;
+    }
+
+    function stepCardQty(itemId, locationId, delta) {
+        const input = getCardQtyInput(itemId, locationId);
+        if (!input) return;
+        input.value = Math.max(1, getCardQty(itemId, locationId) + delta);
+    }
+
+    function getStockRow(itemId, locationId) {
+        return allData.find(r => r.item_id == itemId && r.location_id == locationId);
+    }
+
+    function addIssueToCart(itemId, locationId) {
+        const row = getStockRow(itemId, locationId);
+        const input = getCardQtyInput(itemId, locationId);
+        const qty = Math.floor(parseFloat(input?.value) || 0);
+        const onHand = parseFloat(row?.onhand_qty) || 0;
+        if (!row || qty <= 0) {
+            PEApp.showToast('กรุณาระบุจำนวนที่ต้องการเบิก', 'warning');
+            return;
+        }
+        const existing = issueCart.find(c => c.item_id == itemId && c.location_id == locationId);
+        const newQty = (existing ? existing.quantity : 0) + qty;
+        if (newQty > onHand) {
+            PEApp.showToast(`จำนวนเกินสต๊อกคงเหลือ (คงเหลือ ${PEApp.formatNumber(onHand)})`, 'warning');
+            return;
+        }
+        if (existing) {
+            existing.quantity = newQty;
+        } else {
+            issueCart.push({
+                item_id: row.item_id, item_code: row.item_code, item_name: row.item_name,
+                image_path: row.image_path, location_id: row.location_id, location_name: row.location_name,
+                uom: row.uom, quantity: qty
+            });
+        }
+        if (input) input.value = 1;
+        renderIssueCart();
+        PEApp.showToast('เพิ่มรายการลงตะกร้าแล้ว', 'success');
+    }
+
+    function changeCartQty(index, delta) {
+        const line = issueCart[index];
+        if (!line) return;
+        const onHand = parseFloat(getStockRow(line.item_id, line.location_id)?.onhand_qty) || 0;
+        const next = line.quantity + delta;
+        if (next <= 0) { removeIssueCartItem(index); return; }
+        if (next > onHand) {
+            PEApp.showToast('จำนวนเกินสต๊อกคงเหลือ', 'warning');
+            return;
+        }
+        line.quantity = next;
+        renderIssueCart();
+    }
+
+    function removeIssueCartItem(index) {
+        issueCart.splice(index, 1);
+        renderIssueCart();
+    }
+
+    function clearIssueCart() {
+        issueCart = [];
+        renderIssueCart();
+    }
+
+    function renderIssueCart() {
+        const list = document.getElementById('spCartList');
+        const fab = document.getElementById('spCartFab');
+        const total = issueCart.reduce((sum, c) => sum + c.quantity, 0);
+        const countEls = ['spCartCount', 'spCartFabCount'];
+        countEls.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = issueCart.length; });
+        if (fab) fab.style.display = issueCart.length ? 'flex' : 'none';
+        if (!list) return;
+        if (!issueCart.length) {
+            list.innerHTML = '<div class="text-center text-muted py-5">ยังไม่มีรายการในตะกร้า</div>';
+            return;
+        }
+        list.innerHTML = issueCart.map((c, i) => {
+            const img = c.image_path
+                ? `<img src="../../${PEApp.escapeHtml(c.image_path)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">`
+                : '<div style="width:48px;height:48px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box-open text-muted"></i></div>';
+            return `
+            <div class="sp-cart-line d-flex gap-2 align-items-center">
+                ${img}
+                <div class="flex-grow-1" style="min-width:0;">
+                    <div class="fw-bold text-truncate">${PEApp.escapeHtml(c.item_name)}</div>
+                    <div class="pe-text-xs text-muted">${PEApp.escapeHtml(c.item_code)} · ${PEApp.escapeHtml(c.location_name || '-')}</div>
+                    <div class="sp-stepper mt-1">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="SparePartsModule.changeCartQty(${i}, -1)" aria-label="ลด"><i class="fas fa-minus"></i></button>
+                        <span class="fw-bold px-2">${PEApp.formatNumber(c.quantity)} ${PEApp.escapeHtml(c.uom || '')}</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="SparePartsModule.changeCartQty(${i}, 1)" aria-label="เพิ่ม"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-outline-danger" style="min-width:44px;min-height:44px;" onclick="SparePartsModule.removeIssueCartItem(${i})" aria-label="ลบ"><i class="fas fa-trash"></i></button>
+            </div>`;
+        }).join('') + `<div class="text-end fw-bold pt-2">รวม ${issueCart.length} รายการ (${PEApp.formatNumber(total)} ชิ้น)</div>`;
+    }
+
+    async function openIssueCart() {
+        renderIssueCart();
+        const woSel = document.getElementById('spCartWoId');
+        try {
+            const res = await PEApp.apiCall('workOrderAPI.php', { action: 'get_work_orders', status: 'Active' });
+            const current = woSel.value;
+            woSel.innerHTML = '<option value="">-- ไม่ระบุ --</option>' +
+                (res.data || []).map(w => `<option value="${w.wo_id}">[${PEApp.escapeHtml(w.wo_number)}] ${PEApp.escapeHtml(w.machine_code)} - ${PEApp.escapeHtml(w.issue_title)}</option>`).join('');
+            woSel.value = current;
+        } catch (e) {
+            console.error('Error loading WOs:', e);
+        }
+        bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('spCartOffcanvas')).show();
+    }
+
+    async function submitIssueCart() {
+        if (!issueCart.length) {
+            PEApp.showToast('ตะกร้าว่างเปล่า กรุณาเพิ่มอะไหล่อย่างน้อย 1 รายการ', 'warning');
+            return;
+        }
+        if (!navigator.onLine) {
+            PEApp.showToast('ไม่มีการเชื่อมต่ออินเทอร์เน็ต ไม่สามารถทำรายการได้', 'error');
+            return;
+        }
+        const btn = document.getElementById('spCartSubmitBtn');
+        btn.disabled = true;
+        try {
+            await PEApp.apiCall('sparePartsAPI.php', {}, 'POST', {
+                action: 'process_transaction',
+                transaction_type: 'ISSUE',
+                items: issueCart.map(c => ({ item_id: c.item_id, location_id: c.location_id, quantity: c.quantity })),
+                notes: document.getElementById('spCartNotes').value,
+                ref_job_id: document.getElementById('spCartWoId').value || null
+            });
+            PEApp.showToast(`เบิกอะไหล่สำเร็จ (${issueCart.length} รายการ)`, 'success');
+            issueCart = [];
+            document.getElementById('spCartNotes').value = '';
+            document.getElementById('spCartWoId').value = '';
+            renderIssueCart();
+            bootstrap.Offcanvas.getInstance(document.getElementById('spCartOffcanvas'))?.hide();
+            loadData();
+        } catch (e) {
+            PEApp.showToast(e.message, 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // ===== STOCK TRANSFER (ย้ายคลัง) =====
+    let transferLines = [];
+    let transferLocations = [];
+
+    async function openTransferModal(itemId = null, fromLocationId = null, qty = null) {
+        transferLines = [];
+        document.getElementById('spTrNotes').value = '';
+        resetTransferForm();
+        renderTransferLines();
+
+        try {
+            if (!transferLocations.length) {
+                const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_master_data' });
+                transferLocations = res.data.locations || [];
+            }
+        } catch (e) {
+            PEApp.showToast(e.message, 'error');
+            return;
+        }
+
+        const stocked = allData.filter(r => (parseFloat(r.onhand_qty) || 0) > 0);
+        const uniqueItems = new Map();
+        stocked.forEach(r => uniqueItems.set(`[${r.item_code}] ${r.item_name}`, r.item_id));
+        window.spTransferTextMap = uniqueItems;
+        const datalist = document.getElementById('spTrItemList');
+        datalist.innerHTML = '';
+        uniqueItems.forEach((id, text) => datalist.appendChild(new Option(text)));
+
+        const toSel = document.getElementById('spTrTo');
+        toSel.innerHTML = '<option value="">-- เลือกคลังปลายทาง --</option>' +
+            transferLocations.map(l => `<option value="${l.location_id}">${PEApp.escapeHtml(l.location_name)}</option>`).join('');
+
+        if (itemId) {
+            const row = getStockRow(itemId, fromLocationId);
+            if (row) {
+                document.getElementById('spTrItemInput').value = `[${row.item_code}] ${row.item_name}`;
+                onTransferItemInput();
+                if (fromLocationId) document.getElementById('spTrFrom').value = fromLocationId;
+                if (qty) document.getElementById('spTrQty').value = qty;
+            }
+        }
+        PEApp.showModal('spTransferModal');
+    }
+
+    function resetTransferForm() {
+        document.getElementById('spTrItemInput').value = '';
+        document.getElementById('spTrItem').value = '';
+        document.getElementById('spTrFrom').innerHTML = '<option value="">-- เลือกคลังต้นทาง --</option>';
+        document.getElementById('spTrTo').value = '';
+        document.getElementById('spTrQty').value = '';
+    }
+
+    function onTransferItemInput() {
+        const text = document.getElementById('spTrItemInput').value;
+        const itemId = window.spTransferTextMap?.get(text) || '';
+        document.getElementById('spTrItem').value = itemId;
+        const fromSel = document.getElementById('spTrFrom');
+        fromSel.innerHTML = '<option value="">-- เลือกคลังต้นทาง --</option>';
+        if (!itemId) return;
+        const sources = allData.filter(r => r.item_id == itemId && (parseFloat(r.onhand_qty) || 0) > 0);
+        sources.forEach(r => fromSel.add(new Option(`${r.location_name} (คงเหลือ: ${parseFloat(r.onhand_qty)} ${r.uom || ''})`, r.location_id)));
+        if (sources.length === 1) fromSel.value = sources[0].location_id;
+    }
+
+    function addTransferLine() {
+        const itemId = document.getElementById('spTrItem').value;
+        const fromId = document.getElementById('spTrFrom').value;
+        const toId = document.getElementById('spTrTo').value;
+        const qty = parseFloat(document.getElementById('spTrQty').value);
+
+        if (!itemId || !fromId || !toId || !qty || qty <= 0) {
+            PEApp.showToast('กรุณากรอกข้อมูลให้ครบถ้วน (อะไหล่ คลังต้นทาง คลังปลายทาง จำนวน)', 'warning');
+            return;
+        }
+        if (fromId === toId) {
+            PEApp.showToast('คลังต้นทางและปลายทางต้องไม่ใช่คลังเดียวกัน', 'warning');
+            return;
+        }
+        const row = getStockRow(itemId, fromId);
+        const onHand = parseFloat(row?.onhand_qty) || 0;
+        const existing = transferLines.find(t => t.item_id == itemId && t.from_location_id == fromId && t.to_location_id == toId);
+        const totalQty = (existing ? existing.quantity : 0) + qty;
+        const reservedElsewhere = transferLines
+            .filter(t => t.item_id == itemId && t.from_location_id == fromId && t !== existing)
+            .reduce((sum, t) => sum + t.quantity, 0);
+        if (totalQty + reservedElsewhere > onHand) {
+            PEApp.showToast(`จำนวนเกินสต๊อกต้นทาง (คงเหลือ ${PEApp.formatNumber(onHand)})`, 'warning');
+            return;
+        }
+        const toName = transferLocations.find(l => l.location_id == toId)?.location_name || '-';
+        if (existing) {
+            existing.quantity = totalQty;
+        } else {
+            transferLines.push({
+                item_id: itemId, item_label: `[${row.item_code}] ${row.item_name}`, uom: row.uom,
+                from_location_id: fromId, from_name: row.location_name,
+                to_location_id: toId, to_name: toName, quantity: qty
+            });
+        }
+        renderTransferLines();
+        resetTransferForm();
+    }
+
+    function removeTransferLine(index) {
+        transferLines.splice(index, 1);
+        renderTransferLines();
+    }
+
+    function renderTransferLines() {
+        const tbody = document.getElementById('spTrBody');
+        document.getElementById('spTrCount').textContent = transferLines.length;
+        if (!transferLines.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">ยังไม่มีรายการ</td></tr>';
+            return;
+        }
+        tbody.innerHTML = transferLines.map((t, i) => `
+            <tr>
+                <td class="text-truncate" style="max-width:180px;" title="${PEApp.escapeHtml(t.item_label)}">${PEApp.escapeHtml(t.item_label)}</td>
+                <td>${PEApp.escapeHtml(t.from_name || '-')}</td>
+                <td>${PEApp.escapeHtml(t.to_name)}</td>
+                <td class="text-end fw-bold">${PEApp.formatNumber(t.quantity)} ${PEApp.escapeHtml(t.uom || '')}</td>
+                <td class="text-center"><button class="btn btn-sm btn-outline-danger" style="min-width:44px;min-height:44px;" onclick="SparePartsModule.removeTransferLine(${i})" aria-label="ลบ"><i class="fas fa-times"></i></button></td>
+            </tr>`).join('');
+    }
+
+    async function submitTransfer() {
+        if (!transferLines.length) {
+            PEApp.showToast('กรุณาเพิ่มรายการย้ายคลังอย่างน้อย 1 รายการ', 'warning');
+            return;
+        }
+        if (!navigator.onLine) {
+            PEApp.showToast('ไม่มีการเชื่อมต่ออินเทอร์เน็ต ไม่สามารถทำรายการได้', 'error');
+            return;
+        }
+        const btn = document.getElementById('spTrSaveBtn');
+        btn.disabled = true;
+        try {
+            await PEApp.apiCall('sparePartsAPI.php', {}, 'POST', {
+                action: 'transfer_stock',
+                items: transferLines.map(t => ({
+                    item_id: t.item_id, from_location_id: t.from_location_id,
+                    to_location_id: t.to_location_id, quantity: t.quantity
+                })),
+                notes: document.getElementById('spTrNotes').value
+            });
+            PEApp.showToast(`ย้ายคลังสำเร็จ (${transferLines.length} รายการ)`, 'success');
+            transferLines = [];
+            PEApp.hideModal('spTransferModal');
+            loadData();
+        } catch (e) {
+            PEApp.showToast(e.message, 'error');
+        } finally {
+            btn.disabled = false;
+        }
     }
     
     function addToCart() {
@@ -811,8 +1137,14 @@ const SparePartsModule = (() => {
             } else if (r.transaction_type === 'ISSUE') {
                 typeBadge = '<span class="pe-badge pe-status-inactive"><i class="fas fa-arrow-up me-1"></i>OUT</span>';
                 qtyClass = 'text-danger fw-bold';
+            } else if (r.transaction_type === 'TRANSFER_IN') {
+                typeBadge = '<span class="pe-badge" style="background:#0d6efd;color:#fff;"><i class="fas fa-exchange-alt me-1"></i>ย้ายเข้า</span>';
+                qtyClass = 'text-primary fw-bold';
+            } else if (r.transaction_type === 'TRANSFER_OUT') {
+                typeBadge = '<span class="pe-badge" style="background:#fd7e14;color:#fff;"><i class="fas fa-exchange-alt me-1"></i>ย้ายออก</span>';
+                qtyClass = 'text-warning fw-bold';
             } else {
-                typeBadge = `<span class="pe-badge" style="background:#6c757d;color:#fff;">${r.transaction_type}</span>`;
+                typeBadge = `<span class="pe-badge" style="background:#6c757d;color:#fff;">${PEApp.escapeHtml(r.transaction_type)}</span>`;
                 qtyClass = 'pe-text-muted';
             }
             
@@ -836,7 +1168,9 @@ const SparePartsModule = (() => {
     }
 
     return { 
-        loadData, filterTable, toggleView, openReceiveModal, openIssueModal, submitTransaction, exportExcel, onItemInput,
+        loadData, filterTable, toggleView, openReceiveModal, submitTransaction, exportExcel, onItemInput,
+        stepCardQty, getCardQty, addIssueToCart, changeCartQty, removeIssueCartItem, clearIssueCart, openIssueCart, submitIssueCart,
+        openTransferModal, onTransferItemInput, addTransferLine, removeTransferLine, submitTransfer,
         switchTab, loadMasterList, filterMasterTable, toggleMasterView, renderMasterTable, openItemModal, saveItem, toggleItemStatus, exportMasterExcel, importMasterExcel,
         loadHistory, filterHistoryTable, renderHistoryTable, previewImage, removeImage, addToCart, removeCartItem
     };

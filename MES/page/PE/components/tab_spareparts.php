@@ -119,8 +119,11 @@
                         <button class="pe-btn pe-btn-success pe-btn-sm" onclick="SparePartsModule.openReceiveModal()">
                             <i class="fas fa-arrow-down"></i> <?php _e('pe.btn_receive'); ?>
                         </button>
-                        <button class="pe-btn pe-btn-ghost pe-btn-sm" style="border-color:var(--pe-text-primary);color:var(--pe-text-primary);" onclick="SparePartsModule.openIssueModal()">
-                            <i class="fas fa-arrow-up"></i> <?php _e('pe.btn_issue'); ?>
+                        <button class="pe-btn pe-btn-ghost pe-btn-sm" style="border-color:var(--pe-text-primary);color:var(--pe-text-primary);" onclick="SparePartsModule.openIssueCart()">
+                            <i class="fas fa-shopping-cart"></i> <?php _e('pe.btn_issue'); ?>
+                        </button>
+                        <button class="pe-btn pe-btn-ghost pe-btn-sm" style="border-color:var(--pe-primary);color:var(--pe-primary);" onclick="SparePartsModule.openTransferModal()">
+                            <i class="fas fa-exchange-alt"></i> ย้ายคลัง
                         </button>
                         <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.exportExcel()" title="Export">
                             <i class="fas fa-file-excel" style="color:var(--pe-success);"></i> <?php _e('pe.btn_export'); ?>
