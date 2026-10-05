@@ -161,7 +161,7 @@ export const STATIONS = [
   {
     no: 10,
     name: 'Ovens',
-    chemical: '-',
+    chemical: 'Temperature Control',
     params: [
       { key: 'BakeOvenTemp', label: 'Bake Oven Temp. (°C)', hasKg: false },
       { key: 'DryOvenTemp',  label: 'Dry Oven Temp. (°C)',  hasKg: false },
@@ -170,7 +170,7 @@ export const STATIONS = [
   {
     no: 11,
     name: 'Painting Condition',
-    chemical: '-',
+    chemical: 'Other Settings',
     params: [
       { key: 'ConveyorSpeed', label: 'Speed Conveyor (m/min)', hasKg: false },
     ],
