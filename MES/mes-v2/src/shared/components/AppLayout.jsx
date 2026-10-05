@@ -15,15 +15,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
-  
-  
-
-  // Auto-close menu when route changes
-  useEffect(() => {
-    closeMenu();
-  }, [location.pathname]);
-
-  // Update date
+// Update date
   useEffect(() => {
     const updateDate = () => {
       const now = new Date();
