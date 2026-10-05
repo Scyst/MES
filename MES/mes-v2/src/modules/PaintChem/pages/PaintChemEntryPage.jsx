@@ -5,10 +5,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
-import { Save, SendHorizonal, Loader2, WifiOff, Wind, FileText } from 'lucide-react';
+import { Save, SendHorizonal, Loader2, WifiOff, Wind, FileText, LayoutGrid, TableProperties } from 'lucide-react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import SheetHeader from '../components/SheetHeader';
 import PaintChemHistoryDrawer from '../components/PaintChemHistoryDrawer';
+import PaintChemTableView from '../components/PaintChemTableView';
 import StationCard from '../components/StationCard';
 import {
   isOutOfRange,
@@ -71,6 +72,7 @@ export default function PaintChemEntryPage() {
   const [extrasBySlot, setExtrasBySlot] = useState({});
   const [slotValues, setSlotVals] = useState(buildEmptySlotValues());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('card');
   const [header, setHeader]       = useState(null);
   const [allLogs, setAllLogs]     = useState([]);
   const [saving, setSaving]       = useState(false);
@@ -314,7 +316,29 @@ export default function PaintChemEntryPage() {
         disabled={isReadOnly || !isOnline}
       />
 
-      {/* Station Cards in a responsive grid */}
+      {/* View Toggle */}
+      <div className="flex justify-end px-1 mb-2">
+        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+          <button 
+            type="button"
+            onClick={() => setViewMode('card')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'card' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+          >
+            <LayoutGrid size={14} /> แบบการ์ด
+          </button>
+          <button 
+            type="button"
+            onClick={() => setViewMode('table')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'table' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+          >
+            <TableProperties size={14} /> แบบตาราง
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'card' ? (
+        <>
+          {/* Station Cards in a responsive grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-3 md:gap-4">
         {STATIONS.map((station) => (
           <StationCard
@@ -356,8 +380,20 @@ export default function PaintChemEntryPage() {
           </div>
         </div>
       </div>
+        </>
+      ) : (
+        <PaintChemTableView
+          timeSlots={SHIFT_SLOTS[shift]}
+          selectedSlot={selectedSlot}
+          onSlotChange={setSlot}
+          allLogs={allLogs}
+          slotValues={slotValues}
+          onChange={handleValueChange}
+          disabled={isReadOnly || !isOnline}
+        />
+      )}
 
-{/* Action Bar */}
+      {/* Action Bar */}
       {!isReadOnly && (
         <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-3 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <div className="w-full px-2 md:px-6 flex gap-3 justify-center md:justify-end">
