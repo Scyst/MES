@@ -297,10 +297,6 @@ export default function PaintChemEntryPage() {
             disabled={isReadOnly || !isOnline}
           />
         ))}
-      </div>
-
-      
-
         {/* Station 12: Note */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm mb-3">
           <div className="w-full flex items-center justify-between px-4 py-3 text-left">
@@ -328,6 +324,7 @@ export default function PaintChemEntryPage() {
             </div>
           </div>
         </div>
+      </div>
 
 {/* Action Bar */}
       {!isReadOnly && (

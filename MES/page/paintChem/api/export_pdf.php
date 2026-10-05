@@ -404,16 +404,16 @@ $dateLabel  = date('d/m/Y', strtotime($logDate));
     </tr>
     <tr>
       <td style="height:55px; text-align:center; vertical-align:bottom; padding-bottom:5px;">
-        ...................................<br>
-        <span style="font-size:6.5pt;"><?php echo htmlspecialchars($preparedBy); ?></span>
+        <div style="margin-bottom:2px;">...................................</div>
+        <div style="font-size:6.5pt; min-height:10px;"><?php echo htmlspecialchars($preparedBy); ?></div>
       </td>
       <td style="text-align:center; vertical-align:bottom; padding-bottom:5px;">
-        ...................................<br>
-        <span style="font-size:6.5pt;"><?php echo htmlspecialchars($checkedBy); ?></span>
+        <div style="margin-bottom:2px;">...................................</div>
+        <div style="font-size:6.5pt; min-height:10px;"><?php echo htmlspecialchars($checkedBy); ?></div>
       </td>
       <td style="text-align:center; vertical-align:bottom; padding-bottom:5px;">
-        ...................................<br>
-        <span style="font-size:6.5pt;"><?php echo htmlspecialchars($approvedBy); ?></span>
+        <div style="margin-bottom:2px;">...................................</div>
+        <div style="font-size:6.5pt; min-height:10px;"><?php echo htmlspecialchars($approvedBy); ?></div>
       </td>
     </tr>
   </table>
