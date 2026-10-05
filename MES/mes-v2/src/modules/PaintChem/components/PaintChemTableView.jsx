@@ -8,10 +8,29 @@ const INPUT_BASE =
   'w-full h-8 px-1 text-center text-xs rounded border focus:outline-none focus:ring-1 focus:ring-blue-500 ' +
   'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 disabled:opacity-60';
 
-function readLogValue(allLogs, slot, stationNo, paramKey, field) {
-  const row = allLogs.find(
-    (log) => log.time_slot === slot && log.station_no === stationNo && log.parameter_key === paramKey
+const normalizeSlot = (slot) => String(slot ?? '').trim();
+const hasValue = (value) => value !== null && value !== undefined;
+
+function findLogRow(allLogs, slot, stationNo, paramKey) {
+  return allLogs.find(
+    (log) =>
+      normalizeSlot(log.time_slot) === normalizeSlot(slot) &&
+      Number(log.station_no) === Number(stationNo) &&
+      String(log.parameter_key).trim() === paramKey
   );
+}
+
+function isSlotRecorded(allLogs, slot) {
+  return allLogs.some(
+    (log) =>
+      normalizeSlot(log.time_slot) === normalizeSlot(slot) &&
+      (hasValue(log.before_value) || hasValue(log.after_value) ||
+        hasValue(log.chemical_added_kg) || hasValue(log.is_overflow))
+  );
+}
+
+function readLogValue(allLogs, slot, stationNo, paramKey, field) {
+  const row = findLogRow(allLogs, slot, stationNo, paramKey);
   if (!row) return '';
   if (field === 'before') return row.before_value ?? '';
   if (field === 'after') return row.after_value ?? '';
@@ -103,6 +122,7 @@ export default function PaintChemTableView({
               </th>
               {timeSlots.map((slot) => {
                 const isEditing = slot === selectedSlot;
+                const isRecorded = isSlotRecorded(allLogs, slot);
                 return (
                   <th
                     key={slot}
@@ -115,8 +135,18 @@ export default function PaintChemTableView({
                     }`}
                   >
                     <div className="text-xs font-semibold">{slot}</div>
-                    <div className={`text-[10px] font-normal ${isEditing ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
-                      {isEditing ? 'กำลังแก้ไข' : 'แตะเพื่อแก้ไข'}
+                    <div
+                      className={`text-[10px] font-medium ${
+                        isEditing
+                          ? 'text-blue-100'
+                          : isRecorded
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-gray-400 dark:text-gray-500'
+                      }`}
+                    >
+                      {isEditing ? 'กำลังแก้ไข' : ''}
+                      {isEditing && isRecorded ? ' · ' : ''}
+                      {isRecorded ? '✓ บันทึกแล้ว' : !isEditing ? 'ยังไม่บันทึก' : ''}
                     </div>
                   </th>
                 );
