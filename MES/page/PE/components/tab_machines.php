@@ -16,7 +16,7 @@
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-check-circle"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-warning pe-animate-in" style="cursor: pointer;" onclick="MachineModule.setKpiFilter('Repair')">
+    <div class="pe-kpi-card kpi-warning pe-animate-in" style="cursor: pointer;" onclick="MachineModule.setKpiFilter('Under Repair')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_under_repair'); ?></div>
             <div class="pe-kpi-value" id="kpiRepairMachines">0</div>
