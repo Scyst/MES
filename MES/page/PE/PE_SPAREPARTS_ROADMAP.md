@@ -38,3 +38,5 @@ The Item Master modal allows users to upload images for spare parts.
 - **Optimization:** Added `loading="lazy"` to `<img>` tags in `sparePartsModule.js` grid templates.
 - **UX Improvement:** Replaced static "Loading..." text with centered animated Bootstrap Spinners.
 - **Feature:** Added drag-and-drop file upload with preview and canvas compression to the Item Master modal.
+- **Migration (2026-10-06):** All stock moved to the new central location **Store PE** (`location_id = 1088`): 92 items / 2,486 pcs, logged as 92 `TRANSFER_OUT` + 92 `TRANSFER_IN` transactions. Old locations (MT Shop, Under Office B10, Office B10) hold no stock.
+- **Known gap:** only 3 of 17 `ISSUE` transactions carry `pe_wo_id`; closed WOs have no parts linked, so per-WO / per-machine parts cost is not yet reliable. See `PE_SYSTEM_STATUS.md`.

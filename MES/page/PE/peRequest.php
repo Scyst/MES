@@ -6,6 +6,7 @@ require_once __DIR__ . '/../components/init.php';
 requirePermission(['view_production', 'view_maintenance']);
 
 $currentUserForJS = $_SESSION['user'] ?? null;
+$loggedInUser = $_SESSION['user']['username'] ?? '';
 
 // Fetch Machines for Dropdowns
 require_once __DIR__ . '/../db.php';
@@ -40,6 +41,37 @@ try {
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/pe-enterprise.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="css/peRequest.css?v=<?php echo time(); ?>">
+    <?php if (isset($_GET['embedded']) && $_GET['embedded'] == '1'): ?>
+    <style>
+        .app-header { display: none !important; }
+        .container-app { padding-top: 5px !important; margin-top: 0 !important; }
+        body { background-color: transparent !important; }
+        .app-section.active { margin-top: 0 !important; }
+        form { margin-top: 0 !important; }
+    </style>
+    <?php endif; ?>
+
+    <style>
+        .checklist-item {
+            background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px;
+            border: 1px solid var(--pe-border-light); box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .btn-check-custom:checked + .btn-outline-success {
+            background-color: var(--pe-success) !important; color: white !important; border-color: var(--pe-success) !important;
+        }
+        .btn-check-custom:checked + .btn-outline-danger {
+            background-color: var(--pe-danger) !important; color: white !important; border-color: var(--pe-danger) !important;
+        }
+        .camera-btn { 
+            border: 2px dashed var(--pe-danger); color: var(--pe-danger); background: rgba(239, 68, 68, 0.05); 
+            border-radius: 8px; padding: 15px 10px; text-align: center; cursor: pointer; 
+        }
+        .remove-img-btn { 
+            position: absolute; top: -10px; right: -10px; background: var(--pe-danger); color: white; 
+            border: none; border-radius: 50%; width: 28px; height: 28px; z-index: 5;
+        }
+    </style>
+
 </head>
 <body>
     <script>
@@ -88,8 +120,10 @@ try {
                         <label class="pe-form-label text-primary"><i class="fas fa-industry me-1"></i> เลือกจากระบบ</label>
                         <select class="pe-form-select border-primary" id="req_machine_id" name="machine_id">
                             <option value="">-- ไม่ระบุ --</option>
-                            <?php foreach($machines as $m): ?>
-                                <option value="<?= $m['machine_id'] ?>" data-line="<?= htmlspecialchars($m['line']) ?>" data-name="<?= htmlspecialchars($m['machine_name']) ?>">
+                            <?php foreach($machines as $m): 
+                                $selected = (isset($_GET['machine_code']) && strtolower($_GET['machine_code']) === strtolower($m['machine_code'])) ? 'selected' : '';
+                            ?>
+                                <option value="<?= $m['machine_id'] ?>" data-line="<?= htmlspecialchars($m['line']) ?>" data-name="<?= htmlspecialchars($m['machine_name']) ?>" <?= $selected ?>>
                                     <?= htmlspecialchars($m['line'] . ' - ' . $m['machine_code'] . ' (' . $m['machine_name'] . ')') ?>
                                 </option>
                             <?php endforeach; ?>
@@ -165,8 +199,10 @@ try {
                         <label class="pe-form-label text-danger"><i class="fas fa-industry me-1"></i> เครื่องจักร</label>
                         <select class="pe-form-select border-danger" id="dt_machine_id" name="machine_id">
                             <option value="">-- ไม่ระบุ --</option>
-                            <?php foreach($machines as $m): ?>
-                                <option value="<?= $m['machine_id'] ?>" data-line="<?= htmlspecialchars($m['line']) ?>" data-name="<?= htmlspecialchars($m['machine_name']) ?>">
+                            <?php foreach($machines as $m): 
+                                $selected = (isset($_GET['machine_code']) && strtolower($_GET['machine_code']) === strtolower($m['machine_code'])) ? 'selected' : '';
+                            ?>
+                                <option value="<?= $m['machine_id'] ?>" data-line="<?= htmlspecialchars($m['line']) ?>" data-name="<?= htmlspecialchars($m['machine_name']) ?>" <?= $selected ?>>
                                     <?= htmlspecialchars($m['line'] . ' - ' . $m['machine_code'] . ' (' . $m['machine_name'] . ')') ?>
                                 </option>
                             <?php endforeach; ?>
@@ -279,21 +315,112 @@ try {
             </div>
         </div>
 
+        
+        <!-- Section: Pre-Op -->
+        <div id="section-preop" class="app-section">
+            <div class="audit-banner" style="background: linear-gradient(135deg, var(--pe-primary), #1e3a8a); color: white; padding: 20px; text-align: center; border-radius: 0 0 24px 24px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); margin-top: -15px;">
+                <h3 class="mb-1 fw-bold" style="letter-spacing: 0.5px; margin-top:15px;">
+                    <i class="fas fa-clipboard-check text-success me-2"></i> Pre-Op
+                </h3>
+                <p class="mb-0 opacity-75 small text-uppercase" style="letter-spacing: 1px;">เช็คลิสต์ก่อนเริ่มงาน</p>
+            </div>
+            <form id="preopForm" class="app-card" style="margin: 15px; border-top: 4px solid var(--pe-primary);">
+                <div class="mb-3">
+                    <label class="pe-form-label text-primary">รหัสเครื่องจักร <span class="required">*</span></label>
+                    <input type="text" class="pe-form-input border-primary text-primary fw-bold text-uppercase" style="background-color: var(--pe-primary-light); font-size: 1.1rem;" name="machine_code" id="preop_machineCode" value="<?= htmlspecialchars($_GET['machine_code'] ?? '') ?>" placeholder="เช่น MC-01" required <?= !empty($_GET['machine_code']) ? 'readonly' : '' ?>>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="pe-form-label">กะ (Shift) <span class="required">*</span></label>
+                        <select class="pe-form-select" name="shift" required>
+                            <option value="Day">กลางวัน</option>
+                            <option value="Night">กลางคืน</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="pe-form-label">ผู้ตรวจ <span class="required">*</span></label>
+                        <input type="text" class="pe-form-input" name="audited_by" id="auditedByInput" required placeholder="ชื่อ/รหัส" value="<?= htmlspecialchars($loggedInUser ?? '') ?>">
+                    </div>
+                </div>
+                <hr class="my-3">
+                <h6 class="fw-bold mb-3 text-secondary"><i class="fas fa-list-ul me-2"></i> รายการตรวจสอบ</h6>
+                <div id="checklistContainer">
+                    <div class="text-center py-4 text-secondary" id="checklistLoading">
+                        <i class="fas fa-spinner fa-spin fa-2x mb-2"></i><p class="mb-0">กำลังโหลด...</p>
+                    </div>
+                </div>
+                <div id="failActionArea" style="display: none; margin-top: 15px; padding: 15px; border-radius: 12px; background-color: var(--pe-danger-light); border: 1px solid var(--pe-danger);">
+                    <h6 class="text-danger fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> พบปัญหา</h6>
+                    <p class="small text-danger mb-2">ระบบจะสร้างใบแจ้งซ่อมฉุกเฉิน</p>
+                    <div class="mb-2">
+                        <textarea class="pe-form-input" id="failRemarks" name="remarks" rows="2" placeholder="อธิบายปัญหา..."></textarea>
+                    </div>
+                </div>
+                <button type="submit" class="btn-app-primary mt-3 w-100" id="submitBtnPreop">
+                    <i class="fas fa-save me-2"></i> บันทึกผล
+                </button>
+            </form>
+        </div>
+
+        <!-- Section: Hazard -->
+        <div id="section-hazard" class="app-section">
+            <div style="background: linear-gradient(135deg, #dc2626, #991b1b); color: white; padding: 20px; text-align: center; border-radius: 0 0 20px 20px; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3); margin-top: -15px;">
+                <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0; margin-top: 10px;"><i class="fas fa-exclamation-triangle fa-fade text-warning me-2"></i> Safety Hazard</h3>
+            </div>
+            <form id="hazardForm" class="app-card" style="margin: 15px; border-top: 4px solid var(--pe-danger);">
+                <input type="hidden" name="action" value="submit_hazard_report">
+                <input type="hidden" id="hazard_imageBase64" name="image_base64" value="">
+                <div class="mb-3"><label class="pe-form-label text-danger">รหัสเครื่องจักร <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control text-uppercase" style="border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 12px; padding: 12px 15px;" name="machine_code" id="hazard_machineCode" value="<?= htmlspecialchars($_GET['machine_code'] ?? '') ?>" placeholder="MC-01" required <?= !empty($_GET['machine_code']) ? 'readonly' : '' ?>>
+                </div>
+                <div class="mb-3"><label class="pe-form-label">ปัญหา (Issue) <span class="text-danger">*</span></label>
+                    <select class="form-select" name="issue_title" style="border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 12px; padding: 12px 15px;" required>
+                        <option value="">-- เลือกหัวข้อ --</option>
+                        <option value="ปุ่ม Emergency Stop พัง / ไม่ทำงาน">ปุ่ม Emergency Stop พัง / ไม่ทำงาน</option>
+                        <option value="Safety Sensor ถูกปิด / ไม่ทำงาน">Safety Sensor ถูกปิด / ไม่ทำงาน</option>
+                        <option value="สายไฟชำรุด / มีไฟรั่ว / ประกายไฟ">สายไฟชำรุด / มีไฟรั่ว / ประกายไฟ</option>
+                        <option value="อุปกรณ์ป้องกัน / ฝาครอบ หลุดหาย">ฝาครอบ / อุปกรณ์ป้องกัน หลุดหาย</option>
+                        <option value="พบความเสี่ยงอื่นๆ">พบความเสี่ยงอื่นๆ</option>
+                    </select>
+                </div>
+                <div class="mb-3"><label class="pe-form-label">รายละเอียด</label>
+                    <textarea class="form-control" name="issue_detail" rows="2" placeholder="อธิบาย..." style="border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 12px; padding: 12px 15px;"></textarea>
+                </div>
+                <div class="mb-3"><label class="pe-form-label text-danger">รูปหลักฐาน <span class="text-danger">*</span></label>
+                    <input type="file" id="hazard_cameraInput" accept="image/*" capture="environment" style="display: none;">
+                    <div class="shadow-sm" id="hazard_cameraBtn" style="border: 2px dashed #f87171; color: #dc2626; background: rgba(254, 226, 226, 0.5); border-radius: 16px; padding: 20px 10px; text-align: center; cursor: pointer;">
+                        <i class="fas fa-camera fa-2x mb-2 opacity-75"></i><h6 class="mb-0 fw-bold">แตะถ่ายรูป</h6>
+                    </div>
+                    <div id="hazard_previewContainer" style="display: none; position: relative; margin-top: 15px;">
+                        <button type="button" id="hazard_removeImgBtn" style="position: absolute; top: -10px; right: -10px; background: #dc2626; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; z-index: 5;"><i class="fas fa-times"></i></button>
+                        <img id="hazard_imagePreview" src="" alt="Preview" style="width: 100%; border-radius: 12px; border: 2px solid #ef4444;">
+                    </div>
+                </div>
+                <button type="submit" class="btn w-100" style="background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; border-radius: 14px; padding: 14px; font-weight: 700;">
+                    <i class="fas fa-paper-plane me-2"></i> ส่งแจ้งเหตุ
+                </button>
+            </form>
+        </div>
+
         <!-- Bottom Navigation -->
         <nav class="bottom-nav">
-            <button class="nav-item-btn text-muted" data-href="../dailyLog/dailyLogUI.php" title="กลับหน้าหลัก" data-icon="fa-home">
+            <button class="nav-item-btn text-muted" data-href="../dailyLog/dailyLogUI.php" title="หน้าหลัก" data-icon="fa-home">
                 <i class="fas fa-home"></i><span>หน้าหลัก</span>
+            </button>
+            <button class="nav-item-btn" data-target="section-preop" data-title="Pre-Op Safety Audit" data-icon="fa-clipboard-check" data-color="text-success"> 
+                <i class="fas fa-clipboard-check"></i><span>Pre-Op</span>
+            </button>
+            <button class="nav-item-btn" data-target="section-hazard" data-title="Safety Hazard" data-icon="fa-exclamation-triangle" data-color="text-danger"> 
+                <i class="fas fa-exclamation-triangle"></i><span>Hazard</span>
             </button>
             <button class="nav-item-btn active" data-target="section-request" data-title="แจ้งซ่อมเครื่องจักร" data-icon="fa-tools" data-color="text-primary"> 
                 <i class="fas fa-tools"></i><span>แจ้งซ่อม</span>
-            </button>
-            <button class="nav-item-btn" data-target="section-downtime" data-title="แจ้งเครื่องหยุด" data-icon="fa-ban" data-color="text-danger"> 
-                <i class="fas fa-ban"></i><span>หยุดไลน์</span>
             </button>
             <button class="nav-item-btn" data-target="section-history" data-title="ประวัติและสถานะ" data-icon="fa-history" data-color="text-dark">
                 <i class="fas fa-history"></i><span>ประวัติ</span>
             </button>
         </nav>
+
     </div>
 
     <!-- Cropper Modal -->

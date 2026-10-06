@@ -42,6 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 lineInput.value = '';
             }
         });
+        
+        // Trigger change to auto-fill if pre-selected
+        if(reqMachineSelect.value !== "") {
+            reqMachineSelect.dispatchEvent(new Event('change'));
+        }
     }
 
     const dtMachineSelect = document.getElementById('dt_machine_id');
@@ -59,6 +64,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 lineInput.value = '';
             }
         });
+        
+        // Trigger change to auto-fill if pre-selected
+        if(dtMachineSelect.value !== "") {
+            dtMachineSelect.dispatchEvent(new Event('change'));
+        }
     }
 
     // Image Compression & Cropper Logic
@@ -582,3 +592,397 @@ async function endDowntime(id) {
         alert('Error: ' + e.message);
     }
 }
+
+// e:\MES\MES\MES\page\PE\script\quick_hazard.js
+document.addEventListener('DOMContentLoaded', () => {
+    const cameraBtn = document.getElementById('hazard_cameraBtn');
+    const cameraInput = document.getElementById('hazard_cameraInput');
+    const previewContainer = document.getElementById('hazard_previewContainer');
+    const imagePreview = document.getElementById('hazard_imagePreview');
+    const removeImgBtn = document.getElementById('hazard_removeImgBtn');
+    const imageBase64 = document.getElementById('hazard_imageBase64');
+    const hazardForm = document.getElementById('hazardForm');
+
+    // Trigger file input when clicking the nice button
+    cameraBtn.addEventListener('click', () => {
+        cameraInput.click();
+    });
+
+    // Handle image selection
+    cameraInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Compress image using Canvas
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                const max_size = 1200; // max width/height
+
+                if (width > height) {
+                    if (width > max_size) {
+                        height *= max_size / width;
+                        width = max_size;
+                    }
+                } else {
+                    if (height > max_size) {
+                        width *= max_size / height;
+                        height = max_size;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                
+                imagePreview.src = dataUrl;
+                imageBase64.value = dataUrl;
+                
+                cameraBtn.style.display = 'none';
+                previewContainer.style.display = 'block';
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Remove image
+    removeImgBtn.addEventListener('click', () => {
+        cameraInput.value = '';
+        imageBase64.value = '';
+        imagePreview.src = '';
+        previewContainer.style.display = 'none';
+        cameraBtn.style.display = 'block';
+    });
+
+    // Form Submission
+    hazardForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        if (!imageBase64.value) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'กรุณาถ่ายรูป',
+                text: 'การแจ้งเหตุฉุกเฉินจำเป็นต้องมีรูปถ่ายเพื่อประเมินสถานการณ์เบื้องต้น',
+                confirmButtonColor: '#dc3545'
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'กำลังส่งข้อมูล...',
+            text: 'กรุณารอสักครู่',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const formData = new FormData(hazardForm);
+
+        try {
+            const response = await fetch('api/publicHazardAPI.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'ส่งข้อมูลสำเร็จ!',
+                    text: `ระบบได้รับแจ้งปัญหาของคุณแล้ว (รหัส: ${result.wo_number}) ทีมงานกำลังเร่งดำเนินการ`,
+                    confirmButtonColor: '#198754',
+                    confirmButtonText: 'รับทราบ'
+                }).then(() => {
+                    // Reset form but keep machine code if it was prefilled
+                    const machineCode = document.getElementById('hazard_machineCode').value;
+                    const isReadonly = document.getElementById('hazard_machineCode').hasAttribute('readonly');
+                    hazardForm.reset();
+                    removeImgBtn.click();
+                    if (isReadonly) {
+                        document.getElementById('hazard_machineCode').value = machineCode;
+                    }
+                });
+            } else {
+                Swal.fire('เกิดข้อผิดพลาด', result.message || 'ไม่สามารถส่งข้อมูลได้', 'error');
+            }
+        } catch (error) {
+            console.error('Error submitting hazard report:', error);
+            Swal.fire('การเชื่อมต่อล้มเหลว', 'กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง', 'error');
+        }
+    });
+});
+
+
+window.removeImage = function(itemId) {
+    document.getElementById(`cam_${itemId}`).value = '';
+    document.getElementById(`img_b64_${itemId}`).value = '';
+    document.getElementById(`preview_img_${itemId}`).src = '';
+    document.getElementById(`preview_cont_${itemId}`).style.display = 'none';
+    document.getElementById(`cam_btn_${itemId}`).style.display = 'block';
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const failActionArea = document.getElementById('failActionArea');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Auto-fill audited_by if previously saved and no session user
+    const auditedByInput = document.getElementById('auditedByInput');
+    if (!auditedByInput.value) {
+        const savedName = localStorage.getItem('preop_audited_by');
+        if(savedName) {
+            auditedByInput.value = savedName;
+        }
+    }
+    
+    // Check if any "no" is selected
+    function checkFailures() {
+        let hasFailure = false;
+        
+        document.querySelectorAll('.checklist-item').forEach(itemDiv => {
+            const radio = itemDiv.querySelector('input[type="radio"]');
+            if (!radio) return;
+            const itemId = radio.dataset.itemId;
+            const noRadio = document.getElementById(`q${itemId}_no`);
+            const failArea = document.getElementById(`fail_area_${itemId}`);
+            
+            if (noRadio && noRadio.checked) {
+                failArea.style.display = 'block';
+                hasFailure = true;
+            } else {
+                failArea.style.display = 'none';
+            }
+        });
+        
+        if (hasFailure) {
+            failActionArea.style.display = 'block';
+            submitBtn.className = 'btn-app-danger mt-4 w-100';
+            submitBtn.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> แจ้งเหตุฉุกเฉิน (เครื่องจักรมีปัญหา)';
+            document.getElementById('failRemarks').required = true;
+        } else {
+            failActionArea.style.display = 'none';
+            submitBtn.className = 'btn-app-primary mt-4 w-100';
+            submitBtn.innerHTML = '<i class="fas fa-save me-2"></i> บันทึกผลการตรวจสอบ (ปกติ)';
+            document.getElementById('failRemarks').required = false;
+        }
+    }
+    
+    // Load dynamic checklist
+    async function loadChecklist(machineCode) {
+        const container = document.getElementById('checklistContainer');
+        if (!machineCode) {
+            container.innerHTML = '<div class="alert alert-warning">กรุณาระบุรหัสเครื่องจักร</div>';
+            return;
+        }
+        
+        try {
+            const response = await fetch('api/preopAPI.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_checklist', machine_code: machineCode })
+            });
+            const result = await response.json();
+            
+            if (result.success && result.data && result.data.length > 0) {
+                container.innerHTML = ''; 
+                
+                result.data.forEach((item, index) => {
+                    const i = index + 1;
+                    const html = `
+                        <div class="checklist-item" id="item${i}">
+                            <div class="checklist-question">${i}. ${item.item_text}</div>
+                            <div class="d-flex w-100" style="gap: 10px;">
+                                <input type="radio" class="btn-check btn-check-custom checklist-radio" 
+                                    name="q${item.item_id}" id="q${item.item_id}_yes" value="yes" 
+                                    data-item-id="${item.item_id}" data-item-text="${item.item_text}" required>
+                                <label class="btn btn-outline-success w-50 fw-bold" for="q${item.item_id}_yes"><i class="fas fa-check me-1"></i> YES</label>
+                                
+                                <input type="radio" class="btn-check btn-check-custom checklist-radio" 
+                                    name="q${item.item_id}" id="q${item.item_id}_no" value="no" 
+                                    data-item-id="${item.item_id}" data-item-text="${item.item_text}" required>
+                                <label class="btn btn-outline-danger w-50 fw-bold" for="q${item.item_id}_no"><i class="fas fa-times me-1"></i> NO</label>
+                            </div>
+                            
+                            <div class="item-failure-area" id="fail_area_${item.item_id}" style="display: none; background: #fff5f5; border: 1px dashed #ef4444; padding: 10px; border-radius: 8px; margin-top: 10px;">
+                                <label class="small text-danger fw-bold mb-1"><i class="fas fa-camera"></i> ถ่ายรูปจุดที่มีปัญหา <span class="required">*</span></label>
+                                <input type="hidden" id="img_b64_${item.item_id}" value="">
+                                <input type="file" id="cam_${item.item_id}" accept="image/*" capture="environment" style="display: none;">
+                                
+                                <div class="camera-btn shadow-sm" id="cam_btn_${item.item_id}" onclick="document.getElementById('cam_${item.item_id}').click();">
+                                    <i class="fas fa-camera mb-1"></i>
+                                    <div class="small fw-bold">ถ่ายรูป</div>
+                                </div>
+
+                                <div class="preview-container" id="preview_cont_${item.item_id}" style="display: none; position: relative;">
+                                    <button type="button" class="remove-img-btn" onclick="removeImage(${item.item_id})"><i class="fas fa-times"></i></button>
+                                    <img id="preview_img_${item.item_id}" src="" alt="Preview" style="width: 100%; border-radius: 8px; border: 1px solid #ef4444;">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', html);
+                });
+                
+                // Attach file input listeners and radio listeners
+                result.data.forEach((item) => {
+                    // Radio listener
+                    document.getElementById(`q${item.item_id}_yes`).addEventListener('change', checkFailures);
+                    document.getElementById(`q${item.item_id}_no`).addEventListener('change', checkFailures);
+
+                    // Camera listener
+                    const camInput = document.getElementById(`cam_${item.item_id}`);
+                    camInput.addEventListener('change', function(e) {
+                        if (e.target.files && e.target.files[0]) {
+                            const file = e.target.files[0];
+                            if (file.size > 5 * 1024 * 1024) {
+                                Swal.fire('ขนาดไฟล์เกิน', 'กรุณาอัปโหลดรูปภาพขนาดไม่เกิน 5MB', 'warning');
+                                camInput.value = '';
+                                return;
+                            }
+                            const reader = new FileReader();
+                            reader.onload = function(evt) {
+                                const img = new Image();
+                                img.onload = function() {
+                                    const canvas = document.createElement('canvas');
+                                    let width = img.width; let height = img.height;
+                                    const MAX = 1200;
+                                    if(width > height && width > MAX) { height *= MAX/width; width = MAX; }
+                                    else if(height > MAX) { width *= MAX/height; height = MAX; }
+                                    canvas.width = width; canvas.height = height;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx.drawImage(img, 0, 0, width, height);
+                                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                                    
+                                    document.getElementById(`preview_img_${item.item_id}`).src = dataUrl;
+                                    document.getElementById(`img_b64_${item.item_id}`).value = dataUrl;
+                                    document.getElementById(`cam_btn_${item.item_id}`).style.display = 'none';
+                                    document.getElementById(`preview_cont_${item.item_id}`).style.display = 'block';
+                                }
+                                img.src = evt.target.result;
+                            }
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                });
+            } else {
+                container.innerHTML = '<div class="alert alert-danger">ไม่พบแบบฟอร์ม หรือรหัสเครื่องจักรไม่ถูกต้อง</div>';
+            }
+        } catch (e) {
+            console.error(e);
+            container.innerHTML = '<div class="alert alert-danger">เกิดข้อผิดพลาดในการโหลดแบบฟอร์ม</div>';
+        }
+    }
+    
+    // Load immediately if machineCode exists
+    const initialMachineCode = document.getElementById('machineCode').value.trim();
+    if (initialMachineCode) {
+        loadChecklist(initialMachineCode);
+    }
+    
+    // Allow reloading if user types machine code manually
+    document.getElementById('machineCode').addEventListener('blur', function(e) {
+        if(e.target.value.trim() !== '') {
+            document.getElementById('checklistContainer').innerHTML = '<div class="text-center py-4 text-secondary"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><p class="mb-0">กำลังโหลดรายการตรวจสอบ...</p></div>';
+            loadChecklist(e.target.value.trim());
+        }
+    });
+
+    // Form Submission
+    document.getElementById('preopForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const machineCode = document.getElementById('machineCode').value.trim();
+        if(!machineCode) {
+            Swal.fire('Error', 'กรุณาระบุรหัสเครื่องจักร', 'error');
+            return;
+        }
+
+        const failAreaVisible = failActionArea.style.display === 'block';
+        
+        const checklistData = [];
+        let missingPhotos = false;
+
+        document.querySelectorAll('.checklist-item').forEach(itemDiv => {
+            const radio = itemDiv.querySelector('input[type="radio"]:checked');
+            if (radio) {
+                const itemId = radio.dataset.itemId;
+                let imageB64 = '';
+                if (radio.value === 'no') {
+                    imageB64 = document.getElementById(`img_b64_${itemId}`).value;
+                    if (!imageB64) missingPhotos = true;
+                }
+                
+                checklistData.push({
+                    item_id: itemId,
+                    text: radio.dataset.itemText,
+                    answer: radio.value,
+                    image_base64: imageB64
+                });
+            }
+        });
+
+        if (failAreaVisible && missingPhotos) {
+            Swal.fire('ถ่ายรูปหลักฐาน', 'กรุณาถ่ายรูปในจุดที่คุณตรวจสอบไม่ผ่าน (ที่มีปัญหา)', 'warning');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> กำลังส่งข้อมูล...';
+
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        data.checklist_data = checklistData;
+
+        try {
+            const response = await fetch('api/preopAPI.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'submit_preop', ...data })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                // Save audited_by to local storage for future auto-fill
+                localStorage.setItem('preop_audited_by', data.audited_by);
+                
+                Swal.fire({
+                    title: 'บันทึกสำเร็จ!',
+                    text: result.message,
+                    icon: 'success',
+                    confirmButtonColor: '#3b82f6',
+                    confirmButtonText: 'ตกลง'
+                }).then(() => {
+                    // Reset form but keep machine code and user name
+                    const mc = machineCode;
+                    const auditedBy = data.audited_by;
+                    document.getElementById('preopForm').reset();
+                    document.getElementById('machineCode').value = mc;
+                    document.querySelector('input[name="audited_by"]').value = auditedBy;
+                    
+                    checkFailures();
+                    loadChecklist(mc);
+                });
+            } else {
+                Swal.fire('เกิดข้อผิดพลาด', result.message || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Network Error', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+});
