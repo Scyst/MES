@@ -1014,23 +1014,23 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.viewHistoryWO = function(item) {
-    const statusBadge = item.status === 'Open' ? <span class="badge bg-danger">Open</span> : 
-                        (item.status === 'Completed' ? <span class="badge bg-success">Completed</span> : 
-                        <span class="badge bg-warning text-dark">+item.status+</span>);
+    const statusBadge = item.status === 'Open' ? `<span class="badge bg-danger">Open</span>` : 
+                        (item.status === 'Completed' ? `<span class="badge bg-success">Completed</span>` : 
+                        `<span class="badge bg-warning text-dark">${item.status}</span>`);
     const dateStr = item.requested_at ? item.requested_at.substring(0, 16) : '-';
     Swal.fire({
-        title: รายละเอียดการแจ้งซ่อม,
-        html: 
+        title: `รายละเอียดการแจ้งซ่อม`,
+        html: `
             <div class="text-start" style="font-size: 0.95rem;">
-                <p><strong>หมายเลข:</strong>  + (item.wo_number || '-') + </p>
-                <p><strong>หัวข้อ:</strong>  + (item.issue_title || '-') + </p>
-                <p><strong>เครื่องจักร:</strong>  + (item.machine_display_name || item.machine_name || '-') + </p>
-                <p><strong>อาการ:</strong>  + (item.issue_detail || '-') + </p>
-                <p><strong>สถานะ:</strong>  + statusBadge + </p>
-                <p><strong>ช่างผู้รับผิดชอบ:</strong>  + (item.assigned_to || '-') + </p>
-                <p><strong>เวลาแจ้ง:</strong>  + dateStr + </p>
+                <p><strong>หมายเลข:</strong> ${item.wo_number || '-'}</p>
+                <p><strong>หัวข้อ:</strong> ${item.issue_title || '-'}</p>
+                <p><strong>เครื่องจักร:</strong> ${item.machine_display_name || item.machine_name || '-'}</p>
+                <p><strong>อาการ:</strong> ${item.issue_detail || '-'}</p>
+                <p><strong>สถานะ:</strong> ${statusBadge}</p>
+                <p><strong>ช่างผู้รับผิดชอบ:</strong> ${item.assigned_to || '-'}</p>
+                <p><strong>เวลาแจ้ง:</strong> ${dateStr}</p>
             </div>
-        ,
+        `,
         confirmButtonText: 'ปิด',
         confirmButtonColor: '#6c757d'
     });
@@ -1047,17 +1047,17 @@ window.viewHistoryDT = function(item) {
     const endDate = formatDt(item.end_time);
     
     Swal.fire({
-        title: รายละเอียดเครื่องหยุด,
-        html: 
+        title: `รายละเอียดเครื่องหยุด`,
+        html: `
             <div class="text-start" style="font-size: 0.95rem;">
-                <p><strong>สาเหตุ:</strong>  + (item.cause_category || '-') + </p>
-                <p><strong>เครื่องจักร:</strong>  + (item.machine_code || item.machine_name || '-') + </p>
-                <p><strong>รายละเอียด:</strong>  + (item.cause_detail || '-') + </p>
-                <p><strong>เวลาเริ่ม:</strong>  + startDate + </p>
-                <p><strong>เวลาจบ:</strong>  + (item.end_time ? endDate : '<span class="text-danger">ยังไม่จบ</span>') + </p>
-                <p><strong>ระยะเวลา:</strong>  + (item.duration_min ? item.duration_min + ' นาที' : 'กำลังดำเนินการ') + </p>
+                <p><strong>สาเหตุ:</strong> ${item.cause_category || '-'}</p>
+                <p><strong>เครื่องจักร:</strong> ${item.machine_code || item.machine_name || '-'}</p>
+                <p><strong>รายละเอียด:</strong> ${item.cause_detail || '-'}</p>
+                <p><strong>เวลาเริ่ม:</strong> ${startDate}</p>
+                <p><strong>เวลาจบ:</strong> ${item.end_time ? endDate : '<span class="text-danger">ยังไม่จบ</span>'}</p>
+                <p><strong>ระยะเวลา:</strong> ${item.duration_min ? item.duration_min + ' นาที' : 'กำลังดำเนินการ'}</p>
             </div>
-        ,
+        `,
         confirmButtonText: 'ปิด',
         confirmButtonColor: '#6c757d'
     });
