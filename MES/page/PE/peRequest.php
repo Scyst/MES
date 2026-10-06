@@ -395,7 +395,7 @@ try {
                         <img id="hazard_imagePreview" src="" alt="Preview" style="width: 100%; border-radius: 12px; border: 2px solid #ef4444;">
                     </div>
                 </div>
-                <button type="submit" class="pe-btn pe-btn-danger w-100 mt-auto">
+                <button type="submit" class="pe-btn pe-btn-danger w-100 mt-3">
                     <i class="fas fa-paper-plane me-2"></i> ส่งแจ้งเหตุ
                 </button>
             </form>
