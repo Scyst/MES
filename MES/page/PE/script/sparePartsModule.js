@@ -144,6 +144,8 @@ const SparePartsModule = (() => {
                         <ul class="dropdown-menu dropdown-menu-end shadow">
                             <li><button type="button" class="dropdown-item py-2" onclick="SparePartsModule.openReceiveModal('${r.item_id}', '${locKey}', SparePartsModule.getCardQty('${r.item_id}', '${locKey}'))"><i class="fas fa-arrow-down text-success me-2"></i>รับเข้า</button></li>
                             <li><button type="button" class="dropdown-item py-2" ${onHand <= 0 ? 'disabled' : ''} onclick="SparePartsModule.openTransferModal('${r.item_id}', '${locKey}', SparePartsModule.getCardQty('${r.item_id}', '${locKey}'))"><i class="fas fa-exchange-alt text-primary me-2"></i>ย้ายคลัง</button></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button type="button" class="dropdown-item py-2" onclick="SparePartsModule.openItemModal('${r.item_id}')"><i class="fas fa-cog text-secondary me-2"></i>ตั้งค่า Item Master</button></li>
                         </ul>
                     </div>
                     ${imgHtml}
@@ -892,7 +894,16 @@ const SparePartsModule = (() => {
         tableBody.innerHTML = tableHtml;
     }
 
-    function openItemModal(id = null) {
+    async function openItemModal(id = null) {
+        if (id && (!allMasterData || allMasterData.length === 0)) {
+            try {
+                const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_mt_items' });
+                if (res.success) allMasterData = res.data || [];
+            } catch (e) {
+                console.error('Error fetching master data:', e);
+            }
+        }
+
         const form = document.getElementById('formMtItem');
         form.reset();
         
