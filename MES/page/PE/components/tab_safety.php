@@ -2,28 +2,28 @@
 
 <!-- KPIs -->
 <div class="pe-kpi-row" id="safetyKpiRow">
-    <div class="pe-kpi-card kpi-primary pe-animate-in" style="--delay: 0.1s">
+    <div class="pe-kpi-card kpi-primary pe-animate-in" style="--delay: 0.1s; cursor: pointer;" onclick="SafetyModule.setKpiFilter('all')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_preop_audits'); ?></div>
             <div class="pe-kpi-value" id="kpiPreOpTotal">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-clipboard-check"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-success pe-animate-in" style="--delay: 0.2s" style="cursor:pointer;" onclick="SafetyModule.openStatsModal()" title="ดูกราฟ Compliance">
+    <div class="pe-kpi-card kpi-success pe-animate-in" style="--delay: 0.2s; cursor: pointer;" onclick="SafetyModule.openStatsModal()" title="ดูกราฟ Compliance">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_compliance_rate'); ?></div>
             <div class="pe-kpi-value"><span id="kpiPreOpCompliance">0</span><span class="unit">%</span></div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-chart-pie"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-danger pe-animate-in" style="--delay: 0.3s">
+    <div class="pe-kpi-card kpi-danger pe-animate-in" style="--delay: 0.3s; cursor: pointer;" onclick="SafetyModule.setKpiFilter('open')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_active_hazards'); ?></div>
             <div class="pe-kpi-value" id="kpiActiveHazards">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-warning pe-animate-in" style="--delay: 0.4s">
+    <div class="pe-kpi-card kpi-warning pe-animate-in" style="--delay: 0.4s; cursor: pointer;" onclick="SafetyModule.setKpiFilter('all')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_avg_response'); ?></div>
             <div class="pe-kpi-value"><span id="kpiResponseTime">--</span><span class="unit">m</span></div>

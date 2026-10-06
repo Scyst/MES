@@ -4,28 +4,28 @@
 
 <!-- KPI Row -->
 <div class="pe-kpi-row" id="spKpiRow">
-    <div class="pe-kpi-card kpi-primary pe-animate-in">
+    <div class="pe-kpi-card kpi-primary pe-animate-in" style="cursor: pointer;" onclick="SparePartsModule.setKpiFilter('')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_total_sku'); ?></div>
             <div class="pe-kpi-value" id="kpiTotalSKU">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-boxes-stacked"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-danger pe-animate-in">
+    <div class="pe-kpi-card kpi-danger pe-animate-in" style="cursor: pointer;" onclick="SparePartsModule.setKpiFilter('LOW')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_low_stock'); ?></div>
             <div class="pe-kpi-value" id="kpiLowStock">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-exclamation-circle"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-success pe-animate-in">
+    <div class="pe-kpi-card kpi-success pe-animate-in" style="cursor: pointer;" onclick="SparePartsModule.setKpiFilter('')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_total_value'); ?></div>
             <div class="pe-kpi-value" id="kpiTotalValue">฿0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-coins"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-info pe-animate-in">
+    <div class="pe-kpi-card kpi-info pe-animate-in" style="cursor: pointer;" onclick="SparePartsModule.setKpiFilter('')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_month_issues'); ?></div>
             <div class="pe-kpi-value" id="kpiMonthIssues">0</div>

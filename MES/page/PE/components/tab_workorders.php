@@ -2,28 +2,28 @@
 
 <!-- KPI Row -->
 <div class="pe-kpi-row" id="woKpiRow">
-    <div class="pe-kpi-card kpi-primary pe-animate-in">
+    <div class="pe-kpi-card kpi-primary pe-animate-in" style="cursor: pointer;" onclick="WorkOrderModule.setKpiFilter('')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_total_wo'); ?></div>
             <div class="pe-kpi-value" id="kpiTotalWO">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-clipboard-list"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-warning pe-animate-in">
+    <div class="pe-kpi-card kpi-warning pe-animate-in" style="cursor: pointer;" onclick="WorkOrderModule.setKpiFilter('Active')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_open_assigned'); ?></div>
             <div class="pe-kpi-value" id="kpiOpenWO">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-hourglass-half"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-success pe-animate-in">
+    <div class="pe-kpi-card kpi-success pe-animate-in" style="cursor: pointer;" onclick="WorkOrderModule.setKpiFilter('Completed')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_completed'); ?></div>
             <div class="pe-kpi-value" id="kpiCompletedWO">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-check-double"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-info pe-animate-in">
+    <div class="pe-kpi-card kpi-info pe-animate-in" style="cursor: pointer;" onclick="WorkOrderModule.setKpiFilter('')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_avg_repair'); ?></div>
             <div class="pe-kpi-value" id="kpiAvgRepair">0 <span class="unit">min</span></div>

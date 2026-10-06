@@ -1178,8 +1178,16 @@ const SparePartsModule = (() => {
         }).join('');
     }
 
+    function setKpiFilter(statusValue) {
+        const filterEl = document.getElementById('spFilterStatus');
+        if (filterEl) {
+            filterEl.value = statusValue;
+            filterInventory();
+        }
+    }
+
     return { 
-        loadData, filterTable, toggleView, openReceiveModal, submitTransaction, exportExcel, onItemInput,
+        loadData, filterTable, toggleView, openReceiveModal, submitTransaction, exportExcel, onItemInput, setKpiFilter,
         stepCardQty, getCardQty, addIssueToCart, changeCartQty, removeIssueCartItem, clearIssueCart, openIssueCart, submitIssueCart,
         openTransferModal, onTransferItemInput, addTransferLine, removeTransferLine, submitTransfer,
         switchTab, loadMasterList, filterMasterTable, toggleMasterView, renderMasterTable, openItemModal, saveItem, toggleItemStatus, exportMasterExcel, importMasterExcel,

@@ -1476,8 +1476,16 @@ const WorkOrderModule = (() => {
         setupHelpers();
     }
 
+    function setKpiFilter(statusValue) {
+        const filterEl = document.getElementById('woFilterStatus');
+        if (filterEl) {
+            filterEl.value = statusValue;
+            loadData();
+        }
+    }
+
     return { 
-        loadData, filterTable, setView, openModal, save, deleteItem, restoreItem, exportExcel, 
+        loadData, filterTable, setView, openModal, save, deleteItem, restoreItem, exportExcel, setKpiFilter,
         onMachineChange, printPDF, openSparePartsModal, onSparePartChange, confirmIssuePart, deleteSparePart,
         quickAccept, quickStart, openQuickCloseModal, submitQuickClose,
         dragStart, allowDrop, dragEnter, dragLeave, drop,

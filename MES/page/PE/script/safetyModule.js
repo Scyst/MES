@@ -527,6 +527,14 @@ const SafetyModule = (function() {
         });
     }
 
+    function setKpiFilter(statusValue) {
+        const filterEl = document.getElementById('safetyStatusFilter');
+        if (filterEl) {
+            filterEl.value = statusValue;
+            loadData();
+        }
+    }
+
     // Export public functions
     return {
         init: init,
@@ -539,7 +547,8 @@ const SafetyModule = (function() {
         loadChecklistConfig: loadChecklistConfig,
         addChecklistRow: addChecklistRow,
         saveChecklistConfig: saveChecklistConfig,
-        openStatsModal: openStatsModal
+        openStatsModal: openStatsModal,
+        setKpiFilter: setKpiFilter
     };
 })();
 

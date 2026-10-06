@@ -2,28 +2,28 @@
 
 <!-- KPI Row -->
 <div class="pe-kpi-row" id="machineKpiRow">
-    <div class="pe-kpi-card kpi-primary pe-animate-in">
+    <div class="pe-kpi-card kpi-primary pe-animate-in" style="cursor: pointer;" onclick="MachineModule.setKpiFilter('')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_total_machines'); ?></div>
             <div class="pe-kpi-value" id="kpiTotalMachines">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-industry"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-success pe-animate-in">
+    <div class="pe-kpi-card kpi-success pe-animate-in" style="cursor: pointer;" onclick="MachineModule.setKpiFilter('Active')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_active'); ?></div>
             <div class="pe-kpi-value" id="kpiActiveMachines">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-check-circle"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-warning pe-animate-in">
+    <div class="pe-kpi-card kpi-warning pe-animate-in" style="cursor: pointer;" onclick="MachineModule.setKpiFilter('Repair')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_under_repair'); ?></div>
             <div class="pe-kpi-value" id="kpiRepairMachines">0</div>
         </div>
         <div class="pe-kpi-icon"><i class="fas fa-wrench"></i></div>
     </div>
-    <div class="pe-kpi-card kpi-danger pe-animate-in">
+    <div class="pe-kpi-card kpi-danger pe-animate-in" style="cursor: pointer;" onclick="MachineModule.setKpiFilter('Inactive')">
         <div>
             <div class="pe-kpi-label"><?php _e('pe.kpi_inactive'); ?></div>
             <div class="pe-kpi-value" id="kpiInactiveMachines">0</div>

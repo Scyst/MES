@@ -597,8 +597,16 @@ const MachineModule = (() => {
         }, 500);
     }
 
+    function setKpiFilter(statusValue) {
+        const filterEl = document.getElementById('machineFilterStatus');
+        if (filterEl) {
+            filterEl.value = statusValue;
+            loadData();
+        }
+    }
+
     return { 
-        loadData, filterTable, setView, openModal, save, viewDetail, viewWorkOrders, deleteItem, restoreItem, startTelemetryPolling,
+        loadData, filterTable, setView, openModal, save, viewDetail, viewWorkOrders, deleteItem, restoreItem, startTelemetryPolling, setKpiFilter,
         openDiscoveryModal, closeDiscoveryModal, loadDiscovery, showDiscoveryRaw, closeDiscoveryRawModal, mapTopic,
         getAllData: () => allData
     };
