@@ -11,12 +11,29 @@ const WorkOrderModule = (() => {
     let croppedImageAfterBlob = null;
 
     function getFiltersFromDOM() {
+        const startEl = document.getElementById('woStartDate');
+        const endEl = document.getElementById('woEndDate');
+        
+        const formatLocal = (d) => {
+            const offset = d.getTimezoneOffset() * 60000;
+            return new Date(d - offset).toISOString().slice(0, 10);
+        };
+
+        if (startEl && !startEl.value) {
+            const start = new Date();
+            start.setDate(start.getDate() - 30);
+            startEl.value = formatLocal(start);
+        }
+        if (endEl && !endEl.value) {
+            endEl.value = formatLocal(new Date());
+        }
+
         return {
             status: document.getElementById('woFilterStatus')?.value || '',
             priority: document.getElementById('woFilterPriority')?.value || '',
             line: document.getElementById('woFilterLine')?.value || '',
-            startDate: document.getElementById('woStartDate')?.value || '',
-            endDate: document.getElementById('woEndDate')?.value || '',
+            startDate: startEl?.value || '',
+            endDate: endEl?.value || '',
             dateType: document.getElementById('woDateFilterType')?.value || 'requested_at'
         };
     }
