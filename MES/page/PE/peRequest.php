@@ -337,7 +337,7 @@ try {
                     </div>
                     <div class="col-6">
                         <label class="pe-form-label">ผู้ตรวจ <span class="required">*</span></label>
-                        <input type="text" class="pe-form-input" name="audited_by" id="auditedByInput" required placeholder="ชื่อ/รหัส" value="<?= htmlspecialchars($loggedInUser ?? '') ?>">
+                        <input type="text" class="pe-form-input" name="audited_by" id="auditedByInput" required placeholder="ชื่อ/รหัส" value="<?= htmlspecialchars($currentUserForJS['fullname'] ?? $currentUserForJS['username']) ?>">
                     </div>
                 </div>
                 <hr class="my-3">
