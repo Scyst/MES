@@ -160,7 +160,7 @@ try {
                 <div class="mb-3">
                     <label class="pe-form-label">ระดับความสำคัญ <span class="required">*</span></label>
                     <select class="pe-form-select bg-light" id="req_priority" name="priority" required>
-                        <option value="Normal">🔴 Normal (รอได้)</option>
+                        <option value="Normal">🟢 Normal (รอได้)</option>
                         <option value="High">🟠 High (ด่วน)</option>
                         <option value="Critical">🔴 Critical (ฉุกเฉิน)</option>
                     </select>
@@ -366,7 +366,7 @@ try {
                 <h6 class="fw-bold text-danger mb-1"><i class="fas fa-exclamation-triangle fa-fade text-warning me-1"></i> Safety Hazard</h6>
                 <small class="text-muted">แจ้งเหตุฉุกเฉิน / พบปัญหาความปลอดภัย</small>
             </div>
-            <form id="hazardForm" class="app-card">
+            <form id="hazardForm" class="app-card" style="min-height: calc(100vh - 210px); display: flex; flex-direction: column;">
                 <input type="hidden" name="action" value="submit_hazard_report">
                 <input type="hidden" id="hazard_imageBase64" name="image_base64" value="">
                 <div class="mb-3"><label class="pe-form-label text-danger">รหัสเครื่องจักร <span class="text-danger">*</span></label>
@@ -395,7 +395,7 @@ try {
                         <img id="hazard_imagePreview" src="" alt="Preview" style="width: 100%; border-radius: 12px; border: 2px solid #ef4444;">
                     </div>
                 </div>
-                <button type="submit" class="pe-btn pe-btn-danger w-100 mt-2">
+                <button type="submit" class="pe-btn pe-btn-danger w-100 mt-auto">
                     <i class="fas fa-paper-plane me-2"></i> ส่งแจ้งเหตุ
                 </button>
             </form>
