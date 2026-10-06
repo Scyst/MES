@@ -53,7 +53,7 @@ try {
 
     <style>
         .checklist-item {
-            background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px;
+            background: white; border-radius: 12px; padding: 12px; margin-bottom: 5px;
             border: 1px solid var(--pe-border-light); box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
         .btn-check-custom:checked + .btn-outline-success {
@@ -341,7 +341,7 @@ try {
                     </div>
                 </div>
                 <hr class="my-3">
-                <h6 class="fw-bold mb-3 text-secondary"><i class="fas fa-list-ul me-2"></i> รายการตรวจสอบ</h6>
+                <h6 class="fw-bold mb-2 text-secondary"><i class="fas fa-list-ul me-2"></i> รายการตรวจสอบ</h6>
                 <div id="checklistContainer">
                     <div class="text-center py-4 text-secondary" id="checklistLoading">
                         <i class="fas fa-spinner fa-spin fa-2x mb-2"></i><p class="mb-0">กำลังโหลด...</p>

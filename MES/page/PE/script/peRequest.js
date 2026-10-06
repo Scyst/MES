@@ -799,17 +799,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const i = index + 1;
                     const html = `
                         <div class="checklist-item" id="item${i}">
-                            <div class="checklist-question mb-2" style="font-size: 0.9rem; font-weight: 500;">${i}. ${item.item_text}</div>
+                            <div class="checklist-question" style="font-size: 0.9rem; font-weight: 500; margin-bottom: 0.75rem;">${i}. ${item.item_text}</div>
                             <div class="d-flex w-100" style="gap: 10px;">
                                 <input type="radio" class="btn-check btn-check-custom checklist-radio" 
                                     name="q${item.item_id}" id="q${item.item_id}_yes" value="yes" 
                                     data-item-id="${item.item_id}" data-item-text="${item.item_text}" required>
-                                <label class="btn btn-outline-success w-50 fw-bold rounded-3 py-2" for="q${item.item_id}_yes" style="font-size: 0.85rem;"><i class="fas fa-check me-1"></i> YES</label>
+                                <label class="btn btn-outline-success w-50 fw-bold rounded-3" for="q${item.item_id}_yes" style="font-size: 0.8rem; padding: 8px 0;"><i class="fas fa-check me-1"></i> YES</label>
                                 
                                 <input type="radio" class="btn-check btn-check-custom checklist-radio" 
                                     name="q${item.item_id}" id="q${item.item_id}_no" value="no" 
                                     data-item-id="${item.item_id}" data-item-text="${item.item_text}" required>
-                                <label class="btn btn-outline-danger w-50 fw-bold rounded-3 py-2" for="q${item.item_id}_no" style="font-size: 0.85rem;"><i class="fas fa-times me-1"></i> NO</label>
+                                <label class="btn btn-outline-danger w-50 fw-bold rounded-3" for="q${item.item_id}_no" style="font-size: 0.8rem; padding: 8px 0;"><i class="fas fa-times me-1"></i> NO</label>
                             </div>
                             
                             <div class="item-failure-area" id="fail_area_${item.item_id}" style="display: none; background: #fff5f5; border: 1px dashed #ef4444; padding: 10px; border-radius: 8px; margin-top: 10px;">
