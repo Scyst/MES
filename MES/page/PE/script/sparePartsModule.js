@@ -1182,7 +1182,7 @@ const SparePartsModule = (() => {
         const filterEl = document.getElementById('spFilterStatus');
         if (filterEl) {
             filterEl.value = statusValue;
-            filterInventory();
+            filterTable();
         }
     }
 

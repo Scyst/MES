@@ -40,7 +40,8 @@ try {
             break;
 
         case 'get_machines':
-            $isDeleted = (!empty($_GET['status']) && $_GET['status'] === 'Deleted');
+            $reqStatus = $input['status'] ?? $_GET['status'] ?? '';
+            $isDeleted = ($reqStatus === 'Deleted');
             $conditions = [$isDeleted ? "is_active = 0" : "is_active = 1"];
             $params = [];
 
@@ -48,21 +49,21 @@ try {
                 $conditions[] = "(mqtt_topic IS NOT NULL AND mqtt_topic != '')";
             }
 
-            if (!empty($_GET['line'])) {
+            if (!empty($input['line']) || !empty($_GET['line'])) {
                 $conditions[] = "line = ?";
-                $params[] = $_GET['line'];
+                $params[] = $input['line'] ?? $_GET['line'];
             }
-            if (!empty($_GET['area_id'])) {
+            if (!empty($input['area_id']) || !empty($_GET['area_id'])) {
                 $conditions[] = "area_id = ?";
-                $params[] = (int)$_GET['area_id'];
+                $params[] = (int)($input['area_id'] ?? $_GET['area_id']);
             }
-            if (!empty($_GET['status']) && !$isDeleted) {
+            if ((!empty($input['status']) || !empty($_GET['status'])) && !$isDeleted) {
                 $conditions[] = "status = ?";
-                $params[] = $_GET['status'];
+                $params[] = $input['status'] ?? $_GET['status'];
             }
-            if (!empty($_GET['machine_type'])) {
+            if (!empty($input['machine_type']) || !empty($_GET['machine_type'])) {
                 $conditions[] = "machine_type = ?";
-                $params[] = $_GET['machine_type'];
+                $params[] = $input['machine_type'] ?? $_GET['machine_type'];
             }
 
             $where = "WHERE " . implode(" AND ", $conditions);
