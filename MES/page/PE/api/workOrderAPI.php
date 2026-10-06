@@ -40,26 +40,16 @@ try {
 
         case 'get_work_orders':
             $isDeleted = (!empty($_GET['status']) && $_GET['status'] === 'Deleted');
-            $conditions = [$isDeleted ? "W.is_active = 0" : "W.is_active = 1"];
-            $params = [];
+            $baseConditions = [$isDeleted ? "W.is_active = 0" : "W.is_active = 1"];
+            $baseParams = [];
 
-            $isActiveFilter = (!empty($_GET['status']) && $_GET['status'] === 'Active');
-
-            if (!empty($_GET['status']) && $_GET['status'] !== 'All' && !$isDeleted) {
-                if ($isActiveFilter) {
-                    $conditions[] = "W.status IN ('Open', 'Pending', 'Assigned', 'In Progress')";
-                } else {
-                    $conditions[] = "W.status = ?";
-                    $params[] = $_GET['status'];
-                }
-            }
             if (!empty($_GET['priority'])) {
-                $conditions[] = "W.priority = ?";
-                $params[] = $_GET['priority'];
+                $baseConditions[] = "W.priority = ?";
+                $baseParams[] = $_GET['priority'];
             }
             if (!empty($_GET['line'])) {
-                $conditions[] = "W.line = ?";
-                $params[] = $_GET['line'];
+                $baseConditions[] = "W.line = ?";
+                $baseParams[] = $_GET['line'];
             }
             $dateType = $_GET['dateType'] ?? 'requested_at';
             $validDateTypes = ['requested_at', 'assigned_at', 'completed_at', 'updated_at'];
@@ -68,15 +58,29 @@ try {
             }
 
             if (!empty($_GET['startDate'])) {
-                $conditions[] = "W.$dateType >= ?";
-                $params[] = $_GET['startDate'];
+                $baseConditions[] = "W.$dateType >= ?";
+                $baseParams[] = $_GET['startDate'];
             }
             if (!empty($_GET['endDate'])) {
-                $conditions[] = "W.$dateType < DATEADD(DAY, 1, CAST(? AS DATE))";
-                $params[] = $_GET['endDate'];
+                $baseConditions[] = "W.$dateType < DATEADD(DAY, 1, CAST(? AS DATE))";
+                $baseParams[] = $_GET['endDate'];
+            }
+
+            $conditions = $baseConditions;
+            $params = $baseParams;
+
+            $isActiveFilter = (!empty($_GET['status']) && $_GET['status'] === 'Active');
+            if (!empty($_GET['status']) && $_GET['status'] !== 'All' && !$isDeleted) {
+                if ($isActiveFilter) {
+                    $conditions[] = "W.status IN ('Open', 'Pending', 'Assigned', 'In Progress')";
+                } else {
+                    $conditions[] = "W.status = ?";
+                    $params[] = $_GET['status'];
+                }
             }
 
             $where = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
+            $summaryWhere = $baseConditions ? "WHERE " . implode(" AND ", $baseConditions) : "";
 
             $sql = "SELECT W.*, M.machine_code, M.machine_name AS machine_display_name, M.is_loto, M.loto_reason
                     FROM " . PE_WORK_ORDERS_TABLE . " W WITH (NOLOCK)
@@ -90,15 +94,15 @@ try {
             $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Summary (Compute without filter so KPIs remain consistent)
+            // Summary (Exclude status filter but include dates/line/priority)
             $summSql = "SELECT 
                             COUNT(*) as total,
                             SUM(CASE WHEN W.status IN ('Open','Assigned','In Progress') THEN 1 ELSE 0 END) as open_count,
                             SUM(CASE WHEN W.status = 'Completed' THEN 1 ELSE 0 END) as completed_count,
                             ISNULL(AVG(CASE WHEN W.status = 'Completed' AND W.repair_minutes IS NOT NULL THEN W.repair_minutes ELSE NULL END), 0) as avg_repair
-                        FROM " . PE_WORK_ORDERS_TABLE . " W WITH (NOLOCK) WHERE W.is_active = 1";
+                        FROM " . PE_WORK_ORDERS_TABLE . " W WITH (NOLOCK) $summaryWhere";
             $summStmt = $pdo->prepare($summSql);
-            $summStmt->execute();
+            $summStmt->execute($baseParams);
             $summary = $summStmt->fetch(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $data, 'summary' => $summary]);
