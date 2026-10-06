@@ -91,7 +91,19 @@ if ($action === 'get_checklist') {
             $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         
-        echo json_encode(['success' => true, 'data' => $items, 'machine_type' => $machineType]);
+        $alreadyAudited = false;
+        if (!empty($machineCode)) {
+            $checkStmt = $pdo->prepare("
+                SELECT COUNT(*) as cnt 
+                FROM PE_PREOP_AUDITS 
+                WHERE machine_id = (SELECT TOP 1 machine_id FROM " . PE_MACHINES_TABLE . " WHERE machine_code = ? OR machine_name = ?) 
+                AND CAST(audited_at AS DATE) = CAST(GETDATE() AS DATE)
+            ");
+            $checkStmt->execute([$machineCode, $machineCode]);
+            $alreadyAudited = ($checkStmt->fetchColumn() > 0);
+        }
+        
+        echo json_encode(['success' => true, 'data' => $items, 'machine_type' => $machineType, 'already_audited' => $alreadyAudited]);
     } catch (Throwable $e) {
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }

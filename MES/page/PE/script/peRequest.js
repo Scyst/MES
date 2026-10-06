@@ -214,7 +214,24 @@ document.addEventListener('DOMContentLoaded', () => {
     navBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             if (btn.dataset.href) {
-                window.location.href = btn.dataset.href;
+                if (btn.dataset.icon === 'fa-home') {
+                    Swal.fire({
+                        title: 'กลับสู่หน้าหลัก?',
+                        text: 'คุณแน่ใจหรือไม่ว่าต้องการออกจากหน้านี้?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3b82f6',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'กลับหน้าหลัก',
+                        cancelButtonText: 'ยกเลิก'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = btn.dataset.href;
+                        }
+                    });
+                } else {
+                    window.location.href = btn.dataset.href;
+                }
                 return;
             }
 
@@ -500,7 +517,7 @@ function renderWOHistory(items) {
         const dateStr = item.requested_at ? item.requested_at.substring(0, 16) : '-';
 
         html += `
-            <div class="history-card ${statusClass}">
+            <div class="history-card ${statusClass}" onclick='viewHistoryWO(${JSON.stringify(item).replace(/'/g, "&apos;")})' style="cursor: pointer;">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
                         <div class="history-title text-primary">${item.issue_title || 'No Title'}</div>
@@ -539,14 +556,14 @@ function renderDTHistory(items) {
         if (!item.end_time) {
             endBtnHtml = `
             <div class="mt-2 text-end">
-                <button class="btn btn-sm btn-danger rounded-pill px-3 shadow-sm" onclick="endDowntime(${item.downtime_id})">
+                <button class="btn btn-sm btn-danger rounded-pill px-3 shadow-sm" onclick="event.stopPropagation(); endDowntime(${item.downtime_id})">
                     <i class="fas fa-power-off"></i> จบการหยุดเครื่อง
                 </button>
             </div>`;
         }
 
         html += `
-            <div class="history-card status-pending">
+            <div class="history-card status-pending" onclick='viewHistoryDT(${JSON.stringify(item).replace(/'/g, "&apos;")})' style="cursor: pointer;">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
                         <div class="history-title text-danger">${item.cause_category || 'No Cause'}</div>
@@ -795,6 +812,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.success && result.data && result.data.length > 0) {
                 container.innerHTML = ''; 
                 
+                const preOpBadge = document.getElementById('preop_status_badge');
+                if (preOpBadge) {
+                    if (result.already_audited) {
+                        preOpBadge.style.display = 'block';
+                    } else {
+                        preOpBadge.style.display = 'none';
+                    }
+                }
+                
                 result.data.forEach((item, index) => {
                     const i = index + 1;
                     const html = `
@@ -986,3 +1012,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+window.viewHistoryWO = function(item) {
+    const statusBadge = item.status === 'Open' ? <span class="badge bg-danger">Open</span> : 
+                        (item.status === 'Completed' ? <span class="badge bg-success">Completed</span> : 
+                        <span class="badge bg-warning text-dark">+item.status+</span>);
+    const dateStr = item.requested_at ? item.requested_at.substring(0, 16) : '-';
+    Swal.fire({
+        title: รายละเอียดการแจ้งซ่อม,
+        html: 
+            <div class="text-start" style="font-size: 0.95rem;">
+                <p><strong>หมายเลข:</strong>  + (item.wo_number || '-') + </p>
+                <p><strong>หัวข้อ:</strong>  + (item.issue_title || '-') + </p>
+                <p><strong>เครื่องจักร:</strong>  + (item.machine_display_name || item.machine_name || '-') + </p>
+                <p><strong>อาการ:</strong>  + (item.issue_detail || '-') + </p>
+                <p><strong>สถานะ:</strong>  + statusBadge + </p>
+                <p><strong>ช่างผู้รับผิดชอบ:</strong>  + (item.assigned_to || '-') + </p>
+                <p><strong>เวลาแจ้ง:</strong>  + dateStr + </p>
+            </div>
+        ,
+        confirmButtonText: 'ปิด',
+        confirmButtonColor: '#6c757d'
+    });
+};
+
+window.viewHistoryDT = function(item) {
+    const formatDt = (dtStr) => {
+        if (!dtStr) return '-';
+        const d = new Date(dtStr);
+        if (isNaN(d)) return dtStr.substring(0, 16);
+        return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    };
+    const startDate = formatDt(item.start_time);
+    const endDate = formatDt(item.end_time);
+    
+    Swal.fire({
+        title: รายละเอียดเครื่องหยุด,
+        html: 
+            <div class="text-start" style="font-size: 0.95rem;">
+                <p><strong>สาเหตุ:</strong>  + (item.cause_category || '-') + </p>
+                <p><strong>เครื่องจักร:</strong>  + (item.machine_code || item.machine_name || '-') + </p>
+                <p><strong>รายละเอียด:</strong>  + (item.cause_detail || '-') + </p>
+                <p><strong>เวลาเริ่ม:</strong>  + startDate + </p>
+                <p><strong>เวลาจบ:</strong>  + (item.end_time ? endDate : '<span class="text-danger">ยังไม่จบ</span>') + </p>
+                <p><strong>ระยะเวลา:</strong>  + (item.duration_min ? item.duration_min + ' นาที' : 'กำลังดำเนินการ') + </p>
+            </div>
+        ,
+        confirmButtonText: 'ปิด',
+        confirmButtonColor: '#6c757d'
+    });
+};
