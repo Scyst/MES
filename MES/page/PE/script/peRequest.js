@@ -883,13 +883,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Load immediately if machineCode exists
-    const initialMachineCode = document.getElementById('machineCode').value.trim();
+    const initialMachineCode = document.getElementById('preop_machineCode').value.trim();
     if (initialMachineCode) {
         loadChecklist(initialMachineCode);
     }
     
     // Allow reloading if user types machine code manually
-    document.getElementById('machineCode').addEventListener('blur', function(e) {
+    document.getElementById('preop_machineCode').addEventListener('blur', function(e) {
         if(e.target.value.trim() !== '') {
             document.getElementById('checklistContainer').innerHTML = '<div class="text-center py-4 text-secondary"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><p class="mb-0">กำลังโหลดรายการตรวจสอบ...</p></div>';
             loadChecklist(e.target.value.trim());

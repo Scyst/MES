@@ -318,11 +318,9 @@ try {
         
         <!-- Section: Pre-Op -->
         <div id="section-preop" class="app-section">
-            <div class="audit-banner" style="background: linear-gradient(135deg, var(--pe-primary), #1e3a8a); color: white; padding: 20px; text-align: center; border-radius: 0 0 24px 24px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); margin-top: -15px;">
-                <h3 class="mb-1 fw-bold" style="letter-spacing: 0.5px; margin-top:15px;">
-                    <i class="fas fa-clipboard-check text-success me-2"></i> Pre-Op
-                </h3>
-                <p class="mb-0 opacity-75 small text-uppercase" style="letter-spacing: 1px;">เช็คลิสต์ก่อนเริ่มงาน</p>
+            <div class="app-card mb-3 text-center bg-success bg-opacity-10 border-success border-opacity-25">
+                <h6 class="fw-bold text-success mb-1"><i class="fas fa-clipboard-check me-1"></i> Pre-Op Safety Audit</h6>
+                <small class="text-muted">ตรวจสอบความพร้อมและเช็คลิสต์ก่อนเริ่มงาน</small>
             </div>
             <form id="preopForm" class="app-card" style="margin: 15px; border-top: 4px solid var(--pe-primary);">
                 <div class="mb-3">
@@ -364,8 +362,9 @@ try {
 
         <!-- Section: Hazard -->
         <div id="section-hazard" class="app-section">
-            <div style="background: linear-gradient(135deg, #dc2626, #991b1b); color: white; padding: 20px; text-align: center; border-radius: 0 0 20px 20px; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3); margin-top: -15px;">
-                <h3 style="font-size: 1.25rem; font-weight: 700; margin: 0; margin-top: 10px;"><i class="fas fa-exclamation-triangle fa-fade text-warning me-2"></i> Safety Hazard</h3>
+            <div class="app-card mb-3 text-center bg-danger bg-opacity-10 border-danger border-opacity-25">
+                <h6 class="fw-bold text-danger mb-1"><i class="fas fa-exclamation-triangle fa-fade text-warning me-1"></i> Safety Hazard</h6>
+                <small class="text-muted">แจ้งเหตุฉุกเฉิน / พบปัญหาความปลอดภัย</small>
             </div>
             <form id="hazardForm" class="app-card" style="margin: 15px; border-top: 4px solid var(--pe-danger);">
                 <input type="hidden" name="action" value="submit_hazard_report">
