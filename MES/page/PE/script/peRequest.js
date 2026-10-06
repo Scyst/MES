@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 b.classList.remove('active');
                 // Reset Color class
                 const defaultColor = b.dataset.color || 'text-dark';
-                b.classList.remove('text-primary', 'text-danger', 'text-dark', 'text-warning');
+                b.classList.remove('text-primary', 'text-danger', 'text-dark', 'text-warning', 'text-success');
                 b.querySelector('i').className = `fas ${b.dataset.icon}`; // Reset icon class just in case
             });
 
