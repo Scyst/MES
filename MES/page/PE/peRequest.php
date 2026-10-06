@@ -322,10 +322,10 @@ try {
                 <h6 class="fw-bold text-success mb-1"><i class="fas fa-clipboard-check me-1"></i> Pre-Op Safety Audit</h6>
                 <small class="text-muted">ตรวจสอบความพร้อมและเช็คลิสต์ก่อนเริ่มงาน</small>
             </div>
-            <form id="preopForm" class="app-card" style="margin: 15px; border-top: 4px solid var(--pe-primary);">
+            <form id="preopForm" class="app-card">
                 <div class="mb-3">
                     <label class="pe-form-label text-primary">รหัสเครื่องจักร <span class="required">*</span></label>
-                    <input type="text" class="pe-form-input border-primary text-primary fw-bold text-uppercase" style="background-color: var(--pe-primary-light); font-size: 1.1rem;" name="machine_code" id="preop_machineCode" value="<?= htmlspecialchars($_GET['machine_code'] ?? '') ?>" placeholder="เช่น MC-01" required <?= !empty($_GET['machine_code']) ? 'readonly' : '' ?>>
+                    <input type="text" class="pe-form-input text-uppercase" name="machine_code" id="preop_machineCode" value="<?= htmlspecialchars($_GET['machine_code'] ?? '') ?>" placeholder="เช่น MC-01" required <?= !empty($_GET['machine_code']) ? 'readonly' : '' ?>>
                 </div>
                 <div class="row mb-3">
                     <div class="col-6">
@@ -354,7 +354,7 @@ try {
                         <textarea class="pe-form-input" id="failRemarks" name="remarks" rows="2" placeholder="อธิบายปัญหา..."></textarea>
                     </div>
                 </div>
-                <button type="submit" class="btn-app-primary mt-3 w-100" id="submitBtnPreop">
+                <button type="submit" class="pe-btn pe-btn-primary w-100 mt-2" id="submitBtnPreop">
                     <i class="fas fa-save me-2"></i> บันทึกผล
                 </button>
             </form>
@@ -366,14 +366,14 @@ try {
                 <h6 class="fw-bold text-danger mb-1"><i class="fas fa-exclamation-triangle fa-fade text-warning me-1"></i> Safety Hazard</h6>
                 <small class="text-muted">แจ้งเหตุฉุกเฉิน / พบปัญหาความปลอดภัย</small>
             </div>
-            <form id="hazardForm" class="app-card" style="margin: 15px; border-top: 4px solid var(--pe-danger);">
+            <form id="hazardForm" class="app-card">
                 <input type="hidden" name="action" value="submit_hazard_report">
                 <input type="hidden" id="hazard_imageBase64" name="image_base64" value="">
                 <div class="mb-3"><label class="pe-form-label text-danger">รหัสเครื่องจักร <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control text-uppercase" style="border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 12px; padding: 12px 15px;" name="machine_code" id="hazard_machineCode" value="<?= htmlspecialchars($_GET['machine_code'] ?? '') ?>" placeholder="MC-01" required <?= !empty($_GET['machine_code']) ? 'readonly' : '' ?>>
+                    <input type="text" class="pe-form-input text-uppercase" name="machine_code" id="hazard_machineCode" value="<?= htmlspecialchars($_GET['machine_code'] ?? '') ?>" placeholder="MC-01" required <?= !empty($_GET['machine_code']) ? 'readonly' : '' ?>>
                 </div>
                 <div class="mb-3"><label class="pe-form-label">ปัญหา (Issue) <span class="text-danger">*</span></label>
-                    <select class="form-select" name="issue_title" style="border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 12px; padding: 12px 15px;" required>
+                    <select class="pe-form-select" name="issue_title" required>
                         <option value="">-- เลือกหัวข้อ --</option>
                         <option value="ปุ่ม Emergency Stop พัง / ไม่ทำงาน">ปุ่ม Emergency Stop พัง / ไม่ทำงาน</option>
                         <option value="Safety Sensor ถูกปิด / ไม่ทำงาน">Safety Sensor ถูกปิด / ไม่ทำงาน</option>
@@ -383,19 +383,19 @@ try {
                     </select>
                 </div>
                 <div class="mb-3"><label class="pe-form-label">รายละเอียด</label>
-                    <textarea class="form-control" name="issue_detail" rows="2" placeholder="อธิบาย..." style="border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 12px; padding: 12px 15px;"></textarea>
+                    <textarea class="pe-form-textarea" name="issue_detail" rows="2" placeholder="อธิบาย..."></textarea>
                 </div>
                 <div class="mb-3"><label class="pe-form-label text-danger">รูปหลักฐาน <span class="text-danger">*</span></label>
                     <input type="file" id="hazard_cameraInput" accept="image/*" capture="environment" style="display: none;">
-                    <div class="shadow-sm" id="hazard_cameraBtn" style="border: 2px dashed #f87171; color: #dc2626; background: rgba(254, 226, 226, 0.5); border-radius: 16px; padding: 20px 10px; text-align: center; cursor: pointer;">
-                        <i class="fas fa-camera fa-2x mb-2 opacity-75"></i><h6 class="mb-0 fw-bold">แตะถ่ายรูป</h6>
+                    <div class="camera-btn shadow-sm" id="hazard_cameraBtn">
+                        <i class="fas fa-camera fa-2x mb-2"></i><h6 class="mb-0 fw-bold">แตะถ่ายรูป</h6>
                     </div>
                     <div id="hazard_previewContainer" style="display: none; position: relative; margin-top: 15px;">
                         <button type="button" id="hazard_removeImgBtn" style="position: absolute; top: -10px; right: -10px; background: #dc2626; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; z-index: 5;"><i class="fas fa-times"></i></button>
                         <img id="hazard_imagePreview" src="" alt="Preview" style="width: 100%; border-radius: 12px; border: 2px solid #ef4444;">
                     </div>
                 </div>
-                <button type="submit" class="btn w-100" style="background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; border-radius: 14px; padding: 14px; font-weight: 700;">
+                <button type="submit" class="pe-btn pe-btn-danger w-100 mt-2">
                     <i class="fas fa-paper-plane me-2"></i> ส่งแจ้งเหตุ
                 </button>
             </form>
