@@ -242,6 +242,17 @@ let sidebarCollapsed = false;
 
     function animateValue(el, start, end, duration = 600) {
         if (!el) return;
+        
+        // Use current DOM value to prevent jitter if it hasn't changed
+        const currentVal = parseInt(el.textContent.replace(/,/g, '')) || 0;
+        if (currentVal === end) {
+            el.textContent = formatNumber(end);
+            return;
+        }
+        
+        // If we want to force start from 0 on load, the DOM already has '0'
+        start = currentVal;
+        
         const range = end - start;
         const startTime = performance.now();
 

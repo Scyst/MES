@@ -90,16 +90,15 @@ try {
             $stmt->execute($params);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Summary
-            $summaryParams = $params;
+            // Summary (Compute without filter so KPIs remain consistent)
             $summSql = "SELECT 
                             COUNT(*) as total,
                             SUM(CASE WHEN W.status IN ('Open','Assigned','In Progress') THEN 1 ELSE 0 END) as open_count,
                             SUM(CASE WHEN W.status = 'Completed' THEN 1 ELSE 0 END) as completed_count,
                             ISNULL(AVG(CASE WHEN W.status = 'Completed' AND W.repair_minutes IS NOT NULL THEN W.repair_minutes ELSE NULL END), 0) as avg_repair
-                        FROM " . PE_WORK_ORDERS_TABLE . " W WITH (NOLOCK) $where";
+                        FROM " . PE_WORK_ORDERS_TABLE . " W WITH (NOLOCK) WHERE W.is_active = 1";
             $summStmt = $pdo->prepare($summSql);
-            $summStmt->execute($summaryParams);
+            $summStmt->execute();
             $summary = $summStmt->fetch(PDO::FETCH_ASSOC);
 
             echo json_encode(['success' => true, 'data' => $data, 'summary' => $summary]);
