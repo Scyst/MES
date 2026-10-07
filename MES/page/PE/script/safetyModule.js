@@ -511,7 +511,12 @@ const SafetyModule = (function() {
     }
 
     function saveChecklistConfig() {
-        const type = document.getElementById('configMachineType')?.value || '';
+        const machineCode = document.getElementById('machineFrmCode')?.value || '';
+        if (!machineCode) {
+            Swal.fire('Warning', 'กรุณาระบุรหัสเครื่องจักรในแท็บข้อมูลเครื่องจักรก่อนบันทึก Checklist', 'warning');
+            return;
+        }
+
         const rows = document.querySelectorAll('.checklist-row');
         const items = [];
         
@@ -540,8 +545,8 @@ const SafetyModule = (function() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                action: 'save_checklist', 
-                machine_type: type,
+                action: 'save_machine_checklist', 
+                machine_code: machineCode,
                 items: items
             })
         })
@@ -549,13 +554,12 @@ const SafetyModule = (function() {
         .then(data => {
             btn.innerHTML = originalHtml;
             btn.disabled = false;
-            if(data.success) {
-                Swal.fire('Saved!', 'Checklist saved successfully.', 'success');
+            if (data.success) {
+                Swal.fire('Saved!', 'บันทึกรายการตรวจสอบสำเร็จ', 'success');
             } else {
-                Swal.fire('Error', data.message, 'error');
+                Swal.fire('Error', data.message || 'Failed to save', 'error');
             }
-        })
-        .catch(err => {
+        }).catch(err => {
             btn.innerHTML = originalHtml;
             btn.disabled = false;
             console.error(err);
