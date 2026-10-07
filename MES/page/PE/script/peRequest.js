@@ -256,6 +256,12 @@ document.addEventListener('DOMContentLoaded', () => {
             sections.forEach(sec => sec.classList.remove('active'));
             document.getElementById(targetId).classList.add('active');
 
+            if (targetId === 'section-hazard') {
+                document.body.classList.add('hazard-mode');
+            } else {
+                document.body.classList.remove('hazard-mode');
+            }
+
             if (targetId === 'section-history') {
                 loadCurrentHistory();
             }
