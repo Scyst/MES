@@ -366,7 +366,7 @@ try {
                 <h6 class="fw-bold text-danger mb-1"><i class="fas fa-exclamation-triangle fa-fade text-warning me-1"></i> Safety Hazard</h6>
                 <small class="text-muted">แจ้งเหตุฉุกเฉิน / พบปัญหาความปลอดภัย</small>
             </div>
-            <form id="hazardForm" class="app-card">
+            <form id="hazardForm" class="app-card" style="display: flex; flex-direction: column; min-height: calc(100vh - 180px);">
                 <input type="hidden" name="action" value="submit_hazard_report">
                 <input type="hidden" id="hazard_imageBase64" name="image_base64" value="">
                 <div class="mb-3"><label class="pe-form-label text-danger">รหัสเครื่องจักร <span class="text-danger">*</span></label>
@@ -385,17 +385,20 @@ try {
                 <div class="mb-3"><label class="pe-form-label">รายละเอียด</label>
                     <textarea class="pe-form-textarea" name="issue_detail" rows="2" placeholder="อธิบาย..."></textarea>
                 </div>
-                <div class="mb-3"><label class="pe-form-label text-danger">รูปหลักฐาน <span class="text-danger">*</span></label>
+                <div class="mb-3" style="flex-grow: 1; display: flex; flex-direction: column;">
+                    <label class="pe-form-label text-danger">รูปหลักฐาน <span class="text-danger">*</span></label>
                     <input type="file" id="hazard_cameraInput" accept="image/*" capture="environment" style="display: none;">
-                    <div class="camera-btn shadow-sm" id="hazard_cameraBtn">
+                    
+                    <div class="camera-btn shadow-sm" id="hazard_cameraBtn" style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 120px; transition: all 0.3s ease;">
                         <i class="fas fa-camera fa-2x mb-2"></i><h6 class="mb-0 fw-bold">แตะถ่ายรูป</h6>
                     </div>
-                    <div id="hazard_previewContainer" style="display: none; position: relative; margin-top: 15px;">
+                    
+                    <div id="hazard_previewContainer" style="display: none; position: relative; margin-top: 15px; flex-grow: 1;">
                         <button type="button" id="hazard_removeImgBtn" style="position: absolute; top: -10px; right: -10px; background: #dc2626; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; z-index: 5;"><i class="fas fa-times"></i></button>
-                        <img id="hazard_imagePreview" src="" alt="Preview" style="width: 100%; border-radius: 12px; border: 2px solid #ef4444;">
+                        <img id="hazard_imagePreview" src="" alt="Preview" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px; border: 2px solid #ef4444;">
                     </div>
                 </div>
-                <button type="submit" class="pe-btn pe-btn-danger w-100 mt-3">
+                <button type="submit" class="pe-btn pe-btn-danger w-100 mt-3" style="margin-top: auto;">
                     <i class="fas fa-paper-plane me-2"></i> ส่งแจ้งเหตุ
                 </button>
             </form>

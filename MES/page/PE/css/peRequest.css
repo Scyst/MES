@@ -299,35 +299,4 @@ textarea.form-control {
     }
 }
 
-/* Stretch Hazard Section on Mobile */
-body.hazard-mode {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
-    padding-bottom: 0 !important; /* Remove body padding so card can go behind nav */
-    overflow: hidden;
-}
-body.hazard-mode .container-app {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    height: 100%;
-}
-body.hazard-mode #section-hazard {
-    display: flex !important;
-    flex-direction: column;
-    flex-grow: 1;
-    overflow-y: auto;
-}
 
-
-#hazardForm {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 0 !important;
-    border-bottom-left-radius: 0 !important;
-    border-bottom-right-radius: 0 !important;
-    padding-bottom: calc(var(--op-nav-height) + env(safe-area-inset-bottom) + 15px) !important;
-}
