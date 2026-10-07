@@ -303,19 +303,25 @@ textarea.form-control {
 body.hazard-mode {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
     padding-bottom: 0 !important; /* Remove body padding so card can go behind nav */
+    overflow: hidden;
 }
 body.hazard-mode .container-app {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    height: 100%;
 }
 body.hazard-mode #section-hazard {
-    display: flex !important; /* overrides display: block */
+    display: flex !important;
     flex-direction: column;
     flex-grow: 1;
+    overflow-y: auto;
 }
+
+
 #hazardForm {
     flex-grow: 1;
     display: flex;
