@@ -128,7 +128,7 @@ try {
             }
             
             $stmt = $pdo->prepare("
-                SELECT t.serial_no, t.current_qty, t.location_id, t.master_pallet_no, t.received_date, t.warehouse_no, l.location_name
+                SELECT t.serial_no, t.current_qty, t.location_id, t.master_pallet_no, t.received_date, t.warehouse_no, t.pallet_no, t.ctn_number, l.location_name
                 FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
                 LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON t.location_id = l.location_id
                 WHERE $cond

@@ -896,13 +896,17 @@ window.viewStockTags = async function(itemCode, itemDesc) {
             const dateStr = t.received_date ? t.received_date.substring(0, 10) : '-';
             total += parseInt(t.current_qty, 10) || 0;
             const isChecked = existingTags.includes(t.serial_no) ? 'checked' : '';
+            
+            const safePallet = t.pallet_no ? t.pallet_no.replace(/</g, "&lt;").replace(/>/g, "&gt;") : '-';
+            const safeCtn = t.ctn_number ? t.ctn_number.replace(/</g, "&lt;").replace(/>/g, "&gt;") : '-';
+
             html += `
             <label class="list-group-item d-flex justify-content-between align-items-center list-group-item-action cursor-pointer py-1 px-2">
                 <div class="d-flex align-items-center gap-2">
                     <input class="form-check-input me-1 req-tag-checkbox" type="checkbox" value="${t.serial_no}" data-qty="${t.current_qty}" ${isChecked} style="transform: scale(0.85);">
                     <div style="font-size: 0.85rem;">
                         <div class="fw-bold text-dark" style="font-size: 0.9rem;">${t.serial_no}</div>
-                        <small class="text-muted" style="font-size: 0.75rem;">Loc: ${t.location_name || '-'} | In: ${dateStr}</small>
+                        <small class="text-muted" style="font-size: 0.75rem;">Loc: ${t.location_name || '-'} | Pallet: ${safePallet} / CTN: ${safeCtn} | In: ${dateStr}</small>
                     </div>
                 </div>
                 <span class="badge bg-primary rounded-pill" style="font-size: 0.8rem;">${parseInt(t.current_qty, 10).toLocaleString()} ชิ้น</span>
