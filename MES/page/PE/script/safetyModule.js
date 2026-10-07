@@ -450,9 +450,11 @@ const SafetyModule = (function() {
 
     function addChecklistRow(item = null) {
         const tbody = document.getElementById('checklistConfigBody');
-        // Clear only the loading placeholder row (identified by data-loading attribute)
+        // Clear only the loading placeholder row or empty placeholder row
         const loadingRow = tbody.querySelector('tr[data-loading]');
+        const emptyRow = tbody.querySelector('tr[data-empty]');
         if (loadingRow) loadingRow.remove();
+        if (emptyRow) emptyRow.remove();
         
         const rowCount = tbody.children.length + 1;
         const tr = document.createElement('tr');
