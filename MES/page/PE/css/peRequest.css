@@ -304,6 +304,7 @@ body.hazard-mode {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    padding-bottom: 0 !important; /* Remove body padding so card can go behind nav */
 }
 body.hazard-mode .container-app {
     display: flex;
@@ -322,5 +323,5 @@ body.hazard-mode #section-hazard {
     margin-bottom: 0 !important;
     border-bottom-left-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
-    padding-bottom: calc(var(--op-nav-height) + 20px) !important;
+    padding-bottom: calc(var(--op-nav-height) + env(safe-area-inset-bottom) + 15px) !important;
 }
