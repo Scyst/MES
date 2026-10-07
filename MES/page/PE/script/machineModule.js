@@ -186,6 +186,13 @@ const MachineModule = (() => {
         document.getElementById('machineEditId').value = editId || '';
         document.getElementById('machineModalTitle').textContent = editId ? 'Edit Machine' : 'Add Machine';
         
+        // Reset tabs
+        const infoTab = document.getElementById('info-tab');
+        if (infoTab) {
+            const tab = new bootstrap.Tab(infoTab);
+            tab.show();
+        }
+        
         const isDeleted = editId && allData.find(m => m.machine_id == editId && (m.is_active === 0 || m.is_active === '0'));
         
         document.getElementById('machineSaveBtn').innerHTML = editId
@@ -226,6 +233,11 @@ const MachineModule = (() => {
         if (previewDiv) previewDiv.style.display = 'none';
         const placeholderDiv = document.getElementById('machineImagePlaceholder');
         if (placeholderDiv) placeholderDiv.style.display = 'block';
+        
+        // Clear Checklist (assuming new by default)
+        if (window.SafetyModule && typeof SafetyModule.loadMachineChecklist === 'function') {
+            SafetyModule.loadMachineChecklist(null);
+        }
 
         // Load data if editing
         if (editId) {
@@ -261,6 +273,11 @@ const MachineModule = (() => {
                         const placeholderDiv = document.getElementById('machineImagePlaceholder');
                         if (placeholderDiv) placeholderDiv.style.display = 'none';
                     }
+                }
+                
+                // Load Checklist
+                if (window.SafetyModule && typeof SafetyModule.loadMachineChecklist === 'function') {
+                    SafetyModule.loadMachineChecklist(machine.machine_code);
                 }
             }
         }

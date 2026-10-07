@@ -63,9 +63,6 @@
     <button class="pe-btn pe-btn-secondary" onclick="MachineModule.openDiscoveryModal()" style="margin-right: 8px;">
         <i class="fas fa-satellite-dish"></i> <?php _e('pe.btn_iiot_discovery'); ?>
     </button>
-    <button class="pe-btn pe-btn-warning" onclick="SafetyModule.openChecklistConfig()" style="margin-right: 8px; color: white;">
-        <i class="fas fa-tasks"></i> จัดการ Pre-Op Checklist
-    </button>
     <button class="pe-btn pe-btn-primary" onclick="MachineModule.openModal()">
         <i class="fas fa-plus"></i> <?php _e('pe.btn_add_machine'); ?>
     </button>

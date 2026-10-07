@@ -398,52 +398,47 @@ const SafetyModule = (function() {
         statsModal.show();
     }
 
-    // --- Checklist Config ---
-    function openChecklistConfig() {
-        if (!checklistModal) {
-            const el = document.getElementById('checklistModal');
-            if (el) {
-                checklistModal = new bootstrap.Modal(el);
-            } else {
-                console.error('checklistModal element not found');
-                return;
-            }
-        }
-        
-        // Load machine types for dropdown
-        fetch('api/preopAPI.php?action=get_machine_types')
-            .then(res => res.json())
-            .then(data => {
-                if(data.success && data.data) {
-                    const select = document.getElementById('configMachineType');
-                    let html = '<option value="">-- Default Checklist (All Machines) --</option>';
-                    data.data.forEach(mt => {
-                        html += `<option value="${mt}">${mt}</option>`;
-                    });
-                    select.innerHTML = html;
-                }
-                loadChecklistConfig();
-                checklistModal.show();
-            })
-            .catch(console.error);
-    }
-
-    function loadChecklistConfig() {
-        const type = document.getElementById('configMachineType')?.value || '';
+    // --- Machine-Specific Checklist Config ---
+    function loadMachineChecklist(machineCode) {
         const tbody = document.getElementById('checklistConfigBody');
         tbody.innerHTML = '<tr data-loading><td colspan="4" class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังโหลด...</td></tr>';
         
+        // Populate copy dropdown
         fetch('api/preopAPI.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_checklist', machine_type: type })
+            body: JSON.stringify({ action: 'get_machines_with_checklists' })
+        })
+        .then(res => res.json())
+        .then(data => {
+            const select = document.getElementById('machineFrmCopyChecklist');
+            if (select && data.success && data.data) {
+                let html = '<option value="">-- เลือกเครื่องจักร --</option>';
+                data.data.forEach(m => {
+                    if (m.machine_code !== machineCode) {
+                        html += `<option value="${m.machine_code}">${m.machine_code} - ${m.machine_name}</option>`;
+                    }
+                });
+                select.innerHTML = html;
+            }
+        }).catch(console.error);
+
+        if (!machineCode) {
+            tbody.innerHTML = '<tr data-empty><td colspan="4" class="text-center py-3 text-muted">กด "เพิ่มรายการ" เพื่อเริ่มต้นสร้างแบบฟอร์มตรวจสอบ</td></tr>';
+            return;
+        }
+
+        fetch('api/preopAPI.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_machine_checklist_config', machine_code: machineCode })
         })
         .then(res => res.json())
         .then(data => {
             tbody.innerHTML = ''; // clear loading row
             if (data.success) {
                 if(data.data.length === 0) {
-                    tbody.innerHTML = '<tr data-empty><td colspan="4" class="text-center py-3 text-muted">ยังไม่มีรายการตรวจสอบสำหรับประเภทนี้ กด "เพิ่มรายการ" เพื่อเริ่มต้น</td></tr>';
+                    tbody.innerHTML = '<tr data-empty><td colspan="4" class="text-center py-3 text-muted">ยังไม่มีรายการตรวจสอบสำหรับเครื่องนี้ กด "เพิ่มรายการ" หรือ "คัดลอก" จากเครื่องอื่น</td></tr>';
                     return;
                 }
                 data.data.forEach(item => {
@@ -454,6 +449,37 @@ const SafetyModule = (function() {
         .catch(() => {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger"><i class="fas fa-exclamation-circle me-2"></i>เกิดข้อผิดพลาด กรุณาลองใหม่</td></tr>';
         });
+    }
+
+    function copyChecklistToMachine() {
+        const copyFrom = document.getElementById('machineFrmCopyChecklist').value;
+        if (!copyFrom) {
+            Swal.fire('Warning', 'กรุณาเลือกเครื่องจักรที่ต้องการคัดลอก', 'warning');
+            return;
+        }
+        
+        const tbody = document.getElementById('checklistConfigBody');
+        tbody.innerHTML = '<tr data-loading><td colspan="4" class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังคัดลอก...</td></tr>';
+        
+        fetch('api/preopAPI.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_machine_checklist_config', machine_code: copyFrom })
+        })
+        .then(res => res.json())
+        .then(data => {
+            tbody.innerHTML = ''; 
+            if (data.success) {
+                if(data.data.length === 0) {
+                    tbody.innerHTML = '<tr data-empty><td colspan="4" class="text-center py-3 text-muted">ไม่พบข้อมูลให้คัดลอก กด "เพิ่มรายการ" เพื่อเริ่มต้นสร้าง</td></tr>';
+                    Swal.fire('Info', 'เครื่องจักรที่เลือกไม่มีรายการตรวจสอบ', 'info');
+                    return;
+                }
+                data.data.forEach(item => {
+                    addChecklistRow(item);
+                });
+            }
+        }).catch(console.error);
     }
 
     function addChecklistRow(item = null) {
@@ -553,8 +579,8 @@ const SafetyModule = (function() {
         filterTable: filterTable,
         viewDetails: viewDetails,
         updateStatus: updateStatus,
-        openChecklistConfig: openChecklistConfig,
-        loadChecklistConfig: loadChecklistConfig,
+        loadMachineChecklist: loadMachineChecklist,
+        copyChecklistToMachine: copyChecklistToMachine,
         addChecklistRow: addChecklistRow,
         saveChecklistConfig: saveChecklistConfig,
         openStatsModal: openStatsModal,

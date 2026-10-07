@@ -12,7 +12,24 @@
                 <input type="hidden" id="machineFrmMapY">
                 <input type="hidden" id="machineFrmAreaId">
                 
-                <div class="row g-3">
+                <!-- Nav Tabs -->
+                <ul class="nav nav-tabs mb-3" id="machineModalTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#tab-info" type="button" role="tab" aria-controls="tab-info" aria-selected="true">
+                            <i class="fas fa-info-circle me-1"></i> ข้อมูลเครื่องจักร (Info)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="checklist-tab" data-bs-toggle="tab" data-bs-target="#tab-checklist" type="button" role="tab" aria-controls="tab-checklist" aria-selected="false">
+                            <i class="fas fa-tasks me-1"></i> รายการเช็ค (Pre-Op)
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="machineModalTabContent">
+                    <!-- Tab 1: Machine Info -->
+                    <div class="tab-pane fade show active" id="tab-info" role="tabpanel" aria-labelledby="info-tab">
+                        <div class="row g-3">
                     <div class="col-md-4">
                         <div class="pe-form-group">
                             <label class="pe-form-label">Machine Code <span class="required">*</span></label>
@@ -145,6 +162,45 @@
                         <div class="pe-form-group">
                             <label class="pe-form-label">Notes</label>
                             <textarea class="pe-form-textarea" id="machineFrmNotes" rows="3" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
+                        </div>
+                    </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab 2: Pre-Op Checklist -->
+                    <div class="tab-pane fade" id="tab-checklist" role="tabpanel" aria-labelledby="checklist-tab">
+                        <div class="d-flex align-items-center gap-3 mb-3 p-3 rounded" style="background: var(--pe-bg-hover);">
+                            <label class="fw-bold text-nowrap mb-0" style="font-size:13px;">คัดลอกแบบฟอร์มจาก:</label>
+                            <select id="machineFrmCopyChecklist" class="form-select form-select-sm" style="max-width:250px;">
+                                <option value="">-- เลือกเครื่องจักร --</option>
+                            </select>
+                            <button class="pe-btn pe-btn-secondary pe-btn-sm text-nowrap" onclick="SafetyModule.copyChecklistToMachine()">
+                                <i class="fas fa-copy"></i> คัดลอก
+                            </button>
+                            <button class="pe-btn pe-btn-primary pe-btn-sm ms-auto text-nowrap" onclick="SafetyModule.addChecklistRow()">
+                                <i class="fas fa-plus"></i> เพิ่มรายการ
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="pe-table mb-0">
+                                <thead style="position: sticky; top: 0; z-index: 1; background: var(--pe-bg-table-header);">
+                                    <tr>
+                                        <th style="width:60px;" class="text-center">ลำดับ</th>
+                                        <th>รายการตรวจสอบ</th>
+                                        <th style="width:80px;" class="text-center">Critical</th>
+                                        <th style="width:60px;" class="text-center">ลบ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="checklistConfigBody">
+                                    <tr><td colspan="4" class="text-center py-4 text-muted">กำลังโหลด...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end mt-3">
+                            <button type="button" class="pe-btn pe-btn-success pe-btn-sm" onclick="SafetyModule.saveChecklistConfig()">
+                                <i class="fas fa-save me-1"></i> บันทึก Checklist ของเครื่องนี้
+                            </button>
                         </div>
                     </div>
                 </div>

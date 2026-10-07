@@ -67,29 +67,11 @@ if ($action === 'get_dashboard_stats') {
 if ($action === 'get_checklist') {
     try {
         $machineCode = $input['machine_code'] ?? '';
-        $machineType = null;
-        
-        if (!empty($machineCode)) {
-            $mStmt = $pdo->prepare("SELECT machine_type FROM " . PE_MACHINES_TABLE . " WHERE machine_code = ? OR machine_name = ?");
-            $mStmt->execute([$machineCode, $machineCode]);
-            $mData = $mStmt->fetch(PDO::FETCH_ASSOC);
-            if ($mData && !empty($mData['machine_type'])) {
-                $machineType = $mData['machine_type'];
-            }
-        }
-        
-        // Find items for specific machine type, fallback to NULL (default)
-        $sql = "SELECT * FROM PE_PREOP_CHECKLIST_TEMPLATE WHERE machine_type = ? ORDER BY item_order ASC";
+        // Find items for specific machine code
+        $sql = "SELECT * FROM PE_PREOP_CHECKLIST_TEMPLATE WHERE machine_code = ? ORDER BY item_order ASC";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$machineType]);
+        $stmt->execute([$machineCode]);
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        if (empty($items)) {
-            // Fallback to default
-            $stmt = $pdo->prepare("SELECT * FROM PE_PREOP_CHECKLIST_TEMPLATE WHERE machine_type IS NULL ORDER BY item_order ASC");
-            $stmt->execute();
-            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
         
         $alreadyAudited = false;
         if (!empty($machineCode)) {
@@ -103,7 +85,7 @@ if ($action === 'get_checklist') {
             $alreadyAudited = ($checkStmt->fetchColumn() > 0);
         }
         
-        echo json_encode(['success' => true, 'data' => $items, 'machine_type' => $machineType, 'already_audited' => $alreadyAudited]);
+        echo json_encode(['success' => true, 'data' => $items, 'already_audited' => $alreadyAudited]);
     } catch (Throwable $e) {
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
@@ -144,6 +126,71 @@ if ($action === 'save_checklist') {
         foreach ($items as $item) {
             $insStmt->execute([
                 $machineType,
+                $item['item_order'],
+                $item['item_text'],
+                $item['is_critical']
+            ]);
+        }
+        
+        $pdo->commit();
+        echo json_encode(['success' => true, 'message' => 'Checklist saved successfully']);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+}
+
+if ($action === 'get_machines_with_checklists') {
+    try {
+        $sql = "SELECT DISTINCT c.machine_code, m.machine_name 
+                FROM PE_PREOP_CHECKLIST_TEMPLATE c
+                JOIN " . PE_MACHINES_TABLE . " m ON c.machine_code = m.machine_code
+                WHERE c.machine_code IS NOT NULL";
+        $stmt = $pdo->query($sql);
+        $machines = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'data' => $machines]);
+    } catch (Throwable $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'get_machine_checklist_config') {
+    try {
+        $machineCode = $input['machine_code'] ?? '';
+        if (empty($machineCode)) throw new Exception("Machine Code is required");
+        
+        $sql = "SELECT * FROM PE_PREOP_CHECKLIST_TEMPLATE WHERE machine_code = ? ORDER BY item_order ASC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$machineCode]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode(['success' => true, 'data' => $items]);
+    } catch (Throwable $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'save_machine_checklist') {
+    try {
+        $machineCode = $input['machine_code'] ?? '';
+        $items = $input['items'] ?? [];
+        if (empty($machineCode)) throw new Exception("Machine Code is required");
+        
+        $pdo->beginTransaction();
+        
+        // Delete old items for this machine
+        $delStmt = $pdo->prepare("DELETE FROM PE_PREOP_CHECKLIST_TEMPLATE WHERE machine_code = ?");
+        $delStmt->execute([$machineCode]);
+        
+        // Insert new items
+        $insSql = "INSERT INTO PE_PREOP_CHECKLIST_TEMPLATE (machine_code, item_order, item_text, is_critical) VALUES (?, ?, ?, ?)";
+        $insStmt = $pdo->prepare($insSql);
+        
+        foreach ($items as $item) {
+            $insStmt->execute([
+                $machineCode,
                 $item['item_order'],
                 $item['item_text'],
                 $item['is_critical']
