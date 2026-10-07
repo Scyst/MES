@@ -412,10 +412,10 @@ try {
             <button class="nav-item-btn position-relative" data-target="section-preop" data-title="Pre-Op Safety Audit" data-icon="fa-clipboard-check" data-color="text-success"> 
                 <i class="fas fa-clipboard-check"></i>
                 <span class="position-absolute top-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle" id="preop_status_badge" style="display: none; margin-top: 10px; margin-left: -20px;"><span class="visually-hidden">Audited</span></span>
-                <span>Pre-Op</span>
+                <span>ก่อนเริ่ม</span>
             </button>
             <button class="nav-item-btn" data-target="section-hazard" data-title="Safety Hazard" data-icon="fa-exclamation-triangle" data-color="text-danger"> 
-                <i class="fas fa-exclamation-triangle"></i><span>Hazard</span>
+                <i class="fas fa-exclamation-triangle"></i><span>จุดเสี่ยง</span>
             </button>
             <button class="nav-item-btn active" data-target="section-request" data-title="แจ้งซ่อมเครื่องจักร" data-icon="fa-tools" data-color="text-primary"> 
                 <i class="fas fa-tools"></i><span>แจ้งซ่อม</span>
