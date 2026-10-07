@@ -307,7 +307,9 @@ const MachineModule = (() => {
         }
 
         const btn = document.getElementById('machineSaveBtn');
+        const originalHtml = btn.innerHTML;
         btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
 
         try {
             let imagePath = null;
@@ -342,8 +344,13 @@ const MachineModule = (() => {
             }
 
             await PEApp.apiCall('machineAPI.php', {}, 'POST', payload);
+            
+            // Save Checklist automatically if SafetyModule is available
+            if (window.SafetyModule && typeof SafetyModule.saveChecklistConfigSilent === 'function') {
+                await SafetyModule.saveChecklistConfigSilent(code);
+            }
 
-            PEApp.showToast('บันทึกเครื่องจักรเรียบร้อย', 'success');
+            PEApp.showToast('บันทึกข้อมูลเครื่องจักรและรายการตรวจเช็คเรียบร้อย', 'success');
             PEApp.hideModal('machineModal');
             loadData();
             document.dispatchEvent(new CustomEvent('peMachineSaved'));
@@ -351,6 +358,7 @@ const MachineModule = (() => {
             PEApp.showToast(e.message, 'error');
         } finally {
             btn.disabled = false;
+            btn.innerHTML = originalHtml;
         }
     }
 

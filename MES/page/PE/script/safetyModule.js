@@ -482,40 +482,51 @@ const SafetyModule = (function() {
         }).catch(console.error);
     }
 
+    function updateChecklistRowOrders() {
+        const rows = document.querySelectorAll('.checklist-row');
+        rows.forEach((tr, index) => {
+            const orderSpan = tr.querySelector('.row-order-display');
+            if (orderSpan) orderSpan.textContent = index + 1;
+            const orderInput = tr.querySelector('.row-order');
+            if (orderInput) orderInput.value = index + 1;
+        });
+    }
+
+    function removeChecklistRow(btn) {
+        btn.closest('tr').remove();
+        updateChecklistRowOrders();
+    }
+
     function addChecklistRow(item = null) {
         const tbody = document.getElementById('checklistConfigBody');
-        // Clear only the loading placeholder row or empty placeholder row
         const loadingRow = tbody.querySelector('tr[data-loading]');
         const emptyRow = tbody.querySelector('tr[data-empty]');
         if (loadingRow) loadingRow.remove();
         if (emptyRow) emptyRow.remove();
         
-        const rowCount = tbody.children.length + 1;
         const tr = document.createElement('tr');
         tr.className = 'checklist-row';
         tr.innerHTML = `
-            <td>
-                <input type="number" class="form-control form-control-sm text-center row-order" value="${item ? item.item_order : rowCount}" min="1">
+            <td class="text-center align-middle">
+                <span class="row-order-display fw-bold text-muted"></span>
+                <input type="hidden" class="row-order" value="">
             </td>
             <td>
                 <input type="text" class="form-control form-control-sm row-text" value="${item ? item.item_text.replace(/"/g, '&quot;') : ''}" placeholder="กรอกรายการตรวจสอบ..." required>
             </td>
-            <td class="text-center">
+            <td class="text-center align-middle">
                 <input type="checkbox" class="form-check-input row-critical" ${!item || item.is_critical ? 'checked' : ''}>
             </td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()" title="ลบรายการนี้"><i class="fas fa-trash"></i></button>
+            <td class="text-center align-middle">
+                <button class="btn btn-sm btn-outline-danger" onclick="SafetyModule.removeChecklistRow(this)" title="ลบรายการนี้"><i class="fas fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
+        updateChecklistRowOrders();
     }
 
-    function saveChecklistConfig() {
-        const machineCode = document.getElementById('machineFrmCode')?.value || '';
-        if (!machineCode) {
-            Swal.fire('Warning', 'กรุณาระบุรหัสเครื่องจักรในแท็บข้อมูลเครื่องจักรก่อนบันทึก Checklist', 'warning');
-            return;
-        }
+    async function saveChecklistConfigSilent(machineCode) {
+        if (!machineCode) return;
 
         const rows = document.querySelectorAll('.checklist-row');
         const items = [];
@@ -531,41 +542,29 @@ const SafetyModule = (function() {
             }
         });
 
-        if(items.length === 0) {
-            Swal.fire('Warning', 'Checklist must have at least one question', 'warning');
-            return;
-        }
-
-        const btn = event.target.closest('button');
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-        btn.disabled = true;
-
-        fetch('api/preopAPI.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                action: 'save_machine_checklist', 
-                machine_code: machineCode,
-                items: items
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            btn.innerHTML = originalHtml;
-            btn.disabled = false;
-            if (data.success) {
-                Swal.fire('Saved!', 'บันทึกรายการตรวจสอบสำเร็จ', 'success');
-            } else {
-                Swal.fire('Error', data.message || 'Failed to save', 'error');
+        // If no rows, we can still save (it will just clear the checklist for this machine)
+        
+        try {
+            const res = await fetch('api/preopAPI.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    action: 'save_machine_checklist', 
+                    machine_code: machineCode,
+                    items: items
+                })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                throw new Error(data.message || 'Failed to save checklist');
             }
-        }).catch(err => {
-            btn.innerHTML = originalHtml;
-            btn.disabled = false;
+        } catch (err) {
             console.error(err);
-            Swal.fire('Error', 'Network Error', 'error');
-        });
+            throw err;
+        }
     }
+
+
 
     function setKpiFilter(statusValue) {
         const filterEl = document.getElementById('safetyStatusFilter');
@@ -586,7 +585,8 @@ const SafetyModule = (function() {
         loadMachineChecklist: loadMachineChecklist,
         copyChecklistToMachine: copyChecklistToMachine,
         addChecklistRow: addChecklistRow,
-        saveChecklistConfig: saveChecklistConfig,
+        removeChecklistRow: removeChecklistRow,
+        saveChecklistConfigSilent: saveChecklistConfigSilent,
         openStatsModal: openStatsModal,
         setKpiFilter: setKpiFilter
     };

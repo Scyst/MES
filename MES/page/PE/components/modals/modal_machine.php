@@ -197,10 +197,6 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="text-end mt-3">
-                            <button type="button" class="pe-btn pe-btn-success pe-btn-sm" onclick="SafetyModule.saveChecklistConfig()">
-                                <i class="fas fa-save me-1"></i> บันทึก Checklist ของเครื่องนี้
-                            </button>
                         </div>
                     </div>
                 </div>
