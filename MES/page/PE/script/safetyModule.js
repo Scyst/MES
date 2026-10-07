@@ -400,7 +400,15 @@ const SafetyModule = (function() {
 
     // --- Checklist Config ---
     function openChecklistConfig() {
-        if (!checklistModal) return;
+        if (!checklistModal) {
+            const el = document.getElementById('checklistModal');
+            if (el) {
+                checklistModal = new bootstrap.Modal(el);
+            } else {
+                console.error('checklistModal element not found');
+                return;
+            }
+        }
         
         // Load machine types for dropdown
         fetch('api/preopAPI.php?action=get_machine_types')
