@@ -901,15 +901,20 @@ window.viewStockTags = async function(itemCode, itemDesc) {
             const safeCtn = t.ctn_number ? t.ctn_number.replace(/</g, "&lt;").replace(/>/g, "&gt;") : '-';
 
             html += `
-            <label class="list-group-item d-flex justify-content-between align-items-center list-group-item-action cursor-pointer py-1 px-2">
-                <div class="d-flex align-items-center gap-2">
-                    <input class="form-check-input me-1 req-tag-checkbox" type="checkbox" value="${t.serial_no}" data-qty="${t.current_qty}" ${isChecked} style="transform: scale(0.85);">
-                    <div style="font-size: 0.85rem;">
-                        <div class="fw-bold text-dark" style="font-size: 0.9rem;">${t.serial_no}</div>
-                        <small class="text-muted" style="font-size: 0.75rem;">Loc: ${t.location_name || '-'} | Pallet: ${safePallet} / CTN: ${safeCtn} | In: ${dateStr}</small>
+            <label class="list-group-item d-flex justify-content-between align-items-center list-group-item-action cursor-pointer py-2 px-3">
+                <div class="d-flex align-items-center gap-3">
+                    <input class="form-check-input me-1 req-tag-checkbox" type="checkbox" value="${t.serial_no}" data-qty="${t.current_qty}" ${isChecked} style="transform: scale(1.2);">
+                    <div style="line-height: 1.4;">
+                        <div class="fw-bold text-dark" style="font-size: 0.95rem;">${t.serial_no}</div>
+                        <div class="text-muted d-flex flex-wrap gap-2 mt-1" style="font-size: 0.8rem;">
+                            <span><i class="fas fa-map-marker-alt text-danger opacity-75 me-1"></i>${t.location_name || '-'}</span>
+                            <span class="border-start ps-2"><i class="fas fa-pallet text-secondary opacity-75 me-1"></i>${safePallet}</span>
+                            <span class="border-start ps-2"><i class="fas fa-box text-warning opacity-75 me-1"></i>${safeCtn}</span>
+                            <span class="border-start ps-2"><i class="far fa-calendar-alt text-info opacity-75 me-1"></i>${dateStr}</span>
+                        </div>
                     </div>
                 </div>
-                <span class="badge bg-primary rounded-pill" style="font-size: 0.8rem;">${parseInt(t.current_qty, 10).toLocaleString()} ชิ้น</span>
+                <span class="badge bg-primary rounded-pill px-3 py-2 shadow-sm" style="font-size: 0.85rem;">${parseInt(t.current_qty, 10).toLocaleString()} ชิ้น</span>
             </label>`;
         });
         html += `</div>`;
@@ -921,7 +926,7 @@ window.viewStockTags = async function(itemCode, itemDesc) {
             showCancelButton: true,
             confirmButtonText: 'อัปเดตตะกร้า',
             cancelButtonText: 'ปิด',
-            width: '500px',
+            width: '650px',
             preConfirm: () => {
                 const checkboxes = document.querySelectorAll('.req-tag-checkbox:checked');
                 let newSelectedTags = [];
