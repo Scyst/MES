@@ -366,7 +366,7 @@ try {
                 <h6 class="fw-bold text-danger mb-1"><i class="fas fa-exclamation-triangle fa-fade text-warning me-1"></i> Safety Hazard</h6>
                 <small class="text-muted">แจ้งเหตุฉุกเฉิน / พบปัญหาความปลอดภัย</small>
             </div>
-            <form id="hazardForm" class="app-card" style="display: flex; flex-direction: column; min-height: calc(100vh - 180px);">
+            <form id="hazardForm" class="app-card" style="display: flex; flex-direction: column; min-height: calc(100vh - 270px);">
                 <input type="hidden" name="action" value="submit_hazard_report">
                 <input type="hidden" id="hazard_imageBase64" name="image_base64" value="">
                 <div class="mb-3"><label class="pe-form-label text-danger">รหัสเครื่องจักร <span class="text-danger">*</span></label>
