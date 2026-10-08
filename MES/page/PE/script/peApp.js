@@ -1,4 +1,4 @@
-// peApp.js — PE Enterprise Core Application Controller
+﻿// peApp.js โ€” PE Enterprise Core Application Controller
 
 // Internal state
 let currentTab = 'machines';
@@ -108,7 +108,7 @@ let sidebarCollapsed = false;
         const json = await res.json();
         if (!json.success) {
             if (json.message === 'CSRF token validation failed.' || json.message?.includes('CSRF')) {
-                showToast('เซสชันมีปัญหาหรือหมดอายุ ระบบกำลังรีเฟรชหน้าจอ...', 'warning');
+                showToast('เน€เธเธชเธเธฑเธเธกเธตเธเธฑเธเธซเธฒเธซเธฃเธทเธญเธซเธกเธ”เธญเธฒเธขเธธ เธฃเธฐเธเธเธเธณเธฅเธฑเธเธฃเธตเน€เธเธฃเธเธซเธเนเธฒเธเธญ...', 'warning');
                 setTimeout(() => window.location.reload(), 1500);
                 return new Promise(() => { }); // prevent further execution
             }
@@ -130,7 +130,7 @@ let sidebarCollapsed = false;
         const json = await res.json();
         if (!json.success) {
             if (json.message === 'CSRF token validation failed.' || json.message?.includes('CSRF')) {
-                showToast('เซสชันมีปัญหาหรือหมดอายุ ระบบกำลังรีเฟรชหน้าจอ...', 'warning');
+                showToast('เน€เธเธชเธเธฑเธเธกเธตเธเธฑเธเธซเธฒเธซเธฃเธทเธญเธซเธกเธ”เธญเธฒเธขเธธ เธฃเธฐเธเธเธเธณเธฅเธฑเธเธฃเธตเน€เธเธฃเธเธซเธเนเธฒเธเธญ...', 'warning');
                 setTimeout(() => window.location.reload(), 1500);
                 return new Promise(() => { });
             }
@@ -198,7 +198,7 @@ let sidebarCollapsed = false;
     }
 
     function formatCurrency(num) {
-        return '฿' + formatNumber(num, 2);
+        return 'เธฟ' + formatNumber(num, 2);
     }
 
     function getStatusBadge(status) {
@@ -387,7 +387,7 @@ function updateNotificationUI(notifs) {
     } else {
         notifyBadge.style.display = 'none';
         notifyCountText.innerText = '(0)';
-        notifyList.innerHTML = '<div style="padding: 15px; text-align: center; color: #888; font-size: 0.9em;">����ա������͹����</div>';
+        notifyList.innerHTML = '<div style="padding: 15px; text-align: center; color: #888; font-size: 0.9em;">ไม่มีการแจ้งเตือนใหม่</div>';
     }
 }
 
@@ -431,4 +431,5 @@ setTimeout(pollNotifications, 1000); // Initial fetch
 
 
 export default PEApp;
+
 

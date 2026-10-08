@@ -248,6 +248,9 @@ $pageTitle = "PE Enterprise";
     include __DIR__ . '/components/modals/modal_wo_filters.php';
     include __DIR__ . '/components/modals/modal_loto.php';
     include __DIR__ . '/components/modals/modal_checklist.php';
+    include __DIR__ . '/components/modals/modal_hazard.php';
+    include __DIR__ . '/components/modals/modal_safety_stats.php';
+    include __DIR__ . '/components/modals/modal_iiot.php';
 ?>
 
 <!-- Cropper Modal -->
