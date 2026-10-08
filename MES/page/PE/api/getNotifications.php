@@ -6,20 +6,24 @@ require_once __DIR__ . '/../../components/init.php';
 requirePermission(['view_dashboard']);
 
 try {
-    // Fetch active notifications
+    // Fetch top 10 notifications for the dropdown
     $stmt = $pdo->prepare("
-        SELECT id, module, ref_id, title, message, alert_level, created_at 
+        SELECT TOP 10 id, module, ref_id, title, message, alert_level, created_at, is_active 
         FROM dbo.PE_NOTIFICATIONS 
-        WHERE is_active = 1 
         ORDER BY created_at DESC
     ");
     $stmt->execute();
     $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Fetch total unread count
+    $stmtCount = $pdo->query("SELECT COUNT(*) FROM dbo.PE_NOTIFICATIONS WHERE is_active = 1");
+    $unreadCount = $stmtCount->fetchColumn();
+
     echo json_encode([
         'success' => true,
         'data' => $notifications,
-        'count' => count($notifications)
+        'count' => count($notifications),
+        'unreadCount' => (int)$unreadCount
     ]);
 
 } catch (Exception $e) {

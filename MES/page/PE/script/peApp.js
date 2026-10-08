@@ -350,41 +350,44 @@ function fetchNotifications() {
         .then(r => r.json())
         .then(res => {
             if (res.success && res.data) {
-                updateNotificationUI(res.data);
+                updateNotificationUI(res.data, res.unreadCount);
             }
         })
         .catch(err => console.error('Error fetching notifications:', err));
 }
 
-function updateNotificationUI(notifs) {
+function updateNotificationUI(notifs, unreadCount = 0) {
     if (!notifyBadge || !notifyList) return;
 
-    if (notifs.length > 0) {
+    if (unreadCount > 0) {
         notifyBadge.style.display = 'inline-block';
-        notifyBadge.innerText = notifs.length > 99 ? '99+' : notifs.length;
-        notifyCountText.innerText = '(' + notifs.length + ')';
-        
+        notifyBadge.innerText = unreadCount > 99 ? '99+' : unreadCount;
+        notifyCountText.innerText = '(' + unreadCount + ')';
+    } else {
+        notifyBadge.style.display = 'none';
+        notifyCountText.innerText = '(0)';
+    }
+
+    if (notifs && notifs.length > 0) {
         let html = '';
         notifs.forEach(n => {
-            // Check for new notifications to toast
             if (!knownNotificationIds.has(n.id)) {
                 knownNotificationIds.add(n.id);
-                // Toast newly discovered notification (if not first load)
-                if (knownNotificationIds.size > notifs.length) { 
-                    // This logic prevents toasting everything on first load.
-                    // Wait, a better way: store a flag if it's initial load.
-                }
             }
 
             let icon = 'fa-info-circle text-info';
             if (n.alert_level === 'danger') icon = 'fa-exclamation-triangle text-danger';
             if (n.alert_level === 'warning') icon = 'fa-exclamation-circle text-warning';
 
+            let bgClass = n.is_active == 1 ? 'background: #fdfdfd;' : 'background: #fafafa; opacity: 0.85;';
+            let dot = n.is_active == 1 ? '<div style="width: 8px; height: 8px; border-radius: 50%; background: var(--pe-danger); margin-top: 6px;"></div>' : '<div style="width: 8px; height: 8px; margin-top: 6px;"></div>';
+
             html += `
-                <div style="padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 0.9em;">
+                <div style="padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 0.9em; ${bgClass}">
                     <div style="display: flex; align-items: start; gap: 10px;">
+                        ${dot}
                         <i class="fas ${icon}" style="margin-top: 3px;"></i>
-                        <div>
+                        <div style="flex: 1;">
                             <div style="font-weight: bold; color: #333;">${n.title}</div>
                             <div style="color: #666; margin-top: 2px; white-space: pre-wrap;">${n.message}</div>
                             <div style="color: #aaa; font-size: 0.8em; margin-top: 4px;">${n.created_at}</div>
@@ -395,12 +398,9 @@ function updateNotificationUI(notifs) {
         });
         notifyList.innerHTML = html;
     } else {
-        notifyBadge.style.display = 'none';
-        notifyCountText.innerText = '(0)';
-        notifyList.innerHTML = '<div style="padding: 15px; text-align: center; color: #888; font-size: 0.9em;">����ա������͹����</div>';
+        notifyList.innerHTML = '<div style="padding: 15px; text-align: center; color: #888; font-size: 0.9em;">ไม่มีการแจ้งเตือนใหม่</div>';
     }
 }
-
 let isFirstNotifyLoad = true;
 function pollNotifications() {
     fetch('api/getNotifications.php')
@@ -428,7 +428,7 @@ function pollNotifications() {
                 res.data.forEach(n => knownNotificationIds.add(n.id));
                 isFirstNotifyLoad = false;
                 
-                updateNotificationUI(res.data);
+                updateNotificationUI(res.data, res.unreadCount);
             }
         });
 }
@@ -441,5 +441,6 @@ setTimeout(pollNotifications, 1000); // Initial fetch
 
 
 export default PEApp;
+
 
 
