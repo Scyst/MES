@@ -10,13 +10,13 @@ const SafetyModule = (function() {
 
     function init() {
         if(document.getElementById('hazardModal')) {
-            currentHazModal = new bootstrap.Modal(document.getElementById('hazardModal'));
+            currentHazModal = bootstrap.Modal.getInstance(document.getElementById('hazardModal')) || new bootstrap.Modal(document.getElementById('hazardModal'));
         }
         if(document.getElementById('checklistModal')) {
-            checklistModal = new bootstrap.Modal(document.getElementById('checklistModal'));
+            checklistModal = bootstrap.Modal.getInstance(document.getElementById('checklistModal')) || new bootstrap.Modal(document.getElementById('checklistModal'));
         }
         if(document.getElementById('safetyStatsModal')) {
-            statsModal = new bootstrap.Modal(document.getElementById('safetyStatsModal'));
+            statsModal = bootstrap.Modal.getInstance(document.getElementById('safetyStatsModal')) || new bootstrap.Modal(document.getElementById('safetyStatsModal'));
         }
         loadData();
         loadPreOpStats();
