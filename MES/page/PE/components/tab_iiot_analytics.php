@@ -29,7 +29,7 @@
         <button class="pe-chip active" onclick="IIoTAnalyticsModule.setPeriod('week')">Last 7 Days</button>
         <button class="pe-chip" onclick="IIoTAnalyticsModule.setPeriod('month')">This Month</button>
         <button class="pe-chip" onclick="IIoTAnalyticsModule.setPeriod('last_month')">Last Month</button>
-        <button class="pe-btn pe-btn-ghost pe-btn-sm ms-2" onclick="window.print()" title="Export PDF / Print" style="border-color:var(--pe-text-muted); color:var(--pe-text-primary);">
+        <button class="pe-btn pe-btn-ghost pe-btn-sm ms-2" onclick="PEApp.printWithCharts('panel-iiot_analytics')" title="Export PDF / Print" style="border-color:var(--pe-text-muted); color:var(--pe-text-primary);">
             <i class="fas fa-print me-1"></i> Report
         </button>
     </div>

@@ -1,4 +1,4 @@
-﻿// peApp.js — PE Enterprise Core Application Controller
+// peApp.js — PE Enterprise Core Application Controller
 
 // Internal state
 let currentTab = 'machines';
@@ -299,13 +299,64 @@ let sidebarCollapsed = false;
         }
     });
 
+    function printWithCharts(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            window.print();
+            return;
+        }
+
+        let printContainer = document.getElementById('pe-print-container');
+        if (!printContainer) {
+            printContainer = document.createElement('div');
+            printContainer.id = 'pe-print-container';
+            document.body.appendChild(printContainer);
+        }
+        
+        printContainer.innerHTML = '';
+        
+        // Clone the target
+        const clone = container.cloneNode(true);
+        
+        // Find all original and cloned canvases
+        const originalCanvases = container.querySelectorAll('canvas');
+        const clonedCanvases = clone.querySelectorAll('canvas');
+        
+        originalCanvases.forEach((canvas, i) => {
+            const img = document.createElement('img');
+            img.src = canvas.toDataURL('image/png');
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.maxHeight = '280px';
+            img.style.display = 'block';
+            img.style.margin = '0 auto';
+            img.className = 'print-canvas-image';
+            
+            const clonedCanvas = clonedCanvases[i];
+            clonedCanvas.parentNode.insertBefore(img, clonedCanvas);
+            clonedCanvas.remove();
+        });
+        
+        printContainer.appendChild(clone);
+        
+        document.body.classList.add('pe-printing-mode');
+        
+        setTimeout(() => {
+            window.print();
+            setTimeout(() => {
+                document.body.classList.remove('pe-printing-mode');
+                printContainer.innerHTML = '';
+            }, 1000);
+        }, 150);
+    }
+
     // Expose public API
     const PEApp = {
         switchTab, refreshCurrentTab, toggleSidebar,
         apiCall, uploadFile, showToast, showConfirm, showModal, hideModal,
         formatDate, formatDateTime, formatTime, formatNumber, formatCurrency,
         getStatusBadge, getPriorityBadge, getMachineStatusBadge, getCriticalityBadge,
-        escapeHtml, animateValue,
+        escapeHtml, animateValue, printWithCharts,
         get currentTab() { return currentTab; }
     };
 // Attach to window for legacy inline handlers (onclick)

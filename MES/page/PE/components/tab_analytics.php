@@ -26,7 +26,7 @@
         <button class="pe-chip" onclick="AnalyticsModule.setPeriod('month')">This Month</button>
         <button class="pe-chip" onclick="AnalyticsModule.setPeriod('last_month')">Last Month</button>
         <button class="pe-chip active" onclick="AnalyticsModule.setPeriod('quarter')">This Quarter</button>
-        <button class="pe-btn pe-btn-ghost pe-btn-sm ms-2" onclick="window.print()" title="Export PDF / Print" style="border-color:var(--pe-text-muted); color:var(--pe-text-primary);">
+        <button class="pe-btn pe-btn-ghost pe-btn-sm ms-2" onclick="PEApp.printWithCharts('panel-analytics')" title="Export PDF / Print" style="border-color:var(--pe-text-muted); color:var(--pe-text-primary);">
             <i class="fas fa-print me-1"></i> Executive Report
         </button>
     </div>
@@ -212,21 +212,6 @@
         }
     }
     
-    @media print {
-        body { background: white !important; }
-        .pe-sidebar, .pe-header, .pe-subnav, .pe-filter-bar { display: none !important; }
-        .pe-main-content { margin: 0 !important; padding: 0 !important; width: 100% !important; }
-        .pe-card { border: 1px solid #ddd !important; box-shadow: none !important; margin-bottom: 20px !important; break-inside: avoid; }
-        .pe-analytics-grid-row-1, .pe-analytics-grid-row-2, .pe-analytics-grid-row-3 {
-            display: flex !important;
-            flex-wrap: wrap !important;
-            gap: 16px !important;
-        }
-        .pe-analytics-grid-row-1 > div, .pe-analytics-grid-row-2 > div, .pe-analytics-grid-row-3 > div {
-            flex: 1 1 45% !important;
-        }
-        canvas { max-height: 250px !important; }
-        #predictiveRiskContainer { break-after: avoid; }
-    }
+
 </style>
 

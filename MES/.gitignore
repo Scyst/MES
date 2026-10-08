@@ -1,4 +1,4 @@
-﻿utils/
+utils/
 node_modules/
 documents/
 test/
@@ -57,3 +57,6 @@ page/cctv_downloader/downloads/
 page/cctv_downloader/api/ffmpeg.exe
 
 
+
+# MES Learning Hub Summaries
+mes-learning-hub/qa_iso_summaries/
