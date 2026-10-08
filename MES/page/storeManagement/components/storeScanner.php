@@ -215,11 +215,18 @@
                                 <button class="btn btn-success fw-bold px-3" id="btnReceiveTrace" onclick="receiveScannedTag()">รับเข้าสต็อก</button>
                             </div>
                         </div>
+                        <div id="traceTransferArea" class="d-none mb-2">
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-info text-white border-info"><i class="fas fa-exchange-alt"></i></span>
+                                <select id="transferLocationTrace" class="form-select border-info fw-bold text-dark"></select>
+                                <button class="btn btn-info text-white fw-bold px-3" id="btnTransferTrace" onclick="transferScannedTag()">โอนย้ายที่ตั้ง</button>
+                            </div>
+                        </div>
                         <div id="traceIssueArea" class="d-none">
                             <div class="input-group shadow-sm">
                                 <span class="input-group-text bg-warning text-dark border-warning"><i class="fas fa-dolly"></i></span>
                                 <select id="issueLocationTrace" class="form-select border-warning fw-bold text-dark"></select>
-                                <button class="btn btn-warning text-dark fw-bold px-3" id="btnIssueTrace" onclick="issueScannedTag()">เบิกจ่าย</button>
+                                <button class="btn btn-warning text-dark fw-bold px-3" id="btnIssueTrace" onclick="issueScannedTag()">เบิกจ่าย (WIP)</button>
                             </div>
                         </div>
                     </div>

@@ -27,7 +27,7 @@ try {
         'receive_scanned_tag', 'delete_tag', 'delete_bulk_tags', 'edit_tag', 
         'update_print_status', 'create_request', 'approve_request', 'reject_request',
         'bulk_receive_tags', 'manual_add_rm', 'process_transfer_request', 'bulk_process_transfer_request',
-        'submit_cycle_count', 'approve_cycle_count', 'create_transfer_request',
+        'submit_cycle_count', 'approve_cycle_count', 'create_transfer_request', 'transfer_tag',
         'submit_requisition', 'accept_order', 'confirm_issue', 'reject_order', 'submit_k2_pr', 
         'upload_image', 'update_item_info', 'cancel_my_order'
     ];
@@ -1657,6 +1657,27 @@ try {
             ";
             $stmt = $pdo->query($sql);
             $response = ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
+            break;
+
+        case 'transfer_tag':
+            $serials = $_POST['serials'] ?? $_POST['barcode'] ?? '';
+            $to_location = (int)($_POST['to_location'] ?? 0);
+
+            if (empty($serials) || $to_location == 0) {
+                throw new Exception("ข้อมูลไม่ครบถ้วน (ยังไม่ได้เลือก Tag หรือ โลเคชั่น)");
+            }
+
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
+            $stmt = $pdo->prepare("EXEC dbo.sp_Store_TransferSpecificTags @SerialNumbers=?, @ToLocationID=?, @UserID=?");
+            $success = $stmt->execute([$serials, $to_location, $currentUser['id']]);
+            $errors = $stmt->errorInfo();
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); 
+
+            if (!$success && isset($errors[0]) && !in_array($errors[0], ['00000', '01000', '01003'])) {
+                throw new Exception($errors[2] ?? "เกิดข้อผิดพลาดในการรันคำสั่ง");
+            }
+
+            $response = ['success' => true, 'message' => 'โอนย้ายที่ตั้งสำเร็จ'];
             break;
 
         case 'issue_rm':

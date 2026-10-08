@@ -101,10 +101,12 @@ window.updateLocationFilterDropdown = function() {
     
     const receiveTraceSelect = document.getElementById('receiveLocationTrace'); 
     const issueTraceSelect = document.getElementById('issueLocationTrace');     
+    const transferTraceSelect = document.getElementById('transferLocationTrace');     
     
     if (filterSelect) filterSelect.innerHTML = '<option value="ALL">All Locations</option>';
     if (receiveTraceSelect) receiveTraceSelect.innerHTML = '';
     if (issueTraceSelect) issueTraceSelect.innerHTML = '';
+    if (transferTraceSelect) transferTraceSelect.innerHTML = '';
     
     let storeSelected = false;
     let wipSelected = false;
@@ -126,6 +128,7 @@ window.updateLocationFilterDropdown = function() {
         const filterOption = `<option value="${escapeHTML(loc.location_id)}">${escapeHTML(loc.location_name)}</option>`;
         const receiveOption = `<option value="${escapeHTML(loc.location_id)}" ${isReceiveDefault}>${escapeHTML(loc.location_name)}</option>`;
         const issueOption = `<option value="${escapeHTML(loc.location_id)}" ${isIssueDefault}>${escapeHTML(loc.location_name)}</option>`;
+        const transferOption = `<option value="${escapeHTML(loc.location_id)}" ${isReceiveDefault}>${escapeHTML(loc.location_name)}</option>`;
         
         if (filterSelect) {
             if (!typeSelect || typeSelect.value === 'ALL' || loc.location_type === typeSelect.value) {
@@ -134,6 +137,7 @@ window.updateLocationFilterDropdown = function() {
         }
         if (receiveTraceSelect) receiveTraceSelect.innerHTML += receiveOption;
         if (issueTraceSelect) issueTraceSelect.innerHTML += issueOption;
+        if (transferTraceSelect) transferTraceSelect.innerHTML += transferOption;
     });
     
     document.dispatchEvent(new Event('locationsLoaded'));
@@ -315,10 +319,12 @@ function renderTraceData(data) {
     const actionArea = document.getElementById('traceActionArea');
     const receiveArea = document.getElementById('traceReceiveArea');
     const issueArea = document.getElementById('traceIssueArea');
+    const transferArea = document.getElementById('traceTransferArea');
     
     actionArea.classList.remove('d-none');
     receiveArea.classList.add('d-none');
     issueArea.classList.add('d-none');
+    if (transferArea) transferArea.classList.add('d-none');
 
     const autoReceive = document.getElementById('continuousScanToggle');
     const isContinuous = (autoReceive && autoReceive.checked);
@@ -331,6 +337,7 @@ function renderTraceData(data) {
     }
     else if (tag.status === 'AVAILABLE' && typeof CAN_MANAGE_WH !== 'undefined' && CAN_MANAGE_WH) {
         issueArea.classList.remove('d-none');
+        if (transferArea) transferArea.classList.remove('d-none');
     }
 }
 
@@ -409,6 +416,35 @@ window.issueScannedTag = async function(ignoreFifo = false) {
         document.getElementById('traceIssueArea').classList.add('d-none');
         document.getElementById('traceStatus').className = 'badge bg-warning text-dark rounded-pill px-3 py-2 shadow-sm';
         document.getElementById('traceStatus').innerText = 'WIP';
+
+        const autoReceive = document.getElementById('continuousScanToggle');
+        if (autoReceive && autoReceive.checked) {
+            setTimeout(() => resumeScanning(), 800); 
+        }
+    }
+};
+
+window.transferScannedTag = async function() {
+    if (!currentScannedBarcode) return;
+    const locId = document.getElementById('transferLocationTrace').value;
+    
+    const formData = new FormData();
+    formData.append('barcode', currentScannedBarcode);
+    formData.append('to_location', locId);
+    
+    const result = await fetchAPI('transfer_tag', 'POST', formData, 'btnTransferTrace');
+    
+    if(result && result.success) {
+        if (typeof showToast === 'function') {
+            showToast('โอนย้ายที่ตั้งสำเร็จ!', 'var(--bs-info)');
+        } else {
+            Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, icon: 'success', title: 'โอนย้ายสำเร็จ!' });
+        }
+        
+        executeTraceScan();
+
+        if (typeof loadHistory === 'function') loadHistory();
+        if (typeof loadDashboardData === 'function') loadDashboardData();
 
         const autoReceive = document.getElementById('continuousScanToggle');
         if (autoReceive && autoReceive.checked) {
