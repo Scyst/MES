@@ -51,9 +51,6 @@
             <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SafetyModule.openStatsModal()" title="ดูสถิติ/กราฟ">
                 <i class="fas fa-chart-bar"></i>
             </button>
-            <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SafetyModule.openChecklistConfig()" title="จัดการ Checklist">
-                <i class="fas fa-cog"></i>
-            </button>
             <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SafetyModule.loadData()" title="Refresh">
                 <i class="fas fa-sync-alt"></i>
             </button>

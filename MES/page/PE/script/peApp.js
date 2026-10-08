@@ -198,7 +198,7 @@ let sidebarCollapsed = false;
     }
 
     function formatCurrency(num) {
-        return 'เธฟ' + formatNumber(num, 2);
+        return '฿' + formatNumber(num, 2);
     }
 
     function getStatusBadge(status) {
@@ -431,5 +431,6 @@ setTimeout(pollNotifications, 1000); // Initial fetch
 
 
 export default PEApp;
+
 
 
