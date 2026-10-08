@@ -1,4 +1,4 @@
-﻿// peApp.js โ€” PE Enterprise Core Application Controller
+﻿// peApp.js — PE Enterprise Core Application Controller
 
 // Internal state
 let currentTab = 'machines';
@@ -108,7 +108,7 @@ let sidebarCollapsed = false;
         const json = await res.json();
         if (!json.success) {
             if (json.message === 'CSRF token validation failed.' || json.message?.includes('CSRF')) {
-                showToast('เน€เธเธชเธเธฑเธเธกเธตเธเธฑเธเธซเธฒเธซเธฃเธทเธญเธซเธกเธ”เธญเธฒเธขเธธ เธฃเธฐเธเธเธเธณเธฅเธฑเธเธฃเธตเน€เธเธฃเธเธซเธเนเธฒเธเธญ...', 'warning');
+                showToast('เซสชันมีปัญหาหรือหมดอายุ ระบบกำลังรีเฟรชหน้าจอ...', 'warning');
                 setTimeout(() => window.location.reload(), 1500);
                 return new Promise(() => { }); // prevent further execution
             }
@@ -130,7 +130,7 @@ let sidebarCollapsed = false;
         const json = await res.json();
         if (!json.success) {
             if (json.message === 'CSRF token validation failed.' || json.message?.includes('CSRF')) {
-                showToast('เน€เธเธชเธเธฑเธเธกเธตเธเธฑเธเธซเธฒเธซเธฃเธทเธญเธซเธกเธ”เธญเธฒเธขเธธ เธฃเธฐเธเธเธเธณเธฅเธฑเธเธฃเธตเน€เธเธฃเธเธซเธเนเธฒเธเธญ...', 'warning');
+                showToast('เซสชันมีปัญหาหรือหมดอายุ ระบบกำลังรีเฟรชหน้าจอ...', 'warning');
                 setTimeout(() => window.location.reload(), 1500);
                 return new Promise(() => { });
             }
@@ -326,6 +326,16 @@ if (notifyBtn) {
     notifyBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         notifyDropdown.style.display = notifyDropdown.style.display === 'none' ? 'block' : 'none';
+        
+        // Clear notifications when opened
+        if (notifyDropdown.style.display === 'block' && notifyBadge.style.display !== 'none') {
+            fetch('api/clearNotifications.php', { method: 'POST' })
+                .then(() => {
+                    notifyBadge.style.display = 'none';
+                    notifyCountText.innerText = '(0)';
+                })
+                .catch(err => console.error(err));
+        }
     });
 
     document.addEventListener('click', (e) => {
@@ -387,7 +397,7 @@ function updateNotificationUI(notifs) {
     } else {
         notifyBadge.style.display = 'none';
         notifyCountText.innerText = '(0)';
-        notifyList.innerHTML = '<div style="padding: 15px; text-align: center; color: #888; font-size: 0.9em;">ไม่มีการแจ้งเตือนใหม่</div>';
+        notifyList.innerHTML = '<div style="padding: 15px; text-align: center; color: #888; font-size: 0.9em;">����ա������͹����</div>';
     }
 }
 
@@ -431,6 +441,5 @@ setTimeout(pollNotifications, 1000); // Initial fetch
 
 
 export default PEApp;
-
 
 
