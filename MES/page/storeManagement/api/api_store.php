@@ -1021,7 +1021,33 @@ try {
             $stmtPend->execute([$item_id]);
             $pending_details = $stmtPend->fetchAll(PDO::FETCH_ASSOC);
 
-            $response = ['success' => true, 'available_details' => $available_details, 'pending_details' => $pending_details];
+            $stmtHist = $pdo->prepare("
+                SELECT TOP 200 
+                    t.transaction_timestamp, 
+                    t.transaction_type, 
+                    t.quantity, 
+                    t.reference_id, 
+                    t.notes, 
+                    f.location_name as from_loc, 
+                    t2.location_name as to_loc, 
+                    ISNULL(e.name_th, u.username) as user_name 
+                FROM dbo.STOCK_TRANSACTIONS t WITH (NOLOCK) 
+                LEFT JOIN dbo.LOCATIONS f WITH (NOLOCK) ON t.from_location_id = f.location_id
+                LEFT JOIN dbo.LOCATIONS t2 WITH (NOLOCK) ON t.to_location_id = t2.location_id
+                LEFT JOIN dbo.USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+                LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                WHERE t.parameter_id = ?
+                ORDER BY t.transaction_timestamp DESC
+            ");
+            $stmtHist->execute([$item_id]);
+            $history_details = $stmtHist->fetchAll(PDO::FETCH_ASSOC);
+
+            $response = [
+                'success' => true, 
+                'available_details' => $available_details, 
+                'pending_details' => $pending_details, 
+                'history_details' => $history_details
+            ];
             break;
 
         case 'get_stock_ledger':

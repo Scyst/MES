@@ -330,7 +330,9 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
         const overviewList = document.getElementById('overviewLocationsList');
         if(overviewList) overviewList.innerHTML = '';
         
+        let availCount = 0;
         if (res.available_details && res.available_details.length > 0) {
+            availCount = res.available_details.length;
             res.available_details.forEach(loc => {
                 const qty = parseFloat(loc.qty);
                 totalSystemStock += qty;
@@ -353,6 +355,9 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
             availTbody.innerHTML = '<tr style="height: 61px;"><td colspan="2" class="text-center text-muted align-middle">ไม่มีของในคลัง</td></tr>';
             if (overviewList) overviewList.innerHTML = '<div class="text-center text-muted py-3">ไม่มีสต็อกในระบบ</div>';
         }
+        
+        const availBadge = document.getElementById('availCountBadge');
+        if (availBadge) availBadge.innerText = availCount;
 
         const totalQtyEl = document.getElementById('modalItemTotalQty');
         if (totalQtyEl) {
@@ -363,7 +368,9 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
         }
 
         pendTbody.innerHTML = '';
+        let pendCount = 0;
         if (res.pending_details && res.pending_details.length > 0) {
+            pendCount = res.pending_details.length;
             res.pending_details.forEach(p => {
                 pendTbody.innerHTML += `
                     <tr style="height: 61px;">
@@ -378,9 +385,14 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
             pendTbody.innerHTML = '<tr style="height: 61px;"><td colspan="2" class="text-center text-muted align-middle">ไม่มีของรอรับเข้า</td></tr>';
         }
         
+        const pendBadge = document.getElementById('pendCountBadge');
+        if (pendBadge) pendBadge.innerText = pendCount;
+        
         if (tagsTbody) {
             tagsTbody.innerHTML = '';
+            let tagsCount = 0;
             if (tagRes.data && tagRes.data.length > 0) {
+                tagsCount = tagRes.data.length;
                 tagRes.data.forEach(t => {
                     const qty = parseInt(t.current_qty, 10);
                     if (t.location_id == 1008 || (t.location_name && t.location_name.toUpperCase().includes('STORE'))) {
@@ -401,6 +413,17 @@ async function showItemDetails(itemId, itemNo, itemDesc) {
             } else {
                 tagsTbody.innerHTML = '<tr style="height: 61px;"><td colspan="2" class="text-center text-muted align-middle">ไม่มีข้อมูลแท็ก</td></tr>';
             }
+            
+            const tagsBadge = document.getElementById('tagsCountBadge');
+            if (tagsBadge) tagsBadge.innerText = tagsCount;
+        }
+
+        if (res.history_details) {
+            window.currentLedgerData = res.history_details;
+            renderItemLedger();
+        } else {
+            window.currentLedgerData = [];
+            renderItemLedger();
         }
         
         const mismatchWarning = document.getElementById('mismatchWarningContainer');
@@ -490,6 +513,65 @@ async function syncStoreStockWithTags(itemId) {
         await Swal.fire('สำเร็จ!', `ปรับยอดสต็อกเรียบร้อย (${varianceSign}${parseFloat(variance).toLocaleString()} pcs)`, 'success');
         if (detailsModalInstance) detailsModalInstance.hide();
         loadDashboardData();
+    }
+}
+
+function renderItemLedger() {
+    const listContainer = document.getElementById('modalLedgerList');
+    const filterSelect = document.getElementById('ledgerFilterSelect');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '';
+    let data = window.currentLedgerData || [];
+
+    // Client-side filter
+    if (filterSelect && filterSelect.value === 'store') {
+        data = data.filter(h => {
+            const from = (h.from_loc || '').toUpperCase();
+            const to = (h.to_loc || '').toUpperCase();
+            return from.includes('STORE') || to.includes('STORE');
+        });
+    }
+
+    if (data.length > 0) {
+        data.forEach(h => {
+            const qty = parseFloat(h.quantity);
+            const qtyClass = qty > 0 ? 'text-success' : (qty < 0 ? 'text-danger' : 'text-secondary');
+            
+            let refHtml = escapeHTML(h.reference_id || '-');
+            if (h.notes) {
+                refHtml += `<div class="small text-muted text-truncate" style="max-width: 150px;" title="${escapeHTML(h.notes)}">${escapeHTML(h.notes)}</div>`;
+            }
+            
+            const tdate = new Date(h.transaction_timestamp);
+            const formattedDate = !isNaN(tdate.getTime()) 
+                ? `${String(tdate.getDate()).padStart(2, '0')}/${String(tdate.getMonth() + 1).padStart(2, '0')}/${String(tdate.getFullYear()).slice(-2)} ${String(tdate.getHours()).padStart(2, '0')}:${String(tdate.getMinutes()).padStart(2, '0')}`
+                : escapeHTML(h.transaction_timestamp);
+            
+            listContainer.innerHTML += `
+                <div class="list-group-item px-3 py-2 border-bottom">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div>
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle rounded-pill me-1">${escapeHTML(h.transaction_type)}</span>
+                            <span class="fw-bold small text-dark">${refHtml}</span>
+                        </div>
+                        <div class="text-end fw-bold ${qtyClass} fs-6 text-nowrap ms-2">
+                            ${qty > 0 ? '+' : ''}${fmtQty(qty)}
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-end small">
+                        <div class="text-muted text-truncate" style="max-width: 60%; font-size: 0.75rem;">
+                             <i class="fas fa-map-marker-alt me-1"></i> ${escapeHTML(h.from_loc || '-')} <i class="fas fa-arrow-right mx-1 text-muted"></i> ${escapeHTML(h.to_loc || '-')}
+                             <br>
+                             <i class="fas fa-user me-1 mt-1"></i> ${escapeHTML(h.user_name || 'System')}
+                        </div>
+                        <div class="text-muted text-nowrap" style="font-size: 0.75rem;">${formattedDate}</div>
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        listContainer.innerHTML = '<div class="p-4 text-center text-muted">ไม่มีประวัติการทำรายการ</div>';
     }
 }
 
