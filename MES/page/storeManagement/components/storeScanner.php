@@ -136,6 +136,13 @@
         object-fit: cover;
         border-radius: 8px;
     }
+    
+    @media (max-width: 768px) {
+        #traceModal .modal-dialog {
+            max-width: 95% !important;
+            margin: 10px auto !important;
+        }
+    }
 </style>
 
 <div id="printArea" class="d-none"></div>
@@ -185,68 +192,89 @@
 
                 </div>
 
-                <div id="traceLoading" class="text-center py-4 d-none bg-white rounded border shadow-sm">
+                <div id="traceLoading" class="text-center py-4 d-none bg-white rounded-4 border border-light-subtle shadow-sm mt-2">
                     <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                     <span class="ms-2 text-muted fw-bold small">กำลังค้นหาข้อมูล...</span>
                 </div>
 
-                <div id="traceResult" class="d-none">
+                <div id="traceResult" class="d-none mt-2">
                     
-                    <div class="d-flex justify-content-between align-items-center p-2 mb-2 bg-light rounded-3 border shadow-sm">
-                        <h6 class="fw-bold text-primary mb-0 ms-1" id="traceSerial" style="letter-spacing: 0.5px;">-</h6>
-                        <span id="traceStatus" class="badge px-3 py-2 rounded-pill shadow-sm">-</span>
-                    </div>
+                    <!-- Modern Tabs (Top) -->
+                    <ul class="nav nav-pills nav-fill p-1 bg-light rounded-pill mb-3 border border-light-subtle" id="scannerBottomTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active rounded-pill fw-bold text-secondary" id="tab-action" data-bs-toggle="tab" data-bs-target="#pane-action" type="button" role="tab">
+                                <i class="fas fa-bolt me-1"></i> จัดการ
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-pill fw-bold text-secondary" id="tab-history" data-bs-toggle="tab" data-bs-target="#pane-history" type="button" role="tab">
+                                <i class="fas fa-history me-1"></i> ประวัติ
+                            </button>
+                        </li>
+                    </ul>
 
-                    <div class="bg-white border rounded p-2 shadow-sm mb-3 text-muted" style="font-size: 0.85rem;">
-                        <div class="row g-2 px-1">
-                            <div class="col-8 fw-bold text-dark text-truncate"><i class="fas fa-cube me-1"></i> <span id="traceItem">-</span></div>
-                            <div class="col-4 text-end fw-bold text-primary fs-6" id="traceQty">-</div>
-                            <div class="col-12 text-truncate border-bottom pb-2 mb-1" id="traceDesc">-</div>
-                            <div class="col-6 text-truncate"><i class="fas fa-file-invoice me-1"></i> <span id="tracePO">-</span></div>
-                            <div class="col-6 text-end text-truncate"><i class="fas fa-warehouse me-1"></i> <span id="traceInv">-</span></div>
+                    <!-- Unified Info Card (Always Visible) -->
+                    <div class="p-3 mb-3 bg-white border border-light-subtle rounded-4 shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                            <h5 class="fw-bolder text-primary mb-0" id="traceSerial" style="letter-spacing: 0.5px;">-</h5>
+                            <span id="traceStatus" class="badge px-3 py-2 rounded-pill shadow-sm">-</span>
+                        </div>
+                        <div class="row g-2 text-muted" style="font-size: 0.85rem;">
+                            <div class="col-8 text-truncate"><span class="fw-bold text-dark" id="traceItem">-</span></div>
+                            <div class="col-4 text-end fw-bolder text-dark fs-6" id="traceQty">-</div>
+                            <div class="col-12 text-truncate small" id="traceDesc">-</div>
                         </div>
                     </div>
 
-                    <div id="traceActionArea" class="d-none mb-3">
-                        <div id="traceReceiveArea" class="d-none">
-                            <div class="input-group shadow-sm">
-                                <span class="input-group-text bg-success text-white border-success"><i class="fas fa-download"></i></span>
-                                <select id="receiveLocationTrace" class="form-select border-success fw-bold text-success"></select>
-                                <button class="btn btn-success fw-bold px-3" id="btnReceiveTrace" onclick="receiveScannedTag()">รับเข้าสต็อก</button>
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="scannerTabsContent">
+                        
+                        <!-- Action Pane -->
+                        <div class="tab-pane fade show active" id="pane-action" role="tabpanel">
+                            
+                            <!-- Receive Area -->
+                            <div id="traceReceiveArea" class="d-none">
+                                <label class="small text-muted fw-bold mb-1 ms-1">สถานที่รับเข้า (Receive Location)</label>
+                                <div class="d-flex flex-column gap-2 p-2 bg-white border border-light-subtle rounded-4 shadow-sm">
+                                    <select id="receiveLocationTrace" class="form-select py-2 fw-bold border-0 bg-light rounded-3 text-success"></select>
+                                    <button class="btn btn-success fw-bold py-2 w-100 rounded-3 shadow-sm" id="btnReceiveTrace" onclick="receiveScannedTag()">
+                                        <i class="fas fa-download me-2"></i> ยืนยันรับเข้าสต็อก
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Smart Action Area -->
+                            <div id="availableActionArea" class="d-none">
+                                <label class="small text-muted fw-bold mb-1 ms-1">เลือกปลายทาง (Destination)</label>
+                                <div class="d-flex flex-column gap-2 p-2 bg-white border border-light-subtle rounded-4 shadow-sm">
+                                    <select id="smartLocationSelect" class="form-select py-2 fw-bold border-0 bg-light rounded-3 text-dark" onchange="handleSmartLocationChange()">
+                                        <!-- Populated by JS -->
+                                    </select>
+                                    <button class="btn btn-warning text-dark fw-bold py-2 w-100 rounded-3 shadow-sm" id="btnSmartAction" onclick="executeSmartAction()">
+                                        <i class="fas fa-dolly me-2" id="smartActionIconClass"></i><span id="smartActionText">ยืนยันเบิกจ่าย</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                        
+                        <!-- History Pane -->
+                        <div class="tab-pane fade" id="pane-history" role="tabpanel">
+                            <div class="table-responsive bg-white border border-light-subtle rounded-4 shadow-sm hide-scrollbar" style="max-height: 250px;">
+                                <table class="table table-hover align-middle mb-0" style="font-size: 0.8rem;">
+                                    <thead class="table-light sticky-top">
+                                        <tr class="text-secondary small">
+                                            <th class="py-2 px-3 border-0">เวลา</th>
+                                            <th class="py-2 border-0 text-center">สถานะ</th>
+                                            <th class="py-2 text-end px-3 border-0">จำนวน</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="traceHistoryTbody" class="border-top-0"></tbody>
+                                </table>
                             </div>
                         </div>
-                        <div id="traceTransferArea" class="d-none mb-2">
-                            <div class="input-group shadow-sm">
-                                <span class="input-group-text bg-info text-white border-info"><i class="fas fa-exchange-alt"></i></span>
-                                <select id="transferLocationTrace" class="form-select border-info fw-bold text-dark"></select>
-                                <button class="btn btn-info text-white fw-bold px-3" id="btnTransferTrace" onclick="transferScannedTag()">โอนย้ายที่ตั้ง</button>
-                            </div>
-                        </div>
-                        <div id="traceIssueArea" class="d-none">
-                            <div class="input-group shadow-sm">
-                                <span class="input-group-text bg-warning text-dark border-warning"><i class="fas fa-dolly"></i></span>
-                                <select id="issueLocationTrace" class="form-select border-warning fw-bold text-dark"></select>
-                                <button class="btn btn-warning text-dark fw-bold px-3" id="btnIssueTrace" onclick="issueScannedTag()">เบิกจ่าย (WIP)</button>
-                            </div>
-                        </div>
+                        
                     </div>
-
-                    <div>
-                        <h6 class="fw-bold text-secondary small mb-2"><i class="fas fa-history me-1"></i> ประวัติการเคลื่อนไหว</h6>
-                        <div class="table-responsive bg-white border rounded-3 shadow-sm hide-scrollbar" style="max-height: 35vh;">
-                            <table class="table table-sm table-hover align-middle mb-0 text-nowrap" style="font-size: 0.8rem;">
-                                <thead class="table-light sticky-top">
-                                    <tr class="text-secondary">
-                                        <th class="py-2 px-3">เวลา</th>
-                                        <th class="py-2">สถานะ</th>
-                                        <th class="py-2 text-end px-3">จำนวน</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="traceHistoryTbody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
                 </div>
             </div>
         </div>

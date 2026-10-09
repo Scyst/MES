@@ -100,17 +100,16 @@ window.updateLocationFilterDropdown = function() {
     const selectedType = typeSelect ? typeSelect.value : 'STORE'; // Default for inventoryDashboard is usually STORE, but we read from the dropdown
     
     const receiveTraceSelect = document.getElementById('receiveLocationTrace'); 
-    const issueTraceSelect = document.getElementById('issueLocationTrace');     
-    const transferTraceSelect = document.getElementById('transferLocationTrace');     
+    const smartLocationSelect = document.getElementById('smartLocationSelect');     
     
     if (filterSelect) filterSelect.innerHTML = '<option value="ALL">All Locations</option>';
     if (receiveTraceSelect) receiveTraceSelect.innerHTML = '';
-    if (issueTraceSelect) issueTraceSelect.innerHTML = '';
-    if (transferTraceSelect) transferTraceSelect.innerHTML = '';
     
     let storeSelected = false;
     let wipSelected = false;
-    let filterStoreSelected = false;
+
+    let wipOptions = '';
+    let storeOptions = '';
 
     window.allStoreLocationsList.forEach(loc => {
         let isReceiveDefault = '';
@@ -127,8 +126,12 @@ window.updateLocationFilterDropdown = function() {
         
         const filterOption = `<option value="${escapeHTML(loc.location_id)}">${escapeHTML(loc.location_name)}</option>`;
         const receiveOption = `<option value="${escapeHTML(loc.location_id)}" ${isReceiveDefault}>${escapeHTML(loc.location_name)}</option>`;
-        const issueOption = `<option value="${escapeHTML(loc.location_id)}" ${isIssueDefault}>${escapeHTML(loc.location_name)}</option>`;
-        const transferOption = `<option value="${escapeHTML(loc.location_id)}" ${isReceiveDefault}>${escapeHTML(loc.location_name)}</option>`;
+        
+        if (loc.location_type === 'STORE' || loc.location_type === 'WAREHOUSE') {
+            storeOptions += `<option value="${escapeHTML(loc.location_id)}" data-type="STORE">${escapeHTML(loc.location_name)}</option>`;
+        } else {
+            wipOptions += `<option value="${escapeHTML(loc.location_id)}" data-type="WIP" ${isIssueDefault}>${escapeHTML(loc.location_name)}</option>`;
+        }
         
         if (filterSelect) {
             if (!typeSelect || typeSelect.value === 'ALL' || loc.location_type === typeSelect.value) {
@@ -136,9 +139,18 @@ window.updateLocationFilterDropdown = function() {
             }
         }
         if (receiveTraceSelect) receiveTraceSelect.innerHTML += receiveOption;
-        if (issueTraceSelect) issueTraceSelect.innerHTML += issueOption;
-        if (transferTraceSelect) transferTraceSelect.innerHTML += transferOption;
     });
+    
+    if (smartLocationSelect) {
+        smartLocationSelect.innerHTML = `
+            <optgroup label="🏭 ฝ่ายผลิต (WIP)">
+                ${wipOptions}
+            </optgroup>
+            <optgroup label="🏢 ภายในคลังสินค้า (STORE)">
+                ${storeOptions}
+            </optgroup>
+        `;
+    }
     
     document.dispatchEvent(new Event('locationsLoaded'));
 }
@@ -188,7 +200,6 @@ window.resumeScanning = function() {
 function resetTraceUI() {
     document.getElementById('scanInput').value = '';
     document.getElementById('traceResult').classList.add('d-none');
-    document.getElementById('traceActionArea').classList.add('d-none');
     document.getElementById('traceLoading').classList.add('d-none');
     document.getElementById('resumeScanOverlay')?.classList.add('d-none');
     currentScannedBarcode = '';
@@ -257,7 +268,6 @@ window.executeTraceScan = async function() {
 
     document.getElementById('traceLoading').classList.remove('d-none');
     document.getElementById('traceResult').classList.add('d-none');
-    document.getElementById('traceActionArea').classList.add('d-none');
 
     try {
         const json = await fetchAPI(`trace_tag&serial_no=${encodeURIComponent(serialNo)}`, 'GET');
@@ -267,6 +277,13 @@ window.executeTraceScan = async function() {
             renderTraceData(json.data);
             document.getElementById('traceResult').classList.remove('d-none');
             document.getElementById('scanInput').value = ''; 
+            
+            const tabActionBtn = document.getElementById('tab-action');
+            if (tabActionBtn && typeof bootstrap !== 'undefined') {
+                try {
+                    bootstrap.Tab.getOrCreateInstance(tabActionBtn).show();
+                } catch(e) {}
+            }
         }
     } catch (err) {
         document.getElementById('traceLoading').classList.add('d-none');
@@ -291,8 +308,12 @@ function renderTraceData(data) {
     document.getElementById('traceStatus').innerText = tag.status;
     document.getElementById('traceItem').innerText = tag.item_no;
     document.getElementById('traceDesc').innerText = tag.part_description || tag.description_ref || '-';
-    document.getElementById('tracePO').innerText = tag.po_number || '-';
-    document.getElementById('traceInv').innerText = tag.warehouse_no || '-';  
+    
+    const tracePO = document.getElementById('tracePO');
+    if (tracePO) tracePO.innerText = tag.po_number || '-';
+    
+    const traceInv = document.getElementById('traceInv');
+    if (traceInv) traceInv.innerText = tag.warehouse_no || '-';
     document.getElementById('traceQty').innerText = tag.total_tags 
         ? `${parseFloat(tag.total_qty).toLocaleString()} (รวม ${tag.total_tags} ใบ)` 
         : `${parseFloat(tag.current_qty).toLocaleString()} / ${parseFloat(tag.qty_per_pallet).toLocaleString()}`;
@@ -316,15 +337,11 @@ function renderTraceData(data) {
         });
     }
 
-    const actionArea = document.getElementById('traceActionArea');
     const receiveArea = document.getElementById('traceReceiveArea');
-    const issueArea = document.getElementById('traceIssueArea');
-    const transferArea = document.getElementById('traceTransferArea');
+    const availableActionArea = document.getElementById('availableActionArea');
     
-    actionArea.classList.remove('d-none');
-    receiveArea.classList.add('d-none');
-    issueArea.classList.add('d-none');
-    if (transferArea) transferArea.classList.add('d-none');
+    if (receiveArea) receiveArea.classList.add('d-none');
+    if (availableActionArea) availableActionArea.classList.add('d-none');
 
     const autoReceive = document.getElementById('continuousScanToggle');
     const isContinuous = (autoReceive && autoReceive.checked);
@@ -336,8 +353,49 @@ function renderTraceData(data) {
         }
     }
     else if (tag.status === 'AVAILABLE' && typeof CAN_MANAGE_WH !== 'undefined' && CAN_MANAGE_WH) {
-        issueArea.classList.remove('d-none');
-        if (transferArea) transferArea.classList.remove('d-none');
+        if (availableActionArea) {
+            availableActionArea.classList.remove('d-none');
+            const modeSelect = document.getElementById('smartLocationSelect');
+            if (modeSelect) modeSelect.selectedIndex = 0;
+            if (typeof handleSmartLocationChange === 'function') handleSmartLocationChange();
+        }
+    }
+}
+
+window.handleSmartLocationChange = function() {
+    const select = document.getElementById('smartLocationSelect');
+    if (!select) return;
+    
+    const selectedOption = select.options[select.selectedIndex];
+    const locType = selectedOption ? selectedOption.getAttribute('data-type') : null;
+    
+    const btn = document.getElementById('btnSmartAction');
+    const icon = document.getElementById('smartActionIconClass');
+    const text = document.getElementById('smartActionText');
+    if(!btn || !icon || !text) return;
+    
+    if (locType === 'WIP') {
+        btn.className = 'btn btn-warning text-dark fw-bold py-2 w-100 rounded-3 shadow-sm';
+        text.innerText = 'ยืนยันเบิกจ่าย';
+        icon.className = 'fas fa-dolly me-2';
+    } else {
+        btn.className = 'btn btn-info text-white fw-bold py-2 w-100 rounded-3 shadow-sm';
+        text.innerText = 'ยืนยันโอนย้าย';
+        icon.className = 'fas fa-exchange-alt me-2';
+    }
+}
+
+window.executeSmartAction = function() {
+    const select = document.getElementById('smartLocationSelect');
+    if (!select) return;
+    
+    const selectedOption = select.options[select.selectedIndex];
+    const locType = selectedOption ? selectedOption.getAttribute('data-type') : null;
+    
+    if (locType === 'WIP') {
+        issueScannedTag();
+    } else if (locType === 'STORE') {
+        transferScannedTag();
     }
 }
 
@@ -374,7 +432,9 @@ window.receiveScannedTag = async function() {
 
 window.issueScannedTag = async function(ignoreFifo = false) {
     if (!currentScannedBarcode) return;
-    const locId = document.getElementById('issueLocationTrace').value;
+    const locSelect = document.getElementById('smartLocationSelect') || document.getElementById('issueLocationTrace');
+    const locId = locSelect ? locSelect.value : null;
+    if (!locId) return;
     
     const formData = new FormData();
     formData.append('barcode', currentScannedBarcode);
@@ -413,7 +473,9 @@ window.issueScannedTag = async function(ignoreFifo = false) {
         if (typeof loadHistory === 'function') loadHistory();
         if (typeof loadDashboardData === 'function') loadDashboardData();
 
-        document.getElementById('traceIssueArea').classList.add('d-none');
+        const availableActionArea = document.getElementById('availableActionArea');
+        if (availableActionArea) availableActionArea.classList.add('d-none');
+        
         document.getElementById('traceStatus').className = 'badge bg-warning text-dark rounded-pill px-3 py-2 shadow-sm';
         document.getElementById('traceStatus').innerText = 'WIP';
 
@@ -426,7 +488,9 @@ window.issueScannedTag = async function(ignoreFifo = false) {
 
 window.transferScannedTag = async function() {
     if (!currentScannedBarcode) return;
-    const locId = document.getElementById('transferLocationTrace').value;
+    const locSelect = document.getElementById('smartLocationSelect') || document.getElementById('transferLocationTrace');
+    const locId = locSelect ? locSelect.value : null;
+    if (!locId) return;
     
     const formData = new FormData();
     formData.append('barcode', currentScannedBarcode);
