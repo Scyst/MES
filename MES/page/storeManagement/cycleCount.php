@@ -77,40 +77,79 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
             <div class="mobile-container cc-container d-flex flex-column bg-white shadow-sm" style="height: calc(100vh - 100px); max-width: 100%; border-radius: 12px; overflow: hidden; position: relative;">
 
                 <div class="p-3 flex-grow-1 d-flex flex-column" id="mainContent" style="min-height: 0; overflow: hidden;">
-                    <!-- View 1: Select Location -->
+                    <!-- View 1: Select Location (Visual Map) -->
                     <div id="viewSelectLocation" class="d-flex flex-column h-100" style="min-height: 0;">
                         <div class="flex-shrink-0">
-                            <h5 class="fw-bold mb-4 text-dark"><i class="fas fa-map-marker-alt text-primary me-2"></i> เลือก Location ที่ต้องการตรวจ</h5>
-                        </div>
-                        
-                        <div class="flex-grow-1 overflow-auto" style="min-height: 0; padding-bottom: 20px;">
-                            <div class="row g-2" id="locationGrid">
-                                <?php foreach($locations as $loc): ?>
-                                    <?php 
-                                        $statusClass = 'btn-outline-secondary';
-                                        $icon = 'fa-box';
-                                        if ($loc['current_status'] === 'IN_PROGRESS') {
-                                            $statusClass = 'btn-warning text-dark border-warning';
-                                            $icon = 'fa-spinner fa-spin';
-                                        } elseif ($loc['current_status'] === 'COMPLETED') {
-                                            $statusClass = 'btn-success text-white border-success';
-                                            $icon = 'fa-check-circle';
-                                        }
-                                    ?>
-                                    <div class="col-4 col-md-3">
-                                        <button class="btn <?= $statusClass ?> w-100 py-3 fw-bold shadow-sm location-btn" onclick="selectLocationUI(<?= $loc['location_id'] ?>, '<?= htmlspecialchars($loc['location_name']) ?>', this)">
-                                            <i class="fas <?= $icon ?> d-block mb-1 fs-3"></i>
-                                            <?= htmlspecialchars($loc['location_name']) ?>
-                                        </button>
-                                    </div>
-                                <?php endforeach; ?>
+                            <h5 class="fw-bold mb-3 text-dark"><i class="fas fa-map text-primary me-2"></i> แผนผังคลังสินค้า (Visual Map)</h5>
+                            
+                            <!-- Legend -->
+                            <div class="d-flex gap-2 mb-3 px-1" style="font-size: 0.75rem; overflow-x: auto; white-space: nowrap;">
+                                <span class="d-inline-flex align-items-center"><span class="d-inline-block rounded-circle bg-secondary me-1" style="width:10px;height:10px;"></span>รอตรวจ (Pending)</span>
+                                <span class="d-inline-flex align-items-center"><span class="d-inline-block rounded-circle bg-warning me-1" style="width:10px;height:10px;"></span>กำลังเช็ค (In Progress)</span>
+                                <span class="d-inline-flex align-items-center"><span class="d-inline-block rounded-circle bg-success me-1" style="width:10px;height:10px;"></span>เสร็จสิ้น (Completed)</span>
                             </div>
                         </div>
                         
-                        <div class="flex-shrink-0 pt-3 bg-white mt-auto" style="border-top: 1px solid #eee;">
+                        <div class="flex-grow-1 overflow-auto px-1" style="min-height: 0; padding-bottom: 20px;">
+                            <?php 
+                                // Group locations by Zone for visual map
+                                $zones = [];
+                                foreach ($locations as $loc) {
+                                    $name = $loc['location_name'];
+                                    $zone = 'อื่น ๆ (Others)';
+                                    if (preg_match('/^([A-H])\d+$/', $name, $matches)) {
+                                        $zone = 'โซน ' . $matches[1] . ' (Zone ' . $matches[1] . ')';
+                                    } elseif (strpos($name, 'BR-') === 0 || strpos($name, 'BT-') === 0 || strpos($name, 'BWH-') === 0) {
+                                        $zone = 'โซน B (ย่อย)';
+                                    } elseif (strpos($name, 'AW') === 0) {
+                                        $zone = 'โซน A (ย่อย)';
+                                    }
+                                    if (!isset($zones[$zone])) $zones[$zone] = [];
+                                    $zones[$zone][] = $loc;
+                                }
+                                ksort($zones); // A-Z sorting
+                            ?>
+
+                            <?php foreach($zones as $zoneName => $zoneLocs): ?>
+                                <div class="card mb-3 border-0 shadow-sm rounded-3">
+                                    <div class="card-header bg-light border-0 py-2">
+                                        <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-layer-group me-2 text-muted"></i><?= htmlspecialchars($zoneName) ?></h6>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <div class="row g-2">
+                                            <?php foreach($zoneLocs as $loc): ?>
+                                                <?php 
+                                                    $statusClass = 'btn-outline-secondary';
+                                                    $bgStyle = '';
+                                                    $icon = ''; // No icon for cleaner map look, just colors
+                                                    if ($loc['current_status'] === 'IN_PROGRESS') {
+                                                        $statusClass = 'btn-warning text-dark border-warning shadow-sm';
+                                                        $bgStyle = 'background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px);';
+                                                        $icon = '<i class="fas fa-spinner fa-spin position-absolute top-0 end-0 m-1" style="font-size: 10px;"></i>';
+                                                    } elseif ($loc['current_status'] === 'COMPLETED') {
+                                                        $statusClass = 'btn-success text-white border-success shadow-sm';
+                                                        $icon = '<i class="fas fa-check position-absolute top-0 end-0 m-1" style="font-size: 10px;"></i>';
+                                                    }
+                                                ?>
+                                                <div class="col-4 col-md-3 col-lg-2">
+                                                    <button class="btn <?= $statusClass ?> w-100 fw-bold location-btn position-relative" 
+                                                            style="height: 60px; border-radius: 8px; <?= $bgStyle ?>"
+                                                            onclick="selectLocationUI(<?= $loc['location_id'] ?>, '<?= htmlspecialchars($loc['location_name']) ?>', this)">
+                                                        <?= $icon ?>
+                                                        <span class="fs-6"><?= htmlspecialchars($loc['location_name']) ?></span>
+                                                    </button>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        
+                        <div class="flex-shrink-0 pt-3 bg-white mt-auto position-sticky bottom-0" style="border-top: 1px solid #eee; z-index: 10;">
                             <input type="hidden" id="locationSelect">
                             <button class="btn btn-primary w-100 py-3 fw-bold shadow-sm rounded-3 fs-5" onclick="startSession()" id="btnStartSession" disabled>
-                                เริ่มตรวจนับ <i class="fas fa-arrow-right ms-2"></i>
+                                เริ่มตรวจนับชั้นที่เลือก <i class="fas fa-arrow-right ms-2"></i>
                             </button>
                         </div>
                     </div>
