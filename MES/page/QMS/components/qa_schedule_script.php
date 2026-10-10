@@ -95,10 +95,10 @@ function filterQaScheduleLocally() {
     renderQaScheduleTable();
 }
 
-let currentStatusFilter = 'ALL';
+let qaCurrentStatusFilter = 'ALL';
 
 function filterQaByStatus(status) {
-    currentStatusFilter = status;
+    qaCurrentStatusFilter = status;
     document.querySelectorAll('.qa-kpi-filter').forEach(el => el.classList.remove('active'));
     const btn = document.getElementById('kpi-filter-' + status);
     if(btn) btn.classList.add('active');
@@ -112,14 +112,14 @@ function renderQaScheduleTable() {
 
     const dataToRender = currentQaData.filter(po => {
         let matchStatus = true;
-        if (currentStatusFilter !== 'ALL') {
-            if (currentStatusFilter === 'PASS' && po.inspection_result !== 'PASS') matchStatus = false;
-            else if (currentStatusFilter === 'FAIL' && po.inspection_result !== 'FAIL') matchStatus = false;
-            else if (currentStatusFilter === 'IN_PROGRESS') {
+        if (qaCurrentStatusFilter !== 'ALL') {
+            if (qaCurrentStatusFilter === 'PASS' && po.inspection_result !== 'PASS') matchStatus = false;
+            else if (qaCurrentStatusFilter === 'FAIL' && po.inspection_result !== 'FAIL') matchStatus = false;
+            else if (qaCurrentStatusFilter === 'IN_PROGRESS') {
                 // If result is already PASS/FAIL, it's not IN_PROGRESS conceptually based on backend stats logic
                 if (po.inspection_result === 'PASS' || po.inspection_result === 'FAIL' || po.inspection_status !== 'IN_PROGRESS') matchStatus = false;
             }
-            else if (currentStatusFilter === 'WAITING') {
+            else if (qaCurrentStatusFilter === 'WAITING') {
                 if (po.inspection_result === 'PASS' || po.inspection_result === 'FAIL' || po.inspection_status === 'IN_PROGRESS') {
                     matchStatus = false;
                 }
