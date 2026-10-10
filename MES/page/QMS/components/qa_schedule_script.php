@@ -48,69 +48,95 @@ function loadQASchedule(filterType = null) {
                     fetchAndRenderQaCalendar();
                 }
 
-                if(res.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted">No schedule for this date.</td></tr>';
-                    return;
-                }
-                
-                const todayDate = new Date();
-                todayDate.setHours(0,0,0,0);
-                const in7Days = new Date(todayDate);
-                in7Days.setDate(todayDate.getDate() + 7);
+                renderQaScheduleTable();
+            } else {
+                tbody.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-danger">${res.message}</td></tr>`;
+            }
+        }).catch(err => {
+            console.error('Network Error in loadQASchedule:', err);
+            Swal.fire('Error', 'Network Error: ' + err.message, 'error');
+        });
+}
 
-                let html = '';
-                res.data.forEach(po => {
-                    let statusBadge = '<span class="badge bg-secondary">WAITING</span>';
-                    if (po.inspection_status === 'IN_PROGRESS') statusBadge = '<span class="badge bg-warning text-dark">IN PROGRESS</span>';
-                    if (po.inspection_status === 'DONE') statusBadge = '<span class="badge bg-success">DONE</span>';
-                    
-                    let typeBadge = '';
-                    if (po.inspect_type === 'Remote') typeBadge = '<span class="badge bg-info mt-1 d-block" style="width:fit-content; margin:0 auto;">Remote</span>';
-                    if (po.inspect_type === 'On-site') typeBadge = '<span class="badge bg-primary mt-1 d-block" style="width:fit-content; margin:0 auto;">On-site</span>';
+function filterQaScheduleLocally() {
+    renderQaScheduleTable();
+}
 
-                    let resultBadge = '';
-                    if (po.inspection_result === 'PASS') resultBadge = '<span class="badge bg-success ms-1">PASS</span>';
-                    if (po.inspection_result === 'FAIL') resultBadge = '<span class="badge bg-danger ms-1">FAIL</span>';
+function renderQaScheduleTable() {
+    const tbody = document.getElementById('qaScheduleBody');
+    const searchInput = document.getElementById('qaScheduleSearch');
+    const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
-                    let rowClass = '';
-                    if (po.inspection_status !== 'DONE' && po.loading_date) {
-                        const lDate = new Date(po.loading_date);
-                        lDate.setHours(0,0,0,0);
-                        if (lDate <= todayDate) {
-                            rowClass = 'table-overdue';
-                        } else if (lDate <= in7Days) {
-                            rowClass = 'table-approaching';
-                        }
-                    }
+    const dataToRender = currentQaData.filter(po => {
+        if (!term) return true;
+        const searchStr = `${po.ticket_number || ''} ${po.po_number || ''} ${po.sku || ''} ${po.description || ''}`.toLowerCase();
+        return searchStr.includes(term);
+    });
 
-                    let inspectorCell = po.qa_inspector ? 
-                        `<span class="badge bg-info text-dark shadow-sm"><i class="fas fa-user-check me-1"></i>${po.qa_inspector}</span>` :
-                        `<button class="btn btn-sm btn-outline-primary py-0 px-2 shadow-sm" onclick="event.stopPropagation(); assignToMe(${po.id})" style="font-size:0.75rem;">Assign to Me</button>`;
+    if (dataToRender.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted">No schedule found for this criteria.</td></tr>';
+        return;
+    }
 
-                    html += `
-                        <tr class="${rowClass}" style="cursor: pointer;" onclick='openUpdateModal(${JSON.stringify(po).replace(/'/g, "&#39;")})' title="Click to view/update">
-                            <td class="text-center" onclick="event.stopPropagation()">
-                                <input type="checkbox" class="form-check-input po-checkbox" value="${po.id}" onchange="updateBulkCount()">
-                            </td>
-                            <td class="text-center text-secondary">${po.ticket_number || '-'}</td>
-                            <td class="px-3 fw-bold text-primary text-center">${po.po_number}</td>
-                            <td class="text-start">
-                                <div><strong>${po.sku}</strong></div>
-                                <div class="small text-muted">${po.description} (${po.color})</div>
-                            </td>
-                            <td class="fw-bold text-center">${po.quantity ? Number(po.quantity).toLocaleString() : '-'}</td>
-                            <td class="text-center text-muted">-</td>
-                            <td class="text-center">${po.dc_location || '-'}</td>
-                            <td class="text-center fw-bold text-dark">${po.inspection_date ? po.inspection_date.substring(0, 10) : '-'}</td>
-                            <td class="text-center fw-bold text-success">${po.actual_inspection_date ? po.actual_inspection_date.substring(0, 10) : '-'}</td>
-                            <td class="text-center">${po.loading_date ? po.loading_date : '-'}</td>
-                            <td class="text-center fw-bold text-secondary">${po.loading_week || '-'}</td>
-                            <td class="text-center" onclick="event.stopPropagation()">${inspectorCell}</td>
-                            <td class="text-center">${statusBadge} ${resultBadge} ${typeBadge}</td>
-                        </tr>
-                    `;
-                });
-                tbody.innerHTML = html;
+    const todayDate = new Date();
+    todayDate.setHours(0,0,0,0);
+    const in7Days = new Date(todayDate);
+    in7Days.setDate(todayDate.getDate() + 7);
+
+    let html = '';
+    dataToRender.forEach(po => {
+        let statusBadge = '<span class="badge bg-secondary">WAITING</span>';
+        if (po.inspection_status === 'IN_PROGRESS') statusBadge = '<span class="badge bg-warning text-dark">IN PROGRESS</span>';
+        if (po.inspection_status === 'DONE') statusBadge = '<span class="badge bg-success">DONE</span>';
+        
+        let typeBadge = '';
+        if (po.inspect_type === 'Remote') typeBadge = '<span class="badge bg-info mt-1 d-block" style="width:fit-content; margin:0 auto;">Remote</span>';
+        if (po.inspect_type === 'On-site') typeBadge = '<span class="badge bg-primary mt-1 d-block" style="width:fit-content; margin:0 auto;">On-site</span>';
+
+        let resultBadge = '';
+        if (po.inspection_result === 'PASS') resultBadge = '<span class="badge bg-success ms-1">PASS</span>';
+        if (po.inspection_result === 'FAIL') resultBadge = '<span class="badge bg-danger ms-1">FAIL</span>';
+
+        let rowClass = '';
+        if (po.inspection_status !== 'DONE' && po.loading_date) {
+            const lDate = new Date(po.loading_date);
+            lDate.setHours(0,0,0,0);
+            if (lDate <= todayDate) {
+                rowClass = 'table-overdue';
+            } else if (lDate <= in7Days) {
+                rowClass = 'table-approaching';
+            }
+        }
+
+        let inspectorCell = po.qa_inspector ? 
+            `<span class="badge bg-info text-dark shadow-sm"><i class="fas fa-user-check me-1"></i>${po.qa_inspector}</span>` :
+            `<button class="btn btn-sm btn-outline-primary py-0 px-2 shadow-sm" onclick="event.stopPropagation(); assignToMe(${po.id})" style="font-size:0.75rem;">Assign to Me</button>`;
+
+        html += `
+            <tr class="${rowClass}" style="cursor: pointer;" onclick='openUpdateModal(${JSON.stringify(po).replace(/'/g, "&#39;")})' title="Click to view/update">
+                <td class="text-center" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="form-check-input po-checkbox" value="${po.id}" onchange="updateBulkCount()">
+                </td>
+                <td class="text-center text-secondary">${po.ticket_number || '-'}</td>
+                <td class="px-3 fw-bold text-primary text-center">${po.po_number}</td>
+                <td class="text-start">
+                    <div><strong>${po.sku}</strong></div>
+                    <div class="small text-muted">${po.description} (${po.color})</div>
+                </td>
+                <td class="fw-bold text-center">${po.quantity ? Number(po.quantity).toLocaleString() : '-'}</td>
+                <td class="text-center text-muted">-</td>
+                <td class="text-center">${po.dc_location || '-'}</td>
+                <td class="text-center fw-bold text-dark">${po.inspection_date ? po.inspection_date.substring(0, 10) : '-'}</td>
+                <td class="text-center fw-bold text-success">${po.actual_inspection_date ? po.actual_inspection_date.substring(0, 10) : '-'}</td>
+                <td class="text-center">${po.loading_date ? po.loading_date : '-'}</td>
+                <td class="text-center fw-bold text-secondary">${po.loading_week || '-'}</td>
+                <td class="text-center" onclick="event.stopPropagation()">${inspectorCell}</td>
+                <td class="text-center">${statusBadge} ${resultBadge} ${typeBadge}</td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
             } else {
                 tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-danger">${res.message}</td></tr>`;
             }

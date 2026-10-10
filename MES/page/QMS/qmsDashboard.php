@@ -91,9 +91,12 @@ $pageIcon = "fas fa-shield-alt";
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
-                            <div class="input-group shadow-sm" style="max-width: 400px; border-radius: 6px; overflow: hidden; flex: 1; min-width: 250px;">
+                            <div class="input-group shadow-sm" style="max-width: 450px; border-radius: 6px; overflow: hidden; flex: 1; min-width: 250px;">
                                 <span class="input-group-text bg-white border-0"><i class="fas fa-search text-muted"></i></span>
                                 <input type="text" id="searchInput" class="form-control border-0 bg-white" placeholder="ค้นหา CAR No, ลูกค้า, สินค้า..." style="font-size: 0.95rem;">
+                                <button class="btn btn-outline-secondary bg-white border-0 border-start" type="button" data-bs-toggle="collapse" data-bs-target="#advancedSearchCollapse" aria-expanded="false" title="ค้นหาขั้นสูง">
+                                    <i class="fas fa-sliders-h text-primary"></i>
+                                </button>
                             </div>
                             <div class="d-flex gap-2">
                                 <div class="dropdown d-none d-lg-block">
@@ -109,6 +112,37 @@ $pageIcon = "fas fa-shield-alt";
                                 <button class="btn btn-sm btn-primary fw-bold shadow-sm d-none d-lg-block" onclick="openNCRModal()">
                                     <i class="fas fa-plus-circle me-1"></i> New NCR
                                 </button>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Search Panel -->
+                        <div class="collapse mb-3" id="advancedSearchCollapse">
+                            <div class="card card-body shadow-sm border-0 bg-light" style="border-radius: 8px;">
+                                <div class="row g-2">
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label small fw-bold text-muted mb-1">ตั้งแต่ (Start Date)</label>
+                                        <input type="date" id="searchStartDate" class="form-control form-control-sm search-filter-input">
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label small fw-bold text-muted mb-1">ถึง (End Date)</label>
+                                        <input type="date" id="searchEndDate" class="form-control form-control-sm search-filter-input">
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label small fw-bold text-muted mb-1">ลูกค้า (Customer)</label>
+                                        <select id="searchCustomer" class="form-select form-select-sm search-filter-input">
+                                            <option value="">ทั้งหมด (All)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label small fw-bold text-muted mb-1">ประเภทปัญหา (Defect Type)</label>
+                                        <input type="text" id="searchDefect" class="form-control form-control-sm search-filter-input" placeholder="พิมพ์ชื่อ Defect...">
+                                    </div>
+                                    <div class="col-12 text-end mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary fw-bold" onclick="resetAdvancedSearch()">
+                                            <i class="fas fa-undo me-1"></i> ล้างค่า
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

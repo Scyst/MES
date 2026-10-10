@@ -1,4 +1,7 @@
 <script>
+let allConcessionData = [];
+let concessionSearchTimer;
+
 function loadConcessionList() {
     const tbody = document.getElementById('concessionBody');
     tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
@@ -7,43 +10,60 @@ function loadConcessionList() {
         .then(r => r.json())
         .then(res => {
             if(res.success) {
-                if(res.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No records found.</td></tr>';
-                    return;
-                }
-                
-                let html = '';
-                res.data.forEach(req => {
-                    html += `
-                        <tr style="cursor: pointer;" title="View & Print">
-                            <td class="text-center" onclick="event.stopPropagation()">
-                                <input type="checkbox" class="form-check-input concession-checkbox" value="${req.id}" onchange="updateConcessionBulkCount()">
-                            </td>
-                            <td class="px-3 fw-bold text-primary text-start" onclick="viewConcession(${req.id})">${req.request_no}</td>
-                            <td class="text-center" onclick="viewConcession(${req.id})">${req.request_date}</td>
-                            <td class="fw-bold text-start" onclick="viewConcession(${req.id})">${req.subject || '-'}</td>
-                            <td class="text-start" onclick="viewConcession(${req.id})" style="font-size: 0.85rem;">
-                                <div class="text-muted">Name: <span class="text-dark">${req.part_name || '-'}</span></div>
-                                <div class="text-muted mt-1">No: <span class="text-dark">${req.part_no || '-'}</span> | Model: <span class="text-dark">${req.model_name || '-'}</span></div>
-                            </td>
-                            <td class="text-start" onclick="viewConcession(${req.id})" style="font-size: 0.85rem;">
-                                <div>Order: <span class="fw-bold text-dark">${req.order_no || '-'}</span></div>
-                                <div class="mt-1">Lot: <span class="text-dark">${req.lot_no || '-'}</span></div>
-                            </td>
-                            <td class="text-center" onclick="viewConcession(${req.id})">${req.issued_by_dept || '-'}</td>
-                            <td class="text-center" onclick="viewConcession(${req.id})">${req.request_to || '-'}</td>
-                            <td class="text-center" onclick="viewConcession(${req.id})">${req.person_name || '-'}</td>
-                            <td class="fw-bold text-center align-middle" onclick="viewConcession(${req.id})">${req.qty ? Number(req.qty).toLocaleString() : '-'}</td>
-                        </tr>
-                    `;
+                allConcessionData = res.data.map(req => {
+                    req._searchStr = `${req.request_no || ''} ${req.subject || ''} ${req.part_name || ''} ${req.part_no || ''} ${req.person_name || ''}`.toLowerCase();
+                    return req;
                 });
-                tbody.innerHTML = html;
+                renderConcessionTable();
             } else {
                 tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger">${res.message}</td></tr>`;
             }
         }).catch(err => {
             tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-danger">Network Error</td></tr>';
         });
+}
+
+function renderConcessionTable() {
+    const tbody = document.getElementById('concessionBody');
+    const searchInput = document.getElementById('concessionSearch');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    
+    const filteredData = allConcessionData.filter(req => {
+        return searchTerm === '' || req._searchStr.includes(searchTerm);
+    });
+
+    if(filteredData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No records found.</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    filteredData.forEach(req => {
+        html += `
+            <tr style="cursor: pointer;" title="View & Print">
+                <td class="text-center" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="form-check-input concession-checkbox" value="${req.id}" onchange="updateConcessionBulkCount()">
+                </td>
+                <td class="px-3 fw-bold text-primary text-start" onclick="viewConcession(${req.id})">${req.request_no}</td>
+                <td class="text-center" onclick="viewConcession(${req.id})">${req.request_date}</td>
+                <td class="fw-bold text-start" onclick="viewConcession(${req.id})">${req.subject || '-'}</td>
+                <td class="text-start" onclick="viewConcession(${req.id})" style="font-size: 0.85rem;">
+                    <div class="text-muted">Name: <span class="text-dark">${req.part_name || '-'}</span></div>
+                    <div class="text-muted mt-1">No: <span class="text-dark">${req.part_no || '-'}</span> | Model: <span class="text-dark">${req.model_name || '-'}</span></div>
+                </td>
+                <td class="text-start" onclick="viewConcession(${req.id})" style="font-size: 0.85rem;">
+                    <div>Order: <span class="fw-bold text-dark">${req.order_no || '-'}</span></div>
+                    <div class="mt-1">Lot: <span class="text-dark">${req.lot_no || '-'}</span></div>
+                </td>
+                <td class="text-center" onclick="viewConcession(${req.id})">${req.issued_by_dept || '-'}</td>
+                <td class="text-center" onclick="viewConcession(${req.id})">${req.request_to || '-'}</td>
+                <td class="text-center" onclick="viewConcession(${req.id})">${req.person_name || '-'}</td>
+                <td class="fw-bold text-center align-middle" onclick="viewConcession(${req.id})">${req.qty ? Number(req.qty).toLocaleString() : '-'}</td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+    updateConcessionBulkCount();
 }
 
 function openConcessionModal() {
@@ -235,6 +255,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 reader.readAsDataURL(file);
             });
+        });
+    }
+
+    const concessionSearch = document.getElementById('concessionSearch');
+    if(concessionSearch) {
+        concessionSearch.addEventListener('input', function() {
+            const tbody = document.getElementById('concessionBody');
+            if(tbody) tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังค้นหา...</td></tr>';
+            
+            clearTimeout(concessionSearchTimer);
+            concessionSearchTimer = setTimeout(() => {
+                renderConcessionTable();
+            }, 300);
         });
     }
 });

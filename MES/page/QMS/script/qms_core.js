@@ -44,22 +44,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            if (!isDataReady) return; 
+    const filterInputs = document.querySelectorAll('.search-filter-input');
+    
+    const triggerSearch = () => {
+        if (!isDataReady) return; 
 
-            const tbody = document.querySelector('#caseTable tbody');
-            const mobileContainer = document.getElementById('mobileCaseContainer');
-            
-            if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังค้นหา...</td></tr>';
-            if(mobileContainer) mobileContainer.innerHTML = '<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังค้นหา...</div>';
+        const tbody = document.querySelector('#caseTable tbody');
+        const mobileContainer = document.getElementById('mobileCaseContainer');
+        
+        if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังค้นหา...</td></tr>';
+        if(mobileContainer) mobileContainer.innerHTML = '<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังค้นหา...</div>';
 
-            clearTimeout(searchTimer);
-            searchTimer = setTimeout(() => {
-                renderTable(); 
-            }, 300); 
-        });
-    }
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            renderTable(); 
+        }, 300); 
+    };
+
+    if (searchInput) searchInput.addEventListener('input', triggerSearch);
+    filterInputs.forEach(input => {
+        input.addEventListener('input', triggerSearch);
+        input.addEventListener('change', triggerSearch);
+    });
 
     initForms();
 });
@@ -134,12 +140,17 @@ function loadMasterData() {
 
             // 3. จัดการ Customers 
             const customerList = document.getElementById('customer_list');
-            if(customerList && res.data.customers) {
+            const searchCustomer = document.getElementById('searchCustomer');
+            if (res.data.customers) {
                 let custHTML = '';
+                let searchCustHTML = '<option value="">ทั้งหมด (All)</option>';
                 res.data.customers.forEach(c => {
-                    custHTML += `<option value="${escapeHTML(c.customer_name)}">`;
+                    const safeName = escapeHTML(c.customer_name);
+                    custHTML += `<option value="${safeName}">`;
+                    searchCustHTML += `<option value="${safeName}">${safeName}</option>`;
                 });
-                customerList.innerHTML = custHTML;
+                if (customerList) customerList.innerHTML = custHTML;
+                if (searchCustomer) searchCustomer.innerHTML = searchCustHTML;
             }
         }
     })
@@ -168,6 +179,24 @@ function setFilter(status) {
     });
 }
 
+function resetAdvancedSearch() {
+    if (document.getElementById('searchStartDate')) document.getElementById('searchStartDate').value = '';
+    if (document.getElementById('searchEndDate')) document.getElementById('searchEndDate').value = '';
+    if (document.getElementById('searchCustomer')) document.getElementById('searchCustomer').value = '';
+    if (document.getElementById('searchDefect')) document.getElementById('searchDefect').value = '';
+    
+    if (!isDataReady) return;
+    const tbody = document.querySelector('#caseTable tbody');
+    const mobileContainer = document.getElementById('mobileCaseContainer');
+    if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังค้นหา...</td></tr>';
+    if(mobileContainer) mobileContainer.innerHTML = '<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังค้นหา...</div>';
+    
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        renderTable(); 
+    }, 300);
+}
+
 // ==========================================
 // 1.1 วาดตารางและ Mobile Cards (XSS Secured)
 // ==========================================
@@ -178,10 +207,30 @@ function renderTable() {
 
     const searchTerm = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase().trim() : '';
     
+    // Advanced Filters
+    const advStartDate = document.getElementById('searchStartDate') ? document.getElementById('searchStartDate').value : '';
+    const advEndDate = document.getElementById('searchEndDate') ? document.getElementById('searchEndDate').value : '';
+    const advCustomer = document.getElementById('searchCustomer') ? document.getElementById('searchCustomer').value : '';
+    const advDefect = document.getElementById('searchDefect') ? document.getElementById('searchDefect').value.toLowerCase().trim() : '';
+
     const filteredData = allCasesData.filter(c => {
         const matchStatus = (currentStatusFilter === 'ALL' || c.current_status === currentStatusFilter);
         const matchSearch = searchTerm === '' || c._searchStr.includes(searchTerm);
-        return matchStatus && matchSearch;
+        
+        let matchDate = true;
+        if (advStartDate || advEndDate) {
+            const caseDateStr = c.case_date ? c.case_date.split(' ')[0] : '';
+            if (advStartDate && caseDateStr < advStartDate) matchDate = false;
+            if (advEndDate && caseDateStr > advEndDate) matchDate = false;
+        }
+
+        let matchCustomer = true;
+        if (advCustomer && c.customer_name !== advCustomer) matchCustomer = false;
+
+        let matchDefect = true;
+        if (advDefect && (!c.defect_type || !c.defect_type.toLowerCase().includes(advDefect))) matchDefect = false;
+
+        return matchStatus && matchSearch && matchDate && matchCustomer && matchDefect;
     });
 
     if(filteredData.length === 0) {

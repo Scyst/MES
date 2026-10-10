@@ -114,12 +114,20 @@
         </div>
 
         <!-- Custom Date Picker (Range) -->
-        <div class="d-flex align-items-center ps-2 pe-1">
+        <div class="d-flex align-items-center ps-2 pe-1 border-end">
             <button class="btn btn-sm btn-light border px-2 shadow-sm rounded-start-pill" onclick="changeDate(-1)" title="Previous Day"><i class="fas fa-chevron-left"></i></button>
             <input type="date" id="scheduleStartDate" class="form-control form-control-sm border bg-white text-center fw-bold text-dark px-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule('custom_range')" style="font-size: 0.95rem; width: 130px; cursor: pointer; box-shadow: none;" title="Start Date">
             <span class="text-muted small px-1 bg-light border-top border-bottom py-1" style="height:31px">to</span>
             <input type="date" id="scheduleEndDate" class="form-control form-control-sm border bg-white text-center fw-bold text-dark px-1" value="<?php echo date('Y-m-d'); ?>" onchange="loadQASchedule('custom_range')" style="font-size: 0.95rem; width: 130px; cursor: pointer; box-shadow: none;" title="End Date">
             <button class="btn btn-sm btn-light border px-2 shadow-sm rounded-end-pill" onclick="changeDate(1)" title="Next Day"><i class="fas fa-chevron-right"></i></button>
+        </div>
+
+        <!-- Text Search -->
+        <div class="d-flex align-items-center ps-2 pe-1" style="min-width: 250px;">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white border-0"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" id="qaScheduleSearch" class="form-control border-0 bg-white shadow-none" placeholder="ค้นหา Ticket, PO, SKU..." style="font-size: 0.85rem;" oninput="filterQaScheduleLocally()">
+            </div>
         </div>
     </div>
     
