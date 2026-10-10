@@ -1,5 +1,5 @@
 <script>
-let currentFilter = 'date';
+let currentFilter = 'custom_range';
 let currentUpdatePo = null;
 let currentQaData = [];
 let qaCalendarInstance = null;
@@ -69,7 +69,7 @@ function renderQaScheduleTable() {
 
     const dataToRender = currentQaData.filter(po => {
         if (!term) return true;
-        const searchStr = `${po.ticket_number || ''} ${po.po_number || ''} ${po.sku || ''} ${po.description || ''}`.toLowerCase();
+        const searchStr = `${po.ticket_number || ''} ${po.po_number || ''} ${po.sku || ''} ${po.description || ''} ${po.loading_week || ''} ${po.qa_inspector || ''}`.toLowerCase();
         return searchStr.includes(term);
     });
 
