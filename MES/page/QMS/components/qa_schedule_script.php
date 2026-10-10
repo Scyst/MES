@@ -1,5 +1,5 @@
 <script>
-let currentFilter = 'custom_range';
+let currentFilter = 'date';
 let currentUpdatePo = null;
 let currentQaData = [];
 let qaCalendarInstance = null;
@@ -7,6 +7,39 @@ let currentQaView = 'list';
 
 function loadQASchedule(filterType = null) {
     if (filterType) currentFilter = filterType;
+    
+    // Sync UI Dates if a preset is selected
+    if (['today', 'this_week', 'this_month', 'last_month'].includes(currentFilter)) {
+        const today = new Date();
+        let start = new Date();
+        let end = new Date();
+
+        if (currentFilter === 'today') {
+            start = today;
+            end = today;
+        } else if (currentFilter === 'this_week') {
+            const day = today.getDay();
+            const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+            start = new Date(today.getFullYear(), today.getMonth(), diff);
+            end = new Date(start);
+            end.setDate(end.getDate() + 6);
+        } else if (currentFilter === 'this_month') {
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+            end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        } else if (currentFilter === 'last_month') {
+            start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            end = new Date(today.getFullYear(), today.getMonth(), 0);
+        }
+
+        const formatYMD = (d) => {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
+
+        const startEl = document.getElementById('scheduleStartDate');
+        const endEl = document.getElementById('scheduleEndDate');
+        if (startEl) startEl.value = formatYMD(start);
+        if (endEl) endEl.value = formatYMD(end);
+    }
     
     // Clear check if switching to date input
     if (currentFilter === 'date' || currentFilter === 'custom_range') {
@@ -751,22 +784,6 @@ function renderPendingJobs() {
     listEl.innerHTML = html;
 }
 
-
-function setScheduleDateToday() {
-    const inputStart = document.getElementById('scheduleStartDate');
-    const inputEnd = document.getElementById('scheduleEndDate');
-    
-    const date = new Date();
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    
-    const today = `${yyyy}-${mm}-${dd}`;
-    inputStart.value = today;
-    inputEnd.value = today;
-    
-    loadQASchedule('custom_range');
-}
 
 function changeDate(days) {
     const startInput = document.getElementById('scheduleStartDate');
