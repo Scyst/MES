@@ -1599,6 +1599,170 @@ try {
             ];
             break;
 
+        // ==========================================
+        // NEW CYCLE COUNT (SESSION-BASED) ENDPOINTS
+        // ==========================================
+        
+        case 'cc_start_session':
+            $location_id = (int)($_POST['location_id'] ?? 0);
+            $userId = $_SESSION['user']['id'];
+
+            if ($location_id === 0) {
+                throw new Exception("กรุณาระบุคลังสินค้าที่ต้องการตรวจนับ");
+            }
+
+            $pdo->beginTransaction();
+            try {
+                // Check for active session
+                $stmt = $pdo->prepare("SELECT session_id FROM dbo.CYCLE_COUNT_SESSIONS WITH (UPDLOCK) WHERE location_id = ? AND status = 'PENDING'");
+                $stmt->execute([$location_id]);
+                $session_id = $stmt->fetchColumn();
+
+                if (!$session_id) {
+                    // Create new session
+                    $stmt = $pdo->prepare("INSERT INTO dbo.CYCLE_COUNT_SESSIONS (location_id, status, created_by, created_at) VALUES (?, 'PENDING', ?, GETDATE())");
+                    $stmt->execute([$location_id, $userId]);
+                    $session_id = $pdo->lastInsertId();
+
+                    // Snapshot all current tags in this location
+                    $stmtInsert = $pdo->prepare("
+                        INSERT INTO dbo.CYCLE_COUNT_DETAILS (session_id, tag_serial_no, item_id, system_qty, is_wrong_location)
+                        SELECT 
+                            ?, 
+                            t.serial_no, 
+                            t.item_id, 
+                            t.current_qty,
+                            0
+                        FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
+                        WHERE t.location_id = ? AND t.current_qty > 0 AND t.status != 'DELETED'
+                    ");
+                    $stmtInsert->execute([$session_id, $location_id]);
+                }
+                $pdo->commit();
+
+                // Return session and remaining items to count (without showing system_qty to front-end to enforce Blind Count)
+                $stmtGet = $pdo->prepare("
+                    SELECT 
+                        d.id as detail_id,
+                        d.tag_serial_no,
+                        i.sap_no,
+                        ISNULL(i.part_no, i.sap_no) AS item_no,
+                        d.actual_qty,
+                        d.is_wrong_location
+                    FROM dbo.CYCLE_COUNT_DETAILS d WITH (NOLOCK)
+                    JOIN dbo.ITEMS i WITH (NOLOCK) ON d.item_id = i.item_id
+                    WHERE d.session_id = ?
+                ");
+                $stmtGet->execute([$session_id]);
+                $details = $stmtGet->fetchAll(PDO::FETCH_ASSOC);
+
+                // Group by Item for the UI
+                $expected_items = [];
+                $uncounted_count = 0;
+                $counted_count = 0;
+                foreach ($details as $row) {
+                    if ($row['actual_qty'] !== null) {
+                        $counted_count++;
+                        continue; // already counted
+                    }
+                    $uncounted_count++;
+                    $expected_items[$row['item_no']][] = $row['tag_serial_no'];
+                }
+
+                $response = [
+                    'success' => true, 
+                    'session_id' => $session_id,
+                    'expected_items' => $expected_items,
+                    'details' => $details,
+                    'summary' => [
+                        'total' => count($details),
+                        'counted' => $counted_count,
+                        'uncounted' => $uncounted_count
+                    ]
+                ];
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
+        case 'cc_scan_tag':
+            $session_id = (int)($_POST['session_id'] ?? 0);
+            $tag_no = trim($_POST['tag_no'] ?? '');
+            $actual_qty = (float)($_POST['actual_qty'] ?? -1);
+            $remark = trim($_POST['remark'] ?? '');
+
+            if ($session_id === 0 || $tag_no === '' || $actual_qty < 0) {
+                throw new Exception("ข้อมูลไม่ครบถ้วน");
+            }
+
+            // Check if tag is in the session
+            $stmt = $pdo->prepare("SELECT id, item_id, system_qty, is_wrong_location FROM dbo.CYCLE_COUNT_DETAILS WHERE session_id = ? AND tag_serial_no = ?");
+            $stmt->execute([$session_id, $tag_no]);
+            $detail = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($detail) {
+                // Tag belongs to location
+                $variance = $actual_qty - (float)$detail['system_qty'];
+                $stmtUpd = $pdo->prepare("UPDATE dbo.CYCLE_COUNT_DETAILS SET actual_qty = ?, variance_qty = ?, remark = ? WHERE id = ?");
+                $stmtUpd->execute([$actual_qty, $variance, $remark, $detail['id']]);
+
+                $response = ['success' => true, 'variance' => $variance, 'is_wrong_location' => $detail['is_wrong_location']];
+            } else {
+                // Wrong location - tag wasn't expected here
+                // Find it in the system
+                $stmtFind = $pdo->prepare("SELECT item_id, current_qty FROM dbo.RM_SERIAL_TAGS WHERE serial_no = ?");
+                $stmtFind->execute([$tag_no]);
+                $foundTag = $stmtFind->fetch(PDO::FETCH_ASSOC);
+
+                if (!$foundTag) {
+                    throw new Exception("ไม่พบแท็ก/พาเลท $tag_no ในระบบเลย");
+                }
+
+                // Add to details as wrong location
+                $variance = $actual_qty - (float)$foundTag['current_qty'];
+                $stmtIns = $pdo->prepare("
+                    INSERT INTO dbo.CYCLE_COUNT_DETAILS (session_id, tag_serial_no, item_id, system_qty, actual_qty, variance_qty, remark, is_wrong_location)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                ");
+                $stmtIns->execute([
+                    $session_id, $tag_no, $foundTag['item_id'], 
+                    $foundTag['current_qty'], $actual_qty, $variance, 
+                    $remark ? $remark : 'Found in Wrong Location'
+                ]);
+
+                $response = ['success' => true, 'variance' => $variance, 'is_wrong_location' => 1];
+            }
+            break;
+
+        case 'cc_finish_session':
+            $session_id = (int)($_POST['session_id'] ?? 0);
+            $missing_reason = trim($_POST['missing_reason'] ?? 'หาไม่เจอตอนตรวจนับ');
+
+            if ($session_id === 0) throw new Exception("ไม่มี Session ID");
+
+            $pdo->beginTransaction();
+            try {
+                // Any details with NULL actual_qty are missing. Set them to 0.
+                $stmtMiss = $pdo->prepare("
+                    UPDATE dbo.CYCLE_COUNT_DETAILS 
+                    SET actual_qty = 0, variance_qty = 0 - system_qty, remark = ? 
+                    WHERE session_id = ? AND actual_qty IS NULL
+                ");
+                $stmtMiss->execute([$missing_reason, $session_id]);
+
+                // Mark session as COMPLETED
+                $stmtEnd = $pdo->prepare("UPDATE dbo.CYCLE_COUNT_SESSIONS SET status = 'COMPLETED' WHERE session_id = ?");
+                $stmtEnd->execute([$session_id]);
+
+                $pdo->commit();
+                $response = ['success' => true, 'message' => 'ส่งสรุปผลให้หัวหน้าอนุมัติเรียบร้อย'];
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
         case 'submit_cycle_count':
             $item_id = (int)($_POST['item_id'] ?? 0);
             $location_id = (int)($_POST['location_id'] ?? 0);

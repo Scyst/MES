@@ -35,7 +35,41 @@ Tracker for processing documents from `P:\ISO` for the MES Learning Hub.
     - [x] SP-PDD-002 การออกแบบกระบวนการ
     - [x] SP-PDD-003 การเปลี่ยนแปลงกระบวนการผลิต
     - [x] SP-PDD-004 การประเมินความล้มเหลวของสายการผลิต (FMEA)
-    - [ ] Procedure (SCAN/PD อื่นๆ)
+    - [x] SP-PDD-005 การตรวจสอบเครื่องจักรและอุปกรณ์
+    - [x] SP-PDD-006 การบำรุงรักษาตามระยะเวลาและการซ่อมกรณีฉุกเฉิน
+    - [x] SP-PDD-007 การปรับปรุงอย่างต่อเนื่อง
+    - [x] SP-PDD-008 การจัดทำตารางควบคุมคุณภาพในกรรมวิธีการผลิต (PQCT)
+    - [x] SP-PDD-009 การจัดทำขั้นตอนในการปฏิบัติงาน (WI)
+    - [x] SP-PDD-010 การจัดทำ Limit Sample
+    - [x] SP-PDD-011 Heat Exchanger Production Control
+    - [x] SP-PDD-015 การสอบกลับผลิตภัณฑ์ (Traceability)
+    - [x] Procedure (SCAN/PD ครบถ้วน)
+    - [x] SP-STO-001 กระบวนการจัดการสินค้าสำเร็จรูป (FGMS)
+    - [x] SP-STO-002 การควบคุมวัตถุดิบในสินค้าคงคลัง (Stock Control)
+    - [x] SP-STO-003 การควบคุมสารที่เป็นอันตราย (RoHS)
+    - [x] SP-STO-004 การควบคุมการเคลื่อนย้าย จัดเก็บ และบรรจุภัณฑ์
+    - [x] SP-STO-005 มาตรการการจัดการการเรียกคืนผลิตภัณฑ์ (อ้างอิง-เอกสารยกเลิก)
+    - [x] Procedure (SCAN/STO ครบถ้วน)
+    - [x] SP-PUD-002 กระบวนการสั่งซื้อวัตถุดิบ (Raw Material Purchase)
+    - [x] SP-PUD-003 การคัดเลือกและประเมินผู้ขาย (Searching & Evaluation Control)
+    - [x] SP-PUD-004 กระบวนการสั่งซื้อสินค้าทั่วไป (General Purchase)
+    - [x] SP-PUD-005 การจัดทำสัญญาคุณภาพกับ Supplier (Supplier Quality Agreement)
+    - [x] SP-PUD-006 นโยบายและขั้นตอนการจัดซื้อ (Purchasing Policy Procedure)
+    - [x] SP-PUD-009 กระบวนการรับและจ่ายสินค้าสำเร็จรูป (Finish Goods Receive and Issue)
+    - [x] SP-PUD-010 การคัดเลือกและประเมินผู้ขายและผู้รับเหมาช่วง (Supplier & Subcontractor Evaluation)
+    - [x] SP-PUD-011 กระบวนการจัดหา (Procurement Procedure)
+    - [x] Procedure (SCAN/PU ครบถ้วน)
+    - [x] SP-RDD-005 การควบคุมการเปลี่ยนแปลงทางวิศวกรรม (Engineering Change Control)
+    - [x] Procedure (SCAN/RD ครบถ้วน)
+    - [x] SP-MTD-001 การบำรุงรักษาเครื่องจักรเชิงป้องกัน (Preventive Maintenance)
+    - [x] SP-MTD-002 ระเบียบการแจ้งซ่อมและการซ่อมกรณีฉุกเฉิน (Repair Request and Emergency Repairs)
+    - [x] SP-MTD-003 การจัดการระบบเทคโนโลยีสารสนเทศ (Management IT)
+    - [x] SP-MTD-004 การบำรุงรักษาเครื่องจักรเชิงป้องกัน (Preventive Maintenance - Rev.01)
+    - [x] SP-MTD-005 การควบคุมจิ๊กและฟิกซ์เจอร์ (Jig & Fixture Control)
+    - [x] Procedure (SCAN/MN ครบถ้วน)
+    - [x] SP-MIS-001 การรักษาความปลอดภัยข้อมูลแผนก MIS
+    - [x] SP-MIS-002 ขั้นตอนการเปลี่ยน PASSWORD และการเบิกใช้ PASSWORD ขั้นสูง
+    - [x] Procedure (SCAN/MIS ครบถ้วน)
   - [ ] KPI
   - [ ] ISO 14001 -2015
 - [ ] ISOIEC17025

@@ -137,14 +137,7 @@ function renderQaScheduleTable() {
     });
     tbody.innerHTML = html;
 }
-            } else {
-                tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-danger">${res.message}</td></tr>`;
-            }
-        }).catch(err => {
-            console.error('Network Error in loadQASchedule:', err);
-            Swal.fire('Error', 'Network Error: ' + err.message, 'error');
-        });
-}
+
 
 function loadQcUsers() {
     fetch('./api/qa_schedule_api.php?action=get_qc_users')

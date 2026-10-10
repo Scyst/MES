@@ -173,6 +173,11 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem; min-width: 250px;">
                                         <li><h6 class="dropdown-header text-dark fw-bold"><i class="fas fa-tasks me-1"></i> จัดการระบบคลัง</h6></li>
                                         <li>
+                                            <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="cycleCount.php" target="_blank">
+                                                <span><i class="fas fa-boxes text-info fa-fw me-2"></i> ตรวจนับสต็อก (Stock Check)</span>
+                                            </a>
+                                        </li>
+                                        <li>
                                             <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="#" onclick="openApprovalModal()">
                                                 <span><i class="fas fa-clipboard-check text-warning fa-fw me-2"></i> อนุมัติปรับยอด</span>
                                                 <span class="badge bg-danger rounded-pill d-none" id="badgePendingCount">0</span>
