@@ -2,31 +2,31 @@
 <!-- KPI Summary Cards -->
 <div class="mobile-swipe-row mb-3 d-print-none d-flex w-100">
     <div class="swipe-card-wrapper flex-fill">
-        <div class="kpi-card p-3 h-100 bg-white w-100" style="border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+        <div class="kpi-card p-3 h-100 bg-white w-100 qa-kpi-filter active" id="kpi-filter-ALL" onclick="filterQaByStatus('ALL')" style="border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
             <div class="text-secondary fw-bold small text-uppercase mb-1"><i class="fas fa-boxes me-1"></i> Total</div>
             <h3 class="mb-0 fw-bold text-dark" id="stat-qa-total">0</h3>
         </div>
     </div>
     <div class="swipe-card-wrapper flex-fill">
-        <div class="kpi-card p-3 h-100 bg-white w-100" style="border-left: 4px solid #6c757d;">
+        <div class="kpi-card p-3 h-100 bg-white w-100 qa-kpi-filter" id="kpi-filter-WAITING" onclick="filterQaByStatus('WAITING')" style="border-left: 4px solid #6c757d;">
             <div class="text-secondary fw-bold small text-uppercase mb-1"><i class="fas fa-clock me-1"></i> Waiting</div>
             <h3 class="mb-0 fw-bold text-dark" id="stat-waiting">0</h3>
         </div>
     </div>
     <div class="swipe-card-wrapper flex-fill">
-        <div class="kpi-card p-3 h-100 bg-white w-100" style="border-left: 4px solid var(--bs-warning);">
+        <div class="kpi-card p-3 h-100 bg-white w-100 qa-kpi-filter" id="kpi-filter-IN_PROGRESS" onclick="filterQaByStatus('IN_PROGRESS')" style="border-left: 4px solid var(--bs-warning);">
             <div class="text-warning text-dark fw-bold small text-uppercase mb-1"><i class="fas fa-spinner fa-spin me-1"></i> In Progress</div>
             <h3 class="mb-0 fw-bold text-dark" id="stat-inprogress">0</h3>
         </div>
     </div>
     <div class="swipe-card-wrapper flex-fill">
-        <div class="kpi-card p-3 h-100 bg-white w-100" style="border-left: 4px solid var(--bs-success);">
+        <div class="kpi-card p-3 h-100 bg-white w-100 qa-kpi-filter" id="kpi-filter-PASS" onclick="filterQaByStatus('PASS')" style="border-left: 4px solid var(--bs-success);">
             <div class="text-success fw-bold small text-uppercase mb-1"><i class="fas fa-check-circle me-1"></i> Passed</div>
             <h3 class="mb-0 fw-bold text-dark" id="stat-passed">0</h3>
         </div>
     </div>
     <div class="swipe-card-wrapper flex-fill">
-        <div class="kpi-card p-3 h-100 bg-white w-100" style="border-left: 4px solid var(--bs-danger);">
+        <div class="kpi-card p-3 h-100 bg-white w-100 qa-kpi-filter" id="kpi-filter-FAIL" onclick="filterQaByStatus('FAIL')" style="border-left: 4px solid var(--bs-danger);">
             <div class="text-danger fw-bold small text-uppercase mb-1"><i class="fas fa-times-circle me-1"></i> Failed</div>
             <h3 class="mb-0 fw-bold text-dark" id="stat-failed">0</h3>
         </div>
@@ -34,6 +34,22 @@
 </div>
 
 <style>
+.qa-kpi-filter {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    opacity: 0.7;
+}
+.qa-kpi-filter:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+}
+.qa-kpi-filter.active {
+    opacity: 1;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+    background-color: #f8f9fa !important;
+}
 .date-filter-bar {
     background: #ffffff;
     padding: 6px;
@@ -126,7 +142,7 @@
         <div class="d-flex align-items-center ps-2 pe-1" style="min-width: 250px;">
             <div class="input-group input-group-sm">
                 <span class="input-group-text bg-white border-0"><i class="fas fa-search text-muted"></i></span>
-                <input type="text" id="qaScheduleSearch" class="form-control border-0 bg-white shadow-none" placeholder="ค้นหา Ticket, PO, Week, Inspector..." style="font-size: 0.85rem;" oninput="filterQaScheduleLocally()">
+                <input type="text" id="qaScheduleSearch" class="form-control border-0 bg-white shadow-none" placeholder="ค้นหา Ticket, PO, Week, DC, Inspector..." style="font-size: 0.85rem;" oninput="filterQaScheduleLocally()">
             </div>
         </div>
     </div>

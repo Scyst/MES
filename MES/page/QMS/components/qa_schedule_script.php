@@ -95,14 +95,40 @@ function filterQaScheduleLocally() {
     renderQaScheduleTable();
 }
 
+let currentStatusFilter = 'ALL';
+
+function filterQaByStatus(status) {
+    currentStatusFilter = status;
+    document.querySelectorAll('.qa-kpi-filter').forEach(el => el.classList.remove('active'));
+    const btn = document.getElementById('kpi-filter-' + status);
+    if(btn) btn.classList.add('active');
+    renderQaScheduleTable();
+}
+
 function renderQaScheduleTable() {
     const tbody = document.getElementById('qaScheduleBody');
     const searchInput = document.getElementById('qaScheduleSearch');
     const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
     const dataToRender = currentQaData.filter(po => {
+        let matchStatus = true;
+        if (currentStatusFilter !== 'ALL') {
+            if (currentStatusFilter === 'PASS' && po.inspection_result !== 'PASS') matchStatus = false;
+            else if (currentStatusFilter === 'FAIL' && po.inspection_result !== 'FAIL') matchStatus = false;
+            else if (currentStatusFilter === 'IN_PROGRESS') {
+                // If result is already PASS/FAIL, it's not IN_PROGRESS conceptually based on backend stats logic
+                if (po.inspection_result === 'PASS' || po.inspection_result === 'FAIL' || po.inspection_status !== 'IN_PROGRESS') matchStatus = false;
+            }
+            else if (currentStatusFilter === 'WAITING') {
+                if (po.inspection_result === 'PASS' || po.inspection_result === 'FAIL' || po.inspection_status === 'IN_PROGRESS') {
+                    matchStatus = false;
+                }
+            }
+        }
+        if (!matchStatus) return false;
+
         if (!term) return true;
-        const searchStr = `${po.ticket_number || ''} ${po.po_number || ''} ${po.sku || ''} ${po.description || ''} ${po.loading_week || ''} ${po.qa_inspector || ''}`.toLowerCase();
+        const searchStr = `${po.ticket_number || ''} ${po.po_number || ''} ${po.sku || ''} ${po.description || ''} ${po.loading_week || ''} ${po.qa_inspector || ''} ${po.dc_location || ''}`.toLowerCase();
         return searchStr.includes(term);
     });
 
