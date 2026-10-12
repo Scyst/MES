@@ -798,7 +798,7 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                     <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body p-3" style="background-color: #f8fafc !important;">
+                <div class="modal-body p-3 pt-1" style="background-color: #f8fafc !important;">
                     <!-- Filter and Batch Assign Card -->
                     <div class="modal-zone-filter-card mb-3">
                         <div class="row g-2 align-items-center mb-2.5">
@@ -821,9 +821,9 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                         <!-- Batch Assign Control -->
                         <div class="modal-zone-batch-box">
                             <div class="d-flex align-items-center justify-content-between mb-2">
-                                <span class="small fw-bold text-dark d-inline-flex align-items-center gap-1.5">
-                                    <i class="fas fa-layer-group text-primary" style="font-size: 0.8rem;"></i>
-                                    <span>กำหนดโซนแบบกลุ่ม (Batch Assign)</span>
+                                <span class="small fw-bold text-dark d-inline-flex align-items-center gap-2 text-nowrap">
+                                    <i class="fas fa-layer-group text-primary" style="font-size: 0.85rem;"></i>
+                                    <span>กำหนดโซนพร้อมกัน</span>
                                 </span>
                                 <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 small fw-semibold" id="badgeSelectedZoneCount">เลือก 0 รายการ</span>
                             </div>
