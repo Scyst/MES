@@ -1692,8 +1692,9 @@ try {
             $tag_no = trim($_POST['tag_no'] ?? '');
             $actual_qty = (float)($_POST['actual_qty'] ?? -1);
             $remark = trim($_POST['remark'] ?? '');
+            $auto_confirm = !empty($_POST['auto_confirm']);
 
-            if ($session_id === 0 || $tag_no === '' || $actual_qty < 0) {
+            if ($session_id === 0 || $tag_no === '') {
                 throw new Exception("ข้อมูลไม่ครบถ้วน");
             }
 
@@ -1701,6 +1702,38 @@ try {
             $stmt = $pdo->prepare("SELECT id, item_id, system_qty, is_wrong_location FROM dbo.CYCLE_COUNT_DETAILS WHERE session_id = ? AND tag_serial_no = ?");
             $stmt->execute([$session_id, $tag_no]);
             $detail = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Handle Continuous Scan Auto-Confirm
+            if ($auto_confirm) {
+                if ($detail) {
+                    $actual_qty = (float)$detail['system_qty'];
+                    $variance = 0.0;
+                    $remark = $remark ?: 'Auto-confirmed (Continuous Scan)';
+                    $stmtUpd = $pdo->prepare("UPDATE dbo.CYCLE_COUNT_DETAILS SET actual_qty = ?, variance_qty = ?, remark = ? WHERE id = ?");
+                    $stmtUpd->execute([$actual_qty, $variance, $remark, $detail['id']]);
+
+                    $response = [
+                        'success' => true, 
+                        'variance' => 0.0, 
+                        'is_wrong_location' => (int)$detail['is_wrong_location'],
+                        'actual_qty' => $actual_qty,
+                        'auto_confirmed' => true
+                    ];
+                } else {
+                    // Tag not in session - signal frontend to auto-pause and prompt manual input
+                    $response = [
+                        'success' => false, 
+                        'need_manual' => true, 
+                        'is_wrong_location' => 1, 
+                        'message' => "แท็ก $tag_no ไม่ได้อยู่ในคลังนี้ (ของหลงคลัง) กรุณาระบุยอดและสาเหตุ"
+                    ];
+                }
+                break;
+            }
+
+            if ($actual_qty < 0) {
+                throw new Exception("กรุณาระบุยอดที่นับได้อย่างถูกต้อง");
+            }
 
             if ($detail) {
                 // Tag belongs to location

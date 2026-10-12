@@ -246,12 +246,191 @@ function openInputModalForTag(tag) {
     setTimeout(() => document.getElementById('inputActualQty').focus(), 500);
 }
 
+// Audio & Vibration Feedback (Web Audio API)
+let isContinuousScanEnabled = true;
+let isAudioMuted = false;
+let audioCtx = null;
+
+function getAudioContext() {
+    if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+        }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    return audioCtx;
+}
+
+function playSuccessBeep() {
+    if (isAudioMuted) return;
+    try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.setValueAtTime(1760, now + 0.06);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.15);
+    } catch (e) {
+        console.warn('Audio feedback error:', e);
+    }
+}
+
+function playErrorAlarm() {
+    if (isAudioMuted) return;
+    try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.setValueAtTime(180, now + 0.12);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+    } catch (e) {
+        console.warn('Audio feedback error:', e);
+    }
+}
+
+function vibrateDevice(pattern) {
+    if ('vibrate' in navigator) {
+        try {
+            navigator.vibrate(pattern);
+        } catch (e) {}
+    }
+}
+
+function toggleContinuousScan(enabled) {
+    isContinuousScanEnabled = !!enabled;
+    const indicator = document.getElementById('scannerStatusIndicator');
+    if (indicator) {
+        if (isContinuousScanEnabled) {
+            indicator.className = 'badge bg-success-subtle text-success border border-success-subtle small py-1 px-2';
+            indicator.innerHTML = '<i class="fas fa-barcode me-1"></i> พร้อมรับสัญญาณปืนยิง (นับต่อเนื่อง)';
+        } else {
+            indicator.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle small py-1 px-2';
+            indicator.innerHTML = '<i class="fas fa-hand-paper me-1"></i> โหมดยืนยันด้วยมือ';
+        }
+    }
+}
+
+function toggleAudioMute() {
+    isAudioMuted = !isAudioMuted;
+    const icon = document.getElementById('iconSoundStatus');
+    if (icon) {
+        if (isAudioMuted) {
+            icon.className = 'fas fa-volume-mute text-secondary';
+        } else {
+            icon.className = 'fas fa-volume-up text-primary';
+            playSuccessBeep();
+        }
+    }
+}
+
+function showScanningToast(tag) {
+    const indicator = document.getElementById('scannerStatusIndicator');
+    if (indicator) {
+        const oldHtml = indicator.innerHTML;
+        indicator.innerHTML = `<i class="fas fa-spinner fa-spin text-warning me-1"></i> กำลังตรวจ: ${escapeHTML(tag)}`;
+        setTimeout(() => {
+            if (indicator.innerHTML.includes(tag)) {
+                indicator.innerHTML = oldHtml;
+            }
+        }, 1200);
+    }
+}
+
+async function handleScannedTag(tagCode) {
+    if (!tagCode) return;
+    const cleanTag = tagCode.trim();
+    if (!cleanTag) return;
+
+    // If Continuous Scan is OFF, prompt manual input modal
+    if (!isContinuousScanEnabled) {
+        openInputModalForTag(cleanTag);
+        return;
+    }
+
+    // Continuous Scan: Attempt instant auto-confirmation
+    showScanningToast(cleanTag);
+
+    const formData = createFormData('cc_scan_tag');
+    formData.append('session_id', currentSessionId);
+    formData.append('tag_no', cleanTag);
+    formData.append('auto_confirm', '1');
+
+    try {
+        const req = await fetch(API_STORE, { method: 'POST', body: formData });
+        const res = await req.json();
+
+        if (res.success && res.auto_confirmed) {
+            // Normal matching item in session
+            playSuccessBeep();
+            vibrateDevice(80);
+            
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: `นับแล้ว: ${escapeHTML(cleanTag)}`,
+                text: `ยอดตรงตามระบบ (${res.actual_qty})`,
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true
+            });
+
+            refreshSessionDetails();
+        } else {
+            // Auto-pause continuous mode: Tag is either wrong location or requires manual reason/qty
+            playErrorAlarm();
+            vibrateDevice([200, 100, 200]);
+
+            // Open modal to force manual verification
+            openInputModalForTag(cleanTag);
+
+            if (res.is_wrong_location) {
+                document.getElementById('wrongLocationWarning').classList.remove('d-none');
+                document.getElementById('inputReasonContainer').classList.remove('d-none');
+                document.getElementById('inputReason').value = 'ของหลงคลัง';
+            }
+
+            Swal.fire({
+                title: 'ต้องตรวจสอบ!',
+                text: res.message || 'พบรายการผิดปกติ หรือของหลงคลัง กรุณาระบุยอดและสาเหตุ',
+                icon: 'warning',
+                confirmButtonText: 'รับทราบ'
+            });
+        }
+    } catch (e) {
+        playErrorAlarm();
+        vibrateDevice([200, 100, 200]);
+        openInputModalForTag(cleanTag);
+        Swal.fire('Error', e.message || 'ไม่สามารถบันทึกยอดได้', 'error');
+    }
+}
+
 function handleManualTag() {
     const input = document.getElementById('manualTagInput');
     const finalCode = input.value.trim();
     if (finalCode) {
-        openInputModalForTag(finalCode);
         input.value = '';
+        handleScannedTag(finalCode);
     }
 }
 
@@ -263,8 +442,54 @@ function onScanSuccess(decodedText, decodedResult) {
     
     // Cleanup QR string (MES specific logic, sometimes wrapped in specific formats)
     let finalCode = decodedText.trim();
-    openInputModalForTag(finalCode);
+    handleScannedTag(finalCode);
 }
+
+// Hardware Barcode Gun Keystroke Listener (chars < 50ms interval)
+let barcodeBuffer = '';
+let lastKeypressTimestamp = 0;
+const BARCODE_BURST_MAX_GAP_MS = 50;
+
+document.addEventListener('keydown', function (e) {
+    if (!currentSessionId) return;
+    const viewCounting = document.getElementById('viewCounting');
+    if (!viewCounting || viewCounting.classList.contains('d-none')) return;
+
+    if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') {
+        return;
+    }
+
+    const now = Date.now();
+    const timeDiff = now - lastKeypressTimestamp;
+    lastKeypressTimestamp = now;
+
+    if (timeDiff > BARCODE_BURST_MAX_GAP_MS && barcodeBuffer.length > 0) {
+        barcodeBuffer = '';
+    }
+
+    const activeEl = document.activeElement;
+
+    if (e.key === 'Enter') {
+        if (barcodeBuffer.length >= 3) {
+            e.preventDefault();
+            const scannedCode = barcodeBuffer.trim();
+            barcodeBuffer = '';
+            
+            if (activeEl && activeEl.id === 'manualTagInput') {
+                activeEl.value = '';
+            }
+            
+            handleScannedTag(scannedCode);
+            return;
+        }
+        barcodeBuffer = '';
+        return;
+    }
+
+    if (e.key.length === 1) {
+        barcodeBuffer += e.key;
+    }
+});
 
 function onScanFailure(error) {
     // ignore

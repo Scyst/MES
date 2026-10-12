@@ -24,7 +24,7 @@
 | Phase | หัวข้อหลัก | สถานะ | ความเสี่ยง / กฎเกณฑ์ |
 | :--- | :--- | :---: | :--- |
 | **Foundation** | Visual Map, Dynamic Zones, Blind Count, Manager Integration | `COMPLETED` | ห้ามรื้อถอน (Production Ready) |
-| **Phase 1** | Continuous Scan, เสียงสังเคราะห์, Manual UAT, IRA KPI | `PENDING APPROVAL` | **Manual Approve 100%** |
+| **Phase 1** | Continuous Scan, เสียงสังเคราะห์, Manual UAT, IRA KPI | `IN PROGRESS` (1.1 Done) | **Manual Approve 100%** |
 | **Phase 2** | Refactor Master Data (แก้ Hardcode หมวด PKG ใน 4 ไฟล์) | `BACKLOG` | ห้ามกระทบ Logic สต็อก |
 | **Phase 3** | Audit Report (PDF/Excel), Two-Tier Recount, Offline Sync | `BACKLOG` | **Strict Human Choice** |
 
@@ -54,17 +54,17 @@
 
 ---
 
-## 📍 Phase 1: Operational Polish & UAT (รออนุมัติเริ่มพัฒนา)
+## 📍 Phase 1: Operational Polish & UAT (กำลังพัฒนา)
 
 > **เป้าหมาย:** เพิ่มความเร็วในการตรวจนับหน้างานด้วยหัวยิงบาร์โค้ด และทดสอบ Flow การตัดยอดจริงโดยผู้จัดการ
 
-- [ ] **1.1 Hardware Barcode Gun & Continuous Scan Mode**
-  - [ ] ดักจับ Global Keystrokes ที่ส่งมาจากเครื่องยิงบาร์โค้ด (ความห่างแต่ละตัวอักษร $< 30\text{ ms}$)
-  - [ ] สวิตช์เปิด-ปิด "โหมดนับต่อเนื่อง (Continuous Scan)"
-  - [ ] Logic Auto-Confirm สำหรับรายการปกติ (ไม่ต้องเปิด Modal) เพื่อความเร็วสูงสุด
-  - [ ] Auto-Pause: หยุดโหมดต่อเนื่องและบังคับเด้ง Modal เมื่อเจอ "ของหลงคลัง" หรือ "ยอดไม่ตรง"
-  - [ ] ระบบเสียงและสั่นผ่าน Web Audio API & Vibration API (Success Beep / Error Alarm)
-  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/cycleCount.php`, `page/storeManagement/script/cycleCount.js`
+- [x] **1.1 Hardware Barcode Gun & Continuous Scan Mode**
+  - [x] ดักจับ Global Keystrokes ที่ส่งมาจากเครื่องยิงบาร์โค้ด (ความห่างแต่ละตัวอักษร $< 50\text{ ms}$)
+  - [x] สวิตช์เปิด-ปิด "โหมดนับต่อเนื่อง (Continuous Scan)" บนหน้าจอ
+  - [x] Logic Auto-Confirm สำหรับรายการปกติ (ไม่ต้องเปิด Modal) เพื่อความเร็วสูงสุด
+  - [x] Auto-Pause: หยุดโหมดต่อเนื่องและบังคับเด้ง Modal เมื่อเจอ "ของหลงคลัง" หรือ "ยอดไม่ตรง"
+  - [x] ระบบเสียงและสั่นผ่าน Web Audio API & Vibration API (Success Beep / Error Alarm)
+  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/cycleCount.php`, `page/storeManagement/script/cycleCount.js`, `page/storeManagement/api/api_store.php`
 
 - [ ] **1.2 End-to-End Manual Approval Verification (UAT หน้างานจริง)**
   - [ ] ทดสอบสร้างเซสชั่น -> สแกนของจริง -> สรุปผลจบงาน
@@ -132,3 +132,4 @@
 | :--- | :--- | :--- | :--- |
 | **2026-10-10** | Manager Agent | ปรับปรุง Layout มือถือ, สร้าง Visual Map ด้วย Regex เบื้องต้น | `cycleCount.php`, `cycleCount.js` |
 | **2026-10-12** | Antigravity | เพิ่มคอลัมน์ `zone_name`, สร้าง UI จัดการโซน, แก้บั๊ก `checkTagMatch`, เชื่อมระบบอนุมัติผู้จัดการ, บังคับ CSRF, สร้าง Roadmap Tracker | `db_changes.md`, `cycleCount.php`, `cycleCount.js`, `api_store.php`, `ROADMAP.md` |
+| **2026-10-12** | Antigravity | พัฒนา Phase 1.1: Barcode Gun Keystrokes Listener, Continuous Scan Mode (Auto-Confirm), Auto-Pause เมื่อเจอของหลงคลัง, เสียงสังเคราะห์ Web Audio API และการสั่น | `cycleCount.php`, `cycleCount.js`, `api_store.php`, `ROADMAP.md` |
