@@ -231,6 +231,34 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
             padding: 9px 12px;
             font-weight: 500;
         }
+        .cc-search-group select {
+            border: none;
+            box-shadow: none !important;
+            font-size: 0.9rem;
+            padding: 9px 12px;
+            font-weight: 500;
+            color: #334155;
+            background-color: transparent;
+            cursor: pointer;
+        }
+        .custom-zone-chk {
+            width: 1.15rem;
+            height: 1.15rem;
+            border: 1.5px solid #94a3b8;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            background-color: #ffffff;
+            vertical-align: middle;
+        }
+        .custom-zone-chk:hover {
+            border-color: #2563eb;
+        }
+        .custom-zone-chk:checked {
+            background-color: #2563eb;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
         .cc-search-group .btn-submit {
             background: #2563eb;
             color: #ffffff;
@@ -754,13 +782,13 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
             <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
                 <!-- Modal Header -->
                 <div class="modal-header modal-zone-header d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle" style="width: 38px; height: 38px;">
-                            <i class="fas fa-layer-group fs-6"></i>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle flex-shrink-0" style="width: 40px; height: 40px;">
+                            <i class="fas fa-layer-group" style="font-size: 1rem;"></i>
                         </div>
-                        <div>
-                            <h6 class="fw-bold mb-0 text-dark" style="font-size: 1rem;">ตั้งค่าโซนคลังสินค้า</h6>
-                            <span class="text-muted" style="font-size: 0.75rem;">จัดกลุ่มโซนสำหรับแผนผัง Visual Map</span>
+                        <div class="d-flex flex-column justify-content-center min-w-0">
+                            <h6 class="fw-bold text-dark mb-0 lh-1" style="font-size: 1rem; letter-spacing: -0.2px;">ตั้งค่าโซนคลังสินค้า</h6>
+                            <span class="text-muted mt-1.5 lh-1" style="font-size: 0.75rem;">จัดกลุ่มโซนสำหรับแผนผัง Visual Map</span>
                         </div>
                     </div>
                     <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -779,7 +807,7 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                             <div class="col-12 col-md-6">
                                 <div class="input-group cc-search-group">
                                     <span class="input-group-text bg-transparent border-0 ps-3 pe-2 text-muted"><i class="fas fa-filter" style="font-size: 0.85rem;"></i></span>
-                                    <select id="zoneFilterSelect" class="form-select border-0 ps-0 fw-semibold text-dark cursor-pointer" onchange="filterZoneSettings()" style="box-shadow: none;">
+                                    <select id="zoneFilterSelect" class="form-select border-0 ps-0 cursor-pointer" onchange="filterZoneSettings()">
                                         <option value="">-- กรองตามโซนทั้งหมด --</option>
                                     </select>
                                 </div>
@@ -787,19 +815,23 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                         </div>
                         
                         <!-- Batch Assign Control -->
-                        <div class="modal-zone-batch-box d-flex flex-wrap align-items-center justify-content-between gap-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="form-check mb-0 d-flex align-items-center gap-1.5">
-                                    <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="chkSelectAllZones" onchange="toggleSelectAllZones(this.checked)" style="width: 1.1rem; height: 1.1rem; cursor: pointer;">
-                                    <label class="form-check-label fw-bold small text-dark cursor-pointer user-select-none mb-0" for="chkSelectAllZones">เลือกทั้งหมด</label>
-                                </div>
+                        <div class="modal-zone-batch-box">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <label class="d-inline-flex align-items-center gap-2 cursor-pointer user-select-none mb-0">
+                                    <input class="form-check-input custom-zone-chk m-0" type="checkbox" id="chkSelectAllZones" onchange="toggleSelectAllZones(this.checked)">
+                                    <span class="fw-semibold text-dark" style="font-size: 0.85rem;">เลือกทั้งหมด</span>
+                                </label>
                                 <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 small fw-semibold" id="badgeSelectedZoneCount">เลือก 0 รายการ</span>
                             </div>
-                            <div class="d-flex align-items-center gap-1.5 flex-grow-1 justify-content-end" style="max-width: 390px;">
-                                <input list="zoneListDatalist" id="batchZoneInput" class="form-control form-control-sm loc-zone-input" placeholder="พิมพ์หรือเลือกชื่อโซนใหม่...">
+
+                            <div class="input-group cc-search-group w-100">
+                                <span class="input-group-text bg-transparent border-0 ps-3 pe-2 text-muted">
+                                    <i class="fas fa-tag" style="font-size: 0.82rem;"></i>
+                                </span>
+                                <input list="zoneListDatalist" id="batchZoneInput" class="form-control ps-0" placeholder="พิมพ์หรือเลือกชื่อโซนใหม่..." style="font-size: 0.88rem;">
                                 <datalist id="zoneListDatalist"></datalist>
-                                <button class="btn-apply-batch" onclick="applyBatchZone()">
-                                    <i class="fas fa-check"></i> <span>ปรับใช้</span>
+                                <button class="btn btn-submit text-nowrap px-3 fw-bold" type="button" onclick="applyBatchZone()" style="white-space: nowrap; font-size: 0.85rem; letter-spacing: 0.2px;">
+                                    <i class="fas fa-check me-1"></i>ปรับใช้
                                 </button>
                             </div>
                         </div>

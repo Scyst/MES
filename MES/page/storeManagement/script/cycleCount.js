@@ -724,7 +724,7 @@ function renderZoneSettingsTable(list) {
         html += `
             <tr data-loc-id="${loc.location_id}">
                 <td style="width: 44px;">
-                    <input class="form-check-input zone-loc-check" type="checkbox" value="${loc.location_id}" onchange="updateSelectedZoneBadge()" style="width: 1.15rem; height: 1.15rem; cursor: pointer;">
+                    <input class="form-check-input zone-loc-check custom-zone-chk m-0" type="checkbox" value="${loc.location_id}" onchange="updateSelectedZoneBadge()">
                 </td>
                 <td class="text-start">
                     <span class="fw-bold text-dark font-monospace" style="font-size: 0.92rem; letter-spacing: 0.3px;">${escapeHTML(loc.location_name)}</span>
