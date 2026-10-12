@@ -18,12 +18,16 @@
 - [x] เชื่อมโยง Flow ยอดตรวจนับดิฟ/ของสูญหายเข้าตาราง `dbo.INVENTORY_CYCLE_COUNTS` เพื่อให้หัวหน้างานกด Approve/Reject ในหน้า `inventoryDashboard.php` ได้ทันที
 
 ## Actionable Next Steps (สิ่งที่ต้องทำต่อ / ยังไม่ได้ทำ)
-- [ ] ทดสอบ E2E ร่วมกับผู้ใช้งานจริงบนหน้างาน (User Acceptance Testing):
-  - ทดสอบความเร็วในการตอบสนองของเครื่องสแกนบาร์โค้ด (Camera/Hardware Scanner) หน้างานจริง
-  - ทดสอบให้หัวหน้างานกด Approve ในหน้า `inventoryDashboard.php` เพื่อยืนยันว่ายอด Onhand และ Serial Tags ปรับยอดถูกต้องตาม Business Logic
+- [ ] ติดตามการพัฒนาตาม Master Roadmap ใน [page/storeManagement/ROADMAP.md](../../page/storeManagement/ROADMAP.md):
+  - **Phase 1:** Continuous Scan, Audio/Vibration Beep, ทดสอบ Flow อนุมัติจริงโดยหัวหน้างาน (ห้าม Auto-Approve), IRA Metrics
+  - **Phase 2:** Refactor Master Data หมวดหมู่ย่อยสินค้า ดึงจาก DB แทน Hardcoded ใน 4 ไฟล์
+  - **Phase 3:** Audit Reports (PDF/Excel), Two-Tier Recount Protocol, Offline Resilience
+- [ ] **ข้อควรระวังสำคัญ:** ห้ามมีระบบ Auto-Approve เด็ดขาด และห้ามรื้อส่วนที่ `[x]` เสร็จแล้ว
 
 ## Exact Files to Modify (ไฟล์ที่เกี่ยวข้อง)
-- `db_changes.md` (บันทึก Schema)
+- `page/storeManagement/ROADMAP.md` (Master Tracker & Anti-Loop Documentation)
+- `page/storeManagement/STORE_MANAGEMENT_DOC.md` (เอกสารสถาปัตยกรรมโมดูล)
 - `page/storeManagement/cycleCount.php` (UI หลัก)
-- `page/storeManagement/script/cycleCount.js` (สคริปต์ควบคุม UI และการตั้งค่าโซน)
+- `page/storeManagement/script/cycleCount.js` (สคริปต์ควบคุม UI)
 - `page/storeManagement/api/api_store.php` (Backend API)
+

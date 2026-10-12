@@ -94,3 +94,11 @@
     *   อัปเดตยอดรวมในตาราง `INVENTORY_ONHAND` และบันทึก `STOCK_TRANSACTIONS`
 4.  **UI Data Binding:** หน้า UI ส่วนใหญ่เขียนด้วย JavaScript ธรรมดาแบบ Component-based (แยกตามไฟล์) ดังนั้นหากแก้ไข ID/Class ในไฟล์ .php ต้องอย่าลืมตามไปอัปเดตที่ `script/*.js` ด้วย
 5.  **Master Data / Hardcoded Categories:** ปัจจุบันหมวดหมู่ย่อย (เช่น หมวด `PKG` ที่แยกเป็น `BOX`, `PALLET`, `MANUAL` ฯลฯ) ถูก Hardcode ฝังไว้ในโค้ดฝั่ง Frontend กระจัดกระจายในหลายไฟล์ (`materialReq.js`, `inventoryDashboard.js`, `stockLedger.js`, `materialReq.php`) ในอนาคตหากมีเวลาควร Refactor โครงสร้างให้ไปดึงรายชื่อหมวดหมู่จากฐานข้อมูล (Database) แทน เพื่อป้องกันปัญหาตัวกรองหน้าเว็บแสดงผลไม่ตรงกันและลดความซ้ำซ้อนของโค้ด
+
+---
+
+## 6. แผนการพัฒนาและตัวติดตามงาน (Roadmap & Anti-Loop Tracker)
+สามารถดูรายละเอียดแผนงานเชิงลึก Phase 1 - 3, กฎเกณฑ์การควบคุม (Strict No Auto-Approval), และตัวติดตามการพัฒนา (Anti-Loop Tracker) ได้ที่ [ROADMAP.md](ROADMAP.md)
+* **กฎเหล็กของโมดูล:** 
+  1. ห้ามสร้างหรือเปิดใช้งานระบบ Auto-Approve ทุกกรณี การอนุมัติต้องทำด้วยมือ (Manual Approval) โดยผู้มีอำนาจเท่านั้น
+  2. งานที่ทำเครื่องหมาย `[x]` ใน `ROADMAP.md` ถือว่าเสร็จสิ้นแล้ว ห้าม Agent วนลูปกลับมารื้อทำใหม่เด็ดขาด
