@@ -860,8 +860,8 @@ async function backToLocationSelect() {
         // Reset visual map button for this location back to unstarted / normal
         if (currentLocationId) {
             const btn = document.querySelector(`.location-btn[onclick*="selectLocationUI(${currentLocationId},"]`);
-            if (btn && !btn.classList.contains('btn-success')) {
-                btn.className = 'btn btn-outline-secondary w-100 fw-bold location-btn position-relative';
+            if (btn && !btn.classList.contains('btn-loc-completed') && !btn.classList.contains('btn-success')) {
+                btn.className = 'location-btn btn-loc-pending w-100 position-relative';
                 btn.style.backgroundImage = '';
                 const spinner = btn.querySelector('.fa-spinner');
                 if (spinner) spinner.remove();
@@ -907,11 +907,11 @@ async function backToLocationSelect() {
     // User confirmed to leave in-progress
     if (currentLocationId) {
         const btn = document.querySelector(`.location-btn[onclick*="selectLocationUI(${currentLocationId},"]`);
-        if (btn && !btn.classList.contains('btn-success')) {
-            btn.className = 'btn btn-warning text-dark border-warning shadow-sm w-100 fw-bold location-btn position-relative';
-            btn.style.backgroundImage = 'repeating-linear-gradient(45deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)';
+        if (btn && !btn.classList.contains('btn-loc-completed') && !btn.classList.contains('btn-success')) {
+            btn.className = 'location-btn btn-loc-progress w-100 position-relative';
+            btn.style.backgroundImage = '';
             if (!btn.querySelector('.fa-spinner')) {
-                btn.insertAdjacentHTML('afterbegin', '<i class="fas fa-spinner fa-spin position-absolute top-0 end-0 m-1" style="font-size: 10px;"></i>');
+                btn.insertAdjacentHTML('afterbegin', '<i class="fas fa-spinner fa-spin position-absolute top-0 end-0 m-1.5" style="font-size: 10px;"></i>');
             }
         }
     }

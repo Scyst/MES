@@ -47,37 +47,137 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
         
         .cc-container { max-width: 800px; margin: 0 auto; }
         
-        /* Location Map Buttons */
-        .location-btn {
-            border-radius: 10px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            border-width: 1.5px;
-        }
-        .location-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.06); }
-        .location-btn.selected { border-color: #0d6efd; background-color: #e9ecef; }
-
-        /* Navigation Circular Back Button */
-        .btn-nav-back {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
+        /* Zone Card */
+        .zone-card {
             background: #ffffff;
-            border: 1px solid #cbd5e1;
-            color: #334155;
-            display: inline-flex;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: border-color 0.2s;
+        }
+        .zone-card:hover {
+            border-color: #cbd5e1;
+        }
+        .zone-card-header {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 8px 12px;
+        }
+        .zone-card-body {
+            padding: 10px;
+        }
+
+        /* Location Button (Grid Cell) */
+        .location-btn {
+            height: 52px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            letter-spacing: 0.3px;
+            display: flex;
             align-items: center;
             justify-content: center;
+            border-width: 1.5px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .location-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.06);
+        }
+
+        /* Location Button States */
+        .btn-loc-pending {
+            background: #ffffff;
+            border-color: #cbd5e1;
+            color: #334155;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        .btn-loc-pending:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            color: #0f172a;
+        }
+        .location-btn.selected {
+            background: #eff6ff !important;
+            border-color: #2563eb !important;
+            color: #1d4ed8 !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25) !important;
+            transform: translateY(-1px);
+        }
+        .btn-loc-progress {
+            background-color: #fef9c3 !important;
+            border-color: #eab308 !important;
+            color: #854d0e !important;
+            box-shadow: 0 1px 3px rgba(234, 179, 8, 0.15);
+            background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.4) 0, rgba(255,255,255,0.4) 10px, transparent 10px, transparent 20px) !important;
+        }
+        .btn-loc-completed {
+            background-color: #dcfce7 !important;
+            border-color: #22c55e !important;
+            color: #15803d !important;
+            box-shadow: 0 1px 3px rgba(34, 197, 94, 0.15);
+        }
+
+        /* Interactive Location Pill (Click to change location) */
+        .btn-location-pill {
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 20px;
+            padding: 5px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 0.95rem;
+            cursor: pointer;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            flex-shrink: 0;
-            padding: 0;
+            outline: none;
+            user-select: none;
         }
-        .btn-nav-back:hover {
-            background: #f1f5f9;
-            color: #0f172a;
-            border-color: #94a3b8;
-            transform: translateX(-2px);
+        .btn-location-pill:hover {
+            background: #eff6ff;
+            border-color: #2563eb;
+            color: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(37, 99, 235, 0.15);
+        }
+        .btn-location-pill:active {
+            transform: translateY(0);
+        }
+
+        /* Start Session Button */
+        .btn-start-cc {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+        .btn-start-cc:hover:not(:disabled) {
+            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+            color: #ffffff;
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+            transform: translateY(-1px);
+        }
+        .btn-start-cc:disabled {
+            background: #e2e8f0;
+            color: #94a3b8;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
         }
 
         /* Counting Session Header Card */
@@ -242,20 +342,37 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                     <!-- View 1: Select Location (Visual Map) -->
                     <div id="viewSelectLocation" class="d-flex flex-column h-100" style="min-height: 0;">
                         <div class="flex-shrink-0">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-map text-primary me-2"></i> แผนผังคลังสินค้า (Visual Map)</h5>
-                                <?php if (hasPermission('manage_warehouse')): ?>
-                                    <button class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3 shadow-sm" onclick="openZoneSettingsModal()" title="จัดการโซนคลังสินค้า">
-                                        <i class="fas fa-layer-group me-1"></i> จัดการโซน
-                                    </button>
-                                <?php endif; ?>
+                            <!-- Visual Map Header Bar -->
+                            <div class="cc-header-bar mb-2">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle" style="width: 36px; height: 36px;">
+                                            <i class="fas fa-map-marked-alt fs-6"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold mb-0 text-dark">แผนผังคลังสินค้า</h6>
+                                            <span class="text-muted" style="font-size: 0.72rem;">เลือกตำแหน่งเพื่อตรวจนับสต็อก</span>
+                                        </div>
+                                    </div>
+                                    <?php if (hasPermission('manage_warehouse')): ?>
+                                        <button class="btn btn-sm btn-light border shadow-xs fw-semibold rounded-pill px-2.5 py-1 text-primary d-inline-flex align-items-center gap-1" onclick="openZoneSettingsModal()" title="จัดการโซนคลังสินค้า" style="font-size: 0.78rem;">
+                                            <i class="fas fa-sliders-h text-primary"></i> <span>ตั้งค่าโซน</span>
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                             
-                            <!-- Legend -->
-                            <div class="d-flex gap-2 mb-3 px-1" style="font-size: 0.75rem; overflow-x: auto; white-space: nowrap;">
-                                <span class="d-inline-flex align-items-center"><span class="d-inline-block rounded-circle bg-secondary me-1" style="width:10px;height:10px;"></span>รอตรวจ (Pending)</span>
-                                <span class="d-inline-flex align-items-center"><span class="d-inline-block rounded-circle bg-warning me-1" style="width:10px;height:10px;"></span>กำลังเช็ค (In Progress)</span>
-                                <span class="d-inline-flex align-items-center"><span class="d-inline-block rounded-circle bg-success me-1" style="width:10px;height:10px;"></span>เสร็จสิ้น (Completed)</span>
+                            <!-- Legend Toolbar -->
+                            <div class="cc-scanner-bar d-flex align-items-center justify-content-around mb-2.5 px-2 py-1.5" style="font-size: 0.75rem;">
+                                <span class="d-inline-flex align-items-center text-secondary fw-semibold">
+                                    <span class="d-inline-block rounded-circle bg-secondary me-1.5" style="width:8px;height:8px;"></span>รอตรวจ
+                                </span>
+                                <span class="d-inline-flex align-items-center text-warning-emphasis fw-semibold">
+                                    <span class="d-inline-block rounded-circle bg-warning me-1.5" style="width:8px;height:8px;"></span>กำลังเช็ค
+                                </span>
+                                <span class="d-inline-flex align-items-center text-success fw-semibold">
+                                    <span class="d-inline-block rounded-circle bg-success me-1.5" style="width:8px;height:8px;"></span>เสร็จสิ้น
+                                </span>
                             </div>
                         </div>
                         
@@ -284,32 +401,35 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                             ?>
 
                             <?php foreach($zones as $zoneName => $zoneLocs): ?>
-                                <div class="card mb-3 border-0 shadow-sm rounded-3">
-                                    <div class="card-header bg-light border-0 py-2">
-                                        <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-layer-group me-2 text-muted"></i><?= htmlspecialchars($zoneName) ?></h6>
+                                <div class="zone-card mb-2.5">
+                                    <div class="zone-card-header d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-1.5">
+                                            <i class="fas fa-layer-group text-primary" style="font-size: 0.82rem;"></i>
+                                            <span class="fw-bold text-dark" style="font-size: 0.85rem;"><?= htmlspecialchars($zoneName) ?></span>
+                                        </div>
+                                        <span class="badge rounded-pill bg-light text-muted border px-2 py-0.5" style="font-size: 0.7rem;">
+                                            <?= count($zoneLocs) ?> คลัง
+                                        </span>
                                     </div>
-                                    <div class="card-body p-2">
+                                    <div class="zone-card-body">
                                         <div class="row g-2">
                                             <?php foreach($zoneLocs as $loc): ?>
                                                 <?php 
-                                                    $statusClass = 'btn-outline-secondary';
-                                                    $bgStyle = '';
-                                                    $icon = ''; // No icon for cleaner map look, just colors
+                                                    $statusClass = 'btn-loc-pending';
+                                                    $icon = '';
                                                     if ($loc['current_status'] === 'IN_PROGRESS') {
-                                                        $statusClass = 'btn-warning text-dark border-warning shadow-sm';
-                                                        $bgStyle = 'background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px);';
-                                                        $icon = '<i class="fas fa-spinner fa-spin position-absolute top-0 end-0 m-1" style="font-size: 10px;"></i>';
+                                                        $statusClass = 'btn-loc-progress';
+                                                        $icon = '<i class="fas fa-spinner fa-spin position-absolute top-0 end-0 m-1.5" style="font-size: 10px;"></i>';
                                                     } elseif ($loc['current_status'] === 'COMPLETED') {
-                                                        $statusClass = 'btn-success text-white border-success shadow-sm';
-                                                        $icon = '<i class="fas fa-check position-absolute top-0 end-0 m-1" style="font-size: 10px;"></i>';
+                                                        $statusClass = 'btn-loc-completed';
+                                                        $icon = '<i class="fas fa-check position-absolute top-0 end-0 m-1.5" style="font-size: 10px;"></i>';
                                                     }
                                                 ?>
                                                 <div class="col-4 col-md-3 col-lg-2">
-                                                    <button class="btn <?= $statusClass ?> w-100 fw-bold location-btn position-relative" 
-                                                            style="height: 60px; border-radius: 8px; <?= $bgStyle ?>"
+                                                    <button class="location-btn <?= $statusClass ?> w-100" 
                                                             onclick="selectLocationUI(<?= $loc['location_id'] ?>, '<?= htmlspecialchars($loc['location_name']) ?>', this)">
                                                         <?= $icon ?>
-                                                        <span class="fs-6"><?= htmlspecialchars($loc['location_name']) ?></span>
+                                                        <span><?= htmlspecialchars($loc['location_name']) ?></span>
                                                     </button>
                                                 </div>
                                             <?php endforeach; ?>
@@ -319,10 +439,11 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                             <?php endforeach; ?>
                         </div>
                         
-                        <div class="flex-shrink-0 pt-3 bg-white mt-auto position-sticky bottom-0" style="border-top: 1px solid #eee; z-index: 10;">
+                        <div class="flex-shrink-0 pt-2.5 bg-white mt-auto position-sticky bottom-0 border-top" style="z-index: 10;">
                             <input type="hidden" id="locationSelect">
-                            <button class="btn btn-primary w-100 py-3 fw-bold shadow-sm rounded-3 fs-5" onclick="startSession()" id="btnStartSession" disabled>
-                                เริ่มตรวจนับชั้นที่เลือก <i class="fas fa-arrow-right ms-2"></i>
+                            <button class="btn-start-cc" onclick="startSession()" id="btnStartSession" disabled>
+                                <i class="fas fa-play-circle fs-5"></i>
+                                <span>เริ่มตรวจนับคลังที่เลือก</span>
                             </button>
                         </div>
                     </div>
@@ -330,22 +451,20 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                     <!-- View 2: Counting Session -->
                     <div id="viewCounting" class="d-none flex-column h-100" style="min-height: 0;">
                         <div class="flex-shrink-0">
-                            <!-- Clean Header Bar: Circular Back Button + Location Info + Status -->
+                            <!-- Clean Header Bar: Interactive Location Selector Pill + Status -->
                             <div class="cc-header-bar mb-2">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center gap-2 min-w-0">
-                                        <button type="button" class="btn-nav-back" onclick="backToLocationSelect()" title="ย้อนกลับไปเลือก Location">
-                                            <i class="fas fa-chevron-left fs-6"></i>
+                                        <!-- Clickable Location Pill to change location / go back -->
+                                        <button type="button" class="btn-location-pill" onclick="backToLocationSelect()" title="กดเพื่อเปลี่ยนคลังสินค้า / ย้อนกลับ">
+                                            <i class="fas fa-map-marker-alt text-primary"></i>
+                                            <span id="currentLocationName">-</span>
+                                            <i class="fas fa-chevron-down text-muted ms-0.5" style="font-size: 0.65rem;"></i>
                                         </button>
-                                        <div class="min-w-0">
-                                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                <span class="fw-bold text-dark fs-5" id="currentLocationName">-</span>
-                                                <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2 py-0.5" style="font-size: 0.7rem;" title="Blind Count: ระบบปิดบังยอดและเลขแท็กเพื่อให้นับจากของจริง">
-                                                    <i class="fas fa-eye-slash me-1"></i>Blind Count
-                                                </span>
-                                            </div>
-                                            <div class="text-muted" style="font-size: 0.75rem;" id="sessionSubtitle">กำลังตรวจนับสต็อก</div>
-                                        </div>
+
+                                        <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2 py-1" style="font-size: 0.7rem;" title="Blind Count: ระบบปิดบังยอดและเลขแท็กเพื่อให้นับจากของจริง">
+                                            <i class="fas fa-eye-slash me-1"></i>Blind Count
+                                        </span>
                                     </div>
                                     <div class="flex-shrink-0 ms-2">
                                         <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1.5 fw-semibold" id="sessionStatusBadge" style="font-size: 0.75rem;">
