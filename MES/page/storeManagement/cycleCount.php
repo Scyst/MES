@@ -324,6 +324,124 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
         .btn-finish-cc:active {
             transform: translateY(0);
         }
+
+        /* Zone Settings Modal Styling */
+        .modal-zone-header {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 14px 18px;
+        }
+        .modal-zone-filter-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .modal-zone-batch-box {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+        .modal-zone-table-container {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .modal-zone-table thead th {
+            background: #f8fafc;
+            border-bottom: 1.5px solid #e2e8f0;
+            color: #64748b;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            padding: 10px 12px;
+        }
+        .modal-zone-table tbody tr {
+            transition: background 0.15s ease;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .modal-zone-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        .modal-zone-table tbody td {
+            padding: 9px 12px;
+            vertical-align: middle;
+        }
+        .loc-zone-input {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            padding: 6px 10px;
+            background: #ffffff;
+            transition: all 0.2s;
+            font-weight: 500;
+            color: #1e293b;
+        }
+        .loc-zone-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            outline: none;
+        }
+        .btn-apply-batch {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-apply-batch:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+            transform: translateY(-1px);
+        }
+        .btn-modal-save {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 9px 20px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-modal-save:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+            color: #ffffff;
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+            transform: translateY(-1px);
+        }
+        .btn-modal-cancel {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            color: #64748b;
+            border-radius: 10px;
+            padding: 9px 18px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        .btn-modal-cancel:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #334155;
+        }
     </style>
 </head>
 
@@ -633,61 +751,67 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
     <!-- Zone Settings Modal -->
     <div class="modal fade" id="zoneSettingsModal" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
         <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header bg-primary text-white py-3">
-                    <h5 class="modal-title fw-bold">
-                        <i class="fas fa-layer-group me-2"></i> ตั้งค่าโซนคลังสินค้า (Warehouse Zone Settings)
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <!-- Modal Header -->
+                <div class="modal-header modal-zone-header d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle" style="width: 38px; height: 38px;">
+                            <i class="fas fa-layer-group fs-6"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark" style="font-size: 1rem;">ตั้งค่าโซนคลังสินค้า</h6>
+                            <span class="text-muted" style="font-size: 0.75rem;">จัดกลุ่มโซนสำหรับแผนผัง Visual Map</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-3 bg-body-tertiary">
+
+                <div class="modal-body p-3" style="background-color: #f8fafc !important;">
                     <!-- Filter and Batch Assign Card -->
-                    <div class="card border-0 shadow-sm mb-3">
-                        <div class="card-body p-3">
-                            <div class="row g-2 align-items-center mb-2">
-                                <div class="col-12 col-md-6">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                                        <input type="text" id="zoneSearchInput" class="form-control" placeholder="ค้นหาชื่อคลังสินค้า..." oninput="filterZoneSettings()">
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text bg-white"><i class="fas fa-filter text-muted"></i></span>
-                                        <select id="zoneFilterSelect" class="form-select fw-bold" onchange="filterZoneSettings()">
-                                            <option value="">-- กรองตามโซนทั้งหมด --</option>
-                                        </select>
-                                    </div>
+                    <div class="modal-zone-filter-card mb-3">
+                        <div class="row g-2 align-items-center mb-2.5">
+                            <div class="col-12 col-md-6">
+                                <div class="input-group cc-search-group">
+                                    <span class="input-group-text bg-transparent border-0 ps-3 pe-2 text-muted"><i class="fas fa-search" style="font-size: 0.85rem;"></i></span>
+                                    <input type="text" id="zoneSearchInput" class="form-control ps-0" placeholder="ค้นหาชื่อคลังสินค้า..." oninput="filterZoneSettings()">
                                 </div>
                             </div>
-                            
-                            <!-- Batch Assign Control -->
-                            <div class="p-2 bg-light rounded border d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="form-check mb-0">
-                                        <input class="form-check-input" type="checkbox" id="chkSelectAllZones" onchange="toggleSelectAllZones(this.checked)">
-                                        <label class="form-check-label fw-bold small" for="chkSelectAllZones">เลือกทั้งหมด</label>
-                                    </div>
-                                    <span class="badge bg-secondary" id="badgeSelectedZoneCount">เลือก 0 รายการ</span>
+                            <div class="col-12 col-md-6">
+                                <div class="input-group cc-search-group">
+                                    <span class="input-group-text bg-transparent border-0 ps-3 pe-2 text-muted"><i class="fas fa-filter" style="font-size: 0.85rem;"></i></span>
+                                    <select id="zoneFilterSelect" class="form-select border-0 ps-0 fw-semibold text-dark cursor-pointer" onchange="filterZoneSettings()" style="box-shadow: none;">
+                                        <option value="">-- กรองตามโซนทั้งหมด --</option>
+                                    </select>
                                 </div>
-                                <div class="d-flex align-items-center gap-1 flex-grow-1 justify-content-end" style="max-width: 380px;">
-                                    <input list="zoneListDatalist" id="batchZoneInput" class="form-control form-control-sm" placeholder="พิมพ์หรือเลือกชื่อโซนใหม่...">
-                                    <datalist id="zoneListDatalist"></datalist>
-                                    <button class="btn btn-sm btn-outline-primary fw-bold text-nowrap" onclick="applyBatchZone()">
-                                        <i class="fas fa-check me-1"></i> ปรับใช้
-                                    </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Batch Assign Control -->
+                        <div class="modal-zone-batch-box d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="form-check mb-0 d-flex align-items-center gap-1.5">
+                                    <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="chkSelectAllZones" onchange="toggleSelectAllZones(this.checked)" style="width: 1.1rem; height: 1.1rem; cursor: pointer;">
+                                    <label class="form-check-label fw-bold small text-dark cursor-pointer user-select-none mb-0" for="chkSelectAllZones">เลือกทั้งหมด</label>
                                 </div>
+                                <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 small fw-semibold" id="badgeSelectedZoneCount">เลือก 0 รายการ</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1.5 flex-grow-1 justify-content-end" style="max-width: 390px;">
+                                <input list="zoneListDatalist" id="batchZoneInput" class="form-control form-control-sm loc-zone-input" placeholder="พิมพ์หรือเลือกชื่อโซนใหม่...">
+                                <datalist id="zoneListDatalist"></datalist>
+                                <button class="btn-apply-batch" onclick="applyBatchZone()">
+                                    <i class="fas fa-check"></i> <span>ปรับใช้</span>
+                                </button>
                             </div>
                         </div>
                     </div>
 
                     <!-- Locations Table -->
-                    <div class="card border-0 shadow-sm">
+                    <div class="modal-zone-table-container">
                         <div class="table-responsive" style="max-height: 400px;">
-                            <table class="table table-hover table-striped align-middle mb-0 text-center" style="font-size: 0.9rem;">
-                                <thead class="table-light sticky-top">
+                            <table class="table modal-zone-table align-middle mb-0 text-center">
+                                <thead class="sticky-top">
                                     <tr>
-                                        <th style="width: 40px;"></th>
+                                        <th style="width: 44px;"></th>
                                         <th class="text-start">รหัสคลัง (Location)</th>
                                         <th class="text-start">โซนที่กำหนด (Zone)</th>
                                     </tr>
@@ -701,10 +825,12 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-white border-top py-2">
-                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="button" class="btn btn-primary fw-bold shadow-sm" id="btnSaveZones" onclick="saveZoneSettings()">
-                        <i class="fas fa-save me-1"></i> บันทึกการเปลี่ยนแปลง
+
+                <!-- Modal Footer -->
+                <div class="modal-footer bg-white border-top py-2.5 px-3 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn-modal-cancel" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn-modal-save" id="btnSaveZones" onclick="saveZoneSettings()">
+                        <i class="fas fa-save"></i> <span>บันทึกการเปลี่ยนแปลง</span>
                     </button>
                 </div>
             </div>

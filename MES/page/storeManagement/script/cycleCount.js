@@ -674,7 +674,7 @@ function openZoneSettingsModal() {
 
 async function loadZoneSettingsData() {
     const tbody = document.getElementById('zoneTableBody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin fa-2x"></i></td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2 text-primary"></i><div class="small fw-semibold">กำลังโหลดข้อมูลโซน...</div></td></tr>';
 
     try {
         const req = await fetch(`${API_STORE}?action=get_location_zones`);
@@ -714,7 +714,7 @@ function renderZoneSettingsTable(list) {
     if (!tbody) return;
 
     if (!list || list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">ไม่พบข้อมูลคลังสินค้า</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-5"><i class="fas fa-inbox fa-2x mb-2 d-block text-secondary opacity-50"></i>ไม่พบข้อมูลคลังสินค้าตามเงื่อนไข</td></tr>';
         updateSelectedZoneBadge();
         return;
     }
@@ -723,12 +723,14 @@ function renderZoneSettingsTable(list) {
     list.forEach(loc => {
         html += `
             <tr data-loc-id="${loc.location_id}">
-                <td>
-                    <input class="form-check-input zone-loc-check" type="checkbox" value="${loc.location_id}" onchange="updateSelectedZoneBadge()">
+                <td style="width: 44px;">
+                    <input class="form-check-input zone-loc-check" type="checkbox" value="${loc.location_id}" onchange="updateSelectedZoneBadge()" style="width: 1.15rem; height: 1.15rem; cursor: pointer;">
                 </td>
-                <td class="text-start fw-bold text-dark">${escapeHTML(loc.location_name)}</td>
                 <td class="text-start">
-                    <input list="zoneListDatalist" class="form-control form-control-sm loc-zone-input" 
+                    <span class="fw-bold text-dark font-monospace" style="font-size: 0.92rem; letter-spacing: 0.3px;">${escapeHTML(loc.location_name)}</span>
+                </td>
+                <td class="text-start">
+                    <input list="zoneListDatalist" class="form-control form-control-sm loc-zone-input w-100" 
                            data-loc-id="${loc.location_id}" 
                            value="${escapeHTML(loc.zone_name)}" 
                            placeholder="ระบุโซน..."

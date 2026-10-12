@@ -39,10 +39,11 @@
   - เพิ่มคอลัมน์ `zone_name NVARCHAR(50) NULL` ในตาราง `dbo.LOCATIONS`
   - Seed ข้อมูลเริ่มต้นให้คลังประเภท `STORE` ทั้ง 72 คลัง
   - บันทึกลง [db_changes.md](../../db_changes.md) เรียบร้อย
-- [x] **Dynamic Zone Settings UI:**
+- [x] **Dynamic Zone Settings UI & Modern Polish:**
   - สร้าง Modal "จัดการโซนคลังสินค้า (Zone Settings)" บน `cycleCount.php` (จำกัดสิทธิ์เฉพาะผู้มี `manage_warehouse`)
   - รองรับระบบ Batch Assign (เลือกหลายคลังพร้อมกัน -> กำหนดโซน -> บันทึก)
   - Visual Map อ่านค่าจาก `zone_name` ใน DB โดยมี Fallback Regex ป้องกันหน้าพัง
+  - **Modern UI Redesign:** ปรับโฉม Modal ให้เข้าชุดกับระบบ Cycle Count ทั้งหมด (Header ซอฟต์การ์ดพร้อมไอคอนเลเยอร์, ช่องค้นหาและตัวกรองโซนสไตล์คลีน, กรอบ Batch Box พร้อม Pill Badge, ตารางคลังสินค้าสะอาดตาแบบ Monospace, และปุ่มบันทึก Gradient สีน้ำเงิน)
 - [x] **Bug Fixes:**
   - แก้ไข JavaScript Error `checkTagMatch is not defined` ใน `cycleCount.js` รวมเป็น `openInputModalForTag()`
 - [x] **Security & CSRF Enforcement:**
