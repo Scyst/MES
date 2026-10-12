@@ -188,14 +188,14 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                             <div class="card mb-3 border-0 bg-light-subtle shadow-sm p-2 rounded-3">
                                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                                     <div class="form-check form-switch mb-0">
-                                        <input class="form-check-input" type="checkbox" id="switchContinuousScan" onchange="toggleContinuousScan(this.checked)" checked>
+                                        <input class="form-check-input" type="checkbox" id="switchContinuousScan" onchange="toggleContinuousScan(this.checked)">
                                         <label class="form-check-label fw-bold small text-dark" for="switchContinuousScan">
                                             <i class="fas fa-bolt text-warning me-1"></i> โหมดนับต่อเนื่อง (Continuous Scan)
                                         </label>
                                     </div>
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle small py-1 px-2" id="scannerStatusIndicator">
-                                            <i class="fas fa-barcode me-1"></i> พร้อมรับสัญญาณปืนยิง
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small py-1 px-2" id="scannerStatusIndicator">
+                                            <i class="fas fa-hand-paper me-1"></i> โหมดยืนยันด้วยมือ (นับจริง 100%)
                                         </span>
                                         <button class="btn btn-sm btn-outline-secondary border-0 p-1" id="btnToggleSound" onclick="toggleAudioMute()" title="เปิด/ปิดเสียง">
                                             <i class="fas fa-volume-up text-primary" id="iconSoundStatus"></i>
@@ -203,7 +203,7 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                     </div>
                                 </div>
                                 <div class="text-muted" style="font-size: 0.75rem; margin-top: 4px;">
-                                    <i class="fas fa-info-circle me-1"></i> ยิงบาร์โค้ดได้ทันทีโดยไม่ต้องคลิกช่องค้นหา หากยอดตรงระบบจะยืนยันให้อัตโนมัติพร้อมเสียง Beep
+                                    <i class="fas fa-info-circle me-1"></i> ยิงบาร์โค้ดได้ทันทีโดยไม่ต้องคลิกช่องค้นหา ระบบจะเปิดให้กรอกยอดที่นับได้จริง (เปิดสวิตช์หากต้องการนับต่อเนื่อง)
                                 </div>
                             </div>
 

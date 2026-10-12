@@ -247,7 +247,7 @@ function openInputModalForTag(tag) {
 }
 
 // Audio & Vibration Feedback (Web Audio API)
-let isContinuousScanEnabled = true;
+let isContinuousScanEnabled = false; // Default OFF for safety (force 100% manual piece count)
 let isAudioMuted = false;
 let audioCtx = null;
 
@@ -321,11 +321,12 @@ function toggleContinuousScan(enabled) {
     const indicator = document.getElementById('scannerStatusIndicator');
     if (indicator) {
         if (isContinuousScanEnabled) {
-            indicator.className = 'badge bg-success-subtle text-success border border-success-subtle small py-1 px-2';
-            indicator.innerHTML = '<i class="fas fa-barcode me-1"></i> พร้อมรับสัญญาณปืนยิง (นับต่อเนื่อง)';
+            indicator.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small py-1 px-2';
+            indicator.innerHTML = '<i class="fas fa-bolt me-1"></i> โหมดต่อเนื่อง: เปิดใช้งาน';
+            playSuccessBeep();
         } else {
             indicator.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle small py-1 px-2';
-            indicator.innerHTML = '<i class="fas fa-hand-paper me-1"></i> โหมดยืนยันด้วยมือ';
+            indicator.innerHTML = '<i class="fas fa-hand-paper me-1"></i> โหมดยืนยันด้วยมือ (นับจริง 100%)';
         }
     }
 }

@@ -60,8 +60,8 @@
 
 - [x] **1.1 Hardware Barcode Gun & Continuous Scan Mode**
   - [x] ดักจับ Global Keystrokes ที่ส่งมาจากเครื่องยิงบาร์โค้ด (ความห่างแต่ละตัวอักษร $< 50\text{ ms}$)
-  - [x] สวิตช์เปิด-ปิด "โหมดนับต่อเนื่อง (Continuous Scan)" บนหน้าจอ
-  - [x] Logic Auto-Confirm สำหรับรายการปกติ (ไม่ต้องเปิด Modal) เพื่อความเร็วสูงสุด
+  - [x] สวิตช์เปิด-ปิด "โหมดนับต่อเนื่อง (Continuous Scan)" บนหน้าจอ (ตั้ง Default: ปิด/OFF บังคับนับของจริง 100% เว้นแต่จะเปิดอย่างตั้งใจ)
+  - [x] Logic Auto-Confirm สำหรับรายการปกติ (เฉพาะเมื่อเปิดโหมดต่อเนื่อง เพื่อความเร็วสูงสุด)
   - [x] Auto-Pause: หยุดโหมดต่อเนื่องและบังคับเด้ง Modal เมื่อเจอ "ของหลงคลัง" หรือ "ยอดไม่ตรง"
   - [x] ระบบเสียงและสั่นผ่าน Web Audio API & Vibration API (Success Beep / Error Alarm)
   - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/cycleCount.php`, `page/storeManagement/script/cycleCount.js`, `page/storeManagement/api/api_store.php`
