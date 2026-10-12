@@ -174,56 +174,57 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                     <!-- View 2: Counting Session -->
                     <div id="viewCounting" class="d-none flex-column h-100" style="min-height: 0;">
                         <div class="flex-shrink-0">
-                            <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded border">
-                                <div>
-                                    <span class="text-muted small d-block">Location</span>
-                                    <h6 class="fw-bold mb-0 text-primary" id="currentLocationName">-</h6>
+                            <!-- Compact Top Bar: Back Button + Location + Blind Count Badge + Status -->
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded border shadow-sm">
+                                <div class="d-flex align-items-center">
+                                    <button type="button" class="btn btn-sm btn-white border shadow-sm me-2 rounded-2 text-secondary px-2 py-1" onclick="backToLocationSelect()" title="ย้อนกลับไปเลือก Location อื่น">
+                                        <i class="fas fa-arrow-left me-1"></i> <span class="small fw-bold">เปลี่ยนคลัง</span>
+                                    </button>
+                                    <div>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <span class="text-muted small">Location:</span>
+                                            <h6 class="fw-bold mb-0 text-primary fs-6" id="currentLocationName">-</h6>
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle py-1 px-1 ms-1" style="font-size: 0.7rem; cursor: help;" data-bs-toggle="tooltip" title="Blind Count: ระบบปิดบังยอดและเลขแท็กเพื่อให้นับจากของจริง">
+                                                <i class="fas fa-eye-slash me-1"></i>Blind Count
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="text-end">
                                     <span class="badge bg-warning text-dark" id="sessionStatusBadge">กำลังเช็ค</span>
                                 </div>
                             </div>
 
-                            <!-- Continuous Scan & Gun Status Toolbar -->
-                            <div class="card mb-3 border-0 bg-light-subtle shadow-sm p-2 rounded-3">
-                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                    <div class="form-check form-switch mb-0">
-                                        <input class="form-check-input" type="checkbox" id="switchContinuousScan" onchange="toggleContinuousScan(this.checked)">
-                                        <label class="form-check-label fw-bold small text-dark" for="switchContinuousScan">
-                                            <i class="fas fa-bolt text-warning me-1"></i> โหมดนับต่อเนื่อง (Continuous Scan)
-                                        </label>
-                                    </div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small py-1 px-2" id="scannerStatusIndicator">
-                                            <i class="fas fa-hand-paper me-1"></i> โหมดยืนยันด้วยมือ (นับจริง 100%)
-                                        </span>
-                                        <button class="btn btn-sm btn-outline-secondary border-0 p-1" id="btnToggleSound" onclick="toggleAudioMute()" title="เปิด/ปิดเสียง">
-                                            <i class="fas fa-volume-up text-primary" id="iconSoundStatus"></i>
-                                        </button>
-                                    </div>
+                            <!-- Compact Scanner Toolbar (Single row for options) -->
+                            <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                                <div class="form-check form-switch mb-0 d-flex align-items-center gap-1">
+                                    <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="switchContinuousScan" onchange="toggleContinuousScan(this.checked)">
+                                    <label class="form-check-label small fw-bold text-dark cursor-pointer mb-0" for="switchContinuousScan">
+                                        <i class="fas fa-bolt text-warning me-1"></i>นับต่อเนื่อง
+                                    </label>
+                                    <i class="fas fa-question-circle text-muted ms-1" style="font-size: 0.8rem; cursor: pointer;" 
+                                       data-bs-toggle="tooltip" 
+                                       title="โหมดนับต่อเนื่อง: ยืนยันยอดให้อัตโนมัติเมื่อยิงบาร์โค้ด ไม่ต้องเด้งหน้าต่างกรอกยอด (หากพบของหลงคลังจะหยุดบังคับระบุสาเหตุ)"></i>
                                 </div>
-                                <div class="text-muted" style="font-size: 0.75rem; margin-top: 4px;">
-                                    <i class="fas fa-info-circle me-1"></i> ยิงบาร์โค้ดได้ทันทีโดยไม่ต้องคลิกช่องค้นหา ระบบจะเปิดให้กรอกยอดที่นับได้จริง (เปิดสวิตช์หากต้องการนับต่อเนื่อง)
-                                </div>
-                            </div>
-
-                            <div class="row g-2 mb-3">
-                                <div class="col-12 col-md-4">
-                                    <button class="btn btn-dark w-100 fw-bold py-2 shadow-sm" onclick="openScanner()">
-                                        <i class="fas fa-qrcode me-2"></i> สแกนพาเลท
+                                <div class="d-flex align-items-center gap-1">
+                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small py-1 px-2" id="scannerStatusIndicator" title="สถานะโหมดตรวจนับ">
+                                        <i class="fas fa-hand-paper me-1"></i> นับจริง 100%
+                                    </span>
+                                    <button class="btn btn-sm btn-link text-muted p-1 text-decoration-none" id="btnToggleSound" onclick="toggleAudioMute()" title="เปิด/ปิดเสียง Beep">
+                                        <i class="fas fa-volume-up text-primary" id="iconSoundStatus"></i>
                                     </button>
                                 </div>
-                                <div class="col-12 col-md-8">
-                                    <div class="input-group shadow-sm">
-                                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-keyboard text-muted"></i></span>
-                                        <input type="text" class="form-control border-start-0 py-2 fw-bold" id="manualTagInput" placeholder="พิมพ์เลข Tag..." onkeypress="if(event.key === 'Enter') handleManualTag()">
-                                        <button class="btn btn-primary px-4 fw-bold" onclick="handleManualTag()">ค้นหา</button>
-                                    </div>
-                                </div>
                             </div>
 
-                            <div class="alert alert-info py-2 small mb-3 border-0 bg-opacity-10 bg-info text-info-emphasis">
-                                <i class="fas fa-eye-slash me-1"></i> <strong>Blind Count:</strong> ระบบจะซ่อนเลข Tag ที่ยังไม่ถูกนับ
+                            <!-- Combined Scanner & Manual Input (Single Row) -->
+                            <div class="input-group shadow-sm mb-2">
+                                <button class="btn btn-dark fw-bold px-3 d-flex align-items-center" onclick="openScanner()" title="เปิดกล้องสแกน QR / Barcode">
+                                    <i class="fas fa-qrcode me-1"></i> สแกน
+                                </button>
+                                <input type="text" class="form-control fw-bold border-start-0" id="manualTagInput" placeholder="ยิงบาร์โค้ด หรือพิมพ์ Tag..." onkeypress="if(event.key === 'Enter') handleManualTag()">
+                                <button class="btn btn-primary px-3 fw-bold" onclick="handleManualTag()" title="ค้นหา/ตรวจนับ">
+                                    <i class="fas fa-search"></i>
+                                </button>
                             </div>
                         </div>
 

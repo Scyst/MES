@@ -812,3 +812,39 @@ async function saveZoneSettings() {
         }
     }
 }
+
+function backToLocationSelect() {
+    const viewCounting = document.getElementById('viewCounting');
+    const viewSelect = document.getElementById('viewSelectLocation');
+    
+    if (viewCounting) {
+        viewCounting.classList.add('d-none');
+        viewCounting.classList.remove('d-flex');
+    }
+    if (viewSelect) {
+        viewSelect.classList.remove('d-none');
+    }
+
+    // Update visual map button for this location to show IN_PROGRESS
+    if (currentLocationId) {
+        const btn = document.querySelector(`.location-btn[onclick*="selectLocationUI(${currentLocationId},"]`);
+        if (btn && !btn.classList.contains('btn-success')) {
+            btn.className = 'btn btn-warning text-dark border-warning shadow-sm w-100 fw-bold location-btn position-relative';
+            btn.style.backgroundImage = 'repeating-linear-gradient(45deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)';
+            if (!btn.querySelector('.fa-spinner')) {
+                btn.insertAdjacentHTML('afterbegin', '<i class="fas fa-spinner fa-spin position-absolute top-0 end-0 m-1" style="font-size: 10px;"></i>');
+            }
+        }
+    }
+}
+
+// Initialize Bootstrap Tooltips
+document.addEventListener('DOMContentLoaded', function () {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].forEach(el => {
+        try {
+            new bootstrap.Tooltip(el);
+        } catch(e) {}
+    });
+});
+
