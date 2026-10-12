@@ -763,9 +763,16 @@ function toggleSelectAllZones(checked) {
 }
 
 function updateSelectedZoneBadge() {
+    const allChecks = document.querySelectorAll('.zone-loc-check');
     const selected = document.querySelectorAll('.zone-loc-check:checked');
     const badge = document.getElementById('badgeSelectedZoneCount');
     if (badge) badge.innerText = `เลือก ${selected.length} รายการ`;
+
+    const selectAll = document.getElementById('chkSelectAllZones');
+    if (selectAll) {
+        selectAll.checked = allChecks.length > 0 && selected.length === allChecks.length;
+        selectAll.indeterminate = selected.length > 0 && selected.length < allChecks.length;
+    }
 }
 
 function onIndividualZoneChange(locId, newZone) {

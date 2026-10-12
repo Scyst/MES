@@ -353,6 +353,10 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
             transform: translateY(0);
         }
 
+        .lh-2 {
+            line-height: 1.35 !important;
+        }
+
         /* Zone Settings Modal Styling */
         .modal-zone-header {
             background: #ffffff;
@@ -787,8 +791,8 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                             <i class="fas fa-layer-group" style="font-size: 1rem;"></i>
                         </div>
                         <div class="d-flex flex-column justify-content-center min-w-0">
-                            <h6 class="fw-bold text-dark mb-0 lh-1" style="font-size: 1rem; letter-spacing: -0.2px;">ตั้งค่าโซนคลังสินค้า</h6>
-                            <span class="text-muted mt-1.5 lh-1" style="font-size: 0.75rem;">จัดกลุ่มโซนสำหรับแผนผัง Visual Map</span>
+                            <h6 class="fw-bold text-dark mb-0 lh-2" style="font-size: 1rem; letter-spacing: -0.2px;">ตั้งค่าโซนคลังสินค้า</h6>
+                            <span class="text-muted mt-1.5 lh-2" style="font-size: 0.75rem;">จัดกลุ่มโซนสำหรับแผนผัง Visual Map</span>
                         </div>
                     </div>
                     <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -817,10 +821,10 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                         <!-- Batch Assign Control -->
                         <div class="modal-zone-batch-box">
                             <div class="d-flex align-items-center justify-content-between mb-2">
-                                <label class="d-inline-flex align-items-center gap-2 cursor-pointer user-select-none mb-0">
-                                    <input class="form-check-input custom-zone-chk m-0" type="checkbox" id="chkSelectAllZones" onchange="toggleSelectAllZones(this.checked)">
-                                    <span class="fw-semibold text-dark" style="font-size: 0.85rem;">เลือกทั้งหมด</span>
-                                </label>
+                                <span class="small fw-bold text-dark d-inline-flex align-items-center gap-1.5">
+                                    <i class="fas fa-layer-group text-primary" style="font-size: 0.8rem;"></i>
+                                    <span>กำหนดโซนแบบกลุ่ม (Batch Assign)</span>
+                                </span>
                                 <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 small fw-semibold" id="badgeSelectedZoneCount">เลือก 0 รายการ</span>
                             </div>
 
@@ -843,7 +847,9 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                             <table class="table modal-zone-table align-middle mb-0 text-center">
                                 <thead class="sticky-top">
                                     <tr>
-                                        <th style="width: 44px;"></th>
+                                        <th style="width: 44px;" class="text-center align-middle">
+                                            <input class="form-check-input custom-zone-chk m-0" type="checkbox" id="chkSelectAllZones" onchange="toggleSelectAllZones(this.checked)" title="เลือกทั้งหมด">
+                                        </th>
                                         <th class="text-start">รหัสคลัง (Location)</th>
                                         <th class="text-start">โซนที่กำหนด (Zone)</th>
                                     </tr>
