@@ -30,7 +30,7 @@ try {
         'submit_cycle_count', 'approve_cycle_count', 'create_transfer_request', 'transfer_tag',
         'submit_requisition', 'accept_order', 'confirm_issue', 'reject_order', 'submit_k2_pr', 
         'upload_image', 'update_item_info', 'cancel_my_order',
-        'cc_start_session', 'cc_scan_tag', 'cc_finish_session', 'update_location_zones'
+        'cc_start_session', 'cc_scan_tag', 'cc_finish_session', 'cc_cancel_empty_session', 'update_location_zones'
     ];
     
     if (in_array($action, $writeActions) && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -1620,8 +1620,8 @@ try {
                 $session_id = $stmt->fetchColumn();
 
                 if (!$session_id) {
-                    // Create new session
-                    $stmt = $pdo->prepare("INSERT INTO dbo.CYCLE_COUNT_SESSIONS (location_id, status, created_by, created_at) VALUES (?, 'IN_PROGRESS', ?, GETDATE())");
+                    // Create new session with PENDING status (transitions to IN_PROGRESS when first item is counted)
+                    $stmt = $pdo->prepare("INSERT INTO dbo.CYCLE_COUNT_SESSIONS (location_id, status, created_by, created_at) VALUES (?, 'PENDING', ?, GETDATE())");
                     $stmt->execute([$location_id, $userId]);
                     $session_id = $pdo->lastInsertId();
 
@@ -1712,6 +1712,9 @@ try {
                     $stmtUpd = $pdo->prepare("UPDATE dbo.CYCLE_COUNT_DETAILS SET actual_qty = ?, variance_qty = ?, remark = ? WHERE id = ?");
                     $stmtUpd->execute([$actual_qty, $variance, $remark, $detail['id']]);
 
+                    // Transition session to IN_PROGRESS
+                    $pdo->prepare("UPDATE dbo.CYCLE_COUNT_SESSIONS SET status = 'IN_PROGRESS' WHERE session_id = ? AND status = 'PENDING'")->execute([$session_id]);
+
                     $response = [
                         'success' => true, 
                         'variance' => 0.0, 
@@ -1741,6 +1744,9 @@ try {
                 $stmtUpd = $pdo->prepare("UPDATE dbo.CYCLE_COUNT_DETAILS SET actual_qty = ?, variance_qty = ?, remark = ? WHERE id = ?");
                 $stmtUpd->execute([$actual_qty, $variance, $remark, $detail['id']]);
 
+                // Transition session to IN_PROGRESS
+                $pdo->prepare("UPDATE dbo.CYCLE_COUNT_SESSIONS SET status = 'IN_PROGRESS' WHERE session_id = ? AND status = 'PENDING'")->execute([$session_id]);
+
                 $response = ['success' => true, 'variance' => $variance, 'is_wrong_location' => $detail['is_wrong_location']];
             } else {
                 // Wrong location - tag wasn't expected here
@@ -1764,6 +1770,9 @@ try {
                     $foundTag['current_qty'], $actual_qty, $variance, 
                     $remark ? $remark : 'Found in Wrong Location'
                 ]);
+
+                // Transition session to IN_PROGRESS
+                $pdo->prepare("UPDATE dbo.CYCLE_COUNT_SESSIONS SET status = 'IN_PROGRESS' WHERE session_id = ? AND status = 'PENDING'")->execute([$session_id]);
 
                 $response = ['success' => true, 'variance' => $variance, 'is_wrong_location' => 1];
             }
@@ -1820,6 +1829,33 @@ try {
 
                 $pdo->commit();
                 $response = ['success' => true, 'message' => 'บันทึกเสร็จสิ้น ส่งสรุปผลยอดดิฟให้หัวหน้าอนุมัติเรียบร้อย'];
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
+        case 'cc_cancel_empty_session':
+            $session_id = (int)($_POST['session_id'] ?? 0);
+            if ($session_id === 0) {
+                throw new Exception("Session ID ไม่ถูกต้อง");
+            }
+            $pdo->beginTransaction();
+            try {
+                // Ensure no items have actual_qty set (strictly 0 items counted)
+                $stmtChk = $pdo->prepare("SELECT COUNT(*) FROM dbo.CYCLE_COUNT_DETAILS WHERE session_id = ? AND actual_qty IS NOT NULL");
+                $stmtChk->execute([$session_id]);
+                $counted = (int)$stmtChk->fetchColumn();
+
+                if ($counted === 0) {
+                    $stmtDelD = $pdo->prepare("DELETE FROM dbo.CYCLE_COUNT_DETAILS WHERE session_id = ?");
+                    $stmtDelD->execute([$session_id]);
+
+                    $stmtDelS = $pdo->prepare("DELETE FROM dbo.CYCLE_COUNT_SESSIONS WHERE session_id = ?");
+                    $stmtDelS->execute([$session_id]);
+                }
+                $pdo->commit();
+                $response = ['success' => true, 'cancelled' => ($counted === 0)];
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e;

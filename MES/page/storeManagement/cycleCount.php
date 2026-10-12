@@ -43,31 +43,187 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
     <style>
         .list-group-item { cursor: pointer; }
         .list-group-item:hover { background-color: #f1f3f5; }
-        #reader { width: 100%; border: none !important; }
-        
-        .part-card {
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            background: #ffffff;
-            transition: all 0.2s;
-        }
-        .part-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important; }
-        .part-card.matched { border-left: 6px solid #10b981; }
-        .part-card.diff { border-left: 6px solid #ef4444; }
-        .part-card.pending { border-left: 6px solid #f59e0b; }
-        .part-card.wrong-loc { border-left: 6px solid #f97316; background-color: #fffaf0; }
+        #reader { width: 100%; border: none !important; border-radius: 8px; overflow: hidden; }
         
         .cc-container { max-width: 800px; margin: 0 auto; }
         
+        /* Location Map Buttons */
         .location-btn {
-            border-radius: 12px;
-            transition: all 0.2s;
-            border-width: 2px;
+            border-radius: 10px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border-width: 1.5px;
         }
-        .location-btn:hover { transform: scale(1.02); }
+        .location-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.06); }
         .location-btn.selected { border-color: #0d6efd; background-color: #e9ecef; }
+
+        /* Navigation Circular Back Button */
+        .btn-nav-back {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            flex-shrink: 0;
+            padding: 0;
+        }
+        .btn-nav-back:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #94a3b8;
+            transform: translateX(-2px);
+        }
+
+        /* Counting Session Header Card */
+        .cc-header-bar {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 14px;
+        }
+
+        /* Scanner Options Bar */
+        .cc-scanner-bar {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px 12px;
+        }
+
+        /* Unified Barcode Input Group */
+        .cc-search-group {
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #ffffff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .cc-search-group:focus-within {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+        .cc-search-group .btn-scan {
+            background: #1e293b;
+            color: #ffffff;
+            border: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.15s;
+        }
+        .cc-search-group .btn-scan:hover {
+            background: #0f172a;
+            color: #ffffff;
+        }
+        .cc-search-group input {
+            border: none;
+            box-shadow: none !important;
+            font-size: 0.9rem;
+            padding: 9px 12px;
+            font-weight: 500;
+        }
+        .cc-search-group .btn-submit {
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            padding: 0 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+        }
+        .cc-search-group .btn-submit:hover {
+            background: #1d4ed8;
+            color: #ffffff;
+        }
+
+        /* Segmented Nav Tabs */
+        .cc-nav-tabs {
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 10px;
+            display: flex;
+            border: 1px solid #e2e8f0;
+        }
+        .cc-nav-tabs .nav-link {
+            flex: 1;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #64748b;
+            padding: 7px 10px;
+            border: none;
+            background: transparent;
+            transition: all 0.2s;
+        }
+        .cc-nav-tabs .nav-link.active {
+            background: #ffffff;
+            color: #0f172a;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* Modern Part Card */
+        .part-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            background: #ffffff;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .part-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.04) !important;
+        }
+        .part-card.pending {
+            border-left: 4px solid #f59e0b;
+        }
+        .part-card.matched {
+            border-left: 4px solid #10b981;
+            background-color: #f8fcf9;
+        }
+        .part-card.wrong-loc {
+            border-left: 4px solid #f97316;
+            background-color: #fffdfa;
+        }
+
+        /* Finish Button */
+        .btn-finish-cc {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+        .btn-finish-cc:hover {
+            background: linear-gradient(135deg, #047857 0%, #059669 100%);
+            color: #ffffff;
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+            transform: translateY(-1px);
+        }
+        .btn-finish-cc:active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 
@@ -174,72 +330,87 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                     <!-- View 2: Counting Session -->
                     <div id="viewCounting" class="d-none flex-column h-100" style="min-height: 0;">
                         <div class="flex-shrink-0">
-                            <!-- Compact Top Bar: Back Button + Location + Blind Count Badge + Status -->
-                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded border shadow-sm">
-                                <div class="d-flex align-items-center">
-                                    <button type="button" class="btn btn-sm btn-white border shadow-sm me-2 rounded-2 text-secondary px-2 py-1" onclick="backToLocationSelect()" title="ย้อนกลับไปเลือก Location อื่น">
-                                        <i class="fas fa-arrow-left me-1"></i> <span class="small fw-bold">เปลี่ยนคลัง</span>
-                                    </button>
-                                    <div>
-                                        <div class="d-flex align-items-center gap-1">
-                                            <span class="text-muted small">Location:</span>
-                                            <h6 class="fw-bold mb-0 text-primary fs-6" id="currentLocationName">-</h6>
-                                            <span class="badge bg-info-subtle text-info border border-info-subtle py-1 px-1 ms-1" style="font-size: 0.7rem; cursor: help;" data-bs-toggle="tooltip" title="Blind Count: ระบบปิดบังยอดและเลขแท็กเพื่อให้นับจากของจริง">
-                                                <i class="fas fa-eye-slash me-1"></i>Blind Count
-                                            </span>
+                            <!-- Clean Header Bar: Circular Back Button + Location Info + Status -->
+                            <div class="cc-header-bar mb-2">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-2 min-w-0">
+                                        <button type="button" class="btn-nav-back" onclick="backToLocationSelect()" title="ย้อนกลับไปเลือก Location">
+                                            <i class="fas fa-chevron-left fs-6"></i>
+                                        </button>
+                                        <div class="min-w-0">
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <span class="fw-bold text-dark fs-5" id="currentLocationName">-</span>
+                                                <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2 py-0.5" style="font-size: 0.7rem;" title="Blind Count: ระบบปิดบังยอดและเลขแท็กเพื่อให้นับจากของจริง">
+                                                    <i class="fas fa-eye-slash me-1"></i>Blind Count
+                                                </span>
+                                            </div>
+                                            <div class="text-muted" style="font-size: 0.75rem;" id="sessionSubtitle">กำลังตรวจนับสต็อก</div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge bg-warning text-dark" id="sessionStatusBadge">กำลังเช็ค</span>
+                                    <div class="flex-shrink-0 ms-2">
+                                        <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1.5 fw-semibold" id="sessionStatusBadge" style="font-size: 0.75rem;">
+                                            <i class="fas fa-spinner fa-spin me-1"></i>กำลังเช็ค
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Compact Scanner Toolbar (Single row for options) -->
-                            <div class="d-flex justify-content-between align-items-center mb-2 px-1">
-                                <div class="form-check form-switch mb-0 d-flex align-items-center gap-1">
-                                    <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="switchContinuousScan" onchange="toggleContinuousScan(this.checked)">
-                                    <label class="form-check-label small fw-bold text-dark cursor-pointer mb-0" for="switchContinuousScan">
+                            <!-- Scanner Options Bar: Switch + Indicator + Mute -->
+                            <div class="cc-scanner-bar d-flex align-items-center justify-content-between mb-2">
+                                <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                    <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="switchContinuousScan" onchange="toggleContinuousScan(this.checked)" style="width: 2.2rem; height: 1.2rem; cursor: pointer;">
+                                    <label class="form-check-label small fw-semibold text-dark cursor-pointer mb-0 user-select-none" for="switchContinuousScan">
                                         <i class="fas fa-bolt text-warning me-1"></i>นับต่อเนื่อง
                                     </label>
-                                    <i class="fas fa-question-circle text-muted ms-1" style="font-size: 0.8rem; cursor: pointer;" 
-                                       data-bs-toggle="tooltip" 
-                                       title="โหมดนับต่อเนื่อง: ยืนยันยอดให้อัตโนมัติเมื่อยิงบาร์โค้ด ไม่ต้องเด้งหน้าต่างกรอกยอด (หากพบของหลงคลังจะหยุดบังคับระบุสาเหตุ)"></i>
-                                </div>
-                                <div class="d-flex align-items-center gap-1">
-                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small py-1 px-2" id="scannerStatusIndicator" title="สถานะโหมดตรวจนับ">
-                                        <i class="fas fa-hand-paper me-1"></i> นับจริง 100%
+                                    <span class="text-muted" style="font-size: 0.75rem; cursor: pointer;" title="โหมดนับต่อเนื่อง: ยืนยันยอดให้อัตโนมัติเมื่อยิงบาร์โค้ด ไม่ต้องเด้งหน้าต่างกรอกยอด (หากพบของหลงคลังจะหยุดบังคับระบุสาเหตุ)">
+                                        <i class="fas fa-question-circle"></i>
                                     </span>
-                                    <button class="btn btn-sm btn-link text-muted p-1 text-decoration-none" id="btnToggleSound" onclick="toggleAudioMute()" title="เปิด/ปิดเสียง Beep">
-                                        <i class="fas fa-volume-up text-primary" id="iconSoundStatus"></i>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle px-2.5 py-1 small fw-medium" id="scannerStatusIndicator" title="สถานะโหมดตรวจนับ">
+                                        <i class="fas fa-hand-paper me-1 text-primary"></i> นับจริง 100%
+                                    </span>
+                                    <button class="btn btn-sm btn-white border rounded-circle shadow-xs d-flex align-items-center justify-content-center text-muted p-0" 
+                                            id="btnToggleSound" 
+                                            onclick="toggleAudioMute()" 
+                                            style="width: 30px; height: 30px;"
+                                            title="เปิด/ปิดเสียง Beep">
+                                        <i class="fas fa-volume-up text-primary" id="iconSoundStatus" style="font-size: 0.85rem;"></i>
                                     </button>
                                 </div>
                             </div>
 
-                            <!-- Combined Scanner & Manual Input (Single Row) -->
-                            <div class="input-group shadow-sm mb-2">
-                                <button class="btn btn-dark fw-bold px-3 d-flex align-items-center" onclick="openScanner()" title="เปิดกล้องสแกน QR / Barcode">
-                                    <i class="fas fa-qrcode me-1"></i> สแกน
+                            <!-- Barcode Search Input Group -->
+                            <div class="input-group cc-search-group shadow-sm mb-2.5">
+                                <button class="btn btn-scan" type="button" onclick="openScanner()" title="เปิดกล้องสแกน QR / Barcode">
+                                    <i class="fas fa-camera text-info"></i>
+                                    <span>สแกน</span>
                                 </button>
-                                <input type="text" class="form-control fw-bold border-start-0" id="manualTagInput" placeholder="ยิงบาร์โค้ด หรือพิมพ์ Tag..." onkeypress="if(event.key === 'Enter') handleManualTag()">
-                                <button class="btn btn-primary px-3 fw-bold" onclick="handleManualTag()" title="ค้นหา/ตรวจนับ">
-                                    <i class="fas fa-search"></i>
+                                <input type="text" class="form-control" id="manualTagInput" placeholder="ยิงบาร์โค้ด หรือพิมพ์เลขแท็ก..." onkeypress="if(event.key === 'Enter') handleManualTag()">
+                                <button class="btn btn-submit" type="button" onclick="handleManualTag()" title="ค้นหา/ตรวจนับ">
+                                    <i class="fas fa-arrow-right"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Part List -->
+                        <!-- Segmented Navigation & Part Lists -->
                         <div class="flex-grow-1 d-flex flex-column" style="min-height: 0; overflow: hidden;">
-                            <ul class="nav nav-pills nav-fill mb-3 bg-light rounded p-1 flex-shrink-0" id="pills-tab" role="tablist">
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link active fw-bold" id="pills-pending-tab" data-bs-toggle="pill" data-bs-target="#pills-pending" type="button" role="tab">ต้องหา <span class="badge bg-danger ms-1" id="badgePending">0</span></button>
+                            <ul class="nav cc-nav-tabs mb-2 flex-shrink-0" id="pills-tab" role="tablist">
+                                <li class="nav-item flex-fill" role="presentation">
+                                    <button class="nav-link active w-100" id="pills-pending-tab" data-bs-toggle="pill" data-bs-target="#pills-pending" type="button" role="tab">
+                                        <i class="fas fa-clock text-warning me-1"></i>ต้องหา
+                                        <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle ms-1 px-2" id="badgePending">0</span>
+                                    </button>
                                 </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link fw-bold" id="pills-counted-tab" data-bs-toggle="pill" data-bs-target="#pills-counted" type="button" role="tab">นับแล้ว <span class="badge bg-success ms-1" id="badgeCounted">0</span></button>
+                                <li class="nav-item flex-fill" role="presentation">
+                                    <button class="nav-link w-100" id="pills-counted-tab" data-bs-toggle="pill" data-bs-target="#pills-counted" type="button" role="tab">
+                                        <i class="fas fa-check-circle text-success me-1"></i>นับแล้ว
+                                        <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle ms-1 px-2" id="badgeCounted">0</span>
+                                    </button>
                                 </li>
                             </ul>
 
-                            <div class="tab-content flex-grow-1 overflow-auto" id="pills-tabContent" style="min-height: 0;">
+                            <div class="tab-content flex-grow-1 overflow-auto pe-1" id="pills-tabContent" style="min-height: 0;">
                                 <div class="tab-pane fade show active pb-3" id="pills-pending" role="tabpanel">
                                     <div id="expectedItemsList"></div>
                                 </div>
@@ -249,9 +420,11 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                             </div>
                         </div>
 
-                        <div class="flex-shrink-0 pt-3 bg-white mt-auto" style="border-top: 1px solid #eee;">
-                            <button class="btn btn-success w-100 py-3 fw-bold shadow-sm rounded-3 fs-5" onclick="finishSession()">
-                                <i class="fas fa-flag-checkered me-1"></i> สรุปผลการตรวจนับคลังนี้
+                        <!-- Bottom Finish Button -->
+                        <div class="flex-shrink-0 pt-2.5 bg-white mt-auto border-top">
+                            <button class="btn-finish-cc" onclick="finishSession()">
+                                <i class="fas fa-flag-checkered fs-5"></i>
+                                <span>สรุปผลการตรวจนับคลังนี้</span>
                             </button>
                         </div>
                     </div>
