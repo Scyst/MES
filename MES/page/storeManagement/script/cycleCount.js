@@ -8,6 +8,19 @@ let currentCameraDeviceId = null;
 const scannerModal = new bootstrap.Modal(document.getElementById('scannerModal'));
 const inputQtyModal = new bootstrap.Modal(document.getElementById('inputQtyModal'));
 
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+}
+
+function createFormData(action) {
+    const fd = new FormData();
+    fd.append('action', action);
+    const token = getCsrfToken();
+    if (token) fd.append('csrf_token', token);
+    return fd;
+}
+
 function escapeHTML(str) {
     if (!str) return '';
     return str.toString()
@@ -45,8 +58,7 @@ async function startSession() {
     
     Swal.fire({ title: 'กำลังเริ่มเซสชั่น...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    const formData = new FormData();
-    formData.append('action', 'cc_start_session');
+    const formData = createFormData('cc_start_session');
     formData.append('location_id', currentLocationId);
 
     try {
@@ -222,12 +234,23 @@ function toggleCamera() {
     }
 }
 
+function openInputModalForTag(tag) {
+    currentTagNo = tag.trim();
+    document.getElementById('inputTagNo').innerText = currentTagNo;
+    document.getElementById('inputActualQty').value = '';
+    document.getElementById('inputReason').value = '';
+    document.getElementById('inputReasonContainer').classList.add('d-none');
+    document.getElementById('wrongLocationWarning').classList.add('d-none');
+    
+    inputQtyModal.show();
+    setTimeout(() => document.getElementById('inputActualQty').focus(), 500);
+}
+
 function handleManualTag() {
     const input = document.getElementById('manualTagInput');
     const finalCode = input.value.trim();
     if (finalCode) {
-        currentTagNo = finalCode;
-        checkTagMatch(finalCode);
+        openInputModalForTag(finalCode);
         input.value = '';
     }
 }
@@ -240,17 +263,7 @@ function onScanSuccess(decodedText, decodedResult) {
     
     // Cleanup QR string (MES specific logic, sometimes wrapped in specific formats)
     let finalCode = decodedText.trim();
-    // Example: P002888-002, or RM-260316-0131
-    
-    currentTagNo = finalCode;
-    document.getElementById('inputTagNo').innerText = currentTagNo;
-    document.getElementById('inputActualQty').value = '';
-    document.getElementById('inputReason').value = '';
-    document.getElementById('inputReasonContainer').classList.add('d-none');
-    document.getElementById('wrongLocationWarning').classList.add('d-none');
-    
-    inputQtyModal.show();
-    setTimeout(() => document.getElementById('inputActualQty').focus(), 500);
+    openInputModalForTag(finalCode);
 }
 
 function onScanFailure(error) {
@@ -271,8 +284,7 @@ async function submitActualQty() {
     }
 
     // Attempt to submit
-    const formData = new FormData();
-    formData.append('action', 'cc_scan_tag');
+    const formData = createFormData('cc_scan_tag');
     formData.append('session_id', currentSessionId);
     formData.append('tag_no', currentTagNo);
     formData.append('actual_qty', actualQty);
@@ -321,8 +333,7 @@ async function submitActualQty() {
 }
 
 async function refreshSessionDetails() {
-    const formData = new FormData();
-    formData.append('action', 'cc_start_session');
+    const formData = createFormData('cc_start_session');
     formData.append('location_id', currentLocationId);
 
     try {
@@ -365,8 +376,7 @@ async function finishSession() {
 
     Swal.fire({ title: 'กำลังประมวลผล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    const formData = new FormData();
-    formData.append('action', 'cc_finish_session');
+    const formData = createFormData('cc_finish_session');
     formData.append('session_id', currentSessionId);
     // You could prompt for a generic missing reason here if needed, but default is fine.
 
@@ -391,3 +401,188 @@ document.getElementById('scannerModal').addEventListener('hidden.bs.modal', func
         try { html5QrcodeScanner.stop(); } catch(e) {}
     }
 });
+
+// ==========================================
+// ZONE MANAGEMENT
+// ==========================================
+let zoneModalInstance = null;
+let allZoneLocations = [];
+let availableZones = [];
+
+function openZoneSettingsModal() {
+    const modalEl = document.getElementById('zoneSettingsModal');
+    if (!modalEl) return;
+    if (!zoneModalInstance) {
+        zoneModalInstance = new bootstrap.Modal(modalEl);
+    }
+    zoneModalInstance.show();
+    loadZoneSettingsData();
+}
+
+async function loadZoneSettingsData() {
+    const tbody = document.getElementById('zoneTableBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin fa-2x"></i></td></tr>';
+
+    try {
+        const req = await fetch(`${API_STORE}?action=get_location_zones`);
+        const res = await req.json();
+        if (res.success) {
+            allZoneLocations = res.locations || [];
+            availableZones = res.zones || [];
+            
+            // Populate zone filter & datalist
+            const filterSel = document.getElementById('zoneFilterSelect');
+            if (filterSel) {
+                filterSel.innerHTML = '<option value="">-- กรองตามโซนทั้งหมด --</option>';
+                availableZones.forEach(z => {
+                    filterSel.innerHTML += `<option value="${escapeHTML(z)}">${escapeHTML(z)}</option>`;
+                });
+            }
+
+            const dataList = document.getElementById('zoneListDatalist');
+            if (dataList) {
+                dataList.innerHTML = '';
+                availableZones.forEach(z => {
+                    dataList.innerHTML += `<option value="${escapeHTML(z)}">`;
+                });
+            }
+
+            renderZoneSettingsTable(allZoneLocations);
+        } else {
+            if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">${escapeHTML(res.message || 'ไม่สามารถโหลดข้อมูลโซนได้')}</td></tr>`;
+        }
+    } catch (e) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">${escapeHTML(e.message)}</td></tr>`;
+    }
+}
+
+function renderZoneSettingsTable(list) {
+    const tbody = document.getElementById('zoneTableBody');
+    if (!tbody) return;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">ไม่พบข้อมูลคลังสินค้า</td></tr>';
+        updateSelectedZoneBadge();
+        return;
+    }
+
+    let html = '';
+    list.forEach(loc => {
+        html += `
+            <tr data-loc-id="${loc.location_id}">
+                <td>
+                    <input class="form-check-input zone-loc-check" type="checkbox" value="${loc.location_id}" onchange="updateSelectedZoneBadge()">
+                </td>
+                <td class="text-start fw-bold text-dark">${escapeHTML(loc.location_name)}</td>
+                <td class="text-start">
+                    <input list="zoneListDatalist" class="form-control form-control-sm loc-zone-input" 
+                           data-loc-id="${loc.location_id}" 
+                           value="${escapeHTML(loc.zone_name)}" 
+                           placeholder="ระบุโซน..."
+                           onchange="onIndividualZoneChange(${loc.location_id}, this.value)">
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+    updateSelectedZoneBadge();
+}
+
+function filterZoneSettings() {
+    const search = document.getElementById('zoneSearchInput')?.value.trim().toLowerCase() || '';
+    const zoneFilter = document.getElementById('zoneFilterSelect')?.value || '';
+
+    const filtered = allZoneLocations.filter(loc => {
+        const matchName = loc.location_name.toLowerCase().includes(search);
+        const matchZone = !zoneFilter || loc.zone_name === zoneFilter;
+        return matchName && matchZone;
+    });
+
+    renderZoneSettingsTable(filtered);
+}
+
+function toggleSelectAllZones(checked) {
+    const checks = document.querySelectorAll('.zone-loc-check');
+    checks.forEach(c => c.checked = checked);
+    updateSelectedZoneBadge();
+}
+
+function updateSelectedZoneBadge() {
+    const selected = document.querySelectorAll('.zone-loc-check:checked');
+    const badge = document.getElementById('badgeSelectedZoneCount');
+    if (badge) badge.innerText = `เลือก ${selected.length} รายการ`;
+}
+
+function onIndividualZoneChange(locId, newZone) {
+    const found = allZoneLocations.find(l => l.location_id == locId);
+    if (found) {
+        found.zone_name = newZone.trim();
+    }
+}
+
+function applyBatchZone() {
+    const newZone = document.getElementById('batchZoneInput')?.value.trim();
+    if (!newZone) {
+        Swal.fire('คำเตือน', 'กรุณาระบุชื่อโซนที่ต้องการปรับใช้', 'warning');
+        return;
+    }
+
+    const selectedChecks = document.querySelectorAll('.zone-loc-check:checked');
+    if (selectedChecks.length === 0) {
+        Swal.fire('คำเตือน', 'กรุณาเลือกคลังสินค้าที่ต้องการเปลี่ยนโซนอย่างน้อย 1 รายการ', 'warning');
+        return;
+    }
+
+    selectedChecks.forEach(chk => {
+        const locId = chk.value;
+        const input = document.querySelector(`.loc-zone-input[data-loc-id="${locId}"]`);
+        if (input) input.value = newZone;
+        onIndividualZoneChange(locId, newZone);
+    });
+
+    Swal.fire({
+        icon: 'success',
+        title: `ปรับใช้โซน "${newZone}" ให้ ${selectedChecks.length} รายการแล้ว`,
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 1500
+    });
+}
+
+async function saveZoneSettings() {
+    const btn = document.getElementById('btnSaveZones');
+    const oldHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> กำลังบันทึก...';
+        btn.disabled = true;
+    }
+
+    const mappings = allZoneLocations.map(loc => ({
+        location_id: loc.location_id,
+        zone_name: loc.zone_name
+    }));
+
+    const fd = createFormData('update_location_zones');
+    fd.append('mappings', JSON.stringify(mappings));
+
+    try {
+        const req = await fetch(API_STORE, { method: 'POST', body: fd });
+        const res = await req.json();
+
+        if (res.success) {
+            await Swal.fire('สำเร็จ', 'บันทึกการจัดโซนเรียบร้อยแล้ว', 'success');
+            if (zoneModalInstance) zoneModalInstance.hide();
+            window.location.reload();
+        } else {
+            Swal.fire('ข้อผิดพลาด', res.message || 'บันทึกไม่สำเร็จ', 'error');
+        }
+    } catch (e) {
+        Swal.fire('ข้อผิดพลาด', e.message, 'error');
+    } finally {
+        if (btn) {
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+        }
+    }
+}

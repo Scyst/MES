@@ -115,3 +115,21 @@ Log ค่าพารามิเตอร์แต่ละ Station × Time Sl
 - `CK_PCL_STATION` now allows `station_no` 1-10 (was 1-9). Station 10 = Ovens.
 - Station 10 `parameter_key` values: `BakeOvenTemp`, `DryOvenTemp`, `ConveyorSpeed` (value in `before_value`), `SlotNote` (text in `note`, max 500 chars, one row per time slot).
 - `PAINT_CHEM_SHEET_HEADER.conveyor_speed / bake_oven_temp / dry_oven_temp` are no longer written by the application (legacy columns kept; `note` kept as legacy read-only text shown first in the PDF Note box).
+
+---
+
+## 2026-10-12 — Store Management: Warehouse Zone Mapping for Cycle Count
+
+**Agent:** Antigravity  
+**Feature:** จัดการโซนคลังสินค้า (Dynamic Zone Mapping for Cycle Count)
+
+### Column Added to `dbo.LOCATIONS`
+
+| Column | Type | Notes |
+|---|---|---|
+| `zone_name` | NVARCHAR(50) NULL | ชื่อโซนสำหรับจัดกลุ่มคลังสินค้า เช่น 'โซน A (Zone A)', 'โซน B (ย่อย)' เพื่อแสดงใน Visual Map |
+
+```sql
+ALTER TABLE dbo.LOCATIONS ADD zone_name NVARCHAR(50) NULL;
+```
+

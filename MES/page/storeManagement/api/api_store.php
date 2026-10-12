@@ -29,7 +29,8 @@ try {
         'bulk_receive_tags', 'manual_add_rm', 'process_transfer_request', 'bulk_process_transfer_request',
         'submit_cycle_count', 'approve_cycle_count', 'create_transfer_request', 'transfer_tag',
         'submit_requisition', 'accept_order', 'confirm_issue', 'reject_order', 'submit_k2_pr', 
-        'upload_image', 'update_item_info', 'cancel_my_order'
+        'upload_image', 'update_item_info', 'cancel_my_order',
+        'cc_start_session', 'cc_scan_tag', 'cc_finish_session', 'update_location_zones'
     ];
     
     if (in_array($action, $writeActions) && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -1614,13 +1615,13 @@ try {
             $pdo->beginTransaction();
             try {
                 // Check for active session
-                $stmt = $pdo->prepare("SELECT session_id FROM dbo.CYCLE_COUNT_SESSIONS WITH (UPDLOCK) WHERE location_id = ? AND status = 'PENDING'");
+                $stmt = $pdo->prepare("SELECT session_id FROM dbo.CYCLE_COUNT_SESSIONS WITH (UPDLOCK) WHERE location_id = ? AND status IN ('PENDING', 'IN_PROGRESS')");
                 $stmt->execute([$location_id]);
                 $session_id = $stmt->fetchColumn();
 
                 if (!$session_id) {
                     // Create new session
-                    $stmt = $pdo->prepare("INSERT INTO dbo.CYCLE_COUNT_SESSIONS (location_id, status, created_by, created_at) VALUES (?, 'PENDING', ?, GETDATE())");
+                    $stmt = $pdo->prepare("INSERT INTO dbo.CYCLE_COUNT_SESSIONS (location_id, status, created_by, created_at) VALUES (?, 'IN_PROGRESS', ?, GETDATE())");
                     $stmt->execute([$location_id, $userId]);
                     $session_id = $pdo->lastInsertId();
 
@@ -1738,6 +1739,7 @@ try {
         case 'cc_finish_session':
             $session_id = (int)($_POST['session_id'] ?? 0);
             $missing_reason = trim($_POST['missing_reason'] ?? 'หาไม่เจอตอนตรวจนับ');
+            $userId = $_SESSION['user']['id'];
 
             if ($session_id === 0) throw new Exception("ไม่มี Session ID");
 
@@ -1755,8 +1757,92 @@ try {
                 $stmtEnd = $pdo->prepare("UPDATE dbo.CYCLE_COUNT_SESSIONS SET status = 'COMPLETED' WHERE session_id = ?");
                 $stmtEnd->execute([$session_id]);
 
+                // Integrate with Manager Approval: Push variances to INVENTORY_CYCLE_COUNTS
+                $stmtPushApproval = $pdo->prepare("
+                    INSERT INTO dbo.INVENTORY_CYCLE_COUNTS (
+                        location_id, item_id, serial_no, system_qty, actual_qty, counted_by_user_id, counted_at, status, remark
+                    )
+                    SELECT 
+                        s.location_id,
+                        d.item_id,
+                        d.tag_serial_no,
+                        d.system_qty,
+                        d.actual_qty,
+                        s.created_by,
+                        GETDATE(),
+                        'PENDING',
+                        ISNULL(d.remark, N'ผลตรวจนับจากระบบ Cycle Count (Mobile)')
+                    FROM dbo.CYCLE_COUNT_DETAILS d WITH (NOLOCK)
+                    JOIN dbo.CYCLE_COUNT_SESSIONS s WITH (NOLOCK) ON d.session_id = s.session_id
+                    WHERE d.session_id = ? AND d.variance_qty != 0
+                      AND NOT EXISTS (
+                          SELECT 1 FROM dbo.INVENTORY_CYCLE_COUNTS c WITH (NOLOCK)
+                          WHERE c.location_id = s.location_id 
+                            AND c.item_id = d.item_id 
+                            AND c.serial_no = d.tag_serial_no 
+                            AND c.status = 'PENDING'
+                      )
+                ");
+                $stmtPushApproval->execute([$session_id]);
+
                 $pdo->commit();
-                $response = ['success' => true, 'message' => 'ส่งสรุปผลให้หัวหน้าอนุมัติเรียบร้อย'];
+                $response = ['success' => true, 'message' => 'บันทึกเสร็จสิ้น ส่งสรุปผลยอดดิฟให้หัวหน้าอนุมัติเรียบร้อย'];
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
+        case 'get_location_zones':
+            $stmt = $pdo->query("
+                SELECT 
+                    location_id, 
+                    location_name, 
+                    ISNULL(zone_name, N'อื่น ๆ (Others)') as zone_name,
+                    production_line
+                FROM dbo.LOCATIONS WITH (NOLOCK)
+                WHERE location_type = 'STORE' AND is_active = 1
+                ORDER BY location_name
+            ");
+            $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $stmtZones = $pdo->query("
+                SELECT DISTINCT zone_name 
+                FROM dbo.LOCATIONS WITH (NOLOCK) 
+                WHERE location_type = 'STORE' AND is_active = 1 AND zone_name IS NOT NULL AND zone_name != ''
+                ORDER BY zone_name
+            ");
+            $zones = $stmtZones->fetchAll(PDO::FETCH_COLUMN);
+
+            $response = ['success' => true, 'locations' => $locations, 'zones' => $zones];
+            break;
+
+        case 'update_location_zones':
+            if (!hasPermission('manage_warehouse')) {
+                throw new Exception("Unauthorized: ไม่มีสิทธิ์การจัดการคลังสินค้า");
+            }
+
+            $mappings = $_POST['mappings'] ?? [];
+            if (is_string($mappings)) {
+                $mappings = json_decode($mappings, true);
+            }
+
+            if (empty($mappings) || !is_array($mappings)) {
+                throw new Exception("ไม่พบข้อมูลการจัดโซนที่ต้องการบันทึก");
+            }
+
+            $pdo->beginTransaction();
+            try {
+                $stmtUpd = $pdo->prepare("UPDATE dbo.LOCATIONS SET zone_name = ? WHERE location_id = ? AND location_type = 'STORE'");
+                foreach ($mappings as $map) {
+                    $locId = (int)($map['location_id'] ?? 0);
+                    $zone = trim($map['zone_name'] ?? '');
+                    if ($locId > 0 && $zone !== '') {
+                        $stmtUpd->execute([$zone, $locId]);
+                    }
+                }
+                $pdo->commit();
+                $response = ['success' => true, 'message' => 'บันทึกการจัดโซนเรียบร้อยแล้ว'];
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e;

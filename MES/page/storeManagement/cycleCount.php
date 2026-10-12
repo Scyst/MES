@@ -7,11 +7,16 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $locations = [];
 $stmt = $pdo->query("
     SELECT 
         l.location_id, 
         l.location_name,
+        l.zone_name,
         (SELECT TOP 1 status 
          FROM dbo.CYCLE_COUNT_SESSIONS s WITH (NOLOCK) 
          WHERE s.location_id = l.location_id 
@@ -32,6 +37,7 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
 <html lang="th">
 <head>
     <title><?php echo $pageTitle; ?></title>
+    <meta name="csrf-token" content="<?php echo $_SESSION['csrf_token'] ?? ''; ?>">
     <?php include_once '../components/common_head.php'; ?>
     <script src="../../utils/libs/html5-qrcode.min.js"></script>
     <style>
@@ -80,7 +86,14 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                     <!-- View 1: Select Location (Visual Map) -->
                     <div id="viewSelectLocation" class="d-flex flex-column h-100" style="min-height: 0;">
                         <div class="flex-shrink-0">
-                            <h5 class="fw-bold mb-3 text-dark"><i class="fas fa-map text-primary me-2"></i> แผนผังคลังสินค้า (Visual Map)</h5>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-map text-primary me-2"></i> แผนผังคลังสินค้า (Visual Map)</h5>
+                                <?php if (hasPermission('manage_warehouse')): ?>
+                                    <button class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3 shadow-sm" onclick="openZoneSettingsModal()" title="จัดการโซนคลังสินค้า">
+                                        <i class="fas fa-layer-group me-1"></i> จัดการโซน
+                                    </button>
+                                <?php endif; ?>
+                            </div>
                             
                             <!-- Legend -->
                             <div class="d-flex gap-2 mb-3 px-1" style="font-size: 0.75rem; overflow-x: auto; white-space: nowrap;">
@@ -96,13 +109,17 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                 $zones = [];
                                 foreach ($locations as $loc) {
                                     $name = $loc['location_name'];
-                                    $zone = 'อื่น ๆ (Others)';
-                                    if (preg_match('/^([A-H])\d+$/', $name, $matches)) {
-                                        $zone = 'โซน ' . $matches[1] . ' (Zone ' . $matches[1] . ')';
-                                    } elseif (strpos($name, 'BR-') === 0 || strpos($name, 'BT-') === 0 || strpos($name, 'BWH-') === 0) {
-                                        $zone = 'โซน B (ย่อย)';
-                                    } elseif (strpos($name, 'AW') === 0) {
-                                        $zone = 'โซน A (ย่อย)';
+                                    if (!empty($loc['zone_name'])) {
+                                        $zone = $loc['zone_name'];
+                                    } else {
+                                        $zone = 'อื่น ๆ (Others)';
+                                        if (preg_match('/^([A-H])\d+$/', $name, $matches)) {
+                                            $zone = 'โซน ' . $matches[1] . ' (Zone ' . $matches[1] . ')';
+                                        } elseif (strpos($name, 'BR-') === 0 || strpos($name, 'BT-') === 0 || strpos($name, 'BWH-') === 0) {
+                                            $zone = 'โซน B (ย่อย)';
+                                        } elseif (strpos($name, 'AW') === 0) {
+                                            $zone = 'โซน A (ย่อย)';
+                                        }
                                     }
                                     if (!isset($zones[$zone])) $zones[$zone] = [];
                                     $zones[$zone][] = $loc;
@@ -297,10 +314,92 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
         </div>
     </div>
 
+    <!-- Zone Settings Modal -->
+    <div class="modal fade" id="zoneSettingsModal" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fas fa-layer-group me-2"></i> ตั้งค่าโซนคลังสินค้า (Warehouse Zone Settings)
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3 bg-body-tertiary">
+                    <!-- Filter and Batch Assign Card -->
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-body p-3">
+                            <div class="row g-2 align-items-center mb-2">
+                                <div class="col-12 col-md-6">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                        <input type="text" id="zoneSearchInput" class="form-control" placeholder="ค้นหาชื่อคลังสินค้า..." oninput="filterZoneSettings()">
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white"><i class="fas fa-filter text-muted"></i></span>
+                                        <select id="zoneFilterSelect" class="form-select fw-bold" onchange="filterZoneSettings()">
+                                            <option value="">-- กรองตามโซนทั้งหมด --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Batch Assign Control -->
+                            <div class="p-2 bg-light rounded border d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="form-check mb-0">
+                                        <input class="form-check-input" type="checkbox" id="chkSelectAllZones" onchange="toggleSelectAllZones(this.checked)">
+                                        <label class="form-check-label fw-bold small" for="chkSelectAllZones">เลือกทั้งหมด</label>
+                                    </div>
+                                    <span class="badge bg-secondary" id="badgeSelectedZoneCount">เลือก 0 รายการ</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1 flex-grow-1 justify-content-end" style="max-width: 380px;">
+                                    <input list="zoneListDatalist" id="batchZoneInput" class="form-control form-control-sm" placeholder="พิมพ์หรือเลือกชื่อโซนใหม่...">
+                                    <datalist id="zoneListDatalist"></datalist>
+                                    <button class="btn btn-sm btn-outline-primary fw-bold text-nowrap" onclick="applyBatchZone()">
+                                        <i class="fas fa-check me-1"></i> ปรับใช้
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Locations Table -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="table-responsive" style="max-height: 400px;">
+                            <table class="table table-hover table-striped align-middle mb-0 text-center" style="font-size: 0.9rem;">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 40px;"></th>
+                                        <th class="text-start">รหัสคลัง (Location)</th>
+                                        <th class="text-start">โซนที่กำหนด (Zone)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="zoneTableBody">
+                                    <tr>
+                                        <td colspan="3" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin fa-2x"></i></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top py-2">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-primary fw-bold shadow-sm" id="btnSaveZones" onclick="saveZoneSettings()">
+                        <i class="fas fa-save me-1"></i> บันทึกการเปลี่ยนแปลง
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- API PATH -->
     <script>
         const API_STORE = 'api/api_store.php';
     </script>
+    <script src="script/storeCommon.js?v=<?= time() ?>"></script>
     <script src="script/cycleCount.js?v=<?= time() ?>"></script>
             </div> <!-- End container-fluid -->
         </div> <!-- End main-content -->
