@@ -578,7 +578,7 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                         <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle" style="width: 36px; height: 36px;">
                                             <i class="fas fa-map-marked-alt fs-6"></i>
                                         </div>
-                                        <div>
+                                        <div class="d-flex flex-column justify-content-center min-w-0">
                                             <h6 class="fw-bold mb-0 text-dark lh-2">แผนผังคลังสินค้า</h6>
                                             <span class="text-muted lh-2" style="font-size: 0.72rem;">เลือกตำแหน่งเพื่อตรวจนับสต็อก</span>
                                         </div>
