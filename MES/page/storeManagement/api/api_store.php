@@ -1860,6 +1860,14 @@ try {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e;
             }
+        case 'get_zone_health_metrics':
+            require_once __DIR__ . '/zone_health_helper.php';
+            $healthData = getZoneHealthMetrics($pdo);
+            $response = [
+                'success' => true,
+                'overall' => $healthData['overall'],
+                'zones' => $healthData['zones']
+            ];
             break;
 
         case 'get_location_zones':

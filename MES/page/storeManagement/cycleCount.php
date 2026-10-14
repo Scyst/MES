@@ -28,6 +28,12 @@ $stmt = $pdo->query("
 ");
 $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Calculate Zone Health & Warehouse Accuracy Metrics (Phase 1.3)
+require_once __DIR__ . '/api/zone_health_helper.php';
+$healthMetrics = getZoneHealthMetrics($pdo);
+$overallHealth = $healthMetrics['overall'];
+$zoneHealthMap = $healthMetrics['zones_map'];
+
 $pageTitle = "Stock Check (Cycle Count)";
 $pageIcon = "fas fa-clipboard-check"; 
 $pageHeaderTitle = "Stock Check";
@@ -364,6 +370,49 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
         .me-1\.5 { margin-right: 0.375rem !important; }
         .ms-0\.5 { margin-left: 0.125rem !important; }
 
+        /* Zone Health & IRA Styles (Phase 1.3) */
+        .warehouse-kpi-bar {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: all 0.2s ease;
+        }
+        .warehouse-kpi-bar:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .badge-grade-a {
+            background-color: #ecfdf5 !important;
+            color: #047857 !important;
+            border: 1px solid #a7f3d0 !important;
+        }
+        .badge-grade-b {
+            background-color: #fffbeb !important;
+            color: #b45309 !important;
+            border: 1px solid #fde68a !important;
+        }
+        .badge-grade-c {
+            background-color: #fef2f2 !important;
+            color: #b91c1c !important;
+            border: 1px solid #fecaca !important;
+        }
+        .badge-grade-none {
+            background-color: #f8fafc !important;
+            color: #64748b !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        .zone-health-badge {
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            user-select: none;
+        }
+        .zone-health-badge:hover {
+            transform: translateY(-1px) scale(1.03);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        }
+
         /* Zone Settings Modal Styling */
         .modal-zone-header {
             background: #ffffff;
@@ -590,6 +639,42 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                     <?php endif; ?>
                                 </div>
                             </div>
+
+                            <?php
+                                $overallItemIra = $overallHealth['ira_item_pct'];
+                                $overallValIra = $overallHealth['ira_value_pct'];
+                                $overallItemText = $overallItemIra !== null ? number_format($overallItemIra, 1) . '%' : '-';
+                                $overallValText = $overallValIra !== null ? number_format($overallValIra, 1) . '%' : '-';
+                                $itemColorClass = $overallItemIra === null ? 'text-secondary' : ($overallItemIra >= 95 ? 'text-success' : ($overallItemIra >= 85 ? 'text-warning-emphasis' : 'text-danger'));
+                                $valColorClass = $overallValIra === null ? 'text-secondary' : ($overallValIra >= 95 ? 'text-success' : ($overallValIra >= 85 ? 'text-warning-emphasis' : 'text-danger'));
+                                $auditedProgress = $overallHealth['audited_locations'] . ' / ' . $overallHealth['total_locations'] . ' คลัง';
+                            ?>
+                            <!-- Warehouse IRA & Health Mini-Bar -->
+                            <div class="warehouse-kpi-bar mb-2">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="d-flex align-items-center gap-1.5">
+                                        <i class="fas fa-chart-line text-primary" style="font-size: 0.82rem;"></i>
+                                        <span class="fw-bold text-dark" style="font-size: 0.8rem;">ภาพรวมความแม่นยำสต็อก (IRA Health)</span>
+                                    </div>
+                                    <span class="badge rounded-pill <?= $overallHealth['grade_class'] ?> px-2 py-0.5 d-inline-flex align-items-center gap-1" style="font-size: 0.68rem;">
+                                        <i class="<?= $overallHealth['grade_icon'] ?>"></i> <?= $overallHealth['grade_text'] ?>
+                                    </span>
+                                </div>
+                                <div class="row g-1 text-center align-items-center">
+                                    <div class="col-4 border-end">
+                                        <div class="text-muted text-truncate" style="font-size: 0.68rem;">ความแม่นยำรายชิ้น</div>
+                                        <div class="fw-bold fs-6 <?= $itemColorClass ?>"><?= $overallItemText ?></div>
+                                    </div>
+                                    <div class="col-4 border-end">
+                                        <div class="text-muted text-truncate" style="font-size: 0.68rem;">ความแม่นยำมูลค่า</div>
+                                        <div class="fw-bold fs-6 <?= $valColorClass ?>"><?= $overallValText ?></div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-muted text-truncate" style="font-size: 0.68rem;">ตรวจแล้ว / ทั้งหมด</div>
+                                        <div class="fw-bold fs-6 text-dark"><?= $auditedProgress ?></div>
+                                    </div>
+                                </div>
+                            </div>
                             
                             <!-- Legend Toolbar -->
                             <div class="cc-scanner-bar d-flex align-items-center justify-content-around mb-2.5 px-2 py-1.5" style="font-size: 0.75rem;">
@@ -630,15 +715,33 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                             ?>
 
                             <?php foreach($zones as $zoneName => $zoneLocs): ?>
+                                <?php
+                                    $zHealth = $zoneHealthMap[$zoneName] ?? [
+                                        'grade' => null,
+                                        'grade_class' => 'badge-grade-none',
+                                        'grade_icon' => 'far fa-clock',
+                                        'grade_text' => 'ยังไม่ตรวจ',
+                                        'ira_item_pct' => null,
+                                        'ira_value_pct' => null
+                                    ];
+                                ?>
                                 <div class="zone-card mb-2.5">
                                     <div class="zone-card-header d-flex align-items-center justify-content-between">
-                                        <div class="d-flex align-items-center gap-1.5">
+                                        <div class="d-flex align-items-center gap-1.5 min-w-0">
                                             <i class="fas fa-layer-group text-primary" style="font-size: 0.82rem;"></i>
-                                            <span class="fw-bold text-dark" style="font-size: 0.85rem;"><?= htmlspecialchars($zoneName) ?></span>
+                                            <span class="fw-bold text-dark text-truncate" style="font-size: 0.85rem;"><?= htmlspecialchars($zoneName) ?></span>
                                         </div>
-                                        <span class="badge rounded-pill bg-light text-muted border px-2 py-0.5" style="font-size: 0.7rem;">
-                                            <?= count($zoneLocs) ?> คลัง
-                                        </span>
+                                        <div class="d-flex align-items-center gap-1.5 flex-shrink-0">
+                                            <span class="badge rounded-pill <?= $zHealth['grade_class'] ?> zone-health-badge px-2 py-0.5 d-inline-flex align-items-center gap-1"
+                                                  onclick="showZoneHealthModal('<?= htmlspecialchars(addslashes($zoneName)) ?>')"
+                                                  title="คลิกดูรายละเอียดสุขภาพสต็อกโซนนี้"
+                                                  style="font-size: 0.68rem;">
+                                                <i class="<?= $zHealth['grade_icon'] ?>"></i> <?= $zHealth['grade_text'] ?>
+                                            </span>
+                                            <span class="badge rounded-pill bg-light text-muted border px-2 py-0.5" style="font-size: 0.68rem;">
+                                                <?= count($zoneLocs) ?> คลัง
+                                            </span>
+                                        </div>
                                     </div>
                                     <div class="zone-card-body">
                                         <div class="row g-2">
@@ -998,6 +1101,7 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
     <!-- API PATH -->
     <script>
         const API_STORE = 'api/api_store.php';
+        window.zoneHealthData = <?= json_encode($healthMetrics, JSON_UNESCAPED_UNICODE) ?>;
     </script>
     <script src="script/storeCommon.js?v=<?= time() ?>"></script>
     <script src="script/cycleCount.js?v=<?= time() ?>"></script>

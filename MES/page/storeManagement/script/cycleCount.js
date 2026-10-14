@@ -1029,3 +1029,166 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
+// ==========================================
+// ZONE HEALTH & IRA MODAL (PHASE 1.3)
+// ==========================================
+async function showZoneHealthModal(zoneName) {
+    if (!zoneName) return;
+
+    // Check if zoneHealthData is available, otherwise fetch from API
+    let zoneData = null;
+    if (window.zoneHealthData && window.zoneHealthData.zones_map && window.zoneHealthData.zones_map[zoneName]) {
+        zoneData = window.zoneHealthData.zones_map[zoneName];
+    } else {
+        try {
+            const req = await fetch(`${API_STORE}?action=get_zone_health_metrics`);
+            const res = await req.json();
+            if (res.success && res.zones) {
+                window.zoneHealthData = res;
+                zoneData = res.zones.find(z => z.zone_name === zoneName);
+            }
+        } catch (e) {
+            console.error('Failed to fetch zone health metrics:', e);
+        }
+    }
+
+    if (!zoneData) {
+        Swal.fire({
+            title: escapeHTML(zoneName),
+            text: 'ไม่พบข้อมูลความแม่นยำของโซนนี้',
+            icon: 'info',
+            confirmButtonText: 'ตกลง'
+        });
+        return;
+    }
+
+    const counted = zoneData.counted_pallets || 0;
+    const totalPallets = zoneData.total_pallets || 0;
+    const accurate = zoneData.accurate_pallets || 0;
+    const variance = zoneData.variance_pallets || 0;
+    const itemIra = zoneData.ira_item_pct;
+    const valIra = zoneData.ira_value_pct;
+    const sysVal = zoneData.total_system_value || 0;
+    const varVal = zoneData.total_variance_value || 0;
+    const grade = zoneData.grade;
+
+    const itemIraText = itemIra !== null ? `${Number(itemIra).toFixed(1)}%` : 'ยังไม่ตรวจ';
+    const valIraText = valIra !== null ? `${Number(valIra).toFixed(1)}%` : 'ยังไม่ตรวจ';
+
+    // Advice & Badge based on Grade
+    let adviceHtml = '';
+    let gradeBadgeHtml = '';
+
+    if (grade === 'A') {
+        gradeBadgeHtml = `<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-1.5 fs-6"><i class="fas fa-check-circle me-1"></i> เกรด A · ยอดเยี่ยม (${itemIraText})</span>`;
+        adviceHtml = `
+            <div class="p-2.5 rounded-3 border border-success-subtle bg-success-subtle text-success-emphasis text-start" style="font-size: 0.8rem;">
+                <div class="fw-bold mb-1"><i class="fas fa-shield-alt text-success me-1"></i> คำแนะนำในการบริหารสต็อก (Class A):</div>
+                ความแม่นยำสต็อกอยู่ในเกณฑ์มาตรฐานสากล (&ge; 95%) ข้อมูลตรงตามกายภาพสูง ไม่พบความเสี่ยงด้านยอดสูญหาย แนะนำให้คงรอบการตรวจนับและสุ่มตรวจตามปกติ
+            </div>
+        `;
+    } else if (grade === 'B') {
+        gradeBadgeHtml = `<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-1.5 fs-6"><i class="fas fa-exclamation-triangle me-1"></i> เกรด B · ปานกลาง (${itemIraText})</span>`;
+        adviceHtml = `
+            <div class="p-2.5 rounded-3 border border-warning-subtle bg-warning-subtle text-warning-emphasis text-start" style="font-size: 0.8rem;">
+                <div class="fw-bold mb-1"><i class="fas fa-exclamation-circle text-warning me-1"></i> คำแนะนำในการบริหารสต็อก (Class B):</div>
+                ความแม่นยำสต็อกอยู่ในระดับมาตรฐานยอมรับได้ (85% - 94.9%) พบผลต่างบางรายการ แนะนำตรวจสอบบันทึกการเบิกจ่ายและเพิ่มความถี่ในการสุ่มตรวจรอบถัดไป
+            </div>
+        `;
+    } else if (grade === 'C') {
+        gradeBadgeHtml = `<span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3 py-1.5 fs-6"><i class="fas fa-times-circle me-1"></i> เกรด C · ต้องปรับปรุง (${itemIraText})</span>`;
+        adviceHtml = `
+            <div class="p-2.5 rounded-3 border border-danger-subtle bg-danger-subtle text-danger-emphasis text-start" style="font-size: 0.8rem;">
+                <div class="fw-bold mb-1"><i class="fas fa-exclamation-triangle text-danger me-1"></i> คำแนะนำในการบริหารสต็อก (Class C):</div>
+                ความแม่นยำสต็อกต่ำกว่าเกณฑ์ควบคุมคุณภาพ (&lt; 85%) เสี่ยงต่อการเกิดสต็อกหลงคลังหรือยอดสูญหาย แนะนำระงับการเบิกจ่ายชั่วคราวและทำการนับซ้ำ (Recount) ทั้งโซน
+            </div>
+        `;
+    } else {
+        gradeBadgeHtml = `<span class="badge rounded-pill bg-light text-secondary border px-3 py-1.5 fs-6"><i class="far fa-clock me-1"></i> ยังไม่มีข้อมูลการตรวจนับ</span>`;
+        adviceHtml = `
+            <div class="p-2.5 rounded-3 border bg-light text-secondary text-start" style="font-size: 0.8rem;">
+                <div class="fw-bold mb-1 text-dark"><i class="fas fa-info-circle text-primary me-1"></i> สถานะการตรวจนับ:</div>
+                โซนนี้ยังไม่มีประวัติการตรวจนับรอบล่าสุด แนะนำเลือกคลังสินค้าในโซนนี้จากแผนผังเพื่อเริ่มตรวจนับสต็อก
+            </div>
+        `;
+    }
+
+    const fmtCurrency = (v) => Number(v || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const contentHtml = `
+        <div class="text-center mb-3">
+            <div class="mb-2">${gradeBadgeHtml}</div>
+            <div class="text-muted small">คะแนนความถูกต้องของข้อมูลสต็อก (Inventory Record Accuracy)</div>
+        </div>
+
+        <div class="row g-2 mb-3 text-center">
+            <div class="col-6">
+                <div class="p-2.5 rounded-3 border bg-light shadow-xs">
+                    <div class="text-muted small mb-1" style="font-size: 0.72rem;">ความแม่นยำรายชิ้น (Item IRA)</div>
+                    <div class="fw-bold fs-4 ${grade === 'A' ? 'text-success' : (grade === 'B' ? 'text-warning-emphasis' : (grade === 'C' ? 'text-danger' : 'text-secondary'))}">${itemIraText}</div>
+                    <div class="text-muted" style="font-size: 0.68rem;">ยอดตรง ${accurate} / ตรวจแล้ว ${counted} พาเลท</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-2.5 rounded-3 border bg-light shadow-xs">
+                    <div class="text-muted small mb-1" style="font-size: 0.72rem;">ความแม่นยำมูลค่า (Value IRA)</div>
+                    <div class="fw-bold fs-4 ${grade === 'A' ? 'text-success' : (grade === 'B' ? 'text-warning-emphasis' : (grade === 'C' ? 'text-danger' : 'text-secondary'))}">${valIraText}</div>
+                    <div class="text-muted text-truncate" style="font-size: 0.68rem;" title="ผลต่าง ±${fmtCurrency(varVal)} บาท">ดิฟ ±${fmtCurrency(varVal)} บาท</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border rounded-3 overflow-hidden mb-3 text-start shadow-xs">
+            <div class="card-header bg-light py-2 px-3 fw-bold text-dark" style="font-size: 0.8rem;">
+                <i class="fas fa-clipboard-list text-primary me-1.5"></i> ข้อมูลการตรวจนับประจำโซน
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-borderless mb-0" style="font-size: 0.8rem;">
+                    <tbody>
+                        <tr class="border-bottom">
+                            <td class="text-muted ps-3 py-1.5">จำนวนคลังในโซน:</td>
+                            <td class="text-end pe-3 py-1.5 fw-semibold">${zoneData.locations_audited} / ${zoneData.total_locations} คลัง</td>
+                        </tr>
+                        <tr class="border-bottom">
+                            <td class="text-muted ps-3 py-1.5">พาเลทที่นับแล้ว:</td>
+                            <td class="text-end pe-3 py-1.5 fw-semibold">${counted} / ${totalPallets} พาเลท</td>
+                        </tr>
+                        <tr class="border-bottom">
+                            <td class="text-muted ps-3 py-1.5">พาเลทที่ยอดตรง 100%:</td>
+                            <td class="text-end pe-3 py-1.5 fw-semibold text-success">${accurate} พาเลท</td>
+                        </tr>
+                        <tr class="border-bottom">
+                            <td class="text-muted ps-3 py-1.5">พาเลทที่มียอดดิฟ/หลงคลัง:</td>
+                            <td class="text-end pe-3 py-1.5 fw-semibold text-danger">${variance} พาเลท</td>
+                        </tr>
+                        <tr class="border-bottom">
+                            <td class="text-muted ps-3 py-1.5">มูลค่าสต็อกในระบบ:</td>
+                            <td class="text-end pe-3 py-1.5 fw-semibold">${fmtCurrency(sysVal)} บาท</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted ps-3 py-1.5">มูลค่าผลต่างสุทธิ:</td>
+                            <td class="text-end pe-3 py-1.5 fw-semibold ${varVal > 0 ? 'text-danger' : 'text-success'}">±${fmtCurrency(varVal)} บาท</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        ${adviceHtml}
+    `;
+
+    Swal.fire({
+        title: `<div class="d-flex align-items-center justify-content-center gap-2"><i class="fas fa-layer-group text-primary"></i> <span>${escapeHTML(zoneName)}</span></div>`,
+        html: contentHtml,
+        width: 500,
+        showCloseButton: true,
+        showConfirmButton: true,
+        confirmButtonText: 'ปิดหน้าต่าง',
+        confirmButtonColor: '#3b82f6',
+        customClass: {
+            popup: 'rounded-4 shadow-lg'
+        }
+    });
+}
+
+

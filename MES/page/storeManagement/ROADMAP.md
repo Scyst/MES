@@ -88,10 +88,12 @@
   - [x] **ทดสอบการกด Reject ด้วยมือ**: ยืนยันว่าสต็อกคงเดิม 100% ไม่สร้าง Transaction หลอก และบันทึกสถานะ REJECTED พร้อมผู้อนุมัติถูกต้อง
   - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/inventoryDashboard.php`, `page/storeManagement/script/inventoryDashboard.js`, `page/storeManagement/api/api_store.php`, `mes-toolbox/public/api/v1/inventory.php`
 
-- [ ] **1.3 Inventory Record Accuracy (IRA) & Zone Health Metrics**
-  - [ ] พัฒนาฟังก์ชันคำนวณสูตร IRA ระดับรายการและระดับมูลค่า
-  - [ ] แสดงการ์ดคะแนนสุขภาพสต็อก (เกรด A/B/C) แยกตามโซนบน Visual Map
-  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/cycleCount.php`, `page/storeManagement/api/api_store.php`
+- [x] **1.3 Inventory Record Accuracy (IRA) & Zone Health Metrics**
+  - [x] พัฒนาฟังก์ชันคำนวณสูตร IRA ระดับรายการ (Item-level IRA: $\frac{\text{Accurate Items}}{\text{Counted Items}} \times 100\%$) และระดับมูลค่า (Value-weighted IRA: $\max(0, 1 - \frac{\sum |\text{diff}| \times \text{Price}}{\sum \text{system\_qty} \times \text{Price}}) \times 100\%$)
+  - [x] ออกแบบและติดตั้งแถบภาพรวมความแม่นยำคลัง (Warehouse IRA & Health Mini-Bar) แสดงสถิติ IRA รายชิ้น, IRA มูลค่า, และความคืบหน้ารอบตรวจนับ
+  - [x] แสดงการ์ดคะแนนสุขภาพสต็อก (เกรด A/B/C/ยังไม่ตรวจ) แยกตามโซนบน Visual Map
+  - [x] พัฒนา Interactive Zone Health Details Modal แสดงผลแจกแจงละเอียด (ยอดตรง, ยอดดิฟ, มูลค่าระบบ, ผลต่างสุทธิ) พร้อมระบบให้คำแนะนำในการบริหารสต็อก (Operational Action Guidance)
+  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/api/zone_health_helper.php`, `page/storeManagement/api/api_store.php`, `page/storeManagement/cycleCount.php`, `page/storeManagement/script/cycleCount.js`
 
 ---
 
@@ -148,3 +150,4 @@
 | **2026-10-12** | Antigravity | พัฒนา Phase 1.1: Barcode Gun Keystrokes Listener, Continuous Scan Mode (Auto-Confirm), Auto-Pause เมื่อเจอของหลงคลัง, เสียงสังเคราะห์ Web Audio API และการสั่น | `cycleCount.php`, `cycleCount.js`, `api_store.php`, `ROADMAP.md` |
 | **2026-10-12** | Antigravity | ปรับปรุง UX/UI: เพิ่มปุ่มย้อนกลับไปเปลี่ยน Location, รวมแถบสแกนให้กะทัดรัด, แปลงข้อความอธิบายเป็น Tooltips ลดพื้นที่แนวตั้ง | `cycleCount.php`, `cycleCount.js`, `ROADMAP.md` |
 | **2026-10-14** | Antigravity | ปรับปรุง Shelf Legend Spacing & Red Status Indicator, พัฒนาและทดสอบ Phase 1.2 End-to-End Manual Approval Verification (UAT): อัปเดต `sp_Store_ApproveCycleCount` ซิงค์ location_id ป้องกัน underflow, แสดง Serial No. ใน Approval Modal, ตรวจสอบ Onhand, Tag Qty และ Stock Ledger ครบถ้วน | `cycleCount.php`, `cycleCount.js`, `inventoryDashboard.js`, `api_store.php`, `inventory.php`, `db_changes.md`, `ROADMAP.md` |
+| **2026-10-14** | Antigravity | พัฒนา Phase 1.3: Inventory Record Accuracy (IRA) & Zone Health Metrics: สร้าง `zone_health_helper.php`, เพิ่ม Action `get_zone_health_metrics`, เพิ่มแถบ Warehouse IRA Mini-Bar, Grade Badges A/B/C บน Visual Map, และ Interactive Zone Health Drilldown Modal พร้อมคำแนะนำเกรดสต็อก | `zone_health_helper.php`, `api_store.php`, `cycleCount.php`, `cycleCount.js`, `ROADMAP.md` |
