@@ -71,7 +71,7 @@
     - แถบ Scanner Toolbar ดีไซน์แบบการ์ดซอฟต์การ์ด จัดวางสวิตช์และปุ่มตัดเสียงสมดุล
     - Unified Barcode Search Group (ปุ่มกล้องสแกนสี Slate เข้ม + ช่องพิมพ์ไร้ขอบ + ปุ่มค้นหาสีน้ำเงิน)
     - Segmented Navigation Tabs (สไตล์ iOS Track `#f1f5f9` พร้อม Active Pill สีขาวและ Badges ซอฟต์พิลล์)
-    - Part Cards ขอบซ้าย 4px บางประณีต พร้อมแสดงผล monospace tag สบายตา
+    - **Shelf Monitor UI Redesign:** ปรับโฉมแผนผังจำลองชั้นวางสต็อก (Shelf Monitor) บนจอ PC ให้เข้าชุด: Header ซอฟต์การ์ดพร้อมไอคอนและ Badge แสดงคลัง, Legend Toolbar 3 สีพร้อมยอดรวมพาเลท, Pallet Cards สไตล์ Industrial Soft Tint (รอนับ=ขาว, นับแล้ว=เขียวพาสเทล, หลงคลัง=ส้มพาสเทล), และ Empty State สบายตา
     - ปุ่มสรุปผลตรวจนับสีเขียวมรกต Gradient
   - [x] **Zero-Count Session Safety & Clean Back Navigation:**
     - เซสชั่นสร้างในสถานะ `PENDING` และจะเปลี่ยนเป็น `IN_PROGRESS` เมื่อเริ่มนับชิ้นแรกเท่านั้น

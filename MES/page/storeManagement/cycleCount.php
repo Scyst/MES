@@ -474,6 +474,78 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
             border-color: #cbd5e1;
             color: #334155;
         }
+
+        /* Shelf Monitor Styling */
+        .shelf-monitor-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            height: calc(100vh - 100px);
+        }
+        .shelf-header-bar {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 18px;
+        }
+        .shelf-legend-bar {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 9px 18px;
+            font-size: 0.78rem;
+        }
+        .shelf-item-group {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            transition: border-color 0.2s;
+        }
+        .shelf-item-group:hover {
+            border-color: #cbd5e1;
+        }
+        .shelf-item-header {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 10px 16px;
+        }
+        .shelf-pallet-cell {
+            width: 148px;
+            min-height: 105px;
+            border-radius: 10px;
+            padding: 10px;
+            border: 1.5px solid #e2e8f0;
+            background: #ffffff;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            text-align: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .shelf-pallet-cell:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .shelf-pallet-cell.pending {
+            border-color: #cbd5e1;
+            background: #ffffff;
+        }
+        .shelf-pallet-cell.pending:hover {
+            border-color: #94a3b8;
+        }
+        .shelf-pallet-cell.counted {
+            background-color: #f0fdf4 !important;
+            border-color: #86efac !important;
+        }
+        .shelf-pallet-cell.wrong-loc {
+            background-color: #fffbeb !important;
+            border-color: #fcd34d !important;
+        }
     </style>
 </head>
 
@@ -703,16 +775,54 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
 
         <!-- Right Column: Visual Shelf (PC Only) -->
         <div class="col-12 col-lg-7 d-none d-lg-block">
-            <div class="card border-0 shadow-sm" style="height: calc(100vh - 100px); border-radius: 12px; overflow: hidden;">
-                <div class="card-header bg-white border-bottom py-3">
-                    <h5 class="card-title fw-bold mb-0 text-dark"><i class="fas fa-layer-group text-primary me-2"></i> แผนผังจำลองชั้นวางสต็อก (Shelf Monitor)</h5>
-                </div>
-                <div class="card-body bg-body-tertiary" id="shelfContainer" style="overflow-y: auto;">
-                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
-                        <div class="text-center">
-                            <i class="fas fa-box-open fa-3x mb-3 text-secondary opacity-50"></i>
-                            <h5>เลือก Location ด้านซ้ายเพื่อแสดงข้อมูล</h5>
+            <div class="card shelf-monitor-card d-flex flex-column">
+                <!-- Shelf Header Bar -->
+                <div class="shelf-header-bar d-flex align-items-center justify-content-between flex-shrink-0">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle flex-shrink-0" style="width: 40px; height: 40px;">
+                            <i class="fas fa-boxes-stacked" style="font-size: 1rem;"></i>
                         </div>
+                        <div class="d-flex flex-column justify-content-center min-w-0">
+                            <h6 class="fw-bold text-dark mb-0 lh-2" style="font-size: 1rem; letter-spacing: -0.2px;">แผนผังจำลองชั้นวางสต็อก (Shelf Monitor)</h6>
+                            <span class="text-muted mt-1 lh-2" style="font-size: 0.75rem;">แสดงตำแหน่งพาเลทและสถานะการตรวจนับแบบเรียลไทม์</span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="shelfLocationBadge" class="badge rounded-pill bg-light text-secondary border px-2.5 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5" style="font-size: 0.8rem;">
+                            <i class="fas fa-map-marker-alt text-primary"></i>
+                            <span id="shelfLocationText">ยังไม่ได้เลือกคลัง</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Shelf Legend Toolbar -->
+                <div class="shelf-legend-bar d-flex align-items-center justify-content-between flex-shrink-0">
+                    <div class="d-flex align-items-center gap-3.5">
+                        <span class="d-inline-flex align-items-center text-secondary fw-semibold">
+                            <span class="d-inline-block rounded-circle bg-secondary me-1.5" style="width:8px;height:8px;"></span>รอนับ (Pending)
+                        </span>
+                        <span class="d-inline-flex align-items-center text-success fw-semibold">
+                            <span class="d-inline-block rounded-circle bg-success me-1.5" style="width:8px;height:8px;"></span>นับแล้ว (Counted)
+                        </span>
+                        <span class="d-inline-flex align-items-center text-warning-emphasis fw-semibold">
+                            <span class="d-inline-block rounded-circle bg-warning me-1.5" style="width:8px;height:8px;"></span>หลงคลัง (Wrong Loc)
+                        </span>
+                    </div>
+                    <div id="shelfSummaryBadge" class="badge rounded-pill bg-white text-muted border px-2.5 py-1 font-monospace" style="font-size: 0.75rem;">
+                        0 พาเลท
+                    </div>
+                </div>
+
+                <!-- Shelf Content Container -->
+                <div class="card-body p-3 flex-grow-1 overflow-auto" id="shelfContainer" style="background-color: #f8fafc !important; min-height: 0;">
+                    <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted py-5">
+                        <div class="d-flex align-items-center justify-content-center bg-white rounded-circle shadow-xs border mb-3" style="width: 72px; height: 72px;">
+                            <i class="fas fa-boxes-stacked fa-2x text-primary opacity-50"></i>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-1">พร้อมแสดงผลแผนผังชั้นวางสต็อก</h6>
+                        <span class="text-muted small text-center" style="max-width: 340px;">
+                            กรุณาเลือกคลังสินค้าจากแถบด้านซ้ายและกด <b class="text-primary">'เริ่มตรวจนับคลังที่เลือก'</b> เพื่อแสดงข้อมูลพาเลทแบบเรียลไทม์
+                        </span>
                     </div>
                 </div>
             </div>

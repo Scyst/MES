@@ -97,10 +97,53 @@ function maskTag(tag) {
     return tag.substring(0, 2) + '****';
 }
 
+function resetShelfMonitorUI() {
+    const locText = document.getElementById('shelfLocationText');
+    if (locText) locText.innerText = 'ยังไม่ได้เลือกคลัง';
+    
+    const summaryBadge = document.getElementById('shelfSummaryBadge');
+    if (summaryBadge) summaryBadge.innerText = '0 พาเลท';
+    
+    const shelf = document.getElementById('shelfContainer');
+    if (shelf) {
+        shelf.innerHTML = `
+            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted py-5">
+                <div class="d-flex align-items-center justify-content-center bg-white rounded-circle shadow-xs border mb-3" style="width: 72px; height: 72px;">
+                    <i class="fas fa-boxes-stacked fa-2x text-primary opacity-50"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1">พร้อมแสดงผลแผนผังชั้นวางสต็อก</h6>
+                <span class="text-muted small text-center" style="max-width: 340px;">
+                    กรุณาเลือกคลังสินค้าจากแถบด้านซ้ายและกด <b class="text-primary">'เริ่มตรวจนับคลังที่เลือก'</b> เพื่อแสดงข้อมูลพาเลทแบบเรียลไทม์
+                </span>
+            </div>
+        `;
+    }
+}
+
 function renderShelfMonitor(details) {
     const shelf = document.getElementById('shelfContainer');
     if (!shelf) return;
-    
+
+    const locName = document.getElementById('currentLocationName')?.innerText || '-';
+    const locText = document.getElementById('shelfLocationText');
+    if (locText) locText.innerText = `คลัง ${locName}`;
+
+    const summaryBadge = document.getElementById('shelfSummaryBadge');
+    if (summaryBadge) summaryBadge.innerText = `${details ? details.length : 0} พาเลท`;
+
+    if (!details || details.length === 0) {
+        shelf.innerHTML = `
+            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted py-5">
+                <div class="d-flex align-items-center justify-content-center bg-white rounded-circle shadow-xs border mb-3" style="width: 64px; height: 64px;">
+                    <i class="fas fa-inbox fa-2x text-secondary opacity-50"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1">ไม่พบรายการสินค้าในคลังนี้</h6>
+                <span class="text-muted small">คลังนี้อาจยังไม่มีการลงทะเบียนสต็อก หรือสินค้าถูกย้ายออกหมดแล้ว</span>
+            </div>
+        `;
+        return;
+    }
+
     // Group details by Item No
     const items = {};
     details.forEach(d => {
@@ -109,40 +152,66 @@ function renderShelfMonitor(details) {
         items[itemNo].push(d);
     });
 
-    let html = '<div class="row g-3">';
+    let html = '';
     for (const [itemNo, tags] of Object.entries(items)) {
-        html += `<div class="col-12"><h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="fas fa-box text-secondary me-2"></i> Item: ${itemNo} (${tags.length} Tags)</h6><div class="d-flex flex-wrap gap-2 mb-4">`;
-        
+        html += `
+            <div class="shelf-item-group">
+                <div class="shelf-item-header d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-cube text-primary" style="font-size: 0.9rem;"></i>
+                        <span class="fw-bold text-dark font-monospace" style="font-size: 0.95rem;">${escapeHTML(itemNo)}</span>
+                    </div>
+                    <span class="badge rounded-pill bg-light text-muted border px-2.5 py-1 small fw-semibold">
+                        ${tags.length} พาเลท
+                    </span>
+                </div>
+                <div class="p-3">
+                    <div class="d-flex flex-wrap gap-2.5">
+        `;
+
         tags.forEach(d => {
-            let colorClass = 'bg-secondary bg-opacity-25 text-secondary'; // Pending
-            let icon = 'fa-clock';
-            let title = 'รอนับ';
-            
+            let stateClass = 'pending';
+            let badgeHtml = '<span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle px-1.5 py-0.5" style="font-size: 0.68rem;"><i class="fas fa-clock me-1"></i>รอนับ</span>';
+            let qtyHtml = '<div class="text-muted" style="font-size: 0.72rem;">(Blind Count)</div>';
+
             if (d.actual_qty !== null) {
                 if (d.is_wrong_location == 1) {
-                    colorClass = 'bg-warning text-dark border-warning';
-                    icon = 'fa-exclamation-triangle';
-                    title = 'หลงคลัง';
+                    stateClass = 'wrong-loc';
+                    badgeHtml = '<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-1.5 py-0.5" style="font-size: 0.68rem;"><i class="fas fa-exclamation-triangle me-1"></i>หลงคลัง</span>';
+                    qtyHtml = `<div class="fw-bold text-warning-emphasis" style="font-size: 0.78rem;"><span class="text-secondary fw-normal">นับได้:</span> ${d.actual_qty} ชิ้น</div>`;
                 } else {
-                    colorClass = 'bg-success text-white border-success';
-                    icon = 'fa-check';
-                    title = 'นับแล้ว';
+                    stateClass = 'counted';
+                    badgeHtml = '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5" style="font-size: 0.68rem;"><i class="fas fa-check me-1"></i>นับแล้ว</span>';
+                    qtyHtml = `<div class="fw-bold text-success" style="font-size: 0.78rem;"><span class="text-secondary fw-normal">นับได้:</span> ${d.actual_qty} ชิ้น</div>`;
                 }
             }
-            
+
             // Mask tag if not counted yet to keep blind count on shelf monitor too
             const displayTag = d.actual_qty === null ? maskTag(d.tag_serial_no) : escapeHTML(d.tag_serial_no);
 
             html += `
-                <div class="p-2 rounded border ${colorClass} text-center shadow-sm" style="width: 140px; font-size: 0.85rem;" title="${title}">
-                    <i class="fas ${icon} mb-2 fs-4"></i><br>
-                    <span class="fw-bold">${displayTag}</span>
+                <div class="shelf-pallet-cell ${stateClass}" title="${escapeHTML(d.tag_serial_no)}">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <i class="fas fa-qrcode text-muted" style="font-size: 0.8rem;"></i>
+                        ${badgeHtml}
+                    </div>
+                    <div class="my-1.5">
+                        <span class="font-monospace fw-bold text-dark" style="font-size: 0.85rem; letter-spacing: 0.2px;">${displayTag}</span>
+                    </div>
+                    <div class="mt-auto pt-1 border-top" style="border-color: rgba(0,0,0,0.06) !important;">
+                        ${qtyHtml}
+                    </div>
                 </div>
             `;
         });
-        html += `</div></div>`;
+
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
     }
-    html += '</div>';
+
     shelf.innerHTML = html;
 }
 
@@ -889,6 +958,8 @@ async function backToLocationSelect() {
         currentSessionDetails = [];
         currentCountedCount = 0;
 
+        resetShelfMonitorUI();
+
         if (viewCounting) {
             viewCounting.classList.add('d-none');
             viewCounting.classList.remove('d-flex');
@@ -936,6 +1007,8 @@ async function backToLocationSelect() {
     currentLocationId = 0;
     currentSessionDetails = [];
     currentCountedCount = 0;
+
+    resetShelfMonitorUI();
 
     if (viewCounting) {
         viewCounting.classList.add('d-none');
