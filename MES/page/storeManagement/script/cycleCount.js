@@ -1121,21 +1121,32 @@ async function showZoneHealthModal(zoneName) {
             <div class="text-muted small">คะแนนความถูกต้องของข้อมูลสต็อก (Inventory Record Accuracy)</div>
         </div>
 
-        <div class="row g-2 mb-3 text-center">
+        <div class="row g-2 mb-2.5 text-center">
             <div class="col-6">
-                <div class="p-2.5 rounded-3 border bg-light shadow-xs">
-                    <div class="text-muted small mb-1" style="font-size: 0.72rem;">ความแม่นยำรายชิ้น (Item IRA)</div>
+                <div class="p-2.5 rounded-3 border bg-light shadow-xs" title="สูตร: (ยอดตรง ÷ ตรวจแล้ว) × 100%">
+                    <div class="text-muted small mb-1" style="font-size: 0.72rem;">
+                        ความแม่นยำรายชิ้น (Item IRA) <i class="fas fa-info-circle text-muted ms-0.5" style="font-size: 0.65rem;"></i>
+                    </div>
                     <div class="fw-bold fs-4 ${grade === 'A' ? 'text-success' : (grade === 'B' ? 'text-warning-emphasis' : (grade === 'C' ? 'text-danger' : 'text-secondary'))}">${itemIraText}</div>
                     <div class="text-muted" style="font-size: 0.68rem;">ยอดตรง ${accurate} / ตรวจแล้ว ${counted} พาเลท</div>
                 </div>
             </div>
             <div class="col-6">
-                <div class="p-2.5 rounded-3 border bg-light shadow-xs">
-                    <div class="text-muted small mb-1" style="font-size: 0.72rem;">ความแม่นยำมูลค่า (Value IRA)</div>
+                <div class="p-2.5 rounded-3 border bg-light shadow-xs" title="สูตร: [1 - (ผลต่าง ÷ มูลค่าระบบ)] × 100%">
+                    <div class="text-muted small mb-1" style="font-size: 0.72rem;">
+                        ความแม่นยำมูลค่า (Value IRA) <i class="fas fa-info-circle text-muted ms-0.5" style="font-size: 0.65rem;"></i>
+                    </div>
                     <div class="fw-bold fs-4 ${grade === 'A' ? 'text-success' : (grade === 'B' ? 'text-warning-emphasis' : (grade === 'C' ? 'text-danger' : 'text-secondary'))}">${valIraText}</div>
                     <div class="text-muted text-truncate" style="font-size: 0.68rem;" title="ผลต่าง ±${fmtCurrency(varVal)} บาท">ดิฟ ±${fmtCurrency(varVal)} บาท</div>
                 </div>
             </div>
+        </div>
+
+        <div class="text-center mb-3">
+            <span class="badge rounded-pill bg-white text-muted border px-2.5 py-1 shadow-xs" style="font-size: 0.68rem;">
+                <i class="fas fa-calculator text-primary me-1"></i>
+                <span>สูตร: ชิ้นงาน = <b>(ตรง ÷ นับ) × 100%</b> | มูลค่า = <b>[1 - (ดิฟ ÷ ระบบ)] × 100%</b></span>
+            </span>
         </div>
 
         <div class="card border rounded-3 overflow-hidden mb-3 text-start shadow-xs">

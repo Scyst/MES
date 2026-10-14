@@ -656,21 +656,30 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                         <i class="fas fa-chart-line text-primary" style="font-size: 0.82rem;"></i>
                                         <span class="fw-bold text-dark" style="font-size: 0.8rem;">ภาพรวมความแม่นยำสต็อก (IRA Health)</span>
                                     </div>
-                                    <span class="badge rounded-pill <?= $overallHealth['grade_class'] ?> px-2 py-0.5 d-inline-flex align-items-center gap-1" style="font-size: 0.68rem;">
+                                    <span class="badge rounded-pill <?= $overallHealth['grade_class'] ?> px-2 py-0.5 d-inline-flex align-items-center gap-1" 
+                                          data-bs-toggle="tooltip" data-bs-placement="left" 
+                                          title="เกณฑ์สุขภาพสต็อก: เกรด A (≥ 95%), เกรด B (85% - 94.9%), เกรด C (< 85%)" 
+                                          style="font-size: 0.68rem; cursor: help;">
                                         <i class="<?= $overallHealth['grade_icon'] ?>"></i> <?= $overallHealth['grade_text'] ?>
                                     </span>
                                 </div>
                                 <div class="row g-1 text-center align-items-center">
-                                    <div class="col-4 border-end">
-                                        <div class="text-muted text-truncate" style="font-size: 0.68rem;">ความแม่นยำรายชิ้น</div>
+                                    <div class="col-4 border-end" data-bs-toggle="tooltip" data-bs-placement="top" title="สูตร Item IRA: (พาเลทที่ยอดตรง ÷ พาเลทที่ตรวจทั้งหมด) × 100%" style="cursor: help;">
+                                        <div class="text-muted text-truncate" style="font-size: 0.68rem;">
+                                            ความแม่นยำรายชิ้น <i class="fas fa-info-circle text-muted ms-0.5" style="font-size: 0.62rem;"></i>
+                                        </div>
                                         <div class="fw-bold fs-6 <?= $itemColorClass ?>"><?= $overallItemText ?></div>
                                     </div>
-                                    <div class="col-4 border-end">
-                                        <div class="text-muted text-truncate" style="font-size: 0.68rem;">ความแม่นยำมูลค่า</div>
+                                    <div class="col-4 border-end" data-bs-toggle="tooltip" data-bs-placement="top" title="สูตร Value IRA: [1 - (ผลต่างมูลค่ารวม ÷ มูลค่าสต็อกระบบรวม)] × 100%" style="cursor: help;">
+                                        <div class="text-muted text-truncate" style="font-size: 0.68rem;">
+                                            ความแม่นยำมูลค่า <i class="fas fa-info-circle text-muted ms-0.5" style="font-size: 0.62rem;"></i>
+                                        </div>
                                         <div class="fw-bold fs-6 <?= $valColorClass ?>"><?= $overallValText ?></div>
                                     </div>
-                                    <div class="col-4">
-                                        <div class="text-muted text-truncate" style="font-size: 0.68rem;">ตรวจแล้ว / ทั้งหมด</div>
+                                    <div class="col-4" data-bs-toggle="tooltip" data-bs-placement="top" title="จำนวนคลังสินค้าที่เริ่มตรวจนับเทียบกับจำนวนคลังทั้งหมดในสโตร์" style="cursor: help;">
+                                        <div class="text-muted text-truncate" style="font-size: 0.68rem;">
+                                            ตรวจแล้ว / ทั้งหมด <i class="fas fa-info-circle text-muted ms-0.5" style="font-size: 0.62rem;"></i>
+                                        </div>
                                         <div class="fw-bold fs-6 text-dark"><?= $auditedProgress ?></div>
                                     </div>
                                 </div>
