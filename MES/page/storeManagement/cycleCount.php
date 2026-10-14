@@ -826,7 +826,11 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                     <i class="fas fa-eye-slash me-1"></i>Blind Count
                                 </span>
                             </div>
-                            <div class="flex-shrink-0 ms-2">
+                            <div class="d-flex align-items-center gap-1.5 flex-shrink-0 ms-2">
+                                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1 shadow-xs" onclick="resetCountingSession()" title="ยกเลิกการนับและรีเซ็ตเพื่อเริ่มใหม่" style="font-size: 0.75rem;">
+                                    <i class="fas fa-undo-alt"></i>
+                                    <span class="d-none d-sm-inline">รีเซ็ตการนับ</span>
+                                </button>
                                 <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1.5 fw-semibold" id="sessionStatusBadge" style="font-size: 0.75rem;">
                                     <i class="fas fa-spinner fa-spin me-1"></i>กำลังเช็ค
                                 </span>
@@ -914,12 +918,18 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                 </div>
                             </div>
 
-                            <!-- Bottom Finish Button -->
+                            <!-- Bottom Action Buttons: Finish + Cancel/Reset -->
                             <div class="flex-shrink-0 pt-2.5 bg-white mt-auto border-top">
-                                <button class="btn-finish-cc" onclick="finishSession()">
-                                    <i class="fas fa-flag-checkered fs-5"></i>
-                                    <span>สรุปผลการตรวจนับคลังนี้</span>
-                                </button>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="button" class="btn btn-outline-danger fw-semibold d-inline-flex align-items-center justify-content-center gap-1.5 rounded-3 py-2 px-3 shadow-xs" onclick="resetCountingSession()" title="ยกเลิกการนับและรีเซ็ตรายการที่นับไปแล้วทั้งหมด" style="min-width: 125px; font-size: 0.88rem;">
+                                        <i class="fas fa-undo-alt"></i>
+                                        <span>ยกเลิกการนับ</span>
+                                    </button>
+                                    <button class="btn-finish-cc flex-grow-1" onclick="finishSession()">
+                                        <i class="fas fa-flag-checkered fs-5"></i>
+                                        <span>สรุปผลการตรวจนับคลังนี้</span>
+                                    </button>
+                                </div>
                             </div>
                         </div> <!-- End p-3 body of viewCounting -->
                     </div> <!-- End viewCounting -->

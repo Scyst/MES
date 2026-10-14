@@ -999,14 +999,22 @@ async function backToLocationSelect() {
     // Case 2: User has counted some items (> 0 items)
     const result = await Swal.fire({
         title: 'ออกจากหน้าตรวจนับ?',
-        html: `คุณได้ทำการตรวจนับไปแล้ว <b>${currentCountedCount} รายการ</b><br><span class="text-muted small">ต้องการบันทึกสถานะ 'กำลังเช็ค (In Progress)' ไว้ก่อนเพื่อกลับมานับต่อภายหลังใช่หรือไม่?</span>`,
+        html: `คุณได้ทำการตรวจนับไปแล้ว <b>${currentCountedCount} รายการ</b><br><span class="text-muted small">ต้องการบันทึกสถานะ 'กำลังเช็ค (In Progress)' หรือยกเลิกเพื่อรีเซ็ตนับใหม่?</span>`,
         icon: 'question',
         showCancelButton: true,
+        showDenyButton: true,
         confirmButtonColor: '#0d6efd',
+        denyButtonColor: '#dc3545',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'ใช่, บันทึกและออก',
+        confirmButtonText: '<i class="fas fa-save me-1"></i>ใช่, บันทึกและออก',
+        denyButtonText: '<i class="fas fa-undo-alt me-1"></i>ยกเลิกการนับ (รีเซ็ต)',
         cancelButtonText: 'นับต่อ'
     });
+
+    if (result.isDenied) {
+        await executeResetSession();
+        return;
+    }
 
     if (!result.isConfirmed) return;
 
@@ -1048,6 +1056,107 @@ async function backToLocationSelect() {
     }
     if (viewSelect) {
         viewSelect.classList.remove('d-none');
+    }
+}
+
+async function resetCountingSession() {
+    if (!currentSessionId) {
+        await backToLocationSelect();
+        return;
+    }
+
+    const countedText = currentCountedCount > 0 
+        ? `คุณได้ทำการตรวจนับไปแล้ว <b>${currentCountedCount} รายการ</b><br>` 
+        : '';
+
+    const confirm = await Swal.fire({
+        title: 'ยกเลิกการตรวจนับ?',
+        html: `${countedText}<span class="text-danger fw-semibold">ข้อมูลที่นับไปแล้วทั้งหมดในเซสชั่นนี้จะถูกล้างทิ้ง</span><br><span class="text-muted small">และคลังนี้จะกลับสู่สถานะ 'รอนับ' เพื่อให้เริ่มนับใหม่ได้ทันที</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-undo-alt me-1"></i>ยืนยันยกเลิกและรีเซ็ต',
+        cancelButtonText: 'กลับไปนับต่อ'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    await executeResetSession();
+}
+
+async function executeResetSession() {
+    const locId = currentLocationId;
+    const sessId = currentSessionId;
+
+    Swal.fire({
+        title: 'กำลังรีเซ็ตการตรวจนับ...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        const formData = createFormData('cc_reset_session');
+        formData.append('session_id', sessId);
+        formData.append('location_id', locId);
+
+        const req = await fetch(API_STORE, { method: 'POST', body: formData });
+        const res = await req.json();
+
+        if (res.success) {
+            // Reset location button on Visual Map back to pending
+            if (locId) {
+                const btn = document.querySelector(`.location-btn[onclick*="selectLocationUI(${locId},"]`);
+                if (btn) {
+                    btn.className = 'location-btn btn-loc-pending w-100 position-relative';
+                    btn.style.backgroundImage = '';
+                    const spinner = btn.querySelector('.fa-spinner');
+                    if (spinner) spinner.remove();
+                }
+            }
+
+            // Reset UI state
+            currentSessionId = 0;
+            currentLocationId = 0;
+            currentSessionDetails = [];
+            currentCountedCount = 0;
+            currentLocationRecountItems = [];
+
+            const banner = document.getElementById('recountAlertBanner');
+            if (banner) {
+                banner.classList.add('d-none');
+                banner.classList.remove('d-flex');
+            }
+
+            resetShelfMonitorUI();
+
+            const viewCounting = document.getElementById('viewCounting');
+            const viewSelect = document.getElementById('viewSelectLocation');
+            if (viewCounting) {
+                viewCounting.classList.add('d-none');
+                viewCounting.classList.remove('d-flex');
+            }
+            if (viewSelect) {
+                viewSelect.classList.remove('d-none');
+            }
+
+            const locSelect = document.getElementById('locationSelect');
+            if (locSelect) locSelect.value = '';
+            const startBtn = document.getElementById('btnStartSession');
+            if (startBtn) startBtn.disabled = true;
+
+            Swal.fire({
+                icon: 'success',
+                title: 'รีเซ็ตสำเร็จ',
+                text: 'ยกเลิกการตรวจนับและรีเซ็ตคลังสินค้าเรียบร้อยแล้ว สามารถเริ่มนับใหม่ได้ทันที',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } else {
+            Swal.fire('เกิดข้อผิดพลาด', res.message || 'ไม่สามารถรีเซ็ตได้', 'error');
+        }
+    } catch (e) {
+        Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
     }
 }
 

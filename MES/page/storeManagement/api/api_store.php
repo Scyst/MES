@@ -30,7 +30,7 @@ try {
         'submit_cycle_count', 'approve_cycle_count', 'create_transfer_request', 'transfer_tag',
         'submit_requisition', 'accept_order', 'confirm_issue', 'reject_order', 'submit_k2_pr', 
         'upload_image', 'update_item_info', 'cancel_my_order',
-        'cc_start_session', 'cc_scan_tag', 'cc_finish_session', 'cc_cancel_empty_session', 'update_location_zones',
+        'cc_start_session', 'cc_scan_tag', 'cc_finish_session', 'cc_cancel_empty_session', 'cc_reset_session', 'update_location_zones',
         'cc_submit_recount'
     ];
     
@@ -1982,7 +1982,43 @@ try {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e;
             }
+        case 'cc_reset_session':
+            $session_id = (int)($_POST['session_id'] ?? 0);
+            $location_id = (int)($_POST['location_id'] ?? 0);
+            if ($session_id === 0) {
+                throw new Exception("Session ID ไม่ถูกต้อง");
+            }
+
+            $pdo->beginTransaction();
+            try {
+                $stmtChk = $pdo->prepare("SELECT status FROM dbo.CYCLE_COUNT_SESSIONS WITH (UPDLOCK) WHERE session_id = ?");
+                $stmtChk->execute([$session_id]);
+                $status = $stmtChk->fetchColumn();
+
+                if (!$status) {
+                    $pdo->commit();
+                    $response = ['success' => true, 'message' => 'รีเซ็ตเรียบร้อย'];
+                    break;
+                }
+
+                if ($status === 'COMPLETED') {
+                    throw new Exception("ไม่สามารถยกเลิกเซสชั่นที่บันทึกสรุปผลเสร็จสิ้นแล้วได้");
+                }
+
+                $stmtDelD = $pdo->prepare("DELETE FROM dbo.CYCLE_COUNT_DETAILS WHERE session_id = ?");
+                $stmtDelD->execute([$session_id]);
+
+                $stmtDelS = $pdo->prepare("DELETE FROM dbo.CYCLE_COUNT_SESSIONS WHERE session_id = ?");
+                $stmtDelS->execute([$session_id]);
+
+                $pdo->commit();
+                $response = ['success' => true, 'message' => 'ยกเลิกการตรวจนับและรีเซ็ตเรียบร้อย'];
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $e;
+            }
             break;
+
         case 'get_zone_health_metrics':
             require_once __DIR__ . '/zone_health_helper.php';
             $startDate = $_REQUEST['start_date'] ?? null;

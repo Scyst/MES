@@ -76,7 +76,8 @@
   - [x] **Zero-Count Session Safety & Clean Back Navigation:**
     - เซสชั่นสร้างในสถานะ `PENDING` และจะเปลี่ยนเป็น `IN_PROGRESS` เมื่อเริ่มนับชิ้นแรกเท่านั้น
     - หากกดย้อนกลับโดยยังไม่ได้นับอะไรเลย (`countedCount === 0`): ระบบจะลบ Empty Session ทิ้งอัตโนมัติผ่าน `cc_cancel_empty_session` และคงสถานะคลังบน Visual Map เป็นสีเทา (ไม่กลายเป็น In-Progress หลอก)
-    - หากนับไปแล้ว (`countedCount > 0`): เด้งถามยืนยันก่อนออก และคงสถานะ In-Progress ไว้ให้กลับมานับต่อได้
+    - หากนับไปแล้ว (`countedCount > 0`): เด้งถามยืนยันก่อนออก 3 ทางเลือก (1. ใช่ บันทึกและออกเพื่อกลับมานับต่อ, 2. ยกเลิกการนับเพื่อรีเซ็ตเริ่มนับใหม่, 3. นับต่อ)
+    - **ระบบยกเลิกการนับและรีเซ็ต (Cancel & Reset Session Protocol):** เพิ่มปุ่ม "ยกเลิกการนับ" บน Header และ Footer ของหน้าตรวจนับ พร้อม Action `cc_reset_session` ล้างข้อมูลรายละเอียดที่ตรวจนับไปแล้วทั้งหมด ปรับสถานะคลังกลับเป็น Pending สีเทา เพื่อให้พนักงานสามารถเริ่มนับใหม่ได้ทันทีเมื่อต้องการ
   - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/cycleCount.php`, `page/storeManagement/script/cycleCount.js`, `page/storeManagement/api/api_store.php`
 
 - [x] **1.2 End-to-End Manual Approval Verification (UAT หน้างานจริง)**
