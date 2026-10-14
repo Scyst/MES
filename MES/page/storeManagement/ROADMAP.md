@@ -79,14 +79,14 @@
     - หากนับไปแล้ว (`countedCount > 0`): เด้งถามยืนยันก่อนออก และคงสถานะ In-Progress ไว้ให้กลับมานับต่อได้
   - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/cycleCount.php`, `page/storeManagement/script/cycleCount.js`, `page/storeManagement/api/api_store.php`
 
-- [ ] **1.2 End-to-End Manual Approval Verification (UAT หน้างานจริง)**
-  - [ ] ทดสอบสร้างเซสชั่น -> สแกนของจริง -> สรุปผลจบงาน
-  - [ ] **ทดสอบการกด Approve ด้วยมือ** ในหน้า `inventoryDashboard.php`:
-    - ตรวจสอบยอดคงเหลือใน `dbo.INVENTORY_ONHAND`
-    - ตรวจสอบยอดแท็กใน `dbo.RM_SERIAL_TAGS`
-    - ตรวจสอบประวัติ Ledger ใน `dbo.STOCK_TRANSACTIONS` (Reference: `CC-<count_id>`)
-  - [ ] **ทดสอบการกด Reject ด้วยมือ**: ยืนยันว่าสต็อกคงเดิมและบันทึกเหตุผลถูกต้อง
-  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/inventoryDashboard.php`, `page/storeManagement/api/api_store.php`
+- [x] **1.2 End-to-End Manual Approval Verification (UAT หน้างานจริง)**
+  - [x] ทดสอบสร้างเซสชั่น -> สแกนของจริง -> สรุปผลจบงาน
+  - [x] **ทดสอบการกด Approve ด้วยมือ** ในหน้า `inventoryDashboard.php`:
+    - [x] ตรวจสอบยอดคงเหลือใน `dbo.INVENTORY_ONHAND` (ปรับยอดตาม diff_qty แม่นยำ)
+    - [x] ตรวจสอบยอดแท็กใน `dbo.RM_SERIAL_TAGS` (ปรับ current_qty และซิงค์ location_id เมื่อเป็นของหลงคลัง)
+    - [x] ตรวจสอบประวัติ Ledger ใน `dbo.STOCK_TRANSACTIONS` (Reference: `CC-<count_id>`, ประเภท `ADJ_IN`/`ADJ_OUT`)
+  - [x] **ทดสอบการกด Reject ด้วยมือ**: ยืนยันว่าสต็อกคงเดิม 100% ไม่สร้าง Transaction หลอก และบันทึกสถานะ REJECTED พร้อมผู้อนุมัติถูกต้อง
+  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/inventoryDashboard.php`, `page/storeManagement/script/inventoryDashboard.js`, `page/storeManagement/api/api_store.php`, `mes-toolbox/public/api/v1/inventory.php`
 
 - [ ] **1.3 Inventory Record Accuracy (IRA) & Zone Health Metrics**
   - [ ] พัฒนาฟังก์ชันคำนวณสูตร IRA ระดับรายการและระดับมูลค่า
@@ -147,3 +147,4 @@
 | **2026-10-12** | Antigravity | เพิ่มคอลัมน์ `zone_name`, สร้าง UI จัดการโซน, แก้บั๊ก `checkTagMatch`, เชื่อมระบบอนุมัติผู้จัดการ, บังคับ CSRF, สร้าง Roadmap Tracker | `db_changes.md`, `cycleCount.php`, `cycleCount.js`, `api_store.php`, `ROADMAP.md` |
 | **2026-10-12** | Antigravity | พัฒนา Phase 1.1: Barcode Gun Keystrokes Listener, Continuous Scan Mode (Auto-Confirm), Auto-Pause เมื่อเจอของหลงคลัง, เสียงสังเคราะห์ Web Audio API และการสั่น | `cycleCount.php`, `cycleCount.js`, `api_store.php`, `ROADMAP.md` |
 | **2026-10-12** | Antigravity | ปรับปรุง UX/UI: เพิ่มปุ่มย้อนกลับไปเปลี่ยน Location, รวมแถบสแกนให้กะทัดรัด, แปลงข้อความอธิบายเป็น Tooltips ลดพื้นที่แนวตั้ง | `cycleCount.php`, `cycleCount.js`, `ROADMAP.md` |
+| **2026-10-14** | Antigravity | ปรับปรุง Shelf Legend Spacing & Red Status Indicator, พัฒนาและทดสอบ Phase 1.2 End-to-End Manual Approval Verification (UAT): อัปเดต `sp_Store_ApproveCycleCount` ซิงค์ location_id ป้องกัน underflow, แสดง Serial No. ใน Approval Modal, ตรวจสอบ Onhand, Tag Qty และ Stock Ledger ครบถ้วน | `cycleCount.php`, `cycleCount.js`, `inventoryDashboard.js`, `api_store.php`, `inventory.php`, `db_changes.md`, `ROADMAP.md` |

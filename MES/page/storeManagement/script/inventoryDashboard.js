@@ -667,11 +667,15 @@ async function openApprovalModal() {
             const diff = parseFloat(row.diff_qty);
             const diffClass = diff > 0 ? 'text-success' : (diff < 0 ? 'text-danger' : 'text-muted');
             const diffSign = diff > 0 ? '+' : '';
+            const serialBadge = row.serial_no ? `<div class="font-monospace text-muted small"><i class="fas fa-qrcode me-1 opacity-75"></i>${escapeHTML(row.serial_no)}</div>` : '';
             
             const tr = `
                 <tr>
                     <td class="text-muted small d-none d-md-table-cell">${row.counted_at.substring(0,16)}</td>
-                    <td class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${escapeHTML(row.item_no)}</td>
+                    <td>
+                        <div class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${escapeHTML(row.item_no)}</div>
+                        ${serialBadge}
+                    </td>
                     <td>${escapeHTML(row.location_name)}</td>
                     <td class="text-end fw-bold text-secondary d-none d-md-table-cell">${parseFloat(row.system_qty).toLocaleString()}</td>
                     <td class="text-end fw-bold text-primary fs-6">${parseFloat(row.actual_qty).toLocaleString()}</td>
@@ -729,6 +733,7 @@ async function openCcHistoryModal() {
             const diff = parseFloat(row.diff_qty);
             const diffClass = diff > 0 ? 'text-success' : (diff < 0 ? 'text-danger' : 'text-muted');
             const diffSign = diff > 0 ? '+' : '';
+            const serialBadge = row.serial_no ? `<div class="font-monospace text-muted small"><i class="fas fa-qrcode me-1 opacity-75"></i>${escapeHTML(row.serial_no)}</div>` : '';
             
             const badge = row.status === 'APPROVED' 
                 ? '<span class="badge bg-success">APPROVED</span>' 
@@ -739,7 +744,10 @@ async function openCcHistoryModal() {
             const tr = `
                 <tr>
                     <td class="text-muted small d-none d-md-table-cell">${timeStr}</td>
-                    <td class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${escapeHTML(row.item_no)}</td>
+                    <td>
+                        <div class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${escapeHTML(row.item_no)}</div>
+                        ${serialBadge}
+                    </td>
                     <td>${escapeHTML(row.location_name)}</td>
                     <td class="text-end fw-bold text-secondary d-none d-md-table-cell">${parseFloat(row.system_qty).toLocaleString()}</td>
                     <td class="text-end fw-bold text-dark">${parseFloat(row.actual_qty).toLocaleString()}</td>

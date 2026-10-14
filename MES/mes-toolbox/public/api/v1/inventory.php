@@ -1332,7 +1332,7 @@ try {
         case 'get_pending_counts':
             $sql = "
                 SELECT 
-                    c.count_id, c.count_date, c.system_qty, c.actual_qty, c.diff_qty, c.remark, c.counted_at,
+                    c.count_id, c.count_date, c.system_qty, c.actual_qty, c.diff_qty, c.remark, c.counted_at, c.serial_no,
                     i.sap_no, ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description,
                     l.location_name,
                     ISNULL(e.name_th, u.username) AS counter_name
@@ -1353,7 +1353,7 @@ try {
         case 'get_cycle_count_history':
             $sql = "
                 SELECT 
-                    c.count_id, c.count_date, c.system_qty, c.actual_qty, c.diff_qty, c.remark, c.counted_at, c.status, c.approved_at,
+                    c.count_id, c.count_date, c.system_qty, c.actual_qty, c.diff_qty, c.remark, c.counted_at, c.status, c.approved_at, c.serial_no,
                     i.sap_no, ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description,
                     l.location_name,
                     ISNULL(e1.name_th, u1.username) AS counter_name,

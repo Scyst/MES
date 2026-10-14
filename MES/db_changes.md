@@ -133,3 +133,16 @@ Log ค่าพารามิเตอร์แต่ละ Station × Time Sl
 ALTER TABLE dbo.LOCATIONS ADD zone_name NVARCHAR(50) NULL;
 ```
 
+---
+
+## 2026-10-14 — Store Management: Cycle Count Manual Approval Stored Procedure Update
+
+**Agent:** Antigravity  
+**Feature:** Phase 1.2 End-to-End Manual Approval & Location Synchronization
+
+### Stored Procedure Updated: `dbo.sp_Store_ApproveCycleCount`
+- **Location Synchronization:** When approving a count for a specific pallet/tag (`@serial_no IS NOT NULL`), synchronizes `RM_SERIAL_TAGS.location_id = @location_id` so that pallets discovered in wrong locations (ของหลงคลัง) correctly transfer to their counted location upon approval.
+- **Negative Variance Safety:** Protects against negative variance underflow with `CASE WHEN current_qty + @diff_qty < 0 THEN 0 ELSE current_qty + @diff_qty END`.
+- **Ledger Auditability:** Preserves `STOCK_TRANSACTIONS` logging with `reference_id = 'CC-' + CAST(@count_id AS VARCHAR)` and transaction types `ADJ_IN` / `ADJ_OUT`.
+
+
