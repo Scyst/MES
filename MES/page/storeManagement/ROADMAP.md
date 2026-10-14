@@ -115,15 +115,17 @@
 
 ---
 
-## 📍 Phase 3: Advanced Enterprise Warehouse Operations (Backlog)
+## 📍 Phase 3: Advanced Enterprise Warehouse Operations (In Progress)
 
 > **เป้าหมาย:** ระบบตรวจสอบบัญชี, การป้องกันสินค้าสูญหายมูลค่าสูง, และความทนทานต่อมุมอับสัญญาณ
 
-- [ ] **3.1 Audit Report & Official Sign-off Engine**
-  - [ ] หน้าสรุปผลการตรวจนับประวัติย้อนหลัง (Cycle Count History View)
-  - [ ] Export ตารางเปรียบเทียบยอดระบบ vs ยอดจริงในรูปแบบ Excel (.xlsx / CSV BOM)
-  - [ ] Export เอกสารทางการรับรองผลการตรวจนับรูปแบบ PDF พร้อมช่องลงนาม (พนักงาน/หัวหน้าคลัง/ผู้ตรวจบัญชี)
-  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/inventoryDashboard.php`, `page/storeManagement/api/api_store.php`
+- [x] **3.1 Audit Report & Official Sign-off Engine**
+  - [x] ปรับรอบการนับและการคำนวณ IRA ทั้งหมดเป็นรอบประจำเดือน (Monthly Cycle) รีเซ็ตความก้าวหน้าอัตโนมัติทุกวันที่ 1 ของเดือน
+  - [x] หน้าสรุปผลการตรวจนับประวัติย้อนหลัง (Cycle Count History View & Audit Ledger Modal) พร้อม Quick Period Filters (เดือนนี้/เดือนก่อน/30 วันล่าสุด) และ Location/Status Filters
+  - [x] สรุปตัวชี้วัดความแม่นยำสต็อกและกระทบยอดเงิน (System vs Actual Qty, Net Variance Value THB)
+  - [x] Export ตารางเปรียบเทียบยอดระบบ vs ยอดจริงในรูปแบบ Excel (.csv พร้อม UTF-8 BOM รองรับภาษาไทย 100%)
+  - [x] Export ใบรับรองผลการตรวจนับทางการรูปแบบ PDF / Print Ready (`print_cycle_count_audit.php`) พร้อมสรุปเกรดสุขภาพคลัง และ 3 ช่องลงนาม (พนักงานตรวจนับ / หัวหน้าแผนกสโตร์ / ผู้จัดการโรงงาน-บัญชี) ตามมาตรฐาน ISO 9001 / IATF 16949
+  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/components/InventoryModal.php`, `page/storeManagement/script/inventoryDashboard.js`, `page/storeManagement/print_cycle_count_audit.php`, `page/storeManagement/api/api_store.php`, `page/storeManagement/api/zone_health_helper.php`, `page/storeManagement/cycleCount.php`
 
 - [ ] **3.2 Two-Tier Blind Recount Protocol (นับซ้ำเมื่อดิฟสูง - Strict Manual Decision)**
   - [ ] กำหนดเกณฑ์ Trigger ยอดดิฟสูง (เช่น ผลต่าง $> \pm 10,000$ บาท หรือ $> \pm 10\%$)
@@ -152,3 +154,4 @@
 | **2026-10-14** | Antigravity | ปรับปรุง Shelf Legend Spacing & Red Status Indicator, พัฒนาและทดสอบ Phase 1.2 End-to-End Manual Approval Verification (UAT): อัปเดต `sp_Store_ApproveCycleCount` ซิงค์ location_id ป้องกัน underflow, แสดง Serial No. ใน Approval Modal, ตรวจสอบ Onhand, Tag Qty และ Stock Ledger ครบถ้วน | `cycleCount.php`, `cycleCount.js`, `inventoryDashboard.js`, `api_store.php`, `inventory.php`, `db_changes.md`, `ROADMAP.md` |
 | **2026-10-14** | Antigravity | พัฒนา Phase 1.3: Inventory Record Accuracy (IRA) & Zone Health Metrics: สร้าง `zone_health_helper.php`, เพิ่ม Action `get_zone_health_metrics`, เพิ่มแถบ Warehouse IRA Mini-Bar, Grade Badges A/B/C บน Visual Map, และ Interactive Zone Health Drilldown Modal พร้อมคำแนะนำเกรดสต็อก | `zone_health_helper.php`, `api_store.php`, `cycleCount.php`, `cycleCount.js`, `ROADMAP.md` |
 | **2026-10-14** | Antigravity | พัฒนา Phase 2: Refactoring Master Data Architecture (2.1 & 2.2): สร้าง Dynamic Taxonomy API `get_material_categories`, สร้าง `loadMaterialCategories()` พร้อม sessionStorage caching ใน `storeCommon.js`, ลบ Hardcoded Sub-types ใน `inventoryDashboard.js`, `stockLedger.js`, `materialReq.js` และทดสอบ E2E สมบูรณ์ | `api_store.php`, `storeCommon.js`, `inventoryDashboard.js`, `stockLedger.js`, `materialReq.js`, `ROADMAP.md` |
+| **2026-10-14** | Antigravity | ปรับรอบการตรวจนับเป็น Monthly Cycle ประจำเดือน และพัฒนา Phase 3.1 Audit Report & Official Sign-off Engine: ออกแบบและสร้าง `print_cycle_count_audit.php` (A4 Landscape, ISO Certificate, 3 Signature Blocks), ปรับปรุง `ccHistoryModal` ใน `InventoryModal.php` ให้มีตัวกรองช่วงเวลา/คลัง/สถานะและแถบ KPI กระทบยอด, พัฒนา `exportCcHistoryExcel()` (UTF-8 BOM), และทดสอบ E2E สมบูรณ์ | `zone_health_helper.php`, `cycleCount.php`, `api_store.php`, `InventoryModal.php`, `inventoryDashboard.js`, `print_cycle_count_audit.php`, `ROADMAP.md` |

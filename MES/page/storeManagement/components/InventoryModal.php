@@ -216,34 +216,117 @@
 </div>
 
 <div class="modal fade" id="ccHistoryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 95%;">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-info text-white">
-                <h6 class="modal-title fw-bold"><i class="fas fa-history me-2"></i> ประวัติการปรับปรุงสต็อกย้อนหลัง</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-dark text-white py-2.5 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-file-invoice text-info fs-5"></i>
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0">บันทึกประวัติตรวจนับสต็อก & ใบรับรองการตรวจสอบ (Cycle Count Audit Ledger)</h6>
+                        <span class="text-white-50" style="font-size: 0.72rem;">ระบบสอบทานผลต่างสินค้าคงคลังและออกรายงานรับรองตามมาตรฐาน ISO/IATF (Phase 3.1)</span>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-light btn-sm fw-bold" onclick="exportCcHistoryExcel()" title="ส่งออกข้อมูลเป็น Excel CSV พร้อม UTF-8 BOM">
+                        <i class="fas fa-file-excel text-success me-1"></i> Export Excel
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm" onclick="printCcAuditReport()" title="เปิดเอกสารรับรองพร้อม 3 ช่องลงนามเพื่อพิมพ์หรือบันทึกเป็น PDF">
+                        <i class="fas fa-print me-1"></i> พิมพ์ใบรับรอง (PDF)
+                    </button>
+                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal"></button>
+                </div>
             </div>
+            
+            <!-- Filter Toolbar -->
+            <div class="p-2.5 bg-light border-bottom">
+                <div class="row g-2 align-items-center">
+                    <div class="col-12 col-md-auto d-flex align-items-center gap-1">
+                        <label class="form-label mb-0 text-muted small fw-semibold">ช่วงวันที่:</label>
+                        <input type="date" id="ccFilterStartDate" class="form-control form-control-sm" style="width: 130px;">
+                        <span class="text-muted small">-</span>
+                        <input type="date" id="ccFilterEndDate" class="form-control form-control-sm" style="width: 130px;">
+                    </div>
+                    <div class="col-12 col-md-auto d-flex align-items-center gap-1">
+                        <button type="button" id="btnPeriodThisMonth" class="btn btn-xs btn-outline-primary active fw-semibold" onclick="setCcHistoryQuickPeriod('this_month')">เดือนนี้</button>
+                        <button type="button" id="btnPeriodLastMonth" class="btn btn-xs btn-outline-secondary fw-semibold" onclick="setCcHistoryQuickPeriod('last_month')">เดือนก่อน</button>
+                        <button type="button" id="btnPeriod30Days" class="btn btn-xs btn-outline-secondary fw-semibold" onclick="setCcHistoryQuickPeriod('last_30_days')">30 วันล่าสุด</button>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <select id="ccFilterLocation" class="form-select form-select-sm">
+                            <option value="ALL">ทุกตำแหน่ง (All Locations)</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-auto">
+                        <select id="ccFilterStatus" class="form-select form-select-sm" style="width: 130px;">
+                            <option value="ALL">ทุกสถานะ (All)</option>
+                            <option value="APPROVED">อนุมัติแล้ว (Approved)</option>
+                            <option value="REJECTED">ปฏิเสธ (Rejected)</option>
+                            <option value="PENDING">รอดำเนินการ (Pending)</option>
+                        </select>
+                    </div>
+                    <div class="col-8 col-md">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" id="ccFilterSearch" class="form-control form-control-sm border-start-0" placeholder="ค้นหา Part No, SAP, Serial, Loc..." onkeyup="if(event.key==='Enter') loadCcHistoryData()">
+                        </div>
+                    </div>
+                    <div class="col-4 col-md-auto">
+                        <button type="button" class="btn btn-primary btn-sm fw-bold w-100 px-3 shadow-sm" onclick="loadCcHistoryData()">
+                            <i class="fas fa-filter me-1"></i> กรอง
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Summary Badges -->
+                <div class="d-flex align-items-center gap-3 flex-wrap mt-2 pt-2 border-top" style="font-size: 0.78rem;">
+                    <div class="text-muted">
+                        รายการทั้งหมด: <span id="ccSummaryTotal" class="fw-bold text-dark">0</span>
+                    </div>
+                    <div class="text-muted">
+                        อนุมัติ: <span id="ccSummaryApproved" class="fw-bold text-success">0</span> | ปฏิเสธ: <span id="ccSummaryRejected" class="fw-bold text-danger">0</span>
+                    </div>
+                    <div class="text-muted">
+                        ยอดดิฟชิ้นรวม: <span id="ccSummaryDiffQty" class="fw-bold text-secondary">0</span>
+                    </div>
+                    <div class="text-muted">
+                        มูลค่าดิฟรวม (Absolute): <span id="ccSummaryAbsDiffValue" class="fw-bold text-dark">0.00 ฿</span>
+                    </div>
+                    <div class="text-muted">
+                        มูลค่าผลต่างสุทธิ (Net): <span id="ccSummaryNetDiffValue" class="fw-bold text-primary">0.00 ฿</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="modal-body p-0 bg-body-tertiary">
-                <div class="table-responsive hide-scrollbar m-0" style="max-height: 60vh;">
-                    <table class="table table-hover table-striped align-middle mb-0 text-nowrap" style="font-size: 0.85rem;">
-                        <thead class="table-light sticky-top shadow-sm">
-                            <tr class="text-secondary">
-                                <th class="px-3 d-none d-md-table-cell">เวลาที่อนุมัติ</th>
-                                <th>Item No.</th>
-                                <th>Location</th>
-                                <th class="text-end d-none d-md-table-cell">System</th>
+                <div class="table-responsive hide-scrollbar m-0" style="max-height: 58vh;">
+                    <table class="table table-hover table-striped align-middle mb-0 text-nowrap" style="font-size: 0.82rem;">
+                        <thead class="table-dark sticky-top shadow-sm" style="font-size: 0.76rem; letter-spacing: 0.3px;">
+                            <tr>
+                                <th class="px-2 text-center" style="width: 40px;">#</th>
+                                <th class="px-2">วันที่ตรวจ</th>
+                                <th>Item No / Description</th>
+                                <th>Serial No (Tag)</th>
+                                <th>Location / Zone</th>
+                                <th class="text-end">ราคา/หน่วย</th>
+                                <th class="text-end">System</th>
                                 <th class="text-end">Actual</th>
-                                <th class="text-end">Diff</th>
+                                <th class="text-end">Diff Qty</th>
+                                <th class="text-end">Diff Value (฿)</th>
                                 <th class="text-center">Status</th>
-                                <th class="px-3 d-none d-lg-table-cell">คนนับ / คนอนุมัติ</th>
+                                <th class="px-2">ผู้ตรวจ / ผู้อนุมัติ</th>
                             </tr>
                         </thead>
                         <tbody id="ccHistoryTbody">
-                            <tr><td colspan="8" class="text-center py-4"><i class="fas fa-spinner fa-spin text-muted me-2"></i>กำลังโหลด...</td></tr>
+                            <tr><td colspan="12" class="text-center py-4"><i class="fas fa-spinner fa-spin text-muted me-2"></i>กำลังโหลด...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            <div class="modal-footer bg-white border-top py-2">
+            
+            <div class="modal-footer bg-white border-top py-2 d-flex justify-content-between align-items-center">
+                <span class="text-muted small">
+                    <i class="fas fa-info-circle me-1 text-primary"></i> ข้อมูลเชื่อมโยงกับฐานข้อมูลตรวจนับกลาง `dbo.INVENTORY_CYCLE_COUNTS`
+                </span>
                 <button type="button" class="btn btn-secondary btn-sm fw-bold shadow-sm px-4" data-bs-dismiss="modal">ปิด</button>
             </div>
         </div>

@@ -1863,7 +1863,9 @@ try {
             break;
         case 'get_zone_health_metrics':
             require_once __DIR__ . '/zone_health_helper.php';
-            $healthData = getZoneHealthMetrics($pdo);
+            $startDate = $_REQUEST['start_date'] ?? null;
+            $endDate = $_REQUEST['end_date'] ?? null;
+            $healthData = getZoneHealthMetrics($pdo, $startDate, $endDate);
             $response = [
                 'success' => true,
                 'overall' => $healthData['overall'],
@@ -2116,11 +2118,49 @@ try {
             break;
 
         case 'get_cycle_count_history':
+            $startDate = $_REQUEST['start_date'] ?? date('Y-m-01');
+            $endDate = $_REQUEST['end_date'] ?? date('Y-m-d');
+            $locId = $_REQUEST['location_id'] ?? 'ALL';
+            $status = $_REQUEST['status'] ?? 'ALL';
+            $search = trim($_REQUEST['search'] ?? '');
+            $limit = isset($_REQUEST['limit']) && is_numeric($_REQUEST['limit']) ? (int)$_REQUEST['limit'] : 500;
+            if ($limit > 1000) $limit = 1000;
+
+            $whereClauses = ["c.count_date >= ? AND c.count_date <= ?"];
+            $params = [$startDate, $endDate];
+
+            if ($status !== 'ALL' && in_array($status, ['APPROVED', 'REJECTED', 'PENDING'])) {
+                $whereClauses[] = "c.status = ?";
+                $params[] = $status;
+            } else {
+                $whereClauses[] = "c.status IN ('APPROVED', 'REJECTED', 'PENDING')";
+            }
+
+            if ($locId !== 'ALL' && is_numeric($locId) && (int)$locId > 0) {
+                $whereClauses[] = "c.location_id = ?";
+                $params[] = (int)$locId;
+            }
+
+            if (!empty($search)) {
+                $whereClauses[] = "(i.sap_no LIKE ? OR i.part_no LIKE ? OR i.part_description LIKE ? OR c.serial_no LIKE ? OR l.location_name LIKE ?)";
+                $searchParam = "%{$search}%";
+                $params[] = $searchParam;
+                $params[] = $searchParam;
+                $params[] = $searchParam;
+                $params[] = $searchParam;
+                $params[] = $searchParam;
+            }
+
+            $whereSql = implode(" AND ", $whereClauses);
+
             $sql = "
                 SELECT 
                     c.count_id, c.count_date, c.system_qty, c.actual_qty, c.diff_qty, c.remark, c.counted_at, c.status, c.approved_at, c.serial_no,
                     i.sap_no, ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description,
-                    l.location_name,
+                    COALESCE(NULLIF(i.StandardPrice, 0), NULLIF(i.Cost_Total, 0), 0) AS unit_price,
+                    ROUND(ABS(c.diff_qty) * COALESCE(NULLIF(i.StandardPrice, 0), NULLIF(i.Cost_Total, 0), 0), 2) AS diff_value,
+                    ROUND(c.diff_qty * COALESCE(NULLIF(i.StandardPrice, 0), NULLIF(i.Cost_Total, 0), 0), 2) AS net_diff_value,
+                    l.location_name, ISNULL(l.zone_name, N'อื่น ๆ') AS zone_name,
                     ISNULL(e1.name_th, u1.username) AS counter_name,
                     ISNULL(e2.name_th, u2.username) AS approver_name
                 FROM dbo.INVENTORY_CYCLE_COUNTS c WITH (NOLOCK)
@@ -2130,12 +2170,57 @@ try {
                 LEFT JOIN dbo.MANPOWER_EMPLOYEES e1 WITH (NOLOCK) ON u1.emp_id = e1.emp_id
                 LEFT JOIN dbo.USERS u2 WITH (NOLOCK) ON c.approved_by_user_id = u2.id
                 LEFT JOIN dbo.MANPOWER_EMPLOYEES e2 WITH (NOLOCK) ON u2.emp_id = e2.emp_id
-                WHERE c.status IN ('APPROVED', 'REJECTED')
-                ORDER BY c.approved_at DESC
-                OFFSET 0 ROWS FETCH NEXT 200 ROWS ONLY
+                WHERE {$whereSql}
+                ORDER BY c.count_date DESC, c.count_id DESC
+                OFFSET 0 ROWS FETCH NEXT {$limit} ROWS ONLY
             ";
-            $stmt = $pdo->query($sql);
-            $response = ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Compute summary KPIs for this audit query
+            $totalRecords = count($rows);
+            $approvedCount = 0;
+            $rejectedCount = 0;
+            $pendingCount = 0;
+            $totalSystemQty = 0.0;
+            $totalActualQty = 0.0;
+            $totalDiffQty = 0.0;
+            $totalDiffValue = 0.0;
+            $netDiffValue = 0.0;
+
+            foreach ($rows as $r) {
+                if ($r['status'] === 'APPROVED') $approvedCount++;
+                elseif ($r['status'] === 'REJECTED') $rejectedCount++;
+                elseif ($r['status'] === 'PENDING') $pendingCount++;
+
+                $totalSystemQty += (float)$r['system_qty'];
+                $totalActualQty += (float)$r['actual_qty'];
+                $totalDiffQty += (float)$r['diff_qty'];
+                $totalDiffValue += (float)$r['diff_value'];
+                $netDiffValue += (float)$r['net_diff_value'];
+            }
+
+            $summary = [
+                'total_records' => $totalRecords,
+                'approved_count' => $approvedCount,
+                'rejected_count' => $rejectedCount,
+                'pending_count' => $pendingCount,
+                'total_system_qty' => $totalSystemQty,
+                'total_actual_qty' => $totalActualQty,
+                'total_diff_qty' => $totalDiffQty,
+                'total_diff_value' => round($totalDiffValue, 2),
+                'net_diff_value' => round($netDiffValue, 2),
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ];
+
+            $response = [
+                'success' => true, 
+                'data' => $rows,
+                'summary' => $summary
+            ];
             break;
 
         case 'transfer_tag':

@@ -4,7 +4,28 @@
  * MES Store Management - Phase 1.3
  */
 
-function getZoneHealthMetrics(PDO $pdo): array {
+function getThaiMonthYear(int $timestamp): string {
+    $thaiMonths = [
+        1 => 'มกราคม', 2 => 'กุมภาพันธ์', 3 => 'มีนาคม', 4 => 'เมษายน',
+        5 => 'พฤษภาคม', 6 => 'มิถุนายน', 7 => 'กรกฎาคม', 8 => 'สิงหาคม',
+        9 => 'กันยายน', 10 => 'ตุลาคม', 11 => 'พฤศจิกายน', 12 => 'ธันวาคม'
+    ];
+    $m = (int)date('n', $timestamp);
+    $y = (int)date('Y', $timestamp) + 543;
+    return ($thaiMonths[$m] ?? date('F', $timestamp)) . ' ' . $y;
+}
+
+function getZoneHealthMetrics(PDO $pdo, ?string $startDate = null, ?string $endDate = null): array {
+    // Default to current monthly cycle (1st of month to end of month)
+    if (!$startDate) {
+        $startDate = date('Y-m-01 00:00:00');
+    }
+    if (!$endDate) {
+        $endDate = date('Y-m-t 23:59:59');
+    }
+
+    $cycleLabel = getThaiMonthYear(strtotime($startDate));
+
     $sql = "
     WITH RankedSessions AS (
         SELECT 
@@ -17,7 +38,8 @@ function getZoneHealthMetrics(PDO $pdo): array {
             ROW_NUMBER() OVER (PARTITION BY s.location_id ORDER BY s.session_id DESC) as rn
         FROM dbo.CYCLE_COUNT_SESSIONS s WITH (NOLOCK)
         JOIN dbo.LOCATIONS l WITH (NOLOCK) ON s.location_id = l.location_id
-        WHERE EXISTS (
+        WHERE s.created_at >= :start_date AND s.created_at <= :end_date
+          AND EXISTS (
             SELECT 1 FROM dbo.CYCLE_COUNT_DETAILS d WITH (NOLOCK) 
             WHERE d.session_id = s.session_id AND d.actual_qty IS NOT NULL
         )
@@ -83,7 +105,8 @@ function getZoneHealthMetrics(PDO $pdo): array {
     ORDER BY az.zone_name
     ";
 
-    $stmt = $pdo->query($sql);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
     $zoneRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Compute Grades and format numbers
@@ -197,6 +220,9 @@ function getZoneHealthMetrics(PDO $pdo): array {
     }
 
     $overall = [
+        'cycle_label' => $cycleLabel,
+        'start_date' => $startDate,
+        'end_date' => $endDate,
         'total_locations' => $totalLocationsAll,
         'audited_locations' => $auditedLocationsAll,
         'total_pallets' => $totalPalletsAll,

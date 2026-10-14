@@ -717,55 +717,322 @@ async function processApproval(countId, actionType) {
     }
 }
 
+let currentCcHistoryData = [];
+let isCcLocationsLoaded = false;
+
 async function openCcHistoryModal() {
-    ccHistoryModal.show();
-    const tbody = document.getElementById('ccHistoryTbody');
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-info"></i></td></tr>';
+    if (!ccHistoryModal) {
+        const historyModalEl = document.getElementById('ccHistoryModal');
+        if (historyModalEl) ccHistoryModal = new bootstrap.Modal(historyModalEl);
+    }
     
+    // Set default date range to current month if empty
+    const startInput = document.getElementById('ccFilterStartDate');
+    const endInput = document.getElementById('ccFilterEndDate');
+    if (startInput && !startInput.value) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        startInput.value = `${y}-${m}-01`;
+        endInput.value = `${y}-${m}-${d}`;
+    }
+
+    // Populate locations dropdown once
+    if (!isCcLocationsLoaded) {
+        const locSelect = document.getElementById('ccFilterLocation');
+        if (locSelect) {
+            try {
+                const resLoc = await fetchAPI('get_location_zones', 'GET');
+                if (resLoc && resLoc.locations) {
+                    let html = '<option value="ALL">ทุกตำแหน่ง (All Locations)</option>';
+                    resLoc.locations.forEach(l => {
+                        const zoneSuffix = l.zone_name ? ` (${escapeHTML(l.zone_name)})` : '';
+                        html += `<option value="${l.location_id}">${escapeHTML(l.location_name)}${zoneSuffix}</option>`;
+                    });
+                    locSelect.innerHTML = html;
+                    isCcLocationsLoaded = true;
+                }
+            } catch (err) {
+                console.warn('Could not populate cc locations filter', err);
+            }
+        }
+    }
+
+    ccHistoryModal.show();
+    await loadCcHistoryData();
+}
+
+function setCcHistoryQuickPeriod(type) {
+    const startInput = document.getElementById('ccFilterStartDate');
+    const endInput = document.getElementById('ccFilterEndDate');
+    if (!startInput || !endInput) return;
+
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth(); // 0-indexed
+
+    // Reset button states
+    ['btnPeriodThisMonth', 'btnPeriodLastMonth', 'btnPeriod30Days'].forEach(id => {
+        const b = document.getElementById(id);
+        if (b) {
+            b.classList.remove('active', 'btn-outline-primary');
+            b.classList.add('btn-outline-secondary');
+        }
+    });
+
+    if (type === 'this_month') {
+        const b = document.getElementById('btnPeriodThisMonth');
+        if (b) { b.classList.add('active', 'btn-outline-primary'); b.classList.remove('btn-outline-secondary'); }
+        const mStr = String(m + 1).padStart(2, '0');
+        const dStr = String(now.getDate()).padStart(2, '0');
+        startInput.value = `${y}-${mStr}-01`;
+        endInput.value = `${y}-${mStr}-${dStr}`;
+    } else if (type === 'last_month') {
+        const b = document.getElementById('btnPeriodLastMonth');
+        if (b) { b.classList.add('active', 'btn-outline-primary'); b.classList.remove('btn-outline-secondary'); }
+        const firstDayLastMonth = new Date(y, m - 1, 1);
+        const lastDayLastMonth = new Date(y, m, 0);
+        const ly = firstDayLastMonth.getFullYear();
+        const lm = String(firstDayLastMonth.getMonth() + 1).padStart(2, '0');
+        const ld = String(lastDayLastMonth.getDate()).padStart(2, '0');
+        startInput.value = `${ly}-${lm}-01`;
+        endInput.value = `${ly}-${lm}-${ld}`;
+    } else if (type === 'last_30_days') {
+        const b = document.getElementById('btnPeriod30Days');
+        if (b) { b.classList.add('active', 'btn-outline-primary'); b.classList.remove('btn-outline-secondary'); }
+        const past30 = new Date();
+        past30.setDate(past30.getDate() - 30);
+        const py = past30.getFullYear();
+        const pm = String(past30.getMonth() + 1).padStart(2, '0');
+        const pd = String(past30.getDate()).padStart(2, '0');
+        const cy = now.getFullYear();
+        const cm = String(now.getMonth() + 1).padStart(2, '0');
+        const cd = String(now.getDate()).padStart(2, '0');
+        startInput.value = `${py}-${pm}-${pd}`;
+        endInput.value = `${cy}-${cm}-${cd}`;
+    }
+
+    loadCcHistoryData();
+}
+
+async function loadCcHistoryData() {
+    const tbody = document.getElementById('ccHistoryTbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i><div class="text-muted small mt-2">กำลังโหลดประวัติและประมวลผลยอดกระทบสต็อก...</div></td></tr>';
+
+    const startDate = document.getElementById('ccFilterStartDate')?.value || '';
+    const endDate = document.getElementById('ccFilterEndDate')?.value || '';
+    const locId = document.getElementById('ccFilterLocation')?.value || 'ALL';
+    const status = document.getElementById('ccFilterStatus')?.value || 'ALL';
+    const search = document.getElementById('ccFilterSearch')?.value?.trim() || '';
+
+    const queryParams = new URLSearchParams({
+        start_date: startDate,
+        end_date: endDate,
+        location_id: locId,
+        status: status,
+        search: search
+    });
+
     try {
-        const res = await fetchAPI('get_cycle_count_history', 'GET');
+        const res = await fetchAPI(`get_cycle_count_history&${queryParams.toString()}`, 'GET');
         tbody.innerHTML = '';
+        currentCcHistoryData = res.data || [];
+
+        // Update Summary KPIs
+        const sum = res.summary || {};
+        const elTotal = document.getElementById('ccSummaryTotal');
+        const elApp = document.getElementById('ccSummaryApproved');
+        const elRej = document.getElementById('ccSummaryRejected');
+        const elDiffQty = document.getElementById('ccSummaryDiffQty');
+        const elAbsDiff = document.getElementById('ccSummaryAbsDiffValue');
+        const elNetDiff = document.getElementById('ccSummaryNetDiffValue');
+
+        if (elTotal) elTotal.textContent = (sum.total_records || 0).toLocaleString();
+        if (elApp) elApp.textContent = (sum.approved_count || 0).toLocaleString();
+        if (elRej) elRej.textContent = (sum.rejected_count || 0).toLocaleString();
         
-        if (!res.data || res.data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">ยังไม่มีประวัติการปรับยอด</td></tr>';
+        if (elDiffQty) {
+            const diffQty = parseFloat(sum.total_diff_qty || 0);
+            elDiffQty.textContent = (diffQty > 0 ? '+' : '') + diffQty.toLocaleString();
+            elDiffQty.className = 'fw-bold ' + (diffQty > 0 ? 'text-success' : (diffQty < 0 ? 'text-danger' : 'text-secondary'));
+        }
+
+        if (elAbsDiff) {
+            elAbsDiff.textContent = (parseFloat(sum.total_diff_value || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿';
+        }
+
+        if (elNetDiff) {
+            const netVal = parseFloat(sum.net_diff_value || 0);
+            elNetDiff.textContent = (netVal > 0 ? '+' : '') + netVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿';
+            elNetDiff.className = 'fw-bold ' + (netVal > 0 ? 'text-success' : (netVal < 0 ? 'text-danger' : 'text-primary'));
+        }
+
+        if (!currentCcHistoryData || currentCcHistoryData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>ไม่พบประวัติการตรวจนับตามเงื่อนไขที่เลือก</td></tr>';
             return;
         }
 
-        res.data.forEach(row => {
+        let seq = 1;
+        currentCcHistoryData.forEach(row => {
             const diff = parseFloat(row.diff_qty);
             const diffClass = diff > 0 ? 'text-success' : (diff < 0 ? 'text-danger' : 'text-muted');
             const diffSign = diff > 0 ? '+' : '';
-            const serialBadge = row.serial_no ? `<div class="font-monospace text-muted small"><i class="fas fa-qrcode me-1 opacity-75"></i>${escapeHTML(row.serial_no)}</div>` : '';
+            const netVal = parseFloat(row.net_diff_value || 0);
+            const netValSign = netVal > 0 ? '+' : '';
+            const netValClass = netVal > 0 ? 'text-success' : (netVal < 0 ? 'text-danger' : 'text-muted');
             
-            const badge = row.status === 'APPROVED' 
-                ? '<span class="badge bg-success">APPROVED</span>' 
-                : '<span class="badge bg-danger">REJECTED</span>';
+            const serialBadge = row.serial_no 
+                ? `<div class="font-monospace text-muted small"><i class="fas fa-barcode me-1 opacity-75"></i>${escapeHTML(row.serial_no)}</div>` 
+                : '<span class="text-muted small">-</span>';
+            
+            let badge = '<span class="badge bg-secondary">UNKNOWN</span>';
+            if (row.status === 'APPROVED') {
+                badge = '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>APPROVED</span>';
+            } else if (row.status === 'REJECTED') {
+                badge = '<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>REJECTED</span>';
+            } else if (row.status === 'PENDING') {
+                badge = '<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>PENDING</span>';
+            }
 
-            const timeStr = row.approved_at ? row.approved_at.substring(0, 16) : '-';
+            const dateStr = row.count_date ? row.count_date.substring(0, 10) : '-';
+            const unitPrice = parseFloat(row.unit_price || 0);
 
             const tr = `
                 <tr>
-                    <td class="text-muted small d-none d-md-table-cell">${timeStr}</td>
+                    <td class="text-center text-muted small">${seq++}</td>
+                    <td class="text-muted small">${dateStr}</td>
                     <td>
-                        <div class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${escapeHTML(row.item_no)}</div>
-                        ${serialBadge}
+                        <div class="fw-bold text-primary" title="${escapeHTML(row.part_description || '')}">${escapeHTML(row.item_no)}</div>
+                        <div class="text-muted text-truncate" style="max-width: 220px; font-size: 0.72rem;">${escapeHTML(row.part_description || '-')}</div>
                     </td>
-                    <td>${escapeHTML(row.location_name)}</td>
-                    <td class="text-end fw-bold text-secondary d-none d-md-table-cell">${parseFloat(row.system_qty).toLocaleString()}</td>
+                    <td>${serialBadge}</td>
+                    <td>
+                        <span class="fw-semibold text-dark">${escapeHTML(row.location_name)}</span>
+                        <div class="text-muted" style="font-size: 0.7rem;">${escapeHTML(row.zone_name || '')}</div>
+                    </td>
+                    <td class="text-end text-muted">${unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="text-end text-secondary fw-semibold">${parseFloat(row.system_qty).toLocaleString()}</td>
                     <td class="text-end fw-bold text-dark">${parseFloat(row.actual_qty).toLocaleString()}</td>
                     <td class="text-end fw-bold ${diffClass}">${diffSign}${diff.toLocaleString()}</td>
+                    <td class="text-end fw-bold ${netValClass}">${netValSign}${netVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td class="text-center">${badge}</td>
-                    <td class="small d-none d-lg-table-cell">
-                        <div><span class="text-muted">นับ:</span> ${escapeHTML(row.counter_name)}</div>
-                        <div><span class="text-muted">อนุมัติ:</span> <span class="fw-bold">${escapeHTML(row.approver_name)}</span></div>
+                    <td class="small" style="font-size: 0.75rem;">
+                        <div><span class="text-muted">นับ:</span> ${escapeHTML(row.counter_name || '-')}</div>
+                        <div><span class="text-muted">อนุมัติ:</span> <span class="fw-bold">${escapeHTML(row.approver_name || '-')}</span></div>
                     </td>
                 </tr>
             `;
             tbody.innerHTML += tr;
         });
     } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">เกิดข้อผิดพลาดในการโหลดประวัติ</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center text-danger py-4"><i class="fas fa-exclamation-triangle me-1"></i> เกิดข้อผิดพลาดในการโหลดประวัติ</td></tr>';
+        console.error('Error loading CC history:', e);
     }
+}
+
+function exportCcHistoryExcel() {
+    if (!currentCcHistoryData || currentCcHistoryData.length === 0) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ไม่มีข้อมูลสำหรับส่งออก',
+                text: 'ไม่พบรายการตรวจนับตามเงื่อนไขที่เลือก กรุณาตรวจสอบตัวกรอง',
+                confirmButtonText: 'ตกลง'
+            });
+        } else {
+            alert('ไม่มีข้อมูลสำหรับส่งออก');
+        }
+        return;
+    }
+
+    const headers = [
+        'ลำดับ',
+        'วันที่ตรวจนับ',
+        'เวลาอนุมัติ',
+        'รหัสสินค้า (Item No)',
+        'รายละเอียดสินค้า (Description)',
+        'Serial No (Tag)',
+        'ตำแหน่งจัดเก็บ (Location)',
+        'โซน (Zone)',
+        'ราคาต่อหน่วย (บาท)',
+        'ยอดระบบ (System Qty)',
+        'ยอดตรวจจริง (Actual Qty)',
+        'ผลต่าง (Diff Qty)',
+        'มูลค่าดิฟรวม (บาท)',
+        'มูลค่าดิฟสุทธิ (บาท)',
+        'สถานะ (Status)',
+        'ผู้ตรวจนับ (Counted By)',
+        'ผู้อนุมัติ (Approved By)',
+        'หมายเหตุ (Remark)'
+    ];
+
+    const escapeCsv = (str) => {
+        if (str === null || str === undefined) return '""';
+        const val = String(str).replace(/"/g, '""');
+        return `"${val}"`;
+    };
+
+    let csvContent = '\uFEFF' + headers.map(escapeCsv).join(',') + '\r\n';
+
+    currentCcHistoryData.forEach((r, idx) => {
+        const row = [
+            idx + 1,
+            r.count_date ? r.count_date.substring(0, 10) : '',
+            r.approved_at || '',
+            r.item_no || '',
+            r.part_description || '',
+            r.serial_no || '',
+            r.location_name || '',
+            r.zone_name || '',
+            parseFloat(r.unit_price || 0).toFixed(2),
+            parseFloat(r.system_qty || 0),
+            parseFloat(r.actual_qty || 0),
+            parseFloat(r.diff_qty || 0),
+            parseFloat(r.diff_value || 0).toFixed(2),
+            parseFloat(r.net_diff_value || 0).toFixed(2),
+            r.status || '',
+            r.counter_name || '',
+            r.approver_name || '',
+            r.remark || ''
+        ];
+        csvContent += row.map(escapeCsv).join(',') + '\r\n';
+    });
+
+    const startDate = document.getElementById('ccFilterStartDate')?.value || 'start';
+    const endDate = document.getElementById('ccFilterEndDate')?.value || 'end';
+    const filename = `Cycle_Count_Audit_${startDate}_to_${endDate}.csv`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function printCcAuditReport() {
+    const startDate = document.getElementById('ccFilterStartDate')?.value || '';
+    const endDate = document.getElementById('ccFilterEndDate')?.value || '';
+    const locId = document.getElementById('ccFilterLocation')?.value || 'ALL';
+    const status = document.getElementById('ccFilterStatus')?.value || 'ALL';
+    const search = document.getElementById('ccFilterSearch')?.value?.trim() || '';
+
+    const queryParams = new URLSearchParams({
+        start_date: startDate,
+        end_date: endDate,
+        location_id: locId,
+        status: status,
+        search: search
+    });
+
+    const url = `print_cycle_count_audit.php?${queryParams.toString()}`;
+    window.open(url, '_blank');
 }
 
 function toggleMobileCards() {

@@ -12,7 +12,10 @@ if (empty($_SESSION['csrf_token'])) {
 }
 
 $locations = [];
-$stmt = $pdo->query("
+$cycleStart = date('Y-m-01 00:00:00');
+$cycleEnd = date('Y-m-t 23:59:59');
+
+$stmt = $pdo->prepare("
     SELECT 
         l.location_id, 
         l.location_name,
@@ -20,17 +23,21 @@ $stmt = $pdo->query("
         (SELECT TOP 1 status 
          FROM dbo.CYCLE_COUNT_SESSIONS s WITH (NOLOCK) 
          WHERE s.location_id = l.location_id 
-           AND CAST(s.created_at AS DATE) = CAST(GETDATE() AS DATE)
+           AND s.created_at >= :start_date AND s.created_at <= :end_date
          ORDER BY s.session_id DESC) as current_status
     FROM dbo.LOCATIONS l WITH (NOLOCK) 
     WHERE l.location_type = 'STORE' AND l.is_active = 1 
     ORDER BY l.location_name
 ");
+$stmt->execute([
+    'start_date' => $cycleStart,
+    'end_date' => $cycleEnd
+]);
 $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Calculate Zone Health & Warehouse Accuracy Metrics (Phase 1.3)
+// Calculate Zone Health & Warehouse Accuracy Metrics (Phase 1.3 - Monthly Cycle)
 require_once __DIR__ . '/api/zone_health_helper.php';
-$healthMetrics = getZoneHealthMetrics($pdo);
+$healthMetrics = getZoneHealthMetrics($pdo, $cycleStart, $cycleEnd);
 $overallHealth = $healthMetrics['overall'];
 $zoneHealthMap = $healthMetrics['zones_map'];
 
@@ -652,9 +659,14 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                             <!-- Warehouse IRA & Health Mini-Bar -->
                             <div class="warehouse-kpi-bar mb-2">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <div class="d-flex align-items-center gap-1.5">
+                                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
                                         <i class="fas fa-chart-line text-primary" style="font-size: 0.82rem;"></i>
                                         <span class="fw-bold text-dark" style="font-size: 0.8rem;">ภาพรวมความแม่นยำสต็อก (IRA Health)</span>
+                                        <?php if (!empty($overallHealth['cycle_label'])): ?>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.65rem;" title="รอบการนับประจำเดือน">
+                                                <i class="fas fa-calendar-alt me-1"></i><?= htmlspecialchars($overallHealth['cycle_label']) ?>
+                                            </span>
+                                        <?php endif; ?>
                                     </div>
                                     <span class="badge rounded-pill <?= $overallHealth['grade_class'] ?> px-2 py-0.5 d-inline-flex align-items-center gap-1" 
                                           data-bs-toggle="tooltip" data-bs-placement="left" 
