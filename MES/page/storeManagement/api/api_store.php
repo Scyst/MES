@@ -30,7 +30,8 @@ try {
         'submit_cycle_count', 'approve_cycle_count', 'create_transfer_request', 'transfer_tag',
         'submit_requisition', 'accept_order', 'confirm_issue', 'reject_order', 'submit_k2_pr', 
         'upload_image', 'update_item_info', 'cancel_my_order',
-        'cc_start_session', 'cc_scan_tag', 'cc_finish_session', 'cc_cancel_empty_session', 'update_location_zones'
+        'cc_start_session', 'cc_scan_tag', 'cc_finish_session', 'cc_cancel_empty_session', 'update_location_zones',
+        'cc_submit_recount'
     ];
     
     if (in_array($action, $writeActions) && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -1670,15 +1671,41 @@ try {
                     $expected_items[$row['item_no']][] = $row['tag_serial_no'];
                 }
 
+                // Check if this location has any items pending Tier 2 Blind Recount
+                $stmtRecount = $pdo->prepare("
+                    SELECT 
+                        c.count_id,
+                        c.item_id,
+                        c.serial_no,
+                        i.sap_no,
+                        ISNULL(i.part_no, i.sap_no) AS item_no,
+                        i.part_description,
+                        c.counted_at,
+                        ISNULL(e.name_th, u.username) as first_counter_name
+                    FROM dbo.INVENTORY_CYCLE_COUNTS c WITH (NOLOCK)
+                    JOIN dbo.ITEMS i WITH (NOLOCK) ON c.item_id = i.item_id
+                    LEFT JOIN dbo.USERS u WITH (NOLOCK) ON c.counted_by_user_id = u.id
+                    LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
+                    WHERE c.location_id = ? 
+                      AND c.status = 'FLAGGED_FOR_RECOUNT' 
+                      AND c.is_flagged_recount = 1 
+                      AND c.recount_qty IS NULL
+                    ORDER BY c.count_id ASC
+                ");
+                $stmtRecount->execute([$location_id]);
+                $recountItems = $stmtRecount->fetchAll(PDO::FETCH_ASSOC);
+
                 $response = [
                     'success' => true, 
                     'session_id' => $session_id,
                     'expected_items' => $expected_items,
                     'details' => $details,
+                    'recount_items' => $recountItems,
                     'summary' => [
                         'total' => count($details),
                         'counted' => $counted_count,
-                        'uncounted' => $uncounted_count
+                        'uncounted' => $uncounted_count,
+                        'recount_needed' => count($recountItems)
                     ]
                 ];
             } catch (Exception $e) {
@@ -1799,10 +1826,12 @@ try {
                 $stmtEnd = $pdo->prepare("UPDATE dbo.CYCLE_COUNT_SESSIONS SET status = 'COMPLETED' WHERE session_id = ?");
                 $stmtEnd->execute([$session_id]);
 
-                // Integrate with Manager Approval: Push variances to INVENTORY_CYCLE_COUNTS
+                // Integrate with Manager Approval: Push variances to INVENTORY_CYCLE_COUNTS with High Variance Trigger
                 $stmtPushApproval = $pdo->prepare("
                     INSERT INTO dbo.INVENTORY_CYCLE_COUNTS (
-                        location_id, item_id, serial_no, system_qty, actual_qty, counted_by_user_id, counted_at, status, remark
+                        location_id, item_id, serial_no, system_qty, actual_qty, 
+                        counted_by_user_id, counted_at, status, remark,
+                        is_flagged_recount, count1_qty, count1_user_id, count1_at
                     )
                     SELECT 
                         s.location_id,
@@ -1812,23 +1841,116 @@ try {
                         d.actual_qty,
                         s.created_by,
                         GETDATE(),
-                        'PENDING',
-                        ISNULL(d.remark, N'ผลตรวจนับจากระบบ Cycle Count (Mobile)')
+                        CASE 
+                            WHEN (ABS(d.variance_qty) * COALESCE(NULLIF(i.StandardPrice, 0), NULLIF(i.Cost_Total, 0), 0) >= 10000.0)
+                              OR (d.system_qty > 0 AND (ABS(d.variance_qty) / d.system_qty >= 0.10) AND ABS(d.variance_qty) >= 5.0)
+                              OR (d.system_qty = 0 AND d.actual_qty >= 5.0)
+                            THEN 'FLAGGED_FOR_RECOUNT'
+                            ELSE 'PENDING'
+                        END,
+                        CASE 
+                            WHEN (ABS(d.variance_qty) * COALESCE(NULLIF(i.StandardPrice, 0), NULLIF(i.Cost_Total, 0), 0) >= 10000.0)
+                              OR (d.system_qty > 0 AND (ABS(d.variance_qty) / d.system_qty >= 0.10) AND ABS(d.variance_qty) >= 5.0)
+                              OR (d.system_qty = 0 AND d.actual_qty >= 5.0)
+                            THEN ISNULL(d.remark, N'') + N' [ตรวจพบผลต่างสูง ล็อกต้องนับซ้ำ Tier 2 Blind Recount]'
+                            ELSE ISNULL(d.remark, N'ผลตรวจนับจากระบบ Cycle Count (Mobile)')
+                        END,
+                        CASE 
+                            WHEN (ABS(d.variance_qty) * COALESCE(NULLIF(i.StandardPrice, 0), NULLIF(i.Cost_Total, 0), 0) >= 10000.0)
+                              OR (d.system_qty > 0 AND (ABS(d.variance_qty) / d.system_qty >= 0.10) AND ABS(d.variance_qty) >= 5.0)
+                              OR (d.system_qty = 0 AND d.actual_qty >= 5.0)
+                            THEN 1
+                            ELSE 0
+                        END,
+                        d.actual_qty,
+                        s.created_by,
+                        GETDATE()
                     FROM dbo.CYCLE_COUNT_DETAILS d WITH (NOLOCK)
                     JOIN dbo.CYCLE_COUNT_SESSIONS s WITH (NOLOCK) ON d.session_id = s.session_id
+                    JOIN dbo.ITEMS i WITH (NOLOCK) ON d.item_id = i.item_id
                     WHERE d.session_id = ? AND d.variance_qty != 0
                       AND NOT EXISTS (
                           SELECT 1 FROM dbo.INVENTORY_CYCLE_COUNTS c WITH (NOLOCK)
                           WHERE c.location_id = s.location_id 
                             AND c.item_id = d.item_id 
                             AND c.serial_no = d.tag_serial_no 
-                            AND c.status = 'PENDING'
+                            AND c.status IN ('PENDING', 'FLAGGED_FOR_RECOUNT')
                       )
                 ");
                 $stmtPushApproval->execute([$session_id]);
 
+                // Count how many items were flagged for Tier 2 Blind Recount
+                $stmtFlagCount = $pdo->prepare("
+                    SELECT COUNT(*) 
+                    FROM dbo.INVENTORY_CYCLE_COUNTS c WITH (NOLOCK)
+                    JOIN dbo.CYCLE_COUNT_DETAILS d WITH (NOLOCK) ON c.serial_no = d.tag_serial_no AND c.item_id = d.item_id
+                    WHERE d.session_id = ? AND c.status = 'FLAGGED_FOR_RECOUNT'
+                ");
+                $stmtFlagCount->execute([$session_id]);
+                $flaggedCount = (int)$stmtFlagCount->fetchColumn();
+
                 $pdo->commit();
-                $response = ['success' => true, 'message' => 'บันทึกเสร็จสิ้น ส่งสรุปผลยอดดิฟให้หัวหน้าอนุมัติเรียบร้อย'];
+                $msg = $flaggedCount > 0 
+                    ? "บันทึกสรุปผลตรวจนับเรียบร้อย (พบผลต่างสูง {$flaggedCount} รายการ ถูกล็อกให้พนักงานคนที่สองนับซ้ำรอบ 2)"
+                    : 'บันทึกเสร็จสิ้น ส่งสรุปผลยอดดิฟให้หัวหน้าอนุมัติเรียบร้อย';
+
+                $response = [
+                    'success' => true, 
+                    'message' => $msg,
+                    'flagged_count' => $flaggedCount
+                ];
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
+        case 'cc_submit_recount':
+            $count_id = (int)($_POST['count_id'] ?? 0);
+            $recount_qty = isset($_POST['recount_qty']) && is_numeric($_POST['recount_qty']) ? (float)$_POST['recount_qty'] : null;
+            $remark = trim($_POST['remark'] ?? '');
+            $userId = $_SESSION['user']['id'];
+
+            if ($count_id === 0 || $recount_qty === null || $recount_qty < 0) {
+                throw new Exception("ข้อมูลไม่ถูกต้อง กรุณาระบุจำนวนที่นับได้จริงรอบ 2");
+            }
+
+            $pdo->beginTransaction();
+            try {
+                $stmtChk = $pdo->prepare("
+                    SELECT count_id, item_id, location_id, serial_no, system_qty, count1_qty, status 
+                    FROM dbo.INVENTORY_CYCLE_COUNTS WITH (UPDLOCK) 
+                    WHERE count_id = ?
+                ");
+                $stmtChk->execute([$count_id]);
+                $countRecord = $stmtChk->fetch(PDO::FETCH_ASSOC);
+
+                if (!$countRecord) {
+                    throw new Exception("ไม่พบรายการตรวจนับที่ต้องการนับซ้ำ");
+                }
+
+                if ($countRecord['status'] !== 'FLAGGED_FOR_RECOUNT') {
+                    throw new Exception("รายการนี้ไม่อยู่ในสถานะรอนับซ้ำรอบ 2 (สถานะปัจจุบัน: {$countRecord['status']})");
+                }
+
+                // Update recount info and transition status to PENDING so Manager can decide
+                $recountRemark = ' [นับซ้ำรอบ 2 ได้ ' . number_format($recount_qty, 2) . ($remark ? ': ' . $remark : '') . ']';
+                $stmtUpd = $pdo->prepare("
+                    UPDATE dbo.INVENTORY_CYCLE_COUNTS 
+                    SET recount_qty = ?,
+                        recount_user_id = ?,
+                        recount_at = GETDATE(),
+                        status = 'PENDING',
+                        remark = ISNULL(remark, N'') + ?
+                    WHERE count_id = ?
+                ");
+                $stmtUpd->execute([$recount_qty, $userId, $recountRemark, $count_id]);
+
+                $pdo->commit();
+                $response = [
+                    'success' => true,
+                    'message' => 'บันทึกยอดนับซ้ำรอบ 2 (Tier 2 Blind Recount) เรียบร้อยแล้ว ส่งเข้ากระบวนการตัดสินใจของผู้จัดการ'
+                ];
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e;
@@ -2080,6 +2202,8 @@ try {
         case 'approve_cycle_count':
             $count_id = (int)($_POST['count_id'] ?? 0);
             $approval_action = $_POST['approval_action'] ?? ''; 
+            $selected_choice = $_POST['selected_choice'] ?? null;
+            $decision_reason = trim($_POST['decision_reason'] ?? '');
             $userId = $_SESSION['user']['id'];
 
             if (!hasPermission('manage_warehouse')) {
@@ -2090,8 +2214,8 @@ try {
                 throw new Exception("ข้อมูลไม่ถูกต้อง");
             }
 
-            $stmt = $pdo->prepare("EXEC dbo.sp_Store_ApproveCycleCount @count_id=?, @action=?, @user_id=?");
-            $stmt->execute([$count_id, $approval_action, $userId]);
+            $stmt = $pdo->prepare("EXEC dbo.sp_Store_ApproveCycleCount @count_id=?, @action=?, @user_id=?, @selected_choice=?, @decision_reason=?");
+            $stmt->execute([$count_id, $approval_action, $userId, $selected_choice, $decision_reason]);
 
             $response = ['success' => true, 'message' => 'ดำเนินการเรียบร้อยแล้ว'];
             break;
@@ -2100,15 +2224,24 @@ try {
             $sql = "
                 SELECT 
                     c.count_id, c.count_date, c.system_qty, c.actual_qty, c.diff_qty, c.remark, c.counted_at, c.serial_no,
+                    c.status, c.is_flagged_recount, c.count1_qty, c.recount_qty, c.count1_at, c.recount_at, c.manager_choice, c.decision_reason,
                     i.sap_no, ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description,
+                    COALESCE(NULLIF(i.StandardPrice, 0), NULLIF(i.Cost_Total, 0), 0) AS unit_price,
+                    ROUND(ABS(c.diff_qty) * COALESCE(NULLIF(i.StandardPrice, 0), NULLIF(i.Cost_Total, 0), 0), 2) AS diff_value,
                     l.location_name,
-                    ISNULL(e.name_th, u.username) AS counter_name
+                    ISNULL(e.name_th, u.username) AS counter_name,
+                    ISNULL(e1.name_th, u1.username) AS counter1_name,
+                    ISNULL(er.name_th, ur.username) AS recounter_name
                 FROM dbo.INVENTORY_CYCLE_COUNTS c WITH (NOLOCK)
                 JOIN dbo.ITEMS i WITH (NOLOCK) ON c.item_id = i.item_id
                 JOIN dbo.LOCATIONS l WITH (NOLOCK) ON c.location_id = l.location_id
                 LEFT JOIN dbo.USERS u WITH (NOLOCK) ON c.counted_by_user_id = u.id
                 LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
-                WHERE c.status = 'PENDING'
+                LEFT JOIN dbo.USERS u1 WITH (NOLOCK) ON c.count1_user_id = u1.id
+                LEFT JOIN dbo.MANPOWER_EMPLOYEES e1 WITH (NOLOCK) ON u1.emp_id = e1.emp_id
+                LEFT JOIN dbo.USERS ur WITH (NOLOCK) ON c.recount_user_id = ur.id
+                LEFT JOIN dbo.MANPOWER_EMPLOYEES er WITH (NOLOCK) ON ur.emp_id = er.emp_id
+                WHERE c.status IN ('PENDING', 'FLAGGED_FOR_RECOUNT')
                 ORDER BY c.counted_at ASC
             ";
             $stmt = $pdo->query($sql);

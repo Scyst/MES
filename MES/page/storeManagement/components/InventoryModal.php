@@ -215,6 +215,137 @@
     </div>
 </div>
 
+<!-- Strict Manual Decision Modal (Phase 3.2: Two-Tier Blind Recount Protocol) -->
+<div class="modal fade" id="recountDecisionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+            <div class="modal-header bg-dark text-white py-2.5 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center justify-content-center bg-warning text-dark rounded-circle" style="width: 32px; height: 32px;">
+                        <i class="fas fa-gavel" style="font-size: 0.95rem;"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0">ตัดสินผลการตรวจนับซ้ำ (Two-Tier Recount Protocol)</h6>
+                        <span class="text-white-50" style="font-size: 0.72rem;">ระบบสอบทานผลต่างสูง — ผู้จัดการต้องพิจารณาตัดสินใจเลือกยอดด้วยตนเอง (Strict Manual Decision)</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3 bg-light">
+                <!-- Item Info Card -->
+                <div class="card border-0 shadow-sm rounded-3 mb-3">
+                    <div class="card-body p-3">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-12 col-md-6">
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0.5 small mb-1" id="rdVarianceBadge">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>ตรวจพบผลต่างสูง (High Variance)
+                                </span>
+                                <h6 class="fw-bold text-dark mb-0" id="rdItemNo">-</h6>
+                                <div class="text-muted small" id="rdItemDesc">-</div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-muted small">ตำแหน่ง (Location):</div>
+                                <div class="fw-bold text-dark" id="rdLocation">-</div>
+                                <div class="font-monospace text-muted small" id="rdSerialNo">-</div>
+                            </div>
+                            <div class="col-6 col-md-3 text-md-end">
+                                <div class="text-muted small">ราคาต่อหน่วย:</div>
+                                <div class="fw-bold text-success fs-6" id="rdUnitPrice">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3-Column Comparison Grid -->
+                <div class="row g-2 mb-3">
+                    <!-- Column 1: System Qty -->
+                    <div class="col-12 col-md-4">
+                        <div class="card h-100 border-2 rounded-3 text-center rd-choice-card" id="cardChoiceSystem" onclick="selectDecisionChoice('SYSTEM')" style="cursor: pointer; transition: all 0.2s;">
+                            <div class="card-header bg-secondary-subtle border-0 py-2">
+                                <div class="form-check d-flex justify-content-center align-items-center gap-2 m-0">
+                                    <input class="form-check-input" type="radio" name="rdChoiceRadio" id="radioChoiceSystem" value="SYSTEM" onchange="selectDecisionChoice('SYSTEM')">
+                                    <label class="form-check-label fw-bold text-secondary mb-0 cursor-pointer" for="radioChoiceSystem">
+                                        1. ยอดระบบเดิม
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="text-muted small mb-1">System QTY</div>
+                                <div class="fw-bold text-secondary display-6 mb-2" id="rdSystemQty">0</div>
+                                <div class="badge bg-light text-muted border rounded-pill px-2 py-1 small">
+                                    ไม่ปรับยอด คงสต็อกเดิม
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Count 1 Qty -->
+                    <div class="col-12 col-md-4">
+                        <div class="card h-100 border-2 rounded-3 text-center rd-choice-card" id="cardChoiceCount1" onclick="selectDecisionChoice('COUNT_1')" style="cursor: pointer; transition: all 0.2s;">
+                            <div class="card-header bg-primary-subtle border-0 py-2">
+                                <div class="form-check d-flex justify-content-center align-items-center gap-2 m-0">
+                                    <input class="form-check-input" type="radio" name="rdChoiceRadio" id="radioChoiceCount1" value="COUNT_1" onchange="selectDecisionChoice('COUNT_1')">
+                                    <label class="form-check-label fw-bold text-primary mb-0 cursor-pointer" for="radioChoiceCount1">
+                                        2. ยอดนับรอบ 1
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="text-muted small mb-1">Count 1 QTY</div>
+                                <div class="fw-bold text-primary display-6 mb-2" id="rdCount1Qty">0</div>
+                                <div class="text-muted small" id="rdCounter1Info">โดย: -</div>
+                                <div class="text-muted" style="font-size: 0.72rem;" id="rdCount1Time">-</div>
+                                <div class="badge rounded-pill mt-2 px-2 py-1" id="rdDiff1Badge">Diff: -</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 3: Recount Qty -->
+                    <div class="col-12 col-md-4">
+                        <div class="card h-100 border-2 rounded-3 text-center rd-choice-card" id="cardChoiceRecount" onclick="selectDecisionChoice('RECOUNT')" style="cursor: pointer; transition: all 0.2s;">
+                            <div class="card-header bg-success-subtle border-0 py-2">
+                                <div class="form-check d-flex justify-content-center align-items-center gap-2 m-0">
+                                    <input class="form-check-input" type="radio" name="rdChoiceRadio" id="radioChoiceRecount" value="RECOUNT" onchange="selectDecisionChoice('RECOUNT')">
+                                    <label class="form-check-label fw-bold text-success mb-0 cursor-pointer" for="radioChoiceRecount">
+                                        3. ยอดนับซ้ำรอบ 2
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="text-muted small mb-1">Recount QTY</div>
+                                <div class="fw-bold text-success display-6 mb-2" id="rdRecountQty">0</div>
+                                <div class="text-muted small" id="rdRecounterInfo">โดย: -</div>
+                                <div class="text-muted" style="font-size: 0.72rem;" id="rdRecountTime">-</div>
+                                <div class="badge rounded-pill mt-2 px-2 py-1" id="rdDiff2Badge">Diff: -</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Decision Reason Input (Mandatory) -->
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
+                    <label class="form-label fw-bold text-dark small mb-1">
+                        <i class="fas fa-comment-dots text-primary me-1"></i> บันทึกเหตุผลการตัดสินใจของผู้จัดการ (Decision Reason) <span class="text-danger">*</span>
+                    </label>
+                    <textarea id="rdDecisionReason" class="form-control" rows="2" placeholder="ระบุเหตุผลในการตัดสินใจ (เช่น: ตรวจสอบร่วมกันรอบ 2 พบสินค้าซุกอยู่ใต้พาเลทจริง, ยืนยันยอดนับรอบ 2 ถูกต้อง)..."></textarea>
+                    <div class="form-text text-muted" style="font-size: 0.72rem;">* จำเป็นต้องระบุเหตุผลเพื่อบันทึกเป็น Audit Trail ในระบบตามมาตรฐาน ISO 9001 / IATF 16949</div>
+                </div>
+            </div>
+            <div class="modal-footer bg-white border-top py-2.5 px-3 d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-3" onclick="submitRecountReject()">
+                    <i class="fas fa-times me-1"></i> ปัดตกคำขอนี้ (Reject)
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary btn-sm fw-bold px-3" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-primary btn-sm fw-bold px-4 shadow-sm" id="btnSubmitDecision" onclick="submitRecountDecision()">
+                        <i class="fas fa-check-circle me-1"></i> ยืนยันการตัดสินใจและปรับสต็อก
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="ccHistoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 95%;">
         <div class="modal-content border-0 shadow-lg">

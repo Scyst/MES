@@ -671,25 +671,72 @@ async function openApprovalModal() {
             const diffSign = diff > 0 ? '+' : '';
             const serialBadge = row.serial_no ? `<div class="font-monospace text-muted small"><i class="fas fa-qrcode me-1 opacity-75"></i>${escapeHTML(row.serial_no)}</div>` : '';
             
+            const isFlagged = parseInt(row.is_flagged_recount) === 1;
+            const hasRecount = row.recount_qty !== null && row.recount_qty !== undefined;
+            const rowDataJson = JSON.stringify(row).replace(/'/g, "&#39;");
+
+            let statusBadge = '';
+            let actualQtyHtml = '';
+            let diffHtml = '';
+            let actionHtml = '';
+
+            if (isFlagged && !hasRecount) {
+                // Tier 2 Recount Pending on Floor - Strictly Locked
+                statusBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0.5"><i class="fas fa-lock me-1"></i>รอนับซ้ำรอบ 2</span>`;
+                actualQtyHtml = `<div class="text-danger fw-bold fs-6">${parseFloat(row.actual_qty).toLocaleString()}</div><span class="text-muted" style="font-size:0.68rem;">รอบ 1</span>`;
+                diffHtml = `<span class="badge bg-danger text-white rounded-pill px-2 py-0.5" style="font-size:0.7rem;">ดิฟสูง ล็อก</span>`;
+                actionHtml = `
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-secondary disabled" title="ต้องรอพนักงานคนที่สองนับซ้ำรอบ 2 ก่อนอนุมัติ"><i class="fas fa-lock text-muted"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="processApproval(${row.count_id}, 'REJECT')" title="ปัดตกคำขอนี้"><i class="fas fa-times"></i></button>
+                    </div>
+                `;
+            } else if (isFlagged && hasRecount) {
+                // Tier 2 Recount Done - Ready for Strict Manual Decision
+                statusBadge = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5"><i class="fas fa-balance-scale me-1"></i>นับซ้ำแล้ว รอตัดสิน</span>`;
+                actualQtyHtml = `
+                    <div class="small text-primary fw-bold">รอบ 1: ${parseFloat(row.count1_qty !== null ? row.count1_qty : row.actual_qty).toLocaleString()}</div>
+                    <div class="small text-success fw-bold">รอบ 2: ${parseFloat(row.recount_qty).toLocaleString()}</div>
+                `;
+                const d1 = parseFloat(row.count1_qty !== null ? row.count1_qty : row.actual_qty) - parseFloat(row.system_qty);
+                const d2 = parseFloat(row.recount_qty) - parseFloat(row.system_qty);
+                diffHtml = `
+                    <div class="small fw-semibold text-danger">D1: ${d1 > 0 ? '+' : ''}${d1.toLocaleString()}</div>
+                    <div class="small fw-semibold text-success">D2: ${d2 > 0 ? '+' : ''}${d2.toLocaleString()}</div>
+                `;
+                actionHtml = `
+                    <button class="btn btn-sm btn-primary fw-bold shadow-xs px-2.5 py-1 text-nowrap" onclick='openRecountDecisionModal(${rowDataJson})' title="เปิดหน้าต่างตัดสินผล 3 คอลัมน์">
+                        <i class="fas fa-gavel me-1"></i>ตัดสินใจ
+                    </button>
+                `;
+            } else {
+                // Normal pending cycle count item
+                statusBadge = `<span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-0.5">ปกติ</span>`;
+                actualQtyHtml = `<div class="text-primary fw-bold fs-6">${parseFloat(row.actual_qty).toLocaleString()}</div>`;
+                diffHtml = `<div class="fw-bold ${diffClass}">${diffSign}${diff.toLocaleString()}</div>`;
+                actionHtml = `
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-success" onclick="processApproval(${row.count_id}, 'APPROVE')" title="อนุมัติ"><i class="fas fa-check"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="processApproval(${row.count_id}, 'REJECT')" title="ไม่อนุมัติ"><i class="fas fa-times"></i></button>
+                    </div>
+                `;
+            }
+            
             const tr = `
-                <tr>
+                <tr class="${isFlagged && !hasRecount ? 'table-danger-subtle' : (isFlagged && hasRecount ? 'table-warning-subtle' : '')}">
                     <td class="text-muted small d-none d-md-table-cell">${row.counted_at.substring(0,16)}</td>
                     <td>
                         <div class="fw-bold text-primary" title="${escapeHTML(row.part_description)}">${escapeHTML(row.item_no)}</div>
                         ${serialBadge}
+                        <div class="mt-0.5">${statusBadge}</div>
                     </td>
                     <td>${escapeHTML(row.location_name)}</td>
                     <td class="text-end fw-bold text-secondary d-none d-md-table-cell">${parseFloat(row.system_qty).toLocaleString()}</td>
-                    <td class="text-end fw-bold text-primary fs-6">${parseFloat(row.actual_qty).toLocaleString()}</td>
-                    <td class="text-end fw-bold ${diffClass}">${diffSign}${diff.toLocaleString()}</td>
+                    <td class="text-end">${actualQtyHtml}</td>
+                    <td class="text-end">${diffHtml}</td>
                     <td class="small text-truncate d-none d-lg-table-cell" style="max-width: 150px;" title="${escapeHTML(row.remark)}">${escapeHTML(row.remark || '-')}</td>
-                    <td class="small d-none d-md-table-cell">${escapeHTML(row.counter_name)}</td>
-                    <td class="text-center">
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-success" onclick="processApproval(${row.count_id}, 'APPROVE')" title="อนุมัติ"><i class="fas fa-check"></i></button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="processApproval(${row.count_id}, 'REJECT')" title="ไม่อนุมัติ"><i class="fas fa-times"></i></button>
-                        </div>
-                    </td>
+                    <td class="small d-none d-md-table-cell">${escapeHTML(row.counter1_name || row.counter_name || '-')}</td>
+                    <td class="text-center">${actionHtml}</td>
                 </tr>
             `;
             tbody.innerHTML += tr;
@@ -714,6 +761,179 @@ async function processApproval(countId, actionType) {
         openApprovalModal();
         loadDashboardData();
         checkPendingApprovals();
+    }
+}
+
+// ==========================================
+// TWO-TIER BLIND RECOUNT PROTOCOL (Strict Manual Decision)
+// ==========================================
+let activeRecountRow = null;
+let recountDecisionModalInstance = null;
+let selectedRecountChoice = null;
+
+function openRecountDecisionModal(row) {
+    activeRecountRow = row;
+    selectedRecountChoice = null;
+
+    if (!recountDecisionModalInstance) {
+        const modalEl = document.getElementById('recountDecisionModal');
+        if (modalEl) recountDecisionModalInstance = new bootstrap.Modal(modalEl);
+    }
+
+    document.getElementById('rdItemNo').innerText = row.item_no || row.item_code || '-';
+    document.getElementById('rdItemDesc').innerText = row.part_description || row.item_name || '-';
+    document.getElementById('rdLocation').innerText = row.location_name || row.location || '-';
+    document.getElementById('rdSerialNo').innerText = row.serial_no ? `Tag: ${row.serial_no}` : '';
+    
+    const unitPrice = parseFloat(row.unit_price || 0);
+    document.getElementById('rdUnitPrice').innerText = `${unitPrice.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿`;
+
+    const sysQty = parseFloat(row.system_qty || 0);
+    const count1Qty = parseFloat(row.count1_qty !== null && row.count1_qty !== undefined ? row.count1_qty : row.actual_qty);
+    const recountQty = parseFloat(row.recount_qty || 0);
+
+    document.getElementById('rdSystemQty').innerText = sysQty.toLocaleString();
+    document.getElementById('rdCount1Qty').innerText = count1Qty.toLocaleString();
+    document.getElementById('rdRecountQty').innerText = recountQty.toLocaleString();
+
+    document.getElementById('rdCounter1Info').innerText = `โดย: ${row.counter1_name || row.counter_name || '-'}`;
+    document.getElementById('rdCount1Time').innerText = row.count1_at ? row.count1_at.substring(0, 16) : (row.counted_at ? row.counted_at.substring(0, 16) : '-');
+
+    document.getElementById('rdRecounterInfo').innerText = `โดย: ${row.recounter_name || '-'}`;
+    document.getElementById('rdRecountTime').innerText = row.recount_at ? row.recount_at.substring(0, 16) : '-';
+
+    // Calculate diffs
+    const diff1 = count1Qty - sysQty;
+    const diff1Val = diff1 * unitPrice;
+    const diff1Sign = diff1 > 0 ? '+' : '';
+    const badge1 = document.getElementById('rdDiff1Badge');
+    if (badge1) {
+        badge1.className = `badge rounded-pill mt-2 px-2 py-1 ${diff1 === 0 ? 'bg-secondary' : (diff1 > 0 ? 'bg-success' : 'bg-danger')}`;
+        badge1.innerText = `Diff: ${diff1Sign}${diff1.toLocaleString()} (${diff1Sign}${diff1Val.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿)`;
+    }
+
+    const diff2 = recountQty - sysQty;
+    const diff2Val = diff2 * unitPrice;
+    const diff2Sign = diff2 > 0 ? '+' : '';
+    const badge2 = document.getElementById('rdDiff2Badge');
+    if (badge2) {
+        badge2.className = `badge rounded-pill mt-2 px-2 py-1 ${diff2 === 0 ? 'bg-secondary' : (diff2 > 0 ? 'bg-success' : 'bg-danger')}`;
+        badge2.innerText = `Diff: ${diff2Sign}${diff2.toLocaleString()} (${diff2Sign}${diff2Val.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿)`;
+    }
+
+    // Reset radio selection and highlight
+    document.querySelectorAll('.rd-choice-card').forEach(c => {
+        c.style.borderColor = '#e2e8f0';
+        c.style.boxShadow = 'none';
+    });
+    document.querySelectorAll('input[name="rdChoiceRadio"]').forEach(r => r.checked = false);
+    document.getElementById('rdDecisionReason').value = '';
+
+    if (recountDecisionModalInstance) recountDecisionModalInstance.show();
+}
+
+function selectDecisionChoice(choice) {
+    selectedRecountChoice = choice;
+    document.querySelectorAll('input[name="rdChoiceRadio"]').forEach(r => {
+        r.checked = (r.value === choice);
+    });
+
+    // Reset styles
+    const cardSys = document.getElementById('cardChoiceSystem');
+    const cardC1 = document.getElementById('cardChoiceCount1');
+    const cardRec = document.getElementById('cardChoiceRecount');
+
+    if (cardSys) {
+        cardSys.style.borderColor = choice === 'SYSTEM' ? '#64748b' : '#e2e8f0';
+        cardSys.style.boxShadow = choice === 'SYSTEM' ? '0 0 0 3px rgba(100, 116, 139, 0.25)' : 'none';
+    }
+    if (cardC1) {
+        cardC1.style.borderColor = choice === 'COUNT_1' ? '#2563eb' : '#e2e8f0';
+        cardC1.style.boxShadow = choice === 'COUNT_1' ? '0 0 0 3px rgba(37, 99, 235, 0.25)' : 'none';
+    }
+    if (cardRec) {
+        cardRec.style.borderColor = choice === 'RECOUNT' ? '#16a34a' : '#e2e8f0';
+        cardRec.style.boxShadow = choice === 'RECOUNT' ? '0 0 0 3px rgba(22, 163, 74, 0.25)' : 'none';
+    }
+}
+
+async function submitRecountDecision() {
+    if (!activeRecountRow) return;
+    if (!selectedRecountChoice) {
+        Swal.fire('กรุณาเลือกยอดที่ต้องการใช้', 'คุณต้องตัดสินใจเลือก 1 ยอด (ยอดระบบเดิม, ยอดรอบ 1, หรือ ยอดรอบ 2)', 'warning');
+        return;
+    }
+
+    const reason = document.getElementById('rdDecisionReason').value.trim();
+    if (!reason) {
+        Swal.fire('กรุณาระบุเหตุผลการตัดสินใจ', 'ระบุเหตุผลในการเลือกยอดนี้เพื่อบันทึกเป็น Audit Trail ในระบบ', 'warning');
+        return;
+    }
+
+    const choiceLabel = selectedRecountChoice === 'COUNT_1' ? 'ยอดนับรอบ 1' : (selectedRecountChoice === 'RECOUNT' ? 'ยอดนับซ้ำรอบ 2' : 'ยึดยอดระบบเดิม');
+    const confirm = await Swal.fire({
+        title: 'ยืนยันการตัดสินใจและปรับสต็อก?',
+        html: `คุณเลือก <b>${choiceLabel}</b><br>เหตุผล: <i>${escapeHTML(reason)}</i>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยันและปรับสต็อก',
+        cancelButtonText: 'ยกเลิก'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    Swal.fire({ title: 'กำลังบันทึกการตัดสินใจ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    const formData = new FormData();
+    formData.append('count_id', activeRecountRow.count_id);
+    formData.append('approval_action', 'APPROVE');
+    formData.append('selected_choice', selectedRecountChoice);
+    formData.append('decision_reason', reason);
+
+    const res = await fetchAPI('approve_cycle_count', 'POST', formData);
+    if (res && res.success) {
+        Swal.fire('สำเร็จ', res.message || 'บันทึกการตัดสินใจและปรับยอดสต็อกเรียบร้อย', 'success');
+        if (recountDecisionModalInstance) recountDecisionModalInstance.hide();
+        openApprovalModal();
+        loadDashboardData();
+        checkPendingApprovals();
+    } else {
+        Swal.fire('เกิดข้อผิดพลาด', res ? res.message : 'ไม่สามารถบันทึกได้', 'error');
+    }
+}
+
+async function submitRecountReject() {
+    if (!activeRecountRow) return;
+    const reason = document.getElementById('rdDecisionReason').value.trim();
+
+    const confirm = await Swal.fire({
+        title: 'ยืนยันการปัดตกคำขอ (Reject)?',
+        text: 'รายการตรวจนับนี้จะถูกปฏิเสธและไม่ปรับยอดสต็อก',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'ใช่, ปัดตกคำขอนี้',
+        cancelButtonText: 'ยกเลิก'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    Swal.fire({ title: 'กำลังดำเนินการ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    const formData = new FormData();
+    formData.append('count_id', activeRecountRow.count_id);
+    formData.append('approval_action', 'REJECT');
+    formData.append('decision_reason', reason || 'ผู้จัดการปฏิเสธคำขอปรับยอด');
+
+    const res = await fetchAPI('approve_cycle_count', 'POST', formData);
+    if (res && res.success) {
+        Swal.fire('สำเร็จ', 'ปฏิเสธคำขอเรียบร้อยแล้ว', 'info');
+        if (recountDecisionModalInstance) recountDecisionModalInstance.hide();
+        openApprovalModal();
+        loadDashboardData();
+        checkPendingApprovals();
+    } else {
+        Swal.fire('เกิดข้อผิดพลาด', res ? res.message : 'ไม่สามารถปฏิเสธได้', 'error');
     }
 }
 

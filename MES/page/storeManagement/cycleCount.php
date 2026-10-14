@@ -24,7 +24,13 @@ $stmt = $pdo->prepare("
          FROM dbo.CYCLE_COUNT_SESSIONS s WITH (NOLOCK) 
          WHERE s.location_id = l.location_id 
            AND s.created_at >= :start_date AND s.created_at <= :end_date
-         ORDER BY s.session_id DESC) as current_status
+         ORDER BY s.session_id DESC) as current_status,
+        (SELECT COUNT(*) 
+         FROM dbo.INVENTORY_CYCLE_COUNTS c WITH (NOLOCK) 
+         WHERE c.location_id = l.location_id 
+           AND c.status = 'FLAGGED_FOR_RECOUNT' 
+           AND c.is_flagged_recount = 1 
+           AND c.recount_qty IS NULL) as recount_needed_count
     FROM dbo.LOCATIONS l WITH (NOLOCK) 
     WHERE l.location_type = 'STORE' AND l.is_active = 1 
     ORDER BY l.location_name
@@ -621,95 +627,92 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                 <div class="row g-3">
                     <!-- Left Column: UI Controls -->
         <div class="col-12 col-lg-5">
-            <div class="mobile-container cc-container d-flex flex-column bg-white shadow-sm" style="height: calc(100vh - 100px); max-width: 100%; border-radius: 12px; overflow: hidden; position: relative;">
+            <div class="mobile-container cc-container card shelf-monitor-card d-flex flex-column" style="height: calc(100vh - 100px); max-width: 100%; border-radius: 12px; overflow: hidden; position: relative;">
 
-                <div class="p-3 flex-grow-1 d-flex flex-column" id="mainContent" style="min-height: 0; overflow: hidden;">
+                <div class="flex-grow-1 d-flex flex-column" id="mainContent" style="min-height: 0; overflow: hidden;">
                     <!-- View 1: Select Location (Visual Map) -->
                     <div id="viewSelectLocation" class="d-flex flex-column h-100" style="min-height: 0;">
-                        <div class="flex-shrink-0">
-                            <!-- Visual Map Header Bar -->
-                            <div class="cc-header-bar mb-2">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle" style="width: 36px; height: 36px;">
-                                            <i class="fas fa-map-marked-alt fs-6"></i>
-                                        </div>
-                                        <div class="d-flex flex-column justify-content-center min-w-0">
-                                            <h6 class="fw-bold mb-0 text-dark lh-2">แผนผังคลังสินค้า</h6>
-                                            <span class="text-muted lh-2" style="font-size: 0.72rem;">เลือกตำแหน่งเพื่อตรวจนับสต็อก</span>
-                                        </div>
-                                    </div>
-                                    <?php if (hasPermission('manage_warehouse')): ?>
-                                        <button class="btn btn-sm btn-light border shadow-xs fw-semibold rounded-pill px-2.5 py-1 text-primary d-inline-flex align-items-center gap-1" onclick="openZoneSettingsModal()" title="จัดการโซนคลังสินค้า" style="font-size: 0.78rem;">
-                                            <i class="fas fa-sliders-h text-primary"></i> <span>ตั้งค่าโซน</span>
-                                        </button>
-                                    <?php endif; ?>
+                        <!-- Visual Map Header Bar (Flush at Top, exact match with right shelf monitor) -->
+                        <div class="shelf-header-bar d-flex align-items-center justify-content-between flex-shrink-0">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle flex-shrink-0" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-map-marked-alt" style="font-size: 1rem;"></i>
+                                </div>
+                                <div class="d-flex flex-column justify-content-center min-w-0">
+                                    <h6 class="fw-bold text-dark mb-0 lh-2" style="font-size: 1rem; letter-spacing: -0.2px;">แผนผังคลังสินค้า</h6>
+                                    <span class="text-muted lh-2" style="font-size: 0.75rem;">เลือกตำแหน่งเพื่อตรวจนับสต็อก</span>
                                 </div>
                             </div>
+                            <?php if (hasPermission('manage_warehouse')): ?>
+                                <button class="btn btn-sm btn-light border shadow-xs fw-semibold rounded-pill px-2.5 py-1 text-primary d-inline-flex align-items-center gap-1" onclick="openZoneSettingsModal()" title="จัดการโซนคลังสินค้า" style="font-size: 0.78rem;">
+                                    <i class="fas fa-sliders-h text-primary"></i> <span>ตั้งค่าโซน</span>
+                                </button>
+                            <?php endif; ?>
+                        </div>
 
-                            <?php
-                                $overallItemIra = $overallHealth['ira_item_pct'];
-                                $overallValIra = $overallHealth['ira_value_pct'];
-                                $overallItemText = $overallItemIra !== null ? number_format($overallItemIra, 1) . '%' : '-';
-                                $overallValText = $overallValIra !== null ? number_format($overallValIra, 1) . '%' : '-';
-                                $itemColorClass = $overallItemIra === null ? 'text-secondary' : ($overallItemIra >= 95 ? 'text-success' : ($overallItemIra >= 85 ? 'text-warning-emphasis' : 'text-danger'));
-                                $valColorClass = $overallValIra === null ? 'text-secondary' : ($overallValIra >= 95 ? 'text-success' : ($overallValIra >= 85 ? 'text-warning-emphasis' : 'text-danger'));
-                                $auditedProgress = $overallHealth['audited_locations'] . ' / ' . $overallHealth['total_locations'] . ' คลัง';
-                            ?>
-                            <!-- Warehouse IRA & Health Mini-Bar -->
-                            <div class="warehouse-kpi-bar mb-2">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                                        <i class="fas fa-chart-line text-primary" style="font-size: 0.82rem;"></i>
-                                        <span class="fw-bold text-dark" style="font-size: 0.8rem;">ภาพรวมความแม่นยำสต็อก (IRA Health)</span>
-                                        <?php if (!empty($overallHealth['cycle_label'])): ?>
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.65rem;" title="รอบการนับประจำเดือน">
-                                                <i class="fas fa-calendar-alt me-1"></i><?= htmlspecialchars($overallHealth['cycle_label']) ?>
-                                            </span>
-                                        <?php endif; ?>
+                        <div class="p-3 flex-grow-1 d-flex flex-column" style="min-height: 0; overflow: hidden;">
+                            <div class="flex-shrink-0">
+                                <?php
+                                    $overallItemIra = $overallHealth['ira_item_pct'];
+                                    $overallValIra = $overallHealth['ira_value_pct'];
+                                    $overallItemText = $overallItemIra !== null ? number_format($overallItemIra, 1) . '%' : '-';
+                                    $overallValText = $overallValIra !== null ? number_format($overallValIra, 1) . '%' : '-';
+                                    $itemColorClass = $overallItemIra === null ? 'text-secondary' : ($overallItemIra >= 95 ? 'text-success' : ($overallItemIra >= 85 ? 'text-warning-emphasis' : 'text-danger'));
+                                    $valColorClass = $overallValIra === null ? 'text-secondary' : ($overallValIra >= 95 ? 'text-success' : ($overallValIra >= 85 ? 'text-warning-emphasis' : 'text-danger'));
+                                    $auditedProgress = $overallHealth['audited_locations'] . ' / ' . $overallHealth['total_locations'] . ' คลัง';
+                                ?>
+                                <!-- Warehouse IRA & Health Mini-Bar -->
+                                <div class="warehouse-kpi-bar mb-2">
+                                    <div class="d-flex align-items-center justify-content-between gap-1 mb-2">
+                                        <div class="d-flex align-items-center gap-1.5 min-w-0">
+                                            <i class="fas fa-chart-line text-primary flex-shrink-0" style="font-size: 0.82rem;"></i>
+                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 0.8rem;">ความแม่นยำสต็อก (IRA)</span>
+                                            <?php if (!empty($overallHealth['cycle_label'])): ?>
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5 text-nowrap flex-shrink-0" style="font-size: 0.65rem;" title="รอบการนับประจำเดือน">
+                                                    <i class="fas fa-calendar-alt me-1"></i><?= htmlspecialchars($overallHealth['cycle_label']) ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <span class="badge rounded-pill <?= $overallHealth['grade_class'] ?> px-2 py-0.5 d-inline-flex align-items-center gap-1 flex-shrink-0" 
+                                              data-bs-toggle="tooltip" data-bs-placement="left" 
+                                              title="<?= htmlspecialchars($overallHealth['grade_text']) ?> (เกณฑ์สุขภาพสต็อก: เกรด A ≥ 95%, เกรด B 85% - 94.9%, เกรด C < 85%)" 
+                                              style="font-size: 0.68rem; cursor: help;">
+                                            <i class="<?= $overallHealth['grade_icon'] ?>"></i>
+                                            <span><?= explode(' · ', $overallHealth['grade_text'])[0] ?></span>
+                                            <?php if (strpos($overallHealth['grade_text'], ' · ') !== false): ?>
+                                                <span class="d-none d-sm-inline"> · <?= explode(' · ', $overallHealth['grade_text'])[1] ?></span>
+                                            <?php endif; ?>
+                                        </span>
                                     </div>
-                                    <span class="badge rounded-pill <?= $overallHealth['grade_class'] ?> px-2 py-0.5 d-inline-flex align-items-center gap-1" 
-                                          data-bs-toggle="tooltip" data-bs-placement="left" 
-                                          title="เกณฑ์สุขภาพสต็อก: เกรด A (≥ 95%), เกรด B (85% - 94.9%), เกรด C (< 85%)" 
-                                          style="font-size: 0.68rem; cursor: help;">
-                                        <i class="<?= $overallHealth['grade_icon'] ?>"></i> <?= $overallHealth['grade_text'] ?>
+                                    <div class="row g-1 text-center align-items-center">
+                                        <div class="col-4 border-end" data-bs-toggle="tooltip" data-bs-placement="top" title="สูตร Item IRA: (พาเลทที่ยอดตรง ÷ พาเลทที่ตรวจทั้งหมด) × 100%" style="cursor: help;">
+                                            <div class="text-muted text-nowrap" style="font-size: 0.66rem;">แม่นยำรายชิ้น</div>
+                                            <div class="fw-bold fs-6 <?= $itemColorClass ?>"><?= $overallItemText ?></div>
+                                        </div>
+                                        <div class="col-4 border-end" data-bs-toggle="tooltip" data-bs-placement="top" title="สูตร Value IRA: [1 - (ผลต่างมูลค่ารวม ÷ มูลค่าสต็อกระบบรวม)] × 100%" style="cursor: help;">
+                                            <div class="text-muted text-nowrap" style="font-size: 0.66rem;">แม่นยำมูลค่า</div>
+                                            <div class="fw-bold fs-6 <?= $valColorClass ?>"><?= $overallValText ?></div>
+                                        </div>
+                                        <div class="col-4" data-bs-toggle="tooltip" data-bs-placement="top" title="จำนวนคลังสินค้าที่เริ่มตรวจนับเทียบกับจำนวนคลังทั้งหมดในสโตร์" style="cursor: help;">
+                                            <div class="text-muted text-nowrap" style="font-size: 0.66rem;">ตรวจแล้ว / ทั้งหมด</div>
+                                            <div class="fw-bold fs-6 text-dark"><?= $auditedProgress ?></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Legend Toolbar -->
+                                <div class="cc-scanner-bar d-flex align-items-center justify-content-around mb-2.5 px-2 py-1.5" style="font-size: 0.75rem;">
+                                    <span class="d-inline-flex align-items-center text-secondary fw-semibold">
+                                        <span class="d-inline-block rounded-circle bg-secondary me-1.5" style="width:8px;height:8px;"></span>รอตรวจ
+                                    </span>
+                                    <span class="d-inline-flex align-items-center text-warning-emphasis fw-semibold">
+                                        <span class="d-inline-block rounded-circle bg-warning me-1.5" style="width:8px;height:8px;"></span>กำลังเช็ค
+                                    </span>
+                                    <span class="d-inline-flex align-items-center text-success fw-semibold">
+                                        <span class="d-inline-block rounded-circle bg-success me-1.5" style="width:8px;height:8px;"></span>เสร็จสิ้น
                                     </span>
                                 </div>
-                                <div class="row g-1 text-center align-items-center">
-                                    <div class="col-4 border-end" data-bs-toggle="tooltip" data-bs-placement="top" title="สูตร Item IRA: (พาเลทที่ยอดตรง ÷ พาเลทที่ตรวจทั้งหมด) × 100%" style="cursor: help;">
-                                        <div class="text-muted text-truncate" style="font-size: 0.68rem;">
-                                            ความแม่นยำรายชิ้น <i class="fas fa-info-circle text-muted ms-0.5" style="font-size: 0.62rem;"></i>
-                                        </div>
-                                        <div class="fw-bold fs-6 <?= $itemColorClass ?>"><?= $overallItemText ?></div>
-                                    </div>
-                                    <div class="col-4 border-end" data-bs-toggle="tooltip" data-bs-placement="top" title="สูตร Value IRA: [1 - (ผลต่างมูลค่ารวม ÷ มูลค่าสต็อกระบบรวม)] × 100%" style="cursor: help;">
-                                        <div class="text-muted text-truncate" style="font-size: 0.68rem;">
-                                            ความแม่นยำมูลค่า <i class="fas fa-info-circle text-muted ms-0.5" style="font-size: 0.62rem;"></i>
-                                        </div>
-                                        <div class="fw-bold fs-6 <?= $valColorClass ?>"><?= $overallValText ?></div>
-                                    </div>
-                                    <div class="col-4" data-bs-toggle="tooltip" data-bs-placement="top" title="จำนวนคลังสินค้าที่เริ่มตรวจนับเทียบกับจำนวนคลังทั้งหมดในสโตร์" style="cursor: help;">
-                                        <div class="text-muted text-truncate" style="font-size: 0.68rem;">
-                                            ตรวจแล้ว / ทั้งหมด <i class="fas fa-info-circle text-muted ms-0.5" style="font-size: 0.62rem;"></i>
-                                        </div>
-                                        <div class="fw-bold fs-6 text-dark"><?= $auditedProgress ?></div>
-                                    </div>
-                                </div>
                             </div>
-                            
-                            <!-- Legend Toolbar -->
-                            <div class="cc-scanner-bar d-flex align-items-center justify-content-around mb-2.5 px-2 py-1.5" style="font-size: 0.75rem;">
-                                <span class="d-inline-flex align-items-center text-secondary fw-semibold">
-                                    <span class="d-inline-block rounded-circle bg-secondary me-1.5" style="width:8px;height:8px;"></span>รอตรวจ
-                                </span>
-                                <span class="d-inline-flex align-items-center text-warning-emphasis fw-semibold">
-                                    <span class="d-inline-block rounded-circle bg-warning me-1.5" style="width:8px;height:8px;"></span>กำลังเช็ค
-                                </span>
-                                <span class="d-inline-flex align-items-center text-success fw-semibold">
-                                    <span class="d-inline-block rounded-circle bg-success me-1.5" style="width:8px;height:8px;"></span>เสร็จสิ้น
-                                </span>
-                            </div>
-                        </div>
                         
                         <div class="flex-grow-1 overflow-auto px-1" style="min-height: 0; padding-bottom: 20px;">
                             <?php 
@@ -770,17 +773,22 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                                 <?php 
                                                     $statusClass = 'btn-loc-pending';
                                                     $icon = '';
+                                                    $recountBadge = '';
+                                                    if (!empty($loc['recount_needed_count']) && (int)$loc['recount_needed_count'] > 0) {
+                                                        $recountBadge = '<span class="position-absolute top-0 end-0 translate-middle badge rounded-pill bg-danger shadow-xs" style="font-size:0.6rem; z-index:2;" title="มี ' . (int)$loc['recount_needed_count'] . ' รายการรอนับซ้ำรอบ 2"><i class="fas fa-exclamation-triangle"></i> ' . (int)$loc['recount_needed_count'] . '</span>';
+                                                    }
                                                     if ($loc['current_status'] === 'IN_PROGRESS') {
                                                         $statusClass = 'btn-loc-progress';
-                                                        $icon = '<i class="fas fa-spinner fa-spin position-absolute top-0 end-0 m-1.5" style="font-size: 10px;"></i>';
+                                                        $icon = '<i class="fas fa-spinner fa-spin position-absolute top-0 start-0 m-1.5" style="font-size: 10px;"></i>';
                                                     } elseif ($loc['current_status'] === 'COMPLETED') {
                                                         $statusClass = 'btn-loc-completed';
-                                                        $icon = '<i class="fas fa-check position-absolute top-0 end-0 m-1.5" style="font-size: 10px;"></i>';
+                                                        $icon = '<i class="fas fa-check position-absolute top-0 start-0 m-1.5" style="font-size: 10px;"></i>';
                                                     }
                                                 ?>
                                                 <div class="col-4 col-md-3 col-lg-2">
-                                                    <button class="location-btn <?= $statusClass ?> w-100" 
+                                                    <button class="location-btn <?= $statusClass ?> w-100 position-relative" 
                                                             onclick="selectLocationUI(<?= $loc['location_id'] ?>, '<?= htmlspecialchars($loc['location_name']) ?>', this)">
+                                                        <?= $recountBadge ?>
                                                         <?= $icon ?>
                                                         <span><?= htmlspecialchars($loc['location_name']) ?></span>
                                                     </button>
@@ -799,107 +807,122 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                 <span>เริ่มตรวจนับคลังที่เลือก</span>
                             </button>
                         </div>
-                    </div>
+                        </div> <!-- End p-3 body of viewSelectLocation -->
+                    </div> <!-- End viewSelectLocation -->
 
                     <!-- View 2: Counting Session -->
                     <div id="viewCounting" class="d-none flex-column h-100" style="min-height: 0;">
-                        <div class="flex-shrink-0">
-                            <!-- Clean Header Bar: Interactive Location Selector Pill + Status -->
-                            <div class="cc-header-bar mb-2">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center gap-2 min-w-0">
-                                        <!-- Clickable Location Pill to change location / go back -->
-                                        <button type="button" class="btn-location-pill" onclick="backToLocationSelect()" title="กดเพื่อเปลี่ยนคลังสินค้า / ย้อนกลับ">
-                                            <i class="fas fa-map-marker-alt text-primary"></i>
-                                            <span id="currentLocationName">-</span>
-                                            <i class="fas fa-chevron-down text-muted ms-0.5" style="font-size: 0.65rem;"></i>
+                        <!-- Clean Header Bar: Interactive Location Selector Pill + Status (Flush at Top) -->
+                        <div class="shelf-header-bar d-flex align-items-center justify-content-between flex-shrink-0">
+                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                <!-- Clickable Location Pill to change location / go back -->
+                                <button type="button" class="btn-location-pill" onclick="backToLocationSelect()" title="กดเพื่อเปลี่ยนคลังสินค้า / ย้อนกลับ">
+                                    <i class="fas fa-map-marker-alt text-primary"></i>
+                                    <span id="currentLocationName">-</span>
+                                    <i class="fas fa-chevron-down text-muted ms-0.5" style="font-size: 0.65rem;"></i>
+                                </button>
+
+                                <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2 py-1" style="font-size: 0.7rem;" title="Blind Count: ระบบปิดบังยอดและเลขแท็กเพื่อให้นับจากของจริง">
+                                    <i class="fas fa-eye-slash me-1"></i>Blind Count
+                                </span>
+                            </div>
+                            <div class="flex-shrink-0 ms-2">
+                                <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1.5 fw-semibold" id="sessionStatusBadge" style="font-size: 0.75rem;">
+                                    <i class="fas fa-spinner fa-spin me-1"></i>กำลังเช็ค
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="p-3 flex-grow-1 d-flex flex-column" style="min-height: 0; overflow: hidden;">
+                            <div class="flex-shrink-0">
+                                <!-- Recount Alert Banner (Tier 2 Blind Recount) -->
+                                <div id="recountAlertBanner" class="alert alert-danger d-none align-items-center justify-content-between p-2.5 mb-2 rounded-3 border-danger shadow-xs">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fas fa-exclamation-triangle text-danger fs-5 flex-shrink-0"></i>
+                                        <div style="line-height: 1.2;">
+                                            <div class="fw-bold text-danger small">มีรายการรอนับซ้ำรอบ 2 (Tier 2 Blind Recount)</div>
+                                            <span class="text-muted" style="font-size: 0.72rem;">ระบบพบผลต่างสูงในรอบแรก กรุณานับซ้ำโดยไม่ดูยอดเดิม</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-danger fw-bold rounded-pill px-3 py-1 shadow-xs flex-shrink-0" onclick="openRecountModal()" style="font-size: 0.75rem;">
+                                        <i class="fas fa-redo-alt me-1"></i>เริ่มนับซ้ำ (<span id="recountItemsCount">0</span>)
+                                    </button>
+                                </div>
+
+                                <!-- Scanner Options Bar: Switch + Indicator + Mute -->
+                                <div class="cc-scanner-bar d-flex align-items-center justify-content-between mb-2">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                        <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="switchContinuousScan" onchange="toggleContinuousScan(this.checked)" style="width: 2.2rem; height: 1.2rem; cursor: pointer;">
+                                        <label class="form-check-label small fw-semibold text-dark cursor-pointer mb-0 user-select-none" for="switchContinuousScan">
+                                            <i class="fas fa-bolt text-warning me-1"></i>นับต่อเนื่อง
+                                        </label>
+                                        <span class="text-muted" style="font-size: 0.75rem; cursor: pointer;" title="โหมดนับต่อเนื่อง: ยืนยันยอดให้อัตโนมัติเมื่อยิงบาร์โค้ด ไม่ต้องเด้งหน้าต่างกรอกยอด (หากพบของหลงคลังจะหยุดบังคับระบุสาเหตุ)">
+                                            <i class="fas fa-question-circle"></i>
+                                        </span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle px-2.5 py-1 small fw-medium" id="scannerStatusIndicator" title="สถานะโหมดตรวจนับ">
+                                            <i class="fas fa-hand-paper me-1 text-primary"></i> นับจริง 100%
+                                        </span>
+                                        <button class="btn btn-sm btn-white border rounded-circle shadow-xs d-flex align-items-center justify-content-center text-muted p-0" 
+                                                id="btnToggleSound" 
+                                                onclick="toggleAudioMute()" 
+                                                style="width: 30px; height: 30px;"
+                                                title="เปิด/ปิดเสียง Beep">
+                                            <i class="fas fa-volume-up text-primary" id="iconSoundStatus" style="font-size: 0.85rem;"></i>
                                         </button>
-
-                                        <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2 py-1" style="font-size: 0.7rem;" title="Blind Count: ระบบปิดบังยอดและเลขแท็กเพื่อให้นับจากของจริง">
-                                            <i class="fas fa-eye-slash me-1"></i>Blind Count
-                                        </span>
-                                    </div>
-                                    <div class="flex-shrink-0 ms-2">
-                                        <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1.5 fw-semibold" id="sessionStatusBadge" style="font-size: 0.75rem;">
-                                            <i class="fas fa-spinner fa-spin me-1"></i>กำลังเช็ค
-                                        </span>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Scanner Options Bar: Switch + Indicator + Mute -->
-                            <div class="cc-scanner-bar d-flex align-items-center justify-content-between mb-2">
-                                <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
-                                    <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="switchContinuousScan" onchange="toggleContinuousScan(this.checked)" style="width: 2.2rem; height: 1.2rem; cursor: pointer;">
-                                    <label class="form-check-label small fw-semibold text-dark cursor-pointer mb-0 user-select-none" for="switchContinuousScan">
-                                        <i class="fas fa-bolt text-warning me-1"></i>นับต่อเนื่อง
-                                    </label>
-                                    <span class="text-muted" style="font-size: 0.75rem; cursor: pointer;" title="โหมดนับต่อเนื่อง: ยืนยันยอดให้อัตโนมัติเมื่อยิงบาร์โค้ด ไม่ต้องเด้งหน้าต่างกรอกยอด (หากพบของหลงคลังจะหยุดบังคับระบุสาเหตุ)">
-                                        <i class="fas fa-question-circle"></i>
-                                    </span>
-                                </div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle px-2.5 py-1 small fw-medium" id="scannerStatusIndicator" title="สถานะโหมดตรวจนับ">
-                                        <i class="fas fa-hand-paper me-1 text-primary"></i> นับจริง 100%
-                                    </span>
-                                    <button class="btn btn-sm btn-white border rounded-circle shadow-xs d-flex align-items-center justify-content-center text-muted p-0" 
-                                            id="btnToggleSound" 
-                                            onclick="toggleAudioMute()" 
-                                            style="width: 30px; height: 30px;"
-                                            title="เปิด/ปิดเสียง Beep">
-                                        <i class="fas fa-volume-up text-primary" id="iconSoundStatus" style="font-size: 0.85rem;"></i>
+                                <!-- Barcode Search Input Group -->
+                                <div class="input-group cc-search-group shadow-sm mb-2.5">
+                                    <button class="btn btn-scan" type="button" onclick="openScanner()" title="เปิดกล้องสแกน QR / Barcode">
+                                        <i class="fas fa-camera text-info"></i>
+                                        <span>สแกน</span>
+                                    </button>
+                                    <input type="text" class="form-control" id="manualTagInput" placeholder="ยิงบาร์โค้ด หรือพิมพ์เลขแท็ก..." onkeypress="if(event.key === 'Enter') handleManualTag()">
+                                    <button class="btn btn-submit" type="button" onclick="handleManualTag()" title="ค้นหา/ตรวจนับ">
+                                        <i class="fas fa-arrow-right"></i>
                                     </button>
                                 </div>
                             </div>
 
-                            <!-- Barcode Search Input Group -->
-                            <div class="input-group cc-search-group shadow-sm mb-2.5">
-                                <button class="btn btn-scan" type="button" onclick="openScanner()" title="เปิดกล้องสแกน QR / Barcode">
-                                    <i class="fas fa-camera text-info"></i>
-                                    <span>สแกน</span>
+                            <!-- Segmented Navigation & Part Lists -->
+                            <div class="flex-grow-1 d-flex flex-column" style="min-height: 0; overflow: hidden;">
+                                <ul class="nav cc-nav-tabs mb-2 flex-shrink-0" id="pills-tab" role="tablist">
+                                    <li class="nav-item flex-fill" role="presentation">
+                                        <button class="nav-link active w-100" id="pills-pending-tab" data-bs-toggle="pill" data-bs-target="#pills-pending" type="button" role="tab">
+                                            <i class="fas fa-clock text-warning me-1"></i>ต้องหา
+                                            <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle ms-1 px-2" id="badgePending">0</span>
+                                        </button>
+                                    </li>
+                                    <li class="nav-item flex-fill" role="presentation">
+                                        <button class="nav-link w-100" id="pills-counted-tab" data-bs-toggle="pill" data-bs-target="#pills-counted" type="button" role="tab">
+                                            <i class="fas fa-check-circle text-success me-1"></i>นับแล้ว
+                                            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle ms-1 px-2" id="badgeCounted">0</span>
+                                        </button>
+                                    </li>
+                                </ul>
+
+                                <div class="tab-content flex-grow-1 overflow-auto pe-1" id="pills-tabContent" style="min-height: 0;">
+                                    <div class="tab-pane fade show active pb-3" id="pills-pending" role="tabpanel">
+                                        <div id="expectedItemsList"></div>
+                                    </div>
+                                    <div class="tab-pane fade pb-3" id="pills-counted" role="tabpanel">
+                                        <div id="countedItemsList"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Finish Button -->
+                            <div class="flex-shrink-0 pt-2.5 bg-white mt-auto border-top">
+                                <button class="btn-finish-cc" onclick="finishSession()">
+                                    <i class="fas fa-flag-checkered fs-5"></i>
+                                    <span>สรุปผลการตรวจนับคลังนี้</span>
                                 </button>
-                                <input type="text" class="form-control" id="manualTagInput" placeholder="ยิงบาร์โค้ด หรือพิมพ์เลขแท็ก..." onkeypress="if(event.key === 'Enter') handleManualTag()">
-                                <button class="btn btn-submit" type="button" onclick="handleManualTag()" title="ค้นหา/ตรวจนับ">
-                                    <i class="fas fa-arrow-right"></i>
-                                </button>
                             </div>
-                        </div>
-
-                        <!-- Segmented Navigation & Part Lists -->
-                        <div class="flex-grow-1 d-flex flex-column" style="min-height: 0; overflow: hidden;">
-                            <ul class="nav cc-nav-tabs mb-2 flex-shrink-0" id="pills-tab" role="tablist">
-                                <li class="nav-item flex-fill" role="presentation">
-                                    <button class="nav-link active w-100" id="pills-pending-tab" data-bs-toggle="pill" data-bs-target="#pills-pending" type="button" role="tab">
-                                        <i class="fas fa-clock text-warning me-1"></i>ต้องหา
-                                        <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle ms-1 px-2" id="badgePending">0</span>
-                                    </button>
-                                </li>
-                                <li class="nav-item flex-fill" role="presentation">
-                                    <button class="nav-link w-100" id="pills-counted-tab" data-bs-toggle="pill" data-bs-target="#pills-counted" type="button" role="tab">
-                                        <i class="fas fa-check-circle text-success me-1"></i>นับแล้ว
-                                        <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle ms-1 px-2" id="badgeCounted">0</span>
-                                    </button>
-                                </li>
-                            </ul>
-
-                            <div class="tab-content flex-grow-1 overflow-auto pe-1" id="pills-tabContent" style="min-height: 0;">
-                                <div class="tab-pane fade show active pb-3" id="pills-pending" role="tabpanel">
-                                    <div id="expectedItemsList"></div>
-                                </div>
-                                <div class="tab-pane fade pb-3" id="pills-counted" role="tabpanel">
-                                    <div id="countedItemsList"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Bottom Finish Button -->
-                        <div class="flex-shrink-0 pt-2.5 bg-white mt-auto border-top">
-                            <button class="btn-finish-cc" onclick="finishSession()">
-                                <i class="fas fa-flag-checkered fs-5"></i>
-                                <span>สรุปผลการตรวจนับคลังนี้</span>
-                            </button>
-                        </div>
-                    </div>
+                        </div> <!-- End p-3 body of viewCounting -->
+                    </div> <!-- End viewCounting -->
                 </div>
             </div>
         </div>
@@ -1114,6 +1137,40 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                     <button type="button" class="btn-modal-save" id="btnSaveZones" onclick="saveZoneSettings()">
                         <i class="fas fa-save"></i> <span>บันทึกการเปลี่ยนแปลง</span>
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tier 2 Blind Recount Modal (Phase 3.2) -->
+    <div class="modal fade" id="tier2RecountModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+                <div class="modal-header bg-danger text-white py-2.5 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center justify-content-center bg-white text-danger rounded-circle" style="width: 32px; height: 32px;">
+                            <i class="fas fa-redo-alt" style="font-size: 0.9rem;"></i>
+                        </div>
+                        <div>
+                            <h6 class="modal-title fw-bold mb-0">ตรวจนับซ้ำรอบ 2 (Tier 2 Blind Recount Protocol)</h6>
+                            <span class="text-white-50" style="font-size: 0.72rem;">ระบบตรวจพบผลต่างสูงในรอบแรก — ตรวจนับซ้ำโดยไม่แสดงยอดระบบและยอดรอบแรก (Strict Blind Count)</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3 bg-light">
+                    <div class="alert alert-warning border-warning d-flex align-items-center gap-2 py-2 px-3 mb-3 rounded-3" style="font-size: 0.8rem;">
+                        <i class="fas fa-shield-alt text-warning fs-5 flex-shrink-0"></i>
+                        <div>
+                            <b>นโยบายตรวจนับซ้ำ:</b> กรุณานับสินค้าจากของจริงหน้างาน 100% ระบบจะปิดบังยอดทั้งหมดเพื่อความโปร่งใสและถูกต้องตามมาตรฐาน ISO/IATF
+                        </div>
+                    </div>
+                    <div id="tier2RecountList" class="d-flex flex-column gap-2.5">
+                        <!-- Recount Items rendered by JS -->
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top py-2.5 px-3">
+                    <button type="button" class="btn btn-secondary btn-sm fw-bold px-3" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
                 </div>
             </div>
         </div>

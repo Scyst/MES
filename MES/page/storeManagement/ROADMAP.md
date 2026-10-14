@@ -127,12 +127,15 @@
   - [x] Export ใบรับรองผลการตรวจนับทางการรูปแบบ PDF / Print Ready (`print_cycle_count_audit.php`) พร้อมสรุปเกรดสุขภาพคลัง และ 3 ช่องลงนาม (พนักงานตรวจนับ / หัวหน้าแผนกสโตร์ / ผู้จัดการโรงงาน-บัญชี) ตามมาตรฐาน ISO 9001 / IATF 16949
   - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/components/InventoryModal.php`, `page/storeManagement/script/inventoryDashboard.js`, `page/storeManagement/print_cycle_count_audit.php`, `page/storeManagement/api/api_store.php`, `page/storeManagement/api/zone_health_helper.php`, `page/storeManagement/cycleCount.php`
 
-- [ ] **3.2 Two-Tier Blind Recount Protocol (นับซ้ำเมื่อดิฟสูง - Strict Manual Decision)**
-  - [ ] กำหนดเกณฑ์ Trigger ยอดดิฟสูง (เช่น ผลต่าง $> \pm 10,000$ บาท หรือ $> \pm 10\%$)
-  - [ ] เปลี่ยนสถานะรายการเป็น `FLAGGED_FOR_RECOUNT` (ระงับการส่งอนุมัติชั่วคราว)
-  - [ ] ส่งงานให้พนักงานคนที่สองนับซ้ำแบบ Blind Count (ไม่เห็นยอดระบบและยอดคนแรก)
-  - [ ] หน้าจอเปรียบเทียบ 3 คอลัมน์บนโต๊ะผู้จัดการ: **ผู้จัดการต้องเป็นผู้เลือกด้วยมือเท่านั้นว่าจะใช้ยอดใด** (ห้าม Auto-Approve)
-  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/cycleCount.php`, `page/storeManagement/inventoryDashboard.php`, `page/storeManagement/api/api_store.php`
+- [x] **3.2 Two-Tier Blind Recount Protocol (นับซ้ำเมื่อดิฟสูง - Strict Manual Decision)**
+  - [x] กำหนดเกณฑ์ Trigger ยอดดิฟสูง ($|\text{diff}| \times \text{Price} \ge 10,000$ บาท หรือ $|\text{diff}| \ge 10\%$ และ $\ge 5$ ชิ้น)
+  - [x] เปลี่ยนสถานะรายการเป็น `FLAGGED_FOR_RECOUNT` บันทึกยอดรอบแรกและระงับการอนุมัติ
+  - [x] ส่งงานให้พนักงานนับซ้ำหน้างานแบบ Blind Count 100% (ไม่แสดงยอดระบบและยอดรอบแรก) ผ่าน `#tier2RecountModal` และแบนเนอร์แจ้งเตือน
+  - [x] หน้าจอเปรียบเทียบ 3 คอลัมน์บนโต๊ะผู้จัดการ (`#recountDecisionModal`): แสดงยอดระบบเดิม / ยอดนับรอบ 1 / ยอดนับซ้ำรอบ 2 พร้อมผลต่างมูลค่าและผู้ตรวจนับ
+  - [x] บังคับให้ผู้จัดการเลือกยอดด้วยมือเท่านั้น (Strict Manual Decision: COUNT_1, RECOUNT, SYSTEM) พร้อมระบุเหตุผล (Decision Reason) เป็น Audit Trail ตาม ISO/IATF
+  - [x] ปรับ Layout & Padding ฝั่งซ้าย-ขวาบนจอ PC ให้ชิดขอบบนเท่ากันเสมอกัน 100% (`top: 79px, height: 65px`)
+  - [x] จัดการความยาวข้อความและ Badges ในแถบ IRA Health Mini-Bar ให้อยู่ในบรรทัดเดียว ไม่ซ้อนหลายบรรทัดบนมือถือ
+  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/cycleCount.php`, `page/storeManagement/script/cycleCount.js`, `page/storeManagement/components/InventoryModal.php`, `page/storeManagement/script/inventoryDashboard.js`, `page/storeManagement/api/api_store.php`
 
 - [ ] **3.3 Offline Resilience & Network Drop Protection**
   - [ ] ระบบตรวจจับสัญญาณเครือข่าย (`online` / `offline` event) พร้อมแบนเนอร์แจ้งเตือนสถานะ

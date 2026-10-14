@@ -6,6 +6,7 @@ let currentTagNo = '';
 let currentCameraDeviceId = null;
 let currentSessionDetails = [];
 let currentCountedCount = 0;
+let currentLocationRecountItems = [];
 
 const scannerModal = new bootstrap.Modal(document.getElementById('scannerModal'));
 const inputQtyModal = new bootstrap.Modal(document.getElementById('inputQtyModal'));
@@ -72,6 +73,25 @@ async function startSession() {
             currentSessionId = res.session_id;
             currentSessionDetails = res.details || [];
             
+            // Check for Tier 2 Blind Recount items (Phase 3.2)
+            if (res.recount_items && res.recount_items.length > 0) {
+                currentLocationRecountItems = res.recount_items;
+                const banner = document.getElementById('recountAlertBanner');
+                const badge = document.getElementById('recountItemsCount');
+                if (banner && badge) {
+                    badge.innerText = res.recount_items.length;
+                    banner.classList.remove('d-none');
+                    banner.classList.add('d-flex');
+                }
+            } else {
+                currentLocationRecountItems = [];
+                const banner = document.getElementById('recountAlertBanner');
+                if (banner) {
+                    banner.classList.add('d-none');
+                    banner.classList.remove('d-flex');
+                }
+            }
+
             document.getElementById('currentLocationName').innerText = locName;
             const subtitleEl = document.getElementById('sessionSubtitle');
             if (subtitleEl) subtitleEl.innerText = `โซน ${locName} (${currentSessionDetails.length} รายการ)`;
@@ -957,6 +977,12 @@ async function backToLocationSelect() {
         currentLocationId = 0;
         currentSessionDetails = [];
         currentCountedCount = 0;
+        currentLocationRecountItems = [];
+        const banner1 = document.getElementById('recountAlertBanner');
+        if (banner1) {
+            banner1.classList.add('d-none');
+            banner1.classList.remove('d-flex');
+        }
 
         resetShelfMonitorUI();
 
@@ -1007,6 +1033,12 @@ async function backToLocationSelect() {
     currentLocationId = 0;
     currentSessionDetails = [];
     currentCountedCount = 0;
+    currentLocationRecountItems = [];
+    const banner2 = document.getElementById('recountAlertBanner');
+    if (banner2) {
+        banner2.classList.add('d-none');
+        banner2.classList.remove('d-flex');
+    }
 
     resetShelfMonitorUI();
 
@@ -1200,6 +1232,138 @@ async function showZoneHealthModal(zoneName) {
             popup: 'rounded-4 shadow-lg'
         }
     });
+}
+
+// ==========================================
+// TWO-TIER BLIND RECOUNT PROTOCOL (Phase 3.2)
+// ==========================================
+let tier2RecountModalInstance = null;
+
+function openRecountModal() {
+    if (!tier2RecountModalInstance) {
+        const modalEl = document.getElementById('tier2RecountModal');
+        if (modalEl) tier2RecountModalInstance = new bootstrap.Modal(modalEl);
+    }
+    renderTier2RecountList();
+    if (tier2RecountModalInstance) tier2RecountModalInstance.show();
+}
+
+function renderTier2RecountList() {
+    const listEl = document.getElementById('tier2RecountList');
+    if (!listEl) return;
+
+    const items = (typeof currentLocationRecountItems !== 'undefined' && Array.isArray(currentLocationRecountItems) && currentLocationRecountItems.length > 0)
+        ? currentLocationRecountItems
+        : (window.recountPendingItems || []);
+
+    if (!items || items.length === 0) {
+        listEl.innerHTML = `
+            <div class="card border-0 shadow-sm p-4 text-center text-muted">
+                <i class="fas fa-check-circle text-success fs-1 mb-2"></i>
+                <div class="fw-bold">ไม่มีรายการรอนับซ้ำในคลังนี้</div>
+                <div class="small text-muted">ทุกรายการผ่านการตรวจสอบครบถ้วนแล้ว</div>
+            </div>
+        `;
+        const banner = document.getElementById('recountAlertBanner');
+        if (banner) {
+            banner.classList.add('d-none');
+            banner.classList.remove('d-flex');
+        }
+        return;
+    }
+
+    let html = '';
+    items.forEach((item, idx) => {
+        const countId = item.count_id || item.id;
+        const tagSerial = item.serial_no ? escapeHTML(item.serial_no) : (item.item_code ? escapeHTML(item.item_code) : '-');
+        html += `
+            <div class="card border-0 shadow-sm rounded-3 p-3 bg-white" id="recountCard_${countId}">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 fw-bold small">
+                        <i class="fas fa-redo-alt me-1"></i>รายการที่ ${idx + 1}
+                    </span>
+                    <span class="font-monospace fw-bold text-dark fs-6 bg-light border rounded px-2 py-0.5">
+                        <i class="fas fa-barcode me-1 text-primary"></i>${tagSerial}
+                    </span>
+                </div>
+                <div class="mb-2">
+                    <div class="fw-bold text-dark fs-6">${escapeHTML(item.item_name || item.item_no || item.sap_no)}</div>
+                    <div class="text-muted small">${escapeHTML(item.part_description || item.location || '-')}</div>
+                </div>
+                <div class="bg-light p-2.5 rounded-3 mb-2.5 border">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small fw-bold text-dark mb-1">ยอดที่นับได้จริงรอบ 2 <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" step="any" min="0" class="form-control fw-bold fs-5 text-success" id="recountInput_${countId}" placeholder="0.00" required>
+                                <span class="input-group-text bg-white small text-muted">${escapeHTML(item.unit || 'ชิ้น')}</span>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small fw-bold text-dark mb-1">หมายเหตุหน้างาน (ถ้ามี)</label>
+                            <input type="text" class="form-control form-control-sm" id="recountRemark_${countId}" placeholder="เช่น ตรวจสอบพบสินค้าซุกอยู่ใต้พาเลท...">
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm fw-bold w-100 py-2 shadow-xs d-flex align-items-center justify-content-center gap-2" onclick="submitTier2Recount(${countId})">
+                    <i class="fas fa-save"></i>
+                    <span>บันทึกผลการนับซ้ำรอบ 2</span>
+                </button>
+            </div>
+        `;
+    });
+    listEl.innerHTML = html;
+}
+
+async function submitTier2Recount(countId) {
+    const inputEl = document.getElementById(`recountInput_${countId}`);
+    const remarkEl = document.getElementById(`recountRemark_${countId}`);
+    if (!inputEl) return;
+
+    const val = inputEl.value.trim();
+    if (val === '' || isNaN(val) || parseFloat(val) < 0) {
+        Swal.fire('กรุณาระบุยอดที่นับได้', 'ระบุจำนวนที่นับได้จริงเป็นตัวเลขมากกว่าหรือเท่ากับ 0', 'warning');
+        return;
+    }
+
+    const recountQty = parseFloat(val);
+    const remark = remarkEl ? remarkEl.value.trim() : '';
+
+    const confirm = await Swal.fire({
+        title: 'ยืนยันยอดนับซ้ำรอบ 2?',
+        html: `จำนวนที่นับได้จริง: <b>${recountQty.toLocaleString()}</b> ชิ้น<br>ระบบจะส่งยอดนี้ไปยังผู้จัดการเพื่อตัดสินผล`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยันบันทึก',
+        cancelButtonText: 'ยกเลิก'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    Swal.fire({ title: 'กำลังบันทึกยอดนับซ้ำ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    const formData = createFormData('cc_submit_recount');
+    formData.append('count_id', countId);
+    formData.append('recount_qty', recountQty);
+    formData.append('remark', remark);
+
+    try {
+        const req = await fetch(API_STORE, { method: 'POST', body: formData });
+        const res = await req.json();
+
+        if (res.success) {
+            await Swal.fire('สำเร็จ', res.message || 'บันทึกยอดนับซ้ำรอบ 2 เรียบร้อยแล้ว', 'success');
+            // Remove from local list
+            currentLocationRecountItems = currentLocationRecountItems.filter(i => i.count_id !== countId);
+            const badge = document.getElementById('recountItemsCount');
+            if (badge) badge.innerText = currentLocationRecountItems.length;
+            renderTier2RecountList();
+        } else {
+            Swal.fire('เกิดข้อผิดพลาด', res.message || 'ไม่สามารถบันทึกได้', 'error');
+        }
+    } catch (e) {
+        Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+    }
 }
 
 
