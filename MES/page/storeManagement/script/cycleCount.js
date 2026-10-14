@@ -109,7 +109,7 @@ function resetShelfMonitorUI() {
         shelf.innerHTML = `
             <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted py-5">
                 <div class="d-flex align-items-center justify-content-center bg-white rounded-circle shadow-xs border mb-3" style="width: 72px; height: 72px;">
-                    <i class="fas fa-boxes-stacked fa-2x text-primary opacity-50"></i>
+                    <i class="fas fa-boxes fa-2x text-primary opacity-50"></i>
                 </div>
                 <h6 class="fw-bold text-dark mb-1">พร้อมแสดงผลแผนผังชั้นวางสต็อก</h6>
                 <span class="text-muted small text-center" style="max-width: 340px;">

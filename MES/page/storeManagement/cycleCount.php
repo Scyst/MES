@@ -357,6 +357,13 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
             line-height: 1.35 !important;
         }
 
+        /* Fractional spacing utilities (not provided by Bootstrap) */
+        .gap-1\.5 { gap: 0.375rem !important; }
+        .gap-2\.5 { gap: 0.625rem !important; }
+        .gap-3\.5 { gap: 0.875rem !important; }
+        .me-1\.5 { margin-right: 0.375rem !important; }
+        .ms-0\.5 { margin-left: 0.125rem !important; }
+
         /* Zone Settings Modal Styling */
         .modal-zone-header {
             background: #ffffff;
@@ -572,8 +579,8 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                             <i class="fas fa-map-marked-alt fs-6"></i>
                                         </div>
                                         <div>
-                                            <h6 class="fw-bold mb-0 text-dark">แผนผังคลังสินค้า</h6>
-                                            <span class="text-muted" style="font-size: 0.72rem;">เลือกตำแหน่งเพื่อตรวจนับสต็อก</span>
+                                            <h6 class="fw-bold mb-0 text-dark lh-2">แผนผังคลังสินค้า</h6>
+                                            <span class="text-muted lh-2" style="font-size: 0.72rem;">เลือกตำแหน่งเพื่อตรวจนับสต็อก</span>
                                         </div>
                                     </div>
                                     <?php if (hasPermission('manage_warehouse')): ?>
@@ -780,11 +787,11 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                 <div class="shelf-header-bar d-flex align-items-center justify-content-between flex-shrink-0">
                     <div class="d-flex align-items-center gap-3">
                         <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle flex-shrink-0" style="width: 40px; height: 40px;">
-                            <i class="fas fa-boxes-stacked" style="font-size: 1rem;"></i>
+                            <i class="fas fa-boxes" style="font-size: 1rem;"></i>
                         </div>
                         <div class="d-flex flex-column justify-content-center min-w-0">
                             <h6 class="fw-bold text-dark mb-0 lh-2" style="font-size: 1rem; letter-spacing: -0.2px;">แผนผังจำลองชั้นวางสต็อก (Shelf Monitor)</h6>
-                            <span class="text-muted mt-1 lh-2" style="font-size: 0.75rem;">แสดงตำแหน่งพาเลทและสถานะการตรวจนับแบบเรียลไทม์</span>
+                            <span class="text-muted lh-2" style="font-size: 0.75rem;">แสดงตำแหน่งพาเลทและสถานะการตรวจนับแบบเรียลไทม์</span>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -798,15 +805,15 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                 <!-- Shelf Legend Toolbar -->
                 <div class="shelf-legend-bar d-flex align-items-center justify-content-between flex-shrink-0">
                     <div class="d-flex align-items-center gap-4 flex-wrap">
-                        <span class="d-inline-flex align-items-center gap-2 text-secondary fw-semibold">
+                        <span class="d-inline-flex align-items-center gap-1.5 text-secondary fw-semibold">
                             <span class="rounded-circle flex-shrink-0 bg-secondary" style="width: 8px; height: 8px;"></span>
                             <span>รอนับ (Pending)</span>
                         </span>
-                        <span class="d-inline-flex align-items-center gap-2 text-success fw-semibold">
+                        <span class="d-inline-flex align-items-center gap-1.5 text-success fw-semibold">
                             <span class="rounded-circle flex-shrink-0 bg-success" style="width: 8px; height: 8px;"></span>
                             <span>นับแล้ว (Counted)</span>
                         </span>
-                        <span class="d-inline-flex align-items-center gap-2 text-danger fw-semibold">
+                        <span class="d-inline-flex align-items-center gap-1.5 text-danger fw-semibold">
                             <span class="rounded-circle flex-shrink-0 bg-danger" style="width: 8px; height: 8px;"></span>
                             <span>หลงคลัง (Wrong Loc)</span>
                         </span>
@@ -820,7 +827,7 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                 <div class="card-body p-3 flex-grow-1 overflow-auto" id="shelfContainer" style="background-color: #f8fafc !important; min-height: 0;">
                     <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted py-5">
                         <div class="d-flex align-items-center justify-content-center bg-white rounded-circle shadow-xs border mb-3" style="width: 72px; height: 72px;">
-                            <i class="fas fa-boxes-stacked fa-2x text-primary opacity-50"></i>
+                            <i class="fas fa-boxes fa-2x text-primary opacity-50"></i>
                         </div>
                         <h6 class="fw-bold text-dark mb-1">พร้อมแสดงผลแผนผังชั้นวางสต็อก</h6>
                         <span class="text-muted small text-center" style="max-width: 340px;">
