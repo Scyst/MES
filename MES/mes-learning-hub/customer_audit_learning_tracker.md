@@ -1,6 +1,6 @@
 # Customer Specific & ESG Audit Learning Tracker
 
-Tracker for processing customer quality assessments, social compliance, and ESG audit standards from P:\ISO\Audit Lowes 2024 for the MES Learning Hub.
+Tracker for processing customer quality assessments, social compliance, and ESG audit standards from P:\ISO\Audit Lowes 2024, Audit ferguson, Audit GMP, and SP-QCS-014 Recall for the MES Learning Hub.
 
 ## Modules
 
@@ -21,3 +21,6 @@ Tracker for processing customer quality assessments, social compliance, and ESG 
 
 ### 6. ความยั่งยืน ESG, สิทธิมนุษยชน และจรรยาบรรณทางธุรกิจ (ESG, Human Rights & Business Ethics)
 - [x] 06_ESG_Human_Rights_and_Business_Ethics.md (นโยบายสิทธิมนุษยชน SNC026/2565, จรรยาบรรณธุรกิจ, ข้อบังคับการทำงาน, การขจัดแรงงานเด็ก/บังคับ และช่องทางแจ้งเบาะแส)
+
+### 7. การปฏิบัติตามหลัก GMP, การควบคุมของมีคม และขั้นตอนการเรียกคืนผลิตภัณฑ์ (GMP, Sharp Tool & Recall)
+- [x] 07_GMP_Sharp_Tool_Recall_and_Facility_Security.md (มาตรฐาน Costco Non-Food GMP, ระเบียบควบคุมของมีคม, แผนเรียกคืนสินค้า SP-QCS-014 และการตรวจตู้คอนเทนเนอร์ C-TPAT)
