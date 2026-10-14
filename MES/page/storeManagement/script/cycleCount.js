@@ -177,8 +177,8 @@ function renderShelfMonitor(details) {
             if (d.actual_qty !== null) {
                 if (d.is_wrong_location == 1) {
                     stateClass = 'wrong-loc';
-                    badgeHtml = '<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-1.5 py-0.5" style="font-size: 0.68rem;"><i class="fas fa-exclamation-triangle me-1"></i>หลงคลัง</span>';
-                    qtyHtml = `<div class="fw-bold text-warning-emphasis" style="font-size: 0.78rem;"><span class="text-secondary fw-normal">นับได้:</span> ${d.actual_qty} ชิ้น</div>`;
+                    badgeHtml = '<span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-1.5 py-0.5" style="font-size: 0.68rem;"><i class="fas fa-exclamation-triangle me-1"></i>หลงคลัง</span>';
+                    qtyHtml = `<div class="fw-bold text-danger" style="font-size: 0.78rem;"><span class="text-secondary fw-normal">นับได้:</span> ${d.actual_qty} ชิ้น</div>`;
                 } else {
                     stateClass = 'counted';
                     badgeHtml = '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5" style="font-size: 0.68rem;"><i class="fas fa-check me-1"></i>นับแล้ว</span>';

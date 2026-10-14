@@ -543,8 +543,8 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
             border-color: #86efac !important;
         }
         .shelf-pallet-cell.wrong-loc {
-            background-color: #fffbeb !important;
-            border-color: #fcd34d !important;
+            background-color: #fef2f2 !important;
+            border-color: #fca5a5 !important;
         }
     </style>
 </head>
@@ -797,15 +797,18 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
 
                 <!-- Shelf Legend Toolbar -->
                 <div class="shelf-legend-bar d-flex align-items-center justify-content-between flex-shrink-0">
-                    <div class="d-flex align-items-center gap-3.5">
-                        <span class="d-inline-flex align-items-center text-secondary fw-semibold">
-                            <span class="d-inline-block rounded-circle bg-secondary me-1.5" style="width:8px;height:8px;"></span>รอนับ (Pending)
+                    <div class="d-flex align-items-center gap-4 flex-wrap">
+                        <span class="d-inline-flex align-items-center gap-2 text-secondary fw-semibold">
+                            <span class="rounded-circle flex-shrink-0 bg-secondary" style="width: 8px; height: 8px;"></span>
+                            <span>รอนับ (Pending)</span>
                         </span>
-                        <span class="d-inline-flex align-items-center text-success fw-semibold">
-                            <span class="d-inline-block rounded-circle bg-success me-1.5" style="width:8px;height:8px;"></span>นับแล้ว (Counted)
+                        <span class="d-inline-flex align-items-center gap-2 text-success fw-semibold">
+                            <span class="rounded-circle flex-shrink-0 bg-success" style="width: 8px; height: 8px;"></span>
+                            <span>นับแล้ว (Counted)</span>
                         </span>
-                        <span class="d-inline-flex align-items-center text-warning-emphasis fw-semibold">
-                            <span class="d-inline-block rounded-circle bg-warning me-1.5" style="width:8px;height:8px;"></span>หลงคลัง (Wrong Loc)
+                        <span class="d-inline-flex align-items-center gap-2 text-danger fw-semibold">
+                            <span class="rounded-circle flex-shrink-0 bg-danger" style="width: 8px; height: 8px;"></span>
+                            <span>หลงคลัง (Wrong Loc)</span>
                         </span>
                     </div>
                     <div id="shelfSummaryBadge" class="badge rounded-pill bg-white text-muted border px-2.5 py-1 font-monospace" style="font-size: 0.75rem;">
