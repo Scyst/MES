@@ -9,6 +9,7 @@ let searchTimeout;
 document.addEventListener('DOMContentLoaded', () => {
     loadCatalog('ALL'); 
     loadLocations();
+    initMaterialCategories();
 
     const destLocEl = document.getElementById('reqDestLoc');
     if (destLocEl) {
@@ -96,53 +97,45 @@ window.loadLocations = async function() {
     }
 };
 
-const subCategories = {
-    'RM': [
-        { id: 'STEEL', name: 'เหล็ก' },
-        { id: 'PLASTIC', name: 'พลาสติก' },
-        { id: 'CHEMICAL', name: 'เคมีภัณฑ์' },
-        { id: 'PAINT', name: 'สี' },
-        { id: 'BOLT & NUT', name: 'BOLT & NUT' },
-        { id: 'RIVET', name: 'RIVET' },
-        { id: 'OTHER', name: 'อื่นๆ' }
-    ],
-    'PKG': [
-        { id: 'BOX', name: 'กล่องกระดาษ' },
-        { id: 'PALLET', name: 'พาเลท' },
-        { id: 'LABEL', name: 'ฉลาก/สติ๊กเกอร์' },
-        { id: 'KEY', name: 'KEY' },
-        { id: 'BBS', name: 'BBS' },
-        { id: 'HANDLE', name: 'HANDLE' },
-        { id: 'PLASTIC BAG', name: 'PLASTIC BAG' },
-        { id: 'FOAM', name: 'FOAM' },
-        { id: 'PVC LINER', name: 'PVC LINER' },
-        { id: 'TRIUM', name: 'TRIUM' },
-        { id: 'GASSTUT', name: 'GASSTUT' },
-        { id: 'CASTER', name: 'CASTER (ล้อ)' },
-        { id: 'PLASTIC SLIDE LOCK', name: 'PLASTIC SLIDE LOCK' },
-        { id: 'PEARL COTTON', name: 'PEARL COTTON' },
-        { id: 'MANUAL', name: 'MANUAL (คู่มือ)' },
-        { id: 'OTHER', name: 'อื่นๆ' }
-    ],
-    'CON': [
-        { id: 'ACC', name: 'อุปกรณ์ประกอบ' },
-        { id: '5S', name: 'อุปกรณ์ 5ส.' },
-        { id: 'PROD', name: 'สิ้นเปลืองไลน์ผลิต' },
-        { id: 'OFFICE', name: 'เครื่องเขียน' },
-        { id: 'PPE', name: 'อุปกรณ์เซฟตี้' }
-    ],
-    'SP': [
-        { id: 'MECHANICAL', name: 'อะไหล่เครื่องกล' },
-        { id: 'ELECTRICAL', name: 'อะไหล่ไฟฟ้า' },
-        { id: 'OTHER', name: 'อื่นๆ' }
-    ],
-    'TOOL': [
-        { id: 'HANDTOOL', name: 'เครื่องมือช่าง' },
-        { id: 'MACHINE', name: 'เครื่องจักร' }
-    ],
-    'FG': [ { id: 'STANDARD', name: 'สินค้าสำเร็จรูปมาตรฐาน' } ],
-    'SEMI': [ { id: 'STANDARD', name: 'สินค้าระหว่างผลิต' } ]
-};
+let subCategories = {};
+
+async function initMaterialCategories() {
+    try {
+        const catData = await loadMaterialCategories();
+        if (catData && catData.sub_types) {
+            subCategories = catData.sub_types;
+        }
+        
+        // Dynamically append chips for any other categories present in database
+        const mainCatContainer = document.querySelector('.category-chip')?.parentElement;
+        if (mainCatContainer && catData && catData.categories) {
+            const existingTypes = new Set();
+            mainCatContainer.querySelectorAll('.category-chip').forEach(btn => {
+                existingTypes.add(btn.getAttribute('data-category'));
+            });
+            
+            catData.categories.forEach(cat => {
+                if (!existingTypes.has(cat.type) && cat.type !== 'UNCLASSIFIED') {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-outline-primary category-chip text-nowrap';
+                    btn.setAttribute('data-category', cat.type);
+                    btn.style.scrollSnapAlign = 'start';
+                    btn.onclick = function() { filterCategory(cat.type, this); };
+                    btn.innerHTML = `<i class="${cat.icon || 'fas fa-tag'}"></i> ${escapeHTML(cat.type)}`;
+                    mainCatContainer.appendChild(btn);
+                    existingTypes.add(cat.type);
+                }
+            });
+        }
+
+        if (currentMainCategory && currentMainCategory !== 'ALL') {
+            renderSubCategories(currentMainCategory);
+        }
+    } catch (e) {
+        console.warn('Failed to load dynamic categories in materialReq', e);
+    }
+}
 
 let currentMainCategory = 'ALL';
 let currentSubCategory = 'ALL';
@@ -168,8 +161,9 @@ window.filterCategory = function(category, element) {
 
 function renderSubCategories(mainCat) {
     const container = document.getElementById('subCategoryContainer');
+    if (!container) return;
     
-    if (mainCat === 'ALL' || !subCategories[mainCat] || subCategories[mainCat].length === 0) {
+    if (mainCat === 'ALL' || !subCategories[mainCat] || !Array.isArray(subCategories[mainCat]) || subCategories[mainCat].length === 0) {
         container.classList.add('d-none');
         container.classList.remove('d-flex');
         container.innerHTML = '';
@@ -182,7 +176,10 @@ function renderSubCategories(mainCat) {
     let html = `<button type="button" class="btn btn-sm btn-info text-white sub-category-chip active text-nowrap" style="border-radius: 20px;" data-sub="ALL" onclick="filterSubCategory('ALL', this)">รวมทั้งหมด</button>`;
     
     subCategories[mainCat].forEach(sub => {
-        html += `<button type="button" class="btn btn-sm btn-outline-info sub-category-chip text-nowrap" style="border-radius: 20px;" data-sub="${sub.id}" onclick="filterSubCategory('${sub.id}', this)">${sub.name}</button>`;
+        if (sub && sub.id) {
+            const subName = escapeHTML(sub.name || sub.id);
+            html += `<button type="button" class="btn btn-sm btn-outline-info sub-category-chip text-nowrap" style="border-radius: 20px;" data-sub="${escapeHTML(sub.id)}" onclick="filterSubCategory('${escapeHTML(sub.id)}', this)">${subName}</button>`;
+        }
     });
     
     container.innerHTML = html;

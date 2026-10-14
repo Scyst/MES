@@ -6,17 +6,7 @@ let rowsPerPage = 100;
 let totalPages = 1;
 let searchTimer;
 
-const materialSubTypes = {
-    'RM': [{val: 'STEEL', text: 'STEEL (เหล็ก)'}, {val: 'PLASTIC', text: 'PLASTIC (พลาสติก)'}, {val: 'CHEMICAL', text: 'CHEMICAL (เคมีภัณฑ์)'}, {val: 'PAINT', text: 'PAINT (สี)'}, {val: 'BOLT & NUT', text: 'BOLT & NUT'}, {val: 'RIVET', text: 'RIVET'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
-    'PKG': [{val: 'BOX', text: 'BOX (กล่องกระดาษ)'}, {val: 'PALLET', text: 'PALLET (พาเลท)'}, {val: 'LABEL', text: 'LABEL (สติ๊กเกอร์/ฉลาก)'}, {val: 'KEY', text: 'KEY'}, {val: 'BBS', text: 'BBS'}, {val: 'HANDLE', text: 'HANDLE'}, {val: 'PLASTIC BAG', text: 'PLASTIC BAG'}, {val: 'FOAM', text: 'FOAM'}, {val: 'PVC LINER', text: 'PVC LINER'}, {val: 'TRIUM', text: 'TRIUM'}, {val: 'GASSTUT', text: 'GASSTUT'}, {val: 'CASTER', text: 'CASTER (ล้อ)'}, {val: 'PLASTIC SLIDE LOCK', text: 'PLASTIC SLIDE LOCK'}, {val: 'PEARL COTTON', text: 'PEARL COTTON'}, {val: 'MANUAL', text: 'MANUAL (คู่มือ)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
-    'CON': [{val: 'ACC', text: 'ACC (Accessory/อุปกรณ์ประกอบ)'}, {val: '5S', text: '5S (อุปกรณ์ 5ส.)'}, {val: 'PROD', text: 'PROD (สิ้นเปลืองไลน์ผลิต)'}, {val: 'OFFICE', text: 'OFFICE (เครื่องเขียน)'}, {val: 'PPE', text: 'PPE (อุปกรณ์เซฟตี้)'}],
-    'SP': [{val: 'MECHANICAL', text: 'MECHANICAL (อะไหล่เครื่องกล)'}, {val: 'ELECTRICAL', text: 'ELECTRICAL (อะไหล่ไฟฟ้า)'}, {val: 'OTHER', text: 'OTHER (อื่นๆ)'}],
-    'TOOL': [{val: 'HANDTOOL', text: 'HANDTOOL (เครื่องมือช่าง)'}, {val: 'MACHINE', text: 'MACHINE (เครื่องจักร)'}],
-    'FG': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
-    'SEMI': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
-    'WIP': [{val: 'STANDARD', text: 'STANDARD (มาตรฐาน)'}],
-    'OTHER': [{val: 'OTHER', text: 'OTHER (อื่นๆ)'}]
-};
+let materialSubTypes = {};
 
 function resetLedgerFilters() {
     const defaultDate = new Date();
@@ -50,27 +40,39 @@ function updateFilterSubTypeOptions(selectedType) {
     if (!selectedType || selectedType === '' || selectedType === 'ALL') {
         const addedVals = new Set();
         Object.values(materialSubTypes).forEach(subArray => {
-            subArray.forEach(sub => {
-                if (!addedVals.has(sub.val)) {
-                    addedVals.add(sub.val);
-                    const opt = document.createElement('option');
-                    opt.value = sub.val;
-                    opt.textContent = sub.text;
-                    subTypeSelect.appendChild(opt);
-                }
-            });
+            if (Array.isArray(subArray)) {
+                subArray.forEach(sub => {
+                    if (sub && sub.val && !addedVals.has(sub.val)) {
+                        addedVals.add(sub.val);
+                        const opt = document.createElement('option');
+                        opt.value = sub.val;
+                        opt.textContent = sub.text || sub.name || sub.val;
+                        subTypeSelect.appendChild(opt);
+                    }
+                });
+            }
         });
-    } else if (materialSubTypes[selectedType]) {
+    } else if (materialSubTypes[selectedType] && Array.isArray(materialSubTypes[selectedType])) {
         materialSubTypes[selectedType].forEach(sub => {
-            const opt = document.createElement('option');
-            opt.value = sub.val;
-            opt.textContent = sub.text;
-            subTypeSelect.appendChild(opt);
+            if (sub && sub.val) {
+                const opt = document.createElement('option');
+                opt.value = sub.val;
+                opt.textContent = sub.text || sub.name || sub.val;
+                subTypeSelect.appendChild(opt);
+            }
         });
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const catData = await loadMaterialCategories();
+        if (catData && catData.sub_types) {
+            materialSubTypes = catData.sub_types;
+        }
+    } catch (e) {
+        console.warn('Failed to load dynamic categories in stockLedger', e);
+    }
     updateFilterSubTypeOptions('ALL');
     loadLocations();
     loadLedgerData();

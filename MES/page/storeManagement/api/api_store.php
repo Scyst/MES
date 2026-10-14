@@ -1860,6 +1860,7 @@ try {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e;
             }
+            break;
         case 'get_zone_health_metrics':
             require_once __DIR__ . '/zone_health_helper.php';
             $healthData = getZoneHealthMetrics($pdo);
@@ -1867,6 +1868,131 @@ try {
                 'success' => true,
                 'overall' => $healthData['overall'],
                 'zones' => $healthData['zones']
+            ];
+            break;
+
+        case 'get_material_categories':
+            $stmt = $pdo->query("
+                SELECT DISTINCT 
+                    UPPER(LTRIM(RTRIM(material_type))) as material_type, 
+                    UPPER(LTRIM(RTRIM(material_sub_type))) as material_sub_type
+                FROM dbo.ITEMS WITH (NOLOCK)
+                WHERE is_active = 1 
+                  AND material_type IS NOT NULL 
+                  AND LTRIM(RTRIM(material_type)) != ''
+                ORDER BY material_type, material_sub_type
+            ");
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $labelMap = [
+                'STEEL' => 'เหล็ก',
+                'PLASTIC' => 'พลาสติก',
+                'CHEMICAL' => 'เคมีภัณฑ์',
+                'PAINT' => 'สี',
+                'BOLT & NUT' => 'BOLT & NUT',
+                'RIVET' => 'RIVET',
+                'OTHER' => 'อื่นๆ',
+                'BOX' => 'กล่องกระดาษ',
+                'PALLET' => 'พาเลท',
+                'LABEL' => 'สติ๊กเกอร์/ฉลาก',
+                'KEY' => 'KEY',
+                'BBS' => 'BBS',
+                'HANDLE' => 'HANDLE',
+                'PLASTIC BAG' => 'PLASTIC BAG',
+                'FOAM' => 'FOAM',
+                'PVC LINER' => 'PVC LINER',
+                'TRIUM' => 'TRIUM',
+                'GASSTUT' => 'GASSTUT',
+                'CASTER' => 'CASTER (ล้อ)',
+                'PLASTIC SLIDE LOCK' => 'PLASTIC SLIDE LOCK',
+                'PEARL COTTON' => 'PEARL COTTON',
+                'MANUAL' => 'คู่มือ',
+                'ACC' => 'อุปกรณ์ประกอบ',
+                '5S' => 'อุปกรณ์ 5ส.',
+                'PROD' => 'สิ้นเปลืองไลน์ผลิต',
+                'OFFICE' => 'เครื่องเขียน',
+                'PPE' => 'อุปกรณ์เซฟตี้',
+                'MECHANICAL' => 'อะไหล่เครื่องกล',
+                'ELECTRICAL' => 'อะไหล่ไฟฟ้า',
+                'HANDTOOL' => 'เครื่องมือช่าง',
+                'MACHINE' => 'เครื่องจักร',
+                'STANDARD' => 'มาตรฐาน',
+                'UNCLASSIFIED' => 'ยังไม่ระบุหมวดหมู่'
+            ];
+
+            $mainTypeMeta = [
+                'RM' => ['name' => 'วัตถุดิบ (Raw Material)', 'icon' => 'fas fa-cubes'],
+                'PKG' => ['name' => 'บรรจุภัณฑ์ (Packaging)', 'icon' => 'fas fa-box'],
+                'CON' => ['name' => 'วัสดุสิ้นเปลือง (Consumables)', 'icon' => 'fas fa-pump-soap'],
+                'SP' => ['name' => 'อะไหล่ (Spare Parts)', 'icon' => 'fas fa-cogs'],
+                'TOOL' => ['name' => 'เครื่องมือ (Tools)', 'icon' => 'fas fa-wrench'],
+                'FG' => ['name' => 'สินค้าสำเร็จรูป (Finished Goods)', 'icon' => 'fas fa-check-circle'],
+                'SEMI' => ['name' => 'สินค้าระหว่างผลิต (Semi-FG)', 'icon' => 'fas fa-boxes'],
+                'OTHER' => ['name' => 'อื่น ๆ (Other)', 'icon' => 'fas fa-ellipsis-h'],
+                'UNCLASSIFIED' => ['name' => 'รอจัดหมวดหมู่ (Unclassified)', 'icon' => 'fas fa-question-circle']
+            ];
+
+            $groupedSubTypes = [];
+            $allSubTypesSet = [];
+            $typesPresent = [];
+
+            foreach ($rows as $r) {
+                $mType = $r['material_type'];
+                $sSub = $r['material_sub_type'];
+                
+                if (!isset($groupedSubTypes[$mType])) {
+                    $groupedSubTypes[$mType] = [];
+                    $typesPresent[$mType] = true;
+                }
+
+                if (!empty($sSub)) {
+                    $thName = $labelMap[$sSub] ?? $sSub;
+                    $displayText = ($thName !== $sSub && strpos($thName, $sSub) === false) 
+                        ? "{$sSub} ({$thName})" 
+                        : (strpos($thName, '(') !== false ? $thName : ($thName === $sSub ? $sSub : "{$sSub} ({$thName})"));
+                    
+                    $subObj = [
+                        'id' => $sSub,
+                        'val' => $sSub,
+                        'name' => $thName,
+                        'text' => $displayText
+                    ];
+                    
+                    $groupedSubTypes[$mType][] = $subObj;
+                    
+                    if (!isset($allSubTypesSet[$sSub])) {
+                        $allSubTypesSet[$sSub] = $subObj;
+                    }
+                }
+            }
+
+            $categories = [];
+            foreach ($mainTypeMeta as $t => $meta) {
+                if (isset($typesPresent[$t])) {
+                    $categories[] = [
+                        'type' => $t,
+                        'name' => $meta['name'],
+                        'icon' => $meta['icon']
+                    ];
+                }
+            }
+            foreach ($typesPresent as $t => $val) {
+                if (!isset($mainTypeMeta[$t])) {
+                    $categories[] = [
+                        'type' => $t,
+                        'name' => $t,
+                        'icon' => 'fas fa-tag'
+                    ];
+                }
+            }
+
+            $response = [
+                'success' => true,
+                'data' => [
+                    'categories' => $categories,
+                    'sub_types' => $groupedSubTypes,
+                    'all_sub_types' => array_values($allSubTypesSet)
+                ]
             ];
             break;
 

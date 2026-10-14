@@ -101,17 +101,17 @@
 
 > **เป้าหมาย:** แก้หนี้ทางเทคนิคตาม `STORE_MANAGEMENT_DOC.md` ข้อ 5 นำหมวดหมู่ย่อยออกจาก Hardcoded
 
-- [ ] **2.1 Database Taxonomy & Central API**
-  - [ ] ออกแบบตาราง Master หรือ View ดึงหมวดหมู่ย่อยจาก `dbo.ITEMS` แบบ Dynamic
-  - [ ] สร้าง Action `get_material_categories` ใน `api_store.php` พร้อม Memory Cache
+- [x] **2.1 Database Taxonomy & Central API**
+  - [x] ออกแบบดึงหมวดหมู่ย่อยจาก `dbo.ITEMS` แบบ Dynamic พร้อมจัดกลุ่มตาม `material_type`
+  - [x] สร้าง Action `get_material_categories` ใน `api_store.php` พร้อมแมปชื่อภาษาไทยและรหัสมาตรฐาน
   - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/api/api_store.php`
 
-- [ ] **2.2 Unified Frontend Consumption (ปรับปรุง 4 ไฟล์หลัก)**
-  - [ ] สร้างฟังก์ชันกลาง `loadMaterialCategories()` ใน `script/storeCommon.js`
-  - [ ] ปรับปรุง [materialReq.php](materialReq.php) & [materialReq.js](script/materialReq.js)
-  - [ ] ปรับปรุง [inventoryDashboard.js](script/inventoryDashboard.js)
-  - [ ] ปรับปรุง [stockLedger.js](script/stockLedger.js)
-  - [ ] ทดสอบความเข้ากันได้ของตัวกรอง (Filters) ทุกหน้าจอว่าแสดงผลหมวดหมู่ตรงกัน 100%
+- [x] **2.2 Unified Frontend Consumption (ปรับปรุง 4 ไฟล์หลัก)**
+  - [x] สร้างฟังก์ชันกลาง `loadMaterialCategories()` ใน `script/storeCommon.js` พร้อม sessionStorage Cache
+  - [x] ปรับปรุง [materialReq.php](materialReq.php) & [materialReq.js](script/materialReq.js) รองรับชิปหมวดหมู่หลักและหมวดหมู่ย่อยแบบ Dynamic
+  - [x] ปรับปรุง [inventoryDashboard.js](script/inventoryDashboard.js) โหลดตัวกรองหมวดหมู่ย่อยแบบ Dynamic
+  - [x] ปรับปรุง [stockLedger.js](script/stockLedger.js) โหลดตัวกรองหมวดหมู่ย่อยแบบ Dynamic
+  - [x] ทดสอบความเข้ากันได้ของตัวกรอง (Filters) ทุกหน้าจอผ่าน E2E Puppeteer ว่าแสดงผลหมวดหมู่ตรงกัน 100%
 
 ---
 
@@ -151,3 +151,4 @@
 | **2026-10-12** | Antigravity | ปรับปรุง UX/UI: เพิ่มปุ่มย้อนกลับไปเปลี่ยน Location, รวมแถบสแกนให้กะทัดรัด, แปลงข้อความอธิบายเป็น Tooltips ลดพื้นที่แนวตั้ง | `cycleCount.php`, `cycleCount.js`, `ROADMAP.md` |
 | **2026-10-14** | Antigravity | ปรับปรุง Shelf Legend Spacing & Red Status Indicator, พัฒนาและทดสอบ Phase 1.2 End-to-End Manual Approval Verification (UAT): อัปเดต `sp_Store_ApproveCycleCount` ซิงค์ location_id ป้องกัน underflow, แสดง Serial No. ใน Approval Modal, ตรวจสอบ Onhand, Tag Qty และ Stock Ledger ครบถ้วน | `cycleCount.php`, `cycleCount.js`, `inventoryDashboard.js`, `api_store.php`, `inventory.php`, `db_changes.md`, `ROADMAP.md` |
 | **2026-10-14** | Antigravity | พัฒนา Phase 1.3: Inventory Record Accuracy (IRA) & Zone Health Metrics: สร้าง `zone_health_helper.php`, เพิ่ม Action `get_zone_health_metrics`, เพิ่มแถบ Warehouse IRA Mini-Bar, Grade Badges A/B/C บน Visual Map, และ Interactive Zone Health Drilldown Modal พร้อมคำแนะนำเกรดสต็อก | `zone_health_helper.php`, `api_store.php`, `cycleCount.php`, `cycleCount.js`, `ROADMAP.md` |
+| **2026-10-14** | Antigravity | พัฒนา Phase 2: Refactoring Master Data Architecture (2.1 & 2.2): สร้าง Dynamic Taxonomy API `get_material_categories`, สร้าง `loadMaterialCategories()` พร้อม sessionStorage caching ใน `storeCommon.js`, ลบ Hardcoded Sub-types ใน `inventoryDashboard.js`, `stockLedger.js`, `materialReq.js` และทดสอบ E2E สมบูรณ์ | `api_store.php`, `storeCommon.js`, `inventoryDashboard.js`, `stockLedger.js`, `materialReq.js`, `ROADMAP.md` |

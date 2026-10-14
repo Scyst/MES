@@ -126,3 +126,46 @@ function formatDateForPrint(dateStr) {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     return `${parts[2].padStart(2, '0')}-${months[parseInt(parts[1], 10) - 1]}-${parts[0].substring(2)}`;
 }
+
+let _materialCategoriesCache = null;
+
+/**
+ * Load dynamic material taxonomy categories and sub-types from database.
+ * Caches in sessionStorage to eliminate redundant network roundtrips.
+ * @param {boolean} forceRefresh - If true, bypasses cache and fetches fresh data
+ * @returns {Promise<{categories: Array, sub_types: Object, all_sub_types: Array}>}
+ */
+async function loadMaterialCategories(forceRefresh = false) {
+    if (!forceRefresh && _materialCategoriesCache) {
+        return _materialCategoriesCache;
+    }
+
+    if (!forceRefresh) {
+        try {
+            const cached = sessionStorage.getItem('mes_material_categories_cache');
+            if (cached) {
+                _materialCategoriesCache = JSON.parse(cached);
+                return _materialCategoriesCache;
+            }
+        } catch (e) {
+            console.warn('sessionStorage not accessible or corrupted', e);
+        }
+    }
+
+    try {
+        const res = await fetchAPI('get_material_categories', 'GET');
+        if (res && res.success && res.data) {
+            _materialCategoriesCache = res.data;
+            try {
+                sessionStorage.setItem('mes_material_categories_cache', JSON.stringify(res.data));
+            } catch (e) {
+                console.warn('Failed to cache material categories in sessionStorage', e);
+            }
+            return _materialCategoriesCache;
+        }
+    } catch (e) {
+        console.error('Failed to load material categories from server', e);
+    }
+
+    return _materialCategoriesCache || { categories: [], sub_types: {}, all_sub_types: [] };
+}
