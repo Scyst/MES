@@ -204,6 +204,10 @@ function renderShelfMonitor(details) {
                     badgeHtml = '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5" style="font-size: 0.68rem;"><i class="fas fa-check me-1"></i>นับแล้ว</span>';
                     qtyHtml = `<div class="fw-bold text-success" style="font-size: 0.78rem;"><span class="text-secondary fw-normal">นับได้:</span> ${d.actual_qty} ชิ้น</div>`;
                 }
+            } else if (d.found_location_name) {
+                stateClass = 'found-elsewhere';
+                badgeHtml = `<span class="badge rounded-pill bg-info-subtle text-info-emphasis border border-info-subtle px-1.5 py-0.5" style="font-size: 0.68rem;" title="ตรวจพบหลงไปอยู่ที่ ${escapeHTML(d.found_location_name)} แล้ว"><i class="fas fa-map-marker-alt me-1"></i>อยู่ที่ ${escapeHTML(d.found_location_name)}</span>`;
+                qtyHtml = `<div class="text-info-emphasis fw-semibold" style="font-size: 0.72rem;"><i class="fas fa-info-circle me-1"></i>พบที่คลังอื่นแล้ว</div>`;
             }
 
             // Mask tag if not counted yet to keep blind count on shelf monitor too
@@ -248,18 +252,35 @@ function renderLists(details) {
     details.forEach(d => {
         if (d.actual_qty === null) {
             pendingCount++;
+            let badgeStatusHtml = `
+                <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1" style="font-size: 0.75rem;">
+                    <i class="fas fa-clock me-1"></i>รอนับ
+                </span>`;
+            let foundNoticeHtml = '';
+
+            if (d.found_location_name) {
+                badgeStatusHtml = `
+                    <span class="badge rounded-pill bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1" style="font-size: 0.75rem;">
+                        <i class="fas fa-map-marker-alt me-1"></i>พบที่ ${escapeHTML(d.found_location_name)} แล้ว
+                    </span>`;
+                foundNoticeHtml = `
+                    <div class="mt-1.5 pt-1.5 border-top border-info-subtle text-info-emphasis small d-flex align-items-center gap-1.5" style="font-size: 0.75rem;">
+                        <i class="fas fa-check-circle text-info"></i>
+                        <span>ตรวจพบหลงไปอยู่ที่ <strong>${escapeHTML(d.found_location_name)}</strong> แล้ว (ไม่ต้องเดินหา)</span>
+                    </div>`;
+            }
+
             pendingList.innerHTML += `
-                <div class="part-card pending shadow-xs">
+                <div class="part-card pending shadow-xs ${d.found_location_name ? 'border-info-subtle' : ''}">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="fw-bold text-dark fs-6">${escapeHTML(d.item_no)}</div>
-                        <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1" style="font-size: 0.75rem;">
-                            <i class="fas fa-clock me-1"></i>รอนับ
-                        </span>
+                        ${badgeStatusHtml}
                     </div>
                     <div class="d-flex align-items-center gap-1.5 text-muted small mt-1 font-monospace">
                         <i class="fas fa-qrcode text-secondary"></i>
                         <span>${maskTag(d.tag_serial_no)}</span>
                     </div>
+                    ${foundNoticeHtml}
                 </div>
             `;
         } else {
@@ -683,6 +704,7 @@ async function refreshSessionDetails() {
         const res = await req.json();
         if (res.success) {
             renderLists(res.details);
+            renderShelfMonitor(res.details);
         }
     } catch (e) {}
 }

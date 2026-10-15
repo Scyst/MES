@@ -145,4 +145,38 @@ ALTER TABLE dbo.LOCATIONS ADD zone_name NVARCHAR(50) NULL;
 - **Negative Variance Safety:** Protects against negative variance underflow with `CASE WHEN current_qty + @diff_qty < 0 THEN 0 ELSE current_qty + @diff_qty END`.
 - **Ledger Auditability:** Preserves `STOCK_TRANSACTIONS` logging with `reference_id = 'CC-' + CAST(@count_id AS VARCHAR)` and transaction types `ADJ_IN` / `ADJ_OUT`.
 
+---
+
+## 2026-10-14 — Store Management: Two-Tier Blind Recount Protocol (Phase 3.2)
+
+**Agent:** Antigravity  
+**Feature:** Phase 3.2 Two-Tier Blind Recount Protocol & Strict Manual Decision
+
+### Columns Added to `dbo.INVENTORY_CYCLE_COUNTS`
+
+| Column | Type | Notes |
+|---|---|---|
+| `is_flagged_recount` | BIT NOT NULL DEFAULT 0 | 1 = ตรวจพบยอดดิฟสูง เข้าเกณฑ์ต้องนับซ้ำรอบที่ 2 (Tier 2 Blind Recount) |
+| `count1_qty` | DECIMAL(18,4) NULL | ยอดที่ตรวจนับได้ในรอบแรก |
+| `count1_user_id` | INT NULL | รหัสพนักงานที่ตรวจนับรอบแรก |
+| `count1_at` | DATETIME NULL | เวลาที่ตรวจนับรอบแรก |
+| `recount_qty` | DECIMAL(18,4) NULL | ยอดที่ตรวจนับได้ในรอบที่ 2 (Blind Recount) |
+| `recount_user_id` | INT NULL | รหัสพนักงานที่ตรวจนับรอบที่ 2 |
+| `recount_at` | DATETIME NULL | เวลาที่ตรวจนับรอบที่ 2 |
+| `manager_choice` | VARCHAR(30) NULL | ทางเลือกที่ผู้จัดการตัดสินใจ ('USE_COUNT_1', 'USE_RECOUNT', 'KEEP_SYSTEM') |
+| `decision_reason` | NVARCHAR(255) NULL | เหตุผลกำกับการตัดสินใจของผู้จัดการ |
+
+---
+
+## 2026-10-15 — Store Management: Wrong Location Pallet Relocation & Approval Fix
+
+**Agent:** Antigravity  
+**Feature:** Automatic Relocation Synchronization for Wrong Location Pallets
+
+### Stored Procedure Updated: `dbo.sp_Store_ApproveCycleCount`
+- **Physical Tag Relocation:** When `@final_actual > 0` (e.g., pallet found in wrong location B with physical count), updates `RM_SERIAL_TAGS.location_id = @location_id` and sets `current_qty = @final_actual` directly to match the counted quantity on the pallet.
+- **Relocation Preservation on Missing Tag Approval:** When `@final_actual = 0` (e.g., location A writes off missing tag), only sets `current_qty = 0` if `RM_SERIAL_TAGS.location_id == @location_id`. If the tag has already been discovered and transferred to another location, preserves the tag's new location and quantity intact.
+- **Backend Variance Correction:** Updated `cc_scan_tag` so wrong location tags record `system_qty = 0.0` and `variance_qty = +actual_qty`, ensuring surplus entries are pushed to `INVENTORY_CYCLE_COUNTS` for Manager Approval.
+
+
 

@@ -615,6 +615,10 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
             background-color: #fef2f2 !important;
             border-color: #fca5a5 !important;
         }
+        .shelf-pallet-cell.found-elsewhere {
+            background-color: #f0f9ff !important;
+            border-color: #7dd3fc !important;
+        }
     </style>
 </head>
 
@@ -973,6 +977,10 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                         <span class="d-inline-flex align-items-center gap-1.5 text-danger fw-semibold">
                             <span class="rounded-circle flex-shrink-0 bg-danger" style="width: 8px; height: 8px;"></span>
                             <span>หลงคลัง (Wrong Loc)</span>
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-1.5 text-info-emphasis fw-semibold">
+                            <span class="rounded-circle flex-shrink-0 bg-info" style="width: 8px; height: 8px;"></span>
+                            <span>พบที่คลังอื่นแล้ว</span>
                         </span>
                     </div>
                     <div id="shelfSummaryBadge" class="badge rounded-pill bg-white text-muted border px-2.5 py-1 font-monospace" style="font-size: 0.75rem;">

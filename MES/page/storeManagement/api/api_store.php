@@ -1643,6 +1643,7 @@ try {
                 $pdo->commit();
 
                 // Return session and remaining items to count (without showing system_qty to front-end to enforce Blind Count)
+                // Also check if any uncounted items have been scanned as found in another location's session
                 $stmtGet = $pdo->prepare("
                     SELECT 
                         d.id as detail_id,
@@ -1650,9 +1651,22 @@ try {
                         i.sap_no,
                         ISNULL(i.part_no, i.sap_no) AS item_no,
                         d.actual_qty,
-                        d.is_wrong_location
+                        d.is_wrong_location,
+                        d.remark,
+                        other_found.found_location_name
                     FROM dbo.CYCLE_COUNT_DETAILS d WITH (NOLOCK)
                     JOIN dbo.ITEMS i WITH (NOLOCK) ON d.item_id = i.item_id
+                    OUTER APPLY (
+                        SELECT TOP 1 loc.location_name AS found_location_name
+                        FROM dbo.CYCLE_COUNT_DETAILS d2 WITH (NOLOCK)
+                        JOIN dbo.CYCLE_COUNT_SESSIONS s2 WITH (NOLOCK) ON d2.session_id = s2.session_id
+                        JOIN dbo.LOCATIONS loc WITH (NOLOCK) ON s2.location_id = loc.location_id
+                        WHERE d2.tag_serial_no = d.tag_serial_no
+                          AND d2.is_wrong_location = 1
+                          AND d2.actual_qty > 0
+                          AND s2.session_id != d.session_id
+                        ORDER BY d2.id DESC
+                    ) other_found
                     WHERE d.session_id = ?
                 ");
                 $stmtGet->execute([$session_id]);
@@ -1786,16 +1800,20 @@ try {
                     throw new Exception("ไม่พบแท็ก/พาเลท $tag_no ในระบบเลย");
                 }
 
-                // Add to details as wrong location
-                $variance = $actual_qty - (float)$foundTag['current_qty'];
+                // In this location, system expectation was 0 (unexpected surplus / ของหลงคลัง)
+                $system_qty = 0.0;
+                $variance = $actual_qty - $system_qty;
+                $default_remark = 'ของหลงคลัง (พบในตำแหน่งนี้)';
+                $final_remark = $remark ? $remark : $default_remark;
+
                 $stmtIns = $pdo->prepare("
                     INSERT INTO dbo.CYCLE_COUNT_DETAILS (session_id, tag_serial_no, item_id, system_qty, actual_qty, variance_qty, remark, is_wrong_location)
                     VALUES (?, ?, ?, ?, ?, ?, ?, 1)
                 ");
                 $stmtIns->execute([
                     $session_id, $tag_no, $foundTag['item_id'], 
-                    $foundTag['current_qty'], $actual_qty, $variance, 
-                    $remark ? $remark : 'Found in Wrong Location'
+                    $system_qty, $actual_qty, $variance, 
+                    $final_remark
                 ]);
 
                 // Transition session to IN_PROGRESS
@@ -1815,10 +1833,29 @@ try {
             $pdo->beginTransaction();
             try {
                 // Any details with NULL actual_qty are missing. Set them to 0.
+                // If the item was discovered elsewhere as wrong location, record an automated informative remark
                 $stmtMiss = $pdo->prepare("
-                    UPDATE dbo.CYCLE_COUNT_DETAILS 
-                    SET actual_qty = 0, variance_qty = 0 - system_qty, remark = ? 
-                    WHERE session_id = ? AND actual_qty IS NULL
+                    UPDATE d
+                    SET d.actual_qty = 0, 
+                        d.variance_qty = 0 - d.system_qty, 
+                        d.remark = CASE 
+                            WHEN other_found.found_location_name IS NOT NULL 
+                            THEN N'ไม่พบที่นี่ (ตรวจพบหลงไปอยู่ที่ ' + other_found.found_location_name + N' แล้ว)'
+                            ELSE ? 
+                        END
+                    FROM dbo.CYCLE_COUNT_DETAILS d
+                    OUTER APPLY (
+                        SELECT TOP 1 loc.location_name AS found_location_name
+                        FROM dbo.CYCLE_COUNT_DETAILS d2 WITH (NOLOCK)
+                        JOIN dbo.CYCLE_COUNT_SESSIONS s2 WITH (NOLOCK) ON d2.session_id = s2.session_id
+                        JOIN dbo.LOCATIONS loc WITH (NOLOCK) ON s2.location_id = loc.location_id
+                        WHERE d2.tag_serial_no = d.tag_serial_no
+                          AND d2.is_wrong_location = 1
+                          AND d2.actual_qty > 0
+                          AND s2.session_id != d.session_id
+                        ORDER BY d2.id DESC
+                    ) other_found
+                    WHERE d.session_id = ? AND d.actual_qty IS NULL
                 ");
                 $stmtMiss->execute([$missing_reason, $session_id]);
 
@@ -1844,21 +1881,21 @@ try {
                         CASE 
                             WHEN (ABS(d.variance_qty) * COALESCE(NULLIF(i.StandardPrice, 0), NULLIF(i.Cost_Total, 0), 0) >= 10000.0)
                               OR (d.system_qty > 0 AND (ABS(d.variance_qty) / d.system_qty >= 0.10) AND ABS(d.variance_qty) >= 5.0)
-                              OR (d.system_qty = 0 AND d.actual_qty >= 5.0)
+                              OR (d.system_qty = 0 AND d.is_wrong_location = 0 AND d.actual_qty >= 5.0)
                             THEN 'FLAGGED_FOR_RECOUNT'
                             ELSE 'PENDING'
                         END,
                         CASE 
                             WHEN (ABS(d.variance_qty) * COALESCE(NULLIF(i.StandardPrice, 0), NULLIF(i.Cost_Total, 0), 0) >= 10000.0)
                               OR (d.system_qty > 0 AND (ABS(d.variance_qty) / d.system_qty >= 0.10) AND ABS(d.variance_qty) >= 5.0)
-                              OR (d.system_qty = 0 AND d.actual_qty >= 5.0)
+                              OR (d.system_qty = 0 AND d.is_wrong_location = 0 AND d.actual_qty >= 5.0)
                             THEN ISNULL(d.remark, N'') + N' [ตรวจพบผลต่างสูง ล็อกต้องนับซ้ำ Tier 2 Blind Recount]'
                             ELSE ISNULL(d.remark, N'ผลตรวจนับจากระบบ Cycle Count (Mobile)')
                         END,
                         CASE 
                             WHEN (ABS(d.variance_qty) * COALESCE(NULLIF(i.StandardPrice, 0), NULLIF(i.Cost_Total, 0), 0) >= 10000.0)
                               OR (d.system_qty > 0 AND (ABS(d.variance_qty) / d.system_qty >= 0.10) AND ABS(d.variance_qty) >= 5.0)
-                              OR (d.system_qty = 0 AND d.actual_qty >= 5.0)
+                              OR (d.system_qty = 0 AND d.is_wrong_location = 0 AND d.actual_qty >= 5.0)
                             THEN 1
                             ELSE 0
                         END,
