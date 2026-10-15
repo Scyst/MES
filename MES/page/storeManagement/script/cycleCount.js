@@ -997,26 +997,81 @@ async function backToLocationSelect() {
     }
 
     // Case 2: User has counted some items (> 0 items)
-    const result = await Swal.fire({
-        title: 'ออกจากหน้าตรวจนับ?',
-        html: `คุณได้ทำการตรวจนับไปแล้ว <b>${currentCountedCount} รายการ</b><br><span class="text-muted small">ต้องการบันทึกสถานะ 'กำลังเช็ค (In Progress)' หรือยกเลิกเพื่อรีเซ็ตนับใหม่?</span>`,
-        icon: 'question',
-        showCancelButton: true,
-        showDenyButton: true,
-        confirmButtonColor: '#0d6efd',
-        denyButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="fas fa-save me-1"></i>ใช่, บันทึกและออก',
-        denyButtonText: '<i class="fas fa-undo-alt me-1"></i>ยกเลิกการนับ (รีเซ็ต)',
-        cancelButtonText: 'นับต่อ'
+    let userChoice = null; // 'save' | 'reset' | 'stay'
+
+    await Swal.fire({
+        html: `
+            <div class="py-1">
+                <div class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle mb-2" style="width: 44px; height: 44px;">
+                    <i class="fas fa-sign-out-alt fs-5"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1" style="font-size: 1.05rem;">ออกจากหน้าตรวจนับ?</h6>
+                <div class="text-muted small mb-3">
+                    ตรวจนับแล้ว <span class="badge bg-primary-subtle text-primary fw-bold px-2 py-0.5">${currentCountedCount} รายการ</span>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-primary w-100 py-2 px-1 rounded-3 fw-semibold shadow-xs d-flex align-items-center justify-content-center gap-1.5" id="btnSwalSave" style="font-size: 0.82rem;">
+                            <i class="fas fa-save"></i>
+                            <span class="text-nowrap">บันทึกและออก</span>
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-danger w-100 py-2 px-1 rounded-3 fw-semibold shadow-xs d-flex align-items-center justify-content-center gap-1.5 bg-white" id="btnSwalReset" style="font-size: 0.82rem;">
+                            <i class="fas fa-undo-alt"></i>
+                            <span class="text-nowrap">รีเซ็ตเริ่มใหม่</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-light text-secondary border w-100 py-1.5 rounded-3 fw-medium small d-flex align-items-center justify-content-center gap-1" id="btnSwalStay" style="font-size: 0.8rem;">
+                    <span>นับต่อในคลังนี้</span>
+                </button>
+            </div>
+        `,
+        showConfirmButton: false,
+        showCancelButton: false,
+        showCloseButton: true,
+        customClass: {
+            popup: 'rounded-4 shadow-lg p-3',
+            htmlContainer: 'm-0 p-0'
+        },
+        didOpen: () => {
+            const btnSave = document.getElementById('btnSwalSave');
+            const btnReset = document.getElementById('btnSwalReset');
+            const btnStay = document.getElementById('btnSwalStay');
+
+            if (btnSave) {
+                btnSave.addEventListener('click', () => {
+                    userChoice = 'save';
+                    Swal.close();
+                });
+            }
+            if (btnReset) {
+                btnReset.addEventListener('click', () => {
+                    userChoice = 'reset';
+                    Swal.close();
+                });
+            }
+            if (btnStay) {
+                btnStay.addEventListener('click', () => {
+                    userChoice = 'stay';
+                    Swal.close();
+                });
+            }
+        }
     });
 
-    if (result.isDenied) {
+    if (userChoice === 'reset') {
         await executeResetSession();
         return;
     }
 
-    if (!result.isConfirmed) return;
+    if (userChoice !== 'save') {
+        // User clicked 'stay', closed the modal, or clicked outside
+        return;
+    }
 
     // User confirmed to leave in-progress
     if (currentLocationId) {
@@ -1065,22 +1120,60 @@ async function resetCountingSession() {
         return;
     }
 
-    const countedText = currentCountedCount > 0 
-        ? `คุณได้ทำการตรวจนับไปแล้ว <b>${currentCountedCount} รายการ</b><br>` 
-        : '';
+    let confirmReset = false;
 
-    const confirm = await Swal.fire({
-        title: 'ยกเลิกการตรวจนับ?',
-        html: `${countedText}<span class="text-danger fw-semibold">ข้อมูลที่นับไปแล้วทั้งหมดในเซสชั่นนี้จะถูกล้างทิ้ง</span><br><span class="text-muted small">และคลังนี้จะกลับสู่สถานะ 'รอนับ' เพื่อให้เริ่มนับใหม่ได้ทันที</span>`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="fas fa-undo-alt me-1"></i>ยืนยันยกเลิกและรีเซ็ต',
-        cancelButtonText: 'กลับไปนับต่อ'
+    await Swal.fire({
+        html: `
+            <div class="py-1">
+                <div class="d-inline-flex align-items-center justify-content-center bg-danger-subtle text-danger rounded-circle mb-2" style="width: 44px; height: 44px;">
+                    <i class="fas fa-undo-alt fs-5"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1" style="font-size: 1.05rem;">รีเซ็ตการตรวจนับ?</h6>
+                <div class="text-muted small mb-3">
+                    ${currentCountedCount > 0 ? `ข้อมูลที่นับแล้ว <span class="badge bg-danger-subtle text-danger fw-bold px-2 py-0.5">${currentCountedCount} รายการ</span> จะถูกล้างทิ้งทั้งหมด` : 'คลังนี้จะกลับสู่สถานะรอนับใหม่'}
+                </div>
+
+                <div class="row g-2 mb-1">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-danger w-100 py-2 px-1 rounded-3 fw-semibold shadow-xs d-flex align-items-center justify-content-center gap-1.5" id="btnSwalConfirmReset" style="font-size: 0.84rem;">
+                            <i class="fas fa-trash-alt"></i>
+                            <span class="text-nowrap">ยืนยันรีเซ็ต</span>
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn btn-light text-secondary border w-100 py-2 px-1 rounded-3 fw-medium small d-flex align-items-center justify-content-center gap-1" id="btnSwalCancelReset" style="font-size: 0.84rem;">
+                            <span>นับต่อ</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `,
+        showConfirmButton: false,
+        showCancelButton: false,
+        showCloseButton: true,
+        customClass: {
+            popup: 'rounded-4 shadow-lg p-3',
+            htmlContainer: 'm-0 p-0'
+        },
+        didOpen: () => {
+            const btnConfirm = document.getElementById('btnSwalConfirmReset');
+            const btnCancel = document.getElementById('btnSwalCancelReset');
+            if (btnConfirm) {
+                btnConfirm.addEventListener('click', () => {
+                    confirmReset = true;
+                    Swal.close();
+                });
+            }
+            if (btnCancel) {
+                btnCancel.addEventListener('click', () => {
+                    confirmReset = false;
+                    Swal.close();
+                });
+            }
+        }
     });
 
-    if (!confirm.isConfirmed) return;
+    if (!confirmReset) return;
 
     await executeResetSession();
 }
