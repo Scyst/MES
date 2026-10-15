@@ -45,10 +45,22 @@ import {
 } from '../data/content/LiveAuditLessons';
 
 import { 
-  Iso9001Lesson, 
-  Iso14001Lesson, 
-  Iso45001Lesson, 
-  Iso17025Lesson 
+  Iso9001HlsLesson,
+  Iso9001RiskLesson,
+  Iso9001OperationsLesson,
+  Iso9001AuditCapaLesson,
+  Iso14001ContextLegalLesson,
+  Iso14001AspectsLifecycleLesson,
+  Iso14001WasteChemicalLesson,
+  Iso14001EmergencyAuditLesson,
+  Iso45001LeadershipWorkerLesson,
+  Iso45001HazardHierarchyLesson,
+  Iso45001OperationsLotoLesson,
+  Iso45001EmergencyInvestigationLesson,
+  Iso17025GeneralStructureLesson,
+  Iso17025ResourcesEnvironmentLesson,
+  Iso17025MethodsUncertaintyLesson,
+  Iso17025TraceabilityQaLesson
 } from '../data/content/IsoMasteryLessons';
 
 export default function CourseContent({ courseId, moduleContent }) {
@@ -74,11 +86,33 @@ export default function CourseContent({ courseId, moduleContent }) {
     'sys-integration': <SysIntegration />,
     'team-workflow': <TeamWorkflow />,
 
-    // ISO Systems
-    'iso-9001-mastery': <Iso9001Lesson />,
-    'iso-14001-mastery': <Iso14001Lesson />,
-    'iso-45001-mastery': <Iso45001Lesson />,
-    'iso-17025-mastery': <Iso17025Lesson />,
+    // ISO 9001:2015
+    'iso-9001-hls': <Iso9001HlsLesson />,
+    'iso-9001-risk': <Iso9001RiskLesson />,
+    'iso-9001-operations': <Iso9001OperationsLesson />,
+    'iso-9001-audit': <Iso9001AuditCapaLesson />,
+    'iso-9001-mastery': <Iso9001HlsLesson />, // Fallback alias
+
+    // ISO 14001:2015
+    'iso-14001-context': <Iso14001ContextLegalLesson />,
+    'iso-14001-aspects': <Iso14001AspectsLifecycleLesson />,
+    'iso-14001-waste': <Iso14001WasteChemicalLesson />,
+    'iso-14001-emergency': <Iso14001EmergencyAuditLesson />,
+    'iso-14001-mastery': <Iso14001ContextLegalLesson />, // Fallback alias
+
+    // ISO 45001:2018
+    'iso-45001-leadership': <Iso45001LeadershipWorkerLesson />,
+    'iso-45001-hazard': <Iso45001HazardHierarchyLesson />,
+    'iso-45001-operations': <Iso45001OperationsLotoLesson />,
+    'iso-45001-emergency': <Iso45001EmergencyInvestigationLesson />,
+    'iso-45001-mastery': <Iso45001LeadershipWorkerLesson />, // Fallback alias
+
+    // ISO/IEC 17025:2017
+    'iso-17025-general': <Iso17025GeneralStructureLesson />,
+    'iso-17025-resources': <Iso17025ResourcesEnvironmentLesson />,
+    'iso-17025-methods': <Iso17025MethodsUncertaintyLesson />,
+    'iso-17025-traceability': <Iso17025TraceabilityQaLesson />,
+    'iso-17025-mastery': <Iso17025GeneralStructureLesson />, // Fallback alias
 
     // PPAP & Advanced Manufacturing Quality
     'ppap-pfmea': <PpapPfmeaLesson />,

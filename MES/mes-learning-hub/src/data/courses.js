@@ -11,8 +11,23 @@ export const courses = [
     modules: [
       {
         id: 'm1',
-        title: 'ISO 9001:2015 มาตรฐานระบบบริหารงานคุณภาพ & การรับมือ Auditor',
-        content: 'iso-9001-mastery'
+        title: '1. โครงสร้าง HLS, บริบทองค์กร (Clause 4) และการเป็นผู้นำ (Clause 5)',
+        content: 'iso-9001-hls'
+      },
+      {
+        id: 'm2',
+        title: '2. การบริหารความเสี่ยง โอกาส และโครงสร้างสนับสนุน (Clause 6 & 7)',
+        content: 'iso-9001-risk'
+      },
+      {
+        id: 'm3',
+        title: '3. การควบคุมการปฏิบัติการและการตรวจสอบย้อนกลับ (Clause 8)',
+        content: 'iso-9001-operations'
+      },
+      {
+        id: 'm4',
+        title: '4. การประเมินสมรรถนะ การตรวจประเมินภายใน และ CAPA (Clause 9 & 10)',
+        content: 'iso-9001-audit'
       }
     ]
   },
@@ -27,8 +42,23 @@ export const courses = [
     modules: [
       {
         id: 'm1',
-        title: 'ISO 14001:2015 มาตรฐานระบบการจัดการสิ่งแวดล้อม & Eco-Factory',
-        content: 'iso-14001-mastery'
+        title: '1. บริบทสิ่งแวดล้อม นโยบาย และกฎหมายอุตสาหกรรม (Clause 4 & 5)',
+        content: 'iso-14001-context'
+      },
+      {
+        id: 'm2',
+        title: '2. การชี้บ่งประเด็นสิ่งแวดล้อมและมุมมองวงจรชีวิต (Clause 6)',
+        content: 'iso-14001-aspects'
+      },
+      {
+        id: 'm3',
+        title: '3. การจัดการของเสีย สารเคมี และ Eco-Factory (Clause 8.1)',
+        content: 'iso-14001-waste'
+      },
+      {
+        id: 'm4',
+        title: '4. แผนซ้อมรับมือเหตุฉุกเฉินและการมุ่งสู่ Net Zero (Clause 8.2, 9 & 10)',
+        content: 'iso-14001-emergency'
       }
     ]
   },
@@ -43,8 +73,23 @@ export const courses = [
     modules: [
       {
         id: 'm1',
-        title: 'ISO 45001:2018 ระบบการจัดการอาชีวอนามัยและความปลอดภัย',
-        content: 'iso-45001-mastery'
+        title: '1. นโยบายความปลอดภัยและการมีส่วนร่วมของพนักงาน (Clause 4 & 5)',
+        content: 'iso-45001-leadership'
+      },
+      {
+        id: 'm2',
+        title: '2. การชี้บ่งอันตรายและลำดับขั้นการควบคุม (Clause 6)',
+        content: 'iso-45001-hazard'
+      },
+      {
+        id: 'm3',
+        title: '3. การควบคุมความปลอดภัยหน้างาน LOTO & Work Permit (Clause 8.1)',
+        content: 'iso-45001-operations'
+      },
+      {
+        id: 'm4',
+        title: '4. แผนฉุกเฉิน การสืบสวนอุบัติเหตุ และ Near-Miss (Clause 8.2 & 10.2)',
+        content: 'iso-45001-emergency'
       }
     ]
   },
@@ -59,8 +104,23 @@ export const courses = [
     modules: [
       {
         id: 'm1',
-        title: 'ISO/IEC 17025:2017 ความสามารถของห้องปฏิบัติการทดสอบและสอบเทียบ',
-        content: 'iso-17025-mastery'
+        title: '1. ความเป็นกลาง การรักษาความลับ และโครงสร้างห้องแล็บ (Clause 4 & 5)',
+        content: 'iso-17025-general'
+      },
+      {
+        id: 'm2',
+        title: '2. ทรัพยากร บุคลากร และการควบคุมสภาพแวดล้อมห้องปฏิบัติการ (Clause 6)',
+        content: 'iso-17025-resources'
+      },
+      {
+        id: 'm3',
+        title: '3. การทวนสอบวิธีทดสอบและความไม่แน่นอนในการวัด (Clause 7.1 - 7.6)',
+        content: 'iso-17025-methods'
+      },
+      {
+        id: 'm4',
+        title: '4. ความสอบกลับได้ทางมาตรวิทยาและการประกันคุณภาพผลแล็บ (Clause 7.7 & 8)',
+        content: 'iso-17025-traceability'
       }
     ]
   },

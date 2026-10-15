@@ -47,7 +47,7 @@ export function CustomerNpiEcnLesson() {
           การเปิดตัวผลิตภัณฑ์ใหม่ (NPI) และการควบคุม ECN (SP-PDD-003)
         </h2>
         <p className="text-lg text-slate-300 leading-relaxed m-0">
-          กฎเกณฑ์การพัฒนาผลิตภัณฑ์ใหม่ผ่าน Phase-Gate, การวิเคราะห์ความเสี่ยง Team Feasibility Risk Analysis, การคำนวณขีดความสามารถกระบวนการ ($C_{pk} \ge 1.33$) และข้อห้ามการเปลี่ยนแบบโดยพลการ
+          กฎเกณฑ์การพัฒนาผลิตภัณฑ์ใหม่ผ่าน Phase-Gate, การวิเคราะห์ความเสี่ยง Team Feasibility Risk Analysis, การคำนวณขีดความสามารถกระบวนการ (Cpk ≥ 1.33) และข้อห้ามการเปลี่ยนแบบโดยพลการ
         </p>
       </div>
 

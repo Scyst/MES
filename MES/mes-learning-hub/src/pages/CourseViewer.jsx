@@ -3,31 +3,42 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { courses } from '../data/courses';
 import { FiArrowLeft, FiCheckCircle, FiCircle } from 'react-icons/fi';
 import CourseContent from '../components/CourseContent';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 export default function CourseViewer() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const course = courses.find(c => c.id === courseId);
   
-  const [activeModuleId, setActiveModuleId] = useState('');
+  const [activeModuleId, setActiveModuleId] = useState(() => course?.modules?.[0]?.id || '');
 
+  // Synchronize activeModuleId when course changes
   useEffect(() => {
     if (course && course.modules.length > 0) {
-      setActiveModuleId(course.modules[0].id);
+      const exists = course.modules.some(m => m.id === activeModuleId);
+      if (!exists) {
+        setActiveModuleId(course.modules[0].id);
+      }
     }
-  }, [course]);
+  }, [courseId, course, activeModuleId]);
 
   if (!course) {
     return (
-      <div className="viewer-not-found">
-        <h2>Course not found</h2>
-        <button onClick={() => navigate('/')}>Back to Catalog</button>
+      <div className="viewer-not-found p-12 text-center bg-slate-900 min-h-[50vh] flex flex-col items-center justify-center">
+        <h2 className="text-2xl font-bold text-white mb-4">ไม่พบหลักสูตรที่ระบุ (Course not found)</h2>
+        <button 
+          onClick={() => navigate('/')}
+          className="px-6 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-xl font-bold transition-colors shadow-lg shadow-fuchsia-600/20"
+        >
+          กลับสู่หน้าแคตตาล็อก
+        </button>
       </div>
     );
   }
 
-  const activeModule = course.modules.find(m => m.id === activeModuleId);
-  const currentIndex = course.modules.findIndex(m => m.id === activeModuleId);
+  // Resolve active module safely, fallback to first module if not found
+  const activeModule = course.modules.find(m => m.id === activeModuleId) || course.modules[0];
+  const currentIndex = course.modules.findIndex(m => m.id === activeModule?.id);
 
   return (
     <div className="course-viewer">
@@ -35,26 +46,32 @@ export default function CourseViewer() {
       <div className="viewer-sidebar">
         <div className="sidebar-header">
           <button className="back-btn" onClick={() => navigate('/')}>
-            <FiArrowLeft /> Back
+            <FiArrowLeft /> Back to Courses
           </button>
           <h3>{course.title}</h3>
+          <div className="text-xs text-slate-400 mt-1">
+            {course.modules.length} บทเรียน · {course.duration}
+          </div>
         </div>
         <div className="module-list">
-          {course.modules.map((module, index) => (
-            <div 
-              key={module.id} 
-              className={`module-item ${activeModuleId === module.id ? 'active' : ''}`}
-              onClick={() => setActiveModuleId(module.id)}
-            >
-              <div className="module-icon">
-                {activeModuleId === module.id ? <FiCheckCircle className="icon-active" /> : <FiCircle />}
+          {course.modules.map((module, index) => {
+            const isSelected = activeModule?.id === module.id;
+            return (
+              <div 
+                key={module.id} 
+                className={`module-item ${isSelected ? 'active' : ''}`}
+                onClick={() => setActiveModuleId(module.id)}
+              >
+                <div className="module-icon">
+                  {isSelected ? <FiCheckCircle className="icon-active" /> : <FiCircle />}
+                </div>
+                <div className="module-info">
+                  <span className="module-number">Lesson {index + 1}</span>
+                  <span className="module-title">{module.title}</span>
+                </div>
               </div>
-              <div className="module-info">
-                <span className="module-number">Lesson {index + 1}</span>
-                <span className="module-title">{module.title}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -64,7 +81,11 @@ export default function CourseViewer() {
           <h2>{activeModule?.title}</h2>
         </div>
         <div className="content-body">
-          {activeModule && <CourseContent courseId={course.id} moduleContent={activeModule.content} />}
+          {activeModule && (
+            <ErrorBoundary key={activeModule.id} moduleName={activeModule.title}>
+              <CourseContent courseId={course.id} moduleContent={activeModule.content} />
+            </ErrorBoundary>
+          )}
           
           <div className="flex justify-between items-center mt-12 pt-6 border-t border-slate-800">
             {currentIndex > 0 ? (
