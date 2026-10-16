@@ -176,7 +176,22 @@ ALTER TABLE dbo.LOCATIONS ADD zone_name NVARCHAR(50) NULL;
 ### Stored Procedure Updated: `dbo.sp_Store_ApproveCycleCount`
 - **Physical Tag Relocation:** When `@final_actual > 0` (e.g., pallet found in wrong location B with physical count), updates `RM_SERIAL_TAGS.location_id = @location_id` and sets `current_qty = @final_actual` directly to match the counted quantity on the pallet.
 - **Relocation Preservation on Missing Tag Approval:** When `@final_actual = 0` (e.g., location A writes off missing tag), only sets `current_qty = 0` if `RM_SERIAL_TAGS.location_id == @location_id`. If the tag has already been discovered and transferred to another location, preserves the tag's new location and quantity intact.
-- **Backend Variance Correction:** Updated `cc_scan_tag` so wrong location tags record `system_qty = 0.0` and `variance_qty = +actual_qty`, ensuring surplus entries are pushed to `INVENTORY_CYCLE_COUNTS` for Manager Approval.
+---
+
+## 2026-10-16 — Store Management: Two-Sided Atomic Relocation & Status Revive
+
+**Agent:** Antigravity  
+**Feature:** Single-Click Two-Sided Atomic Relocation in Cycle Count Approval & Tag Revival
+
+### Stored Procedure Updated: `dbo.sp_Store_ApproveCycleCount`
+- **Two-Sided Atomic Stock Relocation:** When a tag is discovered at location B but recorded at location A (`@tag_current_loc != @location_id`), approving location B executes an atomic relocation:
+  1. Deducts `@final_actual` from location A (`sp_UpdateOnhandBalance -@final_actual`, logged as `RELOC_OUT`).
+  2. Adds `@final_actual` to location B (`sp_UpdateOnhandBalance +@final_actual`, logged as `RELOC_IN`).
+  3. Updates `RM_SERIAL_TAGS`: `location_id = @location_id`, `current_qty = @final_actual`, `status = 'AVAILABLE'`.
+  4. Automatically resolves pending cycle count records for this tag at location A (`status = 'APPROVED'`, `manager_choice = 'AUTO_RELOCATED'`), eliminating double-approvals and zeroing total warehouse stock impact (net stock change = 0).
+  5. Includes safety guard against double-deduction if location A was already previously approved.
+- **Tag Status Revival (`status = 'AVAILABLE'`):** Whenever a tag is approved with `@final_actual > 0` (including PRD returned tags or normal counts), its status is restored to `'AVAILABLE'`, making it immediately visible and eligible for Material Requisition.
+
 
 
 

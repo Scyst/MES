@@ -589,3 +589,122 @@
         </div>
     </div>
 </div>
+
+<!-- PRD Material Return Modal (ระบบรับคืนวัตถุดิบจากฝ่ายผลิต) -->
+<div class="modal fade" id="prdReturnModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+            <div class="modal-header bg-primary text-white py-2.5 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center justify-content-center bg-white text-primary rounded-circle" style="width: 34px; height: 34px;">
+                        <i class="fas fa-undo-alt" style="font-size: 1rem;"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0">รับคืนวัตถุดิบจากฝ่ายผลิต (PRD Material Return)</h6>
+                        <span class="text-white-50" style="font-size: 0.72rem;">สแกนแท็กเดิมที่เคยตัดจ่ายไปแล้ว เพื่อนำกลับเข้าคลัง Store และเปิดสถานะ AVAILABLE ทันที</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3 bg-light">
+                <!-- Scan Input Box -->
+                <div class="card border-0 shadow-xs mb-3" style="border-radius: 10px;">
+                    <div class="card-body p-3">
+                        <label class="form-label small fw-bold text-dark d-flex align-items-center justify-content-between mb-1.5">
+                            <span><i class="fas fa-qrcode text-primary me-1"></i> สแกน QR หรือพิมพ์รหัสแท็ก/พาเลท</span>
+                            <span class="text-muted" style="font-size: 0.72rem;">(รองรับการยิงบาร์โค้ดหรือกล้องมือถือ)</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-barcode"></i></span>
+                            <input type="text" id="prdReturnScanInput" class="form-control form-control-lg border-start-0 font-monospace" placeholder="เช่น RM2604080004 หรือสแกน QR..." autocomplete="off">
+                            <button class="btn btn-outline-secondary px-3" type="button" id="btnTogglePrdCamera" onclick="togglePrdReturnCamera()" title="เปิด/ปิดกล้องสแกน">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <button class="btn btn-primary px-3 fw-bold" type="button" id="btnSearchPrdTag" onclick="searchPrdReturnTag()">
+                                <i class="fas fa-search me-1"></i> ตรวจสอบ
+                            </button>
+                        </div>
+                        <div id="prdReturnCameraReader" class="mt-2 rounded overflow-hidden d-none" style="width: 100%; max-height: 240px;"></div>
+                    </div>
+                </div>
+
+                <!-- Tag Details Card (Hidden until tag loaded) -->
+                <div id="prdReturnDetailsCard" class="card border-0 shadow-xs mb-3 d-none" style="border-radius: 10px; overflow: hidden;">
+                    <div class="card-header bg-white py-2 px-3 border-bottom d-flex align-items-center justify-content-between">
+                        <div class="fw-bold text-dark small d-flex align-items-center gap-1.5">
+                            <i class="fas fa-pallet text-primary"></i> ข้อมูลแท็กที่ค้นพบ
+                        </div>
+                        <span id="prdReturnStatusBadge" class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-0.5" style="font-size: 0.72rem;">WIP</span>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-md-6">
+                                <div class="text-muted small" style="font-size: 0.75rem;">รหัสชิ้นงาน / Item No.</div>
+                                <div class="fw-bold fs-6 text-primary" id="prdItemNo">-</div>
+                                <div class="text-secondary small text-truncate" id="prdItemDesc" style="font-size: 0.78rem;">-</div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-muted small" style="font-size: 0.75rem;">Serial No. / Tag ID</div>
+                                <div class="font-monospace fw-bold text-dark" id="prdSerialNo">-</div>
+                                <div class="text-muted" style="font-size: 0.72rem;" id="prdPalletNo">-</div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-muted small" style="font-size: 0.75rem;">เบิกจ่ายล่าสุดเมื่อ</div>
+                                <div class="fw-semibold text-secondary small" id="prdLastIssuedAt">-</div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info border-info-subtle py-2 px-3 mb-3 rounded-3 d-flex align-items-center gap-2" style="font-size: 0.78rem;">
+                            <i class="fas fa-info-circle text-info fs-5 flex-shrink-0"></i>
+                            <div>
+                                เมื่อกดยืนยันรับคืน ระบบจะนำยอดเข้า Onhand คลัง Store และเปลี่ยนสถานะแท็กเป็น <b>AVAILABLE</b> ทันที เพื่อให้นำไปเบิกจ่ายต่อได้โดยไม่ต้องพิมพ์แท็กใหม่
+                            </div>
+                        </div>
+
+                        <!-- Inputs for Return -->
+                        <div class="row g-2">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-dark mb-1">
+                                    <i class="fas fa-map-marker-alt text-danger me-1"></i> รับเข้าคลัง / ตำแหน่ง (Location) <span class="text-danger">*</span>
+                                </label>
+                                <select id="prdReturnLocationSelect" class="form-select form-select-sm fw-semibold">
+                                    <option value="">-- เลือกคลังที่เก็บสินค้า --</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-dark mb-1">
+                                    <i class="fas fa-boxes text-success me-1"></i> จำนวนที่รับคืนจริง (QTY) <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" step="any" min="0.001" id="prdReturnQtyInput" class="form-control fw-bold text-end fs-6 text-success" placeholder="ระบุยอดรับคืน">
+                                    <span class="input-group-text bg-light text-muted small">ชิ้น</span>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-dark mb-1">
+                                    <i class="fas fa-comment-dots text-secondary me-1"></i> เหตุผลการรับคืน / หมายเหตุ
+                                </label>
+                                <input type="text" id="prdReturnReasonInput" class="form-control form-control-sm" placeholder="เช่น งานเหลือจากไลน์ผลิต, แผนผลิตยกเลิก, เบิกเกิน ฯลฯ" value="งานเหลือจากไลน์ผลิต นำส่งคืนคลัง Store">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white border-top py-2.5 px-3 d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary btn-sm fw-semibold px-3" onclick="resetPrdReturnForm()">ล้างข้อมูล</button>
+                        <button type="button" class="btn btn-success btn-sm fw-bold px-4 shadow-xs" id="btnConfirmPrdReturn" onclick="submitPrdReturn()">
+                            <i class="fas fa-check-circle me-1"></i> ยืนยันรับคืนเข้า Store
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Empty prompt when no tag scanned -->
+                <div id="prdReturnEmptyPrompt" class="text-center py-4 text-muted">
+                    <i class="fas fa-qrcode fa-3x opacity-25 mb-2"></i>
+                    <div class="small fw-semibold">กรุณาสแกนหรือพิมพ์หมายเลขแท็กด้านบนเพื่อดึงข้อมูล</div>
+                </div>
+            </div>
+            <div class="modal-footer bg-white border-top py-2 px-3">
+                <button type="button" class="btn btn-secondary btn-sm fw-bold px-4" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+</div>

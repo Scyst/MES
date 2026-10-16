@@ -332,6 +332,7 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
     </script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
+    <script src="script/storeApprovalCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeApprovalCommon.js'); ?>"></script>
     <script src="script/inventoryDashboard.js?v=<?php echo filemtime(__DIR__ . '/script/inventoryDashboard.js'); ?>" defer></script>
 </body>
 </html>

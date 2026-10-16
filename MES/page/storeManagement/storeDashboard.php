@@ -478,6 +478,7 @@ $pageIcon = "fas fa-store";
     <script src="../../utils/libs/html5-qrcode.min.js"></script>
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
+    <script src="script/storeApprovalCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeApprovalCommon.js'); ?>"></script>
     <script src="script/storeDashboard.js?v=<?php echo filemtime(__DIR__ . '/script/storeDashboard.js'); ?>" defer></script>
 </body>
 </html>

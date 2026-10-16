@@ -31,7 +31,7 @@ try {
         'submit_requisition', 'accept_order', 'confirm_issue', 'reject_order', 'submit_k2_pr', 
         'upload_image', 'update_item_info', 'cancel_my_order',
         'cc_start_session', 'cc_scan_tag', 'cc_finish_session', 'cc_cancel_empty_session', 'cc_reset_session', 'update_location_zones',
-        'cc_submit_recount'
+        'cc_submit_recount', 'process_prd_return'
     ];
     
     if (in_array($action, $writeActions) && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -2293,6 +2293,137 @@ try {
             $response = ['success' => true, 'message' => 'ดำเนินการเรียบร้อยแล้ว'];
             break;
 
+        case 'check_prd_return_tag':
+            $serial_no = trim($_REQUEST['serial_no'] ?? '');
+            if ($serial_no === '') {
+                throw new Exception("กรุณาระบุหรือสแกนหมายเลขแท็ก QR");
+            }
+
+            $stmtTag = $pdo->prepare("
+                SELECT 
+                    t.tag_id, t.serial_no, t.item_id, t.current_qty, t.qty_per_pallet, t.pallet_no, 
+                    t.location_id, t.status, t.received_date, t.po_number,
+                    i.sap_no, ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description,
+                    l.location_name,
+                    (SELECT TOP 1 FORMAT(transaction_timestamp, 'dd/MM/yyyy HH:mm') 
+                     FROM dbo.TAG_TRANSACTIONS WITH (NOLOCK) 
+                     WHERE serial_no = t.serial_no AND transaction_type IN ('FORCE_ISSUE', 'ISSUE_STORE') 
+                     ORDER BY transaction_id DESC) AS last_issued_at
+                FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
+                JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON t.location_id = l.location_id
+                WHERE t.serial_no = ?
+            ");
+            $stmtTag->execute([$serial_no]);
+            $tag = $stmtTag->fetch(PDO::FETCH_ASSOC);
+
+            if (!$tag) {
+                throw new Exception("ไม่พบแท็กหมายเลข $serial_no ในฐานข้อมูล");
+            }
+
+            // Fetch active Store locations for selection
+            $stmtLoc = $pdo->query("
+                SELECT location_id, location_name, ISNULL(zone_name, N'อื่น ๆ') AS zone_name
+                FROM dbo.LOCATIONS WITH (NOLOCK)
+                WHERE location_type = 'STORE' AND is_active = 1
+                ORDER BY location_name
+            ");
+            $locations = $stmtLoc->fetchAll(PDO::FETCH_ASSOC);
+
+            $response = [
+                'success' => true,
+                'data' => $tag,
+                'locations' => $locations
+            ];
+            break;
+
+        case 'process_prd_return':
+            $serial_no = trim($_POST['serial_no'] ?? '');
+            $location_id = (int)($_POST['location_id'] ?? 0);
+            $return_qty = isset($_POST['return_qty']) && is_numeric($_POST['return_qty']) ? (float)$_POST['return_qty'] : -1;
+            $reason = trim($_POST['reason'] ?? 'งานเหลือจากไลน์ผลิต นำส่งคืนคลัง Store');
+            $userId = $_SESSION['user']['id'];
+
+            if ($serial_no === '' || $location_id <= 0 || $return_qty <= 0) {
+                throw new Exception("ข้อมูลไม่ครบถ้วน (กรุณาระบุแท็ก, คลังปลายทาง และจำนวนรับคืนที่ถูกต้อง)");
+            }
+
+            $pdo->beginTransaction();
+            try {
+                // Lock and verify tag
+                $stmtLock = $pdo->prepare("
+                    SELECT t.tag_id, t.serial_no, t.item_id, t.location_id, t.current_qty, t.status,
+                           i.sap_no, ISNULL(i.part_no, i.sap_no) AS item_no, i.part_description
+                    FROM dbo.RM_SERIAL_TAGS t WITH (UPDLOCK)
+                    JOIN dbo.ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                    WHERE t.serial_no = ?
+                ");
+                $stmtLock->execute([$serial_no]);
+                $tag = $stmtLock->fetch(PDO::FETCH_ASSOC);
+
+                if (!$tag) {
+                    throw new Exception("ไม่พบแท็ก $serial_no ในระบบ");
+                }
+
+                $stmtLoc = $pdo->prepare("SELECT location_name FROM dbo.LOCATIONS WHERE location_id = ? AND location_type = 'STORE'");
+                $stmtLoc->execute([$location_id]);
+                $locName = $stmtLoc->fetchColumn();
+
+                if (!$locName) {
+                    throw new Exception("ไม่พบคลังปลายทางที่เลือก (Location ID: $location_id)");
+                }
+
+                // 1. Update RM_SERIAL_TAGS to target location, set return qty, and revive status to AVAILABLE
+                $stmtUpdTag = $pdo->prepare("
+                    UPDATE dbo.RM_SERIAL_TAGS 
+                    SET location_id = ?, 
+                        current_qty = ?, 
+                        status = 'AVAILABLE' 
+                    WHERE serial_no = ?
+                ");
+                $stmtUpdTag->execute([$location_id, $return_qty, $serial_no]);
+
+                // 2. Increase Inventory Onhand in target Store location
+                $stmtOnhand = $pdo->prepare("EXEC dbo.sp_UpdateOnhandBalance @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+                $stmtOnhand->execute([$tag['item_id'], $location_id, $return_qty]);
+
+                // 3. Insert STOCK_TRANSACTIONS
+                $notes = "รับคืนจากฝ่ายผลิต (PRD Return): " . ($reason ?: 'งานเหลือจากไลน์');
+                $stmtStockTrans = $pdo->prepare("
+                    INSERT INTO dbo.STOCK_TRANSACTIONS (
+                        parameter_id, quantity, transaction_type, 
+                        from_location_id, to_location_id, created_by_user_id, 
+                        reference_id, notes, transaction_timestamp
+                    ) VALUES (?, ?, 'RETURN_PRD', NULL, ?, ?, ?, ?, GETDATE())
+                ");
+                $stmtStockTrans->execute([
+                    $tag['item_id'], $return_qty, $location_id, $userId,
+                    $serial_no, $notes
+                ]);
+
+                // 4. Insert TAG_TRANSACTIONS
+                $stmtTagTrans = $pdo->prepare("
+                    INSERT INTO dbo.TAG_TRANSACTIONS (
+                        serial_no, transaction_type, quantity_changed, 
+                        reference_id, created_by_user_id, notes, transaction_timestamp
+                    ) VALUES (?, 'RETURN_PRD', ?, ?, ?, ?, GETDATE())
+                ");
+                $stmtTagTrans->execute([
+                    $serial_no, $return_qty, 'PRD-RETURN', $userId, $notes
+                ]);
+
+                $pdo->commit();
+
+                $response = [
+                    'success' => true,
+                    'message' => "รับคืนแท็ก {$serial_no} ({$tag['item_no']}) เข้าคลัง {$locName} จำนวน " . number_format($return_qty) . " ชิ้น เรียบร้อยแล้ว (สถานะเป็น AVAILABLE สำหรับเบิกจ่าย)"
+                ];
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
         case 'get_pending_counts':
             $sql = "
                 SELECT 
@@ -2304,10 +2435,16 @@ try {
                     l.location_name,
                     ISNULL(e.name_th, u.username) AS counter_name,
                     ISNULL(e1.name_th, u1.username) AS counter1_name,
-                    ISNULL(er.name_th, ur.username) AS recounter_name
+                    ISNULL(er.name_th, ur.username) AS recounter_name,
+                    t.location_id AS orig_location_id,
+                    ol.location_name AS orig_location_name,
+                    t.status AS tag_status,
+                    CASE WHEN c.serial_no IS NOT NULL AND t.location_id IS NOT NULL AND t.location_id != c.location_id AND c.actual_qty > 0 THEN 1 ELSE 0 END AS is_relocation
                 FROM dbo.INVENTORY_CYCLE_COUNTS c WITH (NOLOCK)
                 JOIN dbo.ITEMS i WITH (NOLOCK) ON c.item_id = i.item_id
                 JOIN dbo.LOCATIONS l WITH (NOLOCK) ON c.location_id = l.location_id
+                LEFT JOIN dbo.RM_SERIAL_TAGS t WITH (NOLOCK) ON c.serial_no = t.serial_no
+                LEFT JOIN dbo.LOCATIONS ol WITH (NOLOCK) ON t.location_id = ol.location_id
                 LEFT JOIN dbo.USERS u WITH (NOLOCK) ON c.counted_by_user_id = u.id
                 LEFT JOIN dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK) ON u.emp_id = e.emp_id
                 LEFT JOIN dbo.USERS u1 WITH (NOLOCK) ON c.count1_user_id = u1.id

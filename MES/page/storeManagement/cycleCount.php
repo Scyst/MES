@@ -647,11 +647,20 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                     <span class="text-muted lh-2" style="font-size: 0.75rem;">เลือกตำแหน่งเพื่อตรวจนับสต็อก</span>
                                 </div>
                             </div>
-                            <?php if (hasPermission('manage_warehouse')): ?>
-                                <button class="btn btn-sm btn-light border shadow-xs fw-semibold rounded-pill px-2.5 py-1 text-primary d-inline-flex align-items-center gap-1" onclick="openZoneSettingsModal()" title="จัดการโซนคลังสินค้า" style="font-size: 0.78rem;">
-                                    <i class="fas fa-sliders-h text-primary"></i> <span>ตั้งค่าโซน</span>
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                <button class="btn btn-sm btn-outline-primary border shadow-xs fw-semibold rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1.5" onclick="openPrdReturnModal()" title="รับคืนวัตถุดิบ/พาเลทจากฝ่ายผลิต" style="font-size: 0.78rem;">
+                                    <i class="fas fa-undo-alt text-primary"></i> <span>รับของคืนจาก PRD</span>
                                 </button>
-                            <?php endif; ?>
+                                <?php if (hasPermission('manage_warehouse')): ?>
+                                    <button class="btn btn-sm btn-warning border shadow-xs fw-semibold rounded-pill px-2.5 py-1 text-dark d-inline-flex align-items-center gap-1.5 position-relative" onclick="openApprovalModal()" title="อนุมัติการปรับยอด Cycle Count" style="font-size: 0.78rem;">
+                                        <i class="fas fa-clipboard-check"></i> <span>อนุมัติผลนับ</span>
+                                        <span class="badge bg-danger rounded-pill px-1.5 py-0.5 d-none" id="ccPendingApprovalBadge" style="font-size: 0.65rem;">0</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-light border shadow-xs fw-semibold rounded-pill px-2.5 py-1 text-primary d-inline-flex align-items-center gap-1" onclick="openZoneSettingsModal()" title="จัดการโซนคลังสินค้า" style="font-size: 0.78rem;">
+                                        <i class="fas fa-sliders-h text-primary"></i> <span>ตั้งค่าโซน</span>
+                                    </button>
+                                <?php endif; ?>
+                            </div>
                         </div>
 
                         <div class="p-3 flex-grow-1 d-flex flex-column" style="min-height: 0; overflow: hidden;">
@@ -1194,12 +1203,15 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
         </div>
     </div>
 
+    <?php include_once __DIR__ . '/components/InventoryModal.php'; ?>
+
     <!-- API PATH -->
     <script>
         const API_STORE = 'api/api_store.php';
         window.zoneHealthData = <?= json_encode($healthMetrics, JSON_UNESCAPED_UNICODE) ?>;
     </script>
     <script src="script/storeCommon.js?v=<?= time() ?>"></script>
+    <script src="script/storeApprovalCommon.js?v=<?= time() ?>"></script>
     <script src="script/cycleCount.js?v=<?= time() ?>"></script>
             </div> <!-- End container-fluid -->
         </div> <!-- End main-content -->
