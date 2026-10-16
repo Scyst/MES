@@ -152,10 +152,18 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                     <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center flex-shrink-0" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
                                         <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
                                     </button>
+
+                                    <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center flex-shrink-0 d-md-none" onclick="openPrdReturnModal()" style="height: 32px;" title="รับของคืนจาก PRD">
+                                        <i class="fas fa-undo-alt text-primary"></i>
+                                    </button>
                                 </div>
                             </div>
 
                             <div id="actionWrapper" class="d-none d-md-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end mt-2 mt-lg-0">
+
+                                <button class="btn btn-sm btn-outline-primary fw-bold px-2 py-1 rounded shadow-sm" onclick="openPrdReturnModal()" title="รับวัตถุดิบคืนจากฝ่ายผลิต (PRD)">
+                                    <i class="fas fa-undo-alt me-1 text-primary"></i> รับคืนจาก PRD
+                                </button>
 
                                 <button class="btn btn-sm fw-bold px-3 py-1 rounded shadow transition-btn text-white border-0" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7);" onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();">
                                     <i class="fas fa-qrcode me-1"></i> สแกน
@@ -172,6 +180,11 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem; min-width: 250px;">
                                         <li><h6 class="dropdown-header text-dark fw-bold"><i class="fas fa-tasks me-1"></i> จัดการระบบคลัง</h6></li>
+                                        <li>
+                                            <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold text-primary" href="#" onclick="openPrdReturnModal()">
+                                                <span><i class="fas fa-undo-alt text-primary fa-fw me-2"></i> รับของคืนจาก PRD</span>
+                                            </a>
+                                        </li>
                                         <li>
                                             <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="cycleCount.php" target="_blank">
                                                 <span><i class="fas fa-boxes text-info fa-fw me-2"></i> ตรวจนับสต็อก (Stock Check)</span>

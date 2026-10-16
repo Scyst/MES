@@ -183,6 +183,7 @@ $pageIcon = "fas fa-store";
                         <input type="date" id="global_end" class="form-control fw-bold text-primary" onchange="triggerGlobalReload()">
                     </div>
                     <button class="btn btn-primary px-3" onclick="triggerGlobalReload()" title="โหลดข้อมูลใหม่"><i class="fas fa-sync-alt"></i></button>
+                    <button class="btn btn-outline-primary px-2 px-md-3 fw-bold" onclick="openPrdReturnModal()" title="รับวัตถุดิบคืนจากฝ่ายผลิต (PRD)"><i class="fas fa-undo-alt me-1"></i> <span class="d-none d-sm-inline">รับคืน</span> PRD</button>
                     <button id="btnExportData" class="btn btn-success px-3 fw-bold d-none" onclick="exportToExcel()"><i class="fas fa-file-excel me-1"></i> Export</button>
                 </div>
             </div>
