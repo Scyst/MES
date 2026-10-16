@@ -48,8 +48,9 @@ async function checkPendingCycleCountApprovals() {
     }
 }
 
-// Alias for backwards compatibility with inventoryDashboard.js
-const checkPendingApprovals = checkPendingCycleCountApprovals;
+// Alias for backwards compatibility with legacy calls
+window.checkPendingCycleCountApprovals = checkPendingCycleCountApprovals;
+window.checkPendingApprovals = checkPendingCycleCountApprovals;
 
 // ==========================================
 // 2. APPROVAL MODAL & TWO-SIDED RELOCATION

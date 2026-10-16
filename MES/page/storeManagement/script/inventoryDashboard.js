@@ -632,24 +632,7 @@ function updateMainAlertBadge() {
     }
 }
 
-async function checkPendingApprovals() {
-    if (typeof CAN_MANAGE_WH === 'undefined' || !CAN_MANAGE_WH) return;
-    try {
-        const res = await fetchAPI('get_pending_counts', 'GET');
-        const badge = document.getElementById('badgePendingCount');
-        if (res && badge) {
-            if (res.count > 0) {
-                badge.innerText = res.count;
-                badge.classList.remove('d-none');
-            } else {
-                badge.innerText = '0';
-                badge.classList.add('d-none');
-            }
-            updateMainAlertBadge();
-        }
-    } catch (e) { console.error(e); }
-}
-
+// checkPendingApprovals is provided by storeApprovalCommon.js (window.checkPendingApprovals)
 // Cycle count approval and Two-Tier Recount Protocol functions are provided by storeApprovalCommon.js
 // (openApprovalModal, processApproval, openRecountDecisionModal, selectDecisionChoice, submitRecountDecision, submitRecountReject)
 
