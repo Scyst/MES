@@ -9,17 +9,18 @@ import {
   FiLayers, 
   FiCheckCircle, 
   FiBookOpen,
-  FiX
+  FiX,
+  FiCompass
 } from 'react-icons/fi';
 
 const CATEGORIES = [
   'ทั้งหมด',
-  'ISO Systems',
-  'Manufacturing Engineering',
-  'Customer Audits & ESG',
-  'Live QA & Case Studies',
-  'Lean & Leadership',
-  'Software & Security'
+  'เครื่องจักรและวิศวกรรมการผลิต',
+  'โปรแกรมและระบบดิจิทัล',
+  'ขั้นตอนการทำงานและระบบมาตรฐาน',
+  'การตรวจโรงงานและเอกสารลูกค้า',
+  'กรณีศึกษาหน้างานจริง',
+  'การบริหารและการเพิ่มผลผลิต'
 ];
 
 export default function Catalog() {
@@ -65,16 +66,16 @@ export default function Catalog() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-300 text-xs font-semibold uppercase tracking-wider mb-3">
-              <FiCheckCircle className="w-3.5 h-3.5" /> MES Industrial Learning Hub
+              <FiCompass className="w-3.5 h-3.5" /> MES Enterprise Learning Platform
             </div>
             <h1>MES Learning Hub</h1>
-            <p className="subtitle max-w-2xl">
-              ศูนย์รวมหลักสูตรยกระดับทักษะวิศวกรรมการผลิต มาตรฐานระบบ ISO สากล และคู่มือรับมือการตรวจประเมินโรงงาน (Factory Audit Defense)
+            <p className="subtitle max-w-3xl leading-relaxed text-slate-300">
+              ศูนย์รวมองค์ความรู้และคู่มือการปฏิบัติงานสำหรับพนักงานทุกคน: ครอบคลุมการทำงานกับเครื่องจักร, การใช้งานโปรแกรมและระบบดิจิทัล (MES, SAP, Web App), ขั้นตอนและวิธีปฏิบัติงาน (SOP / WI), ระบบเอกสาร, ตลอดจนมาตรฐานวิศวกรรมการผลิตและคุณภาพสากล
             </p>
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="flex items-center gap-3 bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80 shadow-inner">
+          <div className="flex items-center gap-3 bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80 shadow-inner flex-shrink-0">
             <div className="px-3 py-1.5 text-center border-r border-slate-700">
               <div className="text-xl font-black text-fuchsia-400">{courses.length}</div>
               <div className="text-[11px] font-medium text-slate-400">หลักสูตร</div>
@@ -84,8 +85,8 @@ export default function Catalog() {
               <div className="text-[11px] font-medium text-slate-400">บทเรียน</div>
             </div>
             <div className="px-3 py-1.5 text-center">
-              <div className="text-xl font-black text-emerald-400">100%</div>
-              <div className="text-[11px] font-medium text-slate-400">Audit Ready</div>
+              <div className="text-xl font-black text-emerald-400">All Roles</div>
+              <div className="text-[11px] font-medium text-slate-400">ทุกแผนก</div>
             </div>
           </div>
         </div>
@@ -96,10 +97,10 @@ export default function Catalog() {
           <div className="relative max-w-xl">
             <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
             <input 
-              type="text"
+              type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ค้นหาหลักสูตร เช่น ISO, PPAP, PFMEA, Walmart, Lean, ผู้สอน..."
+              placeholder="ค้นหาคู่มือเครื่องจักร, โปรแกรมระบบ, SOP, ขั้นตอนการทำงาน, มาตรฐาน ISO, ผู้สอน..."
               className="w-full bg-slate-800/90 border border-slate-700 text-slate-200 placeholder-slate-400 rounded-xl pl-12 pr-10 py-3 text-sm focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-colors shadow-sm"
             />
             {searchQuery && (
@@ -192,9 +193,9 @@ export default function Catalog() {
       ) : (
         <div className="p-12 text-center bg-slate-800/50 rounded-2xl border border-slate-700 my-8">
           <FiLayers className="w-12 h-12 text-slate-500 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-slate-200 mb-1">ไม่พบหลักสูตรที่ตรงกับเงื่อนไข</h3>
+          <h3 className="text-lg font-bold text-slate-200 mb-1">ไม่พบหลักสูตรหรือคู่มือที่ตรงกับเงื่อนไข</h3>
           <p className="text-sm text-slate-400 max-w-md mx-auto mb-4">
-            ลองปรับเปลี่ยนคำค้นหา หรือเลือกหมวดหมู่อื่นเพื่อดูหลักสูตรทั้งหมด
+            ลองปรับเปลี่ยนคำค้นหา หรือเลือกหมวดหมู่อื่นเพื่อดูหลักสูตรและคู่มือทั้งหมด
           </p>
           <button 
             onClick={() => { setSelectedCategory('ทั้งหมด'); setSearchQuery(''); }}
