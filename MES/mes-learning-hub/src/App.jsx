@@ -2,6 +2,7 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Navbar from './components/layout/Navbar';
 import Catalog from './pages/Catalog';
 import CourseViewer from './pages/CourseViewer';
+import CourseBuilder from './pages/CourseBuilder';
 import CommunityHub from './pages/CommunityHub';
 import CreatePost from './pages/CreatePost';
 import PostDetail from './pages/PostDetail';
@@ -18,6 +19,7 @@ function App() {
             {/* Standard Curriculum Courses */}
             <Route path="/" element={<Catalog />} />
             <Route path="/course/:courseId" element={<CourseViewer />} />
+            <Route path="/admin/course-builder" element={<CourseBuilder />} />
 
             {/* Community-Driven Knowledge Hub */}
             <Route path="/community" element={<CommunityHub />} />

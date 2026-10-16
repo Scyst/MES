@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { courses } from '../data/courses';
+import { getCustomCourses, getCurrentUser } from '../data/communityStore';
 import { 
   FiClock, 
   FiUser, 
@@ -9,7 +10,10 @@ import {
   FiLayers, 
   FiCheckCircle, 
   FiBookOpen,
-  FiX
+  FiX,
+  FiPlus,
+  FiAward,
+  FiStar
 } from 'react-icons/fi';
 
 const CATEGORIES = [
@@ -26,37 +30,43 @@ export default function Catalog() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
   const [searchQuery, setSearchQuery] = useState('');
+  const currentUser = getCurrentUser();
+
+  // Combine static official courses with custom-built and promoted courses
+  const allCourses = useMemo(() => {
+    return [...courses, ...getCustomCourses()];
+  }, []);
 
   // Calculate total modules across all courses
   const totalModulesCount = useMemo(() => {
-    return courses.reduce((acc, c) => acc + (c.modules?.length || 0), 0);
-  }, []);
+    return allCourses.reduce((acc, c) => acc + (c.modules?.length || 0), 0);
+  }, [allCourses]);
 
   // Filtered courses based on category and search query
   const filteredCourses = useMemo(() => {
-    return courses.filter(course => {
+    return allCourses.filter(course => {
       const matchesCategory = selectedCategory === 'ทั้งหมด' || course.category === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch = !q || 
         course.title.toLowerCase().includes(q) ||
         course.description.toLowerCase().includes(q) ||
-        course.instructor.toLowerCase().includes(q) ||
+        (course.instructor && course.instructor.toLowerCase().includes(q)) ||
         course.category.toLowerCase().includes(q);
 
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [allCourses, selectedCategory, searchQuery]);
 
   // Category counts
   const categoryCounts = useMemo(() => {
-    const counts = { 'ทั้งหมด': courses.length };
+    const counts = { 'ทั้งหมด': allCourses.length };
     CATEGORIES.forEach(cat => {
       if (cat !== 'ทั้งหมด') {
-        counts[cat] = courses.filter(c => c.category === cat).length;
+        counts[cat] = allCourses.filter(c => c.category === cat).length;
       }
     });
     return counts;
-  }, []);
+  }, [allCourses]);
 
   return (
     <div className="learning-container">
@@ -70,19 +80,30 @@ export default function Catalog() {
             </p>
           </div>
 
-          {/* Quick Metrics Bar */}
-          <div className="flex items-center gap-3 bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80 shadow-inner flex-shrink-0">
-            <div className="px-3 py-1.5 text-center border-r border-slate-700">
-              <div className="text-xl font-black text-fuchsia-400">{courses.length}</div>
-              <div className="text-[11px] font-medium text-slate-400">หลักสูตร</div>
-            </div>
-            <div className="px-3 py-1.5 text-center border-r border-slate-700">
-              <div className="text-xl font-black text-cyan-400">{totalModulesCount}</div>
-              <div className="text-[11px] font-medium text-slate-400">บทเรียน</div>
-            </div>
-            <div className="px-3 py-1.5 text-center">
-              <div className="text-xl font-black text-emerald-400">All Roles</div>
-              <div className="text-[11px] font-medium text-slate-400">ทุกแผนก</div>
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Admin Course Builder Button */}
+            <button
+              onClick={() => navigate('/admin/course-builder')}
+              className="px-4 py-2.5 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white rounded-xl text-xs font-bold transition-all shadow-md inline-flex items-center gap-2 hover:-translate-y-0.5"
+            >
+              <FiPlus className="w-4 h-4" />
+              <span>สร้างหลักสูตรมาตรฐาน</span>
+            </button>
+
+            {/* Quick Metrics Bar */}
+            <div className="flex items-center gap-3 bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80 shadow-inner flex-shrink-0">
+              <div className="px-3 py-1.5 text-center border-r border-slate-700">
+                <div className="text-xl font-black text-fuchsia-400">{allCourses.length}</div>
+                <div className="text-[11px] font-medium text-slate-400">หลักสูตร</div>
+              </div>
+              <div className="px-3 py-1.5 text-center border-r border-slate-700">
+                <div className="text-xl font-black text-cyan-400">{totalModulesCount}</div>
+                <div className="text-[11px] font-medium text-slate-400">บทเรียน</div>
+              </div>
+              <div className="px-3 py-1.5 text-center">
+                <div className="text-xl font-black text-emerald-400">All Roles</div>
+                <div className="text-[11px] font-medium text-slate-400">ทุกแผนก</div>
+              </div>
             </div>
           </div>
         </div>
@@ -103,14 +124,14 @@ export default function Catalog() {
               <button 
                 onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
-                title="ล้างคำค้นหา"
+                title="ล้างข้อความค้นหา"
               >
                 <FiX className="w-4 h-4" />
               </button>
             )}
           </div>
 
-          {/* Category Tabs */}
+          {/* Category Filter Pills */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700">
             {CATEGORIES.map(category => {
               const count = categoryCounts[category] || 0;
@@ -140,47 +161,55 @@ export default function Catalog() {
 
       {/* Courses Grid */}
       {filteredCourses.length > 0 ? (
-        <div className="courses-grid">
+        <div className="course-grid">
           {filteredCourses.map(course => (
             <div 
               key={course.id} 
-              className="course-card group" 
+              className="course-card group cursor-pointer relative"
               onClick={() => navigate(`/course/${course.id}`)}
             >
-              <div 
-                className="course-image" 
-                style={{ backgroundImage: `url(${course.image})` }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-transparent"></div>
-                <div className="course-category">
-                  {course.category}
-                </div>
-                <div className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/80 backdrop-blur-md text-slate-200 text-xs font-semibold border border-slate-700">
-                  <FiBookOpen className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>{course.modules?.length || 0} บทเรียน</span>
-                </div>
+              <div className="card-image-wrap relative">
+                <img src={course.image} alt={course.title} className="card-image" />
+                <div className="card-badge">{course.category}</div>
+                {course.isPromotedFromCommunity && (
+                  <div className="absolute top-3 right-3 bg-amber-500/95 text-slate-950 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm">
+                    <FiStar className="w-3 h-3" /> ยกระดับจากหน้างาน
+                  </div>
+                )}
+                {course.isCustomBuilt && (
+                  <div className="absolute top-3 right-3 bg-fuchsia-600/95 text-white px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm">
+                    <FiAward className="w-3 h-3" /> หลักสูตรใหม่
+                  </div>
+                )}
               </div>
-
-              <div className="course-content">
-                <h2 className="group-hover:text-fuchsia-300 transition-colors">{course.title}</h2>
-                <p className="course-desc">{course.description}</p>
-                
-                <div className="course-meta">
-                  <div className="meta-item">
-                    <FiUser className="icon text-fuchsia-400" />
-                    <span>{course.instructor}</span>
-                  </div>
-                  <div className="meta-item">
-                    <FiClock className="icon text-cyan-400" />
-                    <span>{course.duration}</span>
-                  </div>
+              <div className="card-content flex flex-col justify-between flex-1">
+                <div>
+                  <h3 className="card-title group-hover:text-fuchsia-400 transition-colors">
+                    {course.title}
+                  </h3>
+                  <p className="card-desc text-slate-400 line-clamp-2">{course.description}</p>
                 </div>
-                
-                <div className="course-action">
-                  <button className="start-btn group-hover:bg-fuchsia-600 transition-colors">
-                    <FiPlayCircle className="icon w-4 h-4" />
-                    Start Learning
-                  </button>
+                <div>
+                  <div className="card-meta">
+                    <span className="flex items-center gap-1 truncate max-w-[55%]">
+                      <FiUser className="text-slate-500 flex-shrink-0" />
+                      <span className="truncate">{course.instructor}</span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <FiClock className="text-slate-500" />
+                      <span>{course.duration}</span>
+                    </span>
+                  </div>
+                  <div className="card-footer mt-4 pt-4 border-t border-slate-700 flex items-center justify-between">
+                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                      <FiLayers className="text-fuchsia-400" />
+                      <span>{course.modules?.length || 0} บทเรียน</span>
+                    </span>
+                    <span className="text-xs font-bold text-fuchsia-400 group-hover:text-fuchsia-300 flex items-center gap-1">
+                      <span>เริ่มเรียน</span>
+                      <FiPlayCircle className="text-base" />
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -189,15 +218,15 @@ export default function Catalog() {
       ) : (
         <div className="p-12 text-center bg-slate-800/50 rounded-2xl border border-slate-700 my-8">
           <FiLayers className="w-12 h-12 text-slate-500 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-slate-200 mb-1">ไม่พบหลักสูตรหรือคู่มือที่ตรงกับเงื่อนไข</h3>
+          <h3 className="text-lg font-bold text-slate-200 mb-1">ไม่พบหลักสูตรที่ตรงกับคำค้นหา</h3>
           <p className="text-sm text-slate-400 max-w-md mx-auto mb-4">
-            ลองปรับเปลี่ยนคำค้นหา หรือเลือกหมวดหมู่อื่นเพื่อดูหลักสูตรและคู่มือทั้งหมด
+            ลองปรับเปลี่ยนคำค้นหา หรือเลือกหมวดหมู่อื่นเพื่อดูหลักสูตรทั้งหมด
           </p>
           <button 
             onClick={() => { setSelectedCategory('ทั้งหมด'); setSearchQuery(''); }}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-bold transition-colors"
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-semibold transition-colors"
           >
-            แสดงหลักสูตรทั้งหมด
+            ล้างตัวกรองทั้งหมด
           </button>
         </div>
       )}

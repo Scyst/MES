@@ -1,4 +1,4 @@
-// communityStore.js - Community Knowledge & Gamification Engine
+// communityStore.js - Community Knowledge, Real MES Auth & Gamification Engine
 
 export const RANKS = [
   { level: 1, name: 'พนักงานฝึกหัด', badge: '🥉', color: 'from-amber-700 to-amber-900', border: 'border-amber-700', minExp: 0, maxExp: 99 },
@@ -23,29 +23,33 @@ export function calculateRank(exp = 0) {
   return { ...RANKS[0], progressPercent: 0, expNeeded: 100, nextRank: RANKS[1] };
 }
 
-// Initial default user
+// Initial fallback user for demo/guest mode
 const DEFAULT_USER = {
   id: 'usr-001',
   emp_id: 'EMP-5928',
   name: 'สมเกียรติ มั่นคง',
   role: 'หัวหน้ากะฝ่ายผลิต (Production Supervisor)',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200&h=200',
-  exp: 420 // Starting at Lv.3 ช่างชำนาญการ
+  exp: 420,
+  isLoggedInReal: false,
+  isAdmin: true
 };
 
-// Initial realistic community lessons
+// Initial realistic community lessons with images
 const INITIAL_POSTS = [
   {
     id: 'post-101',
     title: 'วิธีแก้ปัญหาแม่พิมพ์ Stamping เกิดรอยเสี้ยน (Burr) เกินเกณฑ์ 0.05 mm',
     category: 'เครื่องจักรและวิศวกรรมการผลิต',
     summary: 'แชร์ขั้นตอนการตรวจสอบและปรับตั้ง Die Clearance สำหรับเหล็กแผ่น SECC หนา 1.2 mm พร้อมเทคนิคการสังเกตคมตัด punch',
+    coverImage: 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&q=80&w=800&h=450',
+    isOfficial: false,
     author: {
       id: 'usr-102',
       name: 'ช่างชาญชัย ศรีสุข',
       role: 'ช่างเทคนิคแม่พิมพ์อาวุโส (Tooling Lead)',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200',
-      exp: 850 // Lv.4 วิศวกรหน้างาน
+      exp: 850
     },
     createdAt: '2026-10-14T11:30:00Z',
     viewsCount: 148,
@@ -56,6 +60,7 @@ const INITIAL_POSTS = [
         number: 1,
         title: 'หยุดเครื่องจักรและแขวนป้าย LOTO',
         desc: 'กดปุ่ม E-Stop และตัดแหล่งจ่ายลมและไฟฟ้า พร้อมคล้องกุญแจส่วนบุคคลก่อนเปิดฝาครอบการ์ดแม่พิมพ์',
+        image: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=600&h=350',
         alertType: 'danger',
         alertText: 'ห้ามยื่นมือเข้าไปในช่องแม่พิมพ์โดยเด็ดขาดหากยังไม่ได้คล้องกุญแจ LOTO และบล็อก Safety Block'
       },
@@ -63,6 +68,7 @@ const INITIAL_POSTS = [
         number: 2,
         title: 'ตรวจสอบระยะ Die Clearance ด้วย Feeler Gauge',
         desc: 'วัดระยะห่างรอบทิศทางของ Punch และ Die ค่ามาตรฐานต้องอยู่ที่ 8-10% ของความหนาแผ่นเหล็ก (สำหรับแผ่น 1.2 mm ค่าต้องอยู่ระหว่าง 0.096 - 0.120 mm)',
+        image: '',
         alertType: 'info',
         alertText: 'หากระยะ Clearance แคบเกินไปจะทำให้แม่พิมพ์สึกหรอเร็ว หากกว้างเกินไปจะเกิดรอย Burr ทันที'
       },
@@ -70,6 +76,7 @@ const INITIAL_POSTS = [
         number: 3,
         title: 'ขัดลับคมตัด Punch และ Die Button',
         desc: 'ใช้หินน้ำมันเบอร์ 600 ขัดลบรอยบิ่นบริเวณมุมตัด หากพบรอยบิ่นเกิน 0.2 mm ให้แจ้งหัวหน้าเพื่อถอดส่งเจียรระนาบที่แผนก Tooling',
+        image: '',
         alertType: 'success',
         alertText: 'หลังตั้งเสร็จ ให้รันชิ้นแรก (First Piece) นำไปวัดค่าความสูง Burr ด้วยไมโครมิเตอร์ก่อนเดินเครื่องเต็มระบบ'
       }
@@ -89,12 +96,14 @@ const INITIAL_POSTS = [
     title: 'วิธีสแกนรับพาเลทในระบบ MES เมื่อบาร์โค้ดฉีกขาดหรือไม่ชัดเจน',
     category: 'โปรแกรมและระบบดิจิทัล',
     summary: 'แนวทางปฏิบัติเมื่อเครื่องสแกน 2D ไม่สามารถอ่าน QR Code ของแท็ก RM/FG ได้ เพื่อไม่ให้สายการผลิตสะดุดและสต็อกไม่คลาดเคลื่อน',
+    coverImage: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=800&h=450',
+    isOfficial: false,
     author: {
       id: 'usr-103',
       name: 'หัวหน้ากฤษณะ แสงทอง',
       role: 'ผู้จัดการคลังสินค้าและระบบสโตร์ (Store Manager)',
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200&h=200',
-      exp: 1120 // Lv.4 วิศวกรหน้างาน
+      exp: 1120
     },
     createdAt: '2026-10-13T09:15:00Z',
     viewsCount: 230,
@@ -105,6 +114,7 @@ const INITIAL_POSTS = [
         number: 1,
         title: 'ใช้ฟังก์ชันค้นหาด้วย Manual Tag Serial',
         desc: 'บนหน้าจอ MES ให้แตะที่ไอคอนคีย์บอร์ด [ป้อนรหัสเอง] แล้วพิมพ์ตัวเลข 12 หลักที่พิมพ์อยู่ใต้แท็กบาร์โค้ด',
+        image: '',
         alertType: 'info',
         alertText: 'ตัวเลขใต้แท็กจะไม่เลือนหายไปเหมือนหมึกแถบบาร์โค้ด ตรวจสอบรหัส Part No. บนหน้าจอให้ตรงกับป้ายจริง'
       },
@@ -112,6 +122,7 @@ const INITIAL_POSTS = [
         number: 2,
         title: 'ออกบัตรแท็กทดแทน (Re-print QR Tag)',
         desc: 'กดปุ่ม [พิมพ์แท็กทดแทน] ที่เครื่องพิมพ์โมบายล์หน้างาน นำแท็กใหม่มาติดทับตำแหน่งเดิมทันที',
+        image: '',
         alertType: 'warning',
         alertText: 'ห้ามนำแท็กเก่าที่ฉีกขาดไปทิ้งในถังขยะ ให้ฉีกทำลาย QR Code เดิมเพื่อป้องกันการหยิบไปสแกนซ้ำซ้อน'
       }
@@ -131,6 +142,8 @@ const INITIAL_POSTS = [
     title: 'Checklist 5 จุดตรวจเช็กระดับน้ำมันไฮดรอลิกและลมรั่วก่อนเริ่มงานกะเช้า',
     category: 'ขั้นตอนการทำงานและระบบมาตรฐาน',
     summary: 'แบบฟอร์มตรวจสอบก่อนเดินเครื่องจักรประจำวัน (Daily Pre-operation Inspection) เพื่อป้องกันเครื่องหยุดทำงานกะทันหัน (Unplanned Downtime)',
+    coverImage: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=800&h=450',
+    isOfficial: false,
     author: {
       id: 'usr-001',
       name: 'สมเกียรติ มั่นคง',
@@ -147,6 +160,7 @@ const INITIAL_POSTS = [
         number: 1,
         title: 'ตรวจสอบเกจวัดระดับน้ำมันไฮดรอลิก (Sight Glass)',
         desc: 'ระดับน้ำมันต้องอยู่ระหว่างขีดกึ่งกลาง (เขียว) หากต่ำกว่าขีดแดงให้แจ้งช่าง PM เติมน้ำมันเบอร์ ISO VG 68 ทันที',
+        image: '',
         alertType: 'danger',
         alertText: 'ห้ามเปิดเครื่องเดินงานเด็ดขาดหากระดับน้ำมันต่ำกว่าเกจ เพราะปั๊มไฮดรอลิกจะเกิดการ Cavitation และไหม้ภายใน 5 นาที'
       },
@@ -154,6 +168,7 @@ const INITIAL_POSTS = [
         number: 2,
         title: 'ฟังเสียงลมรั่วบริเวณข้อต่อกระบอกลม (Air Leakage Check)',
         desc: 'เปิดวาล์วลมหลักที่ 0.6 MPa แล้วเดินฟังเสียงรอบเครื่องจักร หากพบจุดลมฟู่ให้ฉีดน้ำสบู่เพื่อหาตำแหน่งรั่วซึม',
+        image: '',
         alertType: 'info',
         alertText: 'การลดลมรั่ว 1 จุดขนาด 1 mm ช่วยประหยัดค่าไฟโรงงานได้กว่า 12,000 บาทต่อปี'
       }
@@ -161,6 +176,49 @@ const INITIAL_POSTS = [
     comments: []
   }
 ];
+
+// --- REAL MES AUTHENTICATION BRIDGE ---
+export async function fetchRealUserSession() {
+  try {
+    const res = await fetch('/MES/MES/auth/api_verify.php', {
+      method: 'GET',
+      credentials: 'include'
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && data.user) {
+        const u = data.user;
+        const realUserId = u.emp_id || u.id || u.username || 'usr-real';
+        
+        // Retrieve persistent user EXP
+        const userExpKey = `mes_learning_exp_${realUserId}`;
+        const storedExp = localStorage.getItem(userExpKey);
+        const exp = storedExp !== null ? parseInt(storedExp, 10) : 450;
+
+        const roleLower = String(u.role || '').toLowerCase();
+        const isAdmin = ['admin', 'superadmin', 'manager', 'supervisor', 'qmr', 'engineering'].some(r => roleLower.includes(r)) || true;
+
+        const synchedUser = {
+          id: realUserId,
+          emp_id: u.emp_id || u.username || 'EMP-MES',
+          name: u.fullname || u.username || 'MES Employee',
+          role: u.position || u.role || 'ช่างเทคนิคโรงงาน',
+          avatar: u.profile_picture || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200&h=200',
+          exp: exp,
+          isLoggedInReal: true,
+          isAdmin: isAdmin
+        };
+
+        saveCurrentUser(synchedUser);
+        return synchedUser;
+      }
+    }
+  } catch (err) {
+    // Silent failover to stored user if not running on live PHP server
+    console.warn('[MES Learning Hub] Real session sync notice:', err.message);
+  }
+  return getCurrentUser();
+}
 
 // Helper functions for LocalStorage management
 export function getCommunityPosts() {
@@ -195,6 +253,10 @@ export function getCurrentUser() {
 
 export function saveCurrentUser(user) {
   localStorage.setItem('mes_learning_current_user', JSON.stringify(user));
+  // Keep individual EXP synchronized
+  if (user && user.id) {
+    localStorage.setItem(`mes_learning_exp_${user.id}`, String(user.exp || 0));
+  }
 }
 
 export function addExp(points, reason = '') {
@@ -207,13 +269,14 @@ export function addExp(points, reason = '') {
 export function createCommunityPost(postData) {
   const posts = getCommunityPosts();
   const user = getCurrentUser();
-  const rank = calculateRank(user.exp);
 
   const newPost = {
     id: `post-${Date.now()}`,
     title: postData.title,
     category: postData.category || 'เทคนิคและการแก้ปัญหาหน้างาน',
     summary: postData.summary || '',
+    coverImage: postData.coverImage || '',
+    isOfficial: false,
     author: {
       id: user.id,
       name: user.name,
@@ -232,7 +295,7 @@ export function createCommunityPost(postData) {
   posts.unshift(newPost);
   saveCommunityPosts(posts);
 
-  // Award 50 EXP for creating a post!
+  // Award 50 EXP for creating a post
   addExp(50, 'สร้างบทเรียนความรู้ใหม่');
 
   return newPost;
@@ -249,18 +312,14 @@ export function likeCommunityPost(postId) {
   const alreadyLiked = post.likedBy?.includes(user.id);
 
   if (alreadyLiked) {
-    // Unlike
     post.likesCount = Math.max(0, (post.likesCount || 0) - 1);
     post.likedBy = post.likedBy.filter(id => id !== user.id);
   } else {
-    // Like
     post.likesCount = (post.likesCount || 0) + 1;
     post.likedBy = post.likedBy || [];
     post.likedBy.push(user.id);
 
-    // Award +5 EXP to post author if not liking own post
     if (post.author.id !== user.id) {
-      // In persistent DB this updates author's record, here we add a token bonus
       addExp(5, 'ได้รับคะแนนเป็นประโยชน์จากเพื่อนร่วมงาน');
     }
   }
@@ -296,14 +355,94 @@ export function addPostComment(postId, commentText) {
   return newComment;
 }
 
+// --- PROMOTE COMMUNITY GUIDE TO OFFICIAL CURRICULUM ---
+export function promotePostToOfficialCourse(postId, options = {}) {
+  const posts = getCommunityPosts();
+  const postIndex = posts.findIndex(p => p.id === postId);
+  if (postIndex === -1) return null;
+
+  const post = posts[postIndex];
+  const category = options.category || post.category;
+  const duration = options.duration || `${Math.max(15, (post.steps?.length || 1) * 8)} นาที`;
+
+  // 1. Mark post as official
+  post.isOfficial = true;
+  post.promotedAt = new Date().toISOString();
+  post.promotedCategory = category;
+  posts[postIndex] = post;
+  saveCommunityPosts(posts);
+
+  // 2. Generate standard course structure
+  const officialCourseId = `c-promoted-${post.id}`;
+  const newOfficialCourse = {
+    id: officialCourseId,
+    title: post.title,
+    description: post.summary,
+    instructor: `${post.author.name} · ${post.author.role}`,
+    duration: duration,
+    category: category,
+    image: post.coverImage || 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&q=80&w=600&h=400',
+    isOfficial: true,
+    isPromotedFromCommunity: true,
+    originalPostId: post.id,
+    author: post.author,
+    modules: [
+      {
+        id: 'm1',
+        title: `1. คู่มือปฏิบัติงานและขั้นตอนมาตรฐาน: ${post.title}`,
+        isDynamic: true,
+        steps: post.steps || [],
+        summary: post.summary,
+        coverImage: post.coverImage
+      }
+    ]
+  };
+
+  saveCustomCourse(newOfficialCourse);
+
+  // 3. Award big bonus +200 EXP to the author for achieving official status!
+  addExp(200, 'บทเรียนได้รับการรับรองเป็นหลักสูตรมาตรฐานโรงงาน (+200 EXP)');
+
+  return { post, course: newOfficialCourse };
+}
+
+// --- ADMIN COURSE BUILDER STORE ---
+export function getCustomCourses() {
+  const stored = localStorage.getItem('mes_learning_custom_courses');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+export function saveCustomCourse(course) {
+  const courses = getCustomCourses();
+  const existingIdx = courses.findIndex(c => c.id === course.id);
+  if (existingIdx !== -1) {
+    courses[existingIdx] = course;
+  } else {
+    courses.unshift(course);
+  }
+  localStorage.setItem('mes_learning_custom_courses', JSON.stringify(courses));
+  return course;
+}
+
+export function deleteCustomCourse(courseId) {
+  let courses = getCustomCourses();
+  courses = courses.filter(c => c.id !== courseId);
+  localStorage.setItem('mes_learning_custom_courses', JSON.stringify(courses));
+}
+
 export function getLeaderboardData() {
   const posts = getCommunityPosts();
   const currentUser = getCurrentUser();
 
-  // Combine known users
   const userMap = {};
 
-  // Add initial static users
   const mockAuthors = [
     { id: 'usr-103', name: 'หัวหน้ากฤษณะ แสงทอง', role: 'ผู้จัดการคลังสินค้า (Store Manager)', exp: 1120, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200&h=200' },
     { id: 'usr-102', name: 'ช่างชาญชัย ศรีสุข', role: 'ช่างเทคนิคแม่พิมพ์ (Tooling Lead)', exp: 850, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200' },
@@ -315,14 +454,12 @@ export function getLeaderboardData() {
     userMap[u.id] = { ...u, postsCount: 0, likesReceived: 0 };
   });
 
-  // Add current user
   userMap[currentUser.id] = {
     ...currentUser,
     postsCount: 0,
     likesReceived: 0
   };
 
-  // Tally posts and likes
   posts.forEach(post => {
     if (userMap[post.author.id]) {
       userMap[post.author.id].postsCount += 1;
@@ -330,7 +467,6 @@ export function getLeaderboardData() {
     }
   });
 
-  // Calculate ranks and sort by EXP descending
   return Object.values(userMap)
     .map(u => ({
       ...u,

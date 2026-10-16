@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { courses } from '../data/courses';
+import { getCustomCourses } from '../data/communityStore';
 import { FiArrowLeft, FiCheckCircle, FiCircle } from 'react-icons/fi';
 import CourseContent from '../components/CourseContent';
+import DynamicCourseRenderer from '../components/DynamicCourseRenderer';
 import ErrorBoundary from '../components/ErrorBoundary';
 
 export default function CourseViewer() {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const course = courses.find(c => c.id === courseId);
+
+  // Combine static official courses with custom-built and promoted courses
+  const allCourses = [...courses, ...getCustomCourses()];
+  const course = allCourses.find(c => c.id === courseId);
   
   const [activeModuleId, setActiveModuleId] = useState(() => course?.modules?.[0]?.id || '');
 
   // Synchronize activeModuleId when course changes
   useEffect(() => {
-    if (course && course.modules.length > 0) {
+    if (course && course.modules?.length > 0) {
       const exists = course.modules.some(m => m.id === activeModuleId);
       if (!exists) {
         setActiveModuleId(course.modules[0].id);
@@ -37,8 +42,8 @@ export default function CourseViewer() {
   }
 
   // Resolve active module safely, fallback to first module if not found
-  const activeModule = course.modules.find(m => m.id === activeModuleId) || course.modules[0];
-  const currentIndex = course.modules.findIndex(m => m.id === activeModule?.id);
+  const activeModule = course.modules?.find(m => m.id === activeModuleId) || course.modules?.[0];
+  const currentIndex = course.modules?.findIndex(m => m.id === activeModule?.id) ?? 0;
 
   return (
     <div className="course-viewer">
@@ -50,11 +55,11 @@ export default function CourseViewer() {
           </button>
           <h3>{course.title}</h3>
           <div className="text-xs text-slate-400 mt-1">
-            {course.modules.length} บทเรียน · {course.duration}
+            {course.modules?.length || 0} บทเรียน · {course.duration}
           </div>
         </div>
         <div className="module-list">
-          {course.modules.map((module, index) => {
+          {course.modules?.map((module, index) => {
             const isSelected = activeModule?.id === module.id;
             return (
               <div 
@@ -77,13 +82,14 @@ export default function CourseViewer() {
 
       {/* Main Content Area */}
       <div className="viewer-content">
-        <div className="content-header">
-          <h2>{activeModule?.title}</h2>
-        </div>
         <div className="content-body">
           {activeModule && (
             <ErrorBoundary key={activeModule.id} moduleName={activeModule.title}>
-              <CourseContent courseId={course.id} moduleContent={activeModule.content} />
+              {activeModule.isDynamic || activeModule.steps ? (
+                <DynamicCourseRenderer module={activeModule} course={course} />
+              ) : (
+                <CourseContent courseId={course.id} moduleContent={activeModule.content} />
+              )}
             </ErrorBoundary>
           )}
           
@@ -97,7 +103,7 @@ export default function CourseViewer() {
               </button>
             ) : <div></div>}
             
-            {currentIndex < course.modules.length - 1 ? (
+            {currentIndex < (course.modules?.length || 0) - 1 ? (
               <button 
                 onClick={() => setActiveModuleId(course.modules[currentIndex + 1].id)}
                 className="px-6 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-lg font-bold transition-colors shadow-lg shadow-fuchsia-500/20"

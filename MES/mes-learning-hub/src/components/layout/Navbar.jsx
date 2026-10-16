@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { FiBook, FiAward, FiUsers, FiLayers, FiPlus } from 'react-icons/fi';
-import { getCurrentUser, calculateRank } from '../../data/communityStore';
+import { FiBook, FiAward, FiUsers, FiLayers, FiPlus, FiTool } from 'react-icons/fi';
+import { getCurrentUser, calculateRank, fetchRealUserSession } from '../../data/communityStore';
 
 export default function Navbar() {
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const rank = calculateRank(currentUser.exp);
+
+  useEffect(() => {
+    fetchRealUserSession().then(user => {
+      if (user) {
+        setCurrentUser(user);
+      }
+    });
+  }, []);
 
   // Re-read user exp whenever path changes (e.g. after post creation or upvote)
   useEffect(() => {
@@ -70,8 +78,18 @@ export default function Navbar() {
           </NavLink>
         </div>
 
-        {/* Right User Status */}
-        <div className="flex items-center gap-3">
+        {/* Right User Status & Actions */}
+        <div className="flex items-center gap-2.5">
+          {/* Quick Create Link */}
+          <Link
+            to="/admin/course-builder"
+            className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-300 hover:text-white transition-colors"
+            title="สร้างหลักสูตรมาตรฐานโรงงาน (Admin Studio)"
+          >
+            <FiTool className="w-3.5 h-3.5 text-amber-400" />
+            <span>สร้างหลักสูตร</span>
+          </Link>
+
           <Link
             to="/community/new"
             className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-300 hover:text-white transition-colors"
@@ -90,8 +108,11 @@ export default function Navbar() {
                 <span>{currentUser.name}</span>
                 <span className="text-xs">{rank.badge}</span>
               </div>
-              <div className="text-[10px] text-amber-300 font-mono font-bold">
-                Lv.{rank.level} · {currentUser.exp} EXP
+              <div className="text-[10px] text-amber-300 font-mono font-bold flex items-center justify-end gap-1">
+                {currentUser.isLoggedInReal && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="เชื่อมต่อบัญชี MES สำเร็จ"></span>
+                )}
+                <span>Lv.{rank.level} · {currentUser.exp} EXP</span>
               </div>
             </div>
 

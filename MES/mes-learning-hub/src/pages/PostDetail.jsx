@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   getCommunityPosts, 
   likeCommunityPost, 
   addPostComment, 
   calculateRank,
-  getCurrentUser
+  getCurrentUser,
+  promotePostToOfficialCourse
 } from '../data/communityStore';
 import { 
   FiArrowLeft, 
@@ -17,9 +18,23 @@ import {
   FiAlertTriangle, 
   FiInfo, 
   FiSend,
-  FiShare2,
-  FiBookOpen
+  FiBookOpen,
+  FiAward,
+  FiStar,
+  FiCheck,
+  FiExternalLink,
+  FiX,
+  FiZoomIn
 } from 'react-icons/fi';
+
+const OFFICIAL_CATEGORIES = [
+  'เครื่องจักรและวิศวกรรมการผลิต',
+  'โปรแกรมและระบบดิจิทัล',
+  'ขั้นตอนการทำงานและระบบมาตรฐาน',
+  'การตรวจโรงงานและเอกสารลูกค้า',
+  'กรณีศึกษาหน้างานจริง',
+  'การบริหารและการเพิ่มผลผลิต'
+];
 
 export default function PostDetail() {
   const { postId } = useParams();
@@ -30,11 +45,21 @@ export default function PostDetail() {
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
 
+  // Image Zoom Modal
+  const [zoomedImage, setZoomedImage] = useState(null);
+
+  // Promote Modal
+  const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
+  const [promoteCategory, setPromoteCategory] = useState(OFFICIAL_CATEGORIES[0]);
+  const [promoteDuration, setPromoteDuration] = useState('20 นาที');
+  const [isPromoting, setIsPromoting] = useState(false);
+
   useEffect(() => {
     const posts = getCommunityPosts();
     const found = posts.find(p => p.id === postId);
     if (found) {
       setPost(found);
+      setPromoteCategory(found.category || OFFICIAL_CATEGORIES[0]);
     }
   }, [postId]);
 
@@ -83,6 +108,28 @@ export default function PostDetail() {
     }
   };
 
+  const handlePromoteConfirm = () => {
+    setIsPromoting(true);
+    try {
+      const result = promotePostToOfficialCourse(post.id, {
+        category: promoteCategory,
+        duration: promoteDuration
+      });
+
+      if (result) {
+        setPost({ ...result.post });
+        setIsPromoteModalOpen(false);
+        setToastMsg('🎉 ยกระดับเป็นหลักสูตรมาตรฐานโรงงานสำเร็จ! ผู้เขียนได้รับ +200 EXP');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 4000);
+      }
+    } catch (err) {
+      alert('เกิดข้อผิดพลาดในการยกระดับหลักสูตร: ' + err.message);
+    } finally {
+      setIsPromoting(false);
+    }
+  };
+
   return (
     <div className="learning-container max-w-4xl">
       {/* Toast Notification */}
@@ -90,6 +137,92 @@ export default function PostDetail() {
         <div className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-fuchsia-400/30 animate-bounce">
           <FiCheckCircle className="w-5 h-5 text-amber-300" />
           <span className="text-sm font-bold">{toastMsg}</span>
+        </div>
+      )}
+
+      {/* Lightbox / Zoom Modal */}
+      {zoomedImage && (
+        <div 
+          onClick={() => setZoomedImage(null)}
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out"
+        >
+          <div className="relative max-w-5xl max-h-[90vh]">
+            <img 
+              src={zoomedImage} 
+              alt="Zoomed" 
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl border border-slate-700" 
+            />
+            <button 
+              onClick={() => setZoomedImage(null)}
+              className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white bg-slate-800 rounded-full"
+            >
+              <FiX className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Promote to Official Modal */}
+      {isPromoteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 md:p-8 max-w-lg w-full shadow-2xl animate-in fade-in">
+            <div className="flex items-center gap-3 mb-4 text-amber-400">
+              <FiStar className="w-7 h-7" />
+              <h3 className="text-lg font-bold text-white">ยกระดับเป็นหลักสูตรมาตรฐานโรงงาน</h3>
+            </div>
+            <p className="text-xs text-slate-300 mb-6 leading-relaxed">
+              การอนุมัตินี้จะนำเนื้อหาและขั้นตอนของบทความนี้ไปแสดงใน <strong>"หลักสูตรมาตรฐาน (Standard Curriculum)"</strong> ของโรงงาน เพื่อให้พนักงานและช่างทุกคนใช้เรียนรู้ และจะมอบโบนัสเกียรติยศ <strong>+200 EXP</strong> ให้กับผู้เขียนบทความทันที
+            </p>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  บรรจุเข้าหมวดหมู่หลักสูตร
+                </label>
+                <select
+                  value={promoteCategory}
+                  onChange={(e) => setPromoteCategory(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
+                >
+                  {OFFICIAL_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  ระยะเวลาที่แนะนำในการศึกษา
+                </label>
+                <input 
+                  type="text"
+                  value={promoteDuration}
+                  onChange={(e) => setPromoteDuration(e.target.value)}
+                  placeholder="เช่น 15 นาที, 30 นาที"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsPromoteModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handlePromoteConfirm}
+                disabled={isPromoting}
+                className="px-5 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-lg shadow-amber-500/20 inline-flex items-center gap-2"
+              >
+                <FiCheck className="w-4 h-4" />
+                <span>{isPromoting ? 'กำลังประมวลผล...' : 'ยืนยันยกระดับหลักสูตร (+200 EXP)'}</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -102,13 +235,72 @@ export default function PostDetail() {
           <FiArrowLeft /> กลับสู่คลังความรู้ชุมชน
         </button>
 
-        <span className="text-xs font-semibold text-fuchsia-400 bg-fuchsia-500/10 px-3 py-1 rounded-full border border-fuchsia-500/20">
-          {post.category}
-        </span>
+        <div className="flex items-center gap-2">
+          {post.isOfficial ? (
+            <Link
+              to={`/course/c-promoted-${post.id}`}
+              className="text-xs font-bold text-amber-300 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/30 flex items-center gap-1.5 hover:bg-amber-500/20 transition-colors"
+            >
+              <FiAward className="w-4 h-4 text-amber-400" />
+              <span>หลักสูตรมาตรฐานโรงงาน</span>
+              <FiExternalLink className="w-3 h-3 ml-0.5" />
+            </Link>
+          ) : (
+            <button
+              onClick={() => setIsPromoteModalOpen(true)}
+              className="text-xs font-bold text-amber-300 hover:text-amber-200 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full border border-amber-500/40 flex items-center gap-1.5 transition-colors shadow-sm"
+              title="อนุมัติยกระดับบทเรียนนี้เป็นหลักสูตรทางการ"
+            >
+              <FiStar className="w-3.5 h-3.5 text-amber-400" />
+              <span>ยกระดับเป็นหลักสูตรทางการ</span>
+            </button>
+          )}
+
+          <span className="text-xs font-semibold text-fuchsia-400 bg-fuchsia-500/10 px-3 py-1.5 rounded-full border border-fuchsia-500/20">
+            {post.category}
+          </span>
+        </div>
       </div>
+
+      {/* Promoted Golden Banner if Official */}
+      {post.isOfficial && (
+        <div className="p-4 mb-6 rounded-2xl bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-amber-500/10 border border-amber-500/30 text-amber-200 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🏅</span>
+            <div>
+              <h4 className="text-sm font-bold text-white">ได้รับการรับรองเป็นหลักสูตรมาตรฐานโรงงาน (Official Certified)</h4>
+              <p className="text-xs text-amber-300/80">บทเรียนนี้ได้รับการคัดเลือกและยกระดับเข้าสู่ระบบหลักสูตรมาตรฐานเรียบร้อยแล้ว</p>
+            </div>
+          </div>
+          <Link
+            to={`/course/c-promoted-${post.id}`}
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 flex-shrink-0"
+          >
+            <span>เปิดเรียนในโหมดหลักสูตร</span>
+            <FiExternalLink className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
 
       {/* Main Post Content Card */}
       <div className="bg-slate-800/90 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl mb-8">
+        {/* Cover Photo */}
+        {post.coverImage && (
+          <div 
+            onClick={() => setZoomedImage(post.coverImage)}
+            className="relative mb-6 rounded-2xl overflow-hidden border border-slate-700 max-h-80 cursor-zoom-in group"
+          >
+            <img 
+              src={post.coverImage} 
+              alt={post.title} 
+              className="w-full h-56 md:h-80 object-cover group-hover:scale-105 transition-transform duration-300" 
+            />
+            <div className="absolute bottom-3 right-3 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-lg text-[11px] text-white flex items-center gap-1.5">
+              <FiZoomIn className="w-3.5 h-3.5" /> คลิกดูรูปขยาย
+            </div>
+          </div>
+        )}
+
         {/* Post Title */}
         <h1 className="text-2xl md:text-3xl font-black text-white mb-4 leading-tight">
           {post.title}
@@ -174,6 +366,23 @@ export default function PostDetail() {
                     <p className="text-sm text-slate-300 leading-relaxed m-0">
                       {step.desc}
                     </p>
+
+                    {/* Step Image */}
+                    {step.image && (
+                      <div 
+                        onClick={() => setZoomedImage(step.image)}
+                        className="relative rounded-xl overflow-hidden border border-slate-700 max-w-lg mt-3 cursor-zoom-in group"
+                      >
+                        <img 
+                          src={step.image} 
+                          alt={step.title} 
+                          className="w-full h-48 md:h-64 object-cover group-hover:scale-105 transition-transform" 
+                        />
+                        <div className="absolute bottom-2 right-2 px-2.5 py-1 bg-black/70 backdrop-blur-sm rounded text-[10px] text-white flex items-center gap-1">
+                          <FiZoomIn className="w-3 h-3" /> แตะเพื่อดูรูปขยาย
+                        </div>
+                      </div>
+                    )}
 
                     {/* Alert Box if present */}
                     {step.alertType && step.alertType !== 'none' && step.alertText && (
