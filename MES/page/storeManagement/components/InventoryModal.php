@@ -773,12 +773,12 @@
             <div class="modal-body p-3 p-md-4 bg-body-tertiary">
                 <!-- Scan Input Box -->
                 <div class="prd-scan-card p-3 mb-3">
-                    <div class="d-flex align-items-center justify-content-between mb-2.5">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
                         <span class="fw-bold text-dark d-flex align-items-center" style="font-size: 0.85rem; gap: 8px;">
                             <i class="fas fa-qrcode text-primary fs-6"></i>
                             <span>สแกน QR หรือพิมพ์รหัสแท็ก/พาเลท</span>
                         </span>
-                        <span class="badge bg-light text-muted border px-2.5 py-1.5 d-inline-flex align-items-center" style="font-size: 0.72rem; font-weight: 500; gap: 6px;">
+                        <span class="badge bg-light text-muted border d-inline-flex align-items-center" style="font-size: 0.72rem; font-weight: 500; gap: 6px; padding: 4px 10px;">
                             <i class="fas fa-keyboard text-primary"></i>
                             <span>กด Enter หรือยิงบาร์โค้ดได้ทันที</span>
                         </span>
@@ -867,19 +867,19 @@
                         <!-- Tag Meta Info Badges -->
                         <div class="row g-3 mb-3">
                             <div class="col-6 col-md-4">
-                                <div class="p-2.5 rounded-3 bg-white border" style="min-height: 62px; display: flex; flex-direction: column; justify-content: center;">
+                                <div class="rounded-3 bg-white border" style="padding: 10px 15px; min-height: 64px; display: flex; flex-direction: column; justify-content: center;">
                                     <div class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.4px; margin-bottom: 4px;">SERIAL NO. / TAG</div>
                                     <div class="font-monospace fw-bold text-dark text-truncate" id="prdSerialNo" style="font-size: 0.88rem; line-height: 1.35;">-</div>
                                 </div>
                             </div>
                             <div class="col-6 col-md-4">
-                                <div class="p-2.5 rounded-3 bg-white border" style="min-height: 62px; display: flex; flex-direction: column; justify-content: center;">
+                                <div class="rounded-3 bg-white border" style="padding: 10px 15px; min-height: 64px; display: flex; flex-direction: column; justify-content: center;">
                                     <div class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.4px; margin-bottom: 4px;">พาเลท / ขนาดบรรจุ</div>
                                     <div class="fw-bold text-dark text-truncate" id="prdPalletNo" style="font-size: 0.88rem; line-height: 1.35;">-</div>
                                 </div>
                             </div>
                             <div class="col-12 col-md-4">
-                                <div class="p-2.5 rounded-3 bg-white border" style="min-height: 62px; display: flex; flex-direction: column; justify-content: center;">
+                                <div class="rounded-3 bg-white border" style="padding: 10px 15px; min-height: 64px; display: flex; flex-direction: column; justify-content: center;">
                                     <div class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.4px; margin-bottom: 4px;">ตัดจ่ายล่าสุดเมื่อ</div>
                                     <div class="fw-semibold text-secondary text-truncate" id="prdLastIssuedAt" style="font-size: 0.85rem; line-height: 1.35;">-</div>
                                 </div>
@@ -928,7 +928,7 @@
                                     <i class="fas fa-comment-dots text-secondary fs-6"></i>
                                     <span>เหตุผลการรับคืน / หมายเหตุ</span>
                                 </label>
-                                <input type="text" id="prdReturnReasonInput" class="form-control border-secondary-subtle mb-2.5" placeholder="เช่น งานเหลือจากไลน์ผลิต, แผนผลิตยกเลิก, เบิกเกิน ฯลฯ" value="งานเหลือจากไลน์ผลิต นำส่งคืนคลัง Store" style="border-radius: 8px; height: 42px; font-size: 0.88rem;">
+                                <input type="text" id="prdReturnReasonInput" class="form-control border-secondary-subtle mb-2" placeholder="เช่น งานเหลือจากไลน์ผลิต, แผนผลิตยกเลิก, เบิกเกิน ฯลฯ" value="งานเหลือจากไลน์ผลิต นำส่งคืนคลัง Store" style="border-radius: 8px; height: 42px; font-size: 0.88rem;">
                                 
                                 <!-- Quick Reason Chips -->
                                 <div class="d-flex flex-wrap align-items-center mt-2" style="gap: 8px;">
