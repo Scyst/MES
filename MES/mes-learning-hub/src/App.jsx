@@ -2,6 +2,10 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Navbar from './components/layout/Navbar';
 import Catalog from './pages/Catalog';
 import CourseViewer from './pages/CourseViewer';
+import CommunityHub from './pages/CommunityHub';
+import CreatePost from './pages/CreatePost';
+import PostDetail from './pages/PostDetail';
+import Leaderboard from './pages/Leaderboard';
 import './index.css';
 
 function App() {
@@ -11,8 +15,18 @@ function App() {
         <Navbar />
         <main className="main-content pt-16">
           <Routes>
+            {/* Standard Curriculum Courses */}
             <Route path="/" element={<Catalog />} />
             <Route path="/course/:courseId" element={<CourseViewer />} />
+
+            {/* Community-Driven Knowledge Hub */}
+            <Route path="/community" element={<CommunityHub />} />
+            <Route path="/community/new" element={<CreatePost />} />
+            <Route path="/community/:postId" element={<PostDetail />} />
+
+            {/* Factory Ranks & Leaderboard */}
+            <Route path="/ranks" element={<Leaderboard />} />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

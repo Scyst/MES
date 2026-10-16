@@ -1,34 +1,111 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { FiBook, FiSearch, FiBell, FiUser } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { NavLink, Link, useLocation } from 'react-router-dom';
+import { FiBook, FiAward, FiUsers, FiLayers, FiPlus } from 'react-icons/fi';
+import { getCurrentUser, calculateRank } from '../../data/communityStore';
 
 export default function Navbar() {
-  return (
-    <nav className="fixed top-0 left-0 w-full z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <NavLink to="/" className="flex items-center gap-2 text-fuchsia-400 font-black text-xl hover:text-fuchsia-300 transition-colors">
-          <FiBook className="text-2xl" />
-          <span>MES Learning Hub</span>
-        </NavLink>
+  const location = useLocation();
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+  const rank = calculateRank(currentUser.exp);
 
-        <div className="hidden md:flex flex-1 max-w-xl mx-8">
-          <div className="relative w-full">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input 
-              type="text" 
-              placeholder="ค้นหาคู่มือเครื่องจักร, โปรแกรม, SOP, มาตรฐาน..." 
-              className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-full py-2 pl-10 pr-4 focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-all text-sm placeholder-slate-400"
-            />
+  // Re-read user exp whenever path changes (e.g. after post creation or upvote)
+  useEffect(() => {
+    setCurrentUser(getCurrentUser());
+  }, [location.pathname]);
+
+  return (
+    <nav className="fixed top-0 left-0 w-full z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+        {/* Brand / Logo */}
+        <Link 
+          to="/" 
+          className="flex items-center gap-2.5 text-fuchsia-400 font-black text-lg sm:text-xl hover:text-fuchsia-300 transition-colors flex-shrink-0"
+        >
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-fuchsia-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-fuchsia-600/30">
+            <FiBook className="text-xl" />
           </div>
+          <span className="hidden xs:inline tracking-tight">MES Learning Hub</span>
+        </Link>
+
+        {/* Center Navigation Tabs */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          <NavLink 
+            to="/" 
+            end
+            className={({ isActive }) => `px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
+              isActive 
+                ? 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/40' 
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+          >
+            <FiLayers className="w-4 h-4 text-fuchsia-400" />
+            <span className="hidden sm:inline">หลักสูตรมาตรฐาน</span>
+            <span className="sm:hidden">หลักสูตร</span>
+          </NavLink>
+
+          <NavLink 
+            to="/community" 
+            className={({ isActive }) => `px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
+              isActive 
+                ? 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/40' 
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+          >
+            <FiUsers className="w-4 h-4 text-cyan-400" />
+            <span className="hidden sm:inline">คลังความรู้ชุมชน</span>
+            <span className="sm:hidden">ชุมชน</span>
+          </NavLink>
+
+          <NavLink 
+            to="/ranks" 
+            className={({ isActive }) => `px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
+              isActive 
+                ? 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/40' 
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+          >
+            <FiAward className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">ทำเนียบยศ</span>
+            <span className="sm:hidden">ยศ</span>
+          </NavLink>
         </div>
 
-        <div className="flex items-center gap-4 text-slate-400">
-          <button className="hover:text-white transition-colors" title="การแจ้งเตือน">
-            <FiBell className="text-xl" />
-          </button>
-          <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-fuchsia-500 to-violet-500 flex items-center justify-center text-white font-bold cursor-pointer hover:opacity-90 transition-opacity" title="โปรไฟล์ผู้ใช้งาน">
-            <FiUser />
-          </div>
+        {/* Right User Status */}
+        <div className="flex items-center gap-3">
+          <Link
+            to="/community/new"
+            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-300 hover:text-white transition-colors"
+          >
+            <FiPlus className="w-3.5 h-3.5 text-fuchsia-400" />
+            <span>เขียนบทเรียน</span>
+          </Link>
+
+          <Link 
+            to="/ranks"
+            className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-slate-800/80 transition-colors"
+            title={`ยศปัจจุบัน: Lv.${rank.level} ${rank.name} (${currentUser.exp} EXP)`}
+          >
+            <div className="text-right hidden lg:block">
+              <div className="text-xs font-bold text-white flex items-center justify-end gap-1">
+                <span>{currentUser.name}</span>
+                <span className="text-xs">{rank.badge}</span>
+              </div>
+              <div className="text-[10px] text-amber-300 font-mono font-bold">
+                Lv.{rank.level} · {currentUser.exp} EXP
+              </div>
+            </div>
+
+            <div className="relative">
+              <img 
+                src={currentUser.avatar} 
+                alt={currentUser.name} 
+                className="w-8 h-8 rounded-full object-cover border-2 border-fuchsia-500/60 shadow-sm"
+              />
+              <span className="lg:hidden absolute -bottom-1 -right-1 text-xs">
+                {rank.badge}
+              </span>
+            </div>
+          </Link>
         </div>
       </div>
     </nav>
