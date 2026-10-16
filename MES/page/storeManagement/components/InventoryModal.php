@@ -591,120 +591,366 @@
 </div>
 
 <!-- PRD Material Return Modal (ระบบรับคืนวัตถุดิบจากฝ่ายผลิต) -->
+<style>
+    #prdReturnModal .modal-dialog {
+        max-width: 700px;
+    }
+    #prdReturnModal .modal-content {
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+    }
+    #prdReturnModal .prd-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #172554 100%);
+        padding: 1.1rem 1.4rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    #prdReturnModal .prd-icon-badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #0ea5e9, #2563eb);
+        box-shadow: 0 6px 16px rgba(14, 165, 233, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }
+    #prdReturnModal .prd-scan-card {
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 14px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        transition: all 0.2s ease;
+    }
+    #prdReturnModal .prd-scan-card:focus-within {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+    }
+    #prdReturnModal .prd-scan-input {
+        font-family: 'Roboto Mono', 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 1.05rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+    #prdReturnModal .prd-scan-input:focus {
+        box-shadow: none;
+    }
+    #prdReturnModal .prd-radar-wrap {
+        position: relative;
+        width: 76px;
+        height: 76px;
+        margin: 0 auto 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    #prdReturnModal .prd-radar-ring {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        border-radius: 50%;
+        background: rgba(14, 165, 233, 0.12);
+        animation: prdPulseRadar 2.4s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+    }
+    @keyframes prdPulseRadar {
+        0% { transform: scale(0.85); opacity: 0.8; }
+        50% { transform: scale(1.18); opacity: 0.3; }
+        100% { transform: scale(1.35); opacity: 0; }
+    }
+    #prdReturnModal .prd-radar-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+        color: #0284c7;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        z-index: 2;
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.2);
+    }
+    #prdReturnModal .prd-step-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.75rem 0.6rem;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    #prdReturnModal .prd-step-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        border-color: #cbd5e1;
+    }
+    #prdReturnModal .prd-step-num {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #f1f5f9;
+        color: #475569;
+        font-weight: 700;
+        font-size: 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.35rem;
+    }
+    #prdReturnModal .prd-tag-hero {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border: 1.5px solid #e2e8f0;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 4px 16px -2px rgba(0,0,0,0.04);
+    }
+    #prdReturnModal .prd-tag-header {
+        background: #ffffff;
+        border-bottom: 1px solid #f1f5f9;
+        padding: 0.85rem 1.1rem;
+    }
+    #prdReturnModal .prd-reason-pill {
+        cursor: pointer;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 20px;
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        font-weight: 500;
+        transition: all 0.15s ease;
+        display: inline-block;
+        user-select: none;
+    }
+    #prdReturnModal .prd-reason-pill:hover {
+        background: #e0f2fe;
+        color: #0369a1;
+        border-color: #bae6fd;
+    }
+    #prdReturnModal .btn-confirm-return {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #ffffff;
+        border: none;
+        box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+        transition: all 0.2s ease;
+    }
+    #prdReturnModal .btn-confirm-return:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+        color: #ffffff;
+    }
+</style>
+
 <div class="modal fade" id="prdReturnModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
-            <div class="modal-header bg-primary text-white py-2.5 px-3">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="d-flex align-items-center justify-content-center bg-white text-primary rounded-circle" style="width: 34px; height: 34px;">
-                        <i class="fas fa-undo-alt" style="font-size: 1rem;"></i>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <!-- Sleek Header -->
+            <div class="prd-header d-flex align-items-center justify-content-between text-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="prd-icon-badge">
+                        <i class="fas fa-undo-alt"></i>
                     </div>
                     <div>
-                        <h6 class="modal-title fw-bold mb-0">รับคืนวัตถุดิบจากฝ่ายผลิต (PRD Material Return)</h6>
-                        <span class="text-white-50" style="font-size: 0.72rem;">สแกนแท็กเดิมที่เคยตัดจ่ายไปแล้ว เพื่อนำกลับเข้าคลัง Store และเปิดสถานะ AVAILABLE ทันที</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <h6 class="modal-title fw-bold text-white mb-0" style="font-size: 1.05rem; letter-spacing: -0.2px;">รับคืนวัตถุดิบจากฝ่ายผลิต</h6>
+                            <span class="badge rounded-pill" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); font-size: 0.65rem; font-family: monospace; letter-spacing: 0.5px;">PRD RETURN</span>
+                        </div>
+                        <div class="small opacity-75 mt-0.5" style="color: #cbd5e1; font-size: 0.78rem;">
+                            สแกนแท็กเดิมเพื่อดึงกลับเข้าคลัง Store และเปิดสถานะ <span class="fw-bold text-emerald-400" style="color: #4ade80;">AVAILABLE</span> ทันที
+                        </div>
                     </div>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal" aria-label="Close" style="transition: opacity 0.2s;"></button>
             </div>
-            <div class="modal-body p-3 bg-light">
+
+            <!-- Body -->
+            <div class="modal-body p-3 p-md-4 bg-body-tertiary">
                 <!-- Scan Input Box -->
-                <div class="card border-0 shadow-xs mb-3" style="border-radius: 10px;">
-                    <div class="card-body p-3">
-                        <label class="form-label small fw-bold text-dark d-flex align-items-center justify-content-between mb-1.5">
-                            <span><i class="fas fa-qrcode text-primary me-1"></i> สแกน QR หรือพิมพ์รหัสแท็ก/พาเลท</span>
-                            <span class="text-muted" style="font-size: 0.72rem;">(รองรับการยิงบาร์โค้ดหรือกล้องมือถือ)</span>
-                        </label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-barcode"></i></span>
-                            <input type="text" id="prdReturnScanInput" class="form-control form-control-lg border-start-0 font-monospace" placeholder="เช่น RM2604080004 หรือสแกน QR..." autocomplete="off">
-                            <button class="btn btn-outline-secondary px-3" type="button" id="btnTogglePrdCamera" onclick="togglePrdReturnCamera()" title="เปิด/ปิดกล้องสแกน">
-                                <i class="fas fa-camera"></i>
-                            </button>
-                            <button class="btn btn-primary px-3 fw-bold" type="button" id="btnSearchPrdTag" onclick="searchPrdReturnTag()">
-                                <i class="fas fa-search me-1"></i> ตรวจสอบ
-                            </button>
+                <div class="prd-scan-card p-3 mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="fw-bold small text-dark d-flex align-items-center gap-1.5">
+                            <i class="fas fa-qrcode text-primary"></i> สแกน QR หรือพิมพ์รหัสแท็ก/พาเลท
+                        </span>
+                        <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 0.7rem; font-weight: 500;">
+                            <i class="fas fa-keyboard text-primary me-1"></i> กด Enter หรือยิงบาร์โค้ดได้ทันที
+                        </span>
+                    </div>
+
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-primary border-end-0 px-3">
+                            <i class="fas fa-barcode fs-5"></i>
+                        </span>
+                        <input type="text" id="prdReturnScanInput" class="form-control form-control-lg border-start-0 prd-scan-input" placeholder="เช่น RM-260408-0004 หรือสแกน QR..." autocomplete="off">
+                        <button class="btn btn-outline-secondary px-3" type="button" id="btnTogglePrdCamera" onclick="togglePrdReturnCamera()" title="เปิด/ปิดกล้องสแกน">
+                            <i class="fas fa-camera fs-6"></i>
+                        </button>
+                        <button class="btn btn-primary px-3 px-md-4 fw-bold shadow-sm" type="button" id="btnSearchPrdTag" onclick="searchPrdReturnTag()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+                            <i class="fas fa-search me-1"></i> ตรวจสอบ
+                        </button>
+                    </div>
+
+                    <!-- Camera scanner viewport -->
+                    <div id="prdReturnCameraReader" class="mt-3 rounded-3 overflow-hidden d-none border shadow-sm" style="width: 100%; max-height: 250px; background: #000;"></div>
+                </div>
+
+                <!-- Empty State Walkthrough Prompt (Shown before tag scanned) -->
+                <div id="prdReturnEmptyPrompt" class="p-3 p-md-4 text-center">
+                    <div class="prd-radar-wrap">
+                        <div class="prd-radar-ring"></div>
+                        <div class="prd-radar-icon">
+                            <i class="fas fa-qrcode"></i>
                         </div>
-                        <div id="prdReturnCameraReader" class="mt-2 rounded overflow-hidden d-none" style="width: 100%; max-height: 240px;"></div>
+                    </div>
+                    
+                    <h6 class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">พร้อมสำหรับการสแกนรับคืนสินค้า</h6>
+                    <p class="text-muted small mb-3 mx-auto" style="max-width: 480px; font-size: 0.8rem; line-height: 1.4;">
+                        ยิงบาร์โค้ดหรือสแกน QR บนแท็กพาเลทที่ฝ่ายผลิตนำมาคืน เพื่อดึงข้อมูลพาร์ทและคืนยอดเข้าคลังสโตร์
+                    </p>
+
+                    <!-- 3-Step Process Cards -->
+                    <div class="row g-2 text-start mb-3">
+                        <div class="col-4">
+                            <div class="prd-step-card h-100">
+                                <div class="prd-step-num">1</div>
+                                <div class="fw-bold text-dark small" style="font-size: 0.78rem;">สแกนแท็กเดิม</div>
+                                <div class="text-muted" style="font-size: 0.7rem;">แท็กที่เคยตัดจ่ายไปแล้ว</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="prd-step-card h-100">
+                                <div class="prd-step-num">2</div>
+                                <div class="fw-bold text-dark small" style="font-size: 0.78rem;">เลือกตำแหน่ง</div>
+                                <div class="text-muted" style="font-size: 0.7rem;">ระบุ Location จัดเก็บใน Store</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="prd-step-card h-100">
+                                <div class="prd-step-num">3</div>
+                                <div class="fw-bold text-dark small" style="font-size: 0.78rem;">คืนยอด & พร้อมใช้</div>
+                                <div class="text-muted" style="font-size: 0.7rem;">ปรับเป็น AVAILABLE ทันที</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-inline-flex align-items-center gap-1.5 px-3 py-1.5 rounded-pill bg-light border text-muted small" style="font-size: 0.72rem;">
+                        <i class="fas fa-check-circle text-success"></i>
+                        <span>รองรับแท็กสถานะ: <span class="fw-bold text-warning-emphasis">WIP (ตัดจ่ายไปผลิต)</span> และ <span class="fw-bold text-secondary">CLOSED</span></span>
                     </div>
                 </div>
 
                 <!-- Tag Details Card (Hidden until tag loaded) -->
-                <div id="prdReturnDetailsCard" class="card border-0 shadow-xs mb-3 d-none" style="border-radius: 10px; overflow: hidden;">
-                    <div class="card-header bg-white py-2 px-3 border-bottom d-flex align-items-center justify-content-between">
-                        <div class="fw-bold text-dark small d-flex align-items-center gap-1.5">
-                            <i class="fas fa-pallet text-primary"></i> ข้อมูลแท็กที่ค้นพบ
-                        </div>
-                        <span id="prdReturnStatusBadge" class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-0.5" style="font-size: 0.72rem;">WIP</span>
-                    </div>
-                    <div class="card-body p-3">
-                        <div class="row g-2 mb-3">
-                            <div class="col-12 col-md-6">
-                                <div class="text-muted small" style="font-size: 0.75rem;">รหัสชิ้นงาน / Item No.</div>
-                                <div class="fw-bold fs-6 text-primary" id="prdItemNo">-</div>
-                                <div class="text-secondary small text-truncate" id="prdItemDesc" style="font-size: 0.78rem;">-</div>
+                <div id="prdReturnDetailsCard" class="prd-tag-hero mb-0 d-none">
+                    <!-- Product Header -->
+                    <div class="prd-tag-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="d-flex align-items-center gap-2.5">
+                            <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-3 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                <i class="fas fa-boxes fa-lg"></i>
                             </div>
-                            <div class="col-6 col-md-3">
-                                <div class="text-muted small" style="font-size: 0.75rem;">Serial No. / Tag ID</div>
-                                <div class="font-monospace fw-bold text-dark" id="prdSerialNo">-</div>
-                                <div class="text-muted" style="font-size: 0.72rem;" id="prdPalletNo">-</div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <div class="text-muted small" style="font-size: 0.75rem;">เบิกจ่ายล่าสุดเมื่อ</div>
-                                <div class="fw-semibold text-secondary small" id="prdLastIssuedAt">-</div>
-                            </div>
-                        </div>
-
-                        <div class="alert alert-info border-info-subtle py-2 px-3 mb-3 rounded-3 d-flex align-items-center gap-2" style="font-size: 0.78rem;">
-                            <i class="fas fa-info-circle text-info fs-5 flex-shrink-0"></i>
                             <div>
-                                เมื่อกดยืนยันรับคืน ระบบจะนำยอดเข้า Onhand คลัง Store และเปลี่ยนสถานะแท็กเป็น <b>AVAILABLE</b> ทันที เพื่อให้นำไปเบิกจ่ายต่อได้โดยไม่ต้องพิมพ์แท็กใหม่
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="font-monospace fw-bold fs-6 text-primary" id="prdItemNo">-</span>
+                                </div>
+                                <div class="text-secondary small fw-medium" id="prdItemDesc" style="font-size: 0.8rem; max-width: 420px; line-height: 1.3;">-</div>
+                            </div>
+                        </div>
+                        <span id="prdReturnStatusBadge" class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-1.5 fw-bold" style="font-size: 0.75rem;">WIP</span>
+                    </div>
+
+                    <div class="p-3 p-md-3.5">
+                        <!-- Tag Meta Info Badges -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-6 col-md-4">
+                                <div class="p-2 rounded-3 bg-white border">
+                                    <div class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; font-weight: 600;">Serial No. / Tag</div>
+                                    <div class="font-monospace fw-bold text-dark text-truncate" id="prdSerialNo" style="font-size: 0.85rem;">-</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="p-2 rounded-3 bg-white border">
+                                    <div class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; font-weight: 600;">พาเลท / ขนาดบรรจุ</div>
+                                    <div class="fw-bold text-dark text-truncate" id="prdPalletNo" style="font-size: 0.85rem;">-</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="p-2 rounded-3 bg-white border">
+                                    <div class="text-muted" style="font-size: 0.7rem; text-transform: uppercase; font-weight: 600;">ตัดจ่ายล่าสุดเมื่อ</div>
+                                    <div class="fw-semibold text-secondary text-truncate" id="prdLastIssuedAt" style="font-size: 0.82rem;">-</div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Inputs for Return -->
-                        <div class="row g-2">
+                        <!-- Reassurance Banner -->
+                        <div class="alert border-0 py-2.5 px-3 mb-3 rounded-3 d-flex align-items-start gap-2.5" style="background: #f0fdf4; border: 1px solid #bbf7d0 !important; color: #166534; font-size: 0.78rem;">
+                            <i class="fas fa-shield-alt text-success fs-5 mt-0.5 flex-shrink-0"></i>
+                            <div>
+                                <b>สถานะพร้อมใช้ทันที:</b> เมื่อกดยืนยันรับคืน ระบบจะนำยอดเข้า Onhand คลัง Store และเปลี่ยนสถานะแท็กเป็น <b>AVAILABLE</b> ทันที เพื่อให้นำไปเบิกจ่ายต่อได้โดยไม่ต้องเสียเวลาพิมพ์แท็กใหม่
+                            </div>
+                        </div>
+
+                        <!-- Form Controls -->
+                        <div class="row g-2.5">
                             <div class="col-12 col-md-6">
-                                <label class="form-label small fw-bold text-dark mb-1">
-                                    <i class="fas fa-map-marker-alt text-danger me-1"></i> รับเข้าคลัง / ตำแหน่ง (Location) <span class="text-danger">*</span>
+                                <label class="form-label small fw-bold text-dark mb-1 d-flex align-items-center gap-1">
+                                    <i class="fas fa-map-marker-alt text-danger"></i> รับเข้าคลัง / ตำแหน่ง (Location) <span class="text-danger">*</span>
                                 </label>
-                                <select id="prdReturnLocationSelect" class="form-select form-select-sm fw-semibold">
+                                <select id="prdReturnLocationSelect" class="form-select fw-semibold text-dark border-secondary-subtle" style="border-radius: 8px;">
                                     <option value="">-- เลือกคลังที่เก็บสินค้า --</option>
                                 </select>
                             </div>
+
                             <div class="col-12 col-md-6">
-                                <label class="form-label small fw-bold text-dark mb-1">
-                                    <i class="fas fa-boxes text-success me-1"></i> จำนวนที่รับคืนจริง (QTY) <span class="text-danger">*</span>
-                                </label>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" step="any" min="0.001" id="prdReturnQtyInput" class="form-control fw-bold text-end fs-6 text-success" placeholder="ระบุยอดรับคืน">
-                                    <span class="input-group-text bg-light text-muted small">ชิ้น</span>
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <label class="form-label small fw-bold text-dark mb-0 d-flex align-items-center gap-1">
+                                        <i class="fas fa-boxes text-success"></i> จำนวนที่รับคืนจริง (QTY) <span class="text-danger">*</span>
+                                    </label>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-bold small text-primary" onclick="if(activePrdReturnTag){ document.getElementById('prdReturnQtyInput').value = parseFloat(activePrdReturnTag.current_qty) > 0 ? parseFloat(activePrdReturnTag.current_qty) : parseFloat(activePrdReturnTag.qty_per_pallet || 0); }" style="font-size: 0.72rem;">
+                                        <i class="fas fa-check-double me-1"></i>คืนเต็มยอดเดิม
+                                    </button>
+                                </div>
+                                <div class="input-group">
+                                    <input type="number" step="any" min="0.001" id="prdReturnQtyInput" class="form-control fw-bold text-end fs-6 text-success border-secondary-subtle" placeholder="ระบุยอดรับคืน" style="border-radius: 8px 0 0 8px;">
+                                    <span class="input-group-text bg-light text-muted small fw-semibold" style="border-radius: 0 8px 8px 0;">ชิ้น</span>
                                 </div>
                             </div>
+
                             <div class="col-12">
-                                <label class="form-label small fw-bold text-dark mb-1">
-                                    <i class="fas fa-comment-dots text-secondary me-1"></i> เหตุผลการรับคืน / หมายเหตุ
+                                <label class="form-label small fw-bold text-dark mb-1 d-flex align-items-center gap-1">
+                                    <i class="fas fa-comment-dots text-secondary"></i> เหตุผลการรับคืน / หมายเหตุ
                                 </label>
-                                <input type="text" id="prdReturnReasonInput" class="form-control form-control-sm" placeholder="เช่น งานเหลือจากไลน์ผลิต, แผนผลิตยกเลิก, เบิกเกิน ฯลฯ" value="งานเหลือจากไลน์ผลิต นำส่งคืนคลัง Store">
+                                <input type="text" id="prdReturnReasonInput" class="form-control form-control-sm border-secondary-subtle mb-1.5" placeholder="เช่น งานเหลือจากไลน์ผลิต, แผนผลิตยกเลิก, เบิกเกิน ฯลฯ" value="งานเหลือจากไลน์ผลิต นำส่งคืนคลัง Store" style="border-radius: 8px;">
+                                
+                                <!-- Quick Reason Chips -->
+                                <div class="d-flex flex-wrap gap-1 align-items-center">
+                                    <small class="text-muted me-1" style="font-size: 0.7rem;">แท็กข้อความด่วน:</small>
+                                    <span class="prd-reason-pill" onclick="document.getElementById('prdReturnReasonInput').value = 'งานเหลือจากไลน์ผลิต นำส่งคืนคลัง Store'">งานเหลือจากไลน์</span>
+                                    <span class="prd-reason-pill" onclick="document.getElementById('prdReturnReasonInput').value = 'แผนผลิตถูกยกเลิก / เลื่อนการผลิต'">ยกเลิกแผนผลิต</span>
+                                    <span class="prd-reason-pill" onclick="document.getElementById('prdReturnReasonInput').value = 'เบิกเกินจำนวนที่ใช้จริงในกะ'">เบิกเกินยอด</span>
+                                    <span class="prd-reason-pill" onclick="document.getElementById('prdReturnReasonInput').value = 'ชิ้นงานคืนจากการทดลองผลิต / Setup'">คืนจาก Setup</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="card-footer bg-white border-top py-2.5 px-3 d-flex justify-content-end gap-2">
-                        <button type="button" class="btn btn-secondary btn-sm fw-semibold px-3" onclick="resetPrdReturnForm()">ล้างข้อมูล</button>
-                        <button type="button" class="btn btn-success btn-sm fw-bold px-4 shadow-xs" id="btnConfirmPrdReturn" onclick="submitPrdReturn()">
-                            <i class="fas fa-check-circle me-1"></i> ยืนยันรับคืนเข้า Store
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Empty prompt when no tag scanned -->
-                <div id="prdReturnEmptyPrompt" class="text-center py-4 text-muted">
-                    <i class="fas fa-qrcode fa-3x opacity-25 mb-2"></i>
-                    <div class="small fw-semibold">กรุณาสแกนหรือพิมพ์หมายเลขแท็กด้านบนเพื่อดึงข้อมูล</div>
                 </div>
             </div>
-            <div class="modal-footer bg-white border-top py-2 px-3">
-                <button type="button" class="btn btn-secondary btn-sm fw-bold px-4" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+
+            <!-- Harmonious Footer -->
+            <div class="modal-footer bg-white border-top py-2.5 px-3 px-md-4 d-flex justify-content-between align-items-center">
+                <button type="button" class="btn btn-outline-secondary btn-sm fw-semibold px-3" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> ปิดหน้าต่าง
+                </button>
+                <div id="prdReturnFooterActions" class="d-none d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-light border btn-sm fw-semibold px-3" onclick="resetPrdReturnForm()">
+                        <i class="fas fa-redo me-1 text-muted"></i> ล้างข้อมูล
+                    </button>
+                    <button type="button" class="btn btn-confirm-return btn-sm fw-bold px-4 py-1.5 shadow-sm" id="btnConfirmPrdReturn" onclick="submitPrdReturn()">
+                        <i class="fas fa-check-circle me-1.5"></i> ยืนยันรับคืนเข้า Store
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+</div>

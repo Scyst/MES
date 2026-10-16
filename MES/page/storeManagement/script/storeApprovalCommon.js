@@ -478,6 +478,9 @@ function resetPrdReturnForm() {
     const emptyPrompt = document.getElementById('prdReturnEmptyPrompt');
     if (emptyPrompt) emptyPrompt.classList.remove('d-none');
 
+    const footerActions = document.getElementById('prdReturnFooterActions');
+    if (footerActions) footerActions.classList.add('d-none');
+
     const locSelect = document.getElementById('prdReturnLocationSelect');
     if (locSelect) locSelect.innerHTML = '<option value="">-- เลือกคลังที่เก็บสินค้า --</option>';
 
@@ -564,9 +567,11 @@ async function searchPrdReturnTag(forcedSerial = null) {
         const qtyInput = document.getElementById('prdReturnQtyInput');
         if (qtyInput) qtyInput.value = defaultQty > 0 ? defaultQty : '';
 
-        // Show Details Card
+        // Show Details Card & Footer Actions
         document.getElementById('prdReturnDetailsCard').classList.remove('d-none');
         document.getElementById('prdReturnEmptyPrompt').classList.add('d-none');
+        const footerActions = document.getElementById('prdReturnFooterActions');
+        if (footerActions) footerActions.classList.remove('d-none');
 
         // Focus QTY input
         setTimeout(() => {
