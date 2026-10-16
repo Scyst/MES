@@ -1,7 +1,7 @@
 // trainingAuditStore.js - Manufacturing Training Tracking, Competency Matrix & ISO 9001 Clause 7.2 Audit Engine
 import { courses } from './courses';
-import { getCustomCourses, getCurrentUser } from './communityStore';
-import { getUserAvatarSvg } from './offlineAssets';
+import { getCustomCourses, getCurrentUser, getCommunityPosts, calculateRank } from './communityStore';
+import { getUserAvatarSvg, DEFAULT_COURSE_IMAGE } from './offlineAssets';
 
 // SNC Manufacturing Factory Departments
 export const DEPARTMENTS = [
@@ -933,7 +933,43 @@ export function getCourseAuditSummary(courseId) {
  */
 export function getEmployeeCompetencyPassport(empId) {
   const allEmployees = getAllEmployees();
-  const employee = allEmployees.find(e => e.empId === empId) || allEmployees[0];
+  const currentUser = getCurrentUser();
+  const currentEmpId = currentUser.emp_id || `EMP-${currentUser.id || '5928'}`;
+  
+  let employee = null;
+  let currentUserIsMe = false;
+
+  const USER_ID_MAP = {
+    'usr-103': 'EMP-1880',
+    'usr-102': 'EMP-2905',
+    'usr-104': 'EMP-1092',
+    'usr-105': 'EMP-4419',
+    'usr-001': 'EMP-5928'
+  };
+  const lookupId = USER_ID_MAP[empId] || empId;
+
+  if (!lookupId || lookupId === 'me' || lookupId === currentEmpId || lookupId === currentUser.id) {
+    currentUserIsMe = true;
+    employee = allEmployees.find(e => e.empId === currentEmpId) || {
+      empId: currentEmpId,
+      name: currentUser.name,
+      role: currentUser.role,
+      department: 'แผนกผลิตปั๊มขึ้นรูป (Production Stamping)',
+      shift: 'Day Shift (08:00 - 17:00)',
+      avatar: currentUser.avatar,
+      joinedDate: '2023-01-01'
+    };
+  } else {
+    employee = allEmployees.find(e => 
+      e.empId === lookupId || 
+      e.empId?.toLowerCase() === lookupId?.toLowerCase() ||
+      e.name === lookupId ||
+      e.name.includes(lookupId) ||
+      (typeof lookupId === 'string' && lookupId.includes(e.name))
+    ) || allEmployees[0];
+    currentUserIsMe = (employee.empId === currentEmpId);
+  }
+
   const allCourses = [...courses, ...getCustomCourses()];
   const records = getTrainingRecords();
   const empRecords = records.filter(r => r.empId === employee.empId);
@@ -967,10 +1003,15 @@ export function getEmployeeCompetencyPassport(empId) {
     return {
       courseId: course.id,
       title: course.title,
+      description: course.description,
+      image: course.image || DEFAULT_COURSE_IMAGE,
       category: course.category,
       duration: course.duration,
       isMandatory: isMandatory,
       status: status,
+      quizScore: rec?.quizScore ?? null,
+      quizTotal: rec?.quizTotal ?? null,
+      scoreDisplay: rec && rec.quizTotal !== null ? `${rec.quizScore}/${rec.quizTotal}` : '-',
       quizPercentage: quizPct,
       passed: rec ? rec.passed : false,
       completedDate: completedDate,
@@ -998,8 +1039,25 @@ export function getEmployeeCompetencyPassport(empId) {
   const scores = courseStatusList.filter(c => c.quizPercentage !== null).map(c => c.quizPercentage);
   const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 
+  // Community contributions & rank calculation
+  const posts = getCommunityPosts();
+  const userPosts = posts.filter(p => 
+    p.author?.id === employee.empId || 
+    p.author?.name === employee.name || 
+    (currentUserIsMe && p.author?.id === currentUser.id)
+  );
+  const totalLikesReceived = userPosts.reduce((acc, p) => acc + (p.likesCount || 0), 0);
+
+  const exp = currentUserIsMe ? currentUser.exp : (employee.exp || 420);
+  const rank = calculateRank(exp);
+
   return {
     employee: employee,
+    currentUserIsMe: currentUserIsMe,
+    rank: rank,
+    exp: exp,
+    userPosts: userPosts,
+    totalLikesReceived: totalLikesReceived,
     complianceRate: complianceRate,
     isAuditReady: complianceRate === 100,
     totalCoursesCount: allCourses.length,

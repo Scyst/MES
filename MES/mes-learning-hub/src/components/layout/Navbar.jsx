@@ -114,9 +114,13 @@ export default function Navbar() {
           </Link>
 
           <Link 
-            to="/ranks"
-            className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-slate-800/80 transition-colors"
-            title={`ยศปัจจุบัน: Lv.${rank.level} ${rank.name} (${currentUser.exp} EXP)`}
+            to="/profile"
+            className={`flex items-center gap-2.5 p-1.5 rounded-xl transition-colors ${
+              location.pathname.startsWith('/profile') 
+                ? 'bg-fuchsia-600/20 border border-fuchsia-500/40 shadow-sm' 
+                : 'hover:bg-slate-800/80 border border-transparent'
+            }`}
+            title={`สมรรถนะ & ประวัติการฝึกอบรม: ${currentUser.name} (Lv.${rank.level} · ${currentUser.exp} EXP)`}
           >
             <div className="text-right hidden lg:block">
               <div className="text-xs font-bold text-white flex items-center justify-end gap-1">

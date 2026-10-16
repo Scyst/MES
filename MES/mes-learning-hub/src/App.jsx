@@ -8,6 +8,7 @@ import CreatePost from './pages/CreatePost';
 import PostDetail from './pages/PostDetail';
 import Leaderboard from './pages/Leaderboard';
 import AuditDashboard from './pages/AuditDashboard';
+import UserProfile from './pages/UserProfile';
 import './index.css';
 
 function App() {
@@ -32,6 +33,10 @@ function App() {
 
             {/* Training Tracking & Audit Matrix (ISO 9001 Clause 7.2) */}
             <Route path="/audit" element={<AuditDashboard />} />
+
+            {/* Employee Competency Passport & Training Profile */}
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/profile/:empId" element={<UserProfile />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

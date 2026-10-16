@@ -29,7 +29,8 @@ import {
   FiAlertCircle,
   FiChevronRight,
   FiX,
-  FiCheck
+  FiCheck,
+  FiExternalLink
 } from 'react-icons/fi';
 
 export default function AuditDashboard() {
@@ -365,16 +366,24 @@ export default function AuditDashboard() {
                   {filteredRoster.length > 0 ? (
                     filteredRoster.map(trainee => {
                       return (
-                        <tr key={trainee.empId} className="hover:bg-slate-750/50 transition-colors">
+                        <tr 
+                          key={trainee.empId} 
+                          onClick={() => navigate(`/profile/${trainee.empId}`)}
+                          className="hover:bg-slate-750/70 transition-colors cursor-pointer group"
+                          title={`คลิกเพื่อดูหน้าประวัติและสมรรถนะ: ${trainee.name} (${trainee.empId})`}
+                        >
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
                               <img 
                                 src={trainee.avatar} 
                                 alt={trainee.name} 
-                                className="w-8 h-8 rounded-full object-cover border border-slate-700 flex-shrink-0" 
+                                className="w-8 h-8 rounded-full object-cover border border-slate-700 flex-shrink-0 group-hover:scale-105 transition-transform" 
                               />
                               <div>
-                                <div className="font-bold text-white text-xs">{trainee.name}</div>
+                                <div className="font-bold text-white text-xs group-hover:text-cyan-300 transition-colors flex items-center gap-1.5">
+                                  <span>{trainee.name}</span>
+                                  <FiExternalLink className="w-3 h-3 text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
                                 <div className="text-[10px] text-fuchsia-400 font-mono">{trainee.empId}</div>
                               </div>
                             </div>
@@ -520,6 +529,14 @@ export default function AuditDashboard() {
                 <div className="text-[11px] text-slate-400 mt-0.5">
                   {employeePassport.employee.department} · {employeePassport.employee.shift}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/profile/${employeePassport.employee.empId}`)}
+                  className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition-colors"
+                >
+                  <FiExternalLink className="w-3.5 h-3.5" />
+                  <span>เปิดดูหน้าประวัติเต็มและพิมพ์ Passport</span>
+                </button>
               </div>
             </div>
 

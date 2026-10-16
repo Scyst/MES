@@ -15,7 +15,8 @@ import {
   FiStar, 
   FiHeart, 
   FiBookOpen, 
-  FiUserCheck 
+  FiUserCheck,
+  FiChevronRight
 } from 'react-icons/fi';
 
 export default function Leaderboard() {
@@ -127,9 +128,11 @@ export default function Leaderboard() {
             return (
               <div 
                 key={user.id}
-                className={`px-6 py-4 flex items-center justify-between gap-4 transition-colors ${
-                  isMe ? 'bg-fuchsia-950/20 hover:bg-fuchsia-950/30' : 'hover:bg-slate-750'
+                onClick={() => navigate(`/profile/${user.emp_id || user.id}`)}
+                className={`px-6 py-4 flex items-center justify-between gap-4 transition-all cursor-pointer group ${
+                  isMe ? 'bg-fuchsia-950/20 hover:bg-fuchsia-950/40 border-l-4 border-fuchsia-500' : 'hover:bg-slate-750/70'
                 }`}
+                title="คลิกเพื่อดูประวัติการอบรมและสมรรถนะ (Competency Passport)"
               >
                 {/* Position & User Details */}
                 <div className="flex items-center gap-4 min-w-0">
@@ -149,12 +152,12 @@ export default function Leaderboard() {
                     src={user.avatar} 
                     alt={user.name} 
                     onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
-                    className="w-11 h-11 rounded-xl object-cover border border-slate-600 flex-shrink-0"
+                    className="w-11 h-11 rounded-xl object-cover border border-slate-600 flex-shrink-0 group-hover:scale-105 transition-transform"
                   />
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-white truncate">
+                      <span className="text-sm font-bold text-white truncate group-hover:text-fuchsia-300 transition-colors">
                         {user.name}
                       </span>
                       {isMe && (
@@ -194,6 +197,11 @@ export default function Leaderboard() {
                     <div className="text-xs font-mono font-bold text-amber-300">
                       {user.exp} EXP
                     </div>
+                  </div>
+
+                  {/* Right Chevron */}
+                  <div className="text-slate-500 group-hover:text-fuchsia-400 group-hover:translate-x-1 transition-all">
+                    <FiChevronRight className="w-4 h-4" />
                   </div>
                 </div>
               </div>

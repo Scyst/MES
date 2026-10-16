@@ -20,7 +20,8 @@ import {
   FiCompass,
   FiBookOpen,
   FiStar,
-  FiImage
+  FiImage,
+  FiShield
 } from 'react-icons/fi';
 
 const COMMUNITY_CATEGORIES = [
@@ -111,7 +112,7 @@ export default function CommunityHub() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => navigate('/community/new')}
               className="px-5 py-3 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-fuchsia-600/30 inline-flex items-center gap-2 hover:-translate-y-0.5"
@@ -119,6 +120,15 @@ export default function CommunityHub() {
               <FiPlus className="w-5 h-5" />
               <span>เขียนบทเรียน / แชร์ความรู้</span>
               <span className="bg-black/30 px-1.5 py-0.5 rounded text-[10px] text-amber-300 font-mono">+50 EXP</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/profile')}
+              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-xl text-sm font-semibold transition-colors inline-flex items-center gap-2"
+              title="ดูประวัติการอบรมและสมรรถนะ (Competency Passport)"
+            >
+              <FiShield className="w-4 h-4 text-cyan-400" />
+              <span className="hidden sm:inline">โปรไฟล์ &amp; สมรรถนะ</span>
             </button>
 
             <button
@@ -260,15 +270,22 @@ export default function CommunityHub() {
 
                 {/* Footer: Author & Social Metrics */}
                 <div className="px-6 pb-5 pt-3 border-t border-slate-700/80 flex items-center justify-between gap-3 bg-slate-800/40">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/profile/${post.author.emp_id || post.author.id}`);
+                    }}
+                    className="flex items-center gap-2.5 min-w-0 hover:opacity-80 transition-opacity cursor-pointer group/author"
+                    title={`ดูประวัติและสมรรถนะ: ${post.author.name}`}
+                  >
                     <img 
                       src={post.author.avatar || DEFAULT_AVATAR} 
                       alt={post.author.name} 
-                      className="w-8 h-8 rounded-full object-cover border border-slate-600 flex-shrink-0"
+                      className="w-8 h-8 rounded-full object-cover border border-slate-600 flex-shrink-0 group-hover/author:border-fuchsia-400 transition-colors"
                       onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
                     />
                     <div className="truncate text-xs">
-                      <div className="text-slate-200 font-semibold truncate flex items-center gap-1">
+                      <div className="text-slate-200 font-semibold truncate flex items-center gap-1 group-hover/author:text-fuchsia-300 transition-colors">
                         <span>{post.author.name}</span>
                         <span title={authorRank.name}>{authorRank.badge}</span>
                       </div>

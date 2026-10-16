@@ -315,16 +315,23 @@ export default function PostDetail() {
 
         {/* Author Profile Strip */}
         <div className="flex items-center justify-between gap-4 py-4 border-y border-slate-700/80 mb-8">
-          <div className="flex items-center gap-3">
+          <div 
+            onClick={() => navigate(`/profile/${post.author.emp_id || post.author.id}`)}
+            className="flex items-center gap-3 cursor-pointer group/author hover:opacity-90 transition-opacity"
+            title={`คลิกเพื่อดูประวัติและสมรรถนะของ ${post.author.name}`}
+          >
             <img 
               src={post.author.avatar} 
               alt={post.author.name} 
               onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
-              className="w-12 h-12 rounded-xl object-cover border-2 border-slate-600 shadow"
+              className="w-12 h-12 rounded-xl object-cover border-2 border-slate-600 group-hover/author:border-fuchsia-400 shadow transition-colors"
             />
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-white font-bold text-sm">{post.author.name}</span>
+                <span className="text-white font-bold text-sm group-hover/author:text-fuchsia-300 transition-colors flex items-center gap-1.5">
+                  <span>{post.author.name}</span>
+                  <FiExternalLink className="w-3.5 h-3.5 text-fuchsia-400 opacity-0 group-hover/author:opacity-100 transition-opacity" />
+                </span>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold text-white bg-gradient-to-r ${authorRank.color} border border-white/20`}>
                   {authorRank.badge} Lv.{authorRank.level} {authorRank.name}
                 </span>
