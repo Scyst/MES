@@ -152,29 +152,25 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                                     <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center flex-shrink-0" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
                                         <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
                                     </button>
-
-                                    <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center flex-shrink-0 d-md-none" onclick="openPrdReturnModal()" style="height: 32px;" title="รับของคืนจาก PRD">
-                                        <i class="fas fa-undo-alt text-primary"></i>
-                                    </button>
                                 </div>
                             </div>
 
-                            <div id="actionWrapper" class="d-none d-md-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end mt-2 mt-lg-0">
+                            <div id="actionWrapper" class="d-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end mt-2 mt-lg-0 w-100 w-lg-auto">
 
-                                <button class="btn btn-sm btn-outline-primary fw-bold px-2 py-1 rounded shadow-sm" onclick="openPrdReturnModal()" title="รับวัตถุดิบคืนจากฝ่ายผลิต (PRD)">
-                                    <i class="fas fa-undo-alt me-1 text-primary"></i> รับคืนจาก PRD
+                                <button class="btn btn-sm btn-outline-primary fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center" onclick="openPrdReturnModal()" title="รับวัตถุดิบคืนจากฝ่ายผลิต (PRD)" style="height: 32px;">
+                                    <i class="fas fa-undo-alt me-1 text-primary"></i> <span class="d-none d-sm-inline">รับ</span>คืน<span class="d-none d-sm-inline">จาก PRD</span>
                                 </button>
 
-                                <button class="btn btn-sm fw-bold px-3 py-1 rounded shadow transition-btn text-white border-0" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7);" onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();">
+                                <button class="btn btn-sm fw-bold px-2 px-sm-3 py-1 rounded shadow transition-btn text-white border-0 d-flex align-items-center" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7); height: 32px;" onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();" title="สแกน">
                                     <i class="fas fa-qrcode me-1"></i> สแกน
                                 </button>
                                 
-                                <button class="btn btn-sm btn-outline-success fw-bold px-3 py-1 rounded shadow-sm ms-1" onclick="exportInventoryData()">
+                                <button class="btn btn-sm btn-outline-success fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center" onclick="exportInventoryData()" style="height: 32px;" title="Export to Excel">
                                     <i class="fas fa-file-excel me-1"></i> Export
                                 </button>
 
-                                <div class="dropdown ms-1">
-                                    <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm position-relative" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false">
+                                <div class="dropdown ms-auto ms-lg-1">
+                                    <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm position-relative d-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false" style="height: 32px; min-width: 36px;">
                                         <i class="fas fa-ellipsis-v fa-fw"></i>
                                         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none" id="badgeTotalAlert" style="width: 12px; height: 12px;"></span>
                                     </button>
