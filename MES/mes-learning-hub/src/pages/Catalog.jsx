@@ -9,8 +9,7 @@ import {
   FiLayers, 
   FiCheckCircle, 
   FiBookOpen,
-  FiX,
-  FiCompass
+  FiX
 } from 'react-icons/fi';
 
 const CATEGORIES = [
@@ -65,12 +64,9 @@ export default function Catalog() {
       <div className="header-section">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-300 text-xs font-semibold uppercase tracking-wider mb-3">
-              <FiCompass className="w-3.5 h-3.5" /> MES Enterprise Learning Platform
-            </div>
             <h1>MES Learning Hub</h1>
-            <p className="subtitle max-w-3xl leading-relaxed text-slate-300">
-              ศูนย์รวมองค์ความรู้และคู่มือการปฏิบัติงานสำหรับพนักงานทุกคน: ครอบคลุมการทำงานกับเครื่องจักร, การใช้งานโปรแกรมและระบบดิจิทัล (MES, SAP, Web App), ขั้นตอนและวิธีปฏิบัติงาน (SOP / WI), ระบบเอกสาร, ตลอดจนมาตรฐานวิศวกรรมการผลิตและคุณภาพสากล
+            <p className="subtitle text-slate-400 mt-1">
+              คลังคู่มือปฏิบัติงาน ระบบงาน และสื่อการเรียนรู้สำหรับพนักงาน
             </p>
           </div>
 
