@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { saveCustomCourse, getCurrentUser, calculateRank, addExp, fetchRealUserSession } from '../data/communityStore';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { saveCustomCourse, getCurrentUser, calculateRank, addExp, fetchRealUserSession, getCourseById } from '../data/communityStore';
 import { compressImage } from '../data/imageCompressor';
 import { CATEGORY_OFFLINE_IMAGES, DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
 import { 
@@ -16,7 +16,8 @@ import {
   FiSave,
   FiLayers,
   FiClock,
-  FiUser
+  FiUser,
+  FiEdit2
 } from 'react-icons/fi';
 
 const OFFICIAL_CATEGORIES = [
@@ -30,6 +31,10 @@ const OFFICIAL_CATEGORIES = [
 
 export default function CourseBuilder() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editCourseId = searchParams.get('courseId') || searchParams.get('edit');
+  const isEditMode = Boolean(editCourseId);
+
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const userRank = calculateRank(currentUser.exp);
 
@@ -44,10 +49,64 @@ export default function CourseBuilder() {
     fetchRealUserSession().then(u => {
       if (u) {
         setCurrentUser(u);
-        setInstructor(`${u.name} (${u.role})`);
+        if (!isEditMode) {
+          setInstructor(`${u.name} (${u.role})`);
+        }
       }
     });
-  }, []);
+  }, [isEditMode]);
+
+  // Load existing course data if editing
+  useEffect(() => {
+    if (editCourseId) {
+      const existing = getCourseById(editCourseId);
+      if (existing) {
+        setTitle(existing.title || '');
+        setCategory(existing.category || OFFICIAL_CATEGORIES[0]);
+        setDuration(existing.duration || '45 นาที');
+        setTargetAudience(existing.targetAudience || 'พนักงานปฏิบัติการและหัวหน้างาน');
+        setInstructor(existing.instructor || '');
+        setDescription(existing.description || '');
+        setCoverImage(existing.image || '');
+
+        if (existing.modules && existing.modules.length > 0) {
+          const loadedModules = existing.modules.map((m, idx) => {
+            const steps = (m.steps && m.steps.length > 0) 
+              ? m.steps.map((s, sIdx) => ({
+                  number: s.number || sIdx + 1,
+                  title: s.title || '',
+                  desc: s.desc || '',
+                  image: s.image || '',
+                  alertType: s.alertType || 'none',
+                  alertText: s.alertText || ''
+                }))
+              : [
+                  {
+                    number: 1,
+                    title: m.title || `หัวข้อที่ ${idx + 1}`,
+                    desc: m.summary || (typeof m.content === 'string' ? `รายละเอียดคู่มือปฏิบัติงาน: ${m.title}` : ''),
+                    image: '',
+                    alertType: 'none',
+                    alertText: ''
+                  }
+                ];
+            return {
+              id: m.id || `m${idx + 1}`,
+              title: m.title || `บทที่ ${idx + 1}`,
+              summary: m.summary || '',
+              steps: steps
+            };
+          });
+          setModules(loadedModules);
+        }
+
+        if (existing.quiz && existing.quiz.length > 0) {
+          setQuizzes(existing.quiz);
+          setEnableQuiz(true);
+        }
+      }
+    }
+  }, [editCourseId]);
   const [description, setDescription] = useState('');
   const [coverImage, setCoverImage] = useState('');
   
@@ -248,7 +307,9 @@ export default function CourseBuilder() {
     setErrorMsg('');
 
     try {
-      const courseId = `c-custom-${Date.now()}`;
+      const courseId = isEditMode ? editCourseId : `c-custom-${Date.now()}`;
+      const existingCourse = isEditMode ? getCourseById(editCourseId) : null;
+
       const newCourse = {
         id: courseId,
         title: title.trim(),
@@ -257,15 +318,17 @@ export default function CourseBuilder() {
         duration: duration.trim(),
         category: category,
         targetAudience: targetAudience.trim(),
-        image: coverImage || CATEGORY_OFFLINE_IMAGES[category] || DEFAULT_COURSE_IMAGE,
+        image: coverImage || existingCourse?.image || CATEGORY_OFFLINE_IMAGES[category] || DEFAULT_COURSE_IMAGE,
         isOfficial: true,
         isCustomBuilt: true,
-        author: {
+        isEdited: true,
+        updatedAt: new Date().toISOString(),
+        author: existingCourse?.author || {
           id: currentUser.id,
           name: currentUser.name,
           role: currentUser.role
         },
-        createdAt: new Date().toISOString(),
+        createdAt: existingCourse?.createdAt || new Date().toISOString(),
         modules: modules.map((m, idx) => ({
           id: `m${idx + 1}`,
           title: m.title,
@@ -278,10 +341,13 @@ export default function CourseBuilder() {
 
       saveCustomCourse(newCourse);
 
-      // Award EXP for creating standard course
-      addExp(100, 'สร้างหลักสูตรมาตรฐานใหม่ของโรงงาน');
+      if (isEditMode) {
+        addExp(25, 'บันทึกการปรับปรุงเนื้อหาหลักสูตร');
+      } else {
+        addExp(100, 'สร้างหลักสูตรมาตรฐานใหม่ของโรงงาน');
+      }
 
-      // Navigate to the newly created course!
+      // Navigate to the course!
       navigate(`/course/${courseId}`);
     } catch (err) {
       setErrorMsg('เกิดข้อผิดพลาดในการบันทึกหลักสูตร: ' + err.message);
@@ -301,17 +367,39 @@ export default function CourseBuilder() {
         </button>
 
         <span className="text-xs font-semibold text-fuchsia-400 bg-fuchsia-500/10 px-3 py-1.5 rounded-full border border-fuchsia-500/20 flex items-center gap-1.5">
-          <FiLayers className="w-3.5 h-3.5" /> ระบบสร้างหลักสูตรมาตรฐาน (Admin Studio)
+          {isEditMode ? (
+            <>
+              <FiEdit2 className="w-3.5 h-3.5 text-amber-400" />
+              <span>โหมดแก้ไขข้อมูลหลักสูตร (Edit Mode)</span>
+            </>
+          ) : (
+            <>
+              <FiLayers className="w-3.5 h-3.5" />
+              <span>ระบบสร้างหลักสูตรมาตรฐาน (Admin Studio)</span>
+            </>
+          )}
         </span>
       </div>
 
       <div className="bg-slate-800/90 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-2xl mb-12">
         <div className="border-b border-slate-700 pb-5 mb-8">
           <h1 className="text-2xl md:text-3xl font-black text-white mb-2 flex items-center gap-2.5">
-            <FiLayers className="text-fuchsia-400" /> สร้างหลักสูตรมาตรฐานของโรงงาน (Course Builder)
+            {isEditMode ? (
+              <>
+                <FiEdit2 className="text-amber-400" />
+                <span>แก้ไขหลักสูตร: {title || 'กำลังโหลด...'}</span>
+              </>
+            ) : (
+              <>
+                <FiLayers className="text-fuchsia-400" />
+                <span>สร้างหลักสูตรมาตรฐานของโรงงาน (Course Builder)</span>
+              </>
+            )}
           </h1>
           <p className="text-sm text-slate-400">
-            ระบบสำหรับหัวหน้างานและวิศวกร ในการกำหนดโครงสร้างหลักสูตร บทเรียน ขั้นตอนการปฏิบัติงาน พร้อมชุดแบบทดสอบประเมินผลพนักงาน
+            {isEditMode 
+              ? 'ปรับปรุงเนื้อหาขั้นตอนการทำงาน วิดีโอ/รูปภาพประกอบ และข้อสอบประเมินผลของหลักสูตรนี้'
+              : 'ระบบสำหรับหัวหน้างานและวิศวกร ในการกำหนดโครงสร้างหลักสูตร บทเรียน ขั้นตอนการปฏิบัติงาน พร้อมชุดแบบทดสอบประเมินผลพนักงาน'}
           </p>
         </div>
 
@@ -707,7 +795,7 @@ export default function CourseBuilder() {
               className="px-6 py-2.5 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-fuchsia-600/30 inline-flex items-center gap-2 disabled:opacity-50"
             >
               <FiSave className="w-4 h-4" />
-              <span>{isSubmitting ? 'กำลังบันทึกหลักสูตร...' : 'บันทึกและเผยแพร่หลักสูตร (+100 EXP)'}</span>
+              <span>{isSubmitting ? 'กำลังบันทึกข้อมูล...' : isEditMode ? 'บันทึกการแก้ไขหลักสูตร' : 'บันทึกและเผยแพร่หลักสูตร (+100 EXP)'}</span>
             </button>
           </div>
         </form>

@@ -1,4 +1,5 @@
 // communityStore.js - Community Knowledge, Real MES Auth & Gamification Engine
+import { courses } from './courses';
 import { getUserAvatarSvg, CATEGORY_OFFLINE_IMAGES, DEFAULT_COURSE_IMAGE } from './offlineAssets';
 
 export const RANKS = [
@@ -450,6 +451,25 @@ export function deleteCustomCourse(courseId) {
   let courses = getCustomCourses();
   courses = courses.filter(c => c.id !== courseId);
   localStorage.setItem('mes_learning_custom_courses', JSON.stringify(courses));
+}
+
+export function getAllMergedCourses() {
+  const customCourses = getCustomCourses();
+  const customMap = new Map(customCourses.map(c => [c.id, c]));
+  // If custom course has same id as a static course, custom overrides it
+  const staticFiltered = courses.filter(c => !customMap.has(c.id));
+  return [...customCourses, ...staticFiltered];
+}
+
+export function getCourseById(courseId) {
+  if (!courseId) return null;
+  const customCourses = getCustomCourses();
+  const custom = customCourses.find(c => c.id === courseId);
+  if (custom) return JSON.parse(JSON.stringify(custom));
+
+  const staticCourse = courses.find(c => c.id === courseId);
+  if (staticCourse) return JSON.parse(JSON.stringify(staticCourse));
+  return null;
 }
 
 export function getLeaderboardData() {

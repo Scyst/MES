@@ -11,6 +11,7 @@ import {
   FiCheck 
 } from 'react-icons/fi';
 import { addExp } from '../data/communityStore';
+import { recordLiveUserQuizAttempt } from '../data/trainingAuditStore';
 import { DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
 
 export default function DynamicCourseRenderer({ module, course }) {
@@ -40,6 +41,13 @@ export default function DynamicCourseRenderer({ module, course }) {
     });
     setQuizScore(score);
     setSubmittedQuiz(true);
+
+    // Record into Audit Matrix System (ISO 9001 Clause 7.2)
+    recordLiveUserQuizAttempt({
+      courseId: course.id,
+      score: score,
+      totalQuestions: quizzes.length
+    });
 
     if (score === quizzes.length) {
       addExp(30, 'สอบผ่านแบบทดสอบหลักสูตรคะแนนเต็ม');

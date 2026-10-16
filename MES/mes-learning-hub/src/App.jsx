@@ -7,6 +7,7 @@ import CommunityHub from './pages/CommunityHub';
 import CreatePost from './pages/CreatePost';
 import PostDetail from './pages/PostDetail';
 import Leaderboard from './pages/Leaderboard';
+import AuditDashboard from './pages/AuditDashboard';
 import './index.css';
 
 function App() {
@@ -28,6 +29,9 @@ function App() {
 
             {/* Factory Ranks & Leaderboard */}
             <Route path="/ranks" element={<Leaderboard />} />
+
+            {/* Training Tracking & Audit Matrix (ISO 9001 Clause 7.2) */}
+            <Route path="/audit" element={<AuditDashboard />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

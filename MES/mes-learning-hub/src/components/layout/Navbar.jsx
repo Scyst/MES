@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { FiBook, FiAward, FiUsers, FiLayers, FiPlus, FiTool } from 'react-icons/fi';
+import { FiBook, FiAward, FiUsers, FiLayers, FiPlus, FiTool, FiShield } from 'react-icons/fi';
 import { getCurrentUser, calculateRank, fetchRealUserSession } from '../../data/communityStore';
 import { DEFAULT_AVATAR } from '../../data/offlineAssets';
 
@@ -76,6 +76,20 @@ export default function Navbar() {
             <FiAward className="w-4 h-4 text-amber-400" />
             <span className="hidden sm:inline">ทำเนียบยศ</span>
             <span className="sm:hidden">ยศ</span>
+          </NavLink>
+
+          <NavLink 
+            to="/audit" 
+            className={({ isActive }) => `px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
+              isActive 
+                ? 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/40' 
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+            title="ระบบติดตามผลการฝึกอบรมและตรวจรับรองสมรรถนะ (ISO 9001 Clause 7.2)"
+          >
+            <FiShield className="w-4 h-4 text-emerald-400" />
+            <span className="hidden lg:inline">ติดตามผล & ออดิท</span>
+            <span className="lg:hidden">ออดิท</span>
           </NavLink>
         </div>
 

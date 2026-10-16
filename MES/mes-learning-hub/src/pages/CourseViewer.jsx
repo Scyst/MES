@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { courses } from '../data/courses';
-import { getCustomCourses } from '../data/communityStore';
-import { FiArrowLeft, FiCheckCircle, FiCircle } from 'react-icons/fi';
+import { getCourseById } from '../data/communityStore';
+import { FiArrowLeft, FiCheckCircle, FiCircle, FiEdit2 } from 'react-icons/fi';
 import CourseContent from '../components/CourseContent';
 import DynamicCourseRenderer from '../components/DynamicCourseRenderer';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -11,9 +10,7 @@ export default function CourseViewer() {
   const { courseId } = useParams();
   const navigate = useNavigate();
 
-  // Combine static official courses with custom-built and promoted courses
-  const allCourses = [...courses, ...getCustomCourses()];
-  const course = allCourses.find(c => c.id === courseId);
+  const course = getCourseById(courseId);
   
   const [activeModuleId, setActiveModuleId] = useState(() => course?.modules?.[0]?.id || '');
 
@@ -50,9 +47,19 @@ export default function CourseViewer() {
       {/* Sidebar / Syllabus */}
       <div className="viewer-sidebar">
         <div className="sidebar-header">
-          <button className="back-btn" onClick={() => navigate('/')}>
-            <FiArrowLeft /> Back to Courses
-          </button>
+          <div className="flex items-center justify-between mb-3">
+            <button className="back-btn m-0" onClick={() => navigate('/')}>
+              <FiArrowLeft /> Back
+            </button>
+            <button
+              onClick={() => navigate(`/admin/course-builder?courseId=${course.id}`)}
+              className="px-2.5 py-1 bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 rounded-lg text-xs font-semibold border border-slate-700/80 transition-colors flex items-center gap-1.5 shadow-sm"
+              title="แก้ไขหลักสูตรนี้"
+            >
+              <FiEdit2 className="w-3.5 h-3.5 text-amber-400" />
+              <span>แก้ไขหลักสูตร</span>
+            </button>
+          </div>
           <h3>{course.title}</h3>
           <div className="text-xs text-slate-400 mt-1">
             {course.modules?.length || 0} บทเรียน · {course.duration}

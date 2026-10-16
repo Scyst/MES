@@ -8,6 +8,33 @@
   }
 }
 
+/* Custom Sleek Dark Industrial Scrollbar (WebKit & Firefox) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090d16;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c084fc;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 #090d16;
+}
+
 /* Learning Container (Catalog) */
 .learning-container {
   @apply max-w-7xl mx-auto px-4 py-8;
