@@ -162,41 +162,41 @@ export default function Catalog() {
 
       {/* Courses Grid */}
       {filteredCourses.length > 0 ? (
-        <div className="course-grid">
+        <div className="course-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCourses.map(course => (
             <div 
               key={course.id} 
-              className="course-card group cursor-pointer relative"
+              className="course-card group cursor-pointer relative bg-slate-800/90 rounded-2xl overflow-hidden border border-slate-700/80 hover:border-fuchsia-500/50 transition-all hover:shadow-xl hover:shadow-fuchsia-500/10 hover:-translate-y-1 flex flex-col justify-between"
               onClick={() => navigate(`/course/${course.id}`)}
             >
-              <div className="card-image-wrap relative">
+              <div className="card-image-wrap relative h-48 w-full overflow-hidden bg-slate-950 flex-shrink-0 border-b border-slate-700/60">
                 <img 
                   src={course.image || DEFAULT_COURSE_IMAGE} 
                   alt={course.title} 
-                  className="card-image" 
+                  className="card-image w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                   onError={(e) => { e.currentTarget.src = DEFAULT_COURSE_IMAGE; }}
                 />
-                <div className="card-badge">{course.category}</div>
+                <div className="card-badge absolute top-3 left-3 bg-slate-900/90 backdrop-blur-md text-fuchsia-300 text-[11px] font-bold px-3 py-1 rounded-full border border-fuchsia-500/30 shadow-md z-10">{course.category}</div>
                 {course.isPromotedFromCommunity && (
-                  <div className="absolute top-3 right-3 bg-amber-500/95 text-slate-950 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm">
+                  <div className="absolute top-3 right-3 bg-amber-500/95 text-slate-950 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm z-10">
                     <FiStar className="w-3 h-3" /> ยกระดับจากหน้างาน
                   </div>
                 )}
                 {course.isCustomBuilt && (
-                  <div className="absolute top-3 right-3 bg-fuchsia-600/95 text-white px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm">
+                  <div className="absolute top-3 right-3 bg-fuchsia-600/95 text-white px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm z-10">
                     <FiAward className="w-3 h-3" /> หลักสูตรใหม่
                   </div>
                 )}
               </div>
-              <div className="card-content flex flex-col justify-between flex-1">
+              <div className="card-content p-5 flex flex-col justify-between flex-1">
                 <div>
-                  <h3 className="card-title group-hover:text-fuchsia-400 transition-colors">
+                  <h3 className="card-title text-base font-bold text-white mb-2 line-clamp-2 leading-snug group-hover:text-fuchsia-400 transition-colors">
                     {course.title}
                   </h3>
-                  <p className="card-desc text-slate-400 line-clamp-2">{course.description}</p>
+                  <p className="card-desc text-xs text-slate-400 line-clamp-2 mb-4 leading-relaxed">{course.description}</p>
                 </div>
                 <div>
-                  <div className="card-meta">
+                  <div className="card-meta flex items-center justify-between text-xs text-slate-400 font-medium mb-3">
                     <span className="flex items-center gap-1 truncate max-w-[55%]">
                       <FiUser className="text-slate-500 flex-shrink-0" />
                       <span className="truncate">{course.instructor}</span>
@@ -206,7 +206,7 @@ export default function Catalog() {
                       <span>{course.duration}</span>
                     </span>
                   </div>
-                  <div className="card-footer mt-4 pt-4 border-t border-slate-700 flex items-center justify-between">
+                  <div className="card-footer mt-auto pt-3 border-t border-slate-700/80 flex items-center justify-between text-xs">
                     <span className="text-xs text-slate-400 flex items-center gap-1">
                       <FiLayers className="text-fuchsia-400" />
                       <span>{course.modules?.length || 0} บทเรียน</span>
