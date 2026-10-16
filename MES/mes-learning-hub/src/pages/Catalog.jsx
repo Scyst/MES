@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllMergedCourses, getCurrentUser } from '../data/communityStore';
+import { getUserCourseStatus } from '../data/trainingAuditStore';
 import { DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
 import { 
   FiClock, 
@@ -14,7 +15,8 @@ import {
   FiPlus,
   FiAward,
   FiStar,
-  FiEdit2
+  FiEdit2,
+  FiCheck
 } from 'react-icons/fi';
 
 const CATEGORIES = [
@@ -73,7 +75,7 @@ export default function Catalog() {
     <div className="learning-container">
       {/* Hero Header */}
       <div className="header-section">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-4">
           <div>
             <h1>MES Learning Hub</h1>
             <p className="subtitle text-slate-400 mt-1">
@@ -154,77 +156,113 @@ export default function Catalog() {
       {/* Courses Grid */}
       {filteredCourses.length > 0 ? (
         <div className="course-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCourses.map(course => (
-            <div 
-              key={course.id} 
-              className="course-card group cursor-pointer relative bg-slate-800/90 rounded-2xl overflow-hidden border border-slate-700/80 hover:border-fuchsia-500/50 transition-all hover:shadow-xl hover:shadow-fuchsia-500/10 hover:-translate-y-1 flex flex-col justify-between"
-              onClick={() => navigate(`/course/${course.id}`)}
-            >
-              <div className="card-image-wrap relative h-48 w-full overflow-hidden bg-slate-950 flex-shrink-0 border-b border-slate-700/60">
-                <img 
-                  src={course.image || DEFAULT_COURSE_IMAGE} 
-                  alt={course.title} 
-                  className="card-image w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                  onError={(e) => { e.currentTarget.src = DEFAULT_COURSE_IMAGE; }}
-                />
-                <div className="card-badge absolute top-3 left-3 bg-slate-900/90 backdrop-blur-md text-fuchsia-300 text-[11px] font-bold px-3 py-1 rounded-full border border-fuchsia-500/30 shadow-md z-10">{course.category}</div>
-                {course.isPromotedFromCommunity && (
-                  <div className="absolute top-3 right-3 bg-amber-500/95 text-slate-950 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm z-10">
-                    <FiStar className="w-3 h-3" /> ยกระดับจากหน้างาน
+          {filteredCourses.map(course => {
+            const userStatus = getUserCourseStatus(course.id);
+            const isDone = userStatus.passed || userStatus.status === 'completed';
+            const inProgress = !isDone && userStatus.progressPercent > 0;
+
+            return (
+              <div 
+                key={course.id} 
+                className="course-card group cursor-pointer relative bg-slate-800/90 rounded-2xl overflow-hidden border border-slate-700/80 hover:border-fuchsia-500/50 transition-all hover:shadow-xl hover:shadow-fuchsia-500/10 hover:-translate-y-1 flex flex-col justify-between"
+                onClick={() => navigate(`/course/${course.id}`)}
+              >
+                <div className="card-image-wrap relative h-48 w-full overflow-hidden bg-slate-950 flex-shrink-0 border-b border-slate-700/60">
+                  <img 
+                    src={course.image || DEFAULT_COURSE_IMAGE} 
+                    alt={course.title} 
+                    className="card-image w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                    onError={(e) => { e.currentTarget.src = DEFAULT_COURSE_IMAGE; }}
+                  />
+                  <div className="card-badge absolute top-3 left-3 bg-slate-900/90 backdrop-blur-md text-fuchsia-300 text-[11px] font-bold px-3 py-1 rounded-full border border-fuchsia-500/30 shadow-md z-10">{course.category}</div>
+                  
+                  {/* Top Right Badges */}
+                  <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
+                    {isDone ? (
+                      <div className="bg-emerald-500/95 text-slate-950 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm">
+                        <FiCheck className="w-3.5 h-3.5" /> ผ่านแล้ว 100%
+                      </div>
+                    ) : inProgress ? (
+                      <div className="bg-fuchsia-600/95 text-white px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm font-mono">
+                        กำลังเรียน {userStatus.progressPercent}%
+                      </div>
+                    ) : course.isPromotedFromCommunity ? (
+                      <div className="bg-amber-500/95 text-slate-950 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm">
+                        <FiStar className="w-3 h-3" /> ยกระดับจากหน้างาน
+                      </div>
+                    ) : course.isCustomBuilt ? (
+                      <div className="bg-fuchsia-600/95 text-white px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm">
+                        <FiAward className="w-3 h-3" /> หลักสูตรใหม่
+                      </div>
+                    ) : null}
                   </div>
-                )}
-                {course.isCustomBuilt && (
-                  <div className="absolute top-3 right-3 bg-fuchsia-600/95 text-white px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm z-10">
-                    <FiAward className="w-3 h-3" /> หลักสูตรใหม่
-                  </div>
-                )}
-              </div>
-              <div className="card-content p-5 flex flex-col justify-between flex-1">
-                <div>
-                  <h3 className="card-title text-base font-bold text-white mb-2 line-clamp-2 leading-snug group-hover:text-fuchsia-400 transition-colors">
-                    {course.title}
-                  </h3>
-                  <p className="card-desc text-xs text-slate-400 line-clamp-2 mb-4 leading-relaxed">{course.description}</p>
                 </div>
-                <div>
-                  <div className="card-meta flex items-center justify-between text-xs text-slate-400 font-medium mb-3">
-                    <span className="flex items-center gap-1 truncate max-w-[55%]">
-                      <FiUser className="text-slate-500 flex-shrink-0" />
-                      <span className="truncate">{course.instructor}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <FiClock className="text-slate-500" />
-                      <span>{course.duration}</span>
-                    </span>
+                <div className="card-content p-5 flex flex-col justify-between flex-1">
+                  <div>
+                    <h3 className="card-title text-base font-bold text-white mb-2 line-clamp-2 leading-snug group-hover:text-fuchsia-400 transition-colors">
+                      {course.title}
+                    </h3>
+                    <p className="card-desc text-xs text-slate-400 line-clamp-2 mb-4 leading-relaxed">{course.description}</p>
                   </div>
-                  <div className="card-footer mt-auto pt-3 border-t border-slate-700/80 flex items-center justify-between text-xs">
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                      <FiLayers className="text-fuchsia-400" />
-                      <span>{course.modules?.length || 0} บทเรียน</span>
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/admin/course-builder?courseId=${course.id}`);
-                        }}
-                        className="px-2 py-1 bg-slate-700/60 hover:bg-amber-500/20 hover:text-amber-300 text-slate-400 rounded-lg text-[11px] font-medium transition-colors flex items-center gap-1"
-                        title="แก้ไขข้อมูลหลักสูตรนี้"
-                      >
-                        <FiEdit2 className="w-3 h-3" />
-                        <span>แก้ไข</span>
-                      </button>
-                      <span className="text-xs font-bold text-fuchsia-400 group-hover:text-fuchsia-300 flex items-center gap-1">
-                        <span>เริ่มเรียน</span>
-                        <FiPlayCircle className="text-base" />
+                  <div>
+                    <div className="card-meta flex items-center justify-between text-xs text-slate-400 font-medium mb-3">
+                      <span className="flex items-center gap-1 truncate max-w-[55%]">
+                        <FiUser className="text-slate-500 flex-shrink-0" />
+                        <span className="truncate">{course.instructor}</span>
                       </span>
+                      <span className="flex items-center gap-1">
+                        <FiClock className="text-slate-500" />
+                        <span>{course.duration}</span>
+                      </span>
+                    </div>
+
+                    {/* Progress Bar if in-progress */}
+                    {inProgress && (
+                      <div className="mb-3">
+                        <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className="bg-gradient-to-r from-fuchsia-500 to-violet-500 h-full rounded-full transition-all"
+                            style={{ width: `${userStatus.progressPercent}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="card-footer mt-auto pt-3 border-t border-slate-700/80 flex items-center justify-between text-xs">
+                      <span className="text-xs text-slate-400 flex items-center gap-1">
+                        <FiLayers className={isDone ? "text-emerald-400" : "text-fuchsia-400"} />
+                        <span>{course.modules?.length || 0} บทเรียน</span>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/admin/course-builder?courseId=${course.id}`);
+                          }}
+                          className="px-2 py-1 bg-slate-700/60 hover:bg-amber-500/20 hover:text-amber-300 text-slate-400 rounded-lg text-[11px] font-medium transition-colors flex items-center gap-1"
+                          title="แก้ไขข้อมูลหลักสูตรนี้"
+                        >
+                          <FiEdit2 className="w-3 h-3" />
+                          <span>แก้ไข</span>
+                        </button>
+                        <span className={`text-xs font-bold flex items-center gap-1 ${
+                          isDone 
+                            ? 'text-emerald-400 group-hover:text-emerald-300' 
+                            : inProgress
+                              ? 'text-cyan-400 group-hover:text-cyan-300'
+                              : 'text-fuchsia-400 group-hover:text-fuchsia-300'
+                        }`}>
+                          <span>{isDone ? 'ทบทวนบทเรียน' : inProgress ? 'เรียนต่อ' : 'เริ่มเรียน'}</span>
+                          <FiPlayCircle className="text-base" />
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="p-12 text-center bg-slate-800/50 rounded-2xl border border-slate-700 my-8">

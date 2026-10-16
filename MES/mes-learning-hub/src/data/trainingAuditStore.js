@@ -1,6 +1,6 @@
 // trainingAuditStore.js - Manufacturing Training Tracking, Competency Matrix & ISO 9001 Clause 7.2 Audit Engine
 import { courses } from './courses';
-import { getCustomCourses, getCurrentUser, getCommunityPosts, calculateRank } from './communityStore';
+import { getCustomCourses, getCurrentUser, getCommunityPosts, calculateRank, addExp } from './communityStore';
 import { getUserAvatarSvg, DEFAULT_COURSE_IMAGE } from './offlineAssets';
 
 // SNC Manufacturing Factory Departments
@@ -836,6 +836,156 @@ export function recordLiveUserQuizAttempt({ courseId, score, totalQuestions }) {
 
   saveTrainingRecords(records);
   return newRecord;
+}
+
+// Retrieve module completion list for a specific course & user
+export function getUserModuleProgress(courseId) {
+  const currentUser = getCurrentUser();
+  const empId = currentUser.emp_id || `EMP-${currentUser.id || 'ME'}`;
+  const key = `mes_learning_module_progress_${empId}_${courseId}`;
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Mark a single module as completed in real-time
+export function markModuleCompleted({ courseId, moduleId, totalModules }) {
+  const currentUser = getCurrentUser();
+  const empId = currentUser.emp_id || `EMP-${currentUser.id || 'ME'}`;
+  const key = `mes_learning_module_progress_${empId}_${courseId}`;
+  
+  let completed = [];
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored) completed = JSON.parse(stored);
+  } catch {
+    completed = [];
+  }
+
+  if (!completed.includes(moduleId)) {
+    completed.push(moduleId);
+    localStorage.setItem(key, JSON.stringify(completed));
+    // Small EXP reward for each lesson
+    addExp(5, `เรียนจบหัวข้อย่อย (${completed.length}/${totalModules})`);
+  }
+
+  const progressPercent = Math.min(100, Math.round((completed.length / Math.max(1, totalModules)) * 100));
+  const isAllDone = progressPercent >= 100;
+
+  // Sync to training audit records
+  const records = getTrainingRecords();
+  const existingIdx = records.findIndex(r => (r.empId === empId || r.empId === currentUser.id) && r.courseId === courseId);
+  const now = new Date();
+  const nextYear = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+  if (existingIdx !== -1) {
+    records[existingIdx].progressPercent = progressPercent;
+    if (isAllDone && !records[existingIdx].passed) {
+      records[existingIdx].status = 'completed';
+      records[existingIdx].passed = true;
+      records[existingIdx].completedAt = now.toISOString();
+      records[existingIdx].expiresAt = nextYear.toISOString();
+      if (!records[existingIdx].certificateId) {
+        records[existingIdx].certificateId = `SNC-CERT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      }
+      addExp(50, `จบหลักสูตรมาตรฐานโรงงานครบ 100%`);
+    } else if (!records[existingIdx].passed) {
+      records[existingIdx].status = 'in_progress';
+    }
+  } else {
+    records.unshift({
+      recordId: `rec-live-${Date.now()}`,
+      empId: empId,
+      courseId: courseId,
+      status: isAllDone ? 'completed' : 'in_progress',
+      progressPercent: progressPercent,
+      quizScore: isAllDone ? 1 : null,
+      quizTotal: isAllDone ? 1 : null,
+      quizPercentage: isAllDone ? 100 : null,
+      passed: isAllDone,
+      completedAt: isAllDone ? now.toISOString() : null,
+      expiresAt: isAllDone ? nextYear.toISOString() : null,
+      certificateId: isAllDone ? `SNC-CERT-2026-${Math.floor(1000 + Math.random() * 9000)}` : null,
+      evaluatedBy: 'ระบบติดตามการเรียนรู้อัตโนมัติ (MES Learning Hub LMS)'
+    });
+    if (isAllDone) {
+      addExp(50, `จบหลักสูตรมาตรฐานโรงงานครบ 100%`);
+    }
+  }
+
+  saveTrainingRecords(records);
+  return { completedModules: completed, progressPercent, isAllDone };
+}
+
+// Explicit course completion (when user completes all lessons or clicks Complete Course)
+export function recordCourseCompletion({ courseId, totalModules = 1, moduleIds = [] }) {
+  const currentUser = getCurrentUser();
+  const empId = currentUser.emp_id || `EMP-${currentUser.id || 'ME'}`;
+  const key = `mes_learning_module_progress_${empId}_${courseId}`;
+
+  // Mark all modules as completed in storage
+  localStorage.setItem(key, JSON.stringify(moduleIds));
+
+  const records = getTrainingRecords();
+  const existingIdx = records.findIndex(r => (r.empId === empId || r.empId === currentUser.id) && r.courseId === courseId);
+  const now = new Date();
+  const nextYear = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+  const certId = `SNC-CERT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+  const record = {
+    recordId: existingIdx !== -1 ? records[existingIdx].recordId : `rec-live-${Date.now()}`,
+    empId: empId,
+    courseId: courseId,
+    status: 'completed',
+    progressPercent: 100,
+    quizScore: (existingIdx !== -1 && records[existingIdx].quizScore !== null) ? records[existingIdx].quizScore : 3,
+    quizTotal: (existingIdx !== -1 && records[existingIdx].quizTotal !== null) ? records[existingIdx].quizTotal : 3,
+    quizPercentage: (existingIdx !== -1 && records[existingIdx].quizPercentage !== null) ? records[existingIdx].quizPercentage : 100,
+    passed: true,
+    completedAt: now.toISOString(),
+    expiresAt: nextYear.toISOString(),
+    certificateId: (existingIdx !== -1 && records[existingIdx].certificateId) ? records[existingIdx].certificateId : certId,
+    evaluatedBy: 'ฝ่ายฝึกอบรมและพัฒนาบุคลากร (HRD & Training Committee)'
+  };
+
+  if (existingIdx !== -1) {
+    records[existingIdx] = record;
+  } else {
+    records.unshift(record);
+  }
+
+  saveTrainingRecords(records);
+  addExp(50, 'จบหลักสูตรมาตรฐานโรงงานและได้รับใบรับรองสมรรถนะ (+50 EXP)');
+  return record;
+}
+
+// Get user course status for Catalog or Viewer
+export function getUserCourseStatus(courseId) {
+  const currentUser = getCurrentUser();
+  const empId = currentUser.emp_id || `EMP-${currentUser.id || 'ME'}`;
+  const records = getTrainingRecords();
+  const rec = records.find(r => (r.empId === empId || r.empId === currentUser.id) && r.courseId === courseId);
+
+  if (rec) {
+    return {
+      status: rec.status,
+      progressPercent: rec.progressPercent || (rec.passed ? 100 : 0),
+      passed: rec.passed,
+      certificateId: rec.certificateId,
+      completedAt: rec.completedAt
+    };
+  }
+
+  return {
+    status: 'not_started',
+    progressPercent: 0,
+    passed: false,
+    certificateId: null,
+    completedAt: null
+  };
 }
 
 // --- DUAL-PERSPECTIVE AGGREGATION ENGINES ---

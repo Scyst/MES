@@ -181,15 +181,10 @@ const INITIAL_POSTS = [
 
 // --- REAL MES AUTHENTICATION BRIDGE ---
 export async function fetchRealUserSession() {
-  // Try candidate endpoint paths for api_verify.php
+  // Try candidate endpoint paths for api_verify.php with silent query param
   const candidateEndpoints = [
-    '../MES/MES/auth/api_verify.php',
-    '/iot-toolbox/sandbox-b9/MES/MES/auth/api_verify.php',
-    '../../MES/MES/auth/api_verify.php',
-    '/auth/api_verify.php',
-    '../auth/api_verify.php',
-    './auth/api_verify.php',
-    '/MES/auth/api_verify.php'
+    '../MES/MES/auth/api_verify.php?silent=1',
+    '../auth/api_verify.php?silent=1'
   ];
 
   for (const endpoint of candidateEndpoints) {

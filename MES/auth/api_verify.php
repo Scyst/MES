@@ -9,6 +9,14 @@ if (session_status() === PHP_SESSION_NONE) {
 header('Content-Type: application/json; charset=utf-8');
 
 if (!isset($_SESSION['user'])) {
+    if (isset($_GET['silent']) || isset($_GET['check'])) {
+        echo json_encode([
+            'success' => false,
+            'authenticated' => false,
+            'message' => 'Not authenticated'
+        ]);
+        exit;
+    }
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
@@ -16,6 +24,7 @@ if (!isset($_SESSION['user'])) {
 
 echo json_encode([
     'success' => true,
+    'authenticated' => true,
     'user' => $_SESSION['user']
 ]);
 exit;
