@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { saveCustomCourse, getCurrentUser, calculateRank, addExp } from '../data/communityStore';
+import { saveCustomCourse, getCurrentUser, calculateRank, addExp, fetchRealUserSession } from '../data/communityStore';
 import { compressImage } from '../data/imageCompressor';
+import { CATEGORY_OFFLINE_IMAGES, DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
 import { 
   FiArrowLeft, 
   FiPlus, 
@@ -29,7 +30,7 @@ const OFFICIAL_CATEGORIES = [
 
 export default function CourseBuilder() {
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const userRank = calculateRank(currentUser.exp);
 
   // Form State
@@ -38,6 +39,15 @@ export default function CourseBuilder() {
   const [duration, setDuration] = useState('45 นาที');
   const [targetAudience, setTargetAudience] = useState('พนักงานปฏิบัติการและหัวหน้างาน');
   const [instructor, setInstructor] = useState(`${currentUser.name} (${currentUser.role})`);
+
+  useEffect(() => {
+    fetchRealUserSession().then(u => {
+      if (u) {
+        setCurrentUser(u);
+        setInstructor(`${u.name} (${u.role})`);
+      }
+    });
+  }, []);
   const [description, setDescription] = useState('');
   const [coverImage, setCoverImage] = useState('');
   
@@ -247,7 +257,7 @@ export default function CourseBuilder() {
         duration: duration.trim(),
         category: category,
         targetAudience: targetAudience.trim(),
-        image: coverImage || 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&q=80&w=600&h=400',
+        image: coverImage || CATEGORY_OFFLINE_IMAGES[category] || DEFAULT_COURSE_IMAGE,
         isOfficial: true,
         isCustomBuilt: true,
         author: {

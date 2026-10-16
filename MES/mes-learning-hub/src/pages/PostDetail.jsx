@@ -4,10 +4,11 @@ import {
   getCommunityPosts, 
   likeCommunityPost, 
   addPostComment, 
-  calculateRank,
-  getCurrentUser,
-  promotePostToOfficialCourse
+  calculateRank, 
+  getCurrentUser, 
+  promotePostToOfficialCourse 
 } from '../data/communityStore';
+import { DEFAULT_AVATAR, DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
 import { 
   FiArrowLeft, 
   FiHeart, 
@@ -293,6 +294,7 @@ export default function PostDetail() {
             <img 
               src={post.coverImage} 
               alt={post.title} 
+              onError={(e) => { e.currentTarget.src = DEFAULT_COURSE_IMAGE; }}
               className="w-full h-56 md:h-80 object-cover group-hover:scale-105 transition-transform duration-300" 
             />
             <div className="absolute bottom-3 right-3 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-lg text-[11px] text-white flex items-center gap-1.5">
@@ -317,6 +319,7 @@ export default function PostDetail() {
             <img 
               src={post.author.avatar} 
               alt={post.author.name} 
+              onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
               className="w-12 h-12 rounded-xl object-cover border-2 border-slate-600 shadow"
             />
             <div>
@@ -450,6 +453,7 @@ export default function PostDetail() {
             <img 
               src={currentUser.avatar} 
               alt={currentUser.name} 
+              onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
               className="w-10 h-10 rounded-full object-cover border border-slate-600 flex-shrink-0"
             />
             <div className="flex-1 space-y-2">

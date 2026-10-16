@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { FiBook, FiAward, FiUsers, FiLayers, FiPlus, FiTool } from 'react-icons/fi';
 import { getCurrentUser, calculateRank, fetchRealUserSession } from '../../data/communityStore';
+import { DEFAULT_AVATAR } from '../../data/offlineAssets';
 
 export default function Navbar() {
   const location = useLocation();
@@ -118,9 +119,10 @@ export default function Navbar() {
 
             <div className="relative">
               <img 
-                src={currentUser.avatar} 
+                src={currentUser.avatar || DEFAULT_AVATAR} 
                 alt={currentUser.name} 
                 className="w-8 h-8 rounded-full object-cover border-2 border-fuchsia-500/60 shadow-sm"
+                onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
               />
               <span className="lg:hidden absolute -bottom-1 -right-1 text-xs">
                 {rank.badge}

@@ -6,6 +6,7 @@ import {
   calculateRank, 
   RANKS 
 } from '../data/communityStore';
+import { DEFAULT_AVATAR } from '../data/offlineAssets';
 import { 
   FiArrowLeft, 
   FiAward, 
@@ -147,6 +148,7 @@ export default function Leaderboard() {
                   <img 
                     src={user.avatar} 
                     alt={user.name} 
+                    onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
                     className="w-11 h-11 rounded-xl object-cover border border-slate-600 flex-shrink-0"
                   />
 

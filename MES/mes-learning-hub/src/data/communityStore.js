@@ -1,4 +1,5 @@
 // communityStore.js - Community Knowledge, Real MES Auth & Gamification Engine
+import { getUserAvatarSvg, CATEGORY_OFFLINE_IMAGES, DEFAULT_COURSE_IMAGE } from './offlineAssets';
 
 export const RANKS = [
   { level: 1, name: 'พนักงานฝึกหัด', badge: '🥉', color: 'from-amber-700 to-amber-900', border: 'border-amber-700', minExp: 0, maxExp: 99 },
@@ -29,26 +30,26 @@ const DEFAULT_USER = {
   emp_id: 'EMP-5928',
   name: 'สมเกียรติ มั่นคง',
   role: 'หัวหน้ากะฝ่ายผลิต (Production Supervisor)',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200&h=200',
+  avatar: getUserAvatarSvg('สมเกียรติ มั่นคง'),
   exp: 420,
   isLoggedInReal: false,
   isAdmin: true
 };
 
-// Initial realistic community lessons with images
+// Initial realistic community lessons with offline SVG assets
 const INITIAL_POSTS = [
   {
     id: 'post-101',
     title: 'วิธีแก้ปัญหาแม่พิมพ์ Stamping เกิดรอยเสี้ยน (Burr) เกินเกณฑ์ 0.05 mm',
     category: 'เครื่องจักรและวิศวกรรมการผลิต',
     summary: 'แชร์ขั้นตอนการตรวจสอบและปรับตั้ง Die Clearance สำหรับเหล็กแผ่น SECC หนา 1.2 mm พร้อมเทคนิคการสังเกตคมตัด punch',
-    coverImage: 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&q=80&w=800&h=450',
+    coverImage: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
     isOfficial: false,
     author: {
       id: 'usr-102',
       name: 'ช่างชาญชัย ศรีสุข',
       role: 'ช่างเทคนิคแม่พิมพ์อาวุโส (Tooling Lead)',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200',
+      avatar: getUserAvatarSvg('ช่างชาญชัย ศรีสุข'),
       exp: 850
     },
     createdAt: '2026-10-14T11:30:00Z',
@@ -60,7 +61,7 @@ const INITIAL_POSTS = [
         number: 1,
         title: 'หยุดเครื่องจักรและแขวนป้าย LOTO',
         desc: 'กดปุ่ม E-Stop และตัดแหล่งจ่ายลมและไฟฟ้า พร้อมคล้องกุญแจส่วนบุคคลก่อนเปิดฝาครอบการ์ดแม่พิมพ์',
-        image: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=600&h=350',
+        image: '',
         alertType: 'danger',
         alertText: 'ห้ามยื่นมือเข้าไปในช่องแม่พิมพ์โดยเด็ดขาดหากยังไม่ได้คล้องกุญแจ LOTO และบล็อก Safety Block'
       },
@@ -96,13 +97,13 @@ const INITIAL_POSTS = [
     title: 'วิธีสแกนรับพาเลทในระบบ MES เมื่อบาร์โค้ดฉีกขาดหรือไม่ชัดเจน',
     category: 'โปรแกรมและระบบดิจิทัล',
     summary: 'แนวทางปฏิบัติเมื่อเครื่องสแกน 2D ไม่สามารถอ่าน QR Code ของแท็ก RM/FG ได้ เพื่อไม่ให้สายการผลิตสะดุดและสต็อกไม่คลาดเคลื่อน',
-    coverImage: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=800&h=450',
+    coverImage: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
     isOfficial: false,
     author: {
       id: 'usr-103',
       name: 'หัวหน้ากฤษณะ แสงทอง',
       role: 'ผู้จัดการคลังสินค้าและระบบสโตร์ (Store Manager)',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200&h=200',
+      avatar: getUserAvatarSvg('กฤษณะ แสงทอง'),
       exp: 1120
     },
     createdAt: '2026-10-13T09:15:00Z',
@@ -142,13 +143,13 @@ const INITIAL_POSTS = [
     title: 'Checklist 5 จุดตรวจเช็กระดับน้ำมันไฮดรอลิกและลมรั่วก่อนเริ่มงานกะเช้า',
     category: 'ขั้นตอนการทำงานและระบบมาตรฐาน',
     summary: 'แบบฟอร์มตรวจสอบก่อนเดินเครื่องจักรประจำวัน (Daily Pre-operation Inspection) เพื่อป้องกันเครื่องหยุดทำงานกะทันหัน (Unplanned Downtime)',
-    coverImage: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=800&h=450',
+    coverImage: CATEGORY_OFFLINE_IMAGES['ขั้นตอนการทำงานและระบบมาตรฐาน'],
     isOfficial: false,
     author: {
       id: 'usr-001',
       name: 'สมเกียรติ มั่นคง',
       role: 'หัวหน้ากะฝ่ายผลิต (Production Supervisor)',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200&h=200',
+      avatar: getUserAvatarSvg('สมเกียรติ มั่นคง'),
       exp: 420
     },
     createdAt: '2026-10-12T07:45:00Z',
@@ -179,44 +180,59 @@ const INITIAL_POSTS = [
 
 // --- REAL MES AUTHENTICATION BRIDGE ---
 export async function fetchRealUserSession() {
-  try {
-    const res = await fetch('/MES/MES/auth/api_verify.php', {
-      method: 'GET',
-      credentials: 'include'
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.success && data.user) {
-        const u = data.user;
-        const realUserId = u.emp_id || u.id || u.username || 'usr-real';
-        
-        // Retrieve persistent user EXP
-        const userExpKey = `mes_learning_exp_${realUserId}`;
-        const storedExp = localStorage.getItem(userExpKey);
-        const exp = storedExp !== null ? parseInt(storedExp, 10) : 450;
+  // Try candidate endpoint paths for api_verify.php
+  const candidateEndpoints = [
+    '../MES/MES/auth/api_verify.php',
+    '/iot-toolbox/sandbox-b9/MES/MES/auth/api_verify.php',
+    '../../MES/MES/auth/api_verify.php',
+    '/auth/api_verify.php',
+    '../auth/api_verify.php',
+    './auth/api_verify.php',
+    '/MES/auth/api_verify.php'
+  ];
 
-        const roleLower = String(u.role || '').toLowerCase();
-        const isAdmin = ['admin', 'superadmin', 'manager', 'supervisor', 'qmr', 'engineering'].some(r => roleLower.includes(r)) || true;
+  for (const endpoint of candidateEndpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'GET',
+        credentials: 'include'
+      });
 
-        const synchedUser = {
-          id: realUserId,
-          emp_id: u.emp_id || u.username || 'EMP-MES',
-          name: u.fullname || u.username || 'MES Employee',
-          role: u.position || u.role || 'ช่างเทคนิคโรงงาน',
-          avatar: u.profile_picture || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200&h=200',
-          exp: exp,
-          isLoggedInReal: true,
-          isAdmin: isAdmin
-        };
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success && data.user) {
+          const u = data.user;
+          const realUserId = u.emp_id || u.id || u.username || 'usr-real';
+          
+          // Retrieve persistent user EXP
+          const userExpKey = `mes_learning_exp_${realUserId}`;
+          const storedExp = localStorage.getItem(userExpKey);
+          const exp = storedExp !== null ? parseInt(storedExp, 10) : 450;
 
-        saveCurrentUser(synchedUser);
-        return synchedUser;
+          const roleLower = String(u.role || '').toLowerCase();
+          const isAdmin = ['admin', 'superadmin', 'manager', 'supervisor', 'qmr', 'engineering'].some(r => roleLower.includes(r)) || true;
+
+          const synchedUser = {
+            id: realUserId,
+            emp_id: u.emp_id || u.username || 'EMP-MES',
+            name: u.fullname || u.username || 'MES Employee',
+            role: u.position || u.role || 'ช่างเทคนิคโรงงาน',
+            avatar: u.profile_picture || getUserAvatarSvg(u.fullname || u.username || 'MES'),
+            exp: exp,
+            isLoggedInReal: true,
+            isAdmin: isAdmin
+          };
+
+          saveCurrentUser(synchedUser);
+          console.log('[MES Learning Hub] Authenticated session confirmed via:', endpoint);
+          return synchedUser;
+        }
       }
+    } catch {
+      // Continue to next candidate
     }
-  } catch (err) {
-    // Silent failover to stored user if not running on live PHP server
-    console.warn('[MES Learning Hub] Real session sync notice:', err.message);
   }
+
   return getCurrentUser();
 }
 
@@ -253,7 +269,6 @@ export function getCurrentUser() {
 
 export function saveCurrentUser(user) {
   localStorage.setItem('mes_learning_current_user', JSON.stringify(user));
-  // Keep individual EXP synchronized
   if (user && user.id) {
     localStorage.setItem(`mes_learning_exp_${user.id}`, String(user.exp || 0));
   }
@@ -275,7 +290,7 @@ export function createCommunityPost(postData) {
     title: postData.title,
     category: postData.category || 'เทคนิคและการแก้ปัญหาหน้างาน',
     summary: postData.summary || '',
-    coverImage: postData.coverImage || '',
+    coverImage: postData.coverImage || CATEGORY_OFFLINE_IMAGES[postData.category] || DEFAULT_COURSE_IMAGE,
     isOfficial: false,
     author: {
       id: user.id,
@@ -381,7 +396,7 @@ export function promotePostToOfficialCourse(postId, options = {}) {
     instructor: `${post.author.name} · ${post.author.role}`,
     duration: duration,
     category: category,
-    image: post.coverImage || 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&q=80&w=600&h=400',
+    image: post.coverImage || CATEGORY_OFFLINE_IMAGES[category] || DEFAULT_COURSE_IMAGE,
     isOfficial: true,
     isPromotedFromCommunity: true,
     originalPostId: post.id,
@@ -444,10 +459,10 @@ export function getLeaderboardData() {
   const userMap = {};
 
   const mockAuthors = [
-    { id: 'usr-103', name: 'หัวหน้ากฤษณะ แสงทอง', role: 'ผู้จัดการคลังสินค้า (Store Manager)', exp: 1120, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200&h=200' },
-    { id: 'usr-102', name: 'ช่างชาญชัย ศรีสุข', role: 'ช่างเทคนิคแม่พิมพ์ (Tooling Lead)', exp: 850, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200' },
-    { id: 'usr-104', name: 'ประภาพร รัตนศิลป์', role: 'วิศวกรควบคุมคุณภาพ (QA Engineer)', exp: 680, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200&h=200' },
-    { id: 'usr-105', name: 'ธวัชชัย บำรุงการ', role: 'ช่างซ่อมบำรุง (Maintenance)', exp: 340, avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200&h=200' }
+    { id: 'usr-103', name: 'หัวหน้ากฤษณะ แสงทอง', role: 'ผู้จัดการคลังสินค้า (Store Manager)', exp: 1120, avatar: getUserAvatarSvg('กฤษณะ แสงทอง') },
+    { id: 'usr-102', name: 'ช่างชาญชัย ศรีสุข', role: 'ช่างเทคนิคแม่พิมพ์ (Tooling Lead)', exp: 850, avatar: getUserAvatarSvg('ช่างชาญชัย ศรีสุข') },
+    { id: 'usr-104', name: 'ประภาพร รัตนศิลป์', role: 'วิศวกรควบคุมคุณภาพ (QA Engineer)', exp: 680, avatar: getUserAvatarSvg('ประภาพร รัตนศิลป์') },
+    { id: 'usr-105', name: 'ธวัชชัย บำรุงการ', role: 'ช่างซ่อมบำรุง (Maintenance)', exp: 340, avatar: getUserAvatarSvg('ธวัชชัย บำรุงการ') }
   ];
 
   mockAuthors.forEach(u => {

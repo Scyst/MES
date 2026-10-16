@@ -6,6 +6,7 @@ import {
   calculateRank,
   fetchRealUserSession 
 } from '../data/communityStore';
+import { DEFAULT_AVATAR, DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
 import { 
   FiPlus, 
   FiSearch, 
@@ -71,9 +72,10 @@ export default function CommunityHub() {
           <div className="flex items-center gap-4">
             <div className="relative">
               <img 
-                src={currentUser.avatar} 
+                src={currentUser.avatar || DEFAULT_AVATAR} 
                 alt={currentUser.name} 
                 className="w-16 h-16 rounded-2xl object-cover border-2 border-fuchsia-500/50 shadow-md"
+                onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
               />
               <span className="absolute -bottom-1 -right-1 text-xl" title={rank.name}>
                 {rank.badge}
@@ -213,9 +215,10 @@ export default function CommunityHub() {
                   {post.coverImage && (
                     <div className="relative h-44 overflow-hidden border-b border-slate-700 bg-slate-900">
                       <img 
-                        src={post.coverImage} 
+                        src={post.coverImage || DEFAULT_COURSE_IMAGE} 
                         alt={post.title} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                        onError={(e) => { e.currentTarget.src = DEFAULT_COURSE_IMAGE; }}
                       />
                       {post.isOfficial && (
                         <div className="absolute top-3 right-3 bg-amber-500 text-slate-950 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm">
@@ -259,9 +262,10 @@ export default function CommunityHub() {
                 <div className="px-6 pb-5 pt-3 border-t border-slate-700/80 flex items-center justify-between gap-3 bg-slate-800/40">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <img 
-                      src={post.author.avatar} 
+                      src={post.author.avatar || DEFAULT_AVATAR} 
                       alt={post.author.name} 
                       className="w-8 h-8 rounded-full object-cover border border-slate-600 flex-shrink-0"
+                      onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
                     />
                     <div className="truncate text-xs">
                       <div className="text-slate-200 font-semibold truncate flex items-center gap-1">

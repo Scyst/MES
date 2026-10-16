@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createCommunityPost, getCurrentUser, calculateRank } from '../data/communityStore';
+import { createCommunityPost, getCurrentUser, calculateRank, fetchRealUserSession } from '../data/communityStore';
 import { compressImage } from '../data/imageCompressor';
 import { 
   FiArrowLeft, 
@@ -9,12 +9,12 @@ import {
   FiAlertTriangle, 
   FiCheckCircle, 
   FiInfo, 
-  FiSend,
-  FiBookOpen,
-  FiAward,
-  FiImage,
-  FiCamera,
-  FiX
+  FiSend, 
+  FiBookOpen, 
+  FiAward, 
+  FiImage, 
+  FiCamera, 
+  FiX 
 } from 'react-icons/fi';
 
 const CATEGORIES = [
@@ -27,8 +27,14 @@ const CATEGORIES = [
 
 export default function CreatePost() {
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const userRank = calculateRank(currentUser.exp);
+
+  useEffect(() => {
+    fetchRealUserSession().then(u => {
+      if (u) setCurrentUser(u);
+    });
+  }, []);
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);

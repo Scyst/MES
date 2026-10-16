@@ -1,3 +1,5 @@
+import { CATEGORY_OFFLINE_IMAGES } from './offlineAssets';
+
 export const courses = [
   // --- Category: เครื่องจักรและวิศวกรรมการผลิต (Manufacturing & Engineering) ---
   {
@@ -7,7 +9,7 @@ export const courses = [
     instructor: 'Manufacturing Quality Director',
     duration: '6 hours',
     category: 'เครื่องจักรและวิศวกรรมการผลิต',
-    image: 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&q=80&w=600&h=400',
+    image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
     modules: [
       {
         id: 'm1',
@@ -50,7 +52,7 @@ export const courses = [
     instructor: 'Quality Assurance Expert',
     duration: '3.5 hours',
     category: 'ขั้นตอนการทำงานและระบบมาตรฐาน',
-    image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=600&h=400',
+    image: CATEGORY_OFFLINE_IMAGES['ขั้นตอนการทำงานและระบบมาตรฐาน'],
     modules: [
       {
         id: 'm1',
@@ -81,7 +83,7 @@ export const courses = [
     instructor: 'Environmental Systems Lead',
     duration: '3 hours',
     category: 'ขั้นตอนการทำงานและระบบมาตรฐาน',
-    image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=600&h=400',
+    image: CATEGORY_OFFLINE_IMAGES['ขั้นตอนการทำงานและระบบมาตรฐาน'],
     modules: [
       {
         id: 'm1',
@@ -112,7 +114,7 @@ export const courses = [
     instructor: 'Safety & EHS Specialist',
     duration: '3 hours',
     category: 'ขั้นตอนการทำงานและระบบมาตรฐาน',
-    image: 'https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?auto=format&fit=crop&q=80&w=600&h=400',
+    image: CATEGORY_OFFLINE_IMAGES['ขั้นตอนการทำงานและระบบมาตรฐาน'],
     modules: [
       {
         id: 'm1',
@@ -143,7 +145,7 @@ export const courses = [
     instructor: 'Metrology & Lab QA Specialist',
     duration: '2.5 hours',
     category: 'ขั้นตอนการทำงานและระบบมาตรฐาน',
-    image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80&w=600&h=400',
+    image: CATEGORY_OFFLINE_IMAGES['ขั้นตอนการทำงานและระบบมาตรฐาน'],
     modules: [
       {
         id: 'm1',
@@ -176,7 +178,7 @@ export const courses = [
     instructor: 'Global Compliance Auditor',
     duration: '5.5 hours',
     category: 'การตรวจโรงงานและเอกสารลูกค้า',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600&h=400',
+    image: CATEGORY_OFFLINE_IMAGES['การตรวจโรงงานและเอกสารลูกค้า'],
     modules: [
       {
         id: 'm1',
@@ -219,7 +221,7 @@ export const courses = [
     instructor: 'Chief Quality Inspector & Lead Auditor',
     duration: '5 hours',
     category: 'กรณีศึกษาหน้างานจริง',
-    image: 'https://images.unsplash.com/photo-1565793298595-6a879b1d9492?auto=format&fit=crop&q=80&w=600&h=400',
+    image: CATEGORY_OFFLINE_IMAGES['กรณีศึกษาหน้างานจริง'],
     modules: [
       {
         id: 'm1',
@@ -262,7 +264,7 @@ export const courses = [
     instructor: 'Engineering Team',
     duration: '1.5 hours',
     category: 'โปรแกรมและระบบดิจิทัล',
-    image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&q=80&w=600&h=400',
+    image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
     modules: [
       {
         id: 'm1',
@@ -293,7 +295,7 @@ export const courses = [
     instructor: 'Engineering Team',
     duration: '2.5 hours',
     category: 'โปรแกรมและระบบดิจิทัล',
-    image: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&q=80&w=600&h=400',
+    image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
     modules: [
       {
         id: 'm1',
@@ -326,7 +328,7 @@ export const courses = [
     instructor: 'คุณวุฒิพงศ์ บุญนายวา',
     duration: '3 hours',
     category: 'การบริหารและการเพิ่มผลผลิต',
-    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=600&h=400',
+    image: CATEGORY_OFFLINE_IMAGES['การบริหารและการเพิ่มผลผลิต'],
     modules: [
       {
         id: 'm1',
@@ -357,7 +359,7 @@ export const courses = [
     instructor: 'คุณชัยรัตน์ บรรเทาทุกข์',
     duration: '4 hours',
     category: 'การบริหารและการเพิ่มผลผลิต',
-    image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=600&h=400',
+    image: CATEGORY_OFFLINE_IMAGES['การบริหารและการเพิ่มผลผลิต'],
     modules: [
       {
         id: 'm1',

@@ -11,6 +11,7 @@ import {
   FiCheck 
 } from 'react-icons/fi';
 import { addExp } from '../data/communityStore';
+import { DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
 
 export default function DynamicCourseRenderer({ module, course }) {
   const [zoomedImage, setZoomedImage] = useState(null);
@@ -125,6 +126,7 @@ export default function DynamicCourseRenderer({ module, course }) {
                         <img 
                           src={step.image} 
                           alt={step.title} 
+                          onError={(e) => { e.currentTarget.src = DEFAULT_COURSE_IMAGE; }}
                           className="w-full h-48 md:h-60 object-cover group-hover:scale-105 transition-transform" 
                         />
                         <div className="absolute bottom-2 right-2 px-2.5 py-1 bg-black/70 backdrop-blur-sm rounded text-[10px] text-white flex items-center gap-1">

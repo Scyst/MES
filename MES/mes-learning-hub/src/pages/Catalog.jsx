@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { courses } from '../data/courses';
 import { getCustomCourses, getCurrentUser } from '../data/communityStore';
+import { DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
 import { 
   FiClock, 
   FiUser, 
@@ -169,7 +170,12 @@ export default function Catalog() {
               onClick={() => navigate(`/course/${course.id}`)}
             >
               <div className="card-image-wrap relative">
-                <img src={course.image} alt={course.title} className="card-image" />
+                <img 
+                  src={course.image || DEFAULT_COURSE_IMAGE} 
+                  alt={course.title} 
+                  className="card-image" 
+                  onError={(e) => { e.currentTarget.src = DEFAULT_COURSE_IMAGE; }}
+                />
                 <div className="card-badge">{course.category}</div>
                 {course.isPromotedFromCommunity && (
                   <div className="absolute top-3 right-3 bg-amber-500/95 text-slate-950 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm">
