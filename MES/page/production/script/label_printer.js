@@ -889,6 +889,18 @@ function clearPrinterForm() {
 }
 
 function executeHiddenPrint(labelsArray) {
+    // If ThermalPrinter is active via USB Serial, print ZPL directly!
+    if (window.ThermalPrinter && window.ThermalPrinter.isSerialConnected()) {
+        labelsArray.forEach(async (d) => {
+            const zpl = window.ThermalPrinter.generateProductionZpl(d);
+            await window.ThermalPrinter.printZplUsb(zpl);
+        });
+        if (typeof showToast === 'function') {
+            showToast(`ส่งคำสั่ง ZPL ไปยังเครื่องพิมพ์ USB สำเร็จ (${labelsArray.length} ป้าย)`, 'var(--bs-success)');
+        }
+        return;
+    }
+
     const printArea = document.getElementById('printArea');
     if (!printArea) return;
 
@@ -1015,3 +1027,116 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+// 🖨️ Thermal Printer (ZPL / Kiosk) Helper Functions
+window.openThermalPrinterModal = function() {
+    const modalEl = document.getElementById('thermalPrinterModal');
+    if (modalEl) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+        if (window.ThermalPrinter) {
+            const sampleZpl = window.ThermalPrinter.generateProductionZpl({
+                part_no: 'PART-XYZ-9999',
+                sap_no: '10029384',
+                description: 'Cover Plate Aluminum 2.5mm Finished Powder Coated Black',
+                quantity: 500,
+                prod_date: new Date().toISOString().split('T')[0],
+                manual_lot: 'L-261017-01',
+                location_name: 'LINE-A01',
+                remark: 'Normal Batch',
+                serial_no: '001',
+                scan_id_display: 'L-261017-01/001'
+            });
+            const zplBox = document.getElementById('zplPreviewBox');
+            if (zplBox) zplBox.value = sampleZpl;
+
+            updateUsbUiState(window.ThermalPrinter.isSerialConnected());
+        }
+    }
+};
+
+window.testSilentPrintAction = async function(type) {
+    if (window.ThermalPrinter) {
+        try {
+            await window.ThermalPrinter.testPrintSample(type);
+        } catch (e) {
+            Swal.fire('ข้อผิดพลาด', e.message, 'error');
+        }
+    }
+};
+
+window.connectUsbPrinterAction = async function() {
+    if (window.ThermalPrinter) {
+        try {
+            const res = await window.ThermalPrinter.connectUsb();
+            updateUsbUiState(true);
+            Swal.fire({
+                title: 'เชื่อมต่อสำเร็จ',
+                text: res.message,
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } catch (e) {
+            Swal.fire('ไม่สามารถเชื่อมต่อได้', e.message, 'warning');
+        }
+    }
+};
+
+window.disconnectUsbPrinterAction = async function() {
+    if (window.ThermalPrinter) {
+        await window.ThermalPrinter.disconnectUsb();
+        updateUsbUiState(false);
+        Swal.fire({
+            title: 'ตัดการเชื่อมต่อแล้ว',
+            text: 'ระบบจะกลับไปใช้โหมดการพิมพ์ผ่านไดรเวอร์ Windows ปกติ',
+            icon: 'info',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }
+};
+
+window.sendTestZplAction = async function() {
+    const zplBox = document.getElementById('zplPreviewBox');
+    const zpl = zplBox ? zplBox.value : '';
+    if (!zpl) return;
+
+    if (window.ThermalPrinter && window.ThermalPrinter.isSerialConnected()) {
+        try {
+            await window.ThermalPrinter.printZplUsb(zpl);
+            Swal.fire({
+                title: 'สำเร็จ!',
+                text: 'ส่งคำสั่ง ZPL ตรงเข้าหัวพิมพ์เรียบร้อย',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } catch (e) {
+            Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+        }
+    } else {
+        Swal.fire({
+            title: 'ยังไม่ได้เชื่อมต่อ USB',
+            text: 'กรุณากดปุ่ม "เชื่อมต่อเครื่องพิมพ์ USB" ก่อน หรือใช้แท็บที่ 1 (Chrome Kiosk Silent Print)',
+            icon: 'info'
+        });
+    }
+};
+
+function updateUsbUiState(connected) {
+    const badge = document.getElementById('usbConnectionBadge');
+    const btnConnect = document.getElementById('btnConnectUsb');
+    const btnDisconnect = document.getElementById('btnDisconnectUsb');
+    if (badge) {
+        if (connected) {
+            badge.className = 'badge bg-success';
+            badge.innerText = 'เชื่อมต่อ USB เรียบร้อย (ZPL พร้อมใช้งาน)';
+        } else {
+            badge.className = 'badge bg-secondary';
+            badge.innerText = 'ยังไม่ได้เชื่อมต่อ USB';
+        }
+    }
+    if (btnConnect) btnConnect.classList.toggle('d-none', connected);
+    if (btnDisconnect) btnDisconnect.classList.toggle('d-none', !connected);
+}

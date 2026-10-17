@@ -76,9 +76,14 @@
                     <div class="card shadow-sm border-0 h-100">
                         <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                             <h5 class="mb-0 fw-bold text-primary"><i class="fas fa-tags me-2"></i> สร้างแท็กส่งงาน</h5>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearPrinterForm()" title="ล้างค่าทั้งหมด">
-                                <i class="fas fa-broom"></i> ล้าง
-                            </button>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-success me-1 fw-bold" data-bs-toggle="modal" data-bs-target="#thermalPrinterModal" onclick="if(window.openThermalPrinterModal) openThermalPrinterModal();" title="ตั้งค่าและทดสอบโหมดพิมพ์ด่วน">
+                                    <i class="fas fa-bolt me-1"></i> โหมดพิมพ์ด่วน (ZPL/Kiosk)
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearPrinterForm()" title="ล้างค่าทั้งหมด">
+                                    <i class="fas fa-broom"></i> ล้าง
+                                </button>
+                            </div>
                         </div>
                         <div class="card-body">
                             <form id="label-generator-form">
@@ -367,6 +372,132 @@
         </div>
     </div>
 
+    <!-- 🖨️ Modal: ศูนย์ทดสอบและตั้งค่าพิมพ์ด่วน (ZPL / Kiosk Silent Print) -->
+    <div class="modal fade" id="thermalPrinterModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white py-3">
+                    <div class="d-flex align-items-center">
+                        <div class="p-2 rounded-circle bg-success bg-opacity-25 text-success me-2">
+                            <i class="fas fa-bolt fa-lg"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0">ศูนย์ทดสอบและตั้งค่าพิมพ์ด่วน (Zero-Click Thermal Printer)</h5>
+                            <small class="text-white-50">สำหรับ Honeywell PC42E-T (203dpi) และเครื่องพิมพ์ ZPL ผ่านสาย USB</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light p-3">
+                    <ul class="nav nav-pills nav-fill mb-3 bg-white p-1 rounded border shadow-sm" id="printerTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold py-2" id="kiosk-tab" data-bs-toggle="pill" data-bs-target="#kiosk-content" type="button" role="tab">
+                                <i class="fab fa-chrome me-1 text-primary"></i> 1. Chrome Kiosk Silent (แนะนำทันที)
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold py-2" id="zpl-tab" data-bs-toggle="pill" data-bs-target="#zpl-content" type="button" role="tab">
+                                <i class="fas fa-microchip me-1 text-success"></i> 2. Direct USB ZPL (Web Serial)
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold py-2" id="preview-tab" data-bs-toggle="pill" data-bs-target="#preview-content" type="button" role="tab">
+                                <i class="fas fa-eye me-1 text-info"></i> 3. ตัวอย่างฉลาก 4" × 2"
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="printerTabContent">
+                        <!-- TAB 1: KIOSK SILENT PRINT -->
+                        <div class="tab-pane fade show active" id="kiosk-content" role="tabpanel">
+                            <div class="card border-0 shadow-sm mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-success me-2 px-2 py-1"><i class="fas fa-check-circle me-1"></i>พร้อมใช้ 100%</span>
+                                        <h6 class="fw-bold mb-0 text-dark">พิมพ์เงียบอัตโนมัติ ไม่ต้องคลิกหน้าต่าง Print (&lt; 0.5 วินาที)</h6>
+                                    </div>
+                                    <p class="text-secondary small mb-3">
+                                        วิธีนี้ใช้กับสาย USB และไดรเวอร์ Windows ปัจจุบันได้ทันที <b>ไม่ต้องให้ IT มาตั้งค่า IP หรือลงโปรแกรม PrintSet ใดๆ</b> เพียงแค่เปิด Chrome ด้วยโหมด Kiosk
+                                    </p>
+
+                                    <div class="bg-light p-3 rounded border mb-3">
+                                        <h6 class="fw-bold text-primary small text-uppercase mb-2"><i class="fas fa-list-ol me-1"></i> ขั้นตอนเปิดใช้งานใน 3 สเต็ป:</h6>
+                                        <ol class="small text-secondary mb-0 ps-3">
+                                            <li class="mb-1">ตั้งค่าเครื่องพิมพ์ <b>Honeywell PC42E-T</b> ให้เป็น <b>Default Printer</b> ใน Windows</li>
+                                            <li class="mb-1">คลิกขวาที่ไอคอน <b>Google Chrome บนหน้าจอ Desktop</b> -&gt; เลือก <b>Properties</b></li>
+                                            <li class="mb-1">ในช่อง <b>Target</b> ให้เคาะวรรค 1 ครั้งที่ท้ายสุด แล้วเติม:
+                                                <div class="input-group input-group-sm mt-1 mb-1" style="max-width: 380px;">
+                                                    <input type="text" class="form-control font-monospace bg-white text-danger fw-bold" value=" --kiosk-printing" id="kioskParamInput" readonly>
+                                                    <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(' --kiosk-printing'); Swal.fire('คัดลอกแล้ว', 'นำไปวางต่อท้ายในช่อง Target ได้เลย', 'success');">
+                                                        <i class="fas fa-copy me-1"></i> คัดลอก
+                                                    </button>
+                                                </div>
+                                            </li>
+                                            <li>กด <b>OK</b> แล้วเปิดเบราว์เซอร์จากไอคอนนั้นเข้าใช้งาน MES</li>
+                                        </ol>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="small text-muted"><i class="fas fa-info-circle me-1"></i> ฉลากจะพ่นออกทันทีหลังจากกดปุ่ม</span>
+                                        <button type="button" class="btn btn-primary fw-bold px-3 shadow-sm" onclick="testSilentPrintAction('production')">
+                                            <i class="fas fa-print me-1"></i> ทดสอบพิมพ์ฉลากตัวอย่าง (4" × 2")
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: DIRECT USB ZPL -->
+                        <div class="tab-pane fade" id="zpl-content" role="tabpanel">
+                            <div class="card border-0 shadow-sm mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-usb text-success me-1"></i> Web Serial API (Direct ZPL over USB)</h6>
+                                        <span id="usbConnectionBadge" class="badge bg-secondary">ยังไม่ได้เชื่อมต่อ USB</span>
+                                    </div>
+                                    <p class="text-secondary small mb-3">
+                                        ส่งคำสั่ง ZPL-II ดิบตรงเข้าหัวพิมพ์ Honeywell PC42E-T ผ่านพอร์ต USB โดยไม่ผ่านระบบพิมพ์ของ Windows
+                                    </p>
+
+                                    <div class="d-flex gap-2 mb-3">
+                                        <button type="button" class="btn btn-success fw-bold btn-sm" id="btnConnectUsb" onclick="connectUsbPrinterAction()">
+                                            <i class="fas fa-plug me-1"></i> เชื่อมต่อเครื่องพิมพ์ USB
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger fw-bold btn-sm d-none" id="btnDisconnectUsb" onclick="disconnectUsbPrinterAction()">
+                                            <i class="fas fa-unlink me-1"></i> ตัดการเชื่อมต่อ
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary fw-bold btn-sm" onclick="sendTestZplAction()">
+                                            <i class="fas fa-paper-plane me-1"></i> ส่งคำสั่ง ZPL ทดสอบ
+                                        </button>
+                                    </div>
+
+                                    <label class="form-label small fw-bold text-secondary mb-1">รหัสคำสั่ง ZPL ที่สร้างขึ้น (4.00" x 2.00" @ 203 DPI):</label>
+                                    <textarea id="zplPreviewBox" class="form-control font-monospace text-dark bg-white small" rows="8" readonly style="font-size: 0.75rem;"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: LIVE PREVIEW -->
+                        <div class="tab-pane fade" id="preview-content" role="tabpanel">
+                            <div class="card border-0 shadow-sm text-center p-3">
+                                <h6 class="fw-bold text-secondary mb-2">พิกัดและขนาดฉลากจริง (4.00" x 2.00" / 812 x 406 Dots)</h6>
+                                <div class="p-2 border rounded bg-white d-inline-block mx-auto shadow-sm" style="max-width: 500px;">
+                                    <img src="images/label_preview_4x2.png?v=<?php echo time(); ?>" class="img-fluid rounded" alt="Label Preview" style="border: 1px dashed #ccc;">
+                                </div>
+                                <div class="mt-2 small text-muted">
+                                    <i class="fas fa-check text-success me-1"></i> พิกัดคมชัดระดับหัวพิมพ์ความร้อน 203 DPI พร้อม QR Code และ Code128 Barcode
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white py-2">
+                    <button type="button" class="btn btn-secondary px-4 btn-sm" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="printArea" class="d-none"></div>
 
     <script>
@@ -378,6 +509,7 @@
     </script>
     <script src="../../utils/libs/JsBarcode.all.min.js"></script>
     <script src="../../utils/libs/qrcode.min.js"></script>
+    <script src="script/thermalPrinter.js?v=<?php echo time(); ?>"></script>
 
     <script src="script/label_printer.js?v=<?php echo time(); ?>" defer></script>
 </body>
