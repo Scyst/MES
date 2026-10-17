@@ -24,9 +24,10 @@
 | Phase | หัวข้อหลัก | สถานะ | ความเสี่ยง / กฎเกณฑ์ |
 | :--- | :--- | :---: | :--- |
 | **Foundation** | Visual Map, Dynamic Zones, Blind Count, Manager Integration | `COMPLETED` | ห้ามรื้อถอน (Production Ready) |
-| **Phase 1** | Continuous Scan, เสียงสังเคราะห์, Manual UAT, IRA KPI | `IN PROGRESS` (1.1 Done) | **Manual Approve 100%** |
-| **Phase 2** | Refactor Master Data (แก้ Hardcode หมวด PKG ใน 4 ไฟล์) | `BACKLOG` | ห้ามกระทบ Logic สต็อก |
-| **Phase 3** | Audit Report (PDF/Excel), Two-Tier Recount, Offline Sync | `BACKLOG` | **Strict Human Choice** |
+| **Phase 1** | Continuous Scan, เสียงสังเคราะห์, Manual UAT, IRA KPI | `COMPLETED` | **Manual Approve 100%** |
+| **Phase 2** | Refactor Master Data (แก้ Hardcode หมวด PKG ใน 4 ไฟล์) | `COMPLETED` | ห้ามกระทบ Logic สต็อก |
+| **Phase 3** | Audit Report (PDF/Excel), Two-Tier Recount, Offline Sync | `COMPLETED` | **Strict Human Choice** |
+| **Phase 4** | Zebra Industrial Network Printer Integration (ZPL Direct Print) | `UPCOMING` | ต้องใช้ IP Printer หรือ Node-RED |
 
 ---
 
@@ -174,6 +175,7 @@
 | **2026-10-16** | Antigravity | พัฒนาระบบอนุมัติย้ายตำแหน่ง 2 ขาแบบอัตโนมัติ (Single-Click Two-Sided Atomic Relocation) ใน `dbo.sp_Store_ApproveCycleCount`: ตัดยอดจากคลังเดิมและเพิ่มยอดเข้าคลังใหม่พร้อมกัน สต็อกรวมไม่บวม พร้อมเคลียร์รายการรออนุมัติคลังเดิมอัตโนมัติ, ปปลดล็อกแท็กเป็น `AVAILABLE` เพื่อเบิกจ่ายได้ทันที, พัฒนาระบบรับคืนวัตถุดิบจากฝ่ายผลิต (PRD Material Return) สแกนแท็กเดิมเข้า Store โดยไม่ต้องพิมพ์แท็กใหม่, รวมปุ่มและหน้าต่างอนุมัติผลนับมาไว้บน `cycleCount.php` พร้อม Badge แสดงยอดรออนุมัติแบบเรียลไทม์ และแยกโค้ดโมดูลกลาง `storeApprovalCommon.js`, ขยายปุ่ม "รับคืนจาก PRD" ไปยัง `inventoryDashboard.php` (Toolbar + Mobile + เมนูจัดการคลัง) และ `storeDashboard.php` (Fulfillment Toolbar) เพื่อให้เรียกใช้งานได้จากทุกหน้าหลักของระบบสโตร์ | `dbo.sp_Store_ApproveCycleCount`, `api_store.php`, `InventoryModal.php`, `storeApprovalCommon.js`, `cycleCount.php`, `inventoryDashboard.php`, `inventoryDashboard.js`, `storeDashboard.php`, `db_changes.md`, `ROADMAP.md` |
 | **2026-10-17** | Antigravity | พัฒนา Phase 3.3 Offline Resilience & Network Drop Protection: ตรวจจับ `online`/`offline` อัตโนมัติ, จัดเก็บคิวสแกนออฟไลน์ใน `IndexedDB` (`MES_CycleCount_Offline_v1`) พร้อม `localStorage` Fallback, อัปเดต UI แบบ Optimistic ทันทีพร้อมเสียงและระบบสั่น, ซิงค์ข้อมูลอัตโนมัติแบบ FIFO Queue เมื่อต่อเน็ตติดพร้อมปุ่มซิงค์ด้วยมือ, ล็อกปุ่มจบงาน (`finishSession`) ป้องกันข้อมูลสูญหาย และแก้ไข UI มือถือแนวตั้งสำหรับ `stockTransaction.php` และ `tagHistory.php` ให้ปุ่ม 3 จุดและ Toolbar พอดีหน้าจอ | `cycleCount.php`, `cycleCount.js`, `stockTransaction.php`, `tagHistory.php`, `ROADMAP.md` |
 | **2026-10-17** | Antigravity | ขยาย Offline Mode ไปยังหน้าคลังสินค้าสโตร์ทั้งหมด: สร้างโมดูลกลาง `storeOffline.js` (IndexedDB `MES_Store_Offline_v1` + Auto FIFO Replay + เสียง/สั่น Optimistic Feedback), เชื่อมต่อกับ `rmReceiving.php` (รับเข้าสินค้าที่ลานโหลดมุมอับสัญญาณ) และ `storeRequest.php` (เบิก-จ่ายในช่องแร็คสูง), ปรับปรุง Mobile Toolbar ให้เป็น Single-Row Horizontal Scroll (`.toolbar-scroll-container`) ครบทั้ง 5 หน้าจอหลักของสโตร์ | `storeOffline.js`, `rmReceiving.php`, `rmReceiving.js`, `storeRequest.php`, `storeRequest.js`, `inventoryDashboard.php`, `stockTransaction.php`, `tagHistory.php`, `ROADMAP.md` |
+| **2026-10-17** | Antigravity | ปรับแต่ง UI มือถือขั้นสมบูรณ์: ปรับระยะห่างปุ่ม Toolbar 6px สบายตา, แยกปุ่ม 3 จุด (Kebab Menu ⋮) ออกมาตรึงมุมขวาบนนอก Scrollbar พร้อม Popper fixed strategy ไม่ถูกตัดขาด, ซ่อนปุ่มสแกนซ้ำซ้อนใน Toolbar เพื่อใช้ FAB กลมแทน, ปรับแต่ง Responsive Modal รับคืนสินค้าจากฝ่ายผลิต (`#prdReturnModal`) ไม่ให้หัวข้อและข้อความแตกบรรทัดพร้อมขยายช่อง Input กว้าง 2.5 เท่า, แก้ไขปัญหาหน้าจอ `tagHistory.php` สไลด์ไปด้านข้าง (Horizontal Overflow), และปรับสีรายการ Trace Tag ในเมนู 3 จุดให้เป็นมาตรฐานเดียวกัน | `InventoryModal.php`, `inventoryDashboard.php`, `tagHistory.php`, `stockTransaction.php`, `rmReceiving.php`, `ROADMAP.md` |
 
 
 
