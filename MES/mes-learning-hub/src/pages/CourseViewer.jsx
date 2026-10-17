@@ -55,7 +55,8 @@ export default function CourseViewer() {
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [latestExamScore, setLatestExamScore] = useState(null);
 
-  // Scroll Gate States
+  // Reading Time Lock & Scroll Gate States
+  const [readingSecondsLeft, setReadingSecondsLeft] = useState(0);
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false);
   const bottomSentinelRef = useRef(null);
 
@@ -80,18 +81,47 @@ export default function CourseViewer() {
     }
   }, [courseId, course, activeModuleId]);
 
-  // Scroll Gate IntersectionObserver: triggers when learner scrolls down to bottom sentinel
+  // Reset reading timer & scroll state whenever activeModuleId changes
   useEffect(() => {
     if (!course || !activeModuleId) return;
 
-    // If module was already completed before or course is already completed, unlock immediately
+    const alreadyDone = completedModuleIds.includes(activeModuleId) || isCompleted;
+    if (alreadyDone) {
+      setReadingSecondsLeft(0);
+      setIsScrolledToBottom(true);
+    } else {
+      // Require 10 seconds minimum reading/comprehension time for new uncompleted lessons
+      setReadingSecondsLeft(10);
+      setIsScrolledToBottom(false);
+    }
+  }, [courseId, activeModuleId, isCompleted]);
+
+  // Active 1-second countdown timer for uncompleted modules
+  useEffect(() => {
+    if (readingSecondsLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setReadingSecondsLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [readingSecondsLeft, activeModuleId]);
+
+  // Scroll Gate: triggers when learner scrolls down to bottom sentinel
+  useEffect(() => {
+    if (!course || !activeModuleId) return;
+
     const alreadyDone = completedModuleIds.includes(activeModuleId) || isCompleted;
     if (alreadyDone) {
       setIsScrolledToBottom(true);
       return;
     }
-
-    setIsScrolledToBottom(false);
 
     const sentinel = bottomSentinelRef.current;
     if (!sentinel) return;
@@ -100,14 +130,6 @@ export default function CourseViewer() {
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsScrolledToBottom(true);
-          // Mark module as completed upon verified scroll-to-bottom
-          const res = markModuleCompleted({
-            courseId: course.id,
-            moduleId: activeModuleId,
-            totalModules: course.modules?.length || 1
-          });
-          setCompletedModuleIds(res.completedModules);
-          setCourseStatus(getUserCourseStatus(course.id));
         }
       },
       { threshold: 0.1, rootMargin: '0px 0px 80px 0px' }
@@ -115,19 +137,11 @@ export default function CourseViewer() {
 
     observer.observe(sentinel);
 
-    // Fallback scroll listener in case container layout doesn't trigger intersection
     const handleWindowScroll = () => {
       const scrollPos = window.innerHeight + window.scrollY;
       const docHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
       if (scrollPos >= docHeight - 120) {
         setIsScrolledToBottom(true);
-        const res = markModuleCompleted({
-          courseId: course.id,
-          moduleId: activeModuleId,
-          totalModules: course.modules?.length || 1
-        });
-        setCompletedModuleIds(res.completedModules);
-        setCourseStatus(getUserCourseStatus(course.id));
       }
     };
 
@@ -138,6 +152,23 @@ export default function CourseViewer() {
       window.removeEventListener('scroll', handleWindowScroll);
     };
   }, [course, activeModuleId, completedModuleIds, isCompleted]);
+
+  // Mark module as completed when BOTH timer expires (readingSecondsLeft === 0) AND user reaches bottom
+  useEffect(() => {
+    if (!course || !activeModuleId) return;
+    const alreadyDone = completedModuleIds.includes(activeModuleId) || isCompleted;
+    if (alreadyDone) return;
+
+    if (readingSecondsLeft === 0 && isScrolledToBottom) {
+      const res = markModuleCompleted({
+        courseId: course.id,
+        moduleId: activeModuleId,
+        totalModules: course.modules?.length || 1
+      });
+      setCompletedModuleIds(res.completedModules);
+      setCourseStatus(getUserCourseStatus(course.id));
+    }
+  }, [course, activeModuleId, readingSecondsLeft, isScrolledToBottom, completedModuleIds, isCompleted]);
 
   if (!course) {
     return (
@@ -691,18 +722,32 @@ export default function CourseViewer() {
           {/* Bottom Sentinel for Scroll Gate Detection */}
           <div ref={bottomSentinelRef} className="h-6 w-full pointer-events-none" />
 
-          {/* Scroll Gate Guidance Indicator */}
+          {/* Reading Timer & Scroll Gate Guidance Indicator */}
           <div className="mt-8">
-            {!isScrolledToBottom ? (
+            {readingSecondsLeft > 0 ? (
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs shadow-sm">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 font-mono font-black flex items-center justify-center text-xs animate-pulse flex-shrink-0">
+                    {readingSecondsLeft}
+                  </span>
+                  <span>
+                    <strong>มาตรฐานเวลาการเรียนรู้:</strong> กรุณาใช้เวลาศึกษาเนื้อหาอย่างน้อย 10 วินาที (เหลืออีก {readingSecondsLeft} วินาที)
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono text-amber-400 font-bold bg-amber-500/20 px-2.5 py-1 rounded-lg flex-shrink-0">
+                  ⏳ {readingSecondsLeft}s Left
+                </span>
+              </div>
+            ) : !isScrolledToBottom ? (
               <div className="flex items-center justify-between p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs shadow-sm">
                 <div className="flex items-center gap-2.5">
                   <FiChevronDown className="w-4 h-4 text-amber-400 animate-bounce flex-shrink-0" />
                   <span>
-                    <strong>มาตรฐานการเรียนรู้:</strong> กรุณาเลื่อนอ่านเนื้อหาจนถึงด้านล่างสุด เพื่อทำความเข้าใจก่อนปลดล็อกบทถัดไป
+                    <strong>เลื่อนอ่านให้จบ:</strong> ครบเกณฑ์เวลาศึกษาแล้ว กรุณาเลื่อนอ่านเนื้อหาจนถึงด้านล่างสุดเพื่อปลดล็อก
                   </span>
                 </div>
-                <span className="text-[11px] font-mono text-amber-400/90 font-bold bg-amber-500/20 px-2 py-0.5 rounded">
-                  Scroll to Read
+                <span className="text-[11px] font-mono text-amber-400 font-bold bg-amber-500/20 px-2.5 py-1 rounded-lg flex-shrink-0">
+                  Scroll Down ↓
                 </span>
               </div>
             ) : (
@@ -710,10 +755,10 @@ export default function CourseViewer() {
                 <div className="flex items-center gap-2">
                   <FiCheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                   <span>
-                    <strong>อ่านครบถ้วนแล้ว:</strong> ศึกษาเนื้อหาบทเรียนนี้ครบถ้วนตามขั้นตอนการปฏิบัติงานมาตรฐาน
+                    <strong>ศึกษาครบถ้วนแล้ว:</strong> ผ่านเกณฑ์เวลาและศึกษาเนื้อหาครบถ้วนตามขั้นตอนมาตรฐาน
                   </span>
                 </div>
-                <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded">
+                <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded flex-shrink-0">
                   ✓ Unlocked
                 </span>
               </div>
@@ -732,14 +777,14 @@ export default function CourseViewer() {
             ) : <div className="hidden sm:block"></div>}
             
             {currentIndex < totalModules - 1 ? (
-              !isScrolledToBottom ? (
+              (readingSecondsLeft > 0 || !isScrolledToBottom) ? (
                 <button 
                   disabled
                   className="w-full sm:w-auto px-6 py-2.5 bg-slate-800/80 text-slate-500 rounded-lg font-bold border border-slate-700/60 cursor-not-allowed flex items-center justify-center gap-2 opacity-60"
-                  title="กรุณาเลื่อนอ่านเนื้อหาจนจบบทเรียนก่อนปลดล็อก"
+                  title={readingSecondsLeft > 0 ? `กรุณาใช้เวลาศึกษาอีก ${readingSecondsLeft} วินาที` : 'กรุณาเลื่อนอ่านเนื้อหาจนจบบทเรียน'}
                 >
                   <FiLock className="w-4 h-4" />
-                  <span>Next Lesson → (กรุณาอ่านจนจบ)</span>
+                  <span>Next Lesson → {readingSecondsLeft > 0 ? `(รออีก ${readingSecondsLeft}s)` : '(เลื่อนอ่านจนจบ)'}</span>
                 </button>
               ) : (
                 <button 
@@ -751,14 +796,14 @@ export default function CourseViewer() {
               )
             ) : (
               /* Final Lesson: Must pass assessment to complete */
-              !isScrolledToBottom ? (
+              (readingSecondsLeft > 0 || !isScrolledToBottom) ? (
                 <button 
                   disabled
                   className="w-full sm:w-auto px-6 py-3 bg-slate-800/80 text-slate-500 rounded-xl font-bold border border-slate-700/60 cursor-not-allowed flex items-center justify-center gap-2 opacity-60"
-                  title="กรุณาเลื่อนอ่านเนื้อหาจนจบบทเรียนก่อนเริ่มทำแบบทดสอบ"
+                  title={readingSecondsLeft > 0 ? `กรุณาใช้เวลาศึกษาอีก ${readingSecondsLeft} วินาที` : 'กรุณาเลื่อนอ่านเนื้อหาจนจบ'}
                 >
                   <FiLock className="w-4 h-4" />
-                  <span>เลื่อนอ่านเนื้อหาจนจบเพื่อเริ่มทำแบบทดสอบ</span>
+                  <span>เข้าสู่แบบทดสอบ {readingSecondsLeft > 0 ? `(รออีก ${readingSecondsLeft}s)` : '(เลื่อนอ่านจนจบ)'}</span>
                 </button>
               ) : isCompleted ? (
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -788,7 +833,7 @@ export default function CourseViewer() {
                     setUserAnswers({});
                     setShowAssessmentModal(true);
                   }}
-                  className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-fuchsia-600 via-purple-600 to-emerald-600 hover:from-fuchsia-500 hover:to-emerald-500 text-white rounded-xl font-black text-sm transition-all shadow-xl shadow-purple-600/30 flex items-center justify-center gap-2.5 hover:-translate-y-0.5"
+                  className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-fuchsia-600 via-purple-600 to-emerald-600 hover:from-fuchsia-500 hover:to-emerald-500 text-white rounded-xl font-black text-sm transition-all shadow-xl shadow-purple-600/30 flex items-center justify-center gap-2.5 hover:-translate-y-0.5 animate-pulse"
                 >
                   <FiHelpCircle className="w-5 h-5 text-amber-300" />
                   <span>เข้าสู่แบบทดสอบวัดผลท้ายหลักสูตร (Take Final Assessment)</span>
