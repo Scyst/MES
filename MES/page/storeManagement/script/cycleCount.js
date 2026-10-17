@@ -34,6 +34,425 @@ function escapeHTML(str) {
         .replace(/'/g, "&#039;");
 }
 
+// ==========================================
+// PHASE 3.3: OFFLINE MODE ENGINE (IndexedDB + FIFO Sync)
+// ==========================================
+const CycleCountOffline = {
+    dbName: 'MES_CycleCount_Offline_v1',
+    dbVersion: 1,
+    storeName: 'offline_scans',
+    db: null,
+    isInitialized: false,
+
+    async init() {
+        if (this.isInitialized) return;
+        if (!('indexedDB' in window)) {
+            console.warn('[Offline] IndexedDB not supported, falling back to localStorage');
+            this.isInitialized = true;
+            return;
+        }
+
+        try {
+            this.db = await new Promise((resolve, reject) => {
+                const request = window.indexedDB.open(this.dbName, this.dbVersion);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(this.storeName)) {
+                        const store = db.createObjectStore(this.storeName, { keyPath: 'id', autoIncrement: true });
+                        store.createIndex('session_id', 'session_id', { unique: false });
+                        store.createIndex('created_at', 'created_at', { unique: false });
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+            this.isInitialized = true;
+        } catch (err) {
+            console.warn('[Offline] IndexedDB init error, fallback to localStorage:', err);
+            this.db = null;
+            this.isInitialized = true;
+        }
+    },
+
+    async addScan(scanData) {
+        await this.init();
+        scanData.created_at = Date.now();
+
+        if (this.db) {
+            return new Promise((resolve, reject) => {
+                const tx = this.db.transaction([this.storeName], 'readwrite');
+                const store = tx.objectStore(this.storeName);
+                const req = store.add(scanData);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        } else {
+            const key = 'MES_OFFLINE_SCANS_QUEUE';
+            let list = [];
+            try { list = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
+            scanData.id = Date.now() + Math.random();
+            list.push(scanData);
+            localStorage.setItem(key, JSON.stringify(list));
+            return scanData.id;
+        }
+    },
+
+    async getPendingScans(sessionId = null) {
+        await this.init();
+        if (this.db) {
+            return new Promise((resolve, reject) => {
+                const tx = this.db.transaction([this.storeName], 'readonly');
+                const store = tx.objectStore(this.storeName);
+                const req = store.getAll();
+                req.onsuccess = () => {
+                    let results = req.result || [];
+                    if (sessionId) {
+                        results = results.filter(item => String(item.session_id) === String(sessionId));
+                    }
+                    results.sort((a, b) => (a.created_at || a.id) - (b.created_at || b.id));
+                    resolve(results);
+                };
+                req.onerror = () => reject(req.error);
+            });
+        } else {
+            const key = 'MES_OFFLINE_SCANS_QUEUE';
+            let list = [];
+            try { list = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
+            if (sessionId) {
+                list = list.filter(item => String(item.session_id) === String(sessionId));
+            }
+            list.sort((a, b) => (a.created_at || a.id) - (b.created_at || b.id));
+            return list;
+        }
+    },
+
+    async removeScan(id) {
+        await this.init();
+        if (this.db) {
+            return new Promise((resolve, reject) => {
+                const tx = this.db.transaction([this.storeName], 'readwrite');
+                const store = tx.objectStore(this.storeName);
+                const req = store.delete(id);
+                req.onsuccess = () => resolve(true);
+                req.onerror = () => reject(req.error);
+            });
+        } else {
+            const key = 'MES_OFFLINE_SCANS_QUEUE';
+            let list = [];
+            try { list = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
+            list = list.filter(item => item.id !== id);
+            localStorage.setItem(key, JSON.stringify(list));
+            return true;
+        }
+    },
+
+    async getPendingCount(sessionId = null) {
+        const scans = await this.getPendingScans(sessionId);
+        return scans.length;
+    },
+
+    saveActiveSessionCache(sessionId, locationId, locName, details, recountItems) {
+        try {
+            const data = {
+                sessionId,
+                locationId,
+                locName,
+                details,
+                recountItems,
+                savedAt: Date.now()
+            };
+            sessionStorage.setItem('MES_CC_ACTIVE_SESSION', JSON.stringify(data));
+        } catch (e) {}
+    },
+
+    getActiveSessionCache() {
+        try {
+            const data = sessionStorage.getItem('MES_CC_ACTIVE_SESSION');
+            return data ? JSON.parse(data) : null;
+        } catch (e) {
+            return null;
+        }
+    },
+
+    clearActiveSessionCache() {
+        sessionStorage.removeItem('MES_CC_ACTIVE_SESSION');
+    }
+};
+
+let isSyncingOfflineScans = false;
+
+async function updateOfflineUI() {
+    const isOnline = navigator.onLine;
+    const pendingScans = await CycleCountOffline.getPendingScans(currentSessionId);
+    const count = pendingScans.length;
+
+    // View select location banner
+    const selectBanner = document.getElementById('offlineSelectLocBanner');
+    if (selectBanner) {
+        if (!isOnline) {
+            selectBanner.classList.remove('d-none');
+            selectBanner.classList.add('d-flex');
+        } else {
+            selectBanner.classList.add('d-none');
+            selectBanner.classList.remove('d-flex');
+        }
+    }
+
+    // View counting banner
+    const countBanner = document.getElementById('offlineStatusBanner');
+    const pendingText = document.getElementById('offlinePendingCountText');
+    if (countBanner) {
+        if (!isOnline || count > 0) {
+            countBanner.classList.remove('d-none');
+            countBanner.classList.add('d-flex');
+            if (pendingText) pendingText.innerText = count;
+        } else {
+            countBanner.classList.add('d-none');
+            countBanner.classList.remove('d-flex');
+        }
+    }
+
+    // Header sync badge
+    const syncBadge = document.getElementById('offlineSyncBadge');
+    const syncCount = document.getElementById('offlineSyncCount');
+    if (syncBadge) {
+        if (count > 0) {
+            syncBadge.classList.remove('d-none');
+            if (syncCount) syncCount.innerText = count;
+        } else {
+            syncBadge.classList.add('d-none');
+        }
+    }
+
+    // Finish session button protection
+    const finishBtn = document.getElementById('btnFinishSession');
+    const finishText = document.getElementById('finishBtnText');
+    if (finishBtn) {
+        if (!isOnline) {
+            finishBtn.classList.add('disabled', 'opacity-75');
+            finishBtn.title = 'ไม่สามารถจบการตรวจนับขณะออฟไลน์ได้';
+            if (finishText) finishText.innerText = 'ออฟไลน์ (ต้องต่อเน็ตก่อนจบงาน)';
+        } else if (count > 0) {
+            finishBtn.classList.add('disabled', 'opacity-75');
+            finishBtn.title = `กรุณาซิงค์ข้อมูลค้างส่ง (${count} รายการ) ก่อนจบงาน`;
+            if (finishText) finishText.innerText = `ค้างซิงค์ ${count} รายการ (กดซิงค์ก่อน)`;
+        } else {
+            finishBtn.classList.remove('disabled', 'opacity-75');
+            finishBtn.title = '';
+            if (finishText) finishText.innerText = 'สรุปผลการตรวจนับคลังนี้';
+        }
+    }
+}
+
+async function triggerManualSync() {
+    if (isSyncingOfflineScans) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'info',
+            title: 'ระบบกำลังซิงค์ข้อมูลอยู่แล้ว กรุณารอสักครู่...',
+            showConfirmButton: false,
+            timer: 2000
+        });
+        return;
+    }
+
+    if (!navigator.onLine) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'ยังอยู่ในโหมดออฟไลน์',
+            text: 'กรุณาเชื่อมต่อ Wi-Fi หรือสัญญาณอินเทอร์เน็ตก่อนทำการซิงค์ข้อมูล',
+            confirmButtonText: 'รับทราบ'
+        });
+        return;
+    }
+
+    const pending = await CycleCountOffline.getPendingScans(currentSessionId);
+    if (pending.length === 0) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'ข้อมูลทั้งหมดซิงค์ตรงกับเซิร์ฟเวอร์เรียบร้อยแล้ว',
+            showConfirmButton: false,
+            timer: 2000
+        });
+        updateOfflineUI();
+        return;
+    }
+
+    await syncOfflineScans();
+}
+
+async function syncOfflineScans() {
+    if (isSyncingOfflineScans || !navigator.onLine) return;
+    const pendingScans = await CycleCountOffline.getPendingScans(currentSessionId);
+    if (!pendingScans || pendingScans.length === 0) {
+        await updateOfflineUI();
+        return;
+    }
+
+    isSyncingOfflineScans = true;
+    const totalToSync = pendingScans.length;
+    let syncedCount = 0;
+    let failedCount = 0;
+
+    Swal.fire({
+        title: 'กำลังซิงค์ข้อมูลขึ้นเซิร์ฟเวอร์...',
+        html: `กำลังส่งข้อมูล <b>0</b> / <b>${totalToSync}</b> รายการ (FIFO Queue)`,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    for (const scan of pendingScans) {
+        try {
+            const formData = createFormData('cc_scan_tag');
+            formData.append('session_id', scan.session_id);
+            formData.append('tag_no', scan.tag_no);
+            if (scan.actual_qty !== undefined && scan.actual_qty !== null && scan.actual_qty !== '') {
+                formData.append('actual_qty', scan.actual_qty);
+            }
+            if (scan.remark) {
+                formData.append('remark', scan.remark);
+            }
+            if (scan.auto_confirm) {
+                formData.append('auto_confirm', scan.auto_confirm);
+            }
+
+            const req = await fetch(API_STORE, { method: 'POST', body: formData });
+            const res = await req.json();
+
+            if (res.success) {
+                await CycleCountOffline.removeScan(scan.id);
+                syncedCount++;
+                if (Swal.isVisible()) {
+                    Swal.update({
+                        html: `กำลังส่งข้อมูล <b>${syncedCount}</b> / <b>${totalToSync}</b> รายการ (FIFO Queue)`
+                    });
+                }
+            } else {
+                console.warn('[Offline Sync] Server rejected scan:', scan.tag_no, res.message);
+                await CycleCountOffline.removeScan(scan.id);
+                failedCount++;
+            }
+        } catch (err) {
+            console.error('[Offline Sync] Network drop during sync:', err);
+            break;
+        }
+    }
+
+    isSyncingOfflineScans = false;
+    await updateOfflineUI();
+
+    if (syncedCount > 0) {
+        playSuccessBeep();
+        await refreshSessionDetails();
+        Swal.fire({
+            icon: 'success',
+            title: 'ซิงค์ข้อมูลสำเร็จ',
+            text: `ส่งข้อมูลขึ้นเซิร์ฟเวอร์เรียบร้อยแล้ว ${syncedCount} รายการ${failedCount > 0 ? ` (ตรวจสอบแล้ว ${failedCount} รายการ)` : ''}`,
+            timer: 2500,
+            showConfirmButton: false
+        });
+    } else if (failedCount > 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'การซิงค์เสร็จสิ้น',
+            text: `ระบบดำเนินการประมวลผลแล้ว ${failedCount} รายการ`,
+            confirmButtonText: 'ตกลง'
+        });
+    }
+}
+
+async function handleOfflineScan(tagNo, actualQty, remark, autoConfirm) {
+    const cleanTag = tagNo.trim();
+    if (!currentSessionId) return;
+
+    // Find item in currentSessionDetails
+    const matchedItem = currentSessionDetails.find(d => 
+        (d.tag_serial_no && d.tag_serial_no.trim().toUpperCase() === cleanTag.toUpperCase())
+    );
+
+    let finalQty = actualQty;
+    let isWrongLoc = 0;
+
+    if (matchedItem) {
+        if (finalQty === null || finalQty === undefined || finalQty === '') {
+            finalQty = matchedItem.system_qty;
+        }
+        matchedItem.actual_qty = parseFloat(finalQty);
+        matchedItem.variance = parseFloat(finalQty) - (parseFloat(matchedItem.system_qty) || 0);
+        if (remark) matchedItem.remark = remark;
+    } else {
+        // Not found in this session location -> Wrong location item!
+        isWrongLoc = 1;
+        if (finalQty === null || finalQty === undefined || finalQty === '') {
+            finalQty = 1; // Default 1 for unlisted pallet
+        }
+        currentSessionDetails.push({
+            tag_serial_no: cleanTag,
+            item_no: 'ของหลงคลัง (ออฟไลน์)',
+            system_qty: 0,
+            actual_qty: parseFloat(finalQty),
+            variance: parseFloat(finalQty),
+            is_wrong_location: 1,
+            remark: remark || 'ของหลงคลัง (สแกนออฟไลน์)'
+        });
+    }
+
+    // Save to Offline Queue
+    await CycleCountOffline.addScan({
+        session_id: currentSessionId,
+        location_id: currentLocationId,
+        tag_no: cleanTag,
+        actual_qty: finalQty,
+        remark: remark || '',
+        auto_confirm: autoConfirm || '0',
+        is_wrong_location: isWrongLoc
+    });
+
+    // Save active cache
+    const locName = document.getElementById('currentLocationName')?.innerText || '';
+    CycleCountOffline.saveActiveSessionCache(currentSessionId, currentLocationId, locName, currentSessionDetails, currentLocationRecountItems);
+
+    // Optimistic UI updates
+    renderLists(currentSessionDetails);
+    renderShelfMonitor(currentSessionDetails);
+    await updateOfflineUI();
+
+    // Feedback
+    if (isWrongLoc) {
+        playErrorAlarm();
+        vibrateDevice([200, 100, 200]);
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'warning',
+            title: `[ออฟไลน์] ของหลงคลัง: ${escapeHTML(cleanTag)}`,
+            text: `บันทึกในเครื่องแล้ว (${finalQty} ชิ้น)`,
+            showConfirmButton: false,
+            timer: 2000
+        });
+    } else {
+        playSuccessBeep();
+        vibrateDevice(80);
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: `[ออฟไลน์] นับแล้ว: ${escapeHTML(cleanTag)}`,
+            text: `บันทึกในเครื่องแล้ว (${finalQty} ชิ้น)`,
+            showConfirmButton: false,
+            timer: 2000
+        });
+    }
+}
+
+window.triggerManualSync = triggerManualSync;
+
 function selectLocationUI(id, name, btnElement) {
     document.getElementById('locationSelect').value = id;
     document.getElementById('locationSelect').dataset.name = name;
@@ -53,6 +472,17 @@ async function startSession() {
     const locInput = document.getElementById('locationSelect');
     if (!locInput.value) {
         Swal.fire('Error', 'กรุณาเลือกคลังสินค้า', 'error');
+        return;
+    }
+
+    // Offline check: Require network connection to initialize baseline stock data
+    if (!navigator.onLine) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'ไม่สามารถเปิดเซสชั่นใหม่ขณะออฟไลน์ได้',
+            text: 'กรุณาเชื่อมต่อเครือข่ายอินเทอร์เน็ต/Wi-Fi เพื่อดึงข้อมูลสต็อกล่าสุดก่อนเริ่มการตรวจนับ',
+            confirmButtonText: 'รับทราบ'
+        });
         return;
     }
 
@@ -101,6 +531,10 @@ async function startSession() {
             document.getElementById('viewCounting').classList.add('d-flex');
             
             renderLists(res.details);
+
+            // Cache active session and refresh offline UI
+            CycleCountOffline.saveActiveSessionCache(currentSessionId, currentLocationId, locName, currentSessionDetails, currentLocationRecountItems);
+            updateOfflineUI();
         } else {
             Swal.fire('Error', res.message || 'เกิดข้อผิดพลาด', 'error');
         }
@@ -508,6 +942,31 @@ async function handleScannedTag(tagCode) {
     // Continuous Scan: Attempt instant auto-confirmation
     showScanningToast(cleanTag);
 
+    // If currently offline, process offline directly
+    if (!navigator.onLine) {
+        const matchedItem = currentSessionDetails.find(d => 
+            (d.tag_serial_no && d.tag_serial_no.trim().toUpperCase() === cleanTag.toUpperCase())
+        );
+        if (matchedItem) {
+            await handleOfflineScan(cleanTag, matchedItem.system_qty, '', '1');
+            return;
+        } else {
+            playErrorAlarm();
+            vibrateDevice([200, 100, 200]);
+            openInputModalForTag(cleanTag);
+            document.getElementById('wrongLocationWarning').classList.remove('d-none');
+            document.getElementById('inputReasonContainer').classList.remove('d-none');
+            document.getElementById('inputReason').value = 'ของหลงคลัง (ออฟไลน์)';
+            Swal.fire({
+                title: 'ต้องตรวจสอบ! (โหมดออฟไลน์)',
+                text: 'ไม่พบรายการนี้ในคลังที่กำลังตรวจนับ กรุณาระบุยอดจริงและยืนยันของหลงคลัง',
+                icon: 'warning',
+                confirmButtonText: 'รับทราบ'
+            });
+            return;
+        }
+    }
+
     const formData = createFormData('cc_scan_tag');
     formData.append('session_id', currentSessionId);
     formData.append('tag_no', cleanTag);
@@ -556,10 +1015,9 @@ async function handleScannedTag(tagCode) {
             });
         }
     } catch (e) {
-        playErrorAlarm();
-        vibrateDevice([200, 100, 200]);
-        openInputModalForTag(cleanTag);
-        Swal.fire('Error', e.message || 'ไม่สามารถบันทึกยอดได้', 'error');
+        console.warn('[Network Drop] Scan request failed, queueing offline:', e);
+        // Fallback to offline handling on network drop
+        await handleOfflineScan(cleanTag, null, '', '1');
     }
 }
 
@@ -646,6 +1104,13 @@ async function submitActualQty() {
         return;
     }
 
+    // Offline mode: queue scan directly
+    if (!navigator.onLine) {
+        await handleOfflineScan(currentTagNo, actualQty, reason, '0');
+        inputQtyModal.hide();
+        return;
+    }
+
     // Attempt to submit
     const formData = createFormData('cc_scan_tag');
     formData.append('session_id', currentSessionId);
@@ -688,7 +1153,9 @@ async function submitActualQty() {
             Swal.fire('Error', res.message || 'เกิดข้อผิดพลาด', 'error');
         }
     } catch (e) {
-        Swal.fire('Error', e.message, 'error');
+        console.warn('[Network Drop] Manual submit failed, saving to offline store:', e);
+        await handleOfflineScan(currentTagNo, actualQty, reason, '0');
+        inputQtyModal.hide();
     } finally {
         btn.innerHTML = oldText;
         btn.disabled = false;
@@ -696,6 +1163,12 @@ async function submitActualQty() {
 }
 
 async function refreshSessionDetails() {
+    if (!navigator.onLine) {
+        renderLists(currentSessionDetails);
+        renderShelfMonitor(currentSessionDetails);
+        return;
+    }
+
     const formData = createFormData('cc_start_session');
     formData.append('location_id', currentLocationId);
 
@@ -705,11 +1178,44 @@ async function refreshSessionDetails() {
         if (res.success) {
             renderLists(res.details);
             renderShelfMonitor(res.details);
+            const locName = document.getElementById('currentLocationName')?.innerText || '';
+            CycleCountOffline.saveActiveSessionCache(currentSessionId, currentLocationId, locName, res.details, currentLocationRecountItems);
         }
-    } catch (e) {}
+    } catch (e) {
+        console.warn('refreshSessionDetails error, using in-memory state:', e);
+        renderLists(currentSessionDetails);
+        renderShelfMonitor(currentSessionDetails);
+    }
 }
 
 async function finishSession() {
+    // Offline resilience checks (Phase 3.3)
+    if (!navigator.onLine) {
+        Swal.fire({
+            icon: 'error',
+            title: 'ไม่สามารถสรุปผลขณะออฟไลน์ได้',
+            text: 'อุปกรณ์อยู่ในมุมอับสัญญาณ กรุณาเดินไปยังจุดที่มี Wi-Fi หรือสัญญาณอินเทอร์เน็ตเพื่อสรุปผลการตรวจนับ',
+            confirmButtonText: 'รับทราบ'
+        });
+        return;
+    }
+
+    const pendingScansCount = await CycleCountOffline.getPendingCount(currentSessionId);
+    if (pendingScansCount > 0) {
+        const syncConfirm = await Swal.fire({
+            icon: 'warning',
+            title: 'ยังมีข้อมูลค้างซิงค์!',
+            html: `ระบบพบข้อมูลการสแกนค้างอยู่ในเครื่อง <b>${pendingScansCount} รายการ</b><br>กรุณากดปุ่ม <b>"ซิงค์เดี๋ยวนี้"</b> ให้เรียบร้อยก่อนสรุปผล`,
+            confirmButtonText: '<i class="fas fa-sync-alt me-1"></i> ซิงค์เดี๋ยวนี้',
+            showCancelButton: true,
+            cancelButtonText: 'ยกเลิก'
+        });
+        if (syncConfirm.isConfirmed) {
+            triggerManualSync();
+        }
+        return;
+    }
+
     const pendingCount = parseInt(document.getElementById('badgePending').innerText);
     
     if (pendingCount > 0) {
@@ -749,6 +1255,7 @@ async function finishSession() {
         const res = await req.json();
         
         if (res.success) {
+            CycleCountOffline.clearActiveSessionCache();
             await Swal.fire('เสร็จสิ้น!', 'ส่งสรุปผลให้หัวหน้าตรวจสอบเรียบร้อย', 'success');
             window.location.reload();
         } else {
@@ -1260,6 +1767,10 @@ async function executeResetSession() {
             const startBtn = document.getElementById('btnStartSession');
             if (startBtn) startBtn.disabled = true;
 
+            // Clear active session cache on reset
+            CycleCountOffline.clearActiveSessionCache();
+            updateOfflineUI();
+
             Swal.fire({
                 icon: 'success',
                 title: 'รีเซ็ตสำเร็จ',
@@ -1275,13 +1786,46 @@ async function executeResetSession() {
     }
 }
 
-// Initialize Bootstrap Tooltips
-document.addEventListener('DOMContentLoaded', function () {
+function cancelSession() {
+    return resetCountingSession();
+}
+
+// Initialize Bootstrap Tooltips & Phase 3.3 Offline Listeners
+document.addEventListener('DOMContentLoaded', async function () {
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
     [...tooltipTriggerList].forEach(el => {
         try {
             new bootstrap.Tooltip(el);
         } catch(e) {}
+    });
+
+    // Initialize Offline Engine
+    try {
+        await CycleCountOffline.init();
+        await updateOfflineUI();
+    } catch (e) {
+        console.warn('Offline init error:', e);
+    }
+});
+
+// Network status listeners
+window.addEventListener('online', () => {
+    console.log('[Network] Reconnected to online');
+    updateOfflineUI();
+    syncOfflineScans();
+});
+
+window.addEventListener('offline', () => {
+    console.log('[Network] Connection lost (offline)');
+    updateOfflineUI();
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'warning',
+        title: 'เข้าสู่โหมดออฟไลน์ (Offline Mode)',
+        text: 'ระบบจะบันทึกผลการสแกนในเครื่องชั่วคราว',
+        showConfirmButton: false,
+        timer: 3500
     });
 });
 

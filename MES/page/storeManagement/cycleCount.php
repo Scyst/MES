@@ -665,6 +665,14 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
 
                         <div class="p-3 flex-grow-1 d-flex flex-column" style="min-height: 0; overflow: hidden;">
                             <div class="flex-shrink-0">
+                                <!-- Offline Alert on Select Location (Phase 3.3) -->
+                                <div id="offlineSelectLocBanner" class="alert alert-warning d-none align-items-center gap-2 p-2 mb-2 rounded-3 border-warning shadow-xs" style="background-color: #fffbeb; border-color: #fde68a;">
+                                    <i class="fas fa-signal-slash text-warning fs-5 flex-shrink-0"></i>
+                                    <div style="line-height: 1.25;" class="min-w-0">
+                                        <span class="fw-bold text-warning-emphasis small d-block">ขณะนี้ระบบอยู่ในโหมดออฟไลน์ (Offline)</span>
+                                        <span class="text-secondary" style="font-size: 0.72rem;">กรุณาเชื่อมต่อ Wi-Fi เพื่อโหลดข้อมูลคลังสินค้าใหม่</span>
+                                    </div>
+                                </div>
                                 <?php
                                     $overallItemIra = $overallHealth['ira_item_pct'];
                                     $overallValIra = $overallHealth['ira_value_pct'];
@@ -847,11 +855,29 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                 <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1.5 fw-semibold" id="sessionStatusBadge" style="font-size: 0.75rem;">
                                     <i class="fas fa-spinner fa-spin me-1"></i>กำลังเช็ค
                                 </span>
+                                <!-- Offline Sync Badge (Phase 3.3) -->
+                                <span id="offlineSyncBadge" class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2 py-1.5 fw-semibold d-none" style="font-size: 0.72rem; cursor: pointer;" onclick="triggerManualSync()" title="คลิกเพื่อส่งข้อมูลที่บันทึกไว้ในเครื่องขึ้นเซิร์ฟเวอร์">
+                                    <i class="fas fa-wifi-slash me-1"></i><span id="offlineSyncCount">0</span> ค้างซิงค์
+                                </span>
                             </div>
                         </div>
 
                         <div class="p-3 flex-grow-1 d-flex flex-column" style="min-height: 0; overflow: hidden;">
                             <div class="flex-shrink-0">
+                                <!-- Offline Status Banner (Phase 3.3) -->
+                                <div id="offlineStatusBanner" class="alert alert-warning d-none align-items-center justify-content-between p-2 mb-2 rounded-3 border-warning shadow-xs" style="background-color: #fffbeb; border-color: #fde68a;">
+                                    <div class="d-flex align-items-center gap-2 min-w-0">
+                                        <div class="spinner-grow spinner-grow-sm text-warning flex-shrink-0" role="status" style="width: 12px; height: 12px;"></div>
+                                        <div style="line-height: 1.25;" class="min-w-0">
+                                            <div class="fw-bold text-warning-emphasis small text-truncate"><i class="fas fa-signal-slash me-1 text-warning"></i> กำลังทำงานในโหมดออฟไลน์ (Offline Mode)</div>
+                                            <span class="text-secondary" style="font-size: 0.72rem;">อยู่ในมุมอับสัญญาณ บันทึกข้อมูลในเครื่องชั่วคราว (<span id="offlinePendingCountText">0</span> รายการ)</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-warning fw-bold rounded-pill px-2.5 py-0.5 shadow-xs flex-shrink-0 ms-2 text-dark bg-white" onclick="triggerManualSync()" style="font-size: 0.72rem;">
+                                        <i class="fas fa-sync-alt me-1"></i>ซิงค์เดี๋ยวนี้
+                                    </button>
+                                </div>
+
                                 <!-- Recount Alert Banner (Tier 2 Blind Recount) -->
                                 <div id="recountAlertBanner" class="alert alert-danger d-none align-items-center justify-content-between p-2.5 mb-2 rounded-3 border-danger shadow-xs">
                                     <div class="d-flex align-items-center gap-2">
@@ -938,9 +964,9 @@ $pageHeaderSubtitle = "ระบบตรวจนับสินค้าใน
                                         <i class="fas fa-undo-alt"></i>
                                         <span>ยกเลิกการนับ</span>
                                     </button>
-                                    <button class="btn-finish-cc flex-grow-1" onclick="finishSession()">
+                                    <button class="btn-finish-cc flex-grow-1" id="btnFinishSession" onclick="finishSession()">
                                         <i class="fas fa-flag-checkered fs-5"></i>
-                                        <span>สรุปผลการตรวจนับคลังนี้</span>
+                                        <span id="finishBtnText">สรุปผลการตรวจนับคลังนี้</span>
                                     </button>
                                 </div>
                             </div>

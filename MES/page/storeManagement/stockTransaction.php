@@ -91,28 +91,31 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
                         <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 w-100">
                             
                             <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-                                
-                            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-                                <div class="input-group input-group-sm shadow-sm flex-grow-1" style="min-width: 200px; max-width: 500px;">
-                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
-                                    <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Part No, SAP No, Ref No หรือ Notes...">
-                                    <button class="btn btn-outline-secondary border-secondary-subtle" type="button" onclick="loadLedgerData()" title="Refresh Data">
-                                        <i class="fas fa-sync-alt"></i>
+                                <div class="d-flex align-items-center gap-1 w-100 w-md-auto flex-nowrap" style="flex: 1 1 250px; max-width: 650px;">
+                                    <div class="input-group input-group-sm shadow-sm flex-grow-1">
+                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
+                                        <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Part No, SAP No, Ref No หรือ Notes...">
+                                        <button class="btn btn-outline-secondary border-secondary-subtle" type="button" onclick="loadLedgerData()" title="Refresh Data">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
+                                    <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 px-sm-3 d-flex align-items-center justify-content-center flex-shrink-0" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
+                                        <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
                                     </button>
                                 </div>
-                                <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-3 d-flex align-items-center justify-content-center flex-shrink-0" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
-                                    <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
-                                </button>
-                            </div>
                             </div>
 
-                            <div id="actionWrapper" class="d-none d-md-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end">
+                            <div id="actionWrapper" class="d-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end mt-2 mt-lg-0 w-100 w-lg-auto">
                                 
-                                <div class="dropdown ms-1">
-                                    <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false">
+                                <button class="btn btn-sm btn-outline-success fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center" onclick="exportLedgerToExcel()" style="height: 32px;" title="Export to Excel">
+                                    <i class="fas fa-file-excel me-1"></i> Export
+                                </button>
+
+                                <div class="dropdown ms-auto ms-lg-1">
+                                    <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm position-relative d-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false" style="height: 32px; min-width: 36px;">
                                         <i class="fas fa-ellipsis-v fa-fw"></i>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem;">
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem; min-width: 240px;">
                                         <li><h6 class="dropdown-header text-dark fw-bold">จัดการข้อมูล</h6></li>
                                         <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="exportLedgerToExcel()"><i class="fas fa-file-excel text-success fa-fw me-2"></i> Export to Excel</a></li>
                                         
@@ -121,7 +124,7 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
                                         <li><h6 class="dropdown-header text-dark fw-bold">เมนูนำทาง (Navigation)</h6></li>
                                         <li><a class="dropdown-item py-2 fw-bold" href="inventoryDashboard.php"><i class="fas fa-boxes text-secondary fa-fw me-2"></i> Stock Inventory (ยอดคงคลัง)</a></li>
                                         <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> Stock Receiving (รับเข้า/สร้าง Tag)</a></li>
-                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10" href="stockTransaction.php"><i class="fas fa-history text-primary fa-fw me-2"></i> Stock Transaction (ประวัติความเคลื่อนไหว)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10 text-primary" href="stockTransaction.php"><i class="fas fa-history text-primary fa-fw me-2"></i> Stock Transaction (ประวัติความเคลื่อนไหว)</a></li>
                                         <li><a class="dropdown-item py-2 fw-bold text-success" href="tagHistory.php"><i class="fas fa-search-location fa-fw me-2"></i> Trace Tag (ตามประวัติ)</a></li>
                                     </ul>
                                 </div>

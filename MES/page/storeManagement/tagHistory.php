@@ -139,25 +139,27 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                         <form id="traceForm" class="m-0">
                             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 w-100">
                                   <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-                                      <div class="input-group input-group-sm shadow-sm flex-grow-1" style="min-width: 250px; max-width: 500px;">
-                                          <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-barcode"></i></span>
-                                          <input type="text" id="serialNoInput" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="สแกน หรือ พิมพ์บาร์โค้ดที่นี่..." required autocomplete="off">
-                                          <button class="btn btn-outline-secondary border-secondary-subtle" type="submit" id="btnSearch" title="Search">
-                                              <i class="fas fa-search"></i>
+                                      <div class="d-flex align-items-center gap-1 w-100 w-md-auto flex-nowrap" style="flex: 1 1 250px; max-width: 650px;">
+                                          <div class="input-group input-group-sm shadow-sm flex-grow-1">
+                                              <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-barcode"></i></span>
+                                              <input type="text" id="serialNoInput" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="สแกน หรือ พิมพ์บาร์โค้ดที่นี่..." required autocomplete="off">
+                                              <button class="btn btn-outline-secondary border-secondary-subtle" type="submit" id="btnSearch" title="Search">
+                                                  <i class="fas fa-search"></i>
+                                              </button>
+                                          </div>
+                                          <button id="btnClear" class="btn btn-outline-danger btn-sm shadow-sm fw-bold px-2 px-sm-3 d-flex align-items-center justify-content-center flex-shrink-0" type="button" style="height: 32px;" title="Clear">
+                                              <i class="fas fa-eraser"></i> <small class="d-none d-sm-inline ms-1">Clear</small>
                                           </button>
                                       </div>
-                                      <button id="btnClear" class="btn btn-outline-danger btn-sm shadow-sm fw-bold px-3 d-flex align-items-center justify-content-center flex-shrink-0" type="button" style="height: 32px;" title="Clear">
-                                          <i class="fas fa-eraser"></i> <small class="d-none d-sm-inline ms-1">Clear</small>
-                                      </button>
                                   </div>
                                   
                                   <!-- Action Wrapper & Kebab Menu -->
-                                  <div id="actionWrapper" class="d-none d-md-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end mt-2 mt-lg-0">
-                                      <div class="dropdown ms-1">
-                                          <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false">
+                                  <div id="actionWrapper" class="d-flex flex-wrap align-items-center gap-2 justify-content-end mt-2 mt-lg-0 w-100 w-lg-auto">
+                                      <div class="dropdown ms-auto ms-lg-1">
+                                          <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm position-relative d-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false" style="height: 32px; min-width: 36px;">
                                               <i class="fas fa-ellipsis-v fa-fw"></i>
                                           </button>
-                                          <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem;">
+                                          <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem; min-width: 240px;">
                                               <li><h6 class="dropdown-header text-dark fw-bold"><i class="fas fa-compass me-1"></i> เมนูนำทาง (Navigation)</h6></li>
                                               <li><a class="dropdown-item py-2 fw-bold" href="inventoryDashboard.php"><i class="fas fa-boxes text-secondary fa-fw me-2"></i> Stock Inventory (ยอดคงคลัง)</a></li>
                                               <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> Stock Receiving (รับเข้า/สร้าง Tag)</a></li>
