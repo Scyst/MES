@@ -208,3 +208,420 @@
 .course-content-wrapper em {
   @apply text-slate-400 italic;
 }
+
+/* ============================================================
+   LIGHT THEME INDUSTRIAL STYLES (SNC MES BRAND)
+   Clean, crisp, high-contrast, executive-grade light theme
+   ============================================================ */
+
+/* Light Scrollbar (WebKit & Firefox) */
+html.theme-light ::-webkit-scrollbar-track,
+body.theme-light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+html.theme-light ::-webkit-scrollbar-thumb,
+body.theme-light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+html.theme-light ::-webkit-scrollbar-thumb:hover,
+body.theme-light ::-webkit-scrollbar-thumb:hover {
+  background: #a855f7;
+}
+
+html.theme-light * {
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+/* Base Light Theme Setup */
+html.theme-light,
+body.theme-light {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.theme-light .app-container {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Navbar Light Mode */
+.theme-light nav {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-bottom-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+}
+
+.theme-light nav .text-slate-400 {
+  color: #64748b !important;
+}
+
+.theme-light nav .hover\:bg-slate-800:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.theme-light nav .bg-slate-800 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+.theme-light nav .border-slate-800,
+.theme-light nav .border-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light nav .text-white {
+  color: #0f172a !important;
+}
+
+/* Catalog Hero & Metrics in Light Mode */
+.theme-light .header-section h1 {
+  @apply text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-700 to-fuchsia-600 mb-1 pb-2.5 leading-tight inline-block;
+}
+
+.theme-light .subtitle {
+  color: #64748b !important;
+}
+
+.theme-light .header-section .bg-slate-800\/80 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.theme-light .header-section .border-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Inputs, Textareas, Selects */
+.theme-light input[type="text"],
+.theme-light input[type="search"],
+.theme-light textarea,
+.theme-light select {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.theme-light input::placeholder,
+.theme-light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Category Filter Buttons */
+.theme-light .header-section button.bg-slate-800 {
+  background-color: #ffffff !important;
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .header-section button.bg-slate-800:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.theme-light .header-section button.bg-slate-800 .bg-slate-700 {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+}
+
+/* Course Cards in Light Mode */
+.theme-light .course-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .course-card:hover {
+  border-color: #d946ef !important;
+  box-shadow: 0 10px 15px -3px rgba(217, 70, 239, 0.12), 0 4px 6px -4px rgba(217, 70, 239, 0.08) !important;
+}
+
+.theme-light .card-image-wrap {
+  background-color: #f1f5f9 !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+.theme-light .card-badge {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #a21caf !important;
+  border-color: #f0abfc !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .card-content {
+  background-color: #ffffff !important;
+}
+
+.theme-light .card-title {
+  color: #0f172a !important;
+}
+
+.theme-light .course-card:hover .card-title {
+  color: #a21caf !important;
+}
+
+.theme-light .card-desc {
+  color: #64748b !important;
+}
+
+.theme-light .card-meta {
+  color: #64748b !important;
+}
+
+.theme-light .card-meta .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+.theme-light .card-footer {
+  border-top-color: #f1f5f9 !important;
+}
+
+.theme-light .card-footer button.bg-slate-700\/60 {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #e2e8f0;
+}
+
+.theme-light .card-footer button.bg-slate-700\/60:hover {
+  background-color: #fef3c7 !important;
+  color: #b45309 !important;
+  border-color: #fde68a;
+}
+
+/* Course Viewer Sidebar & Content in Light Mode */
+.theme-light .viewer-sidebar {
+  background-color: #ffffff !important;
+  border-right-color: #e2e8f0 !important;
+}
+
+.theme-light .sidebar-header {
+  border-bottom-color: #e2e8f0 !important;
+}
+
+.theme-light .sidebar-header h3 {
+  color: #0f172a !important;
+}
+
+.theme-light .back-btn {
+  color: #64748b !important;
+}
+
+.theme-light .back-btn:hover {
+  color: #0f172a !important;
+}
+
+.theme-light .module-item {
+  color: #475569 !important;
+}
+
+.theme-light .module-item:hover {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.theme-light .module-item.active {
+  background-color: #fdf4ff !important;
+  color: #a21caf !important;
+  border: 1px solid #f0abfc !important;
+}
+
+.theme-light .viewer-content {
+  color: #1e293b !important;
+}
+
+.theme-light .content-header {
+  border-bottom-color: #e2e8f0 !important;
+}
+
+.theme-light .content-header h2 {
+  color: #0f172a !important;
+}
+
+/* Course Content Prose & Cards in Light Mode */
+.theme-light .prose {
+  color: #334155 !important;
+}
+
+.theme-light .prose h1,
+.theme-light .prose h2,
+.theme-light .prose h3,
+.theme-light .prose h4 {
+  color: #0f172a !important;
+}
+
+.theme-light .course-content-wrapper {
+  color: #334155 !important;
+}
+
+.theme-light .course-content-wrapper h3 {
+  color: #0f172a !important;
+}
+
+.theme-light .course-content-wrapper h4 {
+  color: #1e293b !important;
+}
+
+.theme-light .course-content-wrapper strong {
+  color: #a21caf !important;
+}
+
+.theme-light .course-content-wrapper em {
+  color: #64748b !important;
+}
+
+/* Lesson Container Backgrounds */
+.theme-light .course-viewer .bg-slate-800,
+.theme-light .course-viewer .bg-slate-800\/90,
+.theme-light .course-viewer .bg-slate-800\/80 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .course-viewer .bg-slate-900,
+.theme-light .course-viewer .bg-slate-900\/90,
+.theme-light .course-viewer .bg-slate-900\/80,
+.theme-light .course-viewer .bg-slate-900\/50 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .course-viewer .border-slate-700,
+.theme-light .course-viewer .border-slate-800 {
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .course-viewer .text-slate-300 {
+  color: #334155 !important;
+}
+
+.theme-light .course-viewer .text-slate-400 {
+  color: #64748b !important;
+}
+
+.theme-light .course-viewer .text-white:not([class*="bg-fuchsia"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-cyan"]):not([class*="bg-amber"]):not([class*="bg-gradient"]):not([class*="shadow-fuchsia"]) {
+  color: #0f172a !important;
+}
+
+/* Checkpoint Card in Light Mode */
+.theme-light .checkpoint-card,
+.theme-light [class*="bg-slate-900/90"][class*="rounded-2xl"],
+.theme-light [class*="bg-slate-900/80"][class*="rounded-2xl"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Choice Buttons in Checkpoint */
+.theme-light .checkpoint-choice-btn,
+.theme-light button[class*="bg-slate-800/80"][class*="rounded-xl"] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+.theme-light .checkpoint-choice-btn:hover,
+.theme-light button[class*="bg-slate-800/80"][class*="rounded-xl"]:hover {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Bottom Lesson Nav Buttons */
+.theme-light .course-viewer button.bg-slate-800:not([disabled]) {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .course-viewer button.bg-slate-800:not([disabled]):hover {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #94a3b8 !important;
+}
+
+.theme-light .course-viewer button[disabled] {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #94a3b8 !important;
+}
+
+/* Audit Dashboard & Ranks in Light Mode */
+.theme-light .bg-slate-800,
+.theme-light .bg-slate-800\/90,
+.theme-light .bg-slate-800\/80,
+.theme-light .bg-slate-800\/50 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+}
+
+.theme-light .bg-slate-900,
+.theme-light .bg-slate-900\/90,
+.theme-light .bg-slate-900\/80,
+.theme-light .bg-slate-900\/60,
+.theme-light .bg-slate-900\/50,
+.theme-light .bg-slate-850 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .border-slate-800,
+.theme-light .border-slate-700,
+.theme-light .border-slate-700\/80,
+.theme-light .border-slate-700\/60 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Tables in Light Mode */
+.theme-light table {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+.theme-light thead tr {
+  background-color: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.theme-light thead th {
+  color: #475569 !important;
+}
+
+.theme-light tbody tr {
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.theme-light tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* General Text Overrides in Light Mode */
+.theme-light .text-slate-200 {
+  color: #1e293b !important;
+}
+
+.theme-light .text-slate-300 {
+  color: #334155 !important;
+}
+
+.theme-light .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Modals & Dialogs */
+.theme-light [role="dialog"],
+.theme-light .modal-box {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+

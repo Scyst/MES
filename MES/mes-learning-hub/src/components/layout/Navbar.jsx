@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { FiBook, FiAward, FiUsers, FiLayers, FiPlus, FiTool, FiShield } from 'react-icons/fi';
+import { FiBook, FiAward, FiUsers, FiLayers, FiPlus, FiTool, FiShield, FiSun, FiMoon } from 'react-icons/fi';
 import { getCurrentUser, calculateRank, fetchRealUserSession } from '../../data/communityStore';
 import { DEFAULT_AVATAR } from '../../data/offlineAssets';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function Navbar() {
   const location = useLocation();
+  const { theme, isDark, toggleTheme } = useTheme();
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const rank = calculateRank(currentUser.exp);
 
@@ -43,11 +45,15 @@ export default function Navbar() {
             end
             className={({ isActive }) => `px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
               isActive 
-                ? 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/40' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? isDark
+                  ? 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/40' 
+                  : 'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-300 shadow-sm'
+                : isDark
+                  ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <FiLayers className="w-4 h-4 text-fuchsia-400" />
+            <FiLayers className={`w-4 h-4 ${isDark ? 'text-fuchsia-400' : 'text-fuchsia-600'}`} />
             <span className="hidden sm:inline">หลักสูตรมาตรฐาน</span>
             <span className="sm:hidden">หลักสูตร</span>
           </NavLink>
@@ -56,11 +62,15 @@ export default function Navbar() {
             to="/community" 
             className={({ isActive }) => `px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
               isActive 
-                ? 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/40' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? isDark
+                  ? 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/40' 
+                  : 'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-300 shadow-sm'
+                : isDark
+                  ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <FiUsers className="w-4 h-4 text-cyan-400" />
+            <FiUsers className={`w-4 h-4 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />
             <span className="hidden sm:inline">คลังความรู้ชุมชน</span>
             <span className="sm:hidden">ชุมชน</span>
           </NavLink>
@@ -69,11 +79,15 @@ export default function Navbar() {
             to="/ranks" 
             className={({ isActive }) => `px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
               isActive 
-                ? 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/40' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? isDark
+                  ? 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/40' 
+                  : 'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-300 shadow-sm'
+                : isDark
+                  ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <FiAward className="w-4 h-4 text-amber-400" />
+            <FiAward className={`w-4 h-4 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
             <span className="hidden sm:inline">ทำเนียบยศ</span>
             <span className="sm:hidden">ยศ</span>
           </NavLink>
@@ -82,12 +96,16 @@ export default function Navbar() {
             to="/audit" 
             className={({ isActive }) => `px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
               isActive 
-                ? 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/40' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? isDark
+                  ? 'bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/40' 
+                  : 'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-300 shadow-sm'
+                : isDark
+                  ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
             title="ระบบติดตามผลการฝึกอบรมและตรวจรับรองสมรรถนะ (ISO 9001 Clause 7.2)"
           >
-            <FiShield className="w-4 h-4 text-emerald-400" />
+            <FiShield className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
             <span className="hidden lg:inline">ติดตามผล & ออดิท</span>
             <span className="lg:hidden">ออดิท</span>
           </NavLink>
@@ -112,6 +130,31 @@ export default function Navbar() {
             <FiPlus className="w-3.5 h-3.5 text-fuchsia-400" />
             <span>เขียนบทเรียน</span>
           </Link>
+
+          {/* Theme Switcher (Dark / Light) */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className={`p-2 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs font-bold border min-w-[38px] min-h-[38px] ${
+              isDark
+                ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700 hover:border-amber-400/40 shadow-sm'
+                : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 hover:border-slate-400 shadow-sm'
+            }`}
+            title={isDark ? 'สลับเป็นโหมดสว่าง (Light Mode)' : 'สลับเป็นโหมดมืด (Dark Mode)'}
+            aria-label="Toggle Theme"
+          >
+            {isDark ? (
+              <>
+                <FiSun className="w-4 h-4 text-amber-400" />
+                <span className="hidden sm:inline text-xs font-semibold text-slate-300">โหมดสว่าง</span>
+              </>
+            ) : (
+              <>
+                <FiMoon className="w-4 h-4 text-indigo-600" />
+                <span className="hidden sm:inline text-xs font-semibold text-slate-700">โหมดมืด</span>
+              </>
+            )}
+          </button>
 
           <Link 
             to="/profile"
