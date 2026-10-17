@@ -26,6 +26,28 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
         .tag-label { font-size: 0.72rem; color: #6b7280; font-weight: 600; margin-bottom: 4px; }
         .tag-value { font-size: 0.95rem; font-weight: 700; color: #111827; line-height: 1.3; }
         .tag-sub   { font-size: 0.82rem; font-weight: 600; color: #6b7280; }
+
+        .toolbar-scroll-container {
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+        }
+        .toolbar-scroll-container::-webkit-scrollbar {
+            height: 4px;
+        }
+        .toolbar-scroll-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .toolbar-scroll-container::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+        .toolbar-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.35);
+        }
     </style>
 </head>
 <body class="layout-top-header bg-body-tertiary">
@@ -137,25 +159,23 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                 <div class="card border-0 shadow-sm mb-0">
                     <div class="card-body p-2 bg-body-tertiary rounded">
                         <form id="traceForm" class="m-0">
-                            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 w-100">
-                                  <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-                                      <div class="d-flex align-items-center gap-1 w-100 w-md-auto flex-nowrap" style="flex: 1 1 250px; max-width: 650px;">
-                                          <div class="input-group input-group-sm shadow-sm flex-grow-1">
-                                              <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-barcode"></i></span>
-                                              <input type="text" id="serialNoInput" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="สแกน หรือ พิมพ์บาร์โค้ดที่นี่..." required autocomplete="off">
-                                              <button class="btn btn-outline-secondary border-secondary-subtle" type="submit" id="btnSearch" title="Search">
-                                                  <i class="fas fa-search"></i>
-                                              </button>
-                                          </div>
-                                          <button id="btnClear" class="btn btn-outline-danger btn-sm shadow-sm fw-bold px-2 px-sm-3 d-flex align-items-center justify-content-center flex-shrink-0" type="button" style="height: 32px;" title="Clear">
-                                              <i class="fas fa-eraser"></i> <small class="d-none d-sm-inline ms-1">Clear</small>
+                            <div class="d-flex align-items-center justify-content-between gap-2 w-100 flex-nowrap toolbar-scroll-container py-1">
+                                  <div class="d-flex align-items-center gap-1.5 flex-nowrap flex-grow-1" style="min-width: 200px; max-width: 650px;">
+                                      <div class="input-group input-group-sm shadow-sm flex-grow-1">
+                                          <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-barcode"></i></span>
+                                          <input type="text" id="serialNoInput" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="สแกน หรือ พิมพ์บาร์โค้ดที่นี่..." required autocomplete="off">
+                                          <button class="btn btn-outline-secondary border-secondary-subtle" type="submit" id="btnSearch" title="Search">
+                                              <i class="fas fa-search"></i>
                                           </button>
                                       </div>
+                                      <button id="btnClear" class="btn btn-outline-danger btn-sm shadow-sm fw-bold px-2 px-sm-3 d-flex align-items-center justify-content-center flex-shrink-0 text-nowrap" type="button" style="height: 32px;" title="Clear">
+                                          <i class="fas fa-eraser"></i> <small class="d-none d-sm-inline ms-1">Clear</small>
+                                      </button>
                                   </div>
                                   
                                   <!-- Action Wrapper & Kebab Menu -->
-                                  <div id="actionWrapper" class="d-flex flex-wrap align-items-center gap-2 justify-content-end mt-2 mt-lg-0 w-100 w-lg-auto">
-                                      <div class="dropdown ms-auto ms-lg-1">
+                                  <div id="actionWrapper" class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
+                                      <div class="dropdown flex-shrink-0">
                                           <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm position-relative d-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false" style="height: 32px; min-width: 36px;">
                                               <i class="fas fa-ellipsis-v fa-fw"></i>
                                           </button>

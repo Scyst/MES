@@ -11,6 +11,26 @@ let searchTimer;
 let manualAddModalInstance;
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (window.StoreOffline) {
+        StoreOffline.init('rm_receiving');
+    }
+
+    window._customOfflineSyncHandler = async (item) => {
+        if (item.action === 'bulk_receive_tags') {
+            const formData = new FormData();
+            formData.append('serials', JSON.stringify(item.payload.serials));
+            formData.append('location_id', item.payload.location_id);
+            const res = await fetchAPI('bulk_receive_tags', 'POST', formData);
+            return res && res.success;
+        } else if (item.action === 'import_excel') {
+            const formData = new FormData();
+            formData.append('data', JSON.stringify(item.payload.data));
+            const res = await fetchAPI('import_excel', 'POST', formData);
+            return res && res.success;
+        }
+        return false;
+    };
+
     const importModalEl = document.getElementById('importModal');
     if (importModalEl) {
         importModalInstance = new bootstrap.Modal(importModalEl);
@@ -87,24 +107,42 @@ async function submitManualAdd(e) {
     const formData = new FormData();
     formData.append('data', JSON.stringify(manualData)); 
 
-    const res = await fetchAPI('import_excel', 'POST', formData, 'btnSubmitManual');
-    
-    if (res) {
+    if (window.StoreOffline && !StoreOffline.isOnline()) {
+        await StoreOffline.enqueue('rm_receiving', 'import_excel', { data: manualData }, `เพิ่มแท็ก ${packQty} ป้าย (Manual)`);
         manualAddModalInstance.hide();
-        loadHistory();
+        return;
+    }
+
+    try {
+        const res = await fetchAPI('import_excel', 'POST', formData, 'btnSubmitManual');
         
-        Swal.fire({ 
-            title: 'สำเร็จ', 
-            text: `เพิ่มข้อมูล ${packQty} ป้ายเรียบร้อย กำลังเปิดหน้าต่างพิมพ์...`, 
-            icon: 'success', 
-            timer: 1500, 
-            showConfirmButton: false 
-        }).then(() => {
-            if (res.data && res.data.length > 0) {
-                if(typeof renderPrintTags === 'function') renderPrintTags(res.data);
-                setTimeout(() => { window.print(); }, 300);
-            }
-        });
+        if (res) {
+            manualAddModalInstance.hide();
+            loadHistory();
+            
+            Swal.fire({ 
+                title: 'สำเร็จ', 
+                text: `เพิ่มข้อมูล ${packQty} ป้ายเรียบร้อย กำลังเปิดหน้าต่างพิมพ์...`, 
+                icon: 'success', 
+                timer: 1500, 
+                showConfirmButton: false 
+            }).then(() => {
+                if (res.data && res.data.length > 0) {
+                    if(typeof renderPrintTags === 'function') renderPrintTags(res.data);
+                    setTimeout(() => { window.print(); }, 300);
+                }
+            });
+        } else if (window.StoreOffline && !navigator.onLine) {
+            await StoreOffline.enqueue('rm_receiving', 'import_excel', { data: manualData }, `เพิ่มแท็ก ${packQty} ป้าย (Manual)`);
+            manualAddModalInstance.hide();
+        }
+    } catch (err) {
+        if (window.StoreOffline) {
+            await StoreOffline.enqueue('rm_receiving', 'import_excel', { data: manualData }, `เพิ่มแท็ก ${packQty} ป้าย (Manual)`);
+            manualAddModalInstance.hide();
+        } else {
+            console.error(err);
+        }
     }
 }
 
@@ -697,6 +735,28 @@ window.bulkReceiveTags = async function() {
     });
 
     if (locationId) {
+        if (window.StoreOffline && !StoreOffline.isOnline()) {
+            await StoreOffline.enqueue('rm_receiving', 'bulk_receive_tags', {
+                serials: serials,
+                location_id: locationId
+            }, `รับเข้าสต็อก ${serials.length} Tags`);
+
+            document.querySelectorAll('.row-checkbox:checked').forEach(cb => {
+                const card = cb.closest('.card') || cb.closest('tr');
+                if (card) {
+                    const badge = card.querySelector('.badge');
+                    if (badge) {
+                        badge.className = 'badge bg-warning-subtle text-warning border border-warning-subtle';
+                        badge.innerHTML = '<i class="fas fa-clock me-1"></i>รอซิงค์ (ออฟไลน์)';
+                    }
+                }
+                cb.checked = false;
+            });
+            document.getElementById('selectAllCheckbox').checked = false;
+            updateBatchPrintBtn();
+            return;
+        }
+
         Swal.fire({
             title: 'กำลังรับเข้าสต็อก...',
             text: 'กรุณารอสักครู่ ระบบกำลังอัปเดตยอดคงเหลือ',
@@ -715,9 +775,24 @@ window.bulkReceiveTags = async function() {
                 document.getElementById('selectAllCheckbox').checked = false;
                 updateBatchPrintBtn(); 
                 loadHistory(); 
+            } else if (window.StoreOffline && !navigator.onLine) {
+                await StoreOffline.enqueue('rm_receiving', 'bulk_receive_tags', {
+                    serials: serials,
+                    location_id: locationId
+                }, `รับเข้าสต็อก ${serials.length} Tags`);
+                document.getElementById('selectAllCheckbox').checked = false;
+                updateBatchPrintBtn();
             }
         } catch(e) {
             console.error(e);
+            if (window.StoreOffline) {
+                await StoreOffline.enqueue('rm_receiving', 'bulk_receive_tags', {
+                    serials: serials,
+                    location_id: locationId
+                }, `รับเข้าสต็อก ${serials.length} Tags`);
+                document.getElementById('selectAllCheckbox').checked = false;
+                updateBatchPrintBtn();
+            }
         }
     }
 };

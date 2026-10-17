@@ -138,13 +138,23 @@
   - [x] จัดการความยาวข้อความและ Badges ในแถบ IRA Health Mini-Bar ให้อยู่ในบรรทัดเดียว ไม่ซ้อนหลายบรรทัดบนมือถือ
   - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/cycleCount.php`, `page/storeManagement/script/cycleCount.js`, `page/storeManagement/components/InventoryModal.php`, `page/storeManagement/script/inventoryDashboard.js`, `page/storeManagement/api/api_store.php`
 
-- [x] **3.3 Offline Resilience & Network Drop Protection**
+- [x] **3.3 Offline Resilience & Network Drop Protection (Expanded Full Store Coverage)**
   - [x] ระบบตรวจจับสัญญาณเครือข่าย (`online` / `offline` event) พร้อมแบนเนอร์แจ้งเตือนสถานะ (`#offlineSelectLocBanner`, `#offlineStatusBanner`, `#offlineSyncBadge`)
-  - [x] บันทึกข้อมูลการสแกนลง `IndexedDB` (`MES_CycleCount_Offline_v1`) ชั่วคราวเมื่ออยู่ในมุมอับสัญญาณ พร้อม `localStorage` Fallback
+  - [x] บันทึกข้อมูลการสแกนลง `IndexedDB` (`MES_CycleCount_Offline_v1` และ `MES_Store_Offline_v1`) ชั่วคราวเมื่ออยู่ในมุมอับสัญญาณ พร้อม `localStorage` Fallback
   - [x] ล็อกการกดจบงาน (`cc_finish_session`) ขณะออฟไลน์ หรือเมื่อมีข้อมูลค้างซิงค์ พร้อมแสดงข้อความและปุ่มซิงค์เดี๋ยวนี้
   - [x] ซิงค์ข้อมูลขึ้นเซิร์ฟเวอร์อัตโนมัติเมื่อต่อสัญญาณติด (FIFO Queue) และปุ่มกดซิงค์ด้วยมือ (Manual Trigger)
-  - [x] ปรับปรุง Responsive UI มือถือแนวตั้ง (< 768px) ในหน้า `stockTransaction.php` และ `tagHistory.php` ให้ปุ่ม 3 จุดและ Toolbar แสดงผลสวยงาม ไม่ตกบรรทัด
-  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/cycleCount.php`, `page/storeManagement/script/cycleCount.js`, `page/storeManagement/stockTransaction.php`, `page/storeManagement/tagHistory.php`
+  - [x] พัฒนาโมดูลกลาง `storeOffline.js` และขยายระบบ Offline Mode ไปยังจุดรับเข้าสต็อก (`rmReceiving.php` / `rmReceiving.js`) และจุดเบิก-จ่ายวัตถุดิบ (`storeRequest.php` / `storeRequest.js`) รองรับมุมอับสัญญาณบริเวณลานโหลดสินค้าและช่องแร็คสูง
+  - [x] ปรับปรุง Responsive UI มือถือแนวตั้ง (< 768px) แบบ Single-Row Horizontal Scroll Toolbar (`.toolbar-scroll-container`) ครอบคลุมทั้ง 5 หน้าหลักของสโตร์: `inventoryDashboard.php`, `stockTransaction.php`, `tagHistory.php`, `rmReceiving.php`, และ `storeRequest.php` ประหยัดพื้นที่แนวตั้ง ไม่ซ้อนหลายบรรทัด
+  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/cycleCount.php`, `page/storeManagement/script/cycleCount.js`, `page/storeManagement/script/storeOffline.js`, `page/storeManagement/rmReceiving.php`, `page/storeManagement/script/rmReceiving.js`, `page/storeManagement/storeRequest.php`, `page/storeManagement/script/storeRequest.js`, `page/storeManagement/inventoryDashboard.php`, `page/storeManagement/stockTransaction.php`, `page/storeManagement/tagHistory.php`
+
+---
+
+## 📍 Phase 4: Industrial Hardware & Direct Integration (Upcoming)
+
+- [ ] **4.1 Zebra Industrial Network Printer Integration (ZPL Direct Print)**
+  - [ ] ส่งคำสั่ง Raw ZPL ข้ามเครือข่าย LAN ไปยัง IP เครื่องพิมพ์ Zebra (ZT411 / ZD421) ผ่าน TCP Port 9100 หรือ Node-RED
+  - [ ] ปริ้นท์ฉลากแท็กสินค้าทันทีภายใน < 0.5 วินาทีโดยไม่ต้องเปิด Windows/Chrome Print Dialog (Silent Zero-Click Print)
+  - [ ] พิกัดฉลากตรงเป๊ะระดับพิกเซลหัวพิมพ์ความร้อน ไม่ตกขอบ รองรับฉลากขนาดเล็กมาตรฐานโรงงาน (4x3 นิ้ว, 5x3 ซม.)
 
 ---
 
@@ -163,6 +173,8 @@
 | **2026-10-15** | Antigravity | แก้ไข Bug ของหลงคลัง (Wrong Location): แก้ไข `system_qty = 0` และ `variance = +actual_qty` ใน `api_store.php`, ปรับปรุง `dbo.sp_Store_ApproveCycleCount` ซิงค์ `location_id` และคงยอดตามการตรวจนับจริง, เพิ่ม Cross-Location Smart Indicator (`found_location_name`) แจ้งเตือนในหน้านับเดิมและ Shelf Monitor ให้พนักงานทราบว่าพบของที่คลังอื่นแล้วไม่ต้องเดินหา, อัปเดตข้อมูลประวัติค้างส่งให้ผู้จัดการอนุมัติครบถ้วน | `api_store.php`, `cycleCount.php`, `cycleCount.js`, `db_changes.md`, `ROADMAP.md` |
 | **2026-10-16** | Antigravity | พัฒนาระบบอนุมัติย้ายตำแหน่ง 2 ขาแบบอัตโนมัติ (Single-Click Two-Sided Atomic Relocation) ใน `dbo.sp_Store_ApproveCycleCount`: ตัดยอดจากคลังเดิมและเพิ่มยอดเข้าคลังใหม่พร้อมกัน สต็อกรวมไม่บวม พร้อมเคลียร์รายการรออนุมัติคลังเดิมอัตโนมัติ, ปปลดล็อกแท็กเป็น `AVAILABLE` เพื่อเบิกจ่ายได้ทันที, พัฒนาระบบรับคืนวัตถุดิบจากฝ่ายผลิต (PRD Material Return) สแกนแท็กเดิมเข้า Store โดยไม่ต้องพิมพ์แท็กใหม่, รวมปุ่มและหน้าต่างอนุมัติผลนับมาไว้บน `cycleCount.php` พร้อม Badge แสดงยอดรออนุมัติแบบเรียลไทม์ และแยกโค้ดโมดูลกลาง `storeApprovalCommon.js`, ขยายปุ่ม "รับคืนจาก PRD" ไปยัง `inventoryDashboard.php` (Toolbar + Mobile + เมนูจัดการคลัง) และ `storeDashboard.php` (Fulfillment Toolbar) เพื่อให้เรียกใช้งานได้จากทุกหน้าหลักของระบบสโตร์ | `dbo.sp_Store_ApproveCycleCount`, `api_store.php`, `InventoryModal.php`, `storeApprovalCommon.js`, `cycleCount.php`, `inventoryDashboard.php`, `inventoryDashboard.js`, `storeDashboard.php`, `db_changes.md`, `ROADMAP.md` |
 | **2026-10-17** | Antigravity | พัฒนา Phase 3.3 Offline Resilience & Network Drop Protection: ตรวจจับ `online`/`offline` อัตโนมัติ, จัดเก็บคิวสแกนออฟไลน์ใน `IndexedDB` (`MES_CycleCount_Offline_v1`) พร้อม `localStorage` Fallback, อัปเดต UI แบบ Optimistic ทันทีพร้อมเสียงและระบบสั่น, ซิงค์ข้อมูลอัตโนมัติแบบ FIFO Queue เมื่อต่อเน็ตติดพร้อมปุ่มซิงค์ด้วยมือ, ล็อกปุ่มจบงาน (`finishSession`) ป้องกันข้อมูลสูญหาย และแก้ไข UI มือถือแนวตั้งสำหรับ `stockTransaction.php` และ `tagHistory.php` ให้ปุ่ม 3 จุดและ Toolbar พอดีหน้าจอ | `cycleCount.php`, `cycleCount.js`, `stockTransaction.php`, `tagHistory.php`, `ROADMAP.md` |
+| **2026-10-17** | Antigravity | ขยาย Offline Mode ไปยังหน้าคลังสินค้าสโตร์ทั้งหมด: สร้างโมดูลกลาง `storeOffline.js` (IndexedDB `MES_Store_Offline_v1` + Auto FIFO Replay + เสียง/สั่น Optimistic Feedback), เชื่อมต่อกับ `rmReceiving.php` (รับเข้าสินค้าที่ลานโหลดมุมอับสัญญาณ) และ `storeRequest.php` (เบิก-จ่ายในช่องแร็คสูง), ปรับปรุง Mobile Toolbar ให้เป็น Single-Row Horizontal Scroll (`.toolbar-scroll-container`) ครบทั้ง 5 หน้าจอหลักของสโตร์ | `storeOffline.js`, `rmReceiving.php`, `rmReceiving.js`, `storeRequest.php`, `storeRequest.js`, `inventoryDashboard.php`, `stockTransaction.php`, `tagHistory.php`, `ROADMAP.md` |
+
 
 
 

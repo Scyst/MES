@@ -33,6 +33,22 @@ try {
     <?php include_once '../components/common_head.php'; ?>
     <?php include_once '../components/chart_head.php'; ?>
     <link rel="stylesheet" href="css/storeRequest.css?v=<?php echo filemtime(__DIR__ . '/css/storeRequest.css'); ?>">
+    <style>
+        .toolbar-scroll-container {
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+        .toolbar-scroll-container::-webkit-scrollbar {
+            height: 3px;
+        }
+        .toolbar-scroll-container::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+    </style>
 </head>
 
 <body class="layout-top-header bg-body-tertiary">
@@ -45,25 +61,29 @@ try {
             <div class="dashboard-header-sticky px-3 pt-3">
                 <div class="card border-0 shadow-sm mb-0">
                     <div class="card-body p-2 bg-body-tertiary rounded">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="toolbar-scroll-container d-flex flex-nowrap align-items-center justify-content-between gap-2 w-100 pb-1">
                             
-                            <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
-                                <div class="input-group input-group-sm" style="max-width: 300px;">
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <div class="input-group input-group-sm flex-shrink-0" style="width: 220px;">
                                     <span class="input-group-text bg-body border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
                                     <input type="text" id="filterSearch" class="form-control border-secondary-subtle ps-2" placeholder="Search SAP, Part, Req ID...">
                                 </div>
                                 
-                                <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" 
+                                <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center flex-shrink-0" 
                                         onclick="loadRequests()" title="Refresh Data" style="width: 32px; height: 32px;"> 
                                     <i class="fas fa-sync-alt"></i>
                                 </button>
                                 
-                                <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
+                                <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center flex-shrink-0" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
                                     <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
                                 </button>
+
+                                <span id="offlineSyncBadge" class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2 py-1.5 fw-semibold d-none flex-shrink-0" style="font-size: 0.72rem; cursor: pointer; height: 32px; display: inline-flex; align-items: center;" onclick="StoreOffline.triggerManualSync('store_request')" title="คลิกเพื่อส่งข้อมูลที่บันทึกไว้ในเครื่องขึ้นเซิร์ฟเวอร์">
+                                    <i class="fas fa-wifi-slash me-1"></i><span id="offlineSyncCount">0</span> ค้างซิงค์
+                                </span>
                             </div>
 
-                            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0 justify-content-end">
 
                                 <div class="d-none d-xl-flex align-items-center border border-secondary-subtle rounded px-3 py-0 bg-body shadow-sm h-100" style="min-height: 31px;">
                                     <span class="badge bg-dark me-2" id="sumCount">
@@ -81,15 +101,15 @@ try {
                                     <span class="small text-muted ms-1">฿</span>
                                 </div>
 
-                                <button id="btnExportExcel" class="btn btn-light btn-sm border-secondary-subtle shadow-sm fw-bold" onclick="exportData()" title="Export to Excel">
+                                <button id="btnExportExcel" class="btn btn-light btn-sm border-secondary-subtle shadow-sm fw-bold flex-shrink-0 text-nowrap" onclick="exportData()" title="Export to Excel">
                                     <i class="fas fa-file-excel text-success me-1"></i> Export
                                 </button>
 
-                                <button class="btn btn-outline-primary btn-sm fw-bold px-3 shadow-sm bg-white" type="button" data-bs-toggle="modal" data-bs-target="#dashboardModal">
+                                <button class="btn btn-outline-primary btn-sm fw-bold px-3 shadow-sm bg-white flex-shrink-0 text-nowrap" type="button" data-bs-toggle="modal" data-bs-target="#dashboardModal">
                                     <i class="fas fa-chart-pie me-1"></i> Dashboard
                                 </button>
 
-                                <div class="dropdown d-none" id="bulkActionDropdown">
+                                <div class="dropdown d-none flex-shrink-0" id="bulkActionDropdown">
                                     <button class="btn btn-dark btn-sm fw-bold px-3 shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="fas fa-layer-group me-1"></i> Bulk (<span id="bulkActionCount">0</span>)
                                     </button>
@@ -98,13 +118,28 @@ try {
                                         <li><a class="dropdown-item text-danger fw-bold py-2" href="#" onclick="bulkReject(); return false;"><i class="fas fa-times-circle me-2"></i> Reject Selected</a></li>
                                     </ul>
                                 </div>
-                                <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" onclick="openRequestModal()">
+                                <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm flex-shrink-0 text-nowrap" onclick="openRequestModal()">
                                     <i class="fas fa-plus me-1"></i> New Request
                                 </button>
                             </div>
 
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div class="px-3 pt-2">
+                <div id="offlineStatusBanner" class="alert alert-warning d-none align-items-center justify-content-between p-2 mb-0 rounded-3 border-warning shadow-xs" style="background-color: #fffbeb; border-color: #fde68a;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-wifi-slash text-warning fa-lg"></i>
+                        <div class="d-flex flex-column">
+                            <span class="fw-bold text-dark" style="font-size: 0.85rem;">กำลังทำงานในโหมดออฟไลน์ (Offline Mode)</span>
+                            <span class="text-secondary" style="font-size: 0.72rem;">อยู่ในมุมอับสัญญาณ บันทึกการจ่ายของ/ใบเบิกในเครื่องชั่วคราว (<span id="offlinePendingCountText">0</span> รายการ)</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-warning btn-sm text-dark fw-bold px-2 py-1 shadow-xs" onclick="StoreOffline.triggerManualSync('store_request')" style="font-size: 0.75rem;">
+                        <i class="fas fa-sync-alt me-1"></i>ซิงค์เดี๋ยวนี้
+                    </button>
                 </div>
             </div>
 
@@ -390,6 +425,7 @@ try {
     
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
+    <script src="script/storeOffline.js?v=<?php echo filemtime(__DIR__ . '/script/storeOffline.js'); ?>" defer></script>
     <script src="script/storeRequest.js?v=<?php echo filemtime(__DIR__ . '/script/storeRequest.js'); ?>" defer></script>
 </body>
 </html>

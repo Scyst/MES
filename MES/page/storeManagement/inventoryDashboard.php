@@ -27,6 +27,28 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
                     .hide-scrollbar::-webkit-scrollbar { display: none; }
                     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+                    .toolbar-scroll-container {
+                        overflow-x: auto;
+                        overflow-y: hidden;
+                        white-space: nowrap;
+                        -webkit-overflow-scrolling: touch;
+                        scrollbar-width: thin;
+                        scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+                    }
+                    .toolbar-scroll-container::-webkit-scrollbar {
+                        height: 4px;
+                    }
+                    .toolbar-scroll-container::-webkit-scrollbar-track {
+                        background: transparent;
+                    }
+                    .toolbar-scroll-container::-webkit-scrollbar-thumb {
+                        background: rgba(0, 0, 0, 0.2);
+                        border-radius: 4px;
+                    }
+                    .toolbar-scroll-container::-webkit-scrollbar-thumb:hover {
+                        background: rgba(0, 0, 0, 0.35);
+                    }
+
                     @media (max-width: 767.98px) {
                         .mobile-fixed-footer {
                             position: fixed !important;
@@ -120,56 +142,54 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
             <div class="dashboard-header-sticky px-3 pt-0">
                 <div class="card border-0 shadow-sm mb-0">
                     <div class="card-body p-2 bg-body-tertiary rounded">
-                        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 w-100">
+                        <div class="d-flex align-items-center justify-content-between gap-2 w-100 flex-nowrap toolbar-scroll-container py-1">
                             
-                            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-                                <div class="d-flex align-items-center gap-1 w-100 w-md-auto flex-nowrap" style="flex: 1 1 250px; max-width: 650px;">
-                                    <div class="input-group input-group-sm shadow-sm flex-grow-1">
-                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
-                                        <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Item No. หรือชื่อ...">
-                                        <button class="btn btn-outline-secondary border-secondary-subtle" type="button" onclick="loadDashboardData()" title="Refresh Data">
-                                            <i class="fas fa-sync-alt"></i>
-                                        </button>
-                                    </div>
-                                    
-                                    <div class="dropdown flex-shrink-0">
-                                        <button class="btn btn-outline-secondary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="height: 32px;" title="การเรียงลำดับ">
-                                            <i class="fas fa-sort-amount-down"></i> <small class="d-none d-sm-inline ms-1">Sort</small>
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.85rem;">
-                                            <li><button class="dropdown-item active" type="button" onclick="setSort('ZERO_LAST', this)"><i class="fas fa-box-open me-2 text-primary"></i>มีของขึ้นก่อน (0 ไว้ท้าย)</button></li>
-                                            <li><button class="dropdown-item" type="button" onclick="setSort('DEFAULT', this)"><i class="fas fa-sort-numeric-down me-2 text-secondary"></i>ติดลบ/0 ขึ้นก่อน</button></li>
-                                            <li><button class="dropdown-item" type="button" onclick="setSort('QTY_DESC', this)"><i class="fas fa-sort-amount-down me-2 text-secondary"></i>ยอดมาก ขึ้นก่อน</button></li>
-                                            <li><button class="dropdown-item" type="button" onclick="setSort('ITEM_ASC', this)"><i class="fas fa-sort-alpha-down me-2 text-secondary"></i>Item A-Z</button></li>
-                                        </ul>
-                                        <input type="hidden" id="sortFilter" value="ZERO_LAST">
-                                    </div>
-                                    
-                                    <button class="btn btn-outline-primary btn-sm shadow-sm flex-shrink-0 d-md-none" id="btnToggleCards" onclick="toggleMobileCards()" title="ซ่อน/แสดงยอดรวม" style="width: 32px; height: 32px; padding: 0;">
-                                        <i class="fas fa-chart-pie"></i>
-                                    </button>
-
-                                    <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center flex-shrink-0" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
-                                        <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
+                            <div class="d-flex align-items-center gap-1.5 flex-nowrap flex-shrink-0">
+                                <div class="input-group input-group-sm shadow-sm" style="width: 210px; min-width: 160px;">
+                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Item No. หรือชื่อ...">
+                                    <button class="btn btn-outline-secondary border-secondary-subtle" type="button" onclick="loadDashboardData()" title="Refresh Data">
+                                        <i class="fas fa-sync-alt"></i>
                                     </button>
                                 </div>
+                                
+                                <div class="dropdown flex-shrink-0">
+                                    <button class="btn btn-outline-secondary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center text-nowrap" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="height: 32px;" title="การเรียงลำดับ">
+                                        <i class="fas fa-sort-amount-down"></i> <small class="d-none d-sm-inline ms-1">Sort</small>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.85rem;">
+                                        <li><button class="dropdown-item active" type="button" onclick="setSort('ZERO_LAST', this)"><i class="fas fa-box-open me-2 text-primary"></i>มีของขึ้นก่อน (0 ไว้ท้าย)</button></li>
+                                        <li><button class="dropdown-item" type="button" onclick="setSort('DEFAULT', this)"><i class="fas fa-sort-numeric-down me-2 text-secondary"></i>ติดลบ/0 ขึ้นก่อน</button></li>
+                                        <li><button class="dropdown-item" type="button" onclick="setSort('QTY_DESC', this)"><i class="fas fa-sort-amount-down me-2 text-secondary"></i>ยอดมาก ขึ้นก่อน</button></li>
+                                        <li><button class="dropdown-item" type="button" onclick="setSort('ITEM_ASC', this)"><i class="fas fa-sort-alpha-down me-2 text-secondary"></i>Item A-Z</button></li>
+                                    </ul>
+                                    <input type="hidden" id="sortFilter" value="ZERO_LAST">
+                                </div>
+                                
+                                <button class="btn btn-outline-primary btn-sm shadow-sm flex-shrink-0 d-md-none" id="btnToggleCards" onclick="toggleMobileCards()" title="ซ่อน/แสดงยอดรวม" style="width: 32px; height: 32px; padding: 0;">
+                                    <i class="fas fa-chart-pie"></i>
+                                </button>
+
+                                <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center flex-shrink-0 text-nowrap" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
+                                    <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
+                                </button>
                             </div>
 
-                            <div id="actionWrapper" class="d-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end mt-2 mt-lg-0 w-100 w-lg-auto">
+                            <div id="actionWrapper" class="d-flex align-items-center gap-1.5 flex-nowrap flex-shrink-0 ms-auto">
 
-                                <button class="btn btn-sm btn-outline-primary fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center" onclick="openPrdReturnModal()" title="รับวัตถุดิบคืนจากฝ่ายผลิต (PRD)" style="height: 32px;">
+                                <button class="btn btn-sm btn-outline-primary fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center flex-shrink-0 text-nowrap" onclick="openPrdReturnModal()" title="รับวัตถุดิบคืนจากฝ่ายผลิต (PRD)" style="height: 32px;">
                                     <i class="fas fa-undo-alt me-1 text-primary"></i> <span class="d-none d-sm-inline">รับ</span>คืน<span class="d-none d-sm-inline">จาก PRD</span>
                                 </button>
 
-                                <button class="btn btn-sm fw-bold px-2 px-sm-3 py-1 rounded shadow transition-btn text-white border-0 d-flex align-items-center" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7); height: 32px;" onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();" title="สแกน">
+                                <button class="btn btn-sm fw-bold px-2 px-sm-3 py-1 rounded shadow transition-btn text-white border-0 d-flex align-items-center flex-shrink-0 text-nowrap" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7); height: 32px;" onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();" title="สแกน">
                                     <i class="fas fa-qrcode me-1"></i> สแกน
                                 </button>
                                 
-                                <button class="btn btn-sm btn-outline-success fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center" onclick="exportInventoryData()" style="height: 32px;" title="Export to Excel">
+                                <button class="btn btn-sm btn-outline-success fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center flex-shrink-0 text-nowrap" onclick="exportInventoryData()" style="height: 32px;" title="Export to Excel">
                                     <i class="fas fa-file-excel me-1"></i> Export
                                 </button>
 
-                                <div class="dropdown ms-auto ms-lg-1">
+                                <div class="dropdown flex-shrink-0">
                                     <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm position-relative d-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false" style="height: 32px; min-width: 36px;">
                                         <i class="fas fa-ellipsis-v fa-fw"></i>
                                         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none" id="badgeTotalAlert" style="width: 12px; height: 12px;"></span>

@@ -9,6 +9,30 @@ let rowsPerPage = 100;
 let totalPages = 1;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    if (window.StoreOffline) {
+        StoreOffline.init('store_request');
+    }
+
+    window._customOfflineSyncHandler = async (item) => {
+        if (item.action === 'approve_request') {
+            const res = await fetchAPI('approve_request', 'POST', item.payload);
+            return res && res.success;
+        } else if (item.action === 'reject_request') {
+            const res = await fetchAPI('reject_request', 'POST', item.payload);
+            return res && res.success;
+        } else if (item.action === 'bulk_approve_requests') {
+            const res = await fetchAPI('bulk_approve_requests', 'POST', item.payload);
+            return res && res.success;
+        } else if (item.action === 'bulk_reject_requests') {
+            const res = await fetchAPI('bulk_reject_requests', 'POST', item.payload);
+            return res && res.success;
+        } else if (item.action === 'create_request') {
+            const res = await fetchAPI('create_request', 'POST', item.payload);
+            return res && res.success;
+        }
+        return false;
+    };
+
     await initData();
     
     if (typeof IS_STORE_ROLE !== 'undefined' && IS_STORE_ROLE) {
@@ -362,22 +386,69 @@ async function submitRequest(e) {
     
     if (submitBtn && !btnId) submitBtn.id = 'tempSubmitBtn';
 
-    const res = await fetchAPI('create_request', 'POST', data, submitBtn ? submitBtn.id : null);
-    
-    if (res) {
-        showToast('บันทึกสำเร็จ', 'var(--bs-success)');
+    if (window.StoreOffline && !StoreOffline.isOnline()) {
+        await StoreOffline.enqueue('store_request', 'create_request', data, `สร้างใบเบิก: ${data.part_no || ''}`);
+        showToast('บันทึกในเครื่องเรียบร้อย (ออฟไลน์)', 'var(--bs-warning)');
         const modalEl = document.getElementById('addRequestModal');
         const modalInstance = bootstrap.Modal.getInstance(modalEl);
         if (modalInstance) modalInstance.hide();
-        currentPage = 1;
-        loadRequests(); 
+        return;
+    }
+
+    try {
+        const res = await fetchAPI('create_request', 'POST', data, submitBtn ? submitBtn.id : null);
+        if (res) {
+            showToast('บันทึกสำเร็จ', 'var(--bs-success)');
+            const modalEl = document.getElementById('addRequestModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+            currentPage = 1;
+            loadRequests(); 
+        } else if (window.StoreOffline && !navigator.onLine) {
+            await StoreOffline.enqueue('store_request', 'create_request', data, `สร้างใบเบิก: ${data.part_no || ''}`);
+            const modalEl = document.getElementById('addRequestModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+        }
+    } catch(err) {
+        console.error(err);
+        if (window.StoreOffline) {
+            await StoreOffline.enqueue('store_request', 'create_request', data, `สร้างใบเบิก: ${data.part_no || ''}`);
+            const modalEl = document.getElementById('addRequestModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+        }
     }
 }
 
 window.approveReq = async (id) => {
     if (!confirm('ยืนยันการอนุมัติจ่ายของ?')) return;
-    const res = await fetchAPI('approve_request', 'POST', { transfer_id: id });
-    if (res) loadRequests();
+
+    if (window.StoreOffline && !StoreOffline.isOnline()) {
+        await StoreOffline.enqueue('store_request', 'approve_request', { transfer_id: id }, `อนุมัติจ่าย Req #${id}`);
+        const row = document.querySelector(`tr[data-req-id="${id}"]`) || document.getElementById(`req-card-${id}`);
+        if (row) {
+            const badge = row.querySelector('.badge');
+            if (badge) {
+                badge.className = 'badge bg-warning-subtle text-warning border border-warning-subtle';
+                badge.innerHTML = '<i class="fas fa-clock me-1"></i>อนุมัติแล้ว (รอซิงค์)';
+            }
+        }
+        return;
+    }
+
+    try {
+        const res = await fetchAPI('approve_request', 'POST', { transfer_id: id });
+        if (res) loadRequests();
+        else if (window.StoreOffline && !navigator.onLine) {
+            await StoreOffline.enqueue('store_request', 'approve_request', { transfer_id: id }, `อนุมัติจ่าย Req #${id}`);
+        }
+    } catch (e) {
+        console.error(e);
+        if (window.StoreOffline) {
+            await StoreOffline.enqueue('store_request', 'approve_request', { transfer_id: id }, `อนุมัติจ่าย Req #${id}`);
+        }
+    }
 };
 
 window.rejectReq = async (id) => {
@@ -413,11 +484,43 @@ window.bulkApprove = async () => {
     if (!confirm(`ยืนยันการอนุมัติจ่ายของจำนวน ${checkedBoxes.length} รายการ?`)) return;
     
     const ids = Array.from(checkedBoxes).map(chk => chk.value);
-    const res = await fetchAPI('bulk_approve_requests', 'POST', { transfer_ids: ids });
-    if (res) {
+
+    if (window.StoreOffline && !StoreOffline.isOnline()) {
+        await StoreOffline.enqueue('store_request', 'bulk_approve_requests', { transfer_ids: ids }, `อนุมัติจ่าย ${ids.length} รายการ`);
+        checkedBoxes.forEach(chk => {
+            const row = chk.closest('tr') || chk.closest('.card');
+            if (row) {
+                const badge = row.querySelector('.badge');
+                if (badge) {
+                    badge.className = 'badge bg-warning-subtle text-warning border border-warning-subtle';
+                    badge.innerHTML = '<i class="fas fa-clock me-1"></i>อนุมัติแล้ว (รอซิงค์)';
+                }
+            }
+            chk.checked = false;
+        });
         document.getElementById('selectAllReq').checked = false;
         updateBulkActionButtons();
-        loadRequests();
+        return;
+    }
+
+    try {
+        const res = await fetchAPI('bulk_approve_requests', 'POST', { transfer_ids: ids });
+        if (res) {
+            document.getElementById('selectAllReq').checked = false;
+            updateBulkActionButtons();
+            loadRequests();
+        } else if (window.StoreOffline && !navigator.onLine) {
+            await StoreOffline.enqueue('store_request', 'bulk_approve_requests', { transfer_ids: ids }, `อนุมัติจ่าย ${ids.length} รายการ`);
+            document.getElementById('selectAllReq').checked = false;
+            updateBulkActionButtons();
+        }
+    } catch(e) {
+        console.error(e);
+        if (window.StoreOffline) {
+            await StoreOffline.enqueue('store_request', 'bulk_approve_requests', { transfer_ids: ids }, `อนุมัติจ่าย ${ids.length} รายการ`);
+            document.getElementById('selectAllReq').checked = false;
+            updateBulkActionButtons();
+        }
     }
 };
 

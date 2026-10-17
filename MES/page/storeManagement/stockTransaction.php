@@ -27,6 +27,28 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
                     .hide-scrollbar::-webkit-scrollbar { display: none; }
                     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
                     
+                    .toolbar-scroll-container {
+                        overflow-x: auto;
+                        overflow-y: hidden;
+                        white-space: nowrap;
+                        -webkit-overflow-scrolling: touch;
+                        scrollbar-width: thin;
+                        scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+                    }
+                    .toolbar-scroll-container::-webkit-scrollbar {
+                        height: 4px;
+                    }
+                    .toolbar-scroll-container::-webkit-scrollbar-track {
+                        background: transparent;
+                    }
+                    .toolbar-scroll-container::-webkit-scrollbar-thumb {
+                        background: rgba(0, 0, 0, 0.2);
+                        border-radius: 4px;
+                    }
+                    .toolbar-scroll-container::-webkit-scrollbar-thumb:hover {
+                        background: rgba(0, 0, 0, 0.35);
+                    }
+
                     /* สร้างคลาสสำหรับสีตัวเลข IN / OUT */
                     .text-in { color: var(--bs-success); font-weight: bold; }
                     .text-out { color: var(--bs-danger); font-weight: bold; }
@@ -88,30 +110,28 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
             <div class="dashboard-header-sticky px-3 pt-0">
                 <div class="card border-0 shadow-sm mb-0">
                     <div class="card-body p-2 bg-body-tertiary rounded">
-                        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 w-100">
+                        <div class="d-flex align-items-center justify-content-between gap-2 w-100 flex-nowrap toolbar-scroll-container py-1">
                             
-                            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-                                <div class="d-flex align-items-center gap-1 w-100 w-md-auto flex-nowrap" style="flex: 1 1 250px; max-width: 650px;">
-                                    <div class="input-group input-group-sm shadow-sm flex-grow-1">
-                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
-                                        <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Part No, SAP No, Ref No หรือ Notes...">
-                                        <button class="btn btn-outline-secondary border-secondary-subtle" type="button" onclick="loadLedgerData()" title="Refresh Data">
-                                            <i class="fas fa-sync-alt"></i>
-                                        </button>
-                                    </div>
-                                    <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 px-sm-3 d-flex align-items-center justify-content-center flex-shrink-0" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
-                                        <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
+                            <div class="d-flex align-items-center gap-1.5 flex-nowrap flex-shrink-0">
+                                <div class="input-group input-group-sm shadow-sm" style="width: 220px; min-width: 170px;">
+                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Part No, SAP No, Ref No หรือ Notes...">
+                                    <button class="btn btn-outline-secondary border-secondary-subtle" type="button" onclick="loadLedgerData()" title="Refresh Data">
+                                        <i class="fas fa-sync-alt"></i>
                                     </button>
                                 </div>
+                                <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 px-sm-3 d-flex align-items-center justify-content-center flex-shrink-0 text-nowrap" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
+                                    <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
+                                </button>
                             </div>
 
-                            <div id="actionWrapper" class="d-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end mt-2 mt-lg-0 w-100 w-lg-auto">
+                            <div id="actionWrapper" class="d-flex align-items-center gap-1.5 flex-nowrap flex-shrink-0 ms-auto">
                                 
-                                <button class="btn btn-sm btn-outline-success fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center" onclick="exportLedgerToExcel()" style="height: 32px;" title="Export to Excel">
+                                <button class="btn btn-sm btn-outline-success fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center flex-shrink-0 text-nowrap" onclick="exportLedgerToExcel()" style="height: 32px;" title="Export to Excel">
                                     <i class="fas fa-file-excel me-1"></i> Export
                                 </button>
 
-                                <div class="dropdown ms-auto ms-lg-1">
+                                <div class="dropdown flex-shrink-0">
                                     <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm position-relative d-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false" style="height: 32px; min-width: 36px;">
                                         <i class="fas fa-ellipsis-v fa-fw"></i>
                                     </button>

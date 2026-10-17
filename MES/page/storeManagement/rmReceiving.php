@@ -32,6 +32,21 @@ $pageHelpId = "";
                     .hide-scrollbar::-webkit-scrollbar { display: none; }
                     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+                    .toolbar-scroll-container {
+                        overflow-x: auto;
+                        overflow-y: hidden;
+                        white-space: nowrap;
+                        -webkit-overflow-scrolling: touch;
+                        scrollbar-width: thin;
+                    }
+                    .toolbar-scroll-container::-webkit-scrollbar {
+                        height: 3px;
+                    }
+                    .toolbar-scroll-container::-webkit-scrollbar-thumb {
+                        background-color: rgba(0, 0, 0, 0.2);
+                        border-radius: 4px;
+                    }
+
                     @media (max-width: 767.98px) {
                         .mobile-fixed-footer {
                             position: fixed !important;
@@ -128,74 +143,72 @@ $pageHelpId = "";
                 <div class="card border-0 shadow-sm mb-0">
                     <div class="card-body p-2 bg-body-tertiary rounded">
                         
-                        <div class="d-flex flex-column flex-xl-row gap-2 justify-content-between align-items-xl-center w-100">
+                        <div class="toolbar-scroll-container d-flex flex-nowrap align-items-center justify-content-between gap-2 w-100 pb-1">
                             
-                            <div class="d-flex flex-column flex-md-row gap-2 flex-grow-1">
-                                
-                                <div class="d-flex gap-2 align-items-center flex-grow-1" style="max-width: 500px;">
-                                    <div class="input-group input-group-sm shadow-sm flex-grow-1">
-                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
-                                        <input type="text" id="searchInput" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="Search Serial, Item, PO...">
-                                    </div>
-                                    <button class="btn btn-outline-secondary btn-sm shadow-sm flex-shrink-0" onclick="loadHistory()" title="Refresh Data" style="width: 32px; height: 32px; padding: 0;"> 
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
-                                    <button class="btn btn-outline-primary btn-sm shadow-sm flex-shrink-0 d-md-none" id="btnToggleCards" onclick="toggleMobileCards()" title="ซ่อน/แสดงรายการ" style="width: 32px; height: 32px; padding: 0;"> 
-                                        <i class="fas fa-eye-slash"></i>
-                                    </button>
-                                    
-                                    <div class="dropdown flex-shrink-0 d-xl-none">
-                                        <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" style="height: 32px;">
-                                            <i class="fas fa-ellipsis-v fa-fw"></i>
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem; min-width: 230px;">
-                                            <li><h6 class="dropdown-header text-success fw-bold"><i class="fas fa-database me-1"></i> จัดการข้อมูล (Data)</h6></li>
-                                            <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="exportToExcel()"><i class="fas fa-file-export fa-fw me-2 text-success"></i> Export to Excel</a></li>
-                                            <?php if($canManageRM): ?>
-                                            <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="openImportModal()"><i class="fas fa-file-import fa-fw me-2 text-primary"></i> Import Excel</a></li>
-                                            <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="openManualAddModal()"><i class="fas fa-keyboard fa-fw me-2 text-info"></i> เพิ่มข้อมูล (Manual)</a></li>
-                                            <?php endif; ?>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><h6 class="dropdown-header text-primary fw-bold"><i class="fas fa-compass me-1"></i> เมนูนำทาง (Navigation)</h6></li>
-                                            <li><a class="dropdown-item py-2 fw-bold" href="inventoryDashboard.php"><i class="fas fa-boxes text-secondary fa-fw me-2"></i> Stock Inventory (ยอดคงคลัง)</a></li>
-                                            <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10 text-primary" href="rmReceiving.php"><i class="fas fa-pallet fa-fw me-2"></i> Stock Receiving (รับเข้า/สร้าง Tag)</a></li>
-                                            <li><a class="dropdown-item py-2 fw-bold" href="stockTransaction.php"><i class="fas fa-history text-secondary fa-fw me-2"></i> Stock Transaction (ประวัติฯ)</a></li>
-                                            <li><a class="dropdown-item py-2 fw-bold text-success" href="tagHistory.php"><i class="fas fa-search-location fa-fw me-2"></i> Trace Tag (ค้นหาประวัติแท็ก)</a></li>
-                                        </ul>
-                                    </div>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <div class="input-group input-group-sm shadow-sm flex-shrink-0" style="width: 170px;">
+                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="searchInput" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="Search Serial, Item, PO...">
                                 </div>
+                                <button class="btn btn-outline-secondary btn-sm shadow-sm flex-shrink-0" onclick="loadHistory()" title="Refresh Data" style="width: 32px; height: 32px; padding: 0;"> 
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm shadow-sm flex-shrink-0 d-md-none" id="btnToggleCards" onclick="toggleMobileCards()" title="ซ่อน/แสดงรายการ" style="width: 32px; height: 32px; padding: 0;"> 
+                                    <i class="fas fa-eye-slash"></i>
+                                </button>
+
+                                <span id="offlineSyncBadge" class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2 py-1.5 fw-semibold d-none flex-shrink-0" style="font-size: 0.72rem; cursor: pointer; height: 32px; display: inline-flex; align-items: center;" onclick="StoreOffline.triggerManualSync('rm_receiving')" title="คลิกเพื่อส่งข้อมูลที่บันทึกไว้ในเครื่องขึ้นเซิร์ฟเวอร์">
+                                    <i class="fas fa-wifi-slash me-1"></i><span id="offlineSyncCount">0</span> ค้างซิงค์
+                                </span>
                                 
-                                <div class="d-flex gap-2 align-items-center flex-grow-1">
-                                    <div class="input-group input-group-sm shadow-sm flex-grow-1" style="min-width: 180px; max-width: 280px;">
-                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary px-2"><i class="fas fa-calendar-alt"></i></span>
-                                        <input type="date" id="filterStartDate" class="form-control border-secondary-subtle px-1" value="<?php echo date('Y-m-01'); ?>">
-                                        <span class="input-group-text bg-white border-secondary-subtle border-start-0 border-end-0 px-1">-</span>
-                                        <input type="date" id="filterEndDate" class="form-control border-secondary-subtle px-1" value="<?php echo date('Y-m-d'); ?>">
-                                    </div>
-                                    <div class="input-group input-group-sm shadow-sm flex-shrink-0" style="width: 110px;">
-                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary px-2"><i class="fas fa-tasks"></i></span>
-                                        <select id="statusFilter" class="form-select border-secondary-subtle fw-bold text-dark px-1" onchange="loadHistory()">
-                                            <option value="ALL">ทุกสถานะ</option>
-                                            <option value="PENDING" class="text-warning" selected>รอรับเข้า</option>
-                                            <option value="AVAILABLE" class="text-success">อยู่ในคลัง</option>
-                                            <option value="ISSUED" class="text-secondary">เบิกจ่ายแล้ว</option>
-                                        </select>
-                                    </div>
-                                    <div class="input-group input-group-sm shadow-sm d-none d-xl-flex flex-shrink-0" style="width: 70px;">
-                                        <select id="rowsPerPage" class="form-select border-secondary-subtle px-1" onchange="changeRowsPerPage()">
-                                            <option value="50">50</option>
-                                            <option value="100" selected>100</option>
-                                            <option value="500">500</option>
-                                        </select>
-                                    </div>
+                                <div class="dropdown flex-shrink-0 d-xl-none">
+                                    <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" style="height: 32px;">
+                                        <i class="fas fa-ellipsis-v fa-fw"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem; min-width: 230px;">
+                                        <li><h6 class="dropdown-header text-success fw-bold"><i class="fas fa-database me-1"></i> จัดการข้อมูล (Data)</h6></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="exportToExcel()"><i class="fas fa-file-export fa-fw me-2 text-success"></i> Export to Excel</a></li>
+                                        <?php if($canManageRM): ?>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="openImportModal()"><i class="fas fa-file-import fa-fw me-2 text-primary"></i> Import Excel</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="openManualAddModal()"><i class="fas fa-keyboard fa-fw me-2 text-info"></i> เพิ่มข้อมูล (Manual)</a></li>
+                                        <?php endif; ?>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><h6 class="dropdown-header text-primary fw-bold"><i class="fas fa-compass me-1"></i> เมนูนำทาง (Navigation)</h6></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="inventoryDashboard.php"><i class="fas fa-boxes text-secondary fa-fw me-2"></i> Stock Inventory (ยอดคงคลัง)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10 text-primary" href="rmReceiving.php"><i class="fas fa-pallet fa-fw me-2"></i> Stock Receiving (รับเข้า/สร้าง Tag)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold" href="stockTransaction.php"><i class="fas fa-history text-secondary fa-fw me-2"></i> Stock Transaction (ประวัติฯ)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold text-success" href="tagHistory.php"><i class="fas fa-search-location fa-fw me-2"></i> Trace Tag (ค้นหาประวัติแท็ก)</a></li>
+                                    </ul>
                                 </div>
 
+                                <div class="input-group input-group-sm shadow-sm flex-shrink-0" style="width: 230px;">
+                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary px-2"><i class="fas fa-calendar-alt"></i></span>
+                                    <input type="date" id="filterStartDate" class="form-control border-secondary-subtle px-1" value="<?php echo date('Y-m-01'); ?>">
+                                    <span class="input-group-text bg-white border-secondary-subtle border-start-0 border-end-0 px-1">-</span>
+                                    <input type="date" id="filterEndDate" class="form-control border-secondary-subtle px-1" value="<?php echo date('Y-m-d'); ?>">
+                                </div>
+                                <div class="input-group input-group-sm shadow-sm flex-shrink-0" style="width: 110px;">
+                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary px-2"><i class="fas fa-tasks"></i></span>
+                                    <select id="statusFilter" class="form-select border-secondary-subtle fw-bold text-dark px-1" onchange="loadHistory()">
+                                        <option value="ALL">ทุกสถานะ</option>
+                                        <option value="PENDING" class="text-warning" selected>รอรับเข้า</option>
+                                        <option value="AVAILABLE" class="text-success">อยู่ในคลัง</option>
+                                        <option value="ISSUED" class="text-secondary">เบิกจ่ายแล้ว</option>
+                                    </select>
+                                </div>
+                                <div class="input-group input-group-sm shadow-sm d-none d-xl-flex flex-shrink-0" style="width: 70px;">
+                                    <select id="rowsPerPage" class="form-select border-secondary-subtle px-1" onchange="changeRowsPerPage()">
+                                        <option value="50">50</option>
+                                        <option value="100" selected>100</option>
+                                        <option value="500">500</option>
+                                    </select>
+                                </div>
                             </div>
 
-                            <div id="actionWrapper" class="d-flex gap-2 align-items-center justify-content-between justify-content-xl-end flex-shrink-0 mt-2 mt-xl-0">
+                            <div id="actionWrapper" class="d-flex gap-2 align-items-center justify-content-end flex-shrink-0">
                                 
-                                <div class="dropdown d-none flex-grow-1 flex-xl-grow-0" id="btnBatchPrintDropdown">
-                                    <button class="btn btn-dark btn-sm shadow-sm dropdown-toggle fw-bold px-3 w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="dropdown d-none flex-shrink-0" id="btnBatchPrintDropdown">
+                                    <button class="btn btn-dark btn-sm shadow-sm dropdown-toggle fw-bold px-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="fas fa-check-square me-1"></i> จัดการที่เลือก (<span id="selectedCount">0</span>)
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" style="font-size: 0.9rem;">
@@ -208,7 +221,7 @@ $pageHelpId = "";
                                     </ul>
                                 </div>
                                 
-                                <button class="btn btn-sm fw-bold px-3 py-1 rounded shadow transition-btn text-white border-0 d-none d-md-flex align-items-center" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7);" onclick="openTraceModal()">
+                                <button class="btn btn-sm fw-bold px-3 py-1 rounded shadow transition-btn text-white border-0 d-none d-md-flex align-items-center flex-shrink-0" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7);" onclick="openTraceModal()">
                                     <i class="fas fa-qrcode me-1"></i> สแกน
                                 </button>
                                 
@@ -237,6 +250,21 @@ $pageHelpId = "";
                         </div>
 
                     </div>
+                </div>
+            </div>
+
+            <div class="px-3 pt-2">
+                <div id="offlineStatusBanner" class="alert alert-warning d-none align-items-center justify-content-between p-2 mb-0 rounded-3 border-warning shadow-xs" style="background-color: #fffbeb; border-color: #fde68a;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-wifi-slash text-warning fa-lg"></i>
+                        <div class="d-flex flex-column">
+                            <span class="fw-bold text-dark" style="font-size: 0.85rem;">กำลังทำงานในโหมดออฟไลน์ (Offline Mode)</span>
+                            <span class="text-secondary" style="font-size: 0.72rem;">อยู่ในมุมอับสัญญาณ บันทึกข้อมูลในเครื่องชั่วคราว (<span id="offlinePendingCountText">0</span> รายการ)</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-warning btn-sm text-dark fw-bold px-2 py-1 shadow-xs" onclick="StoreOffline.triggerManualSync('rm_receiving')" style="font-size: 0.75rem;">
+                        <i class="fas fa-sync-alt me-1"></i>ซิงค์เดี๋ยวนี้
+                    </button>
                 </div>
             </div>
 
@@ -456,6 +484,7 @@ $pageHelpId = "";
 
     <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>" defer></script>
+    <script src="script/storeOffline.js?v=<?php echo filemtime(__DIR__ . '/script/storeOffline.js'); ?>" defer></script>
     <script src="script/rmReceiving.js?v=<?php echo filemtime(__DIR__ . '/script/rmReceiving.js'); ?>" defer></script>
 </body>
 </html>
