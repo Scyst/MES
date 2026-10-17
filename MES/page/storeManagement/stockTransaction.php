@@ -153,7 +153,7 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
                                     <li><a class="dropdown-item py-2 fw-bold" href="inventoryDashboard.php"><i class="fas fa-boxes text-secondary fa-fw me-2"></i> Stock Inventory (ยอดคงคลัง)</a></li>
                                     <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> Stock Receiving (รับเข้า/สร้าง Tag)</a></li>
                                     <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10 text-primary" href="stockTransaction.php"><i class="fas fa-history text-primary fa-fw me-2"></i> Stock Transaction (ประวัติความเคลื่อนไหว)</a></li>
-                                    <li><a class="dropdown-item py-2 fw-bold text-success" href="tagHistory.php"><i class="fas fa-search-location fa-fw me-2"></i> Trace Tag (ตามประวัติ)</a></li>
+                                    <li><a class="dropdown-item py-2 fw-bold" href="tagHistory.php"><i class="fas fa-search-location text-secondary fa-fw me-2"></i> Trace Tag (ตามประวัติ)</a></li>
                                 </ul>
                             </div>
                             

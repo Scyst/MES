@@ -745,6 +745,42 @@
         box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
         color: #ffffff;
     }
+
+    @media (max-width: 575.98px) {
+        #prdReturnModal .prd-header {
+            padding: 0.85rem 1rem !important;
+        }
+        #prdReturnModal .prd-icon-badge {
+            width: 36px !important;
+            height: 36px !important;
+            font-size: 1rem !important;
+            margin-right: 0 !important;
+        }
+        #prdReturnModal .modal-title {
+            font-size: 0.95rem !important;
+            white-space: nowrap !important;
+        }
+        #prdReturnModal .prd-scan-card {
+            padding: 0.85rem 0.9rem !important;
+        }
+        #prdReturnModal .prd-step-card {
+            display: flex !important;
+            align-items: center !important;
+            text-align: left !important;
+            gap: 12px !important;
+            padding: 0.55rem 0.8rem !important;
+            margin-bottom: 0.25rem !important;
+        }
+        #prdReturnModal .prd-step-num {
+            margin-bottom: 0 !important;
+            flex-shrink: 0 !important;
+        }
+        #prdReturnModal .modal-footer {
+            padding: 0.75rem 1rem !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+        }
+    }
 </style>
 
 <div class="modal fade" id="prdReturnModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
@@ -752,21 +788,21 @@
         <div class="modal-content">
             <!-- Sleek Header -->
             <div class="prd-header d-flex align-items-center justify-content-between text-white">
-                <div class="d-flex align-items-center" style="gap: 14px;">
+                <div class="d-flex align-items-center" style="gap: 10px; max-width: calc(100% - 35px);">
                     <div class="prd-icon-badge">
                         <i class="fas fa-undo-alt"></i>
                     </div>
-                    <div>
-                        <div class="d-flex align-items-center" style="gap: 8px; margin-bottom: 4px;">
-                            <h6 class="modal-title fw-bold text-white mb-0" style="font-size: 1.05rem; letter-spacing: -0.2px;">รับคืนวัตถุดิบจากฝ่ายผลิต</h6>
+                    <div class="overflow-hidden">
+                        <div class="d-flex align-items-center flex-wrap" style="gap: 6px; margin-bottom: 2px;">
+                            <h6 class="modal-title fw-bold text-white mb-0 text-truncate" style="font-size: 1.05rem; letter-spacing: -0.2px;">รับคืนวัตถุดิบจากฝ่ายผลิต</h6>
                             <span class="badge rounded-pill" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); font-size: 0.65rem; font-family: monospace; letter-spacing: 0.5px;">PRD RETURN</span>
                         </div>
-                        <div class="small opacity-75" style="color: #cbd5e1; font-size: 0.8rem; line-height: 1.5;">
+                        <div class="small opacity-75 text-truncate" style="color: #cbd5e1; font-size: 0.78rem; line-height: 1.4;">
                             สแกนแท็กเดิมเพื่อดึงกลับเข้าคลัง Store และเปิดสถานะ <span class="fw-bold" style="color: #4ade80;">AVAILABLE</span> ทันที
                         </div>
                     </div>
                 </div>
-                <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal" aria-label="Close" style="transition: opacity 0.2s;"></button>
+                <button type="button" class="btn-close btn-close-white opacity-75 flex-shrink-0" data-bs-dismiss="modal" aria-label="Close" style="transition: opacity 0.2s;"></button>
             </div>
 
             <!-- Body -->
@@ -774,25 +810,25 @@
                 <!-- Scan Input Box -->
                 <div class="prd-scan-card p-3 mb-3">
                     <div class="d-flex align-items-center justify-content-between mb-2">
-                        <span class="fw-bold text-dark d-flex align-items-center" style="font-size: 0.85rem; gap: 8px;">
+                        <span class="fw-bold text-dark d-flex align-items-center text-nowrap" style="font-size: 0.85rem; gap: 8px;">
                             <i class="fas fa-qrcode text-primary fs-6"></i>
                             <span>สแกน QR หรือพิมพ์รหัสแท็ก/พาเลท</span>
                         </span>
-                        <span class="badge bg-light text-muted border d-inline-flex align-items-center" style="font-size: 0.72rem; font-weight: 500; gap: 6px; padding: 4px 10px;">
+                        <span class="badge bg-light text-muted border d-none d-sm-inline-flex align-items-center" style="font-size: 0.72rem; font-weight: 500; gap: 6px; padding: 4px 10px;">
                             <i class="fas fa-keyboard text-primary"></i>
                             <span>กด Enter หรือยิงบาร์โค้ดได้ทันที</span>
                         </span>
                     </div>
 
                     <div class="input-group">
-                        <span class="input-group-text bg-light text-primary border-end-0 px-3">
+                        <span class="input-group-text bg-light text-primary border-end-0 px-2 px-sm-3 d-none d-sm-flex">
                             <i class="fas fa-barcode fs-5"></i>
                         </span>
-                        <input type="text" id="prdReturnScanInput" class="form-control form-control-lg border-start-0 prd-scan-input" placeholder="เช่น RM-260408-0004 หรือสแกน QR..." autocomplete="off">
-                        <button class="btn btn-outline-secondary px-3" type="button" id="btnTogglePrdCamera" onclick="togglePrdReturnCamera()" title="เปิด/ปิดกล้องสแกน">
+                        <input type="text" id="prdReturnScanInput" class="form-control form-control-lg prd-scan-input" placeholder="เช่น RM-260408-0004 หรือสแกน QR..." autocomplete="off">
+                        <button class="btn btn-outline-secondary px-2.5 px-sm-3 flex-shrink-0" type="button" id="btnTogglePrdCamera" onclick="togglePrdReturnCamera()" title="เปิด/ปิดกล้องสแกน">
                             <i class="fas fa-camera fs-6"></i>
                         </button>
-                        <button class="btn btn-primary px-3 px-md-4 fw-bold shadow-sm d-inline-flex align-items-center justify-content-center" type="button" id="btnSearchPrdTag" onclick="searchPrdReturnTag()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); gap: 8px;">
+                        <button class="btn btn-primary px-3 px-md-4 fw-bold shadow-sm d-inline-flex align-items-center justify-content-center text-nowrap flex-shrink-0" type="button" id="btnSearchPrdTag" onclick="searchPrdReturnTag()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); gap: 6px;">
                             <i class="fas fa-search"></i>
                             <span>ตรวจสอบ</span>
                         </button>
@@ -803,7 +839,7 @@
                 </div>
 
                 <!-- Empty State Walkthrough Prompt (Shown before tag scanned) -->
-                <div id="prdReturnEmptyPrompt" class="p-3 p-md-4 text-center">
+                <div id="prdReturnEmptyPrompt" class="p-2 p-md-4 text-center">
                     <div class="prd-radar-wrap">
                         <div class="prd-radar-ring"></div>
                         <div class="prd-radar-icon">
@@ -817,32 +853,38 @@
                     </p>
 
                     <!-- 3-Step Process Cards -->
-                    <div class="row g-3 text-start mb-3">
-                        <div class="col-4">
+                    <div class="row g-2 g-sm-3 text-start mb-3">
+                        <div class="col-12 col-sm-4">
                             <div class="prd-step-card h-100">
                                 <div class="prd-step-num">1</div>
-                                <div class="fw-bold text-dark small mb-1" style="font-size: 0.78rem;">สแกนแท็กเดิม</div>
-                                <div class="text-muted" style="font-size: 0.72rem; line-height: 1.45;">แท็กที่เคยตัดจ่ายไปแล้ว</div>
+                                <div class="step-content">
+                                    <div class="fw-bold text-dark small mb-0 mb-sm-1" style="font-size: 0.78rem;">สแกนแท็กเดิม</div>
+                                    <div class="text-muted" style="font-size: 0.72rem; line-height: 1.45;">แท็กที่เคยตัดจ่ายไปแล้ว</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-4">
+                        <div class="col-12 col-sm-4">
                             <div class="prd-step-card h-100">
                                 <div class="prd-step-num">2</div>
-                                <div class="fw-bold text-dark small mb-1" style="font-size: 0.78rem;">เลือกตำแหน่ง</div>
-                                <div class="text-muted" style="font-size: 0.72rem; line-height: 1.45;">ระบุ Location ใน Store</div>
+                                <div class="step-content">
+                                    <div class="fw-bold text-dark small mb-0 mb-sm-1" style="font-size: 0.78rem;">เลือกตำแหน่ง</div>
+                                    <div class="text-muted" style="font-size: 0.72rem; line-height: 1.45;">ระบุ Location ใน Store</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-4">
+                        <div class="col-12 col-sm-4">
                             <div class="prd-step-card h-100">
                                 <div class="prd-step-num">3</div>
-                                <div class="fw-bold text-dark small mb-1" style="font-size: 0.78rem;">คืนยอด & พร้อมใช้</div>
-                                <div class="text-muted" style="font-size: 0.72rem; line-height: 1.45;">ปรับเป็น AVAILABLE ทันที</div>
+                                <div class="step-content">
+                                    <div class="fw-bold text-dark small mb-0 mb-sm-1" style="font-size: 0.78rem;">คืนยอด & พร้อมใช้</div>
+                                    <div class="text-muted" style="font-size: 0.72rem; line-height: 1.45;">ปรับเป็น AVAILABLE ทันที</div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="d-inline-flex align-items-center px-3.5 py-2 rounded-pill bg-light border text-muted small" style="font-size: 0.75rem; gap: 8px;">
-                        <i class="fas fa-check-circle text-success fs-6"></i>
+                    <div class="d-inline-flex align-items-center px-3.5 py-2 rounded-pill bg-light border text-muted small text-start" style="font-size: 0.74rem; gap: 8px; max-width: 100%;">
+                        <i class="fas fa-check-circle text-success fs-6 flex-shrink-0"></i>
                         <span>รองรับแท็กสถานะ: <span class="fw-bold text-warning-emphasis">WIP (ตัดจ่ายไปผลิต)</span> และ <span class="fw-bold text-secondary">CLOSED</span></span>
                     </div>
                 </div>

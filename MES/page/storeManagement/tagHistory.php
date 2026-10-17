@@ -13,6 +13,29 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
     <title><?php echo $pageTitle; ?></title>
     <?php include_once '../components/common_head.php'; ?>
     <style>
+        html, body {
+            overflow-x: hidden !important;
+            max-width: 100vw;
+        }
+        .page-container, #main-content {
+            overflow-x: hidden !important;
+            max-width: 100%;
+        }
+        .content-wrapper {
+            overflow-x: hidden !important;
+            max-width: 100%;
+        }
+        #recentTagsContainer, #recentTagsContainer .card {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
+        }
+        .table-responsive {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            max-width: 100% !important;
+        }
+
         .dashboard-header-sticky {
             position: sticky;
             top: var(--header-height, 60px);
@@ -187,7 +210,7 @@ $pageHeaderSubtitle = "ค้นหาประวัติการเคลื
                                         <li><a class="dropdown-item py-2 fw-bold" href="inventoryDashboard.php"><i class="fas fa-boxes text-secondary fa-fw me-2"></i> Stock Inventory (ยอดคงคลัง)</a></li>
                                         <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> Stock Receiving (รับเข้า/สร้าง Tag)</a></li>
                                         <li><a class="dropdown-item py-2 fw-bold" href="stockTransaction.php"><i class="fas fa-history text-secondary fa-fw me-2"></i> Stock Transaction (ประวัติความเคลื่อนไหว)</a></li>
-                                        <li><a class="dropdown-item py-2 fw-bold bg-success bg-opacity-10 text-success" href="tagHistory.php"><i class="fas fa-search-location fa-fw me-2"></i> Trace Tag (ตามประวัติ)</a></li>
+                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10 text-primary" href="tagHistory.php"><i class="fas fa-search-location text-primary fa-fw me-2"></i> Trace Tag (ค้นหาประวัติแท็ก)</a></li>
                                     </ul>
                                 </div>
                                 
