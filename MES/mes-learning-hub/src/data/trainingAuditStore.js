@@ -868,7 +868,7 @@ export function markModuleCompleted({ courseId, moduleId, totalModules }) {
   if (!completed.includes(moduleId)) {
     completed.push(moduleId);
     localStorage.setItem(key, JSON.stringify(completed));
-    // Small EXP reward for each lesson
+    // Small EXP reward for each lesson read
     addExp(5, `เรียนจบหัวข้อย่อย (${completed.length}/${totalModules})`);
   }
 
@@ -878,76 +878,74 @@ export function markModuleCompleted({ courseId, moduleId, totalModules }) {
   // Sync to training audit records
   const records = getTrainingRecords();
   const existingIdx = records.findIndex(r => (r.empId === empId || r.empId === currentUser.id) && r.courseId === courseId);
-  const now = new Date();
-  const nextYear = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
 
   if (existingIdx !== -1) {
     records[existingIdx].progressPercent = progressPercent;
-    if (isAllDone && !records[existingIdx].passed) {
-      records[existingIdx].status = 'completed';
-      records[existingIdx].passed = true;
-      records[existingIdx].completedAt = now.toISOString();
-      records[existingIdx].expiresAt = nextYear.toISOString();
-      if (!records[existingIdx].certificateId) {
-        records[existingIdx].certificateId = `SNC-CERT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      }
-      addExp(50, `จบหลักสูตรมาตรฐานโรงงานครบ 100%`);
-    } else if (!records[existingIdx].passed) {
-      records[existingIdx].status = 'in_progress';
+    // Note: Do NOT mark passed=true here. Passing requires passing the post-test assessment (>=80%)
+    if (!records[existingIdx].passed) {
+      records[existingIdx].status = isAllDone ? 'ready_for_assessment' : 'in_progress';
     }
   } else {
     records.unshift({
       recordId: `rec-live-${Date.now()}`,
       empId: empId,
       courseId: courseId,
-      status: isAllDone ? 'completed' : 'in_progress',
+      status: isAllDone ? 'ready_for_assessment' : 'in_progress',
       progressPercent: progressPercent,
-      quizScore: isAllDone ? 1 : null,
-      quizTotal: isAllDone ? 1 : null,
-      quizPercentage: isAllDone ? 100 : null,
-      passed: isAllDone,
-      completedAt: isAllDone ? now.toISOString() : null,
-      expiresAt: isAllDone ? nextYear.toISOString() : null,
-      certificateId: isAllDone ? `SNC-CERT-2026-${Math.floor(1000 + Math.random() * 9000)}` : null,
+      quizScore: null,
+      quizTotal: null,
+      quizPercentage: null,
+      passed: false,
+      completedAt: null,
+      expiresAt: null,
+      certificateId: null,
       evaluatedBy: 'ระบบติดตามการเรียนรู้อัตโนมัติ (MES Learning Hub LMS)'
     });
-    if (isAllDone) {
-      addExp(50, `จบหลักสูตรมาตรฐานโรงงานครบ 100%`);
-    }
   }
 
   saveTrainingRecords(records);
   return { completedModules: completed, progressPercent, isAllDone };
 }
 
-// Explicit course completion (when user completes all lessons or clicks Complete Course)
-export function recordCourseCompletion({ courseId, totalModules = 1, moduleIds = [] }) {
+// Explicit course completion via passing Post-Test Assessment (>=80%)
+export function recordCourseCompletion({ 
+  courseId, 
+  totalModules = 1, 
+  moduleIds = [],
+  score = 4,
+  totalQuestions = 4 
+}) {
   const currentUser = getCurrentUser();
   const empId = currentUser.emp_id || `EMP-${currentUser.id || 'ME'}`;
   const key = `mes_learning_module_progress_${empId}_${courseId}`;
 
   // Mark all modules as completed in storage
-  localStorage.setItem(key, JSON.stringify(moduleIds));
+  if (moduleIds && moduleIds.length > 0) {
+    localStorage.setItem(key, JSON.stringify(moduleIds));
+  }
 
   const records = getTrainingRecords();
   const existingIdx = records.findIndex(r => (r.empId === empId || r.empId === currentUser.id) && r.courseId === courseId);
   const now = new Date();
   const nextYear = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
 
+  const quizPct = Math.round((score / Math.max(1, totalQuestions)) * 100);
+  const isPassed = quizPct >= 80;
+
   const certId = `SNC-CERT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
   const record = {
     recordId: existingIdx !== -1 ? records[existingIdx].recordId : `rec-live-${Date.now()}`,
     empId: empId,
     courseId: courseId,
-    status: 'completed',
+    status: isPassed ? 'completed' : 'failed',
     progressPercent: 100,
-    quizScore: (existingIdx !== -1 && records[existingIdx].quizScore !== null) ? records[existingIdx].quizScore : 3,
-    quizTotal: (existingIdx !== -1 && records[existingIdx].quizTotal !== null) ? records[existingIdx].quizTotal : 3,
-    quizPercentage: (existingIdx !== -1 && records[existingIdx].quizPercentage !== null) ? records[existingIdx].quizPercentage : 100,
-    passed: true,
-    completedAt: now.toISOString(),
-    expiresAt: nextYear.toISOString(),
-    certificateId: (existingIdx !== -1 && records[existingIdx].certificateId) ? records[existingIdx].certificateId : certId,
+    quizScore: score,
+    quizTotal: totalQuestions,
+    quizPercentage: quizPct,
+    passed: isPassed,
+    completedAt: isPassed ? now.toISOString() : null,
+    expiresAt: isPassed ? nextYear.toISOString() : null,
+    certificateId: isPassed ? ((existingIdx !== -1 && records[existingIdx].certificateId) ? records[existingIdx].certificateId : certId) : null,
     evaluatedBy: 'ฝ่ายฝึกอบรมและพัฒนาบุคลากร (HRD & Training Committee)'
   };
 
@@ -958,7 +956,45 @@ export function recordCourseCompletion({ courseId, totalModules = 1, moduleIds =
   }
 
   saveTrainingRecords(records);
-  addExp(50, 'จบหลักสูตรมาตรฐานโรงงานและได้รับใบรับรองสมรรถนะ (+50 EXP)');
+  if (isPassed) {
+    addExp(50, `สอบผ่านแบบทดสอบวัดผลหลักสูตร (${quizPct}%) และได้รับใบรับรองสมรรถนะ`);
+  }
+  return record;
+}
+
+// Record failed assessment attempt for audit matrix tracking
+export function recordFailedAssessment({ courseId, score = 0, totalQuestions = 4 }) {
+  const currentUser = getCurrentUser();
+  const empId = currentUser.emp_id || `EMP-${currentUser.id || 'ME'}`;
+  const records = getTrainingRecords();
+  const existingIdx = records.findIndex(r => (r.empId === empId || r.empId === currentUser.id) && r.courseId === courseId);
+  const quizPct = Math.round((score / Math.max(1, totalQuestions)) * 100);
+
+  const prevPassed = existingIdx !== -1 && records[existingIdx].passed;
+
+  const record = {
+    recordId: existingIdx !== -1 ? records[existingIdx].recordId : `rec-live-${Date.now()}`,
+    empId: empId,
+    courseId: courseId,
+    status: prevPassed ? 'completed' : 'failed',
+    progressPercent: 100,
+    quizScore: score,
+    quizTotal: totalQuestions,
+    quizPercentage: quizPct,
+    passed: prevPassed,
+    completedAt: prevPassed ? records[existingIdx].completedAt : null,
+    expiresAt: prevPassed ? records[existingIdx].expiresAt : null,
+    certificateId: prevPassed ? records[existingIdx].certificateId : null,
+    evaluatedBy: 'ฝ่ายฝึกอบรมและพัฒนาบุคลากร (HRD & Training Committee)'
+  };
+
+  if (existingIdx !== -1) {
+    records[existingIdx] = record;
+  } else {
+    records.unshift(record);
+  }
+
+  saveTrainingRecords(records);
   return record;
 }
 
