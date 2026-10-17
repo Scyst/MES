@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getCourseById } from '../data/communityStore';
+import { getCourseById, addExp } from '../data/communityStore';
 import { 
   getUserModuleProgress, 
   markModuleCompleted, 
@@ -8,7 +8,7 @@ import {
   recordFailedAssessment,
   getUserCourseStatus 
 } from '../data/trainingAuditStore';
-import { getCourseAssessment } from '../data/assessmentBank';
+import { getCourseAssessment, getModuleCheckpoint } from '../data/assessmentBank';
 import { 
   FiArrowLeft, 
   FiCheckCircle, 
@@ -55,11 +55,6 @@ export default function CourseViewer() {
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [latestExamScore, setLatestExamScore] = useState(null);
 
-  // Reading Time Lock & Scroll Gate States
-  const [readingSecondsLeft, setReadingSecondsLeft] = useState(0);
-  const [isScrolledToBottom, setIsScrolledToBottom] = useState(false);
-  const bottomSentinelRef = useRef(null);
-
   // Assessment Modal States
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [userAnswers, setUserAnswers] = useState({});
@@ -71,104 +66,90 @@ export default function CourseViewer() {
     return course ? getCourseAssessment(course) : [];
   }, [course]);
 
-  // Synchronize activeModuleId when course changes
+  // Synchronize all course states when courseId / course changes
   useEffect(() => {
-    if (course && course.modules?.length > 0) {
+    if (!course) return;
+    const status = getUserCourseStatus(course.id);
+    const modProgress = getUserModuleProgress(course.id);
+    const passed = status?.passed || status?.status === 'completed';
+
+    setCourseStatus(status);
+    setCompletedModuleIds(modProgress);
+    setIsCompleted(passed);
+    setEarnedCertId(status?.certificateId || '');
+
+    if (course.modules?.length > 0) {
       const exists = course.modules.some(m => m.id === activeModuleId);
       if (!exists) {
         setActiveModuleId(course.modules[0].id);
       }
     }
-  }, [courseId, course, activeModuleId]);
+  }, [courseId, course]);
 
-  // Reset reading timer & scroll state whenever activeModuleId changes
+  // Resolve active module safely, fallback to first module if not found
+  const activeModule = course?.modules?.find(m => m.id === activeModuleId) || course?.modules?.[0];
+  const currentIndex = course?.modules?.findIndex(m => m.id === activeModule?.id) ?? 0;
+  const totalModules = course?.modules?.length || 1;
+  const progressPercent = isCompleted ? 100 : Math.round((completedModuleIds.length / totalModules) * 100);
+
+  // W3Schools-Style Active Recall Checkpoint for current active module
+  const currentCheckpoint = useMemo(() => {
+    if (!course || !activeModule) return null;
+    return getModuleCheckpoint(course, activeModule, currentIndex);
+  }, [course, activeModule, currentIndex]);
+
+  const [checkpointSelected, setCheckpointSelected] = useState(null);
+  const [checkpointStatus, setCheckpointStatus] = useState(null); // 'correct' | 'incorrect' | null
+  const [checkpointShowHint, setCheckpointShowHint] = useState(false);
+
+  // Synchronize Checkpoint state whenever activeModuleId or completedModuleIds change
   useEffect(() => {
     if (!course || !activeModuleId) return;
 
     const alreadyDone = completedModuleIds.includes(activeModuleId) || isCompleted;
     if (alreadyDone) {
-      setReadingSecondsLeft(0);
-      setIsScrolledToBottom(true);
+      setCheckpointSelected(currentCheckpoint?.correctAnswer ?? 0);
+      setCheckpointStatus('correct');
+      setCheckpointShowHint(false);
     } else {
-      // Require 10 seconds minimum reading/comprehension time for new uncompleted lessons
-      setReadingSecondsLeft(10);
-      setIsScrolledToBottom(false);
+      setCheckpointSelected(null);
+      setCheckpointStatus(null);
+      setCheckpointShowHint(false);
     }
-  }, [courseId, activeModuleId, isCompleted]);
+  }, [courseId, activeModuleId, completedModuleIds, isCompleted, currentCheckpoint]);
 
-  // Active 1-second countdown timer for uncompleted modules
-  useEffect(() => {
-    if (readingSecondsLeft <= 0) return;
+  // Select Checkpoint option and evaluate immediately (Active Recall)
+  const handleSelectCheckpointOption = (optIdx) => {
+    if (!currentCheckpoint) return;
+    setCheckpointSelected(optIdx);
 
-    const timer = setInterval(() => {
-      setReadingSecondsLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
+    const isCorrect = optIdx === currentCheckpoint.correctAnswer;
+    if (isCorrect) {
+      setCheckpointStatus('correct');
+      setCheckpointShowHint(false);
+
+      // Officially mark module completed in training audit store
+      if (!completedModuleIds.includes(activeModuleId) && !isCompleted) {
+        const res = markModuleCompleted({
+          courseId: course.id,
+          moduleId: activeModuleId,
+          totalModules: totalModules
+        });
+        setCompletedModuleIds(res.completedModules);
+        setCourseStatus(getUserCourseStatus(course.id));
+        try {
+          addExp(5, `ผ่าน Checkpoint: ${activeModule?.title || ''}`);
+        } catch (e) {
+          console.warn('Failed to add EXP:', e);
         }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [readingSecondsLeft, activeModuleId]);
-
-  // Scroll Gate: triggers when learner scrolls down to bottom sentinel
-  useEffect(() => {
-    if (!course || !activeModuleId) return;
-
-    const alreadyDone = completedModuleIds.includes(activeModuleId) || isCompleted;
-    if (alreadyDone) {
-      setIsScrolledToBottom(true);
-      return;
-    }
-
-    const sentinel = bottomSentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsScrolledToBottom(true);
-        }
-      },
-      { threshold: 0.1, rootMargin: '0px 0px 80px 0px' }
-    );
-
-    observer.observe(sentinel);
-
-    const handleWindowScroll = () => {
-      const scrollPos = window.innerHeight + window.scrollY;
-      const docHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
-      if (scrollPos >= docHeight - 120) {
-        setIsScrolledToBottom(true);
       }
-    };
-
-    window.addEventListener('scroll', handleWindowScroll, { passive: true });
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('scroll', handleWindowScroll);
-    };
-  }, [course, activeModuleId, completedModuleIds, isCompleted]);
-
-  // Mark module as completed when BOTH timer expires (readingSecondsLeft === 0) AND user reaches bottom
-  useEffect(() => {
-    if (!course || !activeModuleId) return;
-    const alreadyDone = completedModuleIds.includes(activeModuleId) || isCompleted;
-    if (alreadyDone) return;
-
-    if (readingSecondsLeft === 0 && isScrolledToBottom) {
-      const res = markModuleCompleted({
-        courseId: course.id,
-        moduleId: activeModuleId,
-        totalModules: course.modules?.length || 1
-      });
-      setCompletedModuleIds(res.completedModules);
-      setCourseStatus(getUserCourseStatus(course.id));
+    } else {
+      setCheckpointStatus('incorrect');
+      setCheckpointShowHint(true);
     }
-  }, [course, activeModuleId, readingSecondsLeft, isScrolledToBottom, completedModuleIds, isCompleted]);
+  };
+
+  const isCurrentModuleUnlocked = completedModuleIds.includes(activeModuleId) || isCompleted || checkpointStatus === 'correct';
 
   if (!course) {
     return (
@@ -183,12 +164,6 @@ export default function CourseViewer() {
       </div>
     );
   }
-
-  // Resolve active module safely, fallback to first module if not found
-  const activeModule = course.modules?.find(m => m.id === activeModuleId) || course.modules?.[0];
-  const currentIndex = course.modules?.findIndex(m => m.id === activeModule?.id) ?? 0;
-  const totalModules = course.modules?.length || 1;
-  const progressPercent = isCompleted ? 100 : Math.round((completedModuleIds.length / totalModules) * 100);
 
   // Switch to next lesson smoothly
   const handleNextLesson = () => {
@@ -719,51 +694,146 @@ export default function CourseViewer() {
             </ErrorBoundary>
           )}
 
-          {/* Bottom Sentinel for Scroll Gate Detection */}
-          <div ref={bottomSentinelRef} className="h-6 w-full pointer-events-none" />
+          {/* W3Schools-Style Active Recall Checkpoint Card */}
+          {currentCheckpoint && (
+            <div className={`mt-8 p-5 md:p-6 rounded-2xl border transition-all duration-300 ${
+              checkpointStatus === 'correct'
+                ? 'bg-gradient-to-br from-emerald-950/40 via-slate-900 to-teal-950/40 border-emerald-500/40 shadow-xl shadow-emerald-500/10 ring-1 ring-emerald-500/30'
+                : checkpointStatus === 'incorrect'
+                  ? 'bg-gradient-to-br from-rose-950/30 via-slate-900 to-slate-900 border-rose-500/40 shadow-xl shadow-rose-500/10'
+                  : 'bg-gradient-to-br from-purple-950/30 via-slate-900 to-indigo-950/30 border-purple-500/30 shadow-xl shadow-purple-500/10'
+            }`}>
+              {/* Checkpoint Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800/80">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 flex items-center justify-center text-base shadow-sm">
+                    🎯
+                  </span>
+                  <div>
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>Checkpoint ท้ายบทเรียน (Active Recall)</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        W3Schools Style
+                      </span>
+                    </h4>
+                    <p className="text-xs text-slate-400">
+                      ตอบคำถามวัดความเข้าใจสั้นๆ 1 ข้อด้านล่างให้ถูกต้องเพื่อปลดล็อกบทเรียนถัดไป
+                    </p>
+                  </div>
+                </div>
 
-          {/* Reading Timer & Scroll Gate Guidance Indicator */}
-          <div className="mt-8">
-            {readingSecondsLeft > 0 ? (
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs shadow-sm">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 font-mono font-black flex items-center justify-center text-xs animate-pulse flex-shrink-0">
-                    {readingSecondsLeft}
-                  </span>
-                  <span>
-                    <strong>มาตรฐานเวลาการเรียนรู้:</strong> กรุณาใช้เวลาศึกษาเนื้อหาอย่างน้อย 10 วินาที (เหลืออีก {readingSecondsLeft} วินาที)
-                  </span>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  {checkpointStatus === 'correct' ? (
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 shadow-sm">
+                      <FiCheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>ผ่านแล้ว (+5 EXP)</span>
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1.5">
+                      <FiLock className="w-3.5 h-3.5 text-amber-400" />
+                      <span>ปลดล็อกเมื่อตอบถูก (+5 EXP)</span>
+                    </span>
+                  )}
                 </div>
-                <span className="text-[11px] font-mono text-amber-400 font-bold bg-amber-500/20 px-2.5 py-1 rounded-lg flex-shrink-0">
-                  ⏳ {readingSecondsLeft}s Left
-                </span>
               </div>
-            ) : !isScrolledToBottom ? (
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs shadow-sm">
-                <div className="flex items-center gap-2.5">
-                  <FiChevronDown className="w-4 h-4 text-amber-400 animate-bounce flex-shrink-0" />
-                  <span>
-                    <strong>เลื่อนอ่านให้จบ:</strong> ครบเกณฑ์เวลาศึกษาแล้ว กรุณาเลื่อนอ่านเนื้อหาจนถึงด้านล่างสุดเพื่อปลดล็อก
-                  </span>
+
+              {/* Question */}
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-slate-100 leading-relaxed">
+                  {currentCheckpoint.question}
+                </p>
+              </div>
+
+              {/* 4 Choices (A, B, C, D) */}
+              <div className="grid grid-cols-1 gap-2.5 mb-4">
+                {currentCheckpoint.options.map((opt, optIdx) => {
+                  const isSelected = checkpointSelected === optIdx;
+                  const isCorrectChoice = optIdx === currentCheckpoint.correctAnswer;
+                  const isAnswered = checkpointStatus !== null;
+
+                  let btnClass = 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border-slate-700/80 hover:border-slate-600';
+                  let badgeClass = 'bg-slate-700/80 text-slate-300 border-slate-600';
+
+                  if (isAnswered) {
+                    if (isCorrectChoice) {
+                      btnClass = 'bg-emerald-500/20 text-emerald-100 border-emerald-500 ring-1 ring-emerald-500/40 shadow-sm font-medium';
+                      badgeClass = 'bg-emerald-500 text-white border-emerald-400 font-bold';
+                    } else if (isSelected && !isCorrectChoice) {
+                      btnClass = 'bg-rose-500/20 text-rose-200 border-rose-500 ring-1 ring-rose-500/40 font-medium';
+                      badgeClass = 'bg-rose-500 text-white border-rose-400 font-bold';
+                    } else {
+                      btnClass = 'bg-slate-900/60 text-slate-500 border-slate-800/80 opacity-60';
+                      badgeClass = 'bg-slate-800 text-slate-500 border-slate-700';
+                    }
+                  } else if (isSelected) {
+                    btnClass = 'bg-purple-600/30 text-white border-purple-500 ring-1 ring-purple-500/50';
+                    badgeClass = 'bg-purple-500 text-white border-purple-400';
+                  }
+
+                  return (
+                    <button
+                      key={optIdx}
+                      type="button"
+                      onClick={() => handleSelectCheckpointOption(optIdx)}
+                      className={`w-full text-left p-3.5 rounded-xl border text-xs sm:text-sm transition-all duration-200 flex items-start gap-3 min-h-[44px] cursor-pointer ${btnClass}`}
+                    >
+                      <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 border shadow-sm ${badgeClass}`}>
+                        {isAnswered && isCorrectChoice ? (
+                          <FiCheck className="w-3.5 h-3.5" />
+                        ) : isAnswered && isSelected && !isCorrectChoice ? (
+                          <FiX className="w-3.5 h-3.5" />
+                        ) : (
+                          String.fromCharCode(65 + optIdx)
+                        )}
+                      </span>
+                      <span className="flex-1 leading-relaxed">
+                        {opt.replace(/^[A-D]:\s*/, '')}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Result Feedback & Hint */}
+              {checkpointStatus === 'incorrect' && (
+                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-200 text-xs space-y-2 animate-fadeIn">
+                  <div className="flex items-center gap-2 font-bold text-rose-300">
+                    <FiAlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                    <span>ยังไม่ถูกต้อง! ลองทบทวนเนื้อหาและเลือกคำตอบใหม่อีกครั้ง</span>
+                  </div>
+                  {checkpointShowHint && currentCheckpoint.hint && (
+                    <div className="p-3 rounded-lg bg-slate-900/80 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2">
+                      <span className="text-base flex-shrink-0">💡</span>
+                      <div className="leading-relaxed">
+                        <strong className="text-amber-200">คำใบ้: </strong>
+                        <span>{currentCheckpoint.hint}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <span className="text-[11px] font-mono text-amber-400 font-bold bg-amber-500/20 px-2.5 py-1 rounded-lg flex-shrink-0">
-                  Scroll Down ↓
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs shadow-sm">
-                <div className="flex items-center gap-2">
-                  <FiCheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <span>
-                    <strong>ศึกษาครบถ้วนแล้ว:</strong> ผ่านเกณฑ์เวลาและศึกษาเนื้อหาครบถ้วนตามขั้นตอนมาตรฐาน
-                  </span>
+              )}
+
+              {checkpointStatus === 'correct' && (
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-xs space-y-2 animate-fadeIn">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-bold text-emerald-300 text-sm">
+                      <FiCheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                      <span>ยอดเยี่ยมมาก! ตอบถูกต้องตามหลักวิศวกรรม/มาตรฐานอุตสาหกรรม</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-full font-bold">
+                      ✓ ปลดล็อกบทเรียนแล้ว
+                    </span>
+                  </div>
+                  {currentCheckpoint.explanation && (
+                    <div className="p-3 rounded-lg bg-slate-900/80 border border-emerald-500/20 text-slate-300 text-xs leading-relaxed">
+                      <strong className="text-emerald-400">คำอธิบายเฉลย: </strong>
+                      <span>{currentCheckpoint.explanation}</span>
+                    </div>
+                  )}
                 </div>
-                <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded flex-shrink-0">
-                  ✓ Unlocked
-                </span>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
           
           {/* Bottom Lesson Navigation & Complete/Assessment Buttons */}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 pt-6 border-t border-slate-800">
@@ -777,33 +847,33 @@ export default function CourseViewer() {
             ) : <div className="hidden sm:block"></div>}
             
             {currentIndex < totalModules - 1 ? (
-              (readingSecondsLeft > 0 || !isScrolledToBottom) ? (
+              !isCurrentModuleUnlocked ? (
                 <button 
                   disabled
                   className="w-full sm:w-auto px-6 py-2.5 bg-slate-800/80 text-slate-500 rounded-lg font-bold border border-slate-700/60 cursor-not-allowed flex items-center justify-center gap-2 opacity-60"
-                  title={readingSecondsLeft > 0 ? `กรุณาใช้เวลาศึกษาอีก ${readingSecondsLeft} วินาที` : 'กรุณาเลื่อนอ่านเนื้อหาจนจบบทเรียน'}
+                  title="ตอบ Checkpoint ท้ายบทเรียนให้ถูกต้องเพื่อปลดล็อก"
                 >
-                  <FiLock className="w-4 h-4" />
-                  <span>Next Lesson → {readingSecondsLeft > 0 ? `(รออีก ${readingSecondsLeft}s)` : '(เลื่อนอ่านจนจบ)'}</span>
+                  <FiLock className="w-4 h-4 text-amber-500" />
+                  <span>Next Lesson → (ตอบ Checkpoint เพื่อปลดล็อก)</span>
                 </button>
               ) : (
                 <button 
                   onClick={handleNextLesson}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-lg font-bold transition-all shadow-lg shadow-fuchsia-500/20 flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white rounded-lg font-bold transition-all shadow-lg shadow-fuchsia-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5"
                 >
                   <span>Next Lesson →</span>
                 </button>
               )
             ) : (
               /* Final Lesson: Must pass assessment to complete */
-              (readingSecondsLeft > 0 || !isScrolledToBottom) ? (
+              !isCurrentModuleUnlocked ? (
                 <button 
                   disabled
                   className="w-full sm:w-auto px-6 py-3 bg-slate-800/80 text-slate-500 rounded-xl font-bold border border-slate-700/60 cursor-not-allowed flex items-center justify-center gap-2 opacity-60"
-                  title={readingSecondsLeft > 0 ? `กรุณาใช้เวลาศึกษาอีก ${readingSecondsLeft} วินาที` : 'กรุณาเลื่อนอ่านเนื้อหาจนจบ'}
+                  title="ตอบ Checkpoint ท้ายบทเรียนให้ถูกต้องเพื่อปลดล็อก"
                 >
-                  <FiLock className="w-4 h-4" />
-                  <span>เข้าสู่แบบทดสอบ {readingSecondsLeft > 0 ? `(รออีก ${readingSecondsLeft}s)` : '(เลื่อนอ่านจนจบ)'}</span>
+                  <FiLock className="w-4 h-4 text-amber-500" />
+                  <span>เข้าสู่แบบทดสอบ (ตอบ Checkpoint เพื่อปลดล็อก)</span>
                 </button>
               ) : isCompleted ? (
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">

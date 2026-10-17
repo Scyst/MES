@@ -201,6 +201,53 @@ export default function CourseBuilder() {
     setModules(updated);
   };
 
+  // Module Checkpoint handlers (W3Schools Style)
+  const handleModuleCheckpointChange = (mIdx, field, value) => {
+    setModules(prev => {
+      const copy = [...prev];
+      const target = copy[mIdx];
+      const cp = target.checkpoint || {
+        question: '',
+        options: ['', '', '', ''],
+        correctAnswer: 0,
+        hint: '',
+        explanation: ''
+      };
+      copy[mIdx] = {
+        ...target,
+        checkpoint: {
+          ...cp,
+          [field]: value
+        }
+      };
+      return copy;
+    });
+  };
+
+  const handleModuleCheckpointOptionChange = (mIdx, optIdx, value) => {
+    setModules(prev => {
+      const copy = [...prev];
+      const target = copy[mIdx];
+      const cp = target.checkpoint || {
+        question: '',
+        options: ['', '', '', ''],
+        correctAnswer: 0,
+        hint: '',
+        explanation: ''
+      };
+      const opts = Array.isArray(cp.options) ? [...cp.options] : ['', '', '', ''];
+      opts[optIdx] = value;
+      copy[mIdx] = {
+        ...target,
+        checkpoint: {
+          ...cp,
+          options: opts
+        }
+      };
+      return copy;
+    });
+  };
+
   // Step handlers within module
   const handleAddStepToModule = (mIdx) => {
     const updated = [...modules];
@@ -678,6 +725,65 @@ export default function CourseBuilder() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Optional W3Schools Checkpoint for this Module */}
+                  <div className="mt-4 pt-3.5 border-t border-slate-800/80 bg-purple-950/20 p-4 rounded-xl border border-purple-500/20 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                        <span>🎯 Checkpoint ท้ายบทเรียน (Active Recall / W3Schools Style)</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        *หากเว้นว่างไว้ ระบบจะสร้างคำถามวัดความเข้าใจให้อัตโนมัติ
+                      </span>
+                    </div>
+
+                    <input 
+                      type="text"
+                      value={m.checkpoint?.question || ''}
+                      onChange={(e) => handleModuleCheckpointChange(mIdx, 'question', e.target.value)}
+                      placeholder="คำถามวัดความเข้าใจประจำบทเรียน เช่น ข้อใดคือ Die Clearance ที่ถูกต้องสำหรับเหล็ก 1.2 mm?"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500"
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {[0, 1, 2, 3].map((optIdx) => (
+                        <div key={optIdx} className="flex items-center gap-2">
+                          <input 
+                            type="radio"
+                            name={`correct-cp-${mIdx}`}
+                            checked={(m.checkpoint?.correctAnswer ?? 0) === optIdx}
+                            onChange={() => handleModuleCheckpointChange(mIdx, 'correctAnswer', optIdx)}
+                            className="text-purple-600 focus:ring-purple-500 bg-slate-900 border-slate-700 cursor-pointer"
+                            title="เลือกเป็นคำตอบที่ถูกต้อง"
+                          />
+                          <input 
+                            type="text"
+                            value={m.checkpoint?.options?.[optIdx] || ''}
+                            onChange={(e) => handleModuleCheckpointOptionChange(mIdx, optIdx, e.target.value)}
+                            placeholder={`ตัวเลือก ${String.fromCharCode(65 + optIdx)}`}
+                            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input 
+                        type="text"
+                        value={m.checkpoint?.hint || ''}
+                        onChange={(e) => handleModuleCheckpointChange(mIdx, 'hint', e.target.value)}
+                        placeholder="💡 คำใบ้ (แสดงเมื่อตอบผิด เช่น ศึกษาดูตารางอัตราส่วนในขั้นตอนที่ 2)"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                      />
+                      <input 
+                        type="text"
+                        value={m.checkpoint?.explanation || ''}
+                        onChange={(e) => handleModuleCheckpointChange(mIdx, 'explanation', e.target.value)}
+                        placeholder="✓ คำอธิบายเฉลย (แสดงเมื่อตอบถูก เช่น ตามมาตรฐานวิศวกรรมสากล...)"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-emerald-300 placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                      />
                     </div>
                   </div>
                 </div>
