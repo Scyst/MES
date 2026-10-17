@@ -110,7 +110,7 @@ try {
                                 </button>
 
                                 <div class="dropdown d-none flex-shrink-0" id="bulkActionDropdown">
-                                    <button class="btn btn-dark btn-sm fw-bold px-3 shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <button class="btn btn-dark btn-sm fw-bold px-3 shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">
                                         <i class="fas fa-layer-group me-1"></i> Bulk (<span id="bulkActionCount">0</span>)
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow border-0">

@@ -162,7 +162,7 @@ $pageHelpId = "";
                                 </span>
                                 
                                 <div class="dropdown flex-shrink-0 d-xl-none">
-                                    <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" style="height: 32px;">
+                                    <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' title="เมนูเพิ่มเติม" style="height: 32px;">
                                         <i class="fas fa-ellipsis-v fa-fw"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem; min-width: 230px;">

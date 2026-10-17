@@ -142,94 +142,101 @@ $pageHeaderSubtitle = "สรุปยอดวัตถุดิบคงคล
             <div class="dashboard-header-sticky px-3 pt-0">
                 <div class="card border-0 shadow-sm mb-0">
                     <div class="card-body p-2 bg-body-tertiary rounded">
-                        <div class="d-flex align-items-center justify-content-between gap-2 w-100 flex-nowrap toolbar-scroll-container py-1">
+                        <div class="d-flex align-items-center gap-2 w-100">
                             
-                            <div class="d-flex align-items-center gap-1.5 flex-nowrap flex-shrink-0">
-                                <div class="input-group input-group-sm shadow-sm" style="width: 210px; min-width: 160px;">
-                                    <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
-                                    <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Item No. หรือชื่อ...">
-                                    <button class="btn btn-outline-secondary border-secondary-subtle" type="button" onclick="loadDashboardData()" title="Refresh Data">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
-                                </div>
+                            <!-- Scrollable Region: Search, Sort, Filter, Return, Export -->
+                            <div class="toolbar-scroll-container d-flex flex-nowrap align-items-center flex-grow-1 py-1" style="gap: 6px;">
                                 
-                                <div class="dropdown flex-shrink-0">
-                                    <button class="btn btn-outline-secondary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center text-nowrap" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="height: 32px;" title="การเรียงลำดับ">
-                                        <i class="fas fa-sort-amount-down"></i> <small class="d-none d-sm-inline ms-1">Sort</small>
+                                <div class="d-flex align-items-center flex-nowrap flex-shrink-0" style="gap: 6px;">
+                                    <div class="input-group input-group-sm shadow-sm" style="width: 210px; min-width: 160px;">
+                                        <span class="input-group-text bg-white border-secondary-subtle text-secondary"><i class="fas fa-search"></i></span>
+                                        <input type="text" id="filterSearch" class="form-control border-secondary-subtle border-start-0 ps-0" placeholder="ค้นหา Item No. หรือชื่อ...">
+                                        <button class="btn btn-outline-secondary border-secondary-subtle" type="button" onclick="loadDashboardData()" title="Refresh Data">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="dropdown flex-shrink-0">
+                                        <button class="btn btn-outline-secondary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center text-nowrap" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" style="height: 32px;" title="การเรียงลำดับ">
+                                            <i class="fas fa-sort-amount-down"></i> <small class="d-none d-sm-inline ms-1">Sort</small>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.85rem;">
+                                            <li><button class="dropdown-item active" type="button" onclick="setSort('ZERO_LAST', this)"><i class="fas fa-box-open me-2 text-primary"></i>มีของขึ้นก่อน (0 ไว้ท้าย)</button></li>
+                                            <li><button class="dropdown-item" type="button" onclick="setSort('DEFAULT', this)"><i class="fas fa-sort-numeric-down me-2 text-secondary"></i>ติดลบ/0 ขึ้นก่อน</button></li>
+                                            <li><button class="dropdown-item" type="button" onclick="setSort('QTY_DESC', this)"><i class="fas fa-sort-amount-down me-2 text-secondary"></i>ยอดมาก ขึ้นก่อน</button></li>
+                                            <li><button class="dropdown-item" type="button" onclick="setSort('ITEM_ASC', this)"><i class="fas fa-sort-alpha-down me-2 text-secondary"></i>Item A-Z</button></li>
+                                        </ul>
+                                        <input type="hidden" id="sortFilter" value="ZERO_LAST">
+                                    </div>
+                                    
+                                    <button class="btn btn-outline-primary btn-sm shadow-sm flex-shrink-0 d-md-none" id="btnToggleCards" onclick="toggleMobileCards()" title="ซ่อน/แสดงยอดรวม" style="width: 32px; height: 32px; padding: 0;">
+                                        <i class="fas fa-chart-pie"></i>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.85rem;">
-                                        <li><button class="dropdown-item active" type="button" onclick="setSort('ZERO_LAST', this)"><i class="fas fa-box-open me-2 text-primary"></i>มีของขึ้นก่อน (0 ไว้ท้าย)</button></li>
-                                        <li><button class="dropdown-item" type="button" onclick="setSort('DEFAULT', this)"><i class="fas fa-sort-numeric-down me-2 text-secondary"></i>ติดลบ/0 ขึ้นก่อน</button></li>
-                                        <li><button class="dropdown-item" type="button" onclick="setSort('QTY_DESC', this)"><i class="fas fa-sort-amount-down me-2 text-secondary"></i>ยอดมาก ขึ้นก่อน</button></li>
-                                        <li><button class="dropdown-item" type="button" onclick="setSort('ITEM_ASC', this)"><i class="fas fa-sort-alpha-down me-2 text-secondary"></i>Item A-Z</button></li>
-                                    </ul>
-                                    <input type="hidden" id="sortFilter" value="ZERO_LAST">
-                                </div>
-                                
-                                <button class="btn btn-outline-primary btn-sm shadow-sm flex-shrink-0 d-md-none" id="btnToggleCards" onclick="toggleMobileCards()" title="ซ่อน/แสดงยอดรวม" style="width: 32px; height: 32px; padding: 0;">
-                                    <i class="fas fa-chart-pie"></i>
-                                </button>
 
-                                <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center flex-shrink-0 text-nowrap" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
-                                    <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
-                                </button>
+                                    <button class="btn btn-outline-primary btn-sm shadow-sm fw-bold px-2 d-flex align-items-center justify-content-center flex-shrink-0 text-nowrap" data-bs-toggle="modal" data-bs-target="#filterModal" style="height: 32px;">
+                                        <i class="fas fa-filter"></i> <small class="d-none d-sm-inline ms-1">Filters</small>
+                                    </button>
+                                </div>
+
+                                <div id="actionWrapper" class="d-flex align-items-center flex-nowrap flex-shrink-0 ms-auto" style="gap: 6px;">
+
+                                    <button class="btn btn-sm btn-outline-primary fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center flex-shrink-0 text-nowrap" onclick="openPrdReturnModal()" title="รับวัตถุดิบคืนจากฝ่ายผลิต (PRD)" style="height: 32px;">
+                                        <i class="fas fa-undo-alt me-1 text-primary"></i> <span class="d-none d-sm-inline">รับ</span>คืน<span class="d-none d-sm-inline">จาก PRD</span>
+                                    </button>
+
+                                    <button class="btn btn-sm fw-bold px-2 px-sm-3 py-1 rounded shadow transition-btn text-white border-0 d-none d-md-flex align-items-center flex-shrink-0 text-nowrap" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7); height: 32px;" onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();" title="สแกน">
+                                        <i class="fas fa-qrcode me-1"></i> สแกน
+                                    </button>
+                                    
+                                    <button class="btn btn-sm btn-outline-success fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center flex-shrink-0 text-nowrap" onclick="exportInventoryData()" style="height: 32px;" title="Export to Excel">
+                                        <i class="fas fa-file-excel me-1"></i> Export
+                                    </button>
+
+                                </div>
+                                
                             </div>
 
-                            <div id="actionWrapper" class="d-flex align-items-center gap-1.5 flex-nowrap flex-shrink-0 ms-auto">
-
-                                <button class="btn btn-sm btn-outline-primary fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center flex-shrink-0 text-nowrap" onclick="openPrdReturnModal()" title="รับวัตถุดิบคืนจากฝ่ายผลิต (PRD)" style="height: 32px;">
-                                    <i class="fas fa-undo-alt me-1 text-primary"></i> <span class="d-none d-sm-inline">รับ</span>คืน<span class="d-none d-sm-inline">จาก PRD</span>
+                            <!-- Pinned Action Menu (3 Dots / Kebab Menu) Outside Scroll Container -->
+                            <div class="dropdown flex-shrink-0">
+                                <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm position-relative d-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' title="เมนูเพิ่มเติม" aria-expanded="false" style="height: 32px; min-width: 36px;">
+                                    <i class="fas fa-ellipsis-v fa-fw"></i>
+                                    <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none" id="badgeTotalAlert" style="width: 12px; height: 12px;"></span>
                                 </button>
-
-                                <button class="btn btn-sm fw-bold px-2 px-sm-3 py-1 rounded shadow transition-btn text-white border-0 d-flex align-items-center flex-shrink-0 text-nowrap" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7); height: 32px;" onclick="if(typeof traceModalInstance !== 'undefined') traceModalInstance.show();" title="สแกน">
-                                    <i class="fas fa-qrcode me-1"></i> สแกน
-                                </button>
-                                
-                                <button class="btn btn-sm btn-outline-success fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center flex-shrink-0 text-nowrap" onclick="exportInventoryData()" style="height: 32px;" title="Export to Excel">
-                                    <i class="fas fa-file-excel me-1"></i> Export
-                                </button>
-
-                                <div class="dropdown flex-shrink-0">
-                                    <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm position-relative d-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" title="เมนูเพิ่มเติม" aria-expanded="false" style="height: 32px; min-width: 36px;">
-                                        <i class="fas fa-ellipsis-v fa-fw"></i>
-                                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none" id="badgeTotalAlert" style="width: 12px; height: 12px;"></span>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem; min-width: 250px;">
-                                        <li><h6 class="dropdown-header text-dark fw-bold"><i class="fas fa-tasks me-1"></i> จัดการระบบคลัง</h6></li>
-                                        <li>
-                                            <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold text-primary" href="#" onclick="openPrdReturnModal()">
-                                                <span><i class="fas fa-undo-alt text-primary fa-fw me-2"></i> รับของคืนจาก PRD</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="cycleCount.php" target="_blank">
-                                                <span><i class="fas fa-boxes text-info fa-fw me-2"></i> ตรวจนับสต็อก (Stock Check)</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="#" onclick="openApprovalModal()">
-                                                <span><i class="fas fa-clipboard-check text-warning fa-fw me-2"></i> อนุมัติปรับยอด</span>
-                                                <span class="badge bg-danger rounded-pill d-none" id="badgePendingCount">0</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="#" onclick="openConfirmTransferModal()">
-                                                <span><i class="fas fa-truck-loading text-info fa-fw me-2"></i> รายการรอโอนย้าย</span>
-                                                <span class="badge bg-danger rounded-pill d-none" id="badgeTransferCount">0</span>
-                                            </a>
-                                        </li>
-                                        <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="openCcHistoryModal()"><i class="fas fa-history text-secondary fa-fw me-2"></i> ประวัติปรับยอดสต็อก</a></li>
-                                        
-                                        <li><hr class="dropdown-divider"></li>
-                                        
-                                        <li><h6 class="dropdown-header text-dark fw-bold"><i class="fas fa-compass me-1"></i> เมนูนำทาง (Navigation)</h6></li>
-                                        <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10 text-primary" href="inventoryDashboard.php"><i class="fas fa-boxes fa-fw me-2"></i> Stock Inventory (ยอดคงคลัง)</a></li>
-                                        <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> Stock Receiving (รับเข้า/สร้าง Tag)</a></li>
-                                        <li><a class="dropdown-item py-2 fw-bold" href="stockTransaction.php"><i class="fas fa-history text-secondary fa-fw me-2"></i> Stock Transaction (ประวัติฯ)</a></li>
-                                        <li><a class="dropdown-item py-2 fw-bold text-success" href="tagHistory.php"><i class="fas fa-search-location fa-fw me-2"></i> Trace Tag (ค้นหาประวัติแท็ก)</a></li>
-                                    </ul>
-                                </div>
-
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" style="font-size: 0.85rem; min-width: 250px;">
+                                    <li><h6 class="dropdown-header text-dark fw-bold"><i class="fas fa-tasks me-1"></i> จัดการระบบคลัง</h6></li>
+                                    <li>
+                                        <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold text-primary" href="#" onclick="openPrdReturnModal()">
+                                            <span><i class="fas fa-undo-alt text-primary fa-fw me-2"></i> รับของคืนจาก PRD</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="cycleCount.php" target="_blank">
+                                            <span><i class="fas fa-boxes text-info fa-fw me-2"></i> ตรวจนับสต็อก (Stock Check)</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="#" onclick="openApprovalModal()">
+                                            <span><i class="fas fa-clipboard-check text-warning fa-fw me-2"></i> อนุมัติปรับยอด</span>
+                                            <span class="badge bg-danger rounded-pill d-none" id="badgePendingCount">0</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item py-2 d-flex justify-content-between align-items-center fw-bold" href="#" onclick="openConfirmTransferModal()">
+                                            <span><i class="fas fa-truck-loading text-info fa-fw me-2"></i> รายการรอโอนย้าย</span>
+                                            <span class="badge bg-danger rounded-pill d-none" id="badgeTransferCount">0</span>
+                                        </a>
+                                    </li>
+                                    <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="openCcHistoryModal()"><i class="fas fa-history text-secondary fa-fw me-2"></i> ประวัติปรับยอดสต็อก</a></li>
+                                    <li><a class="dropdown-item py-2 fw-bold text-success" href="#" onclick="exportInventoryData()"><i class="fas fa-file-excel fa-fw me-2 text-success"></i> Export to Excel</a></li>
+                                    
+                                    <li><hr class="dropdown-divider"></li>
+                                    
+                                    <li><h6 class="dropdown-header text-dark fw-bold"><i class="fas fa-compass me-1"></i> เมนูนำทาง (Navigation)</h6></li>
+                                    <li><a class="dropdown-item py-2 fw-bold bg-primary bg-opacity-10 text-primary" href="inventoryDashboard.php"><i class="fas fa-boxes fa-fw me-2"></i> Stock Inventory (ยอดคงคลัง)</a></li>
+                                    <li><a class="dropdown-item py-2 fw-bold" href="rmReceiving.php"><i class="fas fa-pallet text-secondary fa-fw me-2"></i> Stock Receiving (รับเข้า/สร้าง Tag)</a></li>
+                                    <li><a class="dropdown-item py-2 fw-bold" href="stockTransaction.php"><i class="fas fa-history text-secondary fa-fw me-2"></i> Stock Transaction (ประวัติฯ)</a></li>
+                                    <li><a class="dropdown-item py-2 fw-bold text-success" href="tagHistory.php"><i class="fas fa-search-location fa-fw me-2"></i> Trace Tag (ค้นหาประวัติแท็ก)</a></li>
+                                </ul>
                             </div>
                             
                         </div>
