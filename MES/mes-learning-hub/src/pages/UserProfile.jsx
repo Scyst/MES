@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getEmployeeCompetencyPassport } from '../data/trainingAuditStore';
 import { getCurrentUser, fetchRealUserSession } from '../data/communityStore';
 import { DEFAULT_AVATAR, DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
+import { useTheme } from '../context/ThemeContext';
 import { 
   FiArrowLeft, 
   FiAward, 
@@ -28,6 +29,7 @@ import {
 export default function UserProfile() {
   const { empId } = useParams();
   const navigate = useNavigate();
+  const { isDark } = useTheme();
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'passed' | 'mandatory' | 'in_progress' | 'posts'
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -69,7 +71,9 @@ export default function UserProfile() {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-xs sm:text-sm text-slate-400 hover:text-white transition-colors"
+          className={`inline-flex items-center gap-2 text-xs sm:text-sm transition-colors ${
+            isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 font-medium'
+          }`}
         >
           <FiArrowLeft /> ย้อนกลับ
         </button>
@@ -77,16 +81,24 @@ export default function UserProfile() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsPrintModalOpen(true)}
-            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-colors shadow-sm"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-colors shadow-sm ${
+              isDark
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
+                : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-300'
+            }`}
           >
-            <FiPrinter className="w-3.5 h-3.5 text-cyan-400" />
+            <FiPrinter className="w-3.5 h-3.5 text-cyan-500" />
             <span>พิมพ์พาสปอร์ตสมรรถนะ (Print Passport)</span>
           </button>
         </div>
       </div>
 
       {/* Industrial Plant ID Card / Employee Hero Badge */}
-      <div className="relative bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
+      <div className={`relative rounded-3xl p-6 sm:p-8 shadow-xl overflow-hidden border transition-all ${
+        isDark
+          ? 'bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-slate-700/80 shadow-2xl'
+          : 'bg-white border-slate-200 shadow-md'
+      }`}>
         {/* Ambient Corner Glow */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-fuchsia-600/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -108,29 +120,35 @@ export default function UserProfile() {
 
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                <h1 className={`text-xl sm:text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   {employee.name}
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-lg bg-slate-800 border border-slate-700 font-mono text-xs font-bold text-fuchsia-400 shadow-inner">
+                <span className={`px-2.5 py-0.5 rounded-lg font-mono text-xs font-bold ${
+                  isDark ? 'bg-slate-800 border border-slate-700 text-fuchsia-400 shadow-inner' : 'bg-slate-100 border border-slate-200 text-fuchsia-700'
+                }`}>
                   {employee.empId}
                 </span>
                 {currentUserIsMe && (
-                  <span className="px-2.5 py-0.5 rounded-full bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 text-[11px] font-bold">
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                    isDark ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30' : 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200'
+                  }`}>
                     บัญชีของคุณ
                   </span>
                 )}
                 {currentUser.isLoggedInReal && currentUserIsMe && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                    isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  }`}>
                     MES Live
                   </span>
                 )}
               </div>
 
-              <div className="text-sm font-semibold text-slate-300">
+              <div className={`text-sm font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 {employee.role}
               </div>
 
-              <div className="text-xs text-slate-400 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <div className={`text-xs flex flex-wrap items-center gap-x-4 gap-y-1 ${isDark ? 'text-slate-400' : 'text-slate-600 font-medium'}`}>
                 <span>🏢 {employee.department}</span>
                 <span>⏱️ {employee.shift}</span>
                 {employee.joinedDate && <span>📅 เริ่มงาน: {new Date(employee.joinedDate).toLocaleDateString('th-TH')}</span>}
@@ -143,13 +161,13 @@ export default function UserProfile() {
                 </span>
 
                 <div className="flex items-center gap-2.5">
-                  <div className="w-40 sm:w-48 bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
+                  <div className={`w-40 sm:w-48 rounded-full h-2 overflow-hidden border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-200 border-slate-300'}`}>
                     <div
                       className="bg-gradient-to-r from-fuchsia-500 to-amber-400 h-2 rounded-full transition-all duration-500"
                       style={{ width: `${rank.progressPercent}%` }}
                     ></div>
                   </div>
-                  <span className="text-xs font-mono font-bold text-amber-300">
+                  <span className={`text-xs font-mono font-bold ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
                     {exp} EXP
                   </span>
                 </div>
@@ -158,19 +176,23 @@ export default function UserProfile() {
           </div>
 
           {/* Right Status Badge */}
-          <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end gap-3 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-800">
+          <div className={`flex flex-col sm:flex-row lg:flex-col items-start lg:items-end gap-3 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
             <div className="text-left lg:text-right">
-              <div className="text-[11px] text-slate-400 font-medium uppercase tracking-wider mb-1">
+              <div className={`text-[11px] font-medium uppercase tracking-wider mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 สถานะความสอดคล้อง ISO 9001 Clause 7.2
               </div>
               {passport.isAuditReady ? (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-black shadow-sm">
-                  <FiCheck className="w-4 h-4 text-emerald-400" />
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-sm border ${
+                  isDark ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                }`}>
+                  <FiCheck className="w-4 h-4 text-emerald-500" />
                   <span>สมรรถนะพร้อมรับออดิท 100%</span>
                 </div>
               ) : (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-black shadow-sm">
-                  <FiAlertTriangle className="w-4 h-4 text-amber-400" />
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-sm border ${
+                  isDark ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-800'
+                }`}>
+                  <FiAlertTriangle className="w-4 h-4 text-amber-500" />
                   <span>ต้องอบรมเพิ่ม ({passport.skillGaps.length} วิชา)</span>
                 </div>
               )}
@@ -178,9 +200,13 @@ export default function UserProfile() {
 
             <Link
               to="/audit"
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-colors"
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-colors ${
+                isDark 
+                  ? 'bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border-slate-700' 
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300 hover:border-slate-400 shadow-sm'
+              }`}
             >
-              <FiShield className="w-3.5 h-3.5 text-cyan-400" />
+              <FiShield className="w-3.5 h-3.5 text-cyan-500" />
               <span>เปิดตรวจสอบใน Audit Matrix</span>
             </Link>
           </div>
@@ -189,54 +215,62 @@ export default function UserProfile() {
 
       {/* 4 Summary Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+        <div className={`rounded-2xl p-4 shadow-sm border transition-all ${
+          isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+        }`}>
+          <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             <span>หลักสูตรที่สำเร็จแล้ว</span>
-            <FiBookOpen className="text-fuchsia-400" />
+            <FiBookOpen className="text-fuchsia-500" />
           </div>
-          <div className="text-2xl font-black text-white">
-            {passport.totalPassedCount} <span className="text-xs text-slate-400 font-normal">/ {passport.totalCoursesCount} วิชา</span>
+          <div className={`text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            {passport.totalPassedCount} <span className={`text-xs font-normal ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>/ {passport.totalCoursesCount} วิชา</span>
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
+          <div className={`text-[11px] mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             ผ่านเกณฑ์แบบทดสอบ ≥80%
           </div>
         </div>
 
-        <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center justify-between text-cyan-400 text-xs font-semibold mb-2">
+        <div className={`rounded-2xl p-4 shadow-sm border transition-all ${
+          isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+        }`}>
+          <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${isDark ? 'text-cyan-400' : 'text-cyan-700 font-bold'}`}>
             <span>เกณฑ์บังคับตามตำแหน่ง</span>
-            <FiShield className="text-cyan-400" />
+            <FiShield className="text-cyan-500" />
           </div>
-          <div className="text-2xl font-black text-cyan-400">
+          <div className={`text-2xl font-black ${isDark ? 'text-cyan-400' : 'text-cyan-700'}`}>
             {passport.complianceRate}%
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
+          <div className={`text-[11px] mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             ผ่าน {passport.mandatoryPassedCount} จาก {passport.mandatoryCoursesCount} หลักสูตรบังคับ
           </div>
         </div>
 
-        <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center justify-between text-amber-400 text-xs font-semibold mb-2">
+        <div className={`rounded-2xl p-4 shadow-sm border transition-all ${
+          isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+        }`}>
+          <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${isDark ? 'text-amber-400' : 'text-amber-700 font-bold'}`}>
             <span>คะแนนสอบเฉลี่ย</span>
-            <FiAward className="text-amber-400" />
+            <FiAward className="text-amber-500" />
           </div>
-          <div className="text-2xl font-black text-amber-400">
+          <div className={`text-2xl font-black ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
             {passport.avgScorePercent}%
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
+          <div className={`text-[11px] mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             คะแนนเฉลี่ยจากการทำข้อสอบ
           </div>
         </div>
 
-        <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center justify-between text-rose-400 text-xs font-semibold mb-2">
+        <div className={`rounded-2xl p-4 shadow-sm border transition-all ${
+          isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+        }`}>
+          <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${isDark ? 'text-rose-400' : 'text-rose-700 font-bold'}`}>
             <span>องค์ความรู้ที่แบ่งปัน</span>
-            <FiHeart className="text-rose-400" />
+            <FiHeart className="text-rose-500" />
           </div>
-          <div className="text-2xl font-black text-white">
-            {userPosts.length} <span className="text-xs text-slate-400 font-normal">บทเรียน</span>
+          <div className={`text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            {userPosts.length} <span className={`text-xs font-normal ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>บทเรียน</span>
           </div>
-          <div className="text-[11px] text-rose-300/80 mt-1 flex items-center gap-1">
+          <div className={`text-[11px] mt-1 flex items-center gap-1 ${isDark ? 'text-rose-300/80' : 'text-rose-700 font-medium'}`}>
             <span>ได้รับ {totalLikesReceived} กำลังใจจากเพื่อนร่วมงาน</span>
           </div>
         </div>
@@ -244,24 +278,28 @@ export default function UserProfile() {
 
       {/* Skill Gap Alert Card (if missing mandatory courses) */}
       {passport.skillGaps.length > 0 && (
-        <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-5 shadow-sm space-y-3">
-          <div className="flex items-center gap-2 text-rose-300 font-bold text-sm">
-            <FiAlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+        <div className={`rounded-2xl p-5 shadow-sm space-y-3 border ${
+          isDark ? 'bg-rose-500/10 border-rose-500/30' : 'bg-rose-50 border-rose-300'
+        }`}>
+          <div className={`flex items-center gap-2 font-bold text-sm ${isDark ? 'text-rose-300' : 'text-rose-900'}`}>
+            <FiAlertTriangle className="w-5 h-5 text-rose-500 flex-shrink-0" />
             <span>หลักสูตรบังคับประจำตำแหน่งที่ยังไม่ผ่านเกณฑ์ (Mandatory Courses Required)</span>
           </div>
-          <p className="text-xs text-rose-200/80">
+          <p className={`text-xs ${isDark ? 'text-rose-200/80' : 'text-rose-800 font-medium'}`}>
             เพื่อให้มีความพร้อมในการปฏิบัติงานและสอดคล้องตามข้อกำหนด ISO 9001 ของฝ่าย {employee.department} กรุณาศึกษาและทำแบบทดสอบหลักสูตรเหล่านี้:
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
             {passport.skillGaps.map(gap => (
-              <div key={gap.courseId} className="bg-slate-900/90 border border-rose-500/20 rounded-xl p-3 flex items-center justify-between gap-3">
+              <div key={gap.courseId} className={`rounded-xl p-3 flex items-center justify-between gap-3 border ${
+                isDark ? 'bg-slate-900/90 border-rose-500/20' : 'bg-white border-rose-200 shadow-sm'
+              }`}>
                 <div className="min-w-0">
-                  <div className="font-bold text-white text-xs truncate">{gap.title}</div>
-                  <div className="text-[10px] text-slate-400">{gap.category} · {gap.duration}</div>
+                  <div className={`font-bold text-xs truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{gap.title}</div>
+                  <div className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-600 font-medium'}`}>{gap.category} · {gap.duration}</div>
                 </div>
                 <button
                   onClick={() => navigate(`/course/${gap.courseId}`)}
-                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0 shadow-sm"
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0 shadow-sm"
                 >
                   เริ่มเรียนทันที
                 </button>
@@ -273,14 +311,16 @@ export default function UserProfile() {
 
       {/* Navigation Filter Tabs for Courses */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+        <div className={`flex items-center justify-between border-b pb-2 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
           <div className="flex items-center gap-2 overflow-x-auto">
             <button
               onClick={() => setActiveFilter('all')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 activeFilter === 'all'
                   ? 'bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white shadow-md'
-                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80'
+                  : isDark 
+                    ? 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80 hover:bg-slate-700'
+                    : 'bg-white text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
               }`}
             >
               หลักสูตรทั้งหมด ({passport.courseStatusList.length})
@@ -291,7 +331,9 @@ export default function UserProfile() {
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 activeFilter === 'passed'
                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
-                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80'
+                  : isDark 
+                    ? 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80 hover:bg-slate-700'
+                    : 'bg-white text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
               }`}
             >
               ผ่านการอบรมแล้ว ({passport.totalPassedCount})
@@ -302,7 +344,9 @@ export default function UserProfile() {
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 activeFilter === 'mandatory'
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
-                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80'
+                  : isDark 
+                    ? 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80 hover:bg-slate-700'
+                    : 'bg-white text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
               }`}
             >
               หลักสูตรบังคับตำแหน่ง ({passport.mandatoryCoursesCount})
@@ -313,7 +357,9 @@ export default function UserProfile() {
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 activeFilter === 'in_progress'
                   ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md'
-                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80'
+                  : isDark 
+                    ? 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80 hover:bg-slate-700'
+                    : 'bg-white text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
               }`}
             >
               กำลังเรียน / ต้องสอบใหม่ ({passport.courseStatusList.filter(c => c.status === 'in_progress' || (!c.passed && c.status === 'failed')).length})
@@ -324,7 +370,9 @@ export default function UserProfile() {
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 activeFilter === 'posts'
                   ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-md'
-                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80'
+                  : isDark 
+                    ? 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80 hover:bg-slate-700'
+                    : 'bg-white text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
               }`}
             >
               บทเรียนที่เขียนแชร์ ({userPosts.length})
@@ -342,12 +390,18 @@ export default function UserProfile() {
               return (
                 <div
                   key={courseItem.courseId}
-                  className="bg-slate-800/90 border border-slate-700/80 hover:border-slate-600 rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all shadow-md group"
+                  className={`rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all group border ${
+                    isDark
+                      ? 'bg-slate-800/90 border-slate-700/80 hover:border-slate-600 shadow-md'
+                      : 'bg-white border-slate-200 hover:border-fuchsia-400 hover:shadow-lg shadow-sm'
+                  }`}
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-900 border border-slate-700 flex-shrink-0">
+                        <div className={`w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border ${
+                          isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-100 border-slate-200'
+                        }`}>
                           <img
                             src={courseItem.image || DEFAULT_COURSE_IMAGE}
                             alt={courseItem.title}
@@ -357,16 +411,22 @@ export default function UserProfile() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-fuchsia-400 uppercase tracking-wider">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                              isDark ? 'text-fuchsia-400' : 'text-fuchsia-700 font-extrabold'
+                            }`}>
                               {courseItem.category}
                             </span>
                             {courseItem.isMandatory && (
-                              <span className="px-2 py-0.2 rounded bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 text-[9px] font-bold">
+                              <span className={`px-2 py-0.2 rounded text-[9px] font-bold border ${
+                                isDark ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30' : 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200'
+                              }`}>
                                 บังคับตามตำแหน่ง
                               </span>
                             )}
                           </div>
-                          <h3 className="text-sm font-bold text-white truncate group-hover:text-fuchsia-300 transition-colors">
+                          <h3 className={`text-sm font-bold truncate transition-colors ${
+                            isDark ? 'text-white group-hover:text-fuchsia-300' : 'text-slate-900 group-hover:text-fuchsia-700'
+                          }`}>
                             {courseItem.title}
                           </h3>
                         </div>
@@ -375,45 +435,59 @@ export default function UserProfile() {
                       {/* Status Badge */}
                       <div className="flex-shrink-0">
                         {isPassed ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">
-                            <FiCheck className="w-3 h-3" /> ผ่านเกณฑ์
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                            isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          }`}>
+                            <FiCheck className="w-3 h-3 text-emerald-500" /> ผ่านเกณฑ์
                           </span>
                         ) : courseItem.status === 'in_progress' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[11px] font-bold">
-                            <FiClock className="w-3 h-3" /> กำลังเรียน
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                            isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-300'
+                          }`}>
+                            <FiClock className="w-3 h-3 text-amber-500" /> กำลังเรียน
                           </span>
                         ) : courseItem.status === 'failed' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30 text-[11px] font-bold">
-                            <FiX className="w-3 h-3" /> ต้องสอบใหม่
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                            isDark ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-800 border-rose-300'
+                          }`}>
+                            <FiX className="w-3 h-3 text-rose-500" /> ต้องสอบใหม่
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-[11px]">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
+                            isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300'
+                          }`}>
                             ยังไม่เข้าเรียน
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                    <p className={`text-xs line-clamp-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                       {courseItem.description}
                     </p>
 
                     {/* Score and Certificate Details Box */}
                     {hasScore && (
-                      <div className="bg-slate-900/90 rounded-xl p-3 border border-slate-750 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className={`rounded-xl p-3 border flex flex-wrap items-center justify-between gap-2 text-xs ${
+                        isDark ? 'bg-slate-900/90 border-slate-750' : 'bg-slate-50 border-slate-200'
+                      }`}>
                         <div className="flex items-center gap-2">
-                          <span className="text-slate-400">ผลการทดสอบ:</span>
-                          <span className={`font-bold font-mono px-2 py-0.5 rounded ${
-                            isPassed ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                          <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>ผลการทดสอบ:</span>
+                          <span className={`font-bold font-mono px-2 py-0.5 rounded border ${
+                            isPassed 
+                              ? isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                              : isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : 'bg-rose-100 text-rose-800 border-rose-300'
                           }`}>
                             {courseItem.scoreDisplay} ({courseItem.quizPercentage}%)
                           </span>
                         </div>
 
                         {courseItem.certificateId !== '-' && (
-                          <div className="flex items-center gap-1 text-[11px] text-cyan-400 font-mono">
+                          <div className={`flex items-center gap-1 text-[11px] font-mono ${isDark ? 'text-cyan-400' : 'text-cyan-800'}`}>
                             <span>Cert:</span>
-                            <span className="bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
+                            <span className={`px-2 py-0.5 rounded border font-bold ${
+                              isDark ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20' : 'bg-cyan-50 text-cyan-800 border-cyan-300'
+                            }`}>
                               {courseItem.certificateId}
                             </span>
                           </div>
@@ -423,7 +497,9 @@ export default function UserProfile() {
                   </div>
 
                   {/* Card Footer */}
-                  <div className="pt-3 mt-3 border-t border-slate-700/80 flex items-center justify-between text-xs text-slate-400">
+                  <div className={`pt-3 mt-3 border-t flex items-center justify-between text-xs ${
+                    isDark ? 'border-slate-700/80 text-slate-400' : 'border-slate-100 text-slate-600'
+                  }`}>
                     <div>
                       {courseItem.completedDate !== '-' ? (
                         <span>จบเมื่อ: {courseItem.completedDate}</span>
@@ -434,7 +510,11 @@ export default function UserProfile() {
 
                     <button
                       onClick={() => navigate(`/course/${courseItem.courseId}`)}
-                      className="px-3 py-1.5 bg-slate-700 hover:bg-fuchsia-600 hover:text-white text-slate-200 rounded-xl font-semibold transition-all inline-flex items-center gap-1.5"
+                      className={`px-3 py-1.5 rounded-xl font-semibold transition-all inline-flex items-center gap-1.5 ${
+                        isDark 
+                          ? 'bg-slate-700 hover:bg-fuchsia-600 hover:text-white text-slate-200' 
+                          : 'bg-slate-100 hover:bg-fuchsia-600 hover:text-white text-slate-800 border border-slate-300 hover:border-fuchsia-600 shadow-sm'
+                      }`}
                     >
                       <span>{isPassed ? 'ทบทวนบทเรียน' : 'เริ่มเรียนหลักสูตร'}</span>
                       <FiChevronRight className="w-3.5 h-3.5" />
@@ -454,35 +534,43 @@ export default function UserProfile() {
                 <div
                   key={post.id}
                   onClick={() => navigate(`/community/${post.id}`)}
-                  className="bg-slate-800/90 border border-slate-700/80 hover:border-fuchsia-500/50 rounded-2xl p-5 cursor-pointer transition-all hover:shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                  className={`border rounded-2xl p-5 cursor-pointer transition-all hover:shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+                    isDark
+                      ? 'bg-slate-800/90 border-slate-700/80 hover:border-fuchsia-500/50'
+                      : 'bg-white border-slate-200 hover:border-fuchsia-400 shadow-sm'
+                  }`}
                 >
                   <div className="space-y-1.5 min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-fuchsia-400">
+                      <span className={`text-xs font-bold ${isDark ? 'text-fuchsia-400' : 'text-fuchsia-700'}`}>
                         {post.category}
                       </span>
                       {post.isOfficial && (
-                        <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                          isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-300'
+                        }`}>
                           ยกระดับเป็นหลักสูตรมาตรฐานแล้ว
                         </span>
                       )}
                     </div>
-                    <h3 className="text-base font-bold text-white hover:text-fuchsia-300 transition-colors">
+                    <h3 className={`text-base font-bold transition-colors ${
+                      isDark ? 'text-white hover:text-fuchsia-300' : 'text-slate-900 hover:text-fuchsia-700'
+                    }`}>
                       {post.title}
                     </h3>
-                    <p className="text-xs text-slate-400 line-clamp-2">
+                    <p className={`text-xs line-clamp-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                       {post.summary}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-4 text-xs text-slate-400 flex-shrink-0">
-                    <span className="flex items-center gap-1 text-rose-400">
+                  <div className={`flex items-center gap-4 text-xs flex-shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <span className="flex items-center gap-1 text-rose-500 font-semibold">
                       <FiHeart /> {post.likesCount || 0} เป็นประโยชน์
                     </span>
                     <span>
                       {post.steps?.length || 0} ขั้นตอน
                     </span>
-                    <span className="text-fuchsia-400 font-bold inline-flex items-center gap-1">
+                    <span className={`font-bold inline-flex items-center gap-1 ${isDark ? 'text-fuchsia-400' : 'text-fuchsia-700'}`}>
                       <span>อ่านคู่มือ</span>
                       <FiChevronRight />
                     </span>
@@ -490,10 +578,12 @@ export default function UserProfile() {
                 </div>
               ))
             ) : (
-              <div className="p-12 text-center bg-slate-800/40 rounded-2xl border border-slate-700">
-                <FiBookOpen className="w-12 h-12 text-slate-500 mx-auto mb-3" />
-                <h4 className="text-sm font-bold text-slate-200 mb-1">ยังไม่มีบทเรียนที่เขียนแชร์</h4>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto mb-4">
+              <div className={`p-12 text-center rounded-2xl border ${
+                isDark ? 'bg-slate-800/40 border-slate-700' : 'bg-white border-slate-200 shadow-sm'
+              }`}>
+                <FiBookOpen className={`w-12 h-12 mx-auto mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                <h4 className={`text-sm font-bold mb-1 ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>ยังไม่มีบทเรียนที่เขียนแชร์</h4>
+                <p className={`text-xs max-w-sm mx-auto mb-4 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   {currentUserIsMe 
                     ? 'คุณสามารถเขียนแชร์เทคนิคหน้างาน หรือขั้นตอนการแก้ปัญหาเครื่องจักรเพื่อรับ +50 EXP ได้ทันที!' 
                     : 'พนักงานท่านนี้ยังไม่ได้เขียนบทเรียนในคลังความรู้ชุมชน'}
@@ -501,7 +591,7 @@ export default function UserProfile() {
                 {currentUserIsMe && (
                   <button
                     onClick={() => navigate('/community/new')}
-                    className="px-4 py-2 bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white rounded-xl text-xs font-bold"
+                    className="px-4 py-2 bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white rounded-xl text-xs font-bold shadow-md hover:from-fuchsia-500 hover:to-violet-500 transition-all"
                   >
                     เริ่มเขียนบทเรียนแรก
                   </button>
