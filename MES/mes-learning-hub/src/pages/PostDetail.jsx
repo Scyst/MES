@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 import { 
   getCommunityPosts, 
   likeCommunityPost, 
@@ -38,6 +39,7 @@ const OFFICIAL_CATEGORIES = [
 ];
 
 export default function PostDetail() {
+  const { isDark } = useTheme();
   const { postId } = useParams();
   const navigate = useNavigate();
   const [currentUser] = useState(() => getCurrentUser());
@@ -166,24 +168,28 @@ export default function PostDetail() {
       {/* Promote to Official Modal */}
       {isPromoteModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 md:p-8 max-w-lg w-full shadow-2xl animate-in fade-in">
-            <div className="flex items-center gap-3 mb-4 text-amber-400">
+          <div className={`border rounded-2xl p-6 md:p-8 max-w-lg w-full shadow-2xl animate-in fade-in ${
+            isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'
+          }`}>
+            <div className="flex items-center gap-3 mb-4 text-amber-500">
               <FiStar className="w-7 h-7" />
-              <h3 className="text-lg font-bold text-white">ยกระดับเป็นหลักสูตรมาตรฐานโรงงาน</h3>
+              <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>ยกระดับเป็นหลักสูตรมาตรฐานโรงงาน</h3>
             </div>
-            <p className="text-xs text-slate-300 mb-6 leading-relaxed">
+            <p className={`text-xs mb-6 leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
               การอนุมัตินี้จะนำเนื้อหาและขั้นตอนของบทความนี้ไปแสดงใน <strong>"หลักสูตรมาตรฐาน (Standard Curriculum)"</strong> ของโรงงาน เพื่อให้พนักงานและช่างทุกคนใช้เรียนรู้ และจะมอบโบนัสเกียรติยศ <strong>+200 EXP</strong> ให้กับผู้เขียนบทความทันที
             </p>
 
             <div className="space-y-4 mb-6">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label className={`block text-xs font-semibold mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                   บรรจุเข้าหมวดหมู่หลักสูตร
                 </label>
                 <select
                   value={promoteCategory}
                   onChange={(e) => setPromoteCategory(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
+                  className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-400 ${
+                    isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900 shadow-sm'
+                  }`}
                 >
                   {OFFICIAL_CATEGORIES.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -192,7 +198,7 @@ export default function PostDetail() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label className={`block text-xs font-semibold mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                   ระยะเวลาที่แนะนำในการศึกษา
                 </label>
                 <input 
@@ -200,16 +206,20 @@ export default function PostDetail() {
                   value={promoteDuration}
                   onChange={(e) => setPromoteDuration(e.target.value)}
                   placeholder="เช่น 15 นาที, 30 นาที"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
+                  className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-400 ${
+                    isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900 shadow-sm'
+                  }`}
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+            <div className={`flex items-center justify-end gap-3 pt-4 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
                 onClick={() => setIsPromoteModalOpen(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition-colors"
+                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                  isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
               >
                 ยกเลิก
               </button>
@@ -231,7 +241,9 @@ export default function PostDetail() {
       <div className="mb-6 flex items-center justify-between">
         <button 
           onClick={() => navigate('/community')}
-          className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+          className={`inline-flex items-center gap-2 text-sm transition-colors ${
+            isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+          }`}
         >
           <FiArrowLeft /> กลับสู่คลังความรู้ชุมชน
         </button>
@@ -240,24 +252,34 @@ export default function PostDetail() {
           {post.isOfficial ? (
             <Link
               to={`/course/c-promoted-${post.id}`}
-              className="text-xs font-bold text-amber-300 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/30 flex items-center gap-1.5 hover:bg-amber-500/20 transition-colors"
+              className={`text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 transition-colors ${
+                isDark 
+                  ? 'text-amber-300 bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20' 
+                  : 'text-amber-900 bg-amber-50 border-amber-300 hover:bg-amber-100 shadow-sm'
+              }`}
             >
-              <FiAward className="w-4 h-4 text-amber-400" />
+              <FiAward className="w-4 h-4 text-amber-500" />
               <span>หลักสูตรมาตรฐานโรงงาน</span>
               <FiExternalLink className="w-3 h-3 ml-0.5" />
             </Link>
           ) : (
             <button
               onClick={() => setIsPromoteModalOpen(true)}
-              className="text-xs font-bold text-amber-300 hover:text-amber-200 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full border border-amber-500/40 flex items-center gap-1.5 transition-colors shadow-sm"
+              className={`text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 transition-colors shadow-sm ${
+                isDark 
+                  ? 'text-amber-300 hover:text-amber-200 bg-slate-800 hover:bg-slate-700 border-amber-500/40' 
+                  : 'text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border-amber-300'
+              }`}
               title="อนุมัติยกระดับบทเรียนนี้เป็นหลักสูตรทางการ"
             >
-              <FiStar className="w-3.5 h-3.5 text-amber-400" />
+              <FiStar className="w-3.5 h-3.5 text-amber-500" />
               <span>ยกระดับเป็นหลักสูตรทางการ</span>
             </button>
           )}
 
-          <span className="text-xs font-semibold text-fuchsia-400 bg-fuchsia-500/10 px-3 py-1.5 rounded-full border border-fuchsia-500/20">
+          <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${
+            isDark ? 'text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20' : 'text-fuchsia-800 bg-fuchsia-50 border-fuchsia-300'
+          }`}>
             {post.category}
           </span>
         </div>
@@ -265,12 +287,16 @@ export default function PostDetail() {
 
       {/* Promoted Golden Banner if Official */}
       {post.isOfficial && (
-        <div className="p-4 mb-6 rounded-2xl bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-amber-500/10 border border-amber-500/30 text-amber-200 flex items-center justify-between gap-4">
+        <div className={`p-4 mb-6 rounded-2xl border flex items-center justify-between gap-4 ${
+          isDark 
+            ? 'bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-amber-500/10 border-amber-500/30 text-amber-200' 
+            : 'bg-amber-50 border-amber-300 text-amber-950 shadow-sm'
+        }`}>
           <div className="flex items-center gap-3">
             <span className="text-2xl">🏅</span>
             <div>
-              <h4 className="text-sm font-bold text-white">ได้รับการรับรองเป็นหลักสูตรมาตรฐานโรงงาน (Official Certified)</h4>
-              <p className="text-xs text-amber-300/80">บทเรียนนี้ได้รับการคัดเลือกและยกระดับเข้าสู่ระบบหลักสูตรมาตรฐานเรียบร้อยแล้ว</p>
+              <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-amber-950'}`}>ได้รับการรับรองเป็นหลักสูตรมาตรฐานโรงงาน (Official Certified)</h4>
+              <p className={`text-xs ${isDark ? 'text-amber-300/80' : 'text-amber-800'}`}>บทเรียนนี้ได้รับการคัดเลือกและยกระดับเข้าสู่ระบบหลักสูตรมาตรฐานเรียบร้อยแล้ว</p>
             </div>
           </div>
           <Link
@@ -284,12 +310,16 @@ export default function PostDetail() {
       )}
 
       {/* Main Post Content Card */}
-      <div className="bg-slate-800/90 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl mb-8">
+      <div className={`border rounded-2xl p-6 md:p-8 mb-8 ${
+        isDark ? 'bg-slate-800/90 border-slate-700 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
         {/* Cover Photo */}
         {post.coverImage && (
           <div 
             onClick={() => setZoomedImage(post.coverImage)}
-            className="relative mb-6 rounded-2xl overflow-hidden border border-slate-700 max-h-80 cursor-zoom-in group"
+            className={`relative mb-6 rounded-2xl overflow-hidden border max-h-80 cursor-zoom-in group ${
+              isDark ? 'border-slate-700' : 'border-slate-200'
+            }`}
           >
             <img 
               src={post.coverImage} 
@@ -304,17 +334,25 @@ export default function PostDetail() {
         )}
 
         {/* Post Title */}
-        <h1 className="text-2xl md:text-3xl font-black text-white mb-4 leading-tight">
+        <h1 className={`text-2xl md:text-3xl font-black mb-4 leading-tight ${
+          isDark ? 'text-white' : 'text-slate-900'
+        }`}>
           {post.title}
         </h1>
 
         {/* Post Summary Callout */}
-        <div className="p-4 bg-slate-900/80 rounded-xl border-l-4 border-fuchsia-500 mb-6 text-slate-300 text-sm leading-relaxed">
+        <div className={`p-4 rounded-xl border-l-4 border-fuchsia-500 mb-6 text-sm leading-relaxed ${
+          isDark 
+            ? 'bg-slate-900/80 text-slate-300' 
+            : 'bg-fuchsia-50/50 text-slate-800 border border-slate-200 border-l-4 border-l-fuchsia-500'
+        }`}>
           {post.summary}
         </div>
 
         {/* Author Profile Strip */}
-        <div className="flex items-center justify-between gap-4 py-4 border-y border-slate-700/80 mb-8">
+        <div className={`flex items-center justify-between gap-4 py-4 border-y mb-8 ${
+          isDark ? 'border-slate-700/80' : 'border-slate-200'
+        }`}>
           <div 
             onClick={() => navigate(`/profile/${post.author.emp_id || post.author.id}`)}
             className="flex items-center gap-3 cursor-pointer group/author hover:opacity-90 transition-opacity"
@@ -324,23 +362,27 @@ export default function PostDetail() {
               src={post.author.avatar} 
               alt={post.author.name} 
               onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
-              className="w-12 h-12 rounded-xl object-cover border-2 border-slate-600 group-hover/author:border-fuchsia-400 shadow transition-colors"
+              className={`w-12 h-12 rounded-xl object-cover border-2 group-hover/author:border-fuchsia-400 shadow transition-colors ${
+                isDark ? 'border-slate-600' : 'border-slate-300'
+              }`}
             />
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-white font-bold text-sm group-hover/author:text-fuchsia-300 transition-colors flex items-center gap-1.5">
+                <span className={`font-bold text-sm transition-colors flex items-center gap-1.5 ${
+                  isDark ? 'text-white group-hover/author:text-fuchsia-300' : 'text-slate-900 group-hover/author:text-fuchsia-700'
+                }`}>
                   <span>{post.author.name}</span>
-                  <FiExternalLink className="w-3.5 h-3.5 text-fuchsia-400 opacity-0 group-hover/author:opacity-100 transition-opacity" />
+                  <FiExternalLink className="w-3.5 h-3.5 text-fuchsia-500 opacity-0 group-hover/author:opacity-100 transition-opacity" />
                 </span>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold text-white bg-gradient-to-r ${authorRank.color} border border-white/20`}>
                   {authorRank.badge} Lv.{authorRank.level} {authorRank.name}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">{post.author.role}</p>
+              <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{post.author.role}</p>
             </div>
           </div>
 
-          <div className="text-right text-xs text-slate-400 flex flex-col items-end">
+          <div className={`text-right text-xs flex flex-col items-end ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             <span className="flex items-center gap-1">
               <FiClock className="w-3.5 h-3.5" />
               {new Date(post.createdAt).toLocaleDateString('th-TH', { 
@@ -349,31 +391,39 @@ export default function PostDetail() {
                 year: 'numeric' 
               })}
             </span>
-            <span className="text-[11px] text-slate-500 mt-0.5">{post.viewsCount || 1} ครั้งที่เปิดอ่าน</span>
+            <span className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{post.viewsCount || 1} ครั้งที่เปิดอ่าน</span>
           </div>
         </div>
 
         {/* Steps List */}
         <div className="space-y-6 mb-8">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <FiBookOpen className="text-fuchsia-400" /> ขั้นตอนการปฏิบัติงาน
+          <h2 className={`text-lg font-bold flex items-center gap-2 ${
+            isDark ? 'text-white' : 'text-slate-900'
+          }`}>
+            <FiBookOpen className="text-fuchsia-500" /> ขั้นตอนการปฏิบัติงาน
           </h2>
 
           {post.steps?.map((step, idx) => {
             return (
               <div 
                 key={idx}
-                className="bg-slate-900/70 border border-slate-700/80 rounded-2xl p-5 md:p-6"
+                className={`border rounded-2xl p-5 md:p-6 shadow-sm ${
+                  isDark ? 'bg-slate-900/70 border-slate-700/80' : 'bg-slate-50 border-slate-200'
+                }`}
               >
                 <div className="flex items-start gap-4">
                   <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-fuchsia-600 to-violet-600 text-white font-black text-sm flex items-center justify-center flex-shrink-0 shadow-md">
                     {step.number || idx + 1}
                   </div>
                   <div className="flex-1 space-y-3">
-                    <h3 className="text-base font-bold text-white m-0">
+                    <h3 className={`text-base font-bold m-0 ${
+                      isDark ? 'text-white' : 'text-slate-900'
+                    }`}>
                       {step.title}
                     </h3>
-                    <p className="text-sm text-slate-300 leading-relaxed m-0">
+                    <p className={`text-sm leading-relaxed m-0 ${
+                      isDark ? 'text-slate-300' : 'text-slate-700'
+                    }`}>
                       {step.desc}
                     </p>
 
@@ -381,7 +431,9 @@ export default function PostDetail() {
                     {step.image && (
                       <div 
                         onClick={() => setZoomedImage(step.image)}
-                        className="relative rounded-xl overflow-hidden border border-slate-700 max-w-lg mt-3 cursor-zoom-in group"
+                        className={`relative rounded-xl overflow-hidden border max-w-lg mt-3 cursor-zoom-in group ${
+                          isDark ? 'border-slate-700' : 'border-slate-300'
+                        }`}
                       >
                         <img 
                           src={step.image} 
@@ -398,17 +450,17 @@ export default function PostDetail() {
                     {step.alertType && step.alertType !== 'none' && step.alertText && (
                       <div className={`p-3.5 rounded-xl text-xs leading-relaxed flex items-start gap-2.5 mt-2 ${
                         step.alertType === 'danger' 
-                          ? 'bg-rose-500/10 border border-rose-500/30 text-rose-300' 
+                          ? (isDark ? 'bg-rose-500/10 border border-rose-500/30 text-rose-300' : 'bg-rose-50 border border-rose-300 text-rose-900') 
                           : step.alertType === 'warning'
-                          ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300'
+                          ? (isDark ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300' : 'bg-amber-50 border border-amber-300 text-amber-900')
                           : step.alertType === 'success'
-                          ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'
-                          : 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-300'
+                          ? (isDark ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border border-emerald-300 text-emerald-900')
+                          : (isDark ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-300' : 'bg-sky-50 border border-sky-300 text-sky-900')
                       }`}>
-                        {step.alertType === 'danger' && <FiAlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />}
-                        {step.alertType === 'warning' && <FiAlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />}
-                        {step.alertType === 'success' && <FiCheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />}
-                        {step.alertType === 'info' && <FiInfo className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />}
+                        {step.alertType === 'danger' && <FiAlertTriangle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />}
+                        {step.alertType === 'warning' && <FiAlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />}
+                        {step.alertType === 'success' && <FiCheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />}
+                        {step.alertType === 'info' && <FiInfo className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" />}
                         <span><strong>{
                           step.alertType === 'danger' ? 'ข้อควรระวังความปลอดภัย: ' :
                           step.alertType === 'warning' ? 'จุดควรระวัง: ' :
@@ -424,23 +476,27 @@ export default function PostDetail() {
         </div>
 
         {/* Upvote & Interaction Toolbar */}
-        <div className="pt-6 border-t border-slate-700/80 flex flex-wrap items-center justify-between gap-4">
+        <div className={`pt-6 border-t flex flex-wrap items-center justify-between gap-4 ${
+          isDark ? 'border-slate-700/80' : 'border-slate-200'
+        }`}>
           <button
             onClick={handleLike}
             className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all inline-flex items-center gap-2 ${
               isLiked 
                 ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30' 
-                : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                : (isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300')
             }`}
           >
             <FiHeart className={`w-4 h-4 ${isLiked ? 'fill-white' : ''}`} />
             <span>{isLiked ? 'เป็นประโยชน์แล้ว' : 'เป็นประโยชน์ (+5 EXP)'}</span>
-            <span className="bg-black/30 px-2 py-0.5 rounded-full text-xs font-mono ml-1">
+            <span className={`px-2 py-0.5 rounded-full text-xs font-mono ml-1 ${
+              isLiked ? 'bg-black/30' : (isDark ? 'bg-black/30' : 'bg-slate-200 text-slate-800')
+            }`}>
               {post.likesCount || 0}
             </span>
           </button>
 
-          <div className="text-xs text-slate-400 flex items-center gap-1.5">
+          <div className={`text-xs flex items-center gap-1.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             <FiEye className="w-4 h-4" />
             <span>{post.viewsCount || 1} ครั้งที่เปิดอ่าน</span>
           </div>
@@ -448,9 +504,13 @@ export default function PostDetail() {
       </div>
 
       {/* Comments & Discussion Section */}
-      <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl">
-        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-          <FiMessageSquare className="text-fuchsia-400" /> 
+      <div className={`border rounded-2xl p-6 md:p-8 shadow-sm ${
+        isDark ? 'bg-slate-800/80 border-slate-700 shadow-xl' : 'bg-white border-slate-200'
+      }`}>
+        <h2 className={`text-xl font-bold mb-6 flex items-center gap-2 ${
+          isDark ? 'text-white' : 'text-slate-900'
+        }`}>
+          <FiMessageSquare className="text-fuchsia-500" /> 
           <span>แลกเปลี่ยนความคิดเห็น / สอบถาม ({post.comments?.length || 0})</span>
         </h2>
 
@@ -461,7 +521,9 @@ export default function PostDetail() {
               src={currentUser.avatar} 
               alt={currentUser.name} 
               onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
-              className="w-10 h-10 rounded-full object-cover border border-slate-600 flex-shrink-0"
+              className={`w-10 h-10 rounded-full object-cover border flex-shrink-0 ${
+                isDark ? 'border-slate-600' : 'border-slate-300'
+              }`}
             />
             <div className="flex-1 space-y-2">
               <textarea 
@@ -469,13 +531,17 @@ export default function PostDetail() {
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="พิมพ์ข้อความแสดงความคิดเห็น หรือแชร์ทริคเพิ่มเติมที่จุดนี้ (+5 EXP)..."
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-fuchsia-500"
+                className={`w-full border rounded-xl p-3 text-sm focus:outline-none focus:border-fuchsia-500 ${
+                  isDark 
+                    ? 'bg-slate-900 border-slate-700 text-white placeholder-slate-500' 
+                    : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 shadow-inner'
+                }`}
               />
               <div className="flex justify-end">
                 <button
                   type="submit"
                   disabled={!commentText.trim()}
-                  className="px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-2 disabled:opacity-40"
+                  className="px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-2 disabled:opacity-40 shadow-sm"
                 >
                   <FiSend className="w-3.5 h-3.5" /> ส่งความเห็น
                 </button>
@@ -488,28 +554,32 @@ export default function PostDetail() {
         {post.comments && post.comments.length > 0 ? (
           <div className="space-y-4">
             {post.comments.map(c => (
-              <div key={c.id} className="p-4 bg-slate-900/60 rounded-xl border border-slate-700/60">
+              <div key={c.id} className={`p-4 rounded-xl border ${
+                isDark ? 'bg-slate-900/60 border-slate-700/60' : 'bg-slate-50 border-slate-200'
+              }`}>
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-white">{c.authorName}</span>
+                    <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{c.authorName}</span>
                     {c.authorBadge && (
-                      <span className="text-[10px] text-amber-300 font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                        isDark ? 'text-amber-300 bg-amber-500/10 border-amber-500/20' : 'text-amber-800 bg-amber-50 border-amber-300'
+                      }`}>
                         {c.authorBadge}
                       </span>
                     )}
                   </div>
-                  <span className="text-[10px] text-slate-500">
+                  <span className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                     {new Date(c.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
                   </span>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed m-0">
+                <p className={`text-xs leading-relaxed m-0 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                   {c.content}
                 </p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-xs text-slate-500 text-center py-4">
+          <p className={`text-xs text-center py-4 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
             ยังไม่มีความคิดเห็น เป็นคนแรกที่ร่วมแลกเปลี่ยนในหัวข้อนี้!
           </p>
         )}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 import { 
   getCommunityPosts, 
   getCurrentUser, 
-  calculateRank,
+  calculateRank, 
   fetchRealUserSession 
 } from '../data/communityStore';
 import { DEFAULT_AVATAR, DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
@@ -34,6 +35,7 @@ const COMMUNITY_CATEGORIES = [
 ];
 
 export default function CommunityHub() {
+  const { isDark } = useTheme();
   const navigate = useNavigate();
   const [posts, setPosts] = useState(() => getCommunityPosts());
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
@@ -68,7 +70,11 @@ export default function CommunityHub() {
   return (
     <div className="learning-container">
       {/* User Gamification & Level Status Card */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700 rounded-2xl p-6 mb-8 shadow-lg shadow-black/20">
+      <div className={`border rounded-2xl p-6 mb-8 shadow-sm ${
+        isDark 
+          ? 'bg-gradient-to-r from-slate-800 to-slate-900 border-slate-700 shadow-lg shadow-black/20' 
+          : 'bg-gradient-to-r from-slate-50 via-white to-slate-50 border-slate-200 text-slate-800'
+      }`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -84,29 +90,33 @@ export default function CommunityHub() {
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-white font-bold text-lg">{currentUser.name}</span>
+                <span className={`font-bold text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>{currentUser.name}</span>
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold text-white bg-gradient-to-r ${rank.color} border border-white/20 shadow-sm`}>
                   Lv.{rank.level} {rank.name}
                 </span>
                 {currentUser.isLoggedInReal && (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                  }`}>
                     MES Live
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400">{currentUser.role} · {currentUser.emp_id}</p>
+              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{currentUser.role} · {currentUser.emp_id}</p>
               
               {/* EXP Progress Bar */}
               <div className="mt-2.5 flex items-center gap-3">
-                <div className="w-48 bg-slate-700/80 rounded-full h-2.5 overflow-hidden border border-slate-600">
+                <div className={`w-48 rounded-full h-2.5 overflow-hidden border ${
+                  isDark ? 'bg-slate-700/80 border-slate-600' : 'bg-slate-200 border-slate-300'
+                }`}>
                   <div 
                     className="bg-gradient-to-r from-fuchsia-500 to-amber-400 h-2.5 rounded-full transition-all duration-500"
                     style={{ width: `${rank.progressPercent}%` }}
                   ></div>
                 </div>
-                <span className="text-[11px] font-mono font-bold text-amber-300">
+                <span className={`text-[11px] font-mono font-bold ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
                   {currentUser.exp} EXP
-                  {rank.nextRank && <span className="text-slate-400 font-normal"> (ขาดอีก {rank.expNeeded} EXP สู่ Lv.{rank.nextRank.level})</span>}
+                  {rank.nextRank && <span className={isDark ? 'text-slate-400 font-normal' : 'text-slate-500 font-normal'}> (ขาดอีก {rank.expNeeded} EXP สู่ Lv.{rank.nextRank.level})</span>}
                 </span>
               </div>
             </div>
@@ -124,19 +134,27 @@ export default function CommunityHub() {
 
             <button
               onClick={() => navigate('/profile')}
-              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-xl text-sm font-semibold transition-colors inline-flex items-center gap-2"
+              className={`px-4 py-3 rounded-xl text-sm font-semibold transition-colors inline-flex items-center gap-2 border ${
+                isDark 
+                  ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white' 
+                  : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm'
+              }`}
               title="ดูประวัติการอบรมและสมรรถนะ (Competency Passport)"
             >
-              <FiShield className="w-4 h-4 text-cyan-400" />
+              <FiShield className="w-4 h-4 text-cyan-500" />
               <span className="hidden sm:inline">โปรไฟล์ &amp; สมรรถนะ</span>
             </button>
 
             <button
               onClick={() => navigate('/ranks')}
-              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-xl text-sm font-semibold transition-colors inline-flex items-center gap-2"
+              className={`px-4 py-3 rounded-xl text-sm font-semibold transition-colors inline-flex items-center gap-2 border ${
+                isDark 
+                  ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white' 
+                  : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm'
+              }`}
               title="ดูทำเนียบยศและคะแนนพนักงาน"
             >
-              <FiAward className="w-4 h-4 text-amber-400" />
+              <FiAward className="w-4 h-4 text-amber-500" />
               <span className="hidden sm:inline">ทำเนียบยศ</span>
             </button>
           </div>
@@ -147,16 +165,22 @@ export default function CommunityHub() {
       <div className="mb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black text-white mb-1">
+            <h2 className={`text-2xl md:text-3xl font-black mb-1 ${
+              isDark ? 'text-white' : 'text-slate-900'
+            }`}>
               คลังความรู้ชุมชน &amp; ทริคหน้างาน
             </h2>
-            <p className="text-sm text-slate-400">
+            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               พื้นที่แลกเปลี่ยนประสบการณ์จริง คู่มือเครื่องจักร วิธีแก้ปัญหา และเทคนิคการทำงานจากเพื่อนร่วมงานทุกแผนก
             </p>
           </div>
 
-          <div className="text-xs font-semibold text-slate-400 bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700/80 self-start md:self-auto">
-            มีบทเรียนทั้งหมด <span className="text-fuchsia-400 font-bold">{posts.length}</span> เรื่อง
+          <div className={`text-xs font-semibold px-4 py-2 rounded-xl border self-start md:self-auto ${
+            isDark 
+              ? 'text-slate-400 bg-slate-800/80 border-slate-700/80' 
+              : 'text-slate-700 bg-white border-slate-200 shadow-sm'
+          }`}>
+            มีบทเรียนทั้งหมด <span className="text-fuchsia-600 font-bold">{posts.length}</span> เรื่อง
           </div>
         </div>
 
@@ -168,12 +192,18 @@ export default function CommunityHub() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="ค้นหาทริคหน้างาน, ชื่อเครื่องจักร, ปัญหาที่พบ, ผู้เขียน..."
-            className="w-full bg-slate-800/90 border border-slate-700 text-slate-200 placeholder-slate-400 rounded-xl pl-12 pr-10 py-3 text-sm focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-colors shadow-sm"
+            className={`w-full border rounded-xl pl-12 pr-10 py-3 text-sm focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-colors shadow-sm ${
+              isDark 
+                ? 'bg-slate-800/90 border-slate-700 text-slate-200 placeholder-slate-400' 
+                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+            }`}
           />
           {searchQuery && (
             <button 
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
+              className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors ${
+                isDark ? 'text-slate-400 hover:text-white hover:bg-slate-700' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+              }`}
             >
               <FiX className="w-4 h-4" />
             </button>
@@ -191,15 +221,19 @@ export default function CommunityHub() {
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all select-none ${
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all select-none border ${
                   isActive
-                    ? 'bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white shadow-md shadow-fuchsia-500/20'
-                    : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border border-slate-700/80'
+                    ? 'bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white shadow-md shadow-fuchsia-500/20 border-transparent'
+                    : (isDark 
+                        ? 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border-slate-700/80' 
+                        : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border-slate-200 shadow-sm')
                 }`}
               >
                 <span>{category}</span>
                 <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                  isActive ? 'bg-black/30 text-white' : 'bg-slate-700 text-slate-300'
+                  isActive 
+                    ? 'bg-black/30 text-white' 
+                    : (isDark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-700 font-semibold')
                 }`}>
                   {count}
                 </span>
@@ -218,12 +252,18 @@ export default function CommunityHub() {
               <div 
                 key={post.id}
                 onClick={() => navigate(`/community/${post.id}`)}
-                className="bg-slate-800/90 rounded-2xl overflow-hidden border border-slate-700 hover:border-fuchsia-500/50 transition-all cursor-pointer hover:shadow-xl hover:shadow-fuchsia-500/10 hover:-translate-y-1 flex flex-col justify-between group"
+                className={`rounded-2xl overflow-hidden border transition-all cursor-pointer hover:-translate-y-1 flex flex-col justify-between group ${
+                  isDark 
+                    ? 'bg-slate-800/90 border-slate-700 hover:border-fuchsia-500/50 hover:shadow-xl hover:shadow-fuchsia-500/10' 
+                    : 'bg-white border-slate-200 hover:border-fuchsia-400 shadow-sm hover:shadow-md'
+                }`}
               >
                 <div>
                   {/* Thumbnail / Cover Photo if present */}
                   {post.coverImage && (
-                    <div className="relative h-44 overflow-hidden border-b border-slate-700 bg-slate-900">
+                    <div className={`relative h-44 overflow-hidden border-b ${
+                      isDark ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-slate-100'
+                    }`}>
                       <img 
                         src={post.coverImage || DEFAULT_COURSE_IMAGE} 
                         alt={post.title} 
@@ -241,35 +281,51 @@ export default function CommunityHub() {
                   <div className="p-6">
                     {/* Category & Date */}
                     <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="text-[11px] font-bold text-fuchsia-400 bg-fuchsia-500/10 px-2.5 py-1 rounded-md border border-fuchsia-500/20 truncate">
+                      <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md border truncate ${
+                        isDark 
+                          ? 'text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20' 
+                          : 'text-fuchsia-800 bg-fuchsia-50 border-fuchsia-200'
+                      }`}>
                         {post.category}
                       </span>
-                      <span className="text-[11px] text-slate-500 whitespace-nowrap flex items-center gap-1">
+                      <span className={`text-[11px] whitespace-nowrap flex items-center gap-1 ${
+                        isDark ? 'text-slate-500' : 'text-slate-500'
+                      }`}>
                         <FiClock className="w-3 h-3" />
                         {new Date(post.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
                       </span>
                     </div>
 
                     {/* Title */}
-                    <h3 className="text-base font-bold text-white mb-2 group-hover:text-fuchsia-300 transition-colors line-clamp-2 leading-snug">
+                    <h3 className={`text-base font-bold mb-2 transition-colors line-clamp-2 leading-snug ${
+                      isDark ? 'text-white group-hover:text-fuchsia-300' : 'text-slate-900 group-hover:text-fuchsia-700'
+                    }`}>
                       {post.title}
                     </h3>
 
                     {/* Summary */}
-                    <p className="text-xs text-slate-400 mb-4 line-clamp-2 leading-relaxed">
+                    <p className={`text-xs mb-4 line-clamp-2 leading-relaxed ${
+                      isDark ? 'text-slate-400' : 'text-slate-600'
+                    }`}>
                       {post.summary}
                     </p>
 
                     {/* Steps preview badge */}
-                    <div className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-300 bg-slate-900/60 px-2.5 py-1 rounded-lg border border-slate-700/60 mb-2">
-                      <FiBookOpen className="w-3.5 h-3.5 text-cyan-400" />
+                    <div className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg border mb-2 ${
+                      isDark 
+                        ? 'text-slate-300 bg-slate-900/60 border-slate-700/60' 
+                        : 'text-slate-700 bg-slate-100 border-slate-200'
+                    }`}>
+                      <FiBookOpen className="w-3.5 h-3.5 text-cyan-500" />
                       <span>{post.steps?.length || 0} ขั้นตอนการปฏิบัติ</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Footer: Author & Social Metrics */}
-                <div className="px-6 pb-5 pt-3 border-t border-slate-700/80 flex items-center justify-between gap-3 bg-slate-800/40">
+                <div className={`px-6 pb-5 pt-3 border-t flex items-center justify-between gap-3 ${
+                  isDark ? 'border-slate-700/80 bg-slate-800/40' : 'border-slate-100 bg-slate-50'
+                }`}>
                   <div 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -281,26 +337,30 @@ export default function CommunityHub() {
                     <img 
                       src={post.author.avatar || DEFAULT_AVATAR} 
                       alt={post.author.name} 
-                      className="w-8 h-8 rounded-full object-cover border border-slate-600 flex-shrink-0 group-hover/author:border-fuchsia-400 transition-colors"
+                      className={`w-8 h-8 rounded-full object-cover border flex-shrink-0 transition-colors ${
+                        isDark ? 'border-slate-600 group-hover/author:border-fuchsia-400' : 'border-slate-300 group-hover/author:border-fuchsia-500'
+                      }`}
                       onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
                     />
                     <div className="truncate text-xs">
-                      <div className="text-slate-200 font-semibold truncate flex items-center gap-1 group-hover/author:text-fuchsia-300 transition-colors">
+                      <div className={`font-semibold truncate flex items-center gap-1 transition-colors ${
+                        isDark ? 'text-slate-200 group-hover/author:text-fuchsia-300' : 'text-slate-900 group-hover/author:text-fuchsia-700'
+                      }`}>
                         <span>{post.author.name}</span>
                         <span title={authorRank.name}>{authorRank.badge}</span>
                       </div>
-                      <div className="text-[10px] text-slate-500 truncate">{post.author.role}</div>
+                      <div className={`text-[10px] truncate ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>{post.author.role}</div>
                     </div>
                   </div>
 
                   {/* Likes & Comments Count */}
-                  <div className="flex items-center gap-3 text-xs text-slate-400 flex-shrink-0">
-                    <span className="flex items-center gap-1 hover:text-rose-400 transition-colors">
+                  <div className={`flex items-center gap-3 text-xs flex-shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <span className="flex items-center gap-1 hover:text-rose-500 transition-colors">
                       <FiHeart className="w-3.5 h-3.5 text-rose-500 fill-rose-500/20" />
                       <span>{post.likesCount || 0}</span>
                     </span>
                     <span className="flex items-center gap-1">
-                      <FiMessageSquare className="w-3.5 h-3.5 text-slate-400" />
+                      <FiMessageSquare className={`w-3.5 h-3.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
                       <span>{post.comments?.length || 0}</span>
                     </span>
                   </div>
@@ -310,15 +370,17 @@ export default function CommunityHub() {
           })}
         </div>
       ) : (
-        <div className="p-12 text-center bg-slate-800/50 rounded-2xl border border-slate-700 my-8">
-          <FiCompass className="w-12 h-12 text-slate-500 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-slate-200 mb-1">ยังไม่พบบทเรียนในหมวดนี้</h3>
-          <p className="text-sm text-slate-400 max-w-md mx-auto mb-4">
+        <div className={`p-12 text-center rounded-2xl border my-8 ${
+          isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <FiCompass className={`w-12 h-12 mx-auto mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+          <h3 className={`text-lg font-bold mb-1 ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>ยังไม่พบบทเรียนในหมวดนี้</h3>
+          <p className={`text-sm max-w-md mx-auto mb-4 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             เป็นคนแรกที่เริ่มแชร์ทริคหรือคู่มือการทำงานในหมวดนี้ และรับทันที +50 EXP!
           </p>
           <button 
             onClick={() => navigate('/community/new')}
-            className="px-5 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-2"
+            className="px-5 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-2 shadow-sm"
           >
             <FiPlus className="w-4 h-4" /> เริ่มเขียนบทเรียนแรก
           </button>
