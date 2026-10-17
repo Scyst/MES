@@ -258,7 +258,10 @@ body.theme-light {
   color: #64748b !important;
 }
 
-.theme-light nav .hover\:bg-slate-800:hover {
+.theme-light nav .hover\:bg-slate-800:hover,
+.theme-light nav .hover\:bg-slate-800\/80:hover,
+.theme-light nav .hover\:bg-slate-800\/90:hover,
+.theme-light nav .hover\:bg-slate-700:hover {
   background-color: #f1f5f9 !important;
   color: #0f172a !important;
 }

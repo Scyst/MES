@@ -116,18 +116,26 @@ export default function Navbar() {
           {/* Quick Create Link */}
           <Link
             to="/admin/course-builder"
-            className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-300 hover:text-white transition-colors"
+            className={`hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+              isDark 
+                ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
+                : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm'
+            }`}
             title="สร้างหลักสูตรมาตรฐานโรงงาน (Admin Studio)"
           >
-            <FiTool className="w-3.5 h-3.5 text-amber-400" />
+            <FiTool className={`w-3.5 h-3.5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
             <span>สร้างหลักสูตร</span>
           </Link>
 
           <Link
             to="/community/new"
-            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-300 hover:text-white transition-colors"
+            className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+              isDark
+                ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
+                : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm'
+            }`}
           >
-            <FiPlus className="w-3.5 h-3.5 text-fuchsia-400" />
+            <FiPlus className={`w-3.5 h-3.5 ${isDark ? 'text-fuchsia-400' : 'text-fuchsia-600'}`} />
             <span>เขียนบทเรียน</span>
           </Link>
 
@@ -158,19 +166,27 @@ export default function Navbar() {
 
           <Link 
             to="/profile"
-            className={`flex items-center gap-2.5 p-1.5 rounded-xl transition-colors ${
+            className={`flex items-center gap-2.5 p-1.5 rounded-xl transition-all border ${
               location.pathname.startsWith('/profile') 
-                ? 'bg-fuchsia-600/20 border border-fuchsia-500/40 shadow-sm' 
-                : 'hover:bg-slate-800/80 border border-transparent'
+                ? isDark
+                  ? 'bg-fuchsia-600/20 text-fuchsia-300 border-fuchsia-500/40 shadow-sm' 
+                  : 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-300 shadow-sm'
+                : isDark
+                  ? 'hover:bg-slate-800 border-transparent hover:border-slate-700'
+                  : 'hover:bg-slate-100 border-transparent hover:border-slate-200 shadow-none'
             }`}
             title={`สมรรถนะ & ประวัติการฝึกอบรม: ${currentUser.name} (Lv.${rank.level} · ${currentUser.exp} EXP)`}
           >
             <div className="text-right hidden lg:block">
-              <div className="text-xs font-bold text-white flex items-center justify-end gap-1">
+              <div className={`text-xs font-bold flex items-center justify-end gap-1 ${
+                isDark ? 'text-white' : 'text-slate-800'
+              }`}>
                 <span>{currentUser.name}</span>
                 <span className="text-xs">{rank.badge}</span>
               </div>
-              <div className="text-[10px] text-amber-300 font-mono font-bold flex items-center justify-end gap-1">
+              <div className={`text-[10px] font-mono font-bold flex items-center justify-end gap-1 ${
+                isDark ? 'text-amber-300' : 'text-amber-700'
+              }`}>
                 {currentUser.isLoggedInReal && (
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="เชื่อมต่อบัญชี MES สำเร็จ"></span>
                 )}
