@@ -774,6 +774,10 @@ export function getAllEmployees() {
   const currentUser = getCurrentUser();
   const list = [...EMPLOYEES_MASTER];
 
+  if (!currentUser || !currentUser.isLoggedInReal) {
+    return list;
+  }
+
   // If current logged-in user is not in master list, merge them in cleanly
   const currentEmpId = currentUser.emp_id || `EMP-${currentUser.id || 'ME'}`;
   const exists = list.some(e => e.empId === currentEmpId || e.empId === currentUser.emp_id);
@@ -812,6 +816,11 @@ export async function syncCourseProgressToBackend({
   passed = false,
   certificateId = null
 }) {
+  const currentUser = getCurrentUser();
+  if (!currentUser || !currentUser.isLoggedInReal || !empId || empId === 'GUEST' || empId === 'EMP-guest') {
+    return null;
+  }
+
   const endpoint = '../MES/MES/page/manpower/api/api_learning.php?action=save_course_progress';
 
   const payload = {

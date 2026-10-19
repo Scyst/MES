@@ -33,7 +33,17 @@ export default function Catalog() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
   const [searchQuery, setSearchQuery] = useState('');
-  const currentUser = getCurrentUser();
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+
+  React.useEffect(() => {
+    const handleUserUpdated = (e) => {
+      if (e.detail) {
+        setCurrentUser(e.detail);
+      }
+    };
+    window.addEventListener('mes-user-updated', handleUserUpdated);
+    return () => window.removeEventListener('mes-user-updated', handleUserUpdated);
+  }, []);
 
   // Combine static official courses with custom-built and promoted courses
   const allCourses = useMemo(() => {
@@ -234,18 +244,20 @@ export default function Catalog() {
                         <span>{course.modules?.length || 0} บทเรียน</span>
                       </span>
                       <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/admin/course-builder?courseId=${course.id}`);
-                          }}
-                          className="px-2 py-1 bg-slate-700/60 hover:bg-amber-500/20 hover:text-amber-300 text-slate-400 rounded-lg text-[11px] font-medium transition-colors flex items-center gap-1"
-                          title="แก้ไขข้อมูลหลักสูตรนี้"
-                        >
-                          <FiEdit2 className="w-3 h-3" />
-                          <span>แก้ไข</span>
-                        </button>
+                        {currentUser?.isLoggedInReal && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/admin/course-builder?courseId=${course.id}`);
+                            }}
+                            className="px-2 py-1 bg-slate-700/60 hover:bg-amber-500/20 hover:text-amber-300 text-slate-400 rounded-lg text-[11px] font-medium transition-colors flex items-center gap-1"
+                            title="แก้ไขข้อมูลหลักสูตรนี้"
+                          >
+                            <FiEdit2 className="w-3 h-3" />
+                            <span>แก้ไข</span>
+                          </button>
+                        )}
                         <span className={`text-xs font-bold flex items-center gap-1 ${
                           isDone 
                             ? 'text-emerald-400 group-hover:text-emerald-300' 

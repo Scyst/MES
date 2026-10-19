@@ -75,14 +75,13 @@ try {
 
     // ─────────────────────────────────────────────────────────────────────────
     // ACTION: get_current_user
-    // ดึงข้อมูลผู้ใช้ที่กำลังล็อกอินจริงในระบบหลัก ($_SESSION['user']) หรือพนักงานที่ระบุ
+    // ดึงข้อมูลผู้ใช้ที่กำลังล็อกอินจริงในระบบหลัก ($_SESSION['user']) เท่านั้น
+    // หากออกจากระบบหลักแล้ว (empty($_SESSION['user'])) จะคืนค่า authenticated = false ทันที
     // ─────────────────────────────────────────────────────────────────────────
     if ($action === 'get_current_user') {
         $sessionUser = $_SESSION['user'] ?? null;
-        $requestedEmpId = trim($_GET['emp_id'] ?? '');
 
-        // ถ้าไม่ได้ล็อกอินในระบบหลัก และไม่ได้ระบุรหัสพนักงาน ให้คืนค่าว่ายังไม่ได้ล็อกอิน (ห้ามดึง TOP 1 เจริญชัย อินทะ มาสวมรอยเด็ดขาด)
-        if (empty($sessionUser) && empty($requestedEmpId)) {
+        if (empty($sessionUser)) {
             echo json_encode([
                 'success'       => true,
                 'authenticated' => false,
@@ -90,7 +89,7 @@ try {
                     'user'    => null,
                     'grading' => null
                 ],
-                'message'       => 'No active MES session'
+                'message'       => 'Guest mode (No active MES session)'
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
@@ -98,92 +97,46 @@ try {
         $dbUser = null;
         $empData = null;
 
-        if (!empty($requestedEmpId)) {
-            // กรณีระบุ emp_id หรือ username เจาะจง
+        // ดึงข้อมูลสดจาก dbo.USERS ตาม $_SESSION['user']
+        $sessionUserId = (int)($sessionUser['id'] ?? 0);
+        $sessionUsername = trim($sessionUser['username'] ?? '');
+
+        $stmtUsr = $pdo->prepare("
+            SELECT TOP 1 id, username, fullname, role, line, emp_id, team_group, profile_picture
+            FROM dbo.USERS WITH (NOLOCK)
+            WHERE (id = ? AND ? > 0) OR (username = ? AND ? <> '')
+            ORDER BY is_active DESC, id ASC
+        ");
+        $stmtUsr->execute([$sessionUserId, $sessionUserId, $sessionUsername, $sessionUsername]);
+        $dbUser = $stmtUsr->fetch(PDO::FETCH_ASSOC) ?: $sessionUser;
+
+        // 1. ค้นหาใน MANPOWER_EMPLOYEES ด้วย emp_id หรือ username
+        $candidateEmpId = !empty($dbUser['emp_id']) ? trim($dbUser['emp_id']) : trim($dbUser['username'] ?? '');
+        if (!empty($candidateEmpId)) {
             $stmtEmp = $pdo->prepare("
                 SELECT TOP 1 E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api, E.is_active
                 FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
-                WHERE E.emp_id = ? OR E.name_th = ?
+                WHERE E.emp_id = ?
+                ORDER BY E.is_active DESC
+            ");
+            $stmtEmp->execute([$candidateEmpId]);
+            $empData = $stmtEmp->fetch(PDO::FETCH_ASSOC);
+        }
+
+        // 2. ถ้าไม่พบด้วย emp_id (เช่นบัญชี Admin verymaron01 ที่ emp_id เป็น NULL) ให้เชื่อมโยงด้วยชื่อ-นามสกุลจริง (fullname = name_th)
+        $fullNameToMatch = trim($dbUser['fullname'] ?? $sessionUser['fullname'] ?? '');
+        if (!$empData && !empty($fullNameToMatch)) {
+            $stmtByName = $pdo->prepare("
+                SELECT TOP 1 E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api, E.is_active
+                FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                WHERE E.name_th = ?
                 ORDER BY E.is_active DESC, E.emp_id DESC
             ");
-            $stmtEmp->execute([$requestedEmpId, $requestedEmpId]);
-            $empData = $stmtEmp->fetch(PDO::FETCH_ASSOC);
-
-            $stmtUsr = $pdo->prepare("
-                SELECT TOP 1 id, username, fullname, role, line, emp_id, team_group, profile_picture
-                FROM dbo.USERS WITH (NOLOCK)
-                WHERE emp_id = ? OR username = ?
-                ORDER BY is_active DESC, id ASC
-            ");
-            $stmtUsr->execute([$empData['emp_id'] ?? $requestedEmpId, $requestedEmpId]);
-            $dbUser = $stmtUsr->fetch(PDO::FETCH_ASSOC);
-
-            if (!$empData && $dbUser && !empty($dbUser['fullname'])) {
-                $stmtByName = $pdo->prepare("
-                    SELECT TOP 1 E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api, E.is_active
-                    FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
-                    WHERE E.name_th = ?
-                    ORDER BY E.is_active DESC, E.emp_id DESC
-                ");
-                $stmtByName->execute([trim($dbUser['fullname'])]);
-                $empData = $stmtByName->fetch(PDO::FETCH_ASSOC);
-            }
-        } else {
-            // กรณีล็อกอินผ่านระบบหลัก ($_SESSION['user']) -> ดึงข้อมูลสดจาก dbo.USERS ก่อนเสมอ
-            $sessionUserId = (int)($sessionUser['id'] ?? 0);
-            $sessionUsername = trim($sessionUser['username'] ?? '');
-
-            $stmtUsr = $pdo->prepare("
-                SELECT TOP 1 id, username, fullname, role, line, emp_id, team_group, profile_picture
-                FROM dbo.USERS WITH (NOLOCK)
-                WHERE (id = ? AND ? > 0) OR (username = ? AND ? <> '')
-                ORDER BY is_active DESC, id ASC
-            ");
-            $stmtUsr->execute([$sessionUserId, $sessionUserId, $sessionUsername, $sessionUsername]);
-            $dbUser = $stmtUsr->fetch(PDO::FETCH_ASSOC) ?: $sessionUser;
-
-            // 1. ค้นหาใน MANPOWER_EMPLOYEES ด้วย emp_id หรือ username
-            $candidateEmpId = !empty($dbUser['emp_id']) ? trim($dbUser['emp_id']) : trim($dbUser['username'] ?? '');
-            if (!empty($candidateEmpId)) {
-                $stmtEmp = $pdo->prepare("
-                    SELECT TOP 1 E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api, E.is_active
-                    FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
-                    WHERE E.emp_id = ?
-                    ORDER BY E.is_active DESC
-                ");
-                $stmtEmp->execute([$candidateEmpId]);
-                $empData = $stmtEmp->fetch(PDO::FETCH_ASSOC);
-            }
-
-            // 2. ถ้าไม่พบด้วย emp_id (เช่นบัญชี Admin verymaron01 ที่ emp_id เป็น NULL) ให้เชื่อมโยงด้วยชื่อ-นามสกุลจริง (fullname = name_th)
-            $fullNameToMatch = trim($dbUser['fullname'] ?? $sessionUser['fullname'] ?? '');
-            if (!$empData && !empty($fullNameToMatch)) {
-                $stmtByName = $pdo->prepare("
-                    SELECT TOP 1 E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api, E.is_active
-                    FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
-                    WHERE E.name_th = ?
-                    ORDER BY E.is_active DESC, E.emp_id DESC
-                ");
-                $stmtByName->execute([$fullNameToMatch]);
-                $empData = $stmtByName->fetch(PDO::FETCH_ASSOC);
-            }
+            $stmtByName->execute([$fullNameToMatch]);
+            $empData = $stmtByName->fetch(PDO::FETCH_ASSOC);
         }
 
-        // ถ้าไม่พบทั้งใน SESSION, USERS และ MANPOWER_EMPLOYEES
-        if (!$empData && !$dbUser && empty($sessionUser)) {
-            echo json_encode([
-                'success'       => true,
-                'authenticated' => false,
-                'data'          => [
-                    'user'    => null,
-                    'grading' => null
-                ],
-                'message'       => 'User not found'
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        // ประกอบข้อมูลผู้ใช้งานจริง (ไม่ใช้ข้อมูลจำลองทับเด็ดขาด)
+        // ประกอบข้อมูลผู้ใช้งานจริงจาก Session
         $empId = $empData['emp_id']
             ?? $dbUser['emp_id']
             ?? $sessionUser['emp_id']
@@ -256,7 +209,7 @@ try {
 
         echo json_encode([
             'success'       => true,
-            'authenticated' => !empty($sessionUser) || !empty($dbUser),
+            'authenticated' => true,
             'data'          => [
                 'user' => [
                     'id'               => $empId,
@@ -269,7 +222,7 @@ try {
                     'team_group'       => $teamGroup,
                     'department'       => $department,
                     'profile_picture'  => $profilePic,
-                    'is_logged_in_real'=> !empty($sessionUser),
+                    'is_logged_in_real'=> true,
                     'is_admin'         => $isAdmin,
                     'exp'              => $computedExp,
                 ],
@@ -286,6 +239,21 @@ try {
                     'avg_score'             => round((float)($learnStat['avg_score'] ?? 0), 1),
                 ]
             ]
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // AUTHENTICATION GATE FOR INTERNAL COMPANY & PDPA DATA
+    // ข้อมูลรายชื่อพนักงาน 405 คน, พาสปอร์ตเกรด 4 มิติ, การบันทึกผลสอบ และ Audit Matrix
+    // สงวนสิทธิ์เฉพาะผู้ที่ล็อกอินในระบบหลัก ($_SESSION['user']) เท่านั้น
+    // ─────────────────────────────────────────────────────────────────────────
+    if (empty($_SESSION['user'])) {
+        echo json_encode([
+            'success'       => false,
+            'authenticated' => false,
+            'data'          => null,
+            'message'       => 'กรุณาเข้าสู่ระบบ MES ก่อนเข้าถึงข้อมูลพนักงานและระบบประเมินสมรรถนะภายในโรงงาน'
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }

@@ -25,17 +25,24 @@ export function calculateRank(exp = 0) {
   return { ...RANKS[0], progressPercent: 0, expNeeded: 100, nextRank: RANKS[1] };
 }
 
-// Initial fallback user for demo/guest mode
-const DEFAULT_USER = {
-  id: 'usr-001',
-  emp_id: 'EMP-5928',
-  name: 'สมเกียรติ มั่นคง',
-  role: 'หัวหน้ากะฝ่ายผลิต (Production Supervisor)',
-  avatar: getUserAvatarSvg('สมเกียรติ มั่นคง'),
-  exp: 420,
+// Explicit Guest User for Safe Guest Mode (Public Standard Course Reader)
+export const GUEST_USER = {
+  id: 'guest',
+  emp_id: 'GUEST',
+  username: '',
+  name: 'ผู้เยี่ยมชม (Guest)',
+  role: 'โหมดผู้เยี่ยมชม (อ่านหลักสูตรมาตรฐาน)',
+  line: 'GUEST',
+  team_group: '-',
+  department: 'บุคคลทั่วไป / ผู้เยี่ยมชม',
+  avatar: getUserAvatarSvg('G'),
+  exp: 0,
   isLoggedInReal: false,
-  isAdmin: true
+  isAdmin: false,
+  grading: null
 };
+
+const DEFAULT_USER = GUEST_USER;
 
 // Initial realistic community lessons with offline SVG assets
 const INITIAL_POSTS = [
@@ -197,6 +204,36 @@ export function saveUserGrading(grading) {
 
 export const API_LEARNING_URL = '../MES/MES/page/manpower/api/api_learning.php';
 export const API_VERIFY_URL = '../MES/MES/auth/api_verify.php?silent=1';
+export const MES_LOGOUT_URL = '../MES/MES/auth/logout.php';
+
+export function getMesLoginUrl() {
+  if (typeof window === 'undefined') {
+    return '../MES/MES/auth/login_form.php';
+  }
+  return `../MES/MES/auth/login_form.php?redirect=${encodeURIComponent(window.location.href)}`;
+}
+
+export function clearLocalUserSession() {
+  localStorage.removeItem('mes_learning_current_user');
+  localStorage.removeItem('mes_learning_user_grading');
+  localStorage.removeItem('mes_learning_active_emp_id');
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('mes-user-updated', { detail: GUEST_USER }));
+  }
+  return GUEST_USER;
+}
+
+export async function logoutFromMes() {
+  clearLocalUserSession();
+  try {
+    await fetch(MES_LOGOUT_URL, { method: 'GET', credentials: 'include' });
+  } catch {
+    // Ignore network error during logout redirect
+  }
+  if (typeof window !== 'undefined') {
+    window.location.reload();
+  }
+}
 
 function buildSyncedUserFromApi(u, grading = null) {
   const realUserId = u.emp_id || u.id || u.username || 'usr-real';
@@ -230,13 +267,14 @@ export async function fetchRealUserSession() {
     // 1. Primary: Query api_learning.php using real PHP $_SESSION['user']
     const res = await fetch(`${API_LEARNING_URL}?action=get_current_user`, {
       method: 'GET',
-      credentials: 'include'
+      credentials: 'include',
+      cache: 'no-store'
     });
 
     if (res.ok) {
       const json = await res.json();
 
-      if (json && json.success && json.data && json.data.user) {
+      if (json && json.authenticated === true && json.data && json.data.user) {
         const grading = json.data.grading || null;
         saveUserGrading(grading);
         const synchedUser = buildSyncedUserFromApi(json.data.user, grading);
@@ -244,45 +282,21 @@ export async function fetchRealUserSession() {
         return synchedUser;
       }
 
-      // 2. Fallback if PHP session was created in MES Toolbox SPA (mes_active_team in localStorage)
+      // If main MES explicitly reports unauthenticated, immediately purge local session & switch to Safe Guest Mode
       if (json && json.authenticated === false) {
-        try {
-          const activeTeamRaw = localStorage.getItem('mes_active_team');
-          const activeTeam = activeTeamRaw ? JSON.parse(activeTeamRaw) : [];
-          if (Array.isArray(activeTeam) && activeTeam.length > 0 && activeTeam[0]) {
-            const teamUser = activeTeam[0];
-            const lookupKey = teamUser.emp_id || teamUser.username || teamUser.fullname;
-            if (lookupKey) {
-              const resTeam = await fetch(
-                `${API_LEARNING_URL}?action=get_current_user&emp_id=${encodeURIComponent(lookupKey)}`,
-                { method: 'GET', credentials: 'include' }
-              );
-              if (resTeam.ok) {
-                const jsonTeam = await resTeam.json();
-                if (jsonTeam && jsonTeam.success && jsonTeam.data && jsonTeam.data.user) {
-                  const grading = jsonTeam.data.grading || null;
-                  saveUserGrading(grading);
-                  const synchedUser = buildSyncedUserFromApi(jsonTeam.data.user, grading);
-                  saveCurrentUser(synchedUser);
-                  return synchedUser;
-                }
-              }
-            }
-          }
-        } catch {
-          // Ignore malformed localStorage
-        }
+        return clearLocalUserSession();
       }
     }
   } catch {
     // Continue to verify fallback
   }
 
-  // 3. Secondary check via auth/api_verify.php
+  // 2. Secondary check via auth/api_verify.php
   try {
     const verifyRes = await fetch(API_VERIFY_URL, {
       method: 'GET',
-      credentials: 'include'
+      credentials: 'include',
+      cache: 'no-store'
     });
     if (verifyRes.ok) {
       const verifyJson = await verifyRes.json();
@@ -290,6 +304,9 @@ export async function fetchRealUserSession() {
         const synchedUser = buildSyncedUserFromApi(verifyJson.user, getUserGrading());
         saveCurrentUser(synchedUser);
         return synchedUser;
+      }
+      if (verifyJson && verifyJson.success === false) {
+        return clearLocalUserSession();
       }
     }
   } catch {
@@ -350,25 +367,31 @@ export function getCurrentUser() {
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
-      // Purge stale auto-fallback "เจริญชัย อินทะ" (1095101035) from previous bug
+      // Only accept cached user if they were genuinely authenticated via MES session
       if (
         parsed &&
-        (parsed.emp_id === '1095101035' || parsed.id === '1095101035' || parsed.name === 'เจริญชัย อินทะ')
+        parsed.isLoggedInReal === true &&
+        parsed.emp_id !== '1095101035' &&
+        parsed.id !== '1095101035' &&
+        parsed.name !== 'เจริญชัย อินทะ' &&
+        parsed.id !== 'usr-001'
       ) {
-        localStorage.removeItem('mes_learning_current_user');
-        localStorage.removeItem('mes_learning_active_emp_id');
-        return DEFAULT_USER;
+        return parsed;
       }
-      return parsed;
+      localStorage.removeItem('mes_learning_current_user');
+      localStorage.removeItem('mes_learning_active_emp_id');
+      return GUEST_USER;
     } catch {
-      return DEFAULT_USER;
+      return GUEST_USER;
     }
   }
-  localStorage.setItem('mes_learning_current_user', JSON.stringify(DEFAULT_USER));
-  return DEFAULT_USER;
+  return GUEST_USER;
 }
 
 export function saveCurrentUser(user) {
+  if (!user || !user.isLoggedInReal) {
+    return clearLocalUserSession();
+  }
   localStorage.setItem('mes_learning_current_user', JSON.stringify(user));
   if (user && user.id) {
     localStorage.setItem(`mes_learning_exp_${user.id}`, String(user.exp || 0));
@@ -380,9 +403,12 @@ export function saveCurrentUser(user) {
 
 export function addExp(points, reason = '') {
   const user = getCurrentUser();
-  user.exp = (user.exp || 0) + points;
-  saveCurrentUser(user);
-  return { newExp: user.exp, rank: calculateRank(user.exp), pointsAdded: points, reason };
+  if (!user || !user.isLoggedInReal) {
+    return { newExp: 0, rank: calculateRank(0), pointsAdded: 0, reason };
+  }
+  const updatedUser = { ...user, exp: (user.exp || 0) + points };
+  saveCurrentUser(updatedUser);
+  return { newExp: updatedUser.exp, rank: calculateRank(updatedUser.exp), pointsAdded: points, reason };
 }
 
 export function createCommunityPost(postData) {
