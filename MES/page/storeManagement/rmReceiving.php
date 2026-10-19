@@ -191,7 +191,7 @@ $pageHelpId = "";
                                 <div id="actionWrapper" class="d-flex gap-2 align-items-center justify-content-end flex-shrink-0 ms-auto">
                                     
                                     <div class="dropdown d-none flex-shrink-0" id="btnBatchPrintDropdown">
-                                        <button class="btn btn-dark btn-sm shadow-sm dropdown-toggle fw-bold px-3" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="height: 32px;">
+                                        <button class="btn btn-dark btn-sm shadow-sm dropdown-toggle fw-bold px-3" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" style="height: 32px;">
                                             <i class="fas fa-check-square me-1"></i> จัดการที่เลือก (<span id="selectedCount">0</span>)
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" style="font-size: 0.9rem; z-index: 1060;">
@@ -204,23 +204,9 @@ $pageHelpId = "";
                                         </ul>
                                     </div>
 
-                                    <?php if($canManageRM): ?>
-                                    <button class="btn btn-sm btn-success fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center flex-shrink-0 text-nowrap" onclick="openImportModal()" title="นำเข้าไฟล์ Excel เพื่อรับเข้าและสร้าง Tag" style="height: 32px;">
-                                        <i class="fas fa-file-import me-1"></i> <span class="d-none d-sm-inline">Import </span>Excel
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-primary fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-flex align-items-center flex-shrink-0 text-nowrap" onclick="openManualAddModal()" title="เพิ่มข้อมูลรับเข้าสร้าง Tag (Manual)" style="height: 32px;">
-                                        <i class="fas fa-plus-circle me-1"></i> <span class="d-none d-sm-inline">เพิ่มข้อมูล </span>(Manual)
-                                    </button>
-                                    <?php endif; ?>
-                                    
                                     <button class="btn btn-sm fw-bold px-3 py-1 rounded shadow transition-btn text-white border-0 d-none d-md-flex align-items-center flex-shrink-0" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7); height: 32px;" onclick="openTraceModal()" title="สแกน">
                                         <i class="fas fa-qrcode me-1"></i> สแกน
                                     </button>
-
-                                    <button class="btn btn-sm btn-outline-success fw-bold px-2 px-sm-3 py-1 rounded shadow-sm d-none d-lg-flex align-items-center flex-shrink-0 text-nowrap" onclick="exportToExcel()" style="height: 32px;" title="Export to Excel">
-                                        <i class="fas fa-file-excel me-1"></i> Export
-                                    </button>
-                                    
                                 </div>
 
                             </div> <!-- END toolbar-scroll-container -->

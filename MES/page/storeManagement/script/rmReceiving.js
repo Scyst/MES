@@ -231,7 +231,7 @@ async function loadHistory() {
                     <td class="text-center"><span class="badge ${badgeClass}">${safeStatus}</span></td>
                     <td class="text-center align-middle">
                         <div class="dropdown">
-                            <button class="btn btn-sm btn-light border-0 text-secondary shadow-sm" type="button" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
+                            <button class="btn btn-sm btn-light border-0 text-secondary shadow-sm" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}'><i class="fas fa-ellipsis-v"></i></button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.9rem;">
                                 <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="printSingleTag('${rowDataEncoded}'); return false;"><i class="fas fa-print text-dark fa-fw me-2"></i> พิมพ์ Tag</a></li>
                                 ${safeMasterPallet ? `<li><a class="dropdown-item py-2 fw-bold text-primary bg-primary bg-opacity-10" href="#" onclick="reprintMasterPallet('${safeMasterPallet}'); return false;"><i class="fas fa-boxes text-primary fa-fw me-2"></i> พิมพ์ Pallet</a></li>` : ''}
@@ -257,7 +257,7 @@ async function loadHistory() {
                                 <span class="badge ${badgeClass}">${safeStatus}</span>
                             </div>
                             <div class="dropdown">
-                                <button class="btn btn-sm btn-light border-0 shadow-sm" data-bs-toggle="dropdown" style="width: 30px; height: 30px; border-radius: 50%;"><i class="fas fa-ellipsis-v"></i></button>
+                                <button class="btn btn-sm btn-light border-0 shadow-sm" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' style="width: 30px; height: 30px; border-radius: 50%;"><i class="fas fa-ellipsis-v"></i></button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                                     <li><a class="dropdown-item fw-bold py-2" href="#" onclick="printSingleTag('${rowDataEncoded}'); return false;"><i class="fas fa-print me-2 text-dark"></i>พิมพ์ Tag</a></li>
                                     ${safeMasterPallet ? `<li><a class="dropdown-item fw-bold text-primary py-2 bg-primary bg-opacity-10" href="#" onclick="reprintMasterPallet('${safeMasterPallet}'); return false;"><i class="fas fa-boxes me-2"></i>พิมพ์ Pallet</a></li>` : ''}
