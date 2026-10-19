@@ -179,10 +179,30 @@ const INITIAL_POSTS = [
   }
 ];
 
-// --- REAL MES AUTHENTICATION BRIDGE ---
+// --- REAL MES AUTHENTICATION & GRADING BRIDGE ---
+export function getUserGrading() {
+  try {
+    const stored = localStorage.getItem('mes_learning_user_grading');
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveUserGrading(grading) {
+  if (grading) {
+    localStorage.setItem('mes_learning_user_grading', JSON.stringify(grading));
+  }
+}
+
 export async function fetchRealUserSession() {
-  // Try candidate endpoint paths for api_verify.php with silent query param
+  const activeEmpId = localStorage.getItem('mes_learning_active_emp_id') || '';
+  const empParam = activeEmpId ? `&emp_id=${encodeURIComponent(activeEmpId)}` : '';
+
+  // Priority candidate endpoint paths
   const candidateEndpoints = [
+    `../MES/MES/page/manpower/api/api_learning.php?action=get_current_user${empParam}`,
+    `../page/manpower/api/api_learning.php?action=get_current_user${empParam}`,
     '../MES/MES/auth/api_verify.php?silent=1',
     '../auth/api_verify.php?silent=1'
   ];
@@ -195,28 +215,60 @@ export async function fetchRealUserSession() {
       });
 
       if (res.ok) {
-        const data = await res.json();
-        if (data && data.success && data.user) {
-          const u = data.user;
+        const json = await res.json();
+        
+        // Response format 1: from api_learning.php (with grading)
+        if (json && json.success && json.data && json.data.user) {
+          const u = json.data.user;
+          const grading = json.data.grading || null;
+          saveUserGrading(grading);
+
+          const realUserId = u.emp_id || u.id || 'usr-real';
+          const userExpKey = `mes_learning_exp_${realUserId}`;
+          const storedExp = localStorage.getItem(userExpKey);
+          const exp = storedExp !== null ? parseInt(storedExp, 10) : (u.exp || 450);
+
+          const synchedUser = {
+            id: realUserId,
+            emp_id: u.emp_id || 'EMP-MES',
+            name: u.name || 'MES Employee',
+            role: u.role || 'ช่างเทคนิคโรงงาน',
+            line: u.line || 'PRODUCTION',
+            team_group: u.team_group || 'A',
+            department: u.department || u.line || 'ฝ่ายผลิต',
+            avatar: u.profile_picture || getUserAvatarSvg(u.name || 'MES'),
+            exp: exp,
+            isLoggedInReal: true,
+            isAdmin: true,
+            grading: grading
+          };
+
+          saveCurrentUser(synchedUser);
+          console.log('[MES Learning Hub] Live User & Grading synchronized via:', endpoint);
+          return synchedUser;
+        }
+
+        // Response format 2: from auth/api_verify.php
+        if (json && json.success && json.user) {
+          const u = json.user;
           const realUserId = u.emp_id || u.id || u.username || 'usr-real';
           
-          // Retrieve persistent user EXP
           const userExpKey = `mes_learning_exp_${realUserId}`;
           const storedExp = localStorage.getItem(userExpKey);
           const exp = storedExp !== null ? parseInt(storedExp, 10) : 450;
-
-          const roleLower = String(u.role || '').toLowerCase();
-          const isAdmin = ['admin', 'superadmin', 'manager', 'supervisor', 'qmr', 'engineering'].some(r => roleLower.includes(r)) || true;
 
           const synchedUser = {
             id: realUserId,
             emp_id: u.emp_id || u.username || 'EMP-MES',
             name: u.fullname || u.username || 'MES Employee',
             role: u.position || u.role || 'ช่างเทคนิคโรงงาน',
+            line: u.line || 'PRODUCTION',
+            team_group: u.team_group || 'A',
+            department: u.line || 'ฝ่ายผลิต',
             avatar: u.profile_picture || getUserAvatarSvg(u.fullname || u.username || 'MES'),
             exp: exp,
             isLoggedInReal: true,
-            isAdmin: isAdmin
+            isAdmin: true
           };
 
           saveCurrentUser(synchedUser);
@@ -230,6 +282,42 @@ export async function fetchRealUserSession() {
   }
 
   return getCurrentUser();
+}
+
+// Fetch list of active factory employees for selector / directory
+export async function fetchEmployeesList(search = '', line = 'ALL') {
+  const candidateEndpoints = [
+    `../MES/MES/page/manpower/api/api_learning.php?action=get_employees&q=${encodeURIComponent(search)}&line=${encodeURIComponent(line)}`,
+    `../page/manpower/api/api_learning.php?action=get_employees&q=${encodeURIComponent(search)}&line=${encodeURIComponent(line)}`
+  ];
+
+  for (const endpoint of candidateEndpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.success && json.data) {
+          return json.data;
+        }
+      }
+    } catch {
+      // Continue
+    }
+  }
+  return { employees: [], lines: [] };
+}
+
+// Switch active user identity to another factory employee
+export async function switchActiveEmployee(empId) {
+  if (empId) {
+    localStorage.setItem('mes_learning_active_emp_id', empId);
+  } else {
+    localStorage.removeItem('mes_learning_active_emp_id');
+  }
+  return await fetchRealUserSession();
 }
 
 // Helper functions for LocalStorage management

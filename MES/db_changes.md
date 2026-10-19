@@ -4,6 +4,41 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-10-19 — MES Learning Hub & Employee Grading Integration
+
+**Agent:** Antigravity  
+**Feature:** เชื่อมต่อผลการอบรม MES Learning Hub เข้ากับระบบประเมินเกรดพนักงาน (Employee Grading Dimension 4: Learning / Multi-skill)
+
+### Tables Created
+
+#### `dbo.LEARNING_RECORDS`
+บันทึกประวัติการอบรม การสอบวัดผล (Post-Test) และใบรับรองสมรรถนะ (Certificate) รายบุคคลตามมาตรฐาน ISO 9001:2015 Clause 7.2
+
+| Column | Type | Notes |
+|---|---|---|
+| id | INT IDENTITY PK | |
+| emp_id | VARCHAR(50) NOT NULL | รหัสพนักงาน (FK to MANPOWER_EMPLOYEES) |
+| course_id | VARCHAR(100) NOT NULL | รหัสหลักสูตร e.g. 'c-ppap', 'c-iso-9001' |
+| course_title | NVARCHAR(255) NOT NULL | ชื่อหลักสูตร |
+| category | NVARCHAR(100) NULL | หมวดหมู่หลักสูตร |
+| status | VARCHAR(30) NOT NULL | 'in_progress', 'completed', 'failed' |
+| quiz_score | INT DEFAULT 0 | คะแนนสอบที่ทำได้ |
+| quiz_total | INT DEFAULT 0 | จำนวนข้อสอบทั้งหมด |
+| quiz_percentage | INT DEFAULT 0 | เปอร์เซ็นต์คะแนนสอบ |
+| passed | BIT DEFAULT 0 | 1 = ผ่านเกณฑ์ (≥ 80%), 0 = ไม่ผ่าน |
+| certificate_id | VARCHAR(50) NULL | รหัสใบรับรอง เช่น 'SNC-CERT-2026-4115' |
+| completed_at | DATETIME NULL | วันที่และเวลาที่สอบผ่านการอบรม |
+| created_at | DATETIME DEFAULT GETDATE() | |
+| updated_at | DATETIME DEFAULT GETDATE() | |
+| CONSTRAINT UQ_Emp_Course | UNIQUE (emp_id, course_id) | พนักงาน 1 คน มี 1 record ต่อหลักสูตร |
+
+**Business Integration Logic:**
+- เมื่อพนักงานสอบผ่านแบบทดสอบ Post-Test (≥ 80%) ข้อมูลจะถูกบันทึกลง `dbo.LEARNING_RECORDS`
+- ข้อมูลจะถูกนำไปอัปเดตลง `dbo.EMP_SKILLS` ให้มีระดับทักษะ `level = 3` (ชำนาญ/Certified)
+- ใน `api_employee_grading.php`: `skill_count` (นับจาก `dbo.EMP_SKILLS WHERE level >= 2`) จะเพิ่มขึ้น ส่งผลให้ `grade_learning` ปรับเป็น A (≥5 ทักษะ), B (≥3), C (≥1), D (0)
+
+---
+
 ## 2026-09-07 — Employee Grading Phase 2
 
 **Agent:** Antigravity (Phase 2 Feature Agent)  

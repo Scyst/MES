@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { 
@@ -31,7 +31,8 @@ import {
   FiChevronRight,
   FiX,
   FiCheck,
-  FiExternalLink
+  FiExternalLink,
+  FiDatabase
 } from 'react-icons/fi';
 
 export default function AuditDashboard() {
@@ -39,6 +40,26 @@ export default function AuditDashboard() {
   const navigate = useNavigate();
   const allCourses = useMemo(() => getAllMergedCourses(), []);
   const allEmployees = useMemo(() => getAllEmployees(), []);
+
+  // Live SQL Server Audit Data State
+  const [liveAuditData, setLiveAuditData] = useState(null);
+
+  useEffect(() => {
+    const candidateEndpoints = [
+      '../MES/MES/page/manpower/api/api_learning.php?action=get_audit_matrix',
+      '../page/manpower/api/api_learning.php?action=get_audit_matrix'
+    ];
+    for (const ep of candidateEndpoints) {
+      fetch(ep, { credentials: 'include' })
+        .then(res => res.json())
+        .then(json => {
+          if (json && json.success && json.data) {
+            setLiveAuditData(json.data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   // Perspective state: 'course' | 'employee' | 'overview'
   const [activeTab, setActiveTab] = useState('course');
@@ -146,6 +167,36 @@ export default function AuditDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Live MES SQL Server Integration Status Banner */}
+      {liveAuditData && (
+        <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm ${
+          isDark 
+            ? 'bg-gradient-to-r from-cyan-950/40 via-slate-900 to-indigo-950/40 border-cyan-500/30 text-slate-300' 
+            : 'bg-gradient-to-r from-cyan-50 via-white to-indigo-50 border-cyan-200 text-slate-800'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-cyan-600/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 flex-shrink-0">
+              <FiDatabase className="w-4 h-4" />
+            </div>
+            <div className="text-xs">
+              <div className="font-bold flex items-center gap-2">
+                <span>เชื่อมโยงข้อมูลสดกับ MES IIOT_TOOLBOX Database</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              </div>
+              <div className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                พนักงานในระบบ {liveAuditData.total_employees} คน · ได้รับการรับรองแล้ว {liveAuditData.certified_employees} คน ({liveAuditData.total_certifications} ใบรับรอง) · คะแนนเฉลี่ย {liveAuditData.avg_score}%
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold">
+              dbo.LEARNING_RECORDS & dbo.EMP_SKILLS
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Perspective Tabs Switcher */}
       <div className={`flex items-center gap-2 border-b pb-2 overflow-x-auto ${

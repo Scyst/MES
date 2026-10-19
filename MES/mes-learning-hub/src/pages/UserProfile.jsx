@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getEmployeeCompetencyPassport } from '../data/trainingAuditStore';
-import { getCurrentUser, fetchRealUserSession } from '../data/communityStore';
+import { getCurrentUser, fetchRealUserSession, fetchEmployeesList, switchActiveEmployee, getUserGrading } from '../data/communityStore';
 import { DEFAULT_AVATAR, DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
 import { useTheme } from '../context/ThemeContext';
 import { 
@@ -15,6 +15,12 @@ import {
   FiHeart, 
   FiPrinter, 
   FiUser, 
+  FiUsers,
+  FiSearch,
+  FiFilter,
+  FiActivity,
+  FiDatabase,
+  FiRefreshCw,
   FiLayers, 
   FiAlertTriangle, 
   FiTrendingUp, 
@@ -34,11 +40,49 @@ export default function UserProfile() {
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'passed' | 'mandatory' | 'in_progress' | 'posts'
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
+  // Employee Directory & Identity Switcher State (405 Real Factory Employees)
+  const [isEmpSelectorOpen, setIsEmpSelectorOpen] = useState(false);
+  const [empSearchQuery, setEmpSearchQuery] = useState('');
+  const [empLineFilter, setEmpLineFilter] = useState('ALL');
+  const [employeeDirectory, setEmployeeDirectory] = useState({ employees: [], lines: [] });
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+  const [viewedEmployeeGrading, setViewedEmployeeGrading] = useState(null);
+
   useEffect(() => {
     fetchRealUserSession().then(u => {
       if (u) setCurrentUser(u);
     });
   }, []);
+
+  // Fetch directory list whenever modal is opened or search/filter changes
+  useEffect(() => {
+    if (isEmpSelectorOpen) {
+      setIsLoadingEmployees(true);
+      fetchEmployeesList(empSearchQuery, empLineFilter)
+        .then(data => {
+          if (data && data.employees) {
+            setEmployeeDirectory(data);
+          }
+        })
+        .finally(() => setIsLoadingEmployees(false));
+    }
+  }, [isEmpSelectorOpen, empSearchQuery, empLineFilter]);
+
+  // Fetch live passport/grading for viewed employee if viewing via URL parameter
+  useEffect(() => {
+    if (empId && empId !== currentUser.emp_id) {
+      fetch(`../MES/MES/page/manpower/api/api_learning.php?action=get_employee_passport&emp_id=${encodeURIComponent(empId)}`, { credentials: 'include' })
+        .then(res => res.json())
+        .then(json => {
+          if (json && json.success && json.data && json.data.grading) {
+            setViewedEmployeeGrading(json.data.grading);
+          }
+        })
+        .catch(() => {});
+    } else {
+      setViewedEmployeeGrading(null);
+    }
+  }, [empId, currentUser.emp_id]);
 
   // Compute passport data based on URL parameter or current logged in user
   const passport = useMemo(() => {
@@ -46,6 +90,36 @@ export default function UserProfile() {
   }, [empId, currentUser]);
 
   const { employee, currentUserIsMe, rank, exp, userPosts, totalLikesReceived } = passport;
+
+  // Active 4-Dimension Grading state
+  const activeGrading = viewedEmployeeGrading || passport.grading || currentUser.grading || getUserGrading() || {
+    evaluation_period: '2026-10',
+    grade_overall: 'B',
+    grade_iph: 'B',
+    grade_5s: 'A',
+    grade_attendance: 'A',
+    grade_learning: 'C',
+    skill_count: 1,
+    passed_courses: passport.totalPassedCount || 1
+  };
+
+  // Switch identity handler
+  const handleSelectEmployee = async (targetEmp) => {
+    await switchActiveEmployee(targetEmp.emp_id);
+    const u = await fetchRealUserSession();
+    if (u) setCurrentUser(u);
+    setIsEmpSelectorOpen(false);
+    navigate(`/profile/${targetEmp.emp_id}`);
+  };
+
+  // Reset to default logged in profile
+  const handleResetToMyProfile = async () => {
+    await switchActiveEmployee(null);
+    const u = await fetchRealUserSession();
+    if (u) setCurrentUser(u);
+    setIsEmpSelectorOpen(false);
+    navigate('/profile');
+  };
 
   // Filtered courses based on active filter
   const displayedCourses = useMemo(() => {
@@ -68,7 +142,7 @@ export default function UserProfile() {
   return (
     <div className="learning-container max-w-6xl py-6 space-y-8">
       {/* Top Breadcrumb & Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           onClick={() => navigate(-1)}
           className={`inline-flex items-center gap-2 text-xs sm:text-sm transition-colors ${
@@ -78,7 +152,21 @@ export default function UserProfile() {
           <FiArrowLeft /> ย้อนกลับ
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Employee Directory / Switcher Modal Button */}
+          <button
+            onClick={() => setIsEmpSelectorOpen(true)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm ${
+              isDark
+                ? 'bg-indigo-900/40 hover:bg-indigo-800/60 text-indigo-300 hover:text-white border-indigo-700/60'
+                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
+            }`}
+            title="ค้นหาและสลับดูข้อมูลพนักงานโรงงานจากฐานข้อมูลจริง 405 คน"
+          >
+            <FiUsers className="w-3.5 h-3.5 text-indigo-500" />
+            <span>สลับดูข้อมูลพนักงาน ({employeeDirectory.employees?.length ? `${employeeDirectory.employees.length} คน` : '405 คน'})</span>
+          </button>
+
           <button
             onClick={() => setIsPrintModalOpen(true)}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-colors shadow-sm ${
@@ -209,6 +297,180 @@ export default function UserProfile() {
               <FiShield className="w-3.5 h-3.5 text-cyan-500" />
               <span>เปิดตรวจสอบใน Audit Matrix</span>
             </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* 4-Dimension Manpower Employee Grading Matrix Card */}
+      <div className={`relative rounded-3xl p-6 sm:p-7 shadow-xl overflow-hidden border transition-all ${
+        isDark 
+          ? 'bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950/40 border-indigo-500/30 shadow-indigo-950/20' 
+          : 'bg-white border-indigo-100 shadow-lg shadow-indigo-100/50'
+      }`}>
+        {/* Top Header of Grading Card */}
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-5 ${
+          isDark ? 'border-slate-700/60' : 'border-slate-200'
+        }`}>
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 border ${
+                isDark ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+              }`}>
+                <FiActivity className="w-3.5 h-3.5 text-indigo-500" />
+                <span>ผลการประเมินเกรดพนักงาน 4 มิติ (Manpower 4D Grading Matrix)</span>
+              </span>
+              <span className={`text-xs font-mono font-semibold px-2 py-0.5 rounded-md ${
+                isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'
+              }`}>
+                รอบประเมิน: {activeGrading.evaluation_period || '2026-10'}
+              </span>
+            </div>
+            <h2 className={`text-lg sm:text-xl font-black flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <span>ระดับเกรดสมรรถนะรวม:</span>
+              <span className={`px-3 py-0.5 rounded-xl font-black text-xl border ${
+                (activeGrading.grade_overall === 'A') 
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+                  : (activeGrading.grade_overall === 'B')
+                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                    : (activeGrading.grade_overall === 'C')
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                      : 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+              }`}>
+                Grade {activeGrading.grade_overall || 'B'}
+              </span>
+            </h2>
+            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              เชื่อมโยงข้อมูลสดแบบ Two-Way กับระบบ Manpower Grading และ SQL Server (<code className="font-mono text-cyan-400">dbo.EMP_SKILLS</code> และ <code className="font-mono text-indigo-400">dbo.EMPLOYEE_GRADES</code>)
+            </p>
+          </div>
+
+          <a
+            href="../MES/MES/page/manpower/employeeGrading.php"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-2 transition-all shadow-sm self-start sm:self-auto ${
+              isDark
+                ? 'bg-slate-800 hover:bg-slate-750 text-indigo-300 hover:text-white border-indigo-700/50'
+                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
+            }`}
+          >
+            <span>ระบบตัดเกรดหลัก (MES)</span>
+            <FiExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+
+        {/* 4 Dimension Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-5">
+          {/* Dimension 1: IPH */}
+          <div className={`rounded-2xl p-4 border transition-all ${
+            isDark ? 'bg-slate-800/70 border-slate-700/70' : 'bg-slate-50 border-slate-200'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                1. รายได้ต่อหัว (IPH)
+              </span>
+              <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black border ${
+                activeGrading.grade_iph === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
+                activeGrading.grade_iph === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
+                activeGrading.grade_iph === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
+                'bg-rose-500/20 text-rose-400 border-rose-500/40'
+              }`}>
+                Grade {activeGrading.grade_iph || 'B'}
+              </span>
+            </div>
+            <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              ประสิทธิภาพการผลิตเทียบอัตราต้นทุนค่าแรงของพนักงาน (Income Per Head Ratio)
+            </div>
+            <div className={`mt-3 text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              เกณฑ์: Ratio ≥ 2.0 (A) / ≥ 1.5 (B) / ≥ 1.0 (C)
+            </div>
+          </div>
+
+          {/* Dimension 2: 5S Audit */}
+          <div className={`rounded-2xl p-4 border transition-all ${
+            isDark ? 'bg-slate-800/70 border-slate-700/70' : 'bg-slate-50 border-slate-200'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                2. การตรวจ 5 ส (5S Audit)
+              </span>
+              <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black border ${
+                activeGrading.grade_5s === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
+                activeGrading.grade_5s === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
+                activeGrading.grade_5s === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
+                'bg-rose-500/20 text-rose-400 border-rose-500/40'
+              }`}>
+                Grade {activeGrading.grade_5s || 'A'}
+              </span>
+            </div>
+            <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              สุขอนามัย ความเป็นระเบียบ และการคัดแยกในพื้นที่ปฏิบัติงาน (Seiri, Seiton, Seiso)
+            </div>
+            <div className={`mt-3 text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              เกณฑ์: คะแนน 85+ (A) / 70+ (B) / 55+ (C)
+            </div>
+          </div>
+
+          {/* Dimension 3: Attendance */}
+          <div className={`rounded-2xl p-4 border transition-all ${
+            isDark ? 'bg-slate-800/70 border-slate-700/70' : 'bg-slate-50 border-slate-200'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                3. การมาทำงาน (Attendance)
+              </span>
+              <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black border ${
+                activeGrading.grade_attendance === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
+                activeGrading.grade_attendance === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
+                activeGrading.grade_attendance === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
+                'bg-rose-500/20 text-rose-400 border-rose-500/40'
+              }`}>
+                Grade {activeGrading.grade_attendance || 'A'}
+              </span>
+            </div>
+            <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              ความตรงต่อเวลาและการปฏิบัติตามวินัยกะ (นับรวมวันมาสายและวันขาดงาน)
+            </div>
+            <div className={`mt-3 text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              เกณฑ์: สาย/ขาด ≤ 0 วัน (A) / ≤ 1 วัน (B) / ≤ 3 วัน (C)
+            </div>
+          </div>
+
+          {/* Dimension 4: Learning & Skills (MES Learning Hub Direct Sync) */}
+          <div className={`rounded-2xl p-4 border relative overflow-hidden transition-all ${
+            isDark 
+              ? 'bg-gradient-to-br from-indigo-900/40 to-fuchsia-900/30 border-indigo-400/50 shadow-md' 
+              : 'bg-gradient-to-br from-indigo-50 to-fuchsia-50/50 border-indigo-300 shadow-sm'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-xs font-black flex items-center gap-1.5 ${isDark ? 'text-indigo-300' : 'text-indigo-900'}`}>
+                <span>4. ทักษะ & การเรียนรู้</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Live Auto-Grading"></span>
+              </span>
+              <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black shadow-sm border ${
+                activeGrading.grade_learning === 'A' ? 'bg-emerald-500/25 text-emerald-300 border-emerald-400' :
+                activeGrading.grade_learning === 'B' ? 'bg-blue-500/25 text-blue-300 border-blue-400' :
+                activeGrading.grade_learning === 'C' ? 'bg-amber-500/25 text-amber-300 border-amber-400' :
+                'bg-rose-500/25 text-rose-300 border-rose-400'
+              }`}>
+                Grade {activeGrading.grade_learning || 'D'}
+              </span>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>ทักษะรับรอง (Level ≥ 2):</span>
+                <span className="font-mono text-cyan-400 font-black">{activeGrading.skill_count || 0} ทักษะ</span>
+              </div>
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>คอร์สที่สอบผ่าน (≥ 80%):</span>
+                <span className="font-mono text-fuchsia-400 font-black">{activeGrading.passed_courses || passport.totalPassedCount || 0} คอร์ส</span>
+              </div>
+            </div>
+
+            <div className={`mt-2.5 pt-2 border-t text-[10px] leading-tight ${isDark ? 'border-indigo-500/20 text-indigo-200/80' : 'border-indigo-200 text-indigo-900'}`}>
+              เกณฑ์: A (≥ 5 ทักษะ) · B (3-4 ทักษะ) · C (1-2 ทักษะ) · D (0 ทักษะ)
+            </div>
           </div>
         </div>
       </div>
@@ -729,6 +991,176 @@ export default function UserProfile() {
               >
                 <FiPrinter className="w-4 h-4" />
                 <span>สั่งพิมพ์เอกสาร (Print Passport)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 405 Factory Employees Directory & Switcher Modal */}
+      {isEmpSelectorOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className={`w-full max-w-3xl rounded-3xl shadow-2xl border overflow-hidden flex flex-col max-h-[88vh] ${
+            isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            {/* Modal Header */}
+            <div className={`p-5 border-b flex items-center justify-between gap-4 ${
+              isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-indigo-50/70 border-slate-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
+                  <FiUsers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black tracking-tight">
+                    ทำเนียบพนักงานโรงงาน (Factory Employee Roster)
+                  </h3>
+                  <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    เลือกพนักงานเพื่อดูสมุดพาสปอร์ตสมรรถนะและเกรด 4 มิติจากฐานข้อมูลจริง <span className="font-mono text-cyan-400">dbo.MANPOWER_EMPLOYEES</span>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsEmpSelectorOpen(false)}
+                className={`p-2 rounded-xl transition-colors ${
+                  isDark ? 'hover:bg-slate-700 text-slate-400 hover:text-white' : 'hover:bg-slate-200 text-slate-600'
+                }`}
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className={`p-4 border-b flex flex-col sm:flex-row items-center gap-3 ${
+              isDark ? 'bg-slate-850 border-slate-700' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="relative flex-1 w-full">
+                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={empSearchQuery}
+                  onChange={(e) => setEmpSearchQuery(e.target.value)}
+                  placeholder="ค้นหาด้วยรหัสพนักงาน, ชื่อ หรือตำแหน่ง..."
+                  className={`w-full pl-10 pr-4 py-2 rounded-xl text-xs sm:text-sm border transition-all ${
+                    isDark 
+                      ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:border-indigo-500' 
+                      : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-indigo-500'
+                  }`}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <FiFilter className="text-slate-400 flex-shrink-0" />
+                <select
+                  value={empLineFilter}
+                  onChange={(e) => setEmpLineFilter(e.target.value)}
+                  className={`px-3 py-2 rounded-xl text-xs sm:text-sm border font-semibold ${
+                    isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-800'
+                  }`}
+                >
+                  <option value="ALL">ทุกสายการผลิต (All Lines)</option>
+                  {(employeeDirectory.lines || []).map(line => (
+                    <option key={line} value={line}>{line}</option>
+                  ))}
+                </select>
+
+                <button
+                  onClick={handleResetToMyProfile}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors whitespace-nowrap ${
+                    isDark ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700' : 'bg-white hover:bg-slate-100 text-amber-700 border-slate-300'
+                  }`}
+                  title="กลับสู่โปรไฟล์พนักงานตนเอง"
+                >
+                  <FiRefreshCw className="inline mr-1" /> โปรไฟล์ฉัน
+                </button>
+              </div>
+            </div>
+
+            {/* Employee List Scrollable Area */}
+            <div className="flex-1 overflow-y-auto p-4 divide-y divide-slate-700/30">
+              {isLoadingEmployees ? (
+                <div className="py-12 text-center text-sm text-slate-400 space-y-2">
+                  <FiRefreshCw className="w-6 h-6 animate-spin mx-auto text-indigo-400" />
+                  <div>กำลังดึงรายชื่อพนักงานจากฐานข้อมูล MES...</div>
+                </div>
+              ) : employeeDirectory.employees?.length === 0 ? (
+                <div className="py-12 text-center text-sm text-slate-400">
+                  ไม่พบข้อมูลพนักงานที่ตรงกับคำค้นหา
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {employeeDirectory.employees.map(emp => {
+                    const isSelected = (emp.emp_id === employee.empId);
+                    return (
+                      <div
+                        key={emp.emp_id}
+                        onClick={() => handleSelectEmployee(emp)}
+                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                          isSelected
+                            ? (isDark ? 'bg-indigo-900/30 border-indigo-500 shadow-md' : 'bg-indigo-50 border-indigo-400 shadow-sm')
+                            : (isDark ? 'bg-slate-800/70 hover:bg-slate-800 border-slate-700/80 hover:border-indigo-500/50' : 'bg-white hover:bg-indigo-50/50 border-slate-200 hover:border-indigo-300 shadow-sm')
+                        }`}
+                      >
+                        <div className="min-w-0 flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs uppercase border ${
+                            isDark ? 'bg-slate-700 border-slate-600 text-cyan-300' : 'bg-slate-100 border-slate-300 text-indigo-700'
+                          }`}>
+                            {emp.name_th ? emp.name_th.charAt(0) : 'E'}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-bold text-xs truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                {emp.name_th || emp.emp_id}
+                              </span>
+                              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-700/50 text-slate-300">
+                                {emp.emp_id}
+                              </span>
+                            </div>
+                            <div className={`text-[11px] truncate ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                              {emp.position || 'พนักงานฝ่ายผลิต'} · {emp.line}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                                สอบผ่าน {emp.passed_courses || 0} คอร์ส
+                              </span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/20">
+                                ทักษะ {emp.skill_count || 0}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-right flex-shrink-0">
+                          <div className={`px-2.5 py-1 rounded-xl text-xs font-black border ${
+                            emp.grade_learning === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                            emp.grade_learning === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                            emp.grade_learning === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                            'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                          }`}>
+                            Lrn: {emp.grade_learning || 'D'}
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-1">
+                            รวม: <span className="font-bold text-white">{emp.grade_overall || 'B'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className={`p-4 border-t flex items-center justify-between text-xs ${
+              isDark ? 'bg-slate-800/80 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+            }`}>
+              <span>แสดงผล {employeeDirectory.employees?.length || 0} พนักงาน</span>
+              <button
+                onClick={() => setIsEmpSelectorOpen(false)}
+                className="px-4 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold"
+              >
+                ปิดหน้าต่าง
               </button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 // trainingAuditStore.js - Manufacturing Training Tracking, Competency Matrix & ISO 9001 Clause 7.2 Audit Engine
 import { courses } from './courses';
-import { getCustomCourses, getCurrentUser, getCommunityPosts, calculateRank, addExp } from './communityStore';
+import { getCustomCourses, getCurrentUser, getCommunityPosts, calculateRank, addExp, getUserGrading, saveUserGrading } from './communityStore';
 import { getUserAvatarSvg, DEFAULT_COURSE_IMAGE } from './offlineAssets';
 
 // SNC Manufacturing Factory Departments
@@ -799,6 +799,69 @@ export function getAllEmployees() {
   return list;
 }
 
+// Synchronize training course progress & Post-Test results directly to MES Backend & SQL Server
+export async function syncCourseProgressToBackend({
+  empId,
+  courseId,
+  courseTitle = '',
+  category = '',
+  status = 'completed',
+  quizScore = 0,
+  quizTotal = 0,
+  quizPercentage = 0,
+  passed = false,
+  certificateId = null
+}) {
+  const candidateEndpoints = [
+    '../MES/MES/page/manpower/api/api_learning.php?action=save_course_progress',
+    '../page/manpower/api/api_learning.php?action=save_course_progress'
+  ];
+
+  const payload = {
+    emp_id: empId,
+    course_id: courseId,
+    course_title: courseTitle,
+    category: category,
+    status: status,
+    quiz_score: quizScore,
+    quiz_total: quizTotal,
+    quiz_percentage: quizPercentage,
+    passed: passed ? 1 : 0,
+    certificate_id: certificateId
+  };
+
+  for (const endpoint of candidateEndpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.success) {
+          console.log('[MES Learning Hub] Course progress saved to SQL Server:', json.data);
+          // If we got back new grading data or skill award, update local grading store!
+          if (json.data && json.data.learning_grade) {
+            const currentGrading = getUserGrading() || {};
+            currentGrading.grade_learning = json.data.learning_grade;
+            currentGrading.system_grade_learning = json.data.learning_grade;
+            if (typeof json.data.new_skill_count === 'number') {
+              currentGrading.skill_count = json.data.new_skill_count;
+            }
+            saveUserGrading(currentGrading);
+          }
+          return json.data;
+        }
+      }
+    } catch {
+      // Continue to next endpoint candidate
+    }
+  }
+  return null;
+}
+
 // Record a quiz completion in real-time from DynamicCourseRenderer or CourseViewer
 export function recordLiveUserQuizAttempt({ courseId, score, totalQuestions }) {
   const currentUser = getCurrentUser();
@@ -904,6 +967,27 @@ export function markModuleCompleted({ courseId, moduleId, totalModules }) {
   }
 
   saveTrainingRecords(records);
+
+  // Sync progress status to backend asynchronously
+  try {
+    const allMerged = [...courses, ...getCustomCourses()];
+    const crs = allMerged.find(c => c.id === courseId);
+    syncCourseProgressToBackend({
+      empId: empId,
+      courseId: courseId,
+      courseTitle: crs ? crs.title : courseId,
+      category: crs ? crs.category : 'มาตรฐานโรงงาน',
+      status: isAllDone ? 'ready_for_assessment' : 'in_progress',
+      quizScore: 0,
+      quizTotal: 0,
+      quizPercentage: 0,
+      passed: false,
+      certificateId: null
+    }).catch(() => {});
+  } catch {
+    // Ignore async error
+  }
+
   return { completedModules: completed, progressPercent, isAllDone };
 }
 
@@ -959,6 +1043,27 @@ export function recordCourseCompletion({
   if (isPassed) {
     addExp(50, `สอบผ่านแบบทดสอบวัดผลหลักสูตร (${quizPct}%) และได้รับใบรับรองสมรรถนะ`);
   }
+
+  // Real-time synchronization to MES SQL Server (dbo.LEARNING_RECORDS & dbo.EMP_SKILLS)
+  try {
+    const allMerged = [...courses, ...getCustomCourses()];
+    const crs = allMerged.find(c => c.id === courseId);
+    syncCourseProgressToBackend({
+      empId: empId,
+      courseId: courseId,
+      courseTitle: crs ? crs.title : courseId,
+      category: crs ? crs.category : 'มาตรฐานโรงงาน',
+      status: isPassed ? 'completed' : 'failed',
+      quizScore: score,
+      quizTotal: totalQuestions,
+      quizPercentage: quizPct,
+      passed: isPassed,
+      certificateId: record.certificateId
+    }).catch(() => {});
+  } catch {
+    // Ignore async error
+  }
+
   return record;
 }
 
@@ -995,6 +1100,27 @@ export function recordFailedAssessment({ courseId, score = 0, totalQuestions = 4
   }
 
   saveTrainingRecords(records);
+
+  // Sync failed attempt to backend
+  try {
+    const allMerged = [...courses, ...getCustomCourses()];
+    const crs = allMerged.find(c => c.id === courseId);
+    syncCourseProgressToBackend({
+      empId: empId,
+      courseId: courseId,
+      courseTitle: crs ? crs.title : courseId,
+      category: crs ? crs.category : 'มาตรฐานโรงงาน',
+      status: prevPassed ? 'completed' : 'failed',
+      quizScore: score,
+      quizTotal: totalQuestions,
+      quizPercentage: quizPct,
+      passed: prevPassed,
+      certificateId: record.certificateId
+    }).catch(() => {});
+  } catch {
+    // Ignore async error
+  }
+
   return record;
 }
 
@@ -1237,6 +1363,10 @@ export function getEmployeeCompetencyPassport(empId) {
   const exp = currentUserIsMe ? currentUser.exp : (employee.exp || 420);
   const rank = calculateRank(exp);
 
+  // Live MES 4-Dimension Grading integration
+  const userGrading = getUserGrading();
+  const liveGrading = currentUserIsMe && (currentUser.grading || userGrading) ? (currentUser.grading || userGrading) : null;
+
   return {
     employee: employee,
     currentUserIsMe: currentUserIsMe,
@@ -1253,7 +1383,8 @@ export function getEmployeeCompetencyPassport(empId) {
     mandatoryPassedCount: mandatoryPassed.length,
     courseStatusList: courseStatusList,
     skillGaps: skillGaps,
-    expiringAlerts: expiringAlerts
+    expiringAlerts: expiringAlerts,
+    grading: liveGrading
   };
 }
 
