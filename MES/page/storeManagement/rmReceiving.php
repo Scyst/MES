@@ -202,8 +202,9 @@ $pageHelpId = "";
                                         data-bs-toggle="dropdown" 
                                         data-bs-popper-config='{"strategy":"fixed"}' 
                                         aria-expanded="false" 
-                                        style="height: 32px;">
-                                    <i class="fas fa-check-square me-1"></i> จัดการที่เลือก (<span id="selectedCount">0</span>)
+                                        style="height: 32px;"
+                                        title="จัดการรายการที่เลือก">
+                                    <i class="fas fa-check-square me-1"></i><span class="d-none d-sm-inline me-1">จัดการที่เลือก</span>(<span id="selectedCount">0</span>)
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-1" aria-labelledby="btnBatchDropdownToggle" style="font-size: 0.9rem; min-width: 210px; z-index: 1060;">
                                     <li><a class="dropdown-item py-2 fw-bold text-success" href="#" onclick="bulkReceiveTags(); return false;"><i class="fas fa-download fa-fw me-2"></i> ยืนยันรับเข้าสต็อก</a></li>
