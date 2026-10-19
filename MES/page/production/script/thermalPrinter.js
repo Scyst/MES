@@ -138,8 +138,8 @@
 ^FO280,216^A0N,20,18^FDLoc: ${locName}^FS
 ^FO30,248^A0N,20,18^FDRemark: ${remark}^FS
 ^FO280,248^A0N,20,18^FDTag: ${scanId}^FS
-^FO30,285^BY2,2,44^BCN,44,N,N,N^FD${scanId}^FS
-^FO545,52^BQN,2,11^FDMA,${scanId}^FS
+^FO30,280^BY2,2,54^BCN,54,N,N,N^FD${scanId}^FS
+^FO550,36^BQN,2,9^FDQA,${scanId}^FS
 ^XZ`;
         },
 
@@ -179,9 +179,9 @@
 ^FO280,212^A0N,22,20^FDWeek: ${week}^FS
 ^FO30,244^A0N,22,20^FDDate: ${date}^FS
 ^FO280,244^A0N,22,20^FDRemark: ${remark}^FS
-^FO30,278^BY2,2,44^BCN,44,N,N,N^FD${serialNo}^FS
-^FO545,45^BQN,2,10^FDMA,${serialNo}^FS
-^FO530,265^A0N,22,20^FB250,1,0,C^FD${serialNo}^FS
+^FO30,275^BY2,2,52^BCN,52,N,N,N^FD${serialNo}^FS
+^FO550,36^BQN,2,9^FDQA,${serialNo}^FS
+^FO530,270^A0N,22,20^FB250,1,0,C^FD${serialNo}^FS
 ^XZ`;
         },
 
