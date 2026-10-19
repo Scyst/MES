@@ -188,28 +188,32 @@ $pageHelpId = "";
                                     </div>
                                 </div>
 
-                                <div id="actionWrapper" class="d-flex gap-2 align-items-center justify-content-end flex-shrink-0 ms-auto">
-                                    
-                                    <div class="dropdown d-none flex-shrink-0" id="btnBatchPrintDropdown">
-                                        <button class="btn btn-dark btn-sm shadow-sm dropdown-toggle fw-bold px-3" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" style="height: 32px;">
-                                            <i class="fas fa-check-square me-1"></i> จัดการที่เลือก (<span id="selectedCount">0</span>)
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" style="font-size: 0.9rem; z-index: 1060;">
-                                            <li><a class="dropdown-item py-2 fw-bold text-success" href="#" onclick="bulkReceiveTags()"><i class="fas fa-download fa-fw me-2"></i> ยืนยันรับเข้าสต็อก</a></li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="printSelectedTags()"><i class="fas fa-print text-dark fa-fw me-2"></i> พิมพ์แยกใบ</a></li>
-                                            <li><a class="dropdown-item py-2 fw-bold text-primary" href="#" onclick="groupToMasterPallet()"><i class="fas fa-boxes fa-fw me-2"></i> จัดพาเลทรวม</a></li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item py-2 fw-bold text-danger" href="#" id="btnBatchDelete" onclick="deleteSelectedTags()"><i class="fas fa-trash fa-fw me-2"></i> ลบรายการ (<span id="selectedDeleteCount">0</span>)</a></li>
-                                        </ul>
-                                    </div>
-
-                                    <button class="btn btn-sm fw-bold px-3 py-1 rounded shadow transition-btn text-white border-0 d-none d-md-flex align-items-center flex-shrink-0" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7); height: 32px;" onclick="openTraceModal()" title="สแกน">
-                                        <i class="fas fa-qrcode me-1"></i> สแกน
-                                    </button>
-                                </div>
+                                <button class="btn btn-sm fw-bold px-3 py-1 rounded shadow transition-btn text-white border-0 d-none d-md-flex align-items-center flex-shrink-0 ms-auto" style="background: linear-gradient(135deg, #0dcaf0, #0b5ed7); height: 32px;" onclick="openTraceModal()" title="สแกน">
+                                    <i class="fas fa-qrcode me-1"></i> สแกน
+                                </button>
 
                             </div> <!-- END toolbar-scroll-container -->
+
+                            <!-- Pinned Batch Actions Menu Outside Scroll Container to Prevent Overflow Clipping -->
+                            <div class="dropdown d-none flex-shrink-0" id="btnBatchPrintDropdown">
+                                <button class="btn btn-dark btn-sm shadow-sm dropdown-toggle fw-bold px-2 px-sm-3 d-flex align-items-center" 
+                                        type="button" 
+                                        id="btnBatchDropdownToggle"
+                                        data-bs-toggle="dropdown" 
+                                        data-bs-popper-config='{"strategy":"fixed"}' 
+                                        aria-expanded="false" 
+                                        style="height: 32px;">
+                                    <i class="fas fa-check-square me-1"></i> จัดการที่เลือก (<span id="selectedCount">0</span>)
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-1" aria-labelledby="btnBatchDropdownToggle" style="font-size: 0.9rem; min-width: 210px; z-index: 1060;">
+                                    <li><a class="dropdown-item py-2 fw-bold text-success" href="#" onclick="bulkReceiveTags(); return false;"><i class="fas fa-download fa-fw me-2"></i> ยืนยันรับเข้าสต็อก</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item py-2 fw-bold" href="#" onclick="printSelectedTags(); return false;"><i class="fas fa-print text-dark fa-fw me-2"></i> พิมพ์แยกใบ</a></li>
+                                    <li><a class="dropdown-item py-2 fw-bold text-primary" href="#" onclick="groupToMasterPallet(); return false;"><i class="fas fa-boxes fa-fw me-2"></i> จัดพาเลทรวม</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item py-2 fw-bold text-danger" href="#" id="btnBatchDelete" onclick="deleteSelectedTags(); return false;"><i class="fas fa-trash fa-fw me-2"></i> ลบรายการ (<span id="selectedDeleteCount">0</span>)</a></li>
+                                </ul>
+                            </div>
 
                             <!-- Pinned Action Menu (3 Dots / Kebab Menu) Outside Scroll Container to Prevent Overflow Clipping -->
                             <div class="dropdown flex-shrink-0">

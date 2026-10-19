@@ -647,7 +647,13 @@ function updateBatchPrintBtn() {
     const actionWrapper = document.getElementById('actionWrapper');
     
     if(checkedCount > 0) {
-        if(btnPrintDropdown) { btnPrintDropdown.classList.remove('d-none'); document.getElementById('selectedCount').innerText = checkedCount; }
+        if(btnPrintDropdown) { 
+            btnPrintDropdown.classList.remove('d-none'); 
+            const selCount = document.getElementById('selectedCount');
+            if(selCount) selCount.innerText = checkedCount;
+            const selDeleteCount = document.getElementById('selectedDeleteCount');
+            if(selDeleteCount) selDeleteCount.innerText = checkedCount;
+        }
         
         if(actionWrapper) { 
             actionWrapper.classList.remove('d-none', 'd-md-flex'); 
