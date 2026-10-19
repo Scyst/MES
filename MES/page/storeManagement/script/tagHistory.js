@@ -1,4 +1,4 @@
-// MES/page/storeManagement/script/tagHistoryTest.js
+// MES/page/storeManagement/script/tagHistory.js
 
 document.addEventListener('DOMContentLoaded', () => {
     const traceForm = document.getElementById('traceForm');
