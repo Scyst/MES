@@ -121,23 +121,25 @@
             const remark = (d.remark || d.notes || '-').substring(0, 25).replace(/[\^~]/g, '');
             const scanId = (d.scan_id_display || `${manualLot}/${d.serial_no || '001'}`).substring(0, 30);
 
+            // Calibrated 1:1 against physical 4"x2" Honeywell tag (203 DPI / 8 dpmm)
             return `^XA
 ^PW${this.DOTS_WIDTH}
 ^LL${this.DOTS_HEIGHT}
 ^PON
 ^LH0,0
-^FO35,72^A0N,34,30^FD${partNo}^FS
-^FO35,110^A0N,24,22^FD${sapNo}^FS
-^FO35,136^A0N,20,18^FB480,2,0,L^FD${desc}^FS
-^FO35,166^GB480,2,2^FS
-^FO35,182^A0N,22,20^FDQTY: ${qty}^FS
-^FO300,182^A0N,22,20^FDDate: ${prodDate}^FS
-^FO35,214^A0N,22,20^FDLot: ${manualLot}^FS
-^FO300,214^A0N,22,20^FDLoc: ${locName}^FS
-^FO35,246^A0N,22,20^FDRemark: ${remark}^FS
-^FO300,246^A0N,22,20^FDTag: ${scanId}^FS
-^FO35,282^BY2,2,48^BCN,48,N,N,N^FD${scanId}^FS
-^FO540,96^BQN,2,7^FDMA,${scanId}^FS
+^FO30,70^A0N,36,36^FD${partNo}^FS
+^FO30,112^A0N,24,24^FD${sapNo}^FS
+^FO30,140^A0N,18,16^FB470,2,0,L^FD${desc}^FS
+^FO30,165^GB470,2,2^FS
+^FO30,182^A0N,20,18^FDQTY:^FS
+^FO85,178^A0N,26,24^FD${qty}^FS
+^FO280,182^A0N,20,18^FDDate: ${prodDate}^FS
+^FO30,216^A0N,20,18^FDLot: ${manualLot}^FS
+^FO280,216^A0N,20,18^FDLoc: ${locName}^FS
+^FO30,248^A0N,20,18^FDRemark: ${remark}^FS
+^FO280,248^A0N,20,18^FDTag: ${scanId}^FS
+^FO30,285^BY2,2,44^BCN,44,N,N,N^FD${scanId}^FS
+^FO545,52^BQN,2,11^FDMA,${scanId}^FS
 ^XZ`;
         },
 
@@ -158,27 +160,28 @@
             const remark = (tag.remark || '-').substring(0, 25).replace(/[\^~]/g, '');
             const serialNo = (tag.serial_no || '-').substring(0, 30);
 
+            // Calibrated 1:1 against physical 4"x2" Honeywell tag (203 DPI / 8 dpmm)
             return `^XA
 ^PW${this.DOTS_WIDTH}
 ^LL${this.DOTS_HEIGHT}
 ^PON
 ^LH0,0
-^FO35,25^A0N,36,30^FD${itemNo}^FS
-^FO35,68^A0N,24,20^FD${category}^FS
-^FO35,95^A0N,20,18^FB510,2,0,L^FD${desc}^FS
-^FO35,140^GB510,2,2^FS
-^FO35,150^A0N,22,20^FDQTY:^FS
-^FO95,146^A0N,28,26^FD${qty}^FS
-^FO300,150^A0N,22,20^FDInv: ${inv}^FS
-^FO35,182^A0N,22,20^FDPO: ${po}^FS
-^FO300,182^A0N,22,20^FDPallet: ${pallet}^FS
-^FO35,214^A0N,22,20^FDCTN: ${ctn}^FS
-^FO300,214^A0N,22,20^FDWeek: ${week}^FS
-^FO35,246^A0N,22,20^FDDate: ${date}^FS
-^FO300,246^A0N,22,20^FDRemark: ${remark}^FS
-^FO35,278^BY2,2,40^BCN,40,N,N,N^FD${serialNo}^FS
-^FO580,55^BQN,2,6^FDMA,${serialNo}^FS
-^FO550,250^A0N,22,20^FB240,1,0,C^FD${serialNo}^FS
+^FO30,25^A0N,36,34^FD${itemNo}^FS
+^FO30,68^A0N,24,22^FD${category}^FS
+^FO30,95^A0N,20,18^FB490,2,0,L^FD${desc}^FS
+^FO30,138^GB490,2,2^FS
+^FO30,148^A0N,22,20^FDQTY:^FS
+^FO90,144^A0N,28,26^FD${qty}^FS
+^FO280,148^A0N,22,20^FDInv: ${inv}^FS
+^FO30,180^A0N,22,20^FDPO: ${po}^FS
+^FO280,180^A0N,22,20^FDPallet: ${pallet}^FS
+^FO30,212^A0N,22,20^FDCTN: ${ctn}^FS
+^FO280,212^A0N,22,20^FDWeek: ${week}^FS
+^FO30,244^A0N,22,20^FDDate: ${date}^FS
+^FO280,244^A0N,22,20^FDRemark: ${remark}^FS
+^FO30,278^BY2,2,44^BCN,44,N,N,N^FD${serialNo}^FS
+^FO545,45^BQN,2,10^FDMA,${serialNo}^FS
+^FO530,265^A0N,22,20^FB250,1,0,C^FD${serialNo}^FS
 ^XZ`;
         },
 
