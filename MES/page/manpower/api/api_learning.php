@@ -51,47 +51,163 @@ $COURSE_SKILL_MAP = [
 
 try {
     // ─────────────────────────────────────────────────────────────────────────
+    // Helper: Format Role & Position Display Title
+    // ─────────────────────────────────────────────────────────────────────────
+    $formatUserRoleTitle = function (?string $sysRole, ?string $empPosition): string {
+        $roleKey = strtolower(trim($sysRole ?? ''));
+        $pos = trim($empPosition ?? '');
+        $roleMap = [
+            'creator'    => 'ผู้พัฒนาระบบหลัก (System Creator)',
+            'admin'      => 'ผู้ดูแลระบบ (System Admin)',
+            'supervisor' => 'หัวหน้างาน (Supervisor)',
+            'qc'         => 'เจ้าหน้าที่ควบคุมคุณภาพ (QC/QA)',
+            'operator'   => 'เจ้าหน้าที่ปฏิบัติการ (Operator)'
+        ];
+
+        if (!empty($pos) && $pos !== 'พนักงาน' && strtolower($pos) !== $roleKey) {
+            if (in_array($roleKey, ['admin', 'creator'], true)) {
+                return $pos . ' (' . strtoupper($roleKey) . ')';
+            }
+            return $pos;
+        }
+        return $roleMap[$roleKey] ?? ($pos ?: 'เจ้าหน้าที่ระบบ MES');
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
     // ACTION: get_current_user
-    // ดึงข้อมูลผู้ใช้ที่กำลังล็อกอิน หรือพนักงานที่เลือก พร้อมเกรด 4 มิติล่าสุด
+    // ดึงข้อมูลผู้ใช้ที่กำลังล็อกอินจริงในระบบหลัก ($_SESSION['user']) หรือพนักงานที่ระบุ
     // ─────────────────────────────────────────────────────────────────────────
     if ($action === 'get_current_user') {
         $sessionUser = $_SESSION['user'] ?? null;
         $requestedEmpId = trim($_GET['emp_id'] ?? '');
 
-        $targetEmpId = !empty($requestedEmpId) 
-            ? $requestedEmpId 
-            : (!empty($sessionUser['emp_id']) ? $sessionUser['emp_id'] : null);
+        // ถ้าไม่ได้ล็อกอินในระบบหลัก และไม่ได้ระบุรหัสพนักงาน ให้คืนค่าว่ายังไม่ได้ล็อกอิน (ห้ามดึง TOP 1 เจริญชัย อินทะ มาสวมรอยเด็ดขาด)
+        if (empty($sessionUser) && empty($requestedEmpId)) {
+            echo json_encode([
+                'success'       => true,
+                'authenticated' => false,
+                'data'          => [
+                    'user'    => null,
+                    'grading' => null
+                ],
+                'message'       => 'No active MES session'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
 
+        $dbUser = null;
         $empData = null;
-        if (!empty($targetEmpId)) {
-            $stmt = $pdo->prepare("
-                SELECT E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api,
-                       U.username, U.role, U.profile_picture
+
+        if (!empty($requestedEmpId)) {
+            // กรณีระบุ emp_id หรือ username เจาะจง
+            $stmtEmp = $pdo->prepare("
+                SELECT TOP 1 E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api, E.is_active
                 FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
-                LEFT JOIN dbo.USERS U WITH (NOLOCK) ON U.emp_id = E.emp_id COLLATE Thai_CI_AS
-                WHERE E.emp_id = ? AND E.is_active = 1
+                WHERE E.emp_id = ? OR E.name_th = ?
+                ORDER BY E.is_active DESC, E.emp_id DESC
             ");
-            $stmt->execute([$targetEmpId]);
-            $empData = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmtEmp->execute([$requestedEmpId, $requestedEmpId]);
+            $empData = $stmtEmp->fetch(PDO::FETCH_ASSOC);
+
+            $stmtUsr = $pdo->prepare("
+                SELECT TOP 1 id, username, fullname, role, line, emp_id, team_group, profile_picture
+                FROM dbo.USERS WITH (NOLOCK)
+                WHERE emp_id = ? OR username = ?
+                ORDER BY is_active DESC, id ASC
+            ");
+            $stmtUsr->execute([$empData['emp_id'] ?? $requestedEmpId, $requestedEmpId]);
+            $dbUser = $stmtUsr->fetch(PDO::FETCH_ASSOC);
+
+            if (!$empData && $dbUser && !empty($dbUser['fullname'])) {
+                $stmtByName = $pdo->prepare("
+                    SELECT TOP 1 E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api, E.is_active
+                    FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                    WHERE E.name_th = ?
+                    ORDER BY E.is_active DESC, E.emp_id DESC
+                ");
+                $stmtByName->execute([trim($dbUser['fullname'])]);
+                $empData = $stmtByName->fetch(PDO::FETCH_ASSOC);
+            }
+        } else {
+            // กรณีล็อกอินผ่านระบบหลัก ($_SESSION['user']) -> ดึงข้อมูลสดจาก dbo.USERS ก่อนเสมอ
+            $sessionUserId = (int)($sessionUser['id'] ?? 0);
+            $sessionUsername = trim($sessionUser['username'] ?? '');
+
+            $stmtUsr = $pdo->prepare("
+                SELECT TOP 1 id, username, fullname, role, line, emp_id, team_group, profile_picture
+                FROM dbo.USERS WITH (NOLOCK)
+                WHERE (id = ? AND ? > 0) OR (username = ? AND ? <> '')
+                ORDER BY is_active DESC, id ASC
+            ");
+            $stmtUsr->execute([$sessionUserId, $sessionUserId, $sessionUsername, $sessionUsername]);
+            $dbUser = $stmtUsr->fetch(PDO::FETCH_ASSOC) ?: $sessionUser;
+
+            // 1. ค้นหาใน MANPOWER_EMPLOYEES ด้วย emp_id หรือ username
+            $candidateEmpId = !empty($dbUser['emp_id']) ? trim($dbUser['emp_id']) : trim($dbUser['username'] ?? '');
+            if (!empty($candidateEmpId)) {
+                $stmtEmp = $pdo->prepare("
+                    SELECT TOP 1 E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api, E.is_active
+                    FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                    WHERE E.emp_id = ?
+                    ORDER BY E.is_active DESC
+                ");
+                $stmtEmp->execute([$candidateEmpId]);
+                $empData = $stmtEmp->fetch(PDO::FETCH_ASSOC);
+            }
+
+            // 2. ถ้าไม่พบด้วย emp_id (เช่นบัญชี Admin verymaron01 ที่ emp_id เป็น NULL) ให้เชื่อมโยงด้วยชื่อ-นามสกุลจริง (fullname = name_th)
+            $fullNameToMatch = trim($dbUser['fullname'] ?? $sessionUser['fullname'] ?? '');
+            if (!$empData && !empty($fullNameToMatch)) {
+                $stmtByName = $pdo->prepare("
+                    SELECT TOP 1 E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api, E.is_active
+                    FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                    WHERE E.name_th = ?
+                    ORDER BY E.is_active DESC, E.emp_id DESC
+                ");
+                $stmtByName->execute([$fullNameToMatch]);
+                $empData = $stmtByName->fetch(PDO::FETCH_ASSOC);
+            }
         }
 
-        // Default fallback if no session and no emp_id passed
-        if (!$empData) {
-            $stmtDefault = $pdo->query("
-                SELECT TOP 1 E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api,
-                             U.username, U.role, U.profile_picture
-                FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
-                LEFT JOIN dbo.USERS U WITH (NOLOCK) ON U.emp_id = E.emp_id COLLATE Thai_CI_AS
-                WHERE E.is_active = 1 AND E.position LIKE N'%หัวหน้า%' OR E.position LIKE N'%ช่าง%'
-                ORDER BY E.emp_id ASC
-            ");
-            $empData = $stmtDefault->fetch(PDO::FETCH_ASSOC);
+        // ถ้าไม่พบทั้งใน SESSION, USERS และ MANPOWER_EMPLOYEES
+        if (!$empData && !$dbUser && empty($sessionUser)) {
+            echo json_encode([
+                'success'       => true,
+                'authenticated' => false,
+                'data'          => [
+                    'user'    => null,
+                    'grading' => null
+                ],
+                'message'       => 'User not found'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
         }
 
-        $empId = $empData ? $empData['emp_id'] : 'EMP-DEMO';
-        $name = $empData ? $empData['name_th'] : ($sessionUser['fullname'] ?? 'ผู้ใช้งาน MES');
-        $position = $empData ? $empData['position'] : ($sessionUser['position'] ?? 'ช่างเทคนิคโรงงาน');
-        $line = $empData ? $empData['line'] : ($sessionUser['line'] ?? 'PRODUCTION');
+        // ประกอบข้อมูลผู้ใช้งานจริง (ไม่ใช้ข้อมูลจำลองทับเด็ดขาด)
+        $empId = $empData['emp_id']
+            ?? $dbUser['emp_id']
+            ?? $sessionUser['emp_id']
+            ?? $dbUser['username']
+            ?? $sessionUser['username']
+            ?? 'MES-USER';
+
+        $username = $dbUser['username'] ?? $sessionUser['username'] ?? $empId;
+
+        $name = !empty($dbUser['fullname'])
+            ? $dbUser['fullname']
+            : (!empty($empData['name_th'])
+                ? $empData['name_th']
+                : (!empty($sessionUser['fullname']) ? $sessionUser['fullname'] : $username));
+
+        $sysRole = $dbUser['role'] ?? $sessionUser['role'] ?? 'operator';
+        $empPos = $empData['position'] ?? $sessionUser['position'] ?? '';
+        $position = $formatUserRoleTitle($sysRole, $empPos);
+
+        $line = $empData['line'] ?? $dbUser['line'] ?? $sessionUser['line'] ?? 'MT/PE';
+        $teamGroup = $empData['team_group'] ?? $dbUser['team_group'] ?? $sessionUser['team_group'] ?? 'TEAM 1';
+        $department = $empData['department_api'] ?? $line;
+        $profilePic = $dbUser['profile_picture'] ?? $sessionUser['profile_picture'] ?? null;
+        $isAdmin = in_array(strtolower($sysRole), ['creator', 'admin', 'supervisor'], true);
 
         // ดึงผลการประเมินเกรด 4 มิติล่าสุดจาก EMPLOYEE_GRADES
         $stmtGrade = $pdo->prepare("
@@ -133,36 +249,41 @@ try {
         $stmtLearn->execute([$empId]);
         $learnStat = $stmtLearn->fetch(PDO::FETCH_ASSOC);
 
-        // คำนวณ EXP สะสม (50 EXP ต่อการเรียนจบ + 20 EXP ต่อทักษะ + 5 EXP ต่อการทดสอบ)
+        // คำนวณ EXP สะสม
         $passedCoursesCount = (int)($learnStat['passed_count'] ?? 0);
-        $computedExp = 100 + ($passedCoursesCount * 50) + ($skillCount * 30);
+        $baseExp = $isAdmin ? 450 : 150;
+        $computedExp = $baseExp + ($passedCoursesCount * 50) + ($skillCount * 30);
 
         echo json_encode([
-            'success' => true,
-            'data' => [
+            'success'       => true,
+            'authenticated' => !empty($sessionUser) || !empty($dbUser),
+            'data'          => [
                 'user' => [
                     'id'               => $empId,
                     'emp_id'           => $empId,
+                    'username'         => $username,
                     'name'             => $name,
                     'role'             => $position,
+                    'sys_role'         => $sysRole,
                     'line'             => $line,
-                    'team_group'       => $empData['team_group'] ?? 'A',
-                    'department'       => $empData['department_api'] ?? $line,
-                    'profile_picture'  => $empData['profile_picture'] ?? null,
+                    'team_group'       => $teamGroup,
+                    'department'       => $department,
+                    'profile_picture'  => $profilePic,
                     'is_logged_in_real'=> !empty($sessionUser),
+                    'is_admin'         => $isAdmin,
                     'exp'              => $computedExp,
                 ],
                 'grading' => [
-                    'evaluation_period' => $gradeRow['evaluation_period'] ?? date('Y-m'),
-                    'grade_overall'     => $gradeRow['grade_overall'] ?? $gradeRow['grade'] ?? 'B',
-                    'grade_iph'         => $gradeRow['grade_iph'] ?? 'B',
-                    'grade_5s'          => $gradeRow['grade_5s'] ?? 'A',
-                    'grade_attendance'  => $gradeRow['grade_attendance'] ?? 'A',
-                    'grade_learning'    => $gradeRow['grade_learning'] ?: $systemLearningGrade,
+                    'evaluation_period'     => $gradeRow['evaluation_period'] ?? date('Y-m'),
+                    'grade_overall'         => $gradeRow['grade_overall'] ?? $gradeRow['grade'] ?? 'B',
+                    'grade_iph'             => $gradeRow['grade_iph'] ?? 'B',
+                    'grade_5s'              => $gradeRow['grade_5s'] ?? 'A',
+                    'grade_attendance'      => $gradeRow['grade_attendance'] ?? 'A',
+                    'grade_learning'        => !empty($gradeRow['grade_learning']) ? $gradeRow['grade_learning'] : $systemLearningGrade,
                     'system_grade_learning' => $systemLearningGrade,
-                    'skill_count'       => $skillCount,
-                    'passed_courses'    => $passedCoursesCount,
-                    'avg_score'         => round((float)($learnStat['avg_score'] ?? 0), 1),
+                    'skill_count'           => $skillCount,
+                    'passed_courses'        => $passedCoursesCount,
+                    'avg_score'             => round((float)($learnStat['avg_score'] ?? 0), 1),
                 ]
             ]
         ], JSON_UNESCAPED_UNICODE);
@@ -255,18 +376,55 @@ try {
             throw new Exception("emp_id is required.");
         }
 
-        // ข้อมูลพนักงาน
+        // 1. ค้นหาใน MANPOWER_EMPLOYEES
         $stmtEmp = $pdo->prepare("
-            SELECT E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api
+            SELECT TOP 1 E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api
             FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
-            WHERE E.emp_id = ? AND E.is_active = 1
+            WHERE E.emp_id = ? OR E.name_th = ?
+            ORDER BY E.is_active DESC, E.emp_id DESC
         ");
-        $stmtEmp->execute([$empId]);
+        $stmtEmp->execute([$empId, $empId]);
         $emp = $stmtEmp->fetch(PDO::FETCH_ASSOC);
 
+        // 2. หากไม่พบใน MANPOWER_EMPLOYEES ให้ค้นหาจาก dbo.USERS (กรณีเป็น Admin/User ในระบบหลัก)
         if (!$emp) {
-            throw new Exception("Employee not found in active roster.");
+            $stmtUsr = $pdo->prepare("
+                SELECT TOP 1 id, username, fullname, role, line, emp_id, team_group
+                FROM dbo.USERS WITH (NOLOCK)
+                WHERE emp_id = ? OR username = ?
+                ORDER BY is_active DESC, id ASC
+            ");
+            $stmtUsr->execute([$empId, $empId]);
+            $uRow = $stmtUsr->fetch(PDO::FETCH_ASSOC);
+
+            if ($uRow && !empty($uRow['fullname'])) {
+                $stmtByName = $pdo->prepare("
+                    SELECT TOP 1 E.emp_id, E.name_th, E.position, E.line, E.team_group, E.department_api
+                    FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                    WHERE E.name_th = ?
+                    ORDER BY E.is_active DESC, E.emp_id DESC
+                ");
+                $stmtByName->execute([trim($uRow['fullname'])]);
+                $emp = $stmtByName->fetch(PDO::FETCH_ASSOC);
+            }
+
+            if (!$emp && $uRow) {
+                $emp = [
+                    'emp_id'         => $uRow['emp_id'] ?: $uRow['username'],
+                    'name_th'        => $uRow['fullname'] ?: $uRow['username'],
+                    'position'       => $formatUserRoleTitle($uRow['role'] ?? 'operator', ''),
+                    'line'           => $uRow['line'] ?: 'MANAGEMENT',
+                    'team_group'     => $uRow['team_group'] ?: 'TEAM 1',
+                    'department_api' => $uRow['line'] ?: 'MANAGEMENT'
+                ];
+            }
         }
+
+        if (!$emp) {
+            throw new Exception("Employee not found in roster.");
+        }
+
+        $resolvedEmpId = $emp['emp_id'];
 
         // คอร์สที่บันทึกไว้ใน LEARNING_RECORDS
         $stmtRecords = $pdo->prepare("
@@ -276,7 +434,7 @@ try {
             WHERE emp_id = ?
             ORDER BY completed_at DESC, updated_at DESC
         ");
-        $stmtRecords->execute([$empId]);
+        $stmtRecords->execute([$resolvedEmpId]);
         $learningRecords = $stmtRecords->fetchAll(PDO::FETCH_ASSOC);
 
         // ทักษะที่ได้รับการรับรองจาก EMP_SKILLS + SKILL_DEFINITIONS
@@ -287,8 +445,31 @@ try {
             WHERE ES.emp_id = ?
             ORDER BY ES.level DESC, SD.display_order ASC
         ");
-        $stmtSkills->execute([$empId]);
+        $stmtSkills->execute([$resolvedEmpId]);
         $skills = $stmtSkills->fetchAll(PDO::FETCH_ASSOC);
+
+        $skillCount = 0;
+        foreach ($skills as $sk) {
+            if ((int)($sk['level'] ?? 0) >= 2) {
+                $skillCount++;
+            }
+        }
+
+        $systemLearningGrade = 'D';
+        if ($skillCount >= 5) {
+            $systemLearningGrade = 'A';
+        } elseif ($skillCount >= 3) {
+            $systemLearningGrade = 'B';
+        } elseif ($skillCount >= 1) {
+            $systemLearningGrade = 'C';
+        }
+
+        $passedCoursesCount = 0;
+        foreach ($learningRecords as $lr) {
+            if (!empty($lr['passed'])) {
+                $passedCoursesCount++;
+            }
+        }
 
         // ผลการประเมินเกรดล่าสุด
         $stmtGrade = $pdo->prepare("
@@ -297,8 +478,21 @@ try {
             WHERE emp_id = ?
             ORDER BY evaluation_period DESC
         ");
-        $stmtGrade->execute([$empId]);
-        $grade = $stmtGrade->fetch(PDO::FETCH_ASSOC);
+        $stmtGrade->execute([$resolvedEmpId]);
+        $gradeRow = $stmtGrade->fetch(PDO::FETCH_ASSOC);
+
+        $gradingData = [
+            'evaluation_period'     => $gradeRow['evaluation_period'] ?? date('Y-m'),
+            'grade_overall'         => $gradeRow['grade_overall'] ?? $gradeRow['grade'] ?? 'B',
+            'grade_iph'             => $gradeRow['grade_iph'] ?? 'B',
+            'grade_5s'              => $gradeRow['grade_5s'] ?? 'A',
+            'grade_attendance'      => $gradeRow['grade_attendance'] ?? 'A',
+            'grade_learning'        => !empty($gradeRow['grade_learning']) ? $gradeRow['grade_learning'] : $systemLearningGrade,
+            'system_grade_learning' => $systemLearningGrade,
+            'skill_count'           => $skillCount,
+            'passed_courses'        => $passedCoursesCount,
+            'notes'                 => $gradeRow['notes'] ?? null
+        ];
 
         echo json_encode([
             'success' => true,
@@ -306,7 +500,7 @@ try {
                 'employee'         => $emp,
                 'learning_records' => $learningRecords,
                 'skills'           => $skills,
-                'grading'          => $grade
+                'grading'          => $gradingData
             ]
         ], JSON_UNESCAPED_UNICODE);
         exit;

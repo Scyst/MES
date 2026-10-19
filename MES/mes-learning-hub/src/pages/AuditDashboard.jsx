@@ -45,20 +45,14 @@ export default function AuditDashboard() {
   const [liveAuditData, setLiveAuditData] = useState(null);
 
   useEffect(() => {
-    const candidateEndpoints = [
-      '../MES/MES/page/manpower/api/api_learning.php?action=get_audit_matrix',
-      '../page/manpower/api/api_learning.php?action=get_audit_matrix'
-    ];
-    for (const ep of candidateEndpoints) {
-      fetch(ep, { credentials: 'include' })
-        .then(res => res.json())
-        .then(json => {
-          if (json && json.success && json.data) {
-            setLiveAuditData(json.data);
-          }
-        })
-        .catch(() => {});
-    }
+    fetch('../MES/MES/page/manpower/api/api_learning.php?action=get_audit_matrix', { credentials: 'include' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(json => {
+        if (json && json.success && json.data) {
+          setLiveAuditData(json.data);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Perspective state: 'course' | 'employee' | 'overview'

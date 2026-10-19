@@ -17,6 +17,14 @@ export default function Navbar() {
         setCurrentUser(user);
       }
     });
+
+    const handleUserUpdated = (e) => {
+      if (e.detail) {
+        setCurrentUser(e.detail);
+      }
+    };
+    window.addEventListener('mes-user-updated', handleUserUpdated);
+    return () => window.removeEventListener('mes-user-updated', handleUserUpdated);
   }, []);
 
   // Re-read user exp whenever path changes (e.g. after post creation or upvote)

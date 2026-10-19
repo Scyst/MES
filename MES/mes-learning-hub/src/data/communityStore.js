@@ -195,90 +195,105 @@ export function saveUserGrading(grading) {
   }
 }
 
+export const API_LEARNING_URL = '../MES/MES/page/manpower/api/api_learning.php';
+export const API_VERIFY_URL = '../MES/MES/auth/api_verify.php?silent=1';
+
+function buildSyncedUserFromApi(u, grading = null) {
+  const realUserId = u.emp_id || u.id || u.username || 'usr-real';
+  const userExpKey = `mes_learning_exp_${realUserId}`;
+  const storedExp = localStorage.getItem(userExpKey);
+  const exp = storedExp !== null ? parseInt(storedExp, 10) : (u.exp || 450);
+
+  return {
+    id: realUserId,
+    emp_id: u.emp_id || u.username || 'EMP-MES',
+    username: u.username || u.emp_id || '',
+    name: u.name || u.fullname || u.username || 'ผู้ใช้งานระบบ MES',
+    role: u.role || u.position || 'เจ้าหน้าที่ระบบ MES',
+    sys_role: u.sys_role || u.role || 'operator',
+    line: u.line || 'MT/PE',
+    team_group: u.team_group || 'TEAM 1',
+    department: u.department || u.line || 'MT/PE',
+    avatar: u.profile_picture || getUserAvatarSvg(u.name || u.fullname || u.username || 'MES'),
+    exp: exp,
+    isLoggedInReal: true,
+    isAdmin: Boolean(u.is_admin ?? true),
+    grading: grading
+  };
+}
+
 export async function fetchRealUserSession() {
-  const activeEmpId = localStorage.getItem('mes_learning_active_emp_id') || '';
-  const empParam = activeEmpId ? `&emp_id=${encodeURIComponent(activeEmpId)}` : '';
+  // Purge legacy active_emp_id override so logged-in user session is never hijacked
+  localStorage.removeItem('mes_learning_active_emp_id');
 
-  // Priority candidate endpoint paths
-  const candidateEndpoints = [
-    `../MES/MES/page/manpower/api/api_learning.php?action=get_current_user${empParam}`,
-    `../page/manpower/api/api_learning.php?action=get_current_user${empParam}`,
-    '../MES/MES/auth/api_verify.php?silent=1',
-    '../auth/api_verify.php?silent=1'
-  ];
+  try {
+    // 1. Primary: Query api_learning.php using real PHP $_SESSION['user']
+    const res = await fetch(`${API_LEARNING_URL}?action=get_current_user`, {
+      method: 'GET',
+      credentials: 'include'
+    });
 
-  for (const endpoint of candidateEndpoints) {
-    try {
-      const res = await fetch(endpoint, {
-        method: 'GET',
-        credentials: 'include'
-      });
+    if (res.ok) {
+      const json = await res.json();
 
-      if (res.ok) {
-        const json = await res.json();
-        
-        // Response format 1: from api_learning.php (with grading)
-        if (json && json.success && json.data && json.data.user) {
-          const u = json.data.user;
-          const grading = json.data.grading || null;
-          saveUserGrading(grading);
+      if (json && json.success && json.data && json.data.user) {
+        const grading = json.data.grading || null;
+        saveUserGrading(grading);
+        const synchedUser = buildSyncedUserFromApi(json.data.user, grading);
+        saveCurrentUser(synchedUser);
+        return synchedUser;
+      }
 
-          const realUserId = u.emp_id || u.id || 'usr-real';
-          const userExpKey = `mes_learning_exp_${realUserId}`;
-          const storedExp = localStorage.getItem(userExpKey);
-          const exp = storedExp !== null ? parseInt(storedExp, 10) : (u.exp || 450);
-
-          const synchedUser = {
-            id: realUserId,
-            emp_id: u.emp_id || 'EMP-MES',
-            name: u.name || 'MES Employee',
-            role: u.role || 'ช่างเทคนิคโรงงาน',
-            line: u.line || 'PRODUCTION',
-            team_group: u.team_group || 'A',
-            department: u.department || u.line || 'ฝ่ายผลิต',
-            avatar: u.profile_picture || getUserAvatarSvg(u.name || 'MES'),
-            exp: exp,
-            isLoggedInReal: true,
-            isAdmin: true,
-            grading: grading
-          };
-
-          saveCurrentUser(synchedUser);
-          console.log('[MES Learning Hub] Live User & Grading synchronized via:', endpoint);
-          return synchedUser;
-        }
-
-        // Response format 2: from auth/api_verify.php
-        if (json && json.success && json.user) {
-          const u = json.user;
-          const realUserId = u.emp_id || u.id || u.username || 'usr-real';
-          
-          const userExpKey = `mes_learning_exp_${realUserId}`;
-          const storedExp = localStorage.getItem(userExpKey);
-          const exp = storedExp !== null ? parseInt(storedExp, 10) : 450;
-
-          const synchedUser = {
-            id: realUserId,
-            emp_id: u.emp_id || u.username || 'EMP-MES',
-            name: u.fullname || u.username || 'MES Employee',
-            role: u.position || u.role || 'ช่างเทคนิคโรงงาน',
-            line: u.line || 'PRODUCTION',
-            team_group: u.team_group || 'A',
-            department: u.line || 'ฝ่ายผลิต',
-            avatar: u.profile_picture || getUserAvatarSvg(u.fullname || u.username || 'MES'),
-            exp: exp,
-            isLoggedInReal: true,
-            isAdmin: true
-          };
-
-          saveCurrentUser(synchedUser);
-          console.log('[MES Learning Hub] Authenticated session confirmed via:', endpoint);
-          return synchedUser;
+      // 2. Fallback if PHP session was created in MES Toolbox SPA (mes_active_team in localStorage)
+      if (json && json.authenticated === false) {
+        try {
+          const activeTeamRaw = localStorage.getItem('mes_active_team');
+          const activeTeam = activeTeamRaw ? JSON.parse(activeTeamRaw) : [];
+          if (Array.isArray(activeTeam) && activeTeam.length > 0 && activeTeam[0]) {
+            const teamUser = activeTeam[0];
+            const lookupKey = teamUser.emp_id || teamUser.username || teamUser.fullname;
+            if (lookupKey) {
+              const resTeam = await fetch(
+                `${API_LEARNING_URL}?action=get_current_user&emp_id=${encodeURIComponent(lookupKey)}`,
+                { method: 'GET', credentials: 'include' }
+              );
+              if (resTeam.ok) {
+                const jsonTeam = await resTeam.json();
+                if (jsonTeam && jsonTeam.success && jsonTeam.data && jsonTeam.data.user) {
+                  const grading = jsonTeam.data.grading || null;
+                  saveUserGrading(grading);
+                  const synchedUser = buildSyncedUserFromApi(jsonTeam.data.user, grading);
+                  saveCurrentUser(synchedUser);
+                  return synchedUser;
+                }
+              }
+            }
+          }
+        } catch {
+          // Ignore malformed localStorage
         }
       }
-    } catch {
-      // Continue to next candidate
     }
+  } catch {
+    // Continue to verify fallback
+  }
+
+  // 3. Secondary check via auth/api_verify.php
+  try {
+    const verifyRes = await fetch(API_VERIFY_URL, {
+      method: 'GET',
+      credentials: 'include'
+    });
+    if (verifyRes.ok) {
+      const verifyJson = await verifyRes.json();
+      if (verifyJson && verifyJson.success && verifyJson.user) {
+        const synchedUser = buildSyncedUserFromApi(verifyJson.user, getUserGrading());
+        saveCurrentUser(synchedUser);
+        return synchedUser;
+      }
+    }
+  } catch {
+    // Ignore network error in offline mode
   }
 
   return getCurrentUser();
@@ -286,37 +301,29 @@ export async function fetchRealUserSession() {
 
 // Fetch list of active factory employees for selector / directory
 export async function fetchEmployeesList(search = '', line = 'ALL') {
-  const candidateEndpoints = [
-    `../MES/MES/page/manpower/api/api_learning.php?action=get_employees&q=${encodeURIComponent(search)}&line=${encodeURIComponent(line)}`,
-    `../page/manpower/api/api_learning.php?action=get_employees&q=${encodeURIComponent(search)}&line=${encodeURIComponent(line)}`
-  ];
-
-  for (const endpoint of candidateEndpoints) {
-    try {
-      const res = await fetch(endpoint, {
+  try {
+    const res = await fetch(
+      `${API_LEARNING_URL}?action=get_employees&q=${encodeURIComponent(search)}&line=${encodeURIComponent(line)}`,
+      {
         method: 'GET',
         credentials: 'include'
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.success && json.data) {
-          return json.data;
-        }
       }
-    } catch {
-      // Continue
+    );
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && json.data) {
+        return json.data;
+      }
     }
+  } catch {
+    // Ignore error in offline mode
   }
   return { employees: [], lines: [] };
 }
 
-// Switch active user identity to another factory employee
-export async function switchActiveEmployee(empId) {
-  if (empId) {
-    localStorage.setItem('mes_learning_active_emp_id', empId);
-  } else {
-    localStorage.removeItem('mes_learning_active_emp_id');
-  }
+// Switch active user identity helper (kept for compatibility, does not override real session)
+export async function switchActiveEmployee() {
+  localStorage.removeItem('mes_learning_active_emp_id');
   return await fetchRealUserSession();
 }
 
@@ -342,7 +349,17 @@ export function getCurrentUser() {
   const stored = localStorage.getItem('mes_learning_current_user');
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Purge stale auto-fallback "เจริญชัย อินทะ" (1095101035) from previous bug
+      if (
+        parsed &&
+        (parsed.emp_id === '1095101035' || parsed.id === '1095101035' || parsed.name === 'เจริญชัย อินทะ')
+      ) {
+        localStorage.removeItem('mes_learning_current_user');
+        localStorage.removeItem('mes_learning_active_emp_id');
+        return DEFAULT_USER;
+      }
+      return parsed;
     } catch {
       return DEFAULT_USER;
     }
@@ -355,6 +372,9 @@ export function saveCurrentUser(user) {
   localStorage.setItem('mes_learning_current_user', JSON.stringify(user));
   if (user && user.id) {
     localStorage.setItem(`mes_learning_exp_${user.id}`, String(user.exp || 0));
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('mes-user-updated', { detail: user }));
   }
 }
 

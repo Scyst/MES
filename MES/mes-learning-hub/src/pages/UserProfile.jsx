@@ -46,12 +46,18 @@ export default function UserProfile() {
   const [empLineFilter, setEmpLineFilter] = useState('ALL');
   const [employeeDirectory, setEmployeeDirectory] = useState({ employees: [], lines: [] });
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
-  const [viewedEmployeeGrading, setViewedEmployeeGrading] = useState(null);
+  const [viewedPassportData, setViewedPassportData] = useState(null);
 
   useEffect(() => {
     fetchRealUserSession().then(u => {
       if (u) setCurrentUser(u);
     });
+
+    const handleUserUpdated = (e) => {
+      if (e.detail) setCurrentUser(e.detail);
+    };
+    window.addEventListener('mes-user-updated', handleUserUpdated);
+    return () => window.removeEventListener('mes-user-updated', handleUserUpdated);
   }, []);
 
   // Fetch directory list whenever modal is opened or search/filter changes
@@ -68,31 +74,31 @@ export default function UserProfile() {
     }
   }, [isEmpSelectorOpen, empSearchQuery, empLineFilter]);
 
-  // Fetch live passport/grading for viewed employee if viewing via URL parameter
+  // Fetch live passport/grading from SQL Server for the currently viewed profile
   useEffect(() => {
-    if (empId && empId !== currentUser.emp_id) {
-      fetch(`../MES/MES/page/manpower/api/api_learning.php?action=get_employee_passport&emp_id=${encodeURIComponent(empId)}`, { credentials: 'include' })
-        .then(res => res.json())
-        .then(json => {
-          if (json && json.success && json.data && json.data.grading) {
-            setViewedEmployeeGrading(json.data.grading);
-          }
-        })
-        .catch(() => {});
-    } else {
-      setViewedEmployeeGrading(null);
-    }
-  }, [empId, currentUser.emp_id]);
+    const targetId = empId || currentUser.emp_id || currentUser.id;
+    if (!targetId) return;
+
+    setViewedPassportData(null);
+    fetch(`../MES/MES/page/manpower/api/api_learning.php?action=get_employee_passport&emp_id=${encodeURIComponent(targetId)}`, { credentials: 'include' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(json => {
+        if (json && json.success && json.data) {
+          setViewedPassportData(json.data);
+        }
+      })
+      .catch(() => {});
+  }, [empId, currentUser.emp_id, currentUser.id]);
 
   // Compute passport data based on URL parameter or current logged in user
   const passport = useMemo(() => {
-    return getEmployeeCompetencyPassport(empId || currentUser.emp_id || currentUser.id);
-  }, [empId, currentUser]);
+    return getEmployeeCompetencyPassport(empId || currentUser.emp_id || currentUser.id, viewedPassportData);
+  }, [empId, currentUser, viewedPassportData]);
 
   const { employee, currentUserIsMe, rank, exp, userPosts, totalLikesReceived } = passport;
 
   // Active 4-Dimension Grading state
-  const activeGrading = viewedEmployeeGrading || passport.grading || currentUser.grading || getUserGrading() || {
+  const activeGrading = viewedPassportData?.grading || passport.grading || currentUser.grading || getUserGrading() || {
     evaluation_period: '2026-10',
     grade_overall: 'B',
     grade_iph: 'B',
@@ -103,16 +109,13 @@ export default function UserProfile() {
     passed_courses: passport.totalPassedCount || 1
   };
 
-  // Switch identity handler
-  const handleSelectEmployee = async (targetEmp) => {
-    await switchActiveEmployee(targetEmp.emp_id);
-    const u = await fetchRealUserSession();
-    if (u) setCurrentUser(u);
+  // Inspect another employee's Competency Passport without overwriting own logged-in session
+  const handleSelectEmployee = (targetEmp) => {
     setIsEmpSelectorOpen(false);
     navigate(`/profile/${targetEmp.emp_id}`);
   };
 
-  // Reset to default logged in profile
+  // Return to own logged-in profile
   const handleResetToMyProfile = async () => {
     await switchActiveEmployee(null);
     const u = await fetchRealUserSession();
@@ -153,6 +156,21 @@ export default function UserProfile() {
         </button>
 
         <div className="flex flex-wrap items-center gap-2">
+          {!currentUserIsMe && (
+            <button
+              onClick={handleResetToMyProfile}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm ${
+                isDark
+                  ? 'bg-emerald-900/40 hover:bg-emerald-800/60 text-emerald-300 hover:text-white border-emerald-700/60'
+                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
+              }`}
+              title="กลับไปดูพาสปอร์ตสมรรถนะและเกรดของบัญชีคุณ"
+            >
+              <FiUser className="w-3.5 h-3.5 text-emerald-500" />
+              <span>โปรไฟล์ของฉัน ({currentUser.name})</span>
+            </button>
+          )}
+
           {/* Employee Directory / Switcher Modal Button */}
           <button
             onClick={() => setIsEmpSelectorOpen(true)}
@@ -161,10 +179,10 @@ export default function UserProfile() {
                 ? 'bg-indigo-900/40 hover:bg-indigo-800/60 text-indigo-300 hover:text-white border-indigo-700/60'
                 : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
             }`}
-            title="ค้นหาและสลับดูข้อมูลพนักงานโรงงานจากฐานข้อมูลจริง 405 คน"
+            title="ค้นหาและตรวจสอบพาสปอร์ตสมรรถนะของพนักงานโรงงานจากฐานข้อมูลจริง 405 คน"
           >
             <FiUsers className="w-3.5 h-3.5 text-indigo-500" />
-            <span>สลับดูข้อมูลพนักงาน ({employeeDirectory.employees?.length ? `${employeeDirectory.employees.length} คน` : '405 คน'})</span>
+            <span>ค้นหาพาสปอร์ตพนักงาน ({employeeDirectory.employees?.length ? `${employeeDirectory.employees.length} คน` : '405 คน'})</span>
           </button>
 
           <button

@@ -812,10 +812,7 @@ export async function syncCourseProgressToBackend({
   passed = false,
   certificateId = null
 }) {
-  const candidateEndpoints = [
-    '../MES/MES/page/manpower/api/api_learning.php?action=save_course_progress',
-    '../page/manpower/api/api_learning.php?action=save_course_progress'
-  ];
+  const endpoint = '../MES/MES/page/manpower/api/api_learning.php?action=save_course_progress';
 
   const payload = {
     emp_id: empId,
@@ -830,34 +827,30 @@ export async function syncCourseProgressToBackend({
     certificate_id: certificateId
   };
 
-  for (const endpoint of candidateEndpoints) {
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.success) {
-          console.log('[MES Learning Hub] Course progress saved to SQL Server:', json.data);
-          // If we got back new grading data or skill award, update local grading store!
-          if (json.data && json.data.learning_grade) {
-            const currentGrading = getUserGrading() || {};
-            currentGrading.grade_learning = json.data.learning_grade;
-            currentGrading.system_grade_learning = json.data.learning_grade;
-            if (typeof json.data.new_skill_count === 'number') {
-              currentGrading.skill_count = json.data.new_skill_count;
-            }
-            saveUserGrading(currentGrading);
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success) {
+        if (json.data && json.data.learning_grade) {
+          const currentGrading = getUserGrading() || {};
+          currentGrading.grade_learning = json.data.learning_grade;
+          currentGrading.system_grade_learning = json.data.learning_grade;
+          if (typeof json.data.new_skill_count === 'number') {
+            currentGrading.skill_count = json.data.new_skill_count;
           }
-          return json.data;
+          saveUserGrading(currentGrading);
         }
+        return json.data;
       }
-    } catch {
-      // Continue to next endpoint candidate
     }
+  } catch {
+    // Ignore network error in offline mode
   }
   return null;
 }
@@ -1239,11 +1232,31 @@ export function getCourseAuditSummary(courseId) {
   };
 }
 
+export function mapLineToDepartment(lineOrDept = '') {
+  const raw = String(lineOrDept || '').trim().toUpperCase();
+  if (!raw) return 'แผนกวิศวกรรมการผลิตและแม่พิมพ์ (Tooling & PE)';
+  if (DEPARTMENTS.includes(lineOrDept)) return lineOrDept;
+
+  if (raw.includes('QA') || raw.includes('QC') || raw.includes('CHECK')) {
+    return 'แผนกควบคุมคุณภาพ (QC/QA)';
+  }
+  if (raw.includes('MT') || raw.includes('PE') || raw.includes('TOOL') || raw.includes('IT') || raw.includes('OFFICE') || raw.includes('MANAGEMENT')) {
+    return 'แผนกวิศวกรรมการผลิตและแม่พิมพ์ (Tooling & PE)';
+  }
+  if (raw.includes('ST') || raw.includes('WH') || raw.includes('STORE') || raw.includes('SCM') || raw.includes('LOGISTIC')) {
+    return 'แผนกคลังสินค้าและโลจิสติกส์ (Store & Warehouse)';
+  }
+  if (raw.includes('ASSY') || raw.includes('ASSEMBLY') || raw.includes('PAINT') || raw.includes('WELD')) {
+    return 'แผนกผลิตประกอบ (Production Assembly)';
+  }
+  return 'แผนกผลิตปั๊มขึ้นรูป (Production Stamping)';
+}
+
 /**
  * Perspective 2: Employee Competency Passport & Skill Matrix
  * Returns skill passport, compliance rate, and gap analysis for an employee.
  */
-export function getEmployeeCompetencyPassport(empId) {
+export function getEmployeeCompetencyPassport(empId, livePassportData = null) {
   const allEmployees = getAllEmployees();
   const currentUser = getCurrentUser();
   const currentEmpId = currentUser.emp_id || `EMP-${currentUser.id || '5928'}`;
@@ -1260,34 +1273,91 @@ export function getEmployeeCompetencyPassport(empId) {
   };
   const lookupId = USER_ID_MAP[empId] || empId;
 
-  if (!lookupId || lookupId === 'me' || lookupId === currentEmpId || lookupId === currentUser.id) {
+  const isLookingUpMe =
+    !lookupId ||
+    lookupId === 'me' ||
+    lookupId === currentEmpId ||
+    lookupId === currentUser.id ||
+    (currentUser.username && lookupId === currentUser.username);
+
+  if (isLookingUpMe) {
     currentUserIsMe = true;
-    employee = allEmployees.find(e => e.empId === currentEmpId) || {
+    const mappedDept = mapLineToDepartment(currentUser.line || currentUser.department);
+    const rawLine = currentUser.line || '';
+    employee = (!currentUser.isLoggedInReal && allEmployees.find(e => e.empId === currentEmpId)) || {
       empId: currentEmpId,
       name: currentUser.name,
       role: currentUser.role,
-      department: 'แผนกผลิตปั๊มขึ้นรูป (Production Stamping)',
-      shift: 'Day Shift (08:00 - 17:00)',
-      avatar: currentUser.avatar,
+      line: rawLine,
+      department: rawLine && !mappedDept.includes(rawLine) ? `${mappedDept} · [${rawLine}]` : mappedDept,
+      matrixDepartment: mappedDept,
+      shift: currentUser.team_group ? `${currentUser.team_group} (08:00 - 17:00)` : 'Day Shift (08:00 - 17:00)',
+      avatar: currentUser.avatar || getUserAvatarSvg(currentUser.name || 'MES'),
       joinedDate: '2023-01-01'
     };
+  } else if (livePassportData && livePassportData.employee) {
+    const liveEmp = livePassportData.employee;
+    const mappedDept = mapLineToDepartment(liveEmp.line || liveEmp.department_api);
+    const rawLine = liveEmp.line || '';
+    employee = {
+      empId: liveEmp.emp_id || lookupId,
+      name: liveEmp.name_th || lookupId,
+      role: liveEmp.position || 'พนักงานปฏิบัติการ',
+      line: rawLine,
+      department: rawLine && !mappedDept.includes(rawLine) ? `${mappedDept} · [${rawLine}]` : mappedDept,
+      matrixDepartment: mappedDept,
+      shift: liveEmp.team_group ? `${liveEmp.team_group} (08:00 - 17:00)` : 'Day Shift (08:00 - 17:00)',
+      avatar: getUserAvatarSvg(liveEmp.name_th || lookupId),
+      joinedDate: '2023-01-01'
+    };
+    currentUserIsMe = (employee.empId === currentEmpId);
   } else {
-    employee = allEmployees.find(e => 
+    const matchedStatic = allEmployees.find(e => 
       e.empId === lookupId || 
       e.empId?.toLowerCase() === lookupId?.toLowerCase() ||
       e.name === lookupId ||
       e.name.includes(lookupId) ||
       (typeof lookupId === 'string' && lookupId.includes(e.name))
-    ) || allEmployees[0];
+    );
+    employee = matchedStatic || {
+      empId: lookupId,
+      name: `รหัสพนักงาน ${lookupId}`,
+      role: 'พนักงานโรงงาน (กำลังโหลดข้อมูลจากฐานข้อมูล MES...)',
+      department: 'แผนกผลิตปั๊มขึ้นรูป (Production Stamping)',
+      matrixDepartment: 'แผนกผลิตปั๊มขึ้นรูป (Production Stamping)',
+      shift: 'Day Shift (08:00 - 17:00)',
+      avatar: getUserAvatarSvg(String(lookupId)),
+      joinedDate: '2023-01-01'
+    };
     currentUserIsMe = (employee.empId === currentEmpId);
   }
 
   const allCourses = [...courses, ...getCustomCourses()];
   const records = getTrainingRecords();
-  const empRecords = records.filter(r => r.empId === employee.empId);
+  const empRecords = records.filter(r => r.empId === employee.empId || (currentUserIsMe && r.empId === currentUser.id));
   const recordMap = new Map(empRecords.map(r => [r.courseId, r]));
 
-  const mandatoryCourseIds = MANDATORY_MATRIX[employee.department] || [];
+  // Merge live SQL Server LEARNING_RECORDS if available
+  if (livePassportData && Array.isArray(livePassportData.learning_records)) {
+    livePassportData.learning_records.forEach(lr => {
+      if (lr && lr.course_id) {
+        recordMap.set(lr.course_id, {
+          empId: employee.empId,
+          courseId: lr.course_id,
+          status: lr.status || (Number(lr.passed) === 1 ? 'completed' : 'in_progress'),
+          quizScore: lr.quiz_score !== null ? Number(lr.quiz_score) : null,
+          quizTotal: lr.quiz_total !== null ? Number(lr.quiz_total) : null,
+          quizPercentage: lr.quiz_percentage !== null ? Number(lr.quiz_percentage) : null,
+          passed: Number(lr.passed) === 1,
+          completedAt: lr.completed_at || lr.updated_at,
+          expiresAt: null,
+          certificateId: lr.certificate_id || null
+        });
+      }
+    });
+  }
+
+  const mandatoryCourseIds = MANDATORY_MATRIX[employee.matrixDepartment || employee.department] || [];
 
   const courseStatusList = allCourses.map(course => {
     const rec = recordMap.get(course.id);
