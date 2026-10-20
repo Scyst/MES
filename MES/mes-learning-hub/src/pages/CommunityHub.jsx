@@ -67,30 +67,30 @@ export default function CommunityHub() {
       <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 ${
         isDark ? 'border-slate-800' : 'border-slate-200'
       }`}>
-        <div>
-          <h1 className={`text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2.5 ${
+        <div className="min-w-0">
+          <h1 className={`text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2.5 ${
             isDark ? 'text-white' : 'text-slate-900'
           }`}>
             <FiUsers className="text-cyan-500 flex-shrink-0" />
             <span>คลังความรู้ชุมชน &amp; ทริคหน้างาน (Community Hub)</span>
           </h1>
-          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-xs sm:text-sm mt-2.5 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             พื้นที่แลกเปลี่ยนประสบการณ์จริง คู่มือเครื่องจักร วิธีแก้ปัญหา และเทคนิคการทำงานจากเพื่อนร่วมงานทุกแผนก
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className={`text-xs font-semibold px-4 py-2 rounded-xl border ${
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <div className={`h-10 px-4 rounded-xl border text-xs font-semibold flex items-center select-none ${
             isDark 
               ? 'text-slate-300 bg-slate-800/80 border-slate-700/80' 
               : 'text-slate-700 bg-white border-slate-200 shadow-sm'
           }`}>
-            บทเรียนหน้างาน <strong className="text-fuchsia-500 font-black">{posts.length}</strong> เรื่อง
+            บทเรียนหน้างาน <strong className="text-fuchsia-500 font-black ml-1.5">{posts.length}</strong> &nbsp;เรื่อง
           </div>
 
           <button
             onClick={() => navigate('/community/new')}
-            className="px-4 py-2.5 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-fuchsia-600/20 inline-flex items-center gap-2 hover:-translate-y-0.5"
+            className="h-10 px-4 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-fuchsia-600/20 inline-flex items-center gap-2 hover:-translate-y-0.5 whitespace-nowrap"
           >
             <FiPlus className="w-4 h-4" />
             <span>เขียนบทเรียน / แชร์ความรู้</span>

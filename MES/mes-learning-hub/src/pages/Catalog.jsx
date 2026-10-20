@@ -88,21 +88,21 @@ export default function Catalog() {
       <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 ${
         isDark ? 'border-slate-800' : 'border-slate-200'
       }`}>
-        <div>
-          <h1 className={`text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2.5 ${
+        <div className="min-w-0">
+          <h1 className={`text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2.5 ${
             isDark ? 'text-white' : 'text-slate-900'
           }`}>
             <FiLayers className="text-fuchsia-500 flex-shrink-0" />
             <span>หลักสูตรมาตรฐานโรงงาน (Standard Curriculum)</span>
           </h1>
-          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-xs sm:text-sm mt-2.5 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             คลังคู่มือปฏิบัติงาน ระบบเครื่องจักร มาตรฐานคุณภาพ และสื่อการเรียนรู้เพื่อรับรองสมรรถนะพนักงาน
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-shrink-0">
           {/* Compact Stats Pill */}
-          <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border text-xs font-semibold ${
+          <div className={`h-10 px-4 rounded-xl border text-xs font-semibold flex items-center gap-2.5 select-none ${
             isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-sm'
           }`}>
             <span>หลักสูตร <strong className="text-fuchsia-500 font-black">{allCourses.length}</strong> วิชา</span>
@@ -114,7 +114,7 @@ export default function Catalog() {
             <button
               type="button"
               onClick={() => navigate('/admin/course-builder')}
-              className="px-4 py-2.5 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-fuchsia-600/20 inline-flex items-center gap-2 hover:-translate-y-0.5"
+              className="h-10 px-4 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-fuchsia-600/20 inline-flex items-center gap-2 hover:-translate-y-0.5 whitespace-nowrap"
               title="สร้างหรือจัดการหลักสูตรมาตรฐานโรงงาน"
             >
               <FiPlus className="w-4 h-4" />

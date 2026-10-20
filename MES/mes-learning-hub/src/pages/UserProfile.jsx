@@ -154,23 +154,23 @@ export default function UserProfile() {
       <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 ${
         isDark ? 'border-slate-800' : 'border-slate-200'
       }`}>
-        <div>
-          <h1 className={`text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2.5 ${
+        <div className="min-w-0">
+          <h1 className={`text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2.5 ${
             isDark ? 'text-white' : 'text-slate-900'
           }`}>
             <FiUser className="text-fuchsia-500 flex-shrink-0" />
-            <span>สมุดพกสมรรถนะและประวัติการฝึกอบรม (Competency Passport)</span>
+            <span>สมุดพกสมรรถนะบุคลากร (Competency Passport)</span>
           </h1>
-          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-xs sm:text-sm mt-2.5 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             ข้อมูลการรับรองทักษะ ประวัติการทำแบบทดสอบ และความสอดคล้องตามมาตรฐานตำแหน่งงานรายบุคคล
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-shrink-0">
           {!currentUserIsMe && (
             <button
               onClick={handleResetToMyProfile}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm ${
+              className={`h-10 px-3.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap ${
                 isDark
                   ? 'bg-emerald-900/40 hover:bg-emerald-800/60 text-emerald-300 hover:text-white border-emerald-700/60'
                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
@@ -178,14 +178,14 @@ export default function UserProfile() {
               title="กลับไปดูพาสปอร์ตสมรรถนะและเกรดของบัญชีคุณ"
             >
               <FiArrowLeft className="w-3.5 h-3.5 text-emerald-500" />
-              <span>กลับไปโปรไฟล์ของฉัน ({currentUser.name})</span>
+              <span>โปรไฟล์ฉัน ({currentUser.name})</span>
             </button>
           )}
 
           {/* Employee Directory / Switcher Modal Button */}
           <button
             onClick={() => setIsEmpSelectorOpen(true)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm ${
+            className={`h-10 px-3.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap ${
               isDark
                 ? 'bg-indigo-900/40 hover:bg-indigo-800/60 text-indigo-300 hover:text-white border-indigo-700/60'
                 : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
@@ -193,12 +193,12 @@ export default function UserProfile() {
             title="ค้นหาและตรวจสอบพาสปอร์ตสมรรถนะของพนักงานโรงงานจากฐานข้อมูลจริง"
           >
             <FiUsers className="w-3.5 h-3.5 text-indigo-500" />
-            <span>ค้นหาพาสปอร์ตพนักงาน ({employeeDirectory.employees?.length ? `${employeeDirectory.employees.length} คน` : '405 คน'})</span>
+            <span>ค้นหาพนักงาน ({employeeDirectory.employees?.length ? `${employeeDirectory.employees.length} คน` : '405 คน'})</span>
           </button>
 
           <button
             onClick={() => setIsPrintModalOpen(true)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-colors shadow-sm ${
+            className={`h-10 px-3.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap ${
               isDark
                 ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
                 : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-300'

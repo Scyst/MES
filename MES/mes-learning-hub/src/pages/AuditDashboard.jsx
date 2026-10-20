@@ -126,21 +126,21 @@ export default function AuditDashboard() {
       <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 ${
         isDark ? 'border-slate-800' : 'border-slate-200'
       }`}>
-        <div>
-          <h1 className={`text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2.5 ${
+        <div className="min-w-0">
+          <h1 className={`text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2.5 ${
             isDark ? 'text-white' : 'text-slate-900'
           }`}>
             <FiShield className="text-emerald-500 flex-shrink-0" />
-            <span>ติดตามผลการฝึกอบรมและตรวจรับรอง (Training Audit Matrix)</span>
+            <span>ติดตามผลการฝึกอบรม (Training Audit Matrix)</span>
           </h1>
-          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-xs sm:text-sm mt-2.5 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             ศูนย์รวมประวัติการอบรม ผลการทดสอบ และอัตราความสอดคล้องตามข้อกำหนด ISO 9001 Clause 7.2 &amp; IATF 16949
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-shrink-0">
           {liveAuditData && (
-            <div className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl border text-xs font-semibold ${
+            <div className={`h-10 px-4 rounded-xl border text-xs font-semibold flex items-center gap-2.5 select-none ${
               isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-sm'
             }`}>
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="เชื่อมต่อข้อมูลจริงแล้ว"></span>
@@ -152,7 +152,7 @@ export default function AuditDashboard() {
 
           <button
             onClick={() => setIsPrintModalOpen(true)}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all border shadow-sm flex items-center gap-2 hover:-translate-y-0.5 ${
+            className={`h-10 px-4 rounded-xl text-xs font-bold transition-all border shadow-sm flex items-center gap-2 hover:-translate-y-0.5 whitespace-nowrap ${
               isDark 
                 ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border-slate-700' 
                 : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300'
